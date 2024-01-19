@@ -377,7 +377,7 @@ final class HttpChannelPool implements AsyncCloseable {
      * A low-level operation that triggers a new connection attempt. Used only by:
      * <ul>
      *   <li>{@link #connect(SessionProtocol, SerializationFormat, PoolKey, ChannelAcquisitionFuture,
-     *                       ClientConnectionTimingsBuilder)} - The pool has been exhausted.</li>
+     *                       ClientConnectionTimingsBuilder, TlsProvider)} - The pool has been exhausted.</li>
      *   <li>{@link HttpSessionHandler} - HTTP/2 upgrade has failed.</li>
      * </ul>
      */

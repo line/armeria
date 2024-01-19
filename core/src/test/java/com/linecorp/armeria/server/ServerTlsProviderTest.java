@@ -40,8 +40,8 @@ class ServerTlsProviderTest {
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
                     TlsProvider.builder()
-                               .set("*", TlsKeyPair.ofSelfSinged("default"))
-                               .set("example.com", TlsKeyPair.ofSelfSinged("example.com"))
+                               .set("*", TlsKeyPair.ofSelfSigned("default"))
+                               .set("example.com", TlsKeyPair.ofSelfSigned("example.com"))
                                .build();
 
             sb.https(0)

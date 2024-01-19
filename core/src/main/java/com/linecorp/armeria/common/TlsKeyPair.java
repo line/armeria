@@ -109,7 +109,7 @@ public final class TlsKeyPair {
     /**
      * Generates a self-signed certificate for the specified {@code hostname}.
      */
-    public static TlsKeyPair ofSelfSinged(String hostname) {
+    public static TlsKeyPair ofSelfSigned(String hostname) {
         requireNonNull(hostname, "hostname");
         try {
             final SelfSignedCertificate ssc = new SelfSignedCertificate(hostname);
@@ -122,8 +122,8 @@ public final class TlsKeyPair {
     /**
      * Generates a self-signed certificate for the local hostname.
      */
-    public static TlsKeyPair ofSelfSinged() {
-        return ofSelfSinged(SystemInfo.hostname());
+    public static TlsKeyPair ofSelfSigned() {
+        return ofSelfSigned(SystemInfo.hostname());
     }
 
     private final PrivateKey privateKey;
