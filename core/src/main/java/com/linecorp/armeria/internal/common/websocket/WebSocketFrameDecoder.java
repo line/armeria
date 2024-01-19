@@ -317,14 +317,15 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
                         fragmentedFramesCount++;
                         if (aggregateContinuation) {
                             aggregatingFramesLength += framePayloadLength;
+                            aggregatingFrames.add(decodedFrame);
                             if (aggregatingFramesLength > maxFramePayloadLength) {
+                                // decodedFrame is release in processOnError.
                                 throw protocolViolation(
                                         WebSocketCloseStatus.MESSAGE_TOO_BIG,
                                         "The length of aggregated frames exceeded the max frame length. " +
                                         " aggregated length: " + aggregatingFramesLength +
                                         ", max frame length: " + maxFramePayloadLength);
                             }
-                            aggregatingFrames.add(decodedFrame);
                         } else {
                             out.add(decodedFrame);
                         }
