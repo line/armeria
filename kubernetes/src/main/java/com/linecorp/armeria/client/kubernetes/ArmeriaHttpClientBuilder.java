@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LogWriter;
 
+import io.fabric8.kubernetes.client.http.HttpClient;
 import io.fabric8.kubernetes.client.http.StandardHttpClientBuilder;
 import io.fabric8.kubernetes.client.http.TlsVersion;
 
@@ -52,7 +53,7 @@ final class ArmeriaHttpClientBuilder extends StandardHttpClientBuilder<
     }
 
     @Override
-    public ArmeriaHttpClient build() {
+    public HttpClient build() {
         if (client != null) {
             return new ArmeriaHttpClient(this, client.getWebClient());
         }

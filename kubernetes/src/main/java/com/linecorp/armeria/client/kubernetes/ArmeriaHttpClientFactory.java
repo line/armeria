@@ -18,22 +18,15 @@ package com.linecorp.armeria.client.kubernetes;
 
 import com.linecorp.armeria.client.WebClientBuilder;
 
-import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.http.HttpClient;
-import io.fabric8.kubernetes.client.http.HttpClient.Factory;
 
 /**
  * An {@link HttpClient.Factory} for creating {@link ArmeriaHttpClient}.
  */
 public class ArmeriaHttpClientFactory implements HttpClient.Factory {
     @Override
-    public ArmeriaHttpClientBuilder newBuilder() {
+    public HttpClient.Builder newBuilder() {
         return new ArmeriaHttpClientBuilder(this);
-    }
-
-    @Override
-    public ArmeriaHttpClientBuilder newBuilder(Config config) {
-        return (ArmeriaHttpClientBuilder) Factory.super.newBuilder(config);
     }
 
     /**

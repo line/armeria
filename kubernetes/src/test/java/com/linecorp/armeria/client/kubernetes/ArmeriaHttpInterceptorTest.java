@@ -91,6 +91,7 @@ class ArmeriaHttpInterceptorTest extends AbstractInterceptorTest {
         }
         // Then
         assertThat(mockServer.getRequestCount()).isEqualTo(2);
-        assertThat(mockServer.getLastRequest().getPath()).isEqualTo("/valid-url");
+        assertThat(mockServer.takeRequest().getRequestLine()).isEqualTo("OPTIONS * HTTP/1.1");
+        assertThat(mockServer.takeRequest().getPath()).isEqualTo("/valid-url");
     }
 }
