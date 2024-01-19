@@ -44,7 +44,6 @@ final class ConfigSourceClient implements SafeCloseable {
 
     private final SubscriberStorage subscriberStorage;
     private final EndpointGroup endpointGroup;
-
     private final XdsStream stream;
 
     ConfigSourceClient(ConfigSource configSource,
@@ -109,6 +108,7 @@ final class ConfigSourceClient implements SafeCloseable {
     public void close() {
         stream.close();
         endpointGroup.close();
+        subscriberStorage.close();
     }
 
     private static long initialFetchTimeoutMillis(ConfigSource configSource) {

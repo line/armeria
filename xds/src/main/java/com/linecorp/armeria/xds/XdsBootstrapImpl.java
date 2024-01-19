@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -40,6 +42,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     private final BootstrapClusters bootstrapClusters;
     private final Consumer<GrpcClientBuilder> configClientCustomizer;
     private final Node bootstrapNode;
+    private boolean closed;
 
     XdsBootstrapImpl(Bootstrap bootstrap) {
         this(bootstrap, ignored -> {});
@@ -72,6 +75,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
             eventLoop.execute(() -> subscribe0(configSource, type, resourceName, node));
             return;
         }
+        checkState(!closed, "Attempting to subscribe to a closed XdsBootstrap");
         final ConfigSourceClient client = clientMap.computeIfAbsent(
                 configSource, ignored -> new ConfigSourceClient(
                         configSource, eventLoop, bootstrapNode,
@@ -84,6 +88,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
             eventLoop.execute(() -> unsubscribe(configSource, node));
             return;
         }
+        checkState(!closed, "Attempting to unsubscribe to a closed XdsBootstrap");
         final XdsType type = node.type();
         final String resourceName = node.name();
         final ConfigSource mappedConfigSource =
@@ -111,6 +116,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
             eventLoop.execute(this::close);
             return;
         }
+        closed = true;
         clientMap.values().forEach(ConfigSourceClient::close);
         clientMap.clear();
     }

@@ -22,9 +22,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import com.linecorp.armeria.common.util.SafeCloseable;
+
 import io.netty.util.concurrent.EventExecutor;
 
-final class SubscriberStorage {
+final class SubscriberStorage implements SafeCloseable {
 
     private final EventExecutor eventLoop;
     private final long timeoutMillis;
@@ -87,5 +89,13 @@ final class SubscriberStorage {
 
     Map<XdsType, Map<String, XdsStreamSubscriber>> allSubscribers() {
         return subscriberMap;
+    }
+
+    @Override
+    public void close() {
+        subscriberMap.values().forEach(subscribers -> {
+            subscribers.values().forEach(XdsStreamSubscriber::close);
+        });
+        subscriberMap.clear();
     }
 }
