@@ -440,7 +440,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean contains(IN_NAME name, String value) {
-        return contains(name, val -> AsciiString.contentEquals(val, value));
+        return contains(name, actual -> AsciiString.contentEquals(actual, value));
     }
 
     private boolean contains(IN_NAME name, Predicate<String> containsValuePredicate) {
@@ -470,8 +470,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean containsBoolean(IN_NAME name, boolean value) {
-         return contains(name, val -> AsciiString.contentEqualsIgnoreCase(val, String.valueOf(value)) ||
-                                      AsciiString.contentEquals(val, value ? "1" : "0"));
+        return contains(name, actual -> {
+            final Boolean maybeBoolean = toBoolean(actual, false);
+            return maybeBoolean != null && maybeBoolean == value;
+        });
     }
 
     @Override

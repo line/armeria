@@ -135,12 +135,19 @@ class HttpHeadersBaseTest {
         assertThat(headers.containsBoolean("dup2", true)).isTrue();
         assertThat(headers.containsBoolean("dup2", false)).isTrue();
 
-        headers.add("caseInsensitive", "TrUe");
-        headers.add("caseInsensitive", "FALSE");
-        assertThat(headers.getBoolean("caseInsensitive")).isTrue();
-        assertThat(headers.getLastBoolean("caseInsensitive")).isFalse();
-        assertThat(headers.containsBoolean("caseInsensitive", true)).isTrue();
-        assertThat(headers.containsBoolean("caseInsensitive", false)).isTrue();
+        headers.add("upperCase", "TRUE");
+        headers.add("upperCase", "FALSE");
+        assertThat(headers.getBoolean("upperCase")).isTrue();
+        assertThat(headers.getLastBoolean("upperCase")).isFalse();
+        assertThat(headers.containsBoolean("upperCase", true)).isTrue();
+        assertThat(headers.containsBoolean("upperCase", false)).isTrue();
+
+        headers.add("unsupported", "tRUE");
+        headers.add("unsupported", "FaLsE");
+        assertThat(headers.getBoolean("unsupported")).isNull();
+        assertThat(headers.getLastBoolean("unsupported")).isNull();
+        assertThat(headers.containsBoolean("unsupported", true)).isFalse();
+        assertThat(headers.containsBoolean("unsupported", false)).isFalse();
     }
 
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest

@@ -131,12 +131,19 @@ class QueryParamsBaseTest {
         assertThat(params.containsBoolean("dup2", true)).isTrue();
         assertThat(params.containsBoolean("dup2", false)).isTrue();
 
-        params.add("caseInsensitive", "TrUe");
-        params.add("caseInsensitive", "FALSE");
-        assertThat(params.getBoolean("caseInsensitive")).isTrue();
-        assertThat(params.getLastBoolean("caseInsensitive")).isFalse();
-        assertThat(params.containsBoolean("caseInsensitive", true)).isTrue();
-        assertThat(params.containsBoolean("caseInsensitive", false)).isTrue();
+        params.add("upperCase", "TRUE");
+        params.add("upperCase", "FALSE");
+        assertThat(params.getBoolean("upperCase")).isTrue();
+        assertThat(params.getLastBoolean("upperCase")).isFalse();
+        assertThat(params.containsBoolean("upperCase", true)).isTrue();
+        assertThat(params.containsBoolean("upperCase", false)).isTrue();
+
+        params.add("unsupported", "tRUE");
+        params.add("unsupported", "FaLsE");
+        assertThat(params.getBoolean("unsupported")).isNull();
+        assertThat(params.getLastBoolean("unsupported")).isNull();
+        assertThat(params.containsBoolean("unsupported", true)).isFalse();
+        assertThat(params.containsBoolean("unsupported", false)).isFalse();
     }
 
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest

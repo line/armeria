@@ -29,6 +29,7 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.util.StringUtil;
 
 import io.netty.util.AsciiString;
 
@@ -132,7 +133,7 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      *
      * @param name the name of the header to retrieve
      * @return the {@code boolean} value of the first value in insertion order or {@code null} if there is
-     *         no such header or it can't be converted to {@code boolean}.
+     *         no such header or it can't be converted to {@code boolean} by {@link StringUtil#toBoolean}.
      */
     @Override
     @Nullable
@@ -145,7 +146,8 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      * @param name the name of the header to retrieve
      * @param defaultValue the default value
      * @return the {@code boolean} value of the first value in insertion order or {@code defaultValue}
-     *         if there is no such header or it can't be converted to {@code boolean}.
+     *         if there is no such header or it can't be converted to {@code boolean}
+     *         by {@link StringUtil#toBoolean}.
      */
     @Override
     boolean getBoolean(CharSequence name, boolean defaultValue);
@@ -156,7 +158,7 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      *
      * @param name the name of the header to retrieve
      * @return the {@code boolean} value of the last value in insertion order or {@code null} if there is
-     *         no such header or it can't be converted to {@code boolean}.
+     *         no such header or it can't be converted to {@code boolean} by {@link StringUtil#toBoolean}.
      */
     @Override
     @Nullable
@@ -169,7 +171,8 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      * @param name the name of the header to retrieve
      * @param defaultValue the default value
      * @return the {@code boolean} value of the last value in insertion order or {@code defaultValue}
-     *         if there is no such header or it can't be converted to {@code boolean}.
+     *         if there is no such header or it can't be converted to {@code boolean}
+     *         by {@link StringUtil#toBoolean}.
      */
     @Override
     boolean getLastBoolean(CharSequence name, boolean defaultValue);
@@ -446,7 +449,8 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      *
      * @param name the header name
      * @param value the header value
-     * @return {@code true} if the header exists. {@code false} otherwise
+     * @return {@code true} if the name and value that converted by {@link StringUtil#toBoolean} exist.
+     *         {@code false} otherwise
      */
     @Override
     boolean containsBoolean(CharSequence name, boolean value);
