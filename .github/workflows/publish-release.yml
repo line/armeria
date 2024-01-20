@@ -18,7 +18,7 @@ jobs:
 
       - id: setup-jdk-19
         name: Set up JDK 19
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '19'
@@ -45,7 +45,7 @@ jobs:
         shell: bash
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 

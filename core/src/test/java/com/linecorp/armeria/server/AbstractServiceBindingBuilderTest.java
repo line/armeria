@@ -45,10 +45,12 @@ class AbstractServiceBindingBuilderTest {
                 ReflectionUtils.getMethods(AbstractServiceBindingBuilder.class,
                                            method -> Modifier.isPublic(method.getModifiers()));
         for (final Method method : superMethods) {
-            assertThat(overriddenMethods).filteredOn(tMethod -> {
-                return method.getName().equals(tMethod.getName()) &&
-                       Arrays.equals(method.getParameterTypes(), tMethod.getParameterTypes());
-            }).hasSize(1);
+            assertThat(overriddenMethods)
+                    .as("%s is not overridden by %s", method, clazz)
+                    .filteredOn(tMethod -> {
+                        return method.getName().equals(tMethod.getName()) &&
+                               Arrays.equals(method.getParameterTypes(), tMethod.getParameterTypes());
+                    }).hasSize(1);
         }
     }
 }

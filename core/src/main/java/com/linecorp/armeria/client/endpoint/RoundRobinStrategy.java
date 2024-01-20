@@ -43,16 +43,16 @@ final class RoundRobinStrategy implements EndpointSelectionStrategy {
 
         RoundRobinSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
+            initialize();
         }
 
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
             final List<Endpoint> endpoints = group().endpoints();
-            final int currentSequence = sequence.getAndIncrement();
-
             if (endpoints.isEmpty()) {
                 return null;
             }
+            final int currentSequence = sequence.getAndIncrement();
             return endpoints.get(Math.abs(currentSequence % endpoints.size()));
         }
     }

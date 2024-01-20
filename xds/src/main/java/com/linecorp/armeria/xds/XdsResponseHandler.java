@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,13 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.encoding;
+package com.linecorp.armeria.xds;
+
+import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
 
 /**
- * A type of HTTP encoding, which is usually included in accept-encoding and content-encoding headers.
+ * Handles callbacks for {@link SotwXdsStream}.
+ * Note that it is important that exceptions are not raised from the callback.
+ * Otherwise, the infinite loop will break as a discovery request is not sent.
  */
-enum HttpEncodingType {
-    GZIP,
-    DEFLATE,
-    BROTLI
+
+interface XdsResponseHandler {
+
+    void handleResponse(
+            ResourceParser resourceParser, DiscoveryResponse value, SotwXdsStream sender);
+
+    void handleReset(XdsStream sender);
 }

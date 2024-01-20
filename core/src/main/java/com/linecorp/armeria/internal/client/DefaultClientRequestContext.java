@@ -180,7 +180,7 @@ public final class DefaultClientRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            @Nullable EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
@@ -225,7 +225,7 @@ public final class DefaultClientRequestContext
         super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
               firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
-              getAttributes(root));
+              getAttributes(root), options.contextHook());
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -500,7 +500,7 @@ public final class DefaultClientRequestContext
                                         SessionProtocol sessionProtocol, HttpMethod method,
                                         RequestTarget reqTarget) {
         super(ctx.meterRegistry(), sessionProtocol, id, method, reqTarget, ctx.exchangeType(),
-              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()));
+              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()), ctx.hook());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -511,7 +511,6 @@ public final class DefaultClientRequestContext
         // So we don't check the nullness of rpcRequest unlike request.
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
-        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         root = ctx.root();
 
@@ -531,6 +530,13 @@ public final class DefaultClientRequestContext
 
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
+        // We don't need to acquire an EventLoop for the initial attempt because it's already acquired by
+        // the root context.
+        if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
+            eventLoop = ctx.eventLoop().withoutContext();
+        } else {
+            acquireEventLoop(endpoint);
+        }
     }
 
     @Nullable

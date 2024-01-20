@@ -16,13 +16,11 @@
 
 package com.linecorp.armeria.common.grpc;
 
-import static com.linecorp.armeria.internal.common.grpc.MetadataUtil.GRPC_STATUS_DETAILS_BIN_KEY;
-import static java.util.Objects.requireNonNull;
+import static com.linecorp.armeria.common.grpc.GoogleGrpcExceptionHandlerFunctionUtil.handleException;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -36,29 +34,17 @@ import io.grpc.StatusRuntimeException;
  * If a given {@link Throwable} is an instance of either {@link StatusRuntimeException} or
  * {@link StatusException}, the {@link Status} retrieved from the exception is
  * returned with higher priority.
+ *
+ * @deprecated Use {@link GoogleGrpcExceptionHandlerFunction} instead.
  */
+@Deprecated
 @UnstableApi
 public interface GoogleGrpcStatusFunction extends GrpcStatusFunction {
 
     @Nullable
     @Override
     default Status apply(RequestContext ctx, Throwable throwable, Metadata metadata) {
-        final Throwable cause = Exceptions.peel(requireNonNull(throwable, "throwable"));
-        if (cause instanceof StatusRuntimeException) {
-            return ((StatusRuntimeException) cause).getStatus();
-        }
-        if (cause instanceof StatusException) {
-            return ((StatusException) cause).getStatus();
-        }
-        final com.google.rpc.Status statusProto = applyStatusProto(ctx, cause, metadata);
-        if (statusProto == null) {
-            return null;
-        }
-        final Status status = Status.fromCodeValue(statusProto.getCode())
-                                    .withDescription(statusProto.getMessage());
-        metadata.discardAll(GRPC_STATUS_DETAILS_BIN_KEY);
-        metadata.put(GRPC_STATUS_DETAILS_BIN_KEY, statusProto);
-        return status;
+        return handleException(ctx, throwable, metadata, this::applyStatusProto);
     }
 
     /**

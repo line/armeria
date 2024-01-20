@@ -84,9 +84,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     ServerHttp2ObjectEncoder getOrCreateResponseEncoder(ChannelHandlerContext connectionHandlerCtx) {
         if (responseEncoder == null) {
             assert connectionHandlerCtx.handler() == this;
-            responseEncoder = new ServerHttp2ObjectEncoder(connectionHandlerCtx, this,
-                                                           cfg.isDateHeaderEnabled(),
-                                                           cfg.isServerHeaderEnabled());
+            responseEncoder = new ServerHttp2ObjectEncoder(connectionHandlerCtx, this);
             requestDecoder.initEncoder(responseEncoder);
         }
         return responseEncoder;
