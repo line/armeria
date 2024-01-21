@@ -119,6 +119,15 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         }
     }
 
+    private static final GrpcExceptionHandlerFunction cancellationGrpcExceptionHandler =
+            (ctx, cause, metadata) -> {
+                Status status = Status.CANCELLED.withCause(cause);
+                if (cause instanceof RequestTimeoutException) {
+                    status = status.withDescription("Request timed out");
+                }
+                return status;
+            };
+
     private final HandlerRegistry registry;
     private final Set<Route> routes;
     private final Map<String, ExchangeType> exchangeTypes;
@@ -301,9 +310,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                   HttpRequest req, MethodDescriptor<I, O> methodDescriptor,
                                   AbstractServerCall<I, O> call) {
         final Listener<I> listener;
+        final Metadata headers = MetadataUtil.copyFromHeaders(req.headers());
         try {
             listener = methodDef.getServerCallHandler()
-                                .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
+                                .startCall(call, headers);
         } catch (Throwable t) {
             call.setListener((Listener<I>) EMPTY_LISTENER);
             call.close(t);
@@ -319,10 +329,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            Status status = Status.CANCELLED.withCause(cancellationCause);
-            if (cancellationCause instanceof RequestTimeoutException) {
-                status = status.withDescription("Request timed out");
-            }
+            final Status status = call.exceptionHandler()
+                .orElse(cancellationGrpcExceptionHandler)
+                .apply(ctx, cancellationCause, headers);
+
+            assert status != null;
             call.close(status, new Metadata());
             return null;
         });
