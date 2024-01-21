@@ -651,6 +651,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         return ctx;
     }
 
+    @Nullable
     public final GrpcExceptionHandlerFunction exceptionHandler() {
         return exceptionHandler;
     }

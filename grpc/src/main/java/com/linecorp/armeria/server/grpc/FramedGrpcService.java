@@ -329,9 +329,15 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            final Status status = call.exceptionHandler()
-                .orElse(cancellationGrpcExceptionHandler)
-                .apply(ctx, cancellationCause, headers);
+            final GrpcExceptionHandlerFunction exceptionHandler;
+
+            if (call.exceptionHandler() != null) {
+                exceptionHandler = call.exceptionHandler().orElse(cancellationGrpcExceptionHandler);
+            } else {
+                exceptionHandler = cancellationGrpcExceptionHandler;
+            }
+
+            final Status status = exceptionHandler.apply(ctx, cancellationCause, headers);
 
             assert status != null;
             call.close(status, new Metadata());
