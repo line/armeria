@@ -175,6 +175,7 @@ includeWithFlags ':zookeeper3',                          'java', 'publish', 'rel
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':consul',                              'java', 'publish', 'relocate', 'native'
+includeWithFlags ':nacos',                               'java', 'publish', 'relocate', 'native'
 
 // Published Javadoc-only projects
 includeWithFlags ':javadoc',                             'java', 'publish', 'no_aggregation'
