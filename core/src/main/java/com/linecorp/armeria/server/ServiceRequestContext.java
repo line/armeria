@@ -324,6 +324,16 @@ public interface ServiceRequestContext extends RequestContext {
     ContextAwareBlockingTaskExecutor blockingTaskExecutor();
 
     /**
+     * Returns whether to use the {@link ContextAwareBlockingTaskExecutor}. Used by `@Blocking` annotation.
+     */
+    boolean shouldUseBlockingTaskExecutor();
+
+    /**
+     * Sets whether to use the {@link ContextAwareBlockingTaskExecutor}. Used by `@Blocking` annotation.
+     */
+    void setShouldUseBlockingTaskExecutor(boolean value);
+
+    /**
      * Returns the {@link #path()} with its context path removed. This method can be useful for a reusable
      * service bound at various path prefixes.
      */

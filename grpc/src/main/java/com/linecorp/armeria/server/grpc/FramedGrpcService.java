@@ -281,8 +281,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
         final Executor blockingExecutor;
         if (useBlockingTaskExecutor || registry.needToUseBlockingTaskExecutor(methodDef)) {
+            ctx.setShouldUseBlockingTaskExecutor(true);
             blockingExecutor = MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor());
         } else {
+            ctx.setShouldUseBlockingTaskExecutor(false);
             blockingExecutor = null;
         }
         final AbstractServerCall<I, O> call = newServerCall(simpleMethodName, methodDef, ctx, req,

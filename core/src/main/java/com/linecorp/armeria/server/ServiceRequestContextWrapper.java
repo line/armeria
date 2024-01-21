@@ -112,6 +112,16 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public boolean shouldUseBlockingTaskExecutor() {
+        return unwrap().shouldUseBlockingTaskExecutor();
+    }
+
+    @Override
+    public void setShouldUseBlockingTaskExecutor(boolean value) {
+        unwrap().setShouldUseBlockingTaskExecutor(value);
+    }
+
+    @Override
     public String mappedPath() {
         return unwrap().mappedPath();
     }
