@@ -1001,7 +1001,6 @@ public final class GrpcServiceBuilder {
                       .collect(Collectors.toList());
     }
 
-
     /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
@@ -1045,7 +1044,7 @@ public final class GrpcServiceBuilder {
         }
 
         // We will copy the service and methods inside the old registry to new one and intercept them.
-        HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
+        final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
 
         if (grpcExceptionHandler != null) {
             newRegistryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
@@ -1054,7 +1053,7 @@ public final class GrpcServiceBuilder {
         // Interceptors passed via the grpc service builder.
         final ImmutableList<ServerInterceptor> globalInterceptors;
 
-        if (this.interceptors == null ) {
+        if (this.interceptors == null) {
             globalInterceptors = ImmutableList.of();
         }  else {
             globalInterceptors = this.interceptors.build();
@@ -1071,8 +1070,8 @@ public final class GrpcServiceBuilder {
                 // A "Service" entry thus there is no method descriptor.
 
                 // Add all methods of the service to the new registry builder one by one and intercept them.
-                for(ServerMethodDefinition<?, ?> smd : entry.service().getMethods()) {
-                    MethodDescriptor<?, ?> smdMethodDescriptor = smd.getMethodDescriptor();
+                for (ServerMethodDefinition<?, ?> smd : entry.service().getMethods()) {
+                    final MethodDescriptor<?, ?> smdMethodDescriptor = smd.getMethodDescriptor();
 
                     if (smdMethodDescriptor == null) {
                         continue;
@@ -1082,12 +1081,12 @@ public final class GrpcServiceBuilder {
                                                                                         smdMethodDescriptor);
 
                     if (methodOption.isPresent()) {
-                        List<ServerInterceptor> allInterceptors =
+                        final List<ServerInterceptor> allInterceptors =
                                 getInterceptorsFromAnnotations(entry.type(), methodOption.get(),
                                                                dependencyInjector, globalInterceptors);
 
-                        ServerServiceDefinition intercepted = ServerInterceptors.intercept(entry.service(),
-                                                                                          allInterceptors);
+                        final ServerServiceDefinition intercepted =
+                                ServerInterceptors.intercept(entry.service(), allInterceptors);
 
                         // Use the path of method descriptor instead of the path of service. We are adding a
                         // single method to the registry as a service opposed to adding the entire service
@@ -1100,21 +1099,24 @@ public final class GrpcServiceBuilder {
                 }
             } else if (entry.type() != null) {
                 // A "Method" entry
-                final Optional<Method> methodOption = getMethodFromMethodDescriptor(entry.type(), methodDescriptor);
+                final Optional<Method> methodOption =
+                        getMethodFromMethodDescriptor(entry.type(), methodDescriptor);
 
                 if (methodOption.isPresent()) {
-                    List<ServerInterceptor> allInterceptors =
+                    final List<ServerInterceptor> allInterceptors =
                             getInterceptorsFromAnnotations(entry.type(), methodOption.get(),
                                                            dependencyInjector, globalInterceptors);
 
-                    ServerServiceDefinition intercepted = ServerInterceptors.intercept(entry.service(), allInterceptors);
+                    final ServerServiceDefinition intercepted = ServerInterceptors.intercept(entry.service(),
+                                                                                             allInterceptors);
                     newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor,
                                                   entry.type(), entry.additionalDecorators());
                 }
             } else {
                 // Others
                 // Only intercept the service with global interceptors.
-                ServerServiceDefinition intercepted = ServerInterceptors.intercept(entry.service(), globalInterceptors);
+                final ServerServiceDefinition intercepted = ServerInterceptors.intercept(entry.service(),
+                                                                                         globalInterceptors);
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor,
                                               entry.type(), entry.additionalDecorators());
             }

@@ -106,9 +106,9 @@ class GrpcServerInterceptorTest {
 
     @Test
     void annotatedInterceptorShouldWork() {
-        AtomicReference<Metadata> headersCapture = new AtomicReference<>();
-        AtomicReference<Metadata> trailersCapture = new AtomicReference<>();
-        ClientInterceptor clientInterceptor = MetadataUtils.newCaptureMetadataInterceptor(headersCapture,
+        final AtomicReference<Metadata> headersCapture = new AtomicReference<>();
+        final AtomicReference<Metadata> trailersCapture = new AtomicReference<>();
+        final ClientInterceptor clientInterceptor = MetadataUtils.newCaptureMetadataInterceptor(headersCapture,
                                                                                           trailersCapture);
         final TestServiceBlockingStub client =
                 GrpcClients.builder(server.httpUri())
@@ -208,7 +208,6 @@ class GrpcServerInterceptorTest {
             return next.startCall(addToHeader("qux", call), headers);
         }
     }
-
 
     @GrpcInterceptor(InterceptorAddBar.class)
     private static class AnnotatedInterceptorServiceImpl extends TestServiceImplBase {
