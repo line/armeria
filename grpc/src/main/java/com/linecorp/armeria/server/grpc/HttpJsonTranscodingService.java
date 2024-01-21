@@ -582,10 +582,22 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 } else {
                     try {
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
-                        // Set JSON media type (https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content)
+                        final MediaType mediaType;
+                        final HttpData content;
+
+                        // https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content
+                        if ("google.api.HttpBody".equals(
+                                spec.method.getMethodDescriptor().getFullMethodName())) {
+                            mediaType = ctx.request().contentType();
+                            content = convertToArbitraryHttpData(ctx, clientRequest);
+                        } else {
+                            mediaType = MediaType.JSON_UTF_8;
+                            content = convertToJson(ctx, clientRequest, spec);
+                        }
+
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
-                                      convertToJson(ctx, clientRequest, spec), responseFuture,
-                                      generateResponseBodyConverter(spec), MediaType.JSON_UTF_8);
+                                      content, responseFuture,
+                                      generateResponseBodyConverter(spec), mediaType);
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
@@ -597,6 +609,20 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return null;
         });
         return HttpResponse.of(responseFuture);
+    }
+
+    private HttpData convertToArbitraryHttpData(ServiceRequestContext ctx,
+                                                AggregatedHttpRequest request) {
+        final ObjectNode body = mapper.createObjectNode();
+
+        try {
+            body.put("content_type",  request.contentUtf8());
+            body.put("data", request.content().array());
+
+            return request.content();
+        } finally {
+            request.content().close();
+        }
     }
 
     /**
