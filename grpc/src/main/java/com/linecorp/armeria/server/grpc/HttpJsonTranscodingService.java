@@ -45,6 +45,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.AnnotationsProto;
+import com.google.api.HttpBody;
 import com.google.api.HttpRule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CaseFormat;
@@ -454,6 +455,12 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     final byte[] array = data.array();
                     try {
                         final JsonNode jsonNode = mapper.readValue(array, JsonNode.class);
+
+                        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getOutputType())) {
+                            final String httpBody = jsonNode.get("data").asText();
+                            return HttpData.wrap(httpBody.getBytes());
+                        }
+
                         // we try to convert lower snake case response body to camel case
                         final String lowerCamelCaseResponseBody =
                                 CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
@@ -586,13 +593,19 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         final HttpData content;
 
                         // https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content
-                        if ("google.api.HttpBody".equals(
-                                spec.method.getMethodDescriptor().getFullMethodName())) {
+                        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getInputType())) {
+                            // TODO: Determine media type dynamically from content.
                             mediaType = ctx.request().contentType();
                             content = convertToArbitraryHttpData(ctx, clientRequest);
                         } else {
                             mediaType = MediaType.JSON_UTF_8;
                             content = convertToJson(ctx, clientRequest, spec);
+                        }
+
+                        // Media type can only be nullif the request doesn't have a content type.
+                        if (mediaType == null) {
+                            throw new IllegalArgumentException("Unsupported content-type: " +
+                                                               clientRequest.contentType());
                         }
 
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),

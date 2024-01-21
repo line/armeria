@@ -45,6 +45,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.api.HttpBody;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
@@ -76,6 +77,8 @@ import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
+import testing.grpc.Transcoding.ArbitraryHttpWrappedRequest;
+import testing.grpc.Transcoding.ArbitraryHttpWrappedResponse;
 import testing.grpc.Transcoding.EchoAnyRequest;
 import testing.grpc.Transcoding.EchoAnyResponse;
 import testing.grpc.Transcoding.EchoFieldMaskRequest;
@@ -331,6 +334,26 @@ public class HttpJsonTranscodingTest {
                                            StreamObserver<EchoNestedMessageResponse> responseObserver) {
             responseObserver
                     .onNext(EchoNestedMessageResponse.newBuilder().setNested(request.getNested()).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void arbitraryHttp(HttpBody request, StreamObserver<HttpBody> responseObserver) {
+            final HttpBody.Builder builder = HttpBody.newBuilder();
+            System.out.println("Request: " + request);
+            builder.setContentType(request.getContentType())
+                   .setData(request.getData());
+            responseObserver.onNext(builder.build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void arbitraryHttpWrapped(ArbitraryHttpWrappedRequest request,
+                                         StreamObserver<ArbitraryHttpWrappedResponse> responseObserver) {
+            final ArbitraryHttpWrappedResponse.Builder builder = ArbitraryHttpWrappedResponse.newBuilder();
+            builder.setResponseId(request.getRequestId() + "-response");
+            builder.setBody(request.getBody());
+            responseObserver.onNext(builder.build());
             responseObserver.onCompleted();
         }
     }
@@ -1083,6 +1106,19 @@ public class HttpJsonTranscodingTest {
         return StreamSupport.stream(methods.spliterator(), false)
                             .filter(node -> node.get("name").asText().equals(name))
                             .findFirst().get();
+    }
+
+    @Test
+    void shouldAcceptArbitraryHttpUsingHttpBody() {
+        final String content = "<html><body>Arbitrary HTTP body</body></html>";
+        final RequestHeaders headers = RequestHeaders.builder()
+                                                     .method(HttpMethod.POST).path("/v1/arbitrary")
+                                                     .contentType(MediaType.HTML_UTF_8).build();
+        final AggregatedHttpResponse response =
+                webClient.execute(headers, content.getBytes()).aggregate().join();
+
+        assertThat(response.contentType()).isEqualTo(MediaType.HTML_UTF_8);
+        assertThat(response.contentUtf8()).isEqualTo(content);
     }
 
     public static List<String> pathMapping(JsonNode method) {
