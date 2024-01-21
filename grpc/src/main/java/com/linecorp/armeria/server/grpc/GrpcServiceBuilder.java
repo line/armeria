@@ -1077,29 +1077,54 @@ public final class GrpcServiceBuilder {
             if (entry.type() != null && methodDescriptor == null) {
                 // A "Service" entry thus there is no method descriptor.
 
-                // Add all methods of the service to the new registry builder one by one and intercept them.
-                for (ServerMethodDefinition<?, ?> smd : entry.service().getMethods()) {
-                    final MethodDescriptor<?, ?> smdMethodDescriptor = smd.getMethodDescriptor();
+                final List<MethodDescriptor<?, ?>> serverMethodDescriptors =
+                        entry.service().getMethods().stream()
+                             .map(ServerMethodDefinition::getMethodDescriptor)
+                             .collect(Collectors.toList());
 
-                    if (smdMethodDescriptor == null) {
-                        continue;
+                final boolean shouldSplitServiceToMethod = serverMethodDescriptors.stream().anyMatch(
+                        methodDescriptor1 -> {
+                            final Optional<Method> methodOption =
+                                    getMethodFromMethodDescriptor(entry.type(), methodDescriptor1);
+
+                            if (methodOption.isPresent()) {
+                                final List<ServerInterceptor> allInterceptors =
+                                        getInterceptorsFromAnnotations(entry.type(), methodOption.get(),
+                                                                       dependencyInjector, ImmutableList.of());
+
+                                return !allInterceptors.isEmpty();
+                            }
+
+                            return false;
+                        }
+                );
+
+                if (shouldSplitServiceToMethod) {
+                    // Add all methods of the service to the new registry builder one by one and intercept them.
+                    for (MethodDescriptor<?, ?> serverMethodDescriptor : serverMethodDescriptors) {
+                        final Optional<Method> methodOption =
+                                getMethodFromMethodDescriptor(entry.type(), serverMethodDescriptor);
+
+                        if (methodOption.isPresent()) {
+                            final List<ServerInterceptor> allInterceptors =
+                                    getInterceptorsFromAnnotations(entry.type(), methodOption.get(),
+                                                                   dependencyInjector, globalInterceptors);
+
+                            final ServerServiceDefinition intercepted =
+                                    ServerInterceptors.intercept(entry.service(), allInterceptors);
+
+                            final String path = calculateServicePath(entry, serverMethodDescriptor);
+                            newRegistryBuilder.addService(path, intercepted,
+                                                          serverMethodDescriptor, entry.type(),
+                                                          ImmutableList.copyOf(entry.additionalDecorators()));
+                        }
                     }
-
-                    final Optional<Method> methodOption = getMethodFromMethodDescriptor(entry.type(),
-                                                                                        smdMethodDescriptor);
-
-                    if (methodOption.isPresent()) {
-                        final List<ServerInterceptor> allInterceptors =
-                                getInterceptorsFromAnnotations(entry.type(), methodOption.get(),
-                                                               dependencyInjector, globalInterceptors);
-
-                        final ServerServiceDefinition intercepted =
-                                ServerInterceptors.intercept(entry.service(), allInterceptors);
-
-                        final String path = calculateServicePath(entry, smdMethodDescriptor);
-                        newRegistryBuilder.addService(path, intercepted, smdMethodDescriptor,
-                                                      entry.type(), entry.additionalDecorators());
-                    }
+                } else {
+                    // No need to split service into individual methods if there are no interceptors.
+                    final ServerServiceDefinition intercepted =
+                            ServerInterceptors.intercept(entry.service(), globalInterceptors);
+                    newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor,
+                                                  entry.type(), entry.additionalDecorators());
                 }
             } else if (entry.type() != null) {
                 // A "Method" entry
