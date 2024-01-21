@@ -612,14 +612,14 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     }
 
     private HttpData convertToArbitraryHttpData(ServiceRequestContext ctx,
-                                                AggregatedHttpRequest request) {
+                                                AggregatedHttpRequest request) throws IOException {
         final ObjectNode body = mapper.createObjectNode();
 
         try {
             body.put("content_type",  request.contentUtf8());
             body.put("data", request.content().array());
 
-            return request.content();
+            return HttpData.wrap(mapper.writeValueAsBytes(body));
         } finally {
             request.content().close();
         }
