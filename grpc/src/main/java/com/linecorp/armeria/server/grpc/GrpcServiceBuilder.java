@@ -1001,6 +1001,14 @@ public final class GrpcServiceBuilder {
                       .collect(Collectors.toList());
     }
 
+    private String calculateServicePath(Entry entry, MethodDescriptor<?, ?> methodDescriptor) {
+        // Use the path of method descriptor instead of the path of service. We are adding a
+        // single method to the registry as a service opposed to adding the entire service
+        // to the registry. The reason is that we can't intercept individual methods if we
+        // add the service as a whole to the registry.
+        return entry.path() + '/' + methodDescriptor.getBareMethodName();
+    }
+
     /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
@@ -1088,13 +1096,9 @@ public final class GrpcServiceBuilder {
                         final ServerServiceDefinition intercepted =
                                 ServerInterceptors.intercept(entry.service(), allInterceptors);
 
-                        // Use the path of method descriptor instead of the path of service. We are adding a
-                        // single method to the registry as a service opposed to adding the entire service
-                        // to the registry. The reason is that we can't intercept individual methods if we
-                        // add the service as a whole to the registry.
-                        final String path = smdMethodDescriptor.getFullMethodName();
+                        final String path = calculateServicePath(entry, smdMethodDescriptor);
                         newRegistryBuilder.addService(path, intercepted, smdMethodDescriptor,
-                                                      null, entry.additionalDecorators());
+                                                      entry.type(), entry.additionalDecorators());
                     }
                 }
             } else if (entry.type() != null) {
