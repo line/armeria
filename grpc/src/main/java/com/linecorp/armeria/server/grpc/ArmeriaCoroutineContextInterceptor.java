@@ -96,7 +96,7 @@ final class ArmeriaCoroutineContextInterceptor extends CoroutineContextServerInt
             // No custom context is specified. Use an event loop or a block task
             // executor as the default Coroutine dispatcher.
             final ScheduledExecutorService executor;
-            if (useBlockingTaskExecutor) {
+            if (useBlockingTaskExecutor || ctx.shouldUseBlockingTaskExecutor()) {
                 executor = ctx.blockingTaskExecutor().withoutContext();
             } else {
                 executor = ctx.eventLoop().withoutContext();
