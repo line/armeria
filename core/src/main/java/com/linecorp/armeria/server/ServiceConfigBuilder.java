@@ -43,8 +43,8 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
+import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {
 
