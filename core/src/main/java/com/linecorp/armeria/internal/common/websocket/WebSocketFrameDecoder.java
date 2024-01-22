@@ -34,7 +34,6 @@ package com.linecorp.armeria.internal.common.websocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
@@ -64,7 +63,6 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
         CORRUPT
     }
 
-    private final RequestContext ctx;
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
     @Nullable
@@ -81,8 +79,7 @@ public abstract class WebSocketFrameDecoder implements HttpDecoder<WebSocketFram
     private boolean receivedClosingHandshake;
     private State state = State.READING_FIRST;
 
-    protected WebSocketFrameDecoder(RequestContext ctx, int maxFramePayloadLength, boolean allowMaskMismatch) {
-        this.ctx = ctx;
+    protected WebSocketFrameDecoder(int maxFramePayloadLength, boolean allowMaskMismatch) {
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
     }
