@@ -1905,6 +1905,7 @@ dep.no
 deporte.bo
 des.br
 desa.id
+desi
 design
 design.aero
 det.br
@@ -2418,7 +2419,6 @@ et
 etajima.hiroshima.jp
 etc.br
 eti.br
-etisalat
 etne.no
 etnedal.no
 eu
@@ -3497,7 +3497,6 @@ homelink.one
 homelinux.com
 homelinux.net
 homelinux.org
-homeoffice.gov.uk
 homes
 homesecuritymac.com
 homesecuritypc.com
@@ -7342,7 +7341,6 @@ sc.ls
 sc.tz
 sc.ug
 sc.us
-sca
 scalebook.scw.cloud
 scb
 sch.ae
@@ -8703,7 +8701,6 @@ vn.ua
 voagat.no
 vodka
 volda.no
-volkswagen
 vologda.su
 volvo
 volyn.ua
@@ -8839,6 +8836,7 @@ webview-assets.cloud9.us-east-1.amazonaws.com
 webview-assets.cloud9.us-east-2.amazonaws.com
 webview-assets.cloud9.us-west-1.amazonaws.com
 webview-assets.cloud9.us-west-2.amazonaws.com
+wed
 wedding
 wedeploy.io
 wedeploy.me
@@ -9188,7 +9186,6 @@ xn--mgba3a4f16a.ir
 xn--mgba3a4fra
 xn--mgba3a4fra.ir
 xn--mgba7c0bbn0a
-xn--mgbaakc7dvf
 xn--mgbaam7a8h
 xn--mgbab2bd
 xn--mgbah1a3hjkrd

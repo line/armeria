@@ -26,10 +26,12 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
+import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
 
@@ -61,6 +63,8 @@ public final class WebSocketServiceBuilder {
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
     private boolean aggregateContinuation;
+    @Nullable
+    private HttpService fallbackService;
 
     WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -158,11 +162,20 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
+     * Sets the fallback {@link HttpService} to use when the request is not a valid WebSocket upgrade request.
+     * This is useful when you want to serve both WebSocket and HTTP requests at the same path.
+     */
+    public WebSocketServiceBuilder fallbackService(HttpService fallbackService) {
+        this.fallbackService = requireNonNull(fallbackService, "fallbackService");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link WebSocketService} with the properties set so far.
      */
     public WebSocketService build() {
-        return new WebSocketService(handler, maxFramePayloadLength, allowMaskMismatch,
-                                    subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN),
-                                    aggregateContinuation);
+        return new DefaultWebSocketService(handler, fallbackService, maxFramePayloadLength, allowMaskMismatch,
+                                           subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN),
+                                           aggregateContinuation);
     }
 }
