@@ -12,8 +12,9 @@ if [[ $GITHUB_REF != refs/pull* ]]; then
 fi
 
 PR_NUMBER=$(echo "$GITHUB_REF" | awk -F / '{print $3}')
+# To obtain sufficient quota for gh cli, it is recommended to set PAT in the `GH_TOKEN` environment variable.
 # Check if there are any changes in .github/actions or .github/workflows
-WORKFLOW_CHANGES=$(gh pr diff "$PR_NUMBER" --name-only | grep -c '^.github/workflows\|^.github/actions')
+WORKFLOW_CHANGES=$(gh -R line/armeria pr diff "$PR_NUMBER" --name-only | grep -c '^.github/workflows\|^.github/actions')
 if [[ "$WORKFLOW_CHANGES" -eq "0" ]]; then
   echo "No changes in .github/actions or .github/workflows. Skipping."
   exit 0
