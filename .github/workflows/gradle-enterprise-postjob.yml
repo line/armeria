@@ -20,7 +20,7 @@ jobs:
   upload-gradle-build-scan:
     name: Upload Gradle build scans
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted-for-non-pr
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
