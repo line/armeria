@@ -17,7 +17,7 @@ env:
 jobs:
   tag-new-version:
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Validate inputs

@@ -12,7 +12,7 @@ jobs:
   publish:
     name: Publish final artifacts
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted
+    runs-on: self-hosted-for-non-pr
     steps:
       - uses: actions/checkout@v4
 

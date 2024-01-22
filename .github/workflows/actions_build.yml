@@ -25,32 +25,49 @@ env:
   GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
 
 jobs:
+  choose-self-hosted:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.runner.outputs.runner }}
+
+    # TODO: Convert 'ubuntu-latest' to 'self-hosted' for pull requests.
+    steps:
+      - id: runner
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "::set-output name=runner:::self-hosted-for-pr"
+          else
+            echo "::set-output name=runner::self-hosted-for-non-pr"
+          fi
+
   build:
-    if: github.repository == 'line/armeria'
+    needs: [ choose-self-hosted ]
+    # TODO: Revert to 'line/armeria'
+    if: github.repository == 'ikhoon/armeria'
     runs-on: ${{ matrix.on }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        on: [ self-hosted, macos-12, windows-latest ]
+        on: [ "${{ needs.choose-self-hosted.outputs.runner }}", macos-12, windows-latest ]
         java: [ 19 ]
         include:
           - java: 8
-            on: self-hosted
+            on: ${{ needs.choose-self-hosted.outputs.runner }}
           - java: 11
-            on: self-hosted
+            on: ${{ needs.choose-self-hosted.outputs.runner }}
           - java: 17
-            on: self-hosted
+            on: ${{ needs.choose-self-hosted.outputs.runner }}
             leak: true
           - java: 17
-            on: self-hosted
+            on: ${{ needs.choose-self-hosted.outputs.runner }}
             min-java: 11
           - java: 17
-            on: self-hosted
+            on: ${{ needs.choose-self-hosted.outputs.runner }}
             min-java: 17
             coverage: true
           - java: 19
-            on: self-hosted
+            on: ${{ needs.choose-self-hosted.outputs.runner }}
             snapshot: true
             # blockhound makes the build run about 10 minutes slower
             blockhound: true
@@ -96,7 +113,7 @@ jobs:
       - name: Build with Gradle (Shading only)
         run: |
           ./gradlew --no-daemon --stacktrace shadedJar shadedTestJar trimShadedJar \
-          ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
+          ${{ startsWith(matrix.on, 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           -PnoLint \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
@@ -115,7 +132,7 @@ jobs:
       - name: Build with Gradle
         run: |
           ./gradlew --no-daemon --stacktrace build \
-          ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
+          ${{ startsWith(matrix.on, 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
           ${{ matrix.coverage && '-Pcoverage' || '' }} \
           ${{ matrix.leak && '-Pleak' || '' }} \
           ${{ matrix.blockhound && '-Pblockhound' || '' }} \
@@ -217,7 +234,7 @@ jobs:
 
   lint:
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -267,7 +284,7 @@ jobs:
 
   flaky-tests:
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4

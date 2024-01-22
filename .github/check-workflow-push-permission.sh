@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# This script checks if the current user is allowed to change to GitHub Actions workflows. The script should be
+# installed on self-hosted runners and defined in the `ACTIONS_RUNNER_HOOK_JOB_STARTED` environment variable.
+# The script is triggered when a job has been assigned to a runner, but before the job starts running.
+# https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/running-scripts-before-or-after-a-job#triggering-the-scripts
+
+cd "$GITHUB_WORKSPACE"
+# Check if there are any changes in .github/actions or .github/workflows
+if git diff --quiet HEAD main -- .github/actions .github/workflows; then
+  echo "No changes in .github/actions or .github/workflows. Skipping."
+  exit 0
+fi
+
+MAINTAINERS=("ikhoon" "jrhee17" "minwoox" "trustin")
+for maintainer in "${MAINTAINERS[@]}"
+do
+  if [[ $maintainer == "$GITHUB_ACTOR" ]]; then
+    echo "$GITHUB_ACTOR is a maintainer. Allowed to change GitHub Actions workflows."
+    exit 0
+  fi
+done
+
+echo "$GITHUB_ACTOR is not a maintainer. Disallowed to change GitHub Actions workflows."
+exit 1

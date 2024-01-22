@@ -20,7 +20,7 @@ jobs:
   upload-gradle-build-scan:
     name: Upload Gradle build scans
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted
+    runs-on: self-hosted-for-non-pr
     steps:
       - uses: actions/checkout@v4
 
@@ -114,7 +114,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ self-hosted, macos-12, windows-latest ]
+        on: [ ubuntu-latest, macos-12, windows-latest ]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -133,7 +133,7 @@ jobs:
       - name: Build with Gradle
         run: |
           ./gradlew --no-daemon --stacktrace --build-cache build \
-          ${{ (matrix.on == 'self-hosted') && '--max-workers=8' || '--max-workers=2' }} --parallel \
+          --max-workers=2 --parallel \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -Pretry=true -PfailOnPassedAfterRetry=false \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }}
