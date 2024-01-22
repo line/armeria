@@ -41,7 +41,7 @@ jobs:
 
   build:
     needs: [ choose-self-hosted ]
-    if: github.repository == 'ikhoon/armeria'
+    if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
     timeout-minutes: 120
     strategy:
