@@ -30,20 +30,18 @@ jobs:
     outputs:
       runner: ${{ steps.runner.outputs.runner }}
 
-    # TODO: Convert 'ubuntu-latest' to 'self-hosted' for pull requests.
     steps:
       - id: runner
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "::set-output name=runner:::self-hosted-for-pr"
+            echo "{runner}={self-hosted-for-pr}" >> $GITHUB_OUTPUT
           else
-            echo "::set-output name=runner::self-hosted-for-non-pr"
+            echo "{runner}={self-hosted-for-non-pr}" >> $GITHUB_OUTPUT
           fi
 
   build:
     needs: [ choose-self-hosted ]
-    # TODO: Revert to 'line/armeria'
-    if: github.repository == 'ikhoon/armeria'
+    if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
     timeout-minutes: 120
     strategy:
