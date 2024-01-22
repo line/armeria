@@ -34,7 +34,7 @@ jobs:
       - id: runner
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "runner=ubuntu-latest" >> "$GITHUB_OUTPUT"
+            echo "runner=self-hosted-for-pr" >> "$GITHUB_OUTPUT"
           else
             echo "runner=self-hosted-for-non-pr" >> "$GITHUB_OUTPUT"
           fi
