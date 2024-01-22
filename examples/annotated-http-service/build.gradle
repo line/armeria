@@ -4,7 +4,6 @@ plugins {
 
 dependencies {
     implementation project(':core')
-    implementation project(':rxjava3')
     runtimeOnly libs.slf4j.simple
 
     testImplementation project(':junit5')
