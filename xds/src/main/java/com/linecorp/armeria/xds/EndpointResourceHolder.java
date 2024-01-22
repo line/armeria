@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 /**
- * A cluster object for a {@link ClusterLoadAssignment}.
+ * A resource holder object for a {@link ClusterLoadAssignment}.
  */
 public final class EndpointResourceHolder extends AbstractResourceHolder {
 
@@ -60,7 +60,7 @@ public final class EndpointResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    public EndpointResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    EndpointResourceHolder withPrimer(@Nullable ResourceHolder primer) {
         if (primer == null) {
             return this;
         }
@@ -70,7 +70,7 @@ public final class EndpointResourceHolder extends AbstractResourceHolder {
 
     @Override
     @Nullable
-    public ClusterResourceHolder primer() {
+    ClusterResourceHolder primer() {
         return primer;
     }
 

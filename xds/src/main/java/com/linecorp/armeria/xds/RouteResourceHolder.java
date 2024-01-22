@@ -18,25 +18,20 @@ package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.List;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 /**
- * A cluster object for a {@link RouteConfiguration}.
+ * A resource holder object for a {@link RouteConfiguration}.
  */
 public final class RouteResourceHolder extends AbstractResourceHolder {
 
     private final RouteConfiguration routeConfiguration;
 
-    @Nullable
-    private List<Route> routes;
     @Nullable
     private final ListenerResourceHolder primer;
 
@@ -66,7 +61,7 @@ public final class RouteResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    public RouteResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    RouteResourceHolder withPrimer(@Nullable ResourceHolder primer) {
         if (primer == null) {
             return this;
         }
@@ -76,7 +71,7 @@ public final class RouteResourceHolder extends AbstractResourceHolder {
 
     @Override
     @Nullable
-    public ListenerResourceHolder primer() {
+    ListenerResourceHolder primer() {
         return primer;
     }
 

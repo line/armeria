@@ -31,7 +31,7 @@ final class EndpointResourceNode extends AbstractResourceNode<EndpointSnapshot> 
     }
 
     @Override
-    void process(ResourceHolder update) {
+    void doOnChanged(ResourceHolder update) {
         final EndpointResourceHolder holder = (EndpointResourceHolder) update;
         parentWatcher().snapshotUpdated(new EndpointSnapshot(holder));
     }

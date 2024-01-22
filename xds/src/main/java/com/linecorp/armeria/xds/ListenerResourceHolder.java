@@ -28,7 +28,7 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 
 /**
- * A cluster object for a {@link Listener}.
+ * A resource holder object for a {@link Listener}.
  */
 public final class ListenerResourceHolder extends AbstractResourceHolder {
 
@@ -48,7 +48,7 @@ public final class ListenerResourceHolder extends AbstractResourceHolder {
             try {
                 connectionManager = apiListener.unpack(HttpConnectionManager.class);
             } catch (InvalidProtocolBufferException e) {
-                throw new RuntimeException(e);
+                throw new IllegalArgumentException(e);
             }
             checkArgument(connectionManager.hasRds() || connectionManager.hasRouteConfig(),
                           "connectionManager should have a rds or RouteConfig");
@@ -78,14 +78,14 @@ public final class ListenerResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    public ListenerResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    ListenerResourceHolder withPrimer(@Nullable ResourceHolder primer) {
         return this;
     }
 
     @Override
     @Nullable
-    public ResourceHolder primer() {
-        return null;
+    ResourceHolder primer() {
+        throw new UnsupportedOperationException();
     }
 
     @Override

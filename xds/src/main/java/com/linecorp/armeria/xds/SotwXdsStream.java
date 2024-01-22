@@ -87,7 +87,7 @@ final class SotwXdsStream implements XdsStream {
         this.stub = requireNonNull(stub, "stub");
         this.node = requireNonNull(node, "node");
         this.backoff = requireNonNull(backoff, "backoff");
-        this.eventLoop = requireNonNull(eventLoop, "eventloop");
+        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.responseHandler = requireNonNull(responseHandler, "responseHandler");
         this.subscriberStorage = requireNonNull(subscriberStorage, "subscriberStorage");
         this.targetTypes = targetTypes;

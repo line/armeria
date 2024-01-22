@@ -66,7 +66,7 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
             try {
                 watcher.snapshotUpdated(snapshot);
             } catch (Throwable t) {
-                logger.warn("Unexpected exception while invoking {}.onChanged",
+                logger.warn("Unexpected exception while invoking {}.snapshotUpdated",
                             watcher.getClass().getSimpleName(), t);
             }
         }

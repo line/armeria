@@ -39,7 +39,7 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerSnapshot> 
     }
 
     @Override
-    public void process(ResourceHolder update) {
+    public void doOnChanged(ResourceHolder update) {
         final ListenerResourceHolder holder = (ListenerResourceHolder) update;
         final HttpConnectionManager connectionManager = holder.connectionManager();
         if (connectionManager != null) {
@@ -67,15 +67,15 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerSnapshot> 
     }
 
     @Override
-    public ListenerResourceHolder current() {
-        return (ListenerResourceHolder) super.current();
+    public ListenerResourceHolder currentResourceHolder() {
+        return (ListenerResourceHolder) super.currentResourceHolder();
     }
 
     private class RouteResourceWatcher implements SnapshotWatcher<RouteSnapshot> {
 
         @Override
         public void snapshotUpdated(RouteSnapshot newSnapshot) {
-            final ListenerResourceHolder current = current();
+            final ListenerResourceHolder current = currentResourceHolder();
             if (current == null) {
                 return;
             }

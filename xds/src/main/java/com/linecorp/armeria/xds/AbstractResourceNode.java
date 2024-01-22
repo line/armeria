@@ -61,7 +61,7 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
     }
 
     @Override
-    public AbstractResourceHolder current() {
+    public AbstractResourceHolder currentResourceHolder() {
         return current;
     }
 
@@ -91,14 +91,14 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
         final Deque<ResourceNode<?>> prevChildren = new ArrayDeque<>(children);
         children.clear();
 
-        process(update);
+        doOnChanged(update);
 
         for (ResourceNode<?> child: prevChildren) {
             child.close();
         }
     }
 
-    abstract void process(ResourceHolder update);
+    abstract void doOnChanged(ResourceHolder update);
 
     @Override
     public void close() {
@@ -127,10 +127,5 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
     @Override
     public String name() {
         return resourceName;
-    }
-
-    @Override
-    public ConfigSource configSource() {
-        return configSource;
     }
 }

@@ -51,7 +51,7 @@ final class BootstrapApiConfigs {
     }
 
     ConfigSource remapConfigSource(XdsType type, @Nullable ConfigSource configSource,
-                                      String resourceName) {
+                                   String resourceName) {
         if (type == XdsType.LISTENER) {
             return ldsConfigSource(configSource);
         } else if (type == XdsType.ROUTE) {

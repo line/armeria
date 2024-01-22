@@ -27,7 +27,7 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
 /**
- * A cluster object for a {@link Cluster}.
+ * A resource holder object for a {@link Cluster}.
  */
 public final class ClusterResourceHolder extends AbstractResourceHolder {
 
@@ -45,7 +45,7 @@ public final class ClusterResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    public ClusterResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    ClusterResourceHolder withPrimer(@Nullable ResourceHolder primer) {
         if (primer == null) {
             return this;
         }
@@ -63,7 +63,7 @@ public final class ClusterResourceHolder extends AbstractResourceHolder {
                 return cluster.getTransportSocket().getTypedConfig()
                               .unpack(UpstreamTlsContext.class);
             } catch (Exception e) {
-                throw new RuntimeException("Error unpacking tls context", e);
+                throw new IllegalArgumentException("Error unpacking tls context", e);
             }
         }
         return null;
@@ -85,7 +85,7 @@ public final class ClusterResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    public RouteResourceHolder primer() {
+    RouteResourceHolder primer() {
         return primer;
     }
 

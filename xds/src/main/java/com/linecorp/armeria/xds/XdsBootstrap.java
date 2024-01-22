@@ -25,7 +25,7 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * A {@link XdsBootstrap} encapsulates all logic to communicate with control plane servers
+ * An {@link XdsBootstrap} encapsulates all logic to communicate with control plane servers
  * to fetch xDS resources locally. Users may choose to watch resources and listen to event
  * updates using this class. The appropriate resources are found from a {@link Bootstrap}
  * that can be provided like the following:
@@ -56,17 +56,13 @@ public interface XdsBootstrap extends SafeCloseable {
 
     /**
      * Represents a {@link Listener} root node of a bootstrap.
-     * Users may hook watchers to the root node to listen to events, or also
-     * start watches on other resources derived from this node.
-     * Note that this root will by default try to query the resource from the remote control plane.
+     * Users may hook watchers to the root node to listen to events.
      */
     ListenerRoot listenerRoot(String resourceName);
 
     /**
      * Represents a {@link Cluster} root node of a bootstrap.
-     * Users may hook watchers to the root node to listen to events, or also
-     * start watches on other resources derived from this node.
-     * Note that this root will by default try to query the resource from the remote control plane.
+     * Users may hook watchers to the root node to listen to events.
      */
     ClusterRoot clusterRoot(String resourceName);
 

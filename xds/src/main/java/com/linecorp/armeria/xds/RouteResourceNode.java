@@ -51,7 +51,7 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
     }
 
     @Override
-    public void process(ResourceHolder update) {
+    public void doOnChanged(ResourceHolder update) {
         final RouteResourceHolder holder = (RouteResourceHolder) update;
         clusterSnapshotList.clear();
         pending.clear();
@@ -83,15 +83,15 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
     }
 
     @Override
-    public RouteResourceHolder current() {
-        return (RouteResourceHolder) super.current();
+    public RouteResourceHolder currentResourceHolder() {
+        return (RouteResourceHolder) super.currentResourceHolder();
     }
 
     private class ClusterSnapshotWatcher implements SnapshotWatcher<ClusterSnapshot> {
 
         @Override
         public void snapshotUpdated(ClusterSnapshot newSnapshot) {
-            final RouteResourceHolder current = current();
+            final RouteResourceHolder current = currentResourceHolder();
             if (current == null) {
                 return;
             }

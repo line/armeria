@@ -60,7 +60,7 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot> {
     }
 
     @Override
-    public void process(ResourceHolder update) {
+    public void doOnChanged(ResourceHolder update) {
         final ClusterResourceHolder holder = (ClusterResourceHolder) update;
         final Cluster cluster = holder.resource();
         if (cluster.hasLoadAssignment()) {
@@ -83,14 +83,14 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot> {
     }
 
     @Override
-    public ClusterResourceHolder current() {
-        return (ClusterResourceHolder) super.current();
+    public ClusterResourceHolder currentResourceHolder() {
+        return (ClusterResourceHolder) super.currentResourceHolder();
     }
 
     private class EndpointSnapshotWatcher implements SnapshotWatcher<EndpointSnapshot> {
         @Override
         public void snapshotUpdated(EndpointSnapshot newSnapshot) {
-            final ClusterResourceHolder current = current();
+            final ClusterResourceHolder current = currentResourceHolder();
             if (current == null) {
                 return;
             }

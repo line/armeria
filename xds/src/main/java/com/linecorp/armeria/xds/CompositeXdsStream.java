@@ -30,12 +30,10 @@ import io.netty.util.concurrent.EventExecutor;
 final class CompositeXdsStream implements XdsStream {
 
     private final Map<XdsType, XdsStream> streamMap = new EnumMap<>(XdsType.class);
-    private final SubscriberStorage subscriberStorage;
 
     CompositeXdsStream(GrpcClientBuilder clientBuilder, Node node, Backoff backoff,
                        EventExecutor eventLoop, XdsResponseHandler handler,
                        SubscriberStorage subscriberStorage) {
-        this.subscriberStorage = subscriberStorage;
         for (XdsType type: XdsType.values()) {
             final SotwXdsStream stream = new SotwXdsStream(
                     SotwDiscoveryStub.basic(type, clientBuilder), node, backoff, eventLoop,
