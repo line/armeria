@@ -34,14 +34,14 @@ jobs:
       - id: runner
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "{runner}={self-hosted-for-pr}" >> $GITHUB_OUTPUT
+            echo "{runner}={ubuntu-latest}" >> $GITHUB_OUTPUT
           else
             echo "{runner}={self-hosted-for-non-pr}" >> $GITHUB_OUTPUT
           fi
 
   build:
     needs: [ choose-self-hosted ]
-    if: github.repository == 'line/armeria'
+    if: github.repository == 'ikhoon/armeria'
     runs-on: ${{ matrix.on }}
     timeout-minutes: 120
     strategy:
