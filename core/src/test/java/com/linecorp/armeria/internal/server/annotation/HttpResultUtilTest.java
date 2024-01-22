@@ -24,13 +24,15 @@ import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.HttpResult;
+import com.linecorp.armeria.server.annotation.StatusCode;
 
 class HttpResultUtilTest {
 
@@ -83,15 +85,13 @@ class HttpResultUtilTest {
 
     @Test
     void shouldAddStatusFromAnnotatedService() {
-        final AnnotatedService service = mock(AnnotatedService.class);
-        when(service.as(AnnotatedService.class)).thenReturn(service);
-        when(service.defaultStatus()).thenReturn(HttpStatus.ACCEPTED);
-
-        final ServiceConfig config = mock(ServiceConfig.class);
-        when(config.service()).thenReturn(service);
+        final Server server = Server
+                .builder()
+                .annotatedService("/", new MyAnnotatedService())
+                .build();
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        when(ctx.config()).thenReturn(config);
+        when(ctx.config()).thenReturn(server.serviceConfigs().get(0));
         when(ctx.negotiatedResponseMediaType()).thenReturn(MediaType.PLAIN_TEXT_UTF_8);
 
         final HttpHeaders headers = HttpHeaders.of("foo", "bar");
@@ -104,15 +104,14 @@ class HttpResultUtilTest {
     }
 
     @Test
-    void shouldUseDefaultStatusWhenNotAnnotatedService() {
-        final HttpService service = mock(HttpService.class);
-        when(service.as(AnnotatedService.class)).thenReturn(null);
-
-        final ServiceConfig config = mock(ServiceConfig.class);
-        when(config.service()).thenReturn(service);
+    void shouldUseOkStatusWhenNotAnnotatedService() {
+        final Server server = Server
+                .builder()
+                .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.ACCEPTED))
+                .build();
 
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        when(ctx.config()).thenReturn(config);
+        when(ctx.config()).thenReturn(server.serviceConfigs().get(0));
         when(ctx.negotiatedResponseMediaType()).thenReturn(MediaType.JSON_UTF_8);
 
         final HttpHeaders headers = HttpHeaders.of("foo", "bar");
@@ -122,5 +121,13 @@ class HttpResultUtilTest {
         assertThat(actual.status()).isEqualTo(HttpStatus.OK);
         assertThat(actual.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(actual.get("foo")).isEqualTo("bar");
+    }
+
+    public class MyAnnotatedService {
+        @Get
+        @StatusCode(202)
+        public int myMethod() {
+            return 123;
+        }
     }
 }
