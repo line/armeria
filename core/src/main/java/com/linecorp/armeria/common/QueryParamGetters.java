@@ -28,7 +28,6 @@ import java.util.stream.Stream;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
@@ -95,9 +94,9 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      * than one value for the specified {@code name}, the first value in insertion order is returned.
      *
      * @param name the parameter name
-     * @return the {@code boolean} value of the first value in insertion order or {@code null}
-     *         if there is no such parameter or it can't be converted to {@code boolean}
-     *         by {@link StringUtil#toBoolean}.
+     * @return {@code true} if the first value in insertion order is one of {@code "true", "TRUE", "1"}.
+     *         {@code false} if the first value in insertion order is one of {@code "false", "FALSE", "0"}.
+     *         {@code null} if there is no such parameter or it can't be converted to {@code boolean}.
      */
     @Override
     @Nullable
@@ -109,9 +108,9 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      *
      * @param name the parameter name
      * @param defaultValue the default value
-     * @return the {@code boolean} value of the first value in insertion order or {@code defaultValue}
-     *         if there is no such parameter or it can't be converted to {@code boolean}
-     *         by {@link StringUtil#toBoolean}.
+     * @return {@code true} if the first value in insertion order is one of {@code "true", "TRUE", "1"}.
+     *         {@code false} if the first value in insertion order is one of {@code "false", "FALSE", "0"}.
+     *         {@code defaultValue} if there is no such parameter or it can't be converted to {@code boolean}.
      */
     @Override
     boolean getBoolean(String name, boolean defaultValue);
@@ -121,9 +120,9 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      * than one value for the specified {@code name}, the last value in insertion order is returned.
      *
      * @param name the parameter name
-     * @return the {@code boolean} value of the last value in insertion order or {@code null}
-     *         if there is no such parameter or it can't be converted to {@code boolean}
-     *         by {@link StringUtil#toBoolean}.
+     * @return {@code true} if the last value in insertion order is one of {@code "true", "TRUE", "1"}.
+     *         {@code false} if the last value in insertion order is one of {@code "false", "FALSE", "0"}.
+     *         {@code null} if there is no such parameter or it can't be converted to {@code boolean}.
      */
     @Override
     @Nullable
@@ -135,9 +134,9 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      *
      * @param name the parameter name
      * @param defaultValue the default value
-     * @return the {@code boolean} value of the last value in insertion order or {@code defaultValue}
-     *         if there is no such parameter or it can't be converted to {@code boolean}
-     *         by {@link StringUtil#toBoolean}.
+     * @return {@code true} if the last value in insertion order is one of {@code "true", "TRUE", "1"}.
+     *         {@code false} if the last value in insertion order is one of {@code "false", "FALSE", "0"}.
+     *         {@code defaultValue} if there is no such parameter or it can't be converted to {@code boolean}.
      */
     @Override
     boolean getLastBoolean(String name, boolean defaultValue);
@@ -414,7 +413,9 @@ interface QueryParamGetters extends StringMultimapGetters</* IN_NAME */ String, 
      *
      * @param name the parameter name
      * @param value the parameter value
-     * @return {@code true} if the name and value that converted by {@link StringUtil#toBoolean} exist.
+     * @return {@code true} if the parameter with the {@code name} exist and
+     *         value is {@code true} and parameter contains value that one of {@code "true", "TRUE", "1"} or
+     *         value is {@code false} and parameter contains value that one of {@code "false", "FALSE", "0"}.
      *         {@code false} otherwise
      */
     @Override

@@ -29,7 +29,6 @@ import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.util.StringUtil;
 
 import io.netty.util.AsciiString;
 
@@ -132,8 +131,9 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      * value for the specified {@code name}, the first value in insertion order is returned.
      *
      * @param name the name of the header to retrieve
-     * @return the {@code boolean} value of the first value in insertion order or {@code null} if there is
-     *         no such header or it can't be converted to {@code boolean} by {@link StringUtil#toBoolean}.
+     * @return {@code true} if the first value in insertion order is one of {@code "true", "TRUE", "1"}.
+     *         {@code false} if the first value in insertion order is one of {@code "false", "FALSE", "0"}.
+     *         {@code null} if there is no such header or it can't be converted to {@code boolean}.
      */
     @Override
     @Nullable
@@ -145,9 +145,9 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      *
      * @param name the name of the header to retrieve
      * @param defaultValue the default value
-     * @return the {@code boolean} value of the first value in insertion order or {@code defaultValue}
-     *         if there is no such header or it can't be converted to {@code boolean}
-     *         by {@link StringUtil#toBoolean}.
+     * @return {@code true} if the first value in insertion order is one of {@code "true", "TRUE", "1"}.
+     *         {@code false} if the first value in insertion order is one of {@code "false", "FALSE", "0"}.
+     *         {@code defaultValue} if there is no such header or it can't be converted to {@code boolean}.
      */
     @Override
     boolean getBoolean(CharSequence name, boolean defaultValue);
@@ -157,8 +157,9 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      * value for the specified {@code name}, the last value in insertion order is returned.
      *
      * @param name the name of the header to retrieve
-     * @return the {@code boolean} value of the last value in insertion order or {@code null} if there is
-     *         no such header or it can't be converted to {@code boolean} by {@link StringUtil#toBoolean}.
+     * @return {@code true} if the last value in insertion order is one of {@code "true", "TRUE", "1"}.
+     *         {@code false} if the last value in insertion order is one of {@code "false", "FALSE", "0"}.
+     *         {@code null} if there is no such header or it can't be converted to {@code boolean}.
      */
     @Override
     @Nullable
@@ -170,9 +171,9 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      *
      * @param name the name of the header to retrieve
      * @param defaultValue the default value
-     * @return the {@code boolean} value of the last value in insertion order or {@code defaultValue}
-     *         if there is no such header or it can't be converted to {@code boolean}
-     *         by {@link StringUtil#toBoolean}.
+     * @return {@code true} if the last value in insertion order is one of {@code "true", "TRUE", "1"}.
+     *         {@code false} if the last value in insertion order is one of {@code "false", "FALSE", "0"}.
+     *         {@code defaultValue} if there is no such header or it can't be converted to {@code boolean}.
      */
     @Override
     boolean getLastBoolean(CharSequence name, boolean defaultValue);
@@ -449,7 +450,9 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      *
      * @param name the header name
      * @param value the header value
-     * @return {@code true} if the name and value that converted by {@link StringUtil#toBoolean} exist.
+     * @return {@code true} if the header with the {@code name} exist and
+     *         value is {@code true} and header contains value that one of {@code "true", "TRUE", "1"} or
+     *         value is {@code false} and header contains value that one of {@code "false", "FALSE", "0"}.
      *         {@code false} otherwise
      */
     @Override
