@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
 import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
-import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTPS;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
@@ -83,6 +82,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     private final ServerConfig cfg;
     private final AsciiString scheme;
+    private SessionProtocol sessionProtocol;
     private final InboundTrafficController inboundTrafficController;
     private ServerHttpObjectEncoder encoder;
     private final HttpServer httpServer;
@@ -97,6 +97,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         ServerHttp1ObjectEncoder encoder, HttpServer httpServer) {
         this.cfg = cfg;
         this.scheme = scheme;
+        sessionProtocol = scheme == SCHEME_HTTP ? SessionProtocol.H1C : SessionProtocol.H1;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         this.encoder = encoder;
         this.httpServer = httpServer;
@@ -227,7 +228,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final EventLoop eventLoop = ctx.channel().eventLoop();
 
                     // Close the request early when it is certain there will be neither content nor trailers.
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), sessionProtocol(),
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), sessionProtocol,
                                                                         headers, reqTarget);
                     if (routingCtx.status().routeMustExist()) {
                         // Find the service that matches the path.
@@ -379,21 +380,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
     }
 
-    private SessionProtocol sessionProtocol() {
-        // scheme is http or https
-        if (scheme == SCHEME_HTTP) {
-            if (encoder instanceof ServerHttp1ObjectEncoder) {
-                return SessionProtocol.H1C;
-            } else {
-                return SessionProtocol.H2C;
-            }
-        } else {
-            assert scheme == SCHEME_HTTPS;
-            assert encoder instanceof ServerHttp1ObjectEncoder;
-            return SessionProtocol.H1;
-        }
-    }
-
     private void removeFromPipelineIfUpgraded(ChannelHandlerContext ctx, boolean endOfStream) {
         if (endOfStream && encoder instanceof ServerHttp2ObjectEncoder) {
             // An HTTP/1 connection has been upgraded to HTTP/2.
@@ -459,6 +445,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // The HTTP/2 encoder will be used when a protocol violation error occurs after upgrading to HTTP/2
             // that is directly written by 'fail()'.
             encoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);
+            sessionProtocol = SessionProtocol.H2C;
 
             // Generate the initial Http2Settings frame,
             // so that the next handler knows the protocol upgrade occurred as well.
