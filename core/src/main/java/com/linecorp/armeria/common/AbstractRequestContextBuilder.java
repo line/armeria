@@ -199,9 +199,6 @@ public abstract class AbstractRequestContextBuilder {
      * Returns the {@link EventLoop} that handles the request.
      */
     protected final EventLoop eventLoop() {
-        if (eventLoop == null) {
-            eventLoop = CommonPools.workerGroup().next();
-        }
         return eventLoop;
     }
 

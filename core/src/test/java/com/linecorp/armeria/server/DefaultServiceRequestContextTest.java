@@ -28,6 +28,7 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -45,7 +46,9 @@ class DefaultServiceRequestContextTest {
     @Test
     void requestTimedOut() {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/hello");
-        final ServiceRequestContext ctx = ServiceRequestContext.builder(request).build();
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(request)
+                                                               .eventLoop(CommonPools.workerGroup().next())
+                                                               .build();
         assertThat(ctx.isTimedOut()).isFalse();
         assertThat(ctx).isInstanceOf(DefaultServiceRequestContext.class);
         final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;

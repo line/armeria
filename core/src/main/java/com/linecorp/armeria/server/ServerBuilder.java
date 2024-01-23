@@ -517,8 +517,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @param shutdownOnStop whether to shut down the worker {@link EventLoopGroup}
      *                       when the {@link Server} stops
      */
-    public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop) {
-        this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+    public ServerBuilder workerGroup(@Nullable EventLoopGroup workerGroup, boolean shutdownOnStop) {
+        if (workerGroup != null) {
+            this.workerGroup = workerGroup;
+        }
         // We don't use ShutdownSupport to shutdown with other instances because we shut down workerGroup first.
         shutdownWorkerGroupOnStop = shutdownOnStop;
         return this;

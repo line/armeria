@@ -35,4 +35,12 @@ class ClientRequestContextBuilderTest {
         final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertThat(ctx2.isTimedOut()).isFalse();
     }
+
+    @Test
+    void testEndpointGroup() {
+        final ClientRequestContext ctx = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                              .endpointGroup(Endpoint.of("example.com", 8080))
+                                                              .build();
+        assertThat(ctx.eventLoop().context().uri().toString()).isEqualTo("http://example.com:8080/");
+    }
 }
