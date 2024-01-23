@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.util.concurrent.CompletableFuture;
@@ -64,10 +65,6 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private static final AtomicLongFieldUpdater<DefaultCancellationScheduler> pendingTimeoutNanosUpdater =
             AtomicLongFieldUpdater.newUpdater(DefaultCancellationScheduler.class, "pendingTimeoutNanos");
 
-    private static final AtomicReferenceFieldUpdater<DefaultCancellationScheduler, EventExecutor>
-            eventLoopUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultCancellationScheduler.class, EventExecutor.class, "eventLoop");
-
     private static final Runnable noopPendingTask = () -> {
     };
 
@@ -78,7 +75,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private long timeoutNanos;
     private long startTimeNanos;
     @Nullable
-    private volatile EventExecutor eventLoop;
+    private EventExecutor eventLoop;
     @Nullable
     private CancellationTask task;
     @Nullable
@@ -125,9 +122,8 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
 
     @Override
     public void init(EventExecutor eventLoop) {
-        if (!eventLoopUpdater.compareAndSet(this, null, eventLoop)) {
-            throw new IllegalStateException("Can't init() more than once");
-        }
+        checkState(this.eventLoop == null, "Scheduler is already initialized with %s", this.eventLoop);
+        this.eventLoop = eventLoop;
     }
 
     @Override
