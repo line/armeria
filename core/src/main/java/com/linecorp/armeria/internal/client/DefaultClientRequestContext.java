@@ -540,7 +540,7 @@ public final class DefaultClientRequestContext
         // the root context.
         if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
             eventLoop = ctx.eventLoop().withoutContext();
-            responseCancellationScheduler.init(ctx.eventLoop());
+            responseCancellationScheduler.init(eventLoop());
         } else {
             acquireEventLoop(endpoint);
         }
