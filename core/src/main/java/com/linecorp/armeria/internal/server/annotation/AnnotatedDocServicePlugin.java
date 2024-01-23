@@ -256,6 +256,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         if (annotationType == RequestObject.class) {
             final BeanFactoryId beanFactoryId = resolver.beanFactoryId();
             final AnnotatedBeanFactory<?> factory = AnnotatedBeanFactoryRegistry.find(beanFactoryId);
+            final TypeSignature typeSignature;
             if (factory != null) {
                 final Builder<AnnotatedValueResolver> builder = ImmutableList.builder();
                 factory.constructor().getValue().forEach(builder::add);
@@ -268,23 +269,16 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 }
 
                 final Class<?> type = beanFactoryId.type();
-                final DescriptiveTypeSignature typeSignature =
-                        new RequestObjectTypeSignature(TypeSignatureType.STRUCT, type.getName(), type,
-                                                       new AnnotatedValueResolversWrapper(resolvers));
-                return FieldInfo.builder(resolver.httpElementName(), typeSignature)
-                                .requirement(resolver.shouldExist() ?
-                                             FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL)
-                                .descriptionInfo(resolver.description())
-                                .build();
+                typeSignature = new RequestObjectTypeSignature(TypeSignatureType.STRUCT, type.getName(), type,
+                                                               new AnnotatedValueResolversWrapper(resolvers));
             } else {
-                final Class<?> elementType = resolver.elementType();
-                final DescriptiveTypeSignature typeSignature = TypeSignature.ofStruct(elementType);
-                return FieldInfo.builder(resolver.httpElementName(), typeSignature)
-                                .requirement(resolver.shouldExist() ?
-                                             FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL)
-                                .descriptionInfo(resolver.description())
-                                .build();
+                typeSignature = toTypeSignature(resolver.elementType());
             }
+            return FieldInfo.builder(resolver.httpElementName(), typeSignature)
+                            .requirement(resolver.shouldExist() ?
+                                         FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL)
+                            .descriptionInfo(resolver.description())
+                            .build();
         }
 
         if (annotationType != Param.class && annotationType != Header.class) {

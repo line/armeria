@@ -88,10 +88,30 @@ See [Using CircuitBreaker with non-Armeria client](/docs/client-circuit-breaker#
   sb.childChannelOption(ChannelOption.SO_RCVBUF, ...);
 
   // Client-side
-  ClientFactoryBuilder cfb = new ClientFactoryBuilder();
+  ClientFactoryBuilder cfb = ClientFactory.builder();
   cfb.channelOption(ChannelOption.SO_REUSEADDR, ...);
   cfb.channelOption(ChannelOption.SO_SNDBUF, ...);
   cfb.channelOption(ChannelOption.SO_RCVBUF, ...);
+  ClientFactory cf = cfb.build();
+  ClientBuilder cb = Clients.builder(...);
+  cb.factory(cf);
+  ```
+
+- Consider increasing <type://ClientFactoryBuilder#maxNumEventLoopsPerEndpoint(int)>
+  and <type://ClientFactoryBuilder#maxNumEventLoopsPerHttp1Endpoint(int)> when a
+  client needs to send a large number of requests to a specific endpoint. The client
+  will assign more CPU resources and create more connections by increasing the number
+  of event loops up to the quantity in <type://ClientFactory#eventLoopGroup()>.
+
+  ```java
+  import com.linecorp.armeria.client.Clients;
+  import com.linecorp.armeria.client.ClientBuilder;
+  import com.linecorp.armeria.client.ClientFactory;
+  import com.linecorp.armeria.client.ClientFactoryBuilder;
+
+  ClientFactoryBuilder cfb = ClientFactory.builder();
+  cfb.maxNumEventLoopsPerEndpoint(16); // default: 1
+  cfb.maxNumEventLoopsPerHttp1Endpoint(16); // default: 1
   ClientFactory cf = cfb.build();
   ClientBuilder cb = Clients.builder(...);
   cb.factory(cf);
