@@ -71,7 +71,7 @@ final class BootstrapApiConfigs {
         if (bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
         }
-        throw new IllegalArgumentException("Cannot find a EDS config source for " + resourceName);
+        throw new IllegalArgumentException("Cannot find an EDS config source for " + resourceName);
     }
 
     ConfigSource cdsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
@@ -94,7 +94,7 @@ final class BootstrapApiConfigs {
         if (bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
         }
-        throw new IllegalArgumentException("Cannot find a RDS config source for route: " + resourceName);
+        throw new IllegalArgumentException("Cannot find an RDS config source for route: " + resourceName);
     }
 
     ConfigSource ldsConfigSource(@Nullable ConfigSource configSource) {
@@ -107,6 +107,6 @@ final class BootstrapApiConfigs {
         if (bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
         }
-        throw new IllegalArgumentException("Cannot find a LDS config source");
+        throw new IllegalArgumentException("Cannot find an LDS config source");
     }
 }

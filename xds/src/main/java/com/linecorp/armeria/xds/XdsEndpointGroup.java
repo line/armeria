@@ -33,7 +33,7 @@ import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 /**
- * Provides a simple {@link EndpointGroup} which listens to a xDS cluster to select endpoints.
+ * Provides a simple {@link EndpointGroup} which listens to an xDS cluster to select endpoints.
  * Listening to EDS can be done like the following:
  * <pre>{@code
  * XdsBootstrap watchersStorage = XdsBootstrap.of(...);

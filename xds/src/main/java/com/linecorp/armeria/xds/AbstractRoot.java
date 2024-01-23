@@ -57,8 +57,8 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
         requireNonNull(watcher, "watcher");
         checkState(!closed, "Watcher %s can't be registered since %s is already closed.",
                    watcher, getClass().getSimpleName());
-        if (!eventLoop().inEventLoop()) {
-            eventLoop().execute(() -> addSnapshotWatcher(watcher));
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> addSnapshotWatcher(watcher));
             return;
         }
         snapshotWatchers.add(watcher);
@@ -79,8 +79,8 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
         requireNonNull(watcher, "watcher");
         checkState(!closed, "Watcher %s can't be removed since %s is already closed.",
                    watcher, getClass().getSimpleName());
-        if (!eventLoop().inEventLoop()) {
-            eventLoop().execute(() -> removeSnapshotWatcher(watcher));
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> removeSnapshotWatcher(watcher));
             return;
         }
         snapshotWatchers.remove(watcher);
@@ -91,7 +91,10 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
         if (closed) {
             return;
         }
-        assert eventLoop.inEventLoop();
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> snapshotUpdated(newSnapshot));
+            return;
+        }
         snapshot = newSnapshot;
         notifyWatchers("snapshotUpdated", watcher -> watcher.snapshotUpdated(snapshot));
     }
@@ -101,12 +104,20 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
         if (closed) {
             return;
         }
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> onMissing(type, resourceName));
+            return;
+        }
         notifyWatchers("onMissing", watcher -> watcher.onMissing(type, resourceName));
     }
 
     @Override
     public void onError(XdsType type, Status status) {
         if (closed) {
+            return;
+        }
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> onError(type, status));
             return;
         }
         notifyWatchers("onError", watcher -> watcher.onError(type, status));

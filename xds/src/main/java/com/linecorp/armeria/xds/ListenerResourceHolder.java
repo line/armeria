@@ -51,7 +51,7 @@ public final class ListenerResourceHolder extends AbstractResourceHolder {
                 throw new IllegalArgumentException(e);
             }
             checkArgument(connectionManager.hasRds() || connectionManager.hasRouteConfig(),
-                          "connectionManager should have a rds or RouteConfig");
+                          "connectionManager should have an RDS or RouteConfig");
         } else {
             connectionManager = null;
         }

@@ -21,7 +21,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.grpc.Status;
 
 /**
- * A watcher implementation which waits for updates on a xDS snapshot.
+ * A watcher implementation which waits for updates on an xDS snapshot.
  */
 @UnstableApi
 @FunctionalInterface
