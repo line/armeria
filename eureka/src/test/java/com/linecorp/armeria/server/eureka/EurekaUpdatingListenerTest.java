@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -253,14 +255,20 @@ class EurekaUpdatingListenerTest {
         application.stop().join();
     }
 
-    @Test
-    void customHealthCheckPath() throws IOException {
+    @ParameterizedTest
+    @CsvSource(value = {
+            "'',/",
+            "custom-health,/custom-health",
+            "/custom-health,/custom-health",
+    })
+    void customHealthCheckPath(String healthCheckUrlPath, String expectedHealthCheckUrlPath)
+            throws IOException {
         final EurekaUpdatingListener listener =
                 EurekaUpdatingListener.builder(eurekaServer.httpUri())
                                       .renewalInterval(Duration.ofSeconds(2))
                                       .leaseDuration(Duration.ofSeconds(10))
                                       .hostname("myhost")
-                                      .healthCheckUrlPath("/custom-health")
+                                      .healthCheckUrlPath(healthCheckUrlPath)
                                       .port(88)
                                       .securePort(8888)
                                       .appName(APP_NAME)
@@ -278,9 +286,9 @@ class EurekaUpdatingListenerTest {
         final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
                                                            InstanceInfo.class);
         assertThat(instanceInfo.getHealthCheckUrl())
-                .isEqualTo("http://myhost:88/custom-health");
+                .isEqualTo("http://myhost:88" + expectedHealthCheckUrlPath);
         assertThat(instanceInfo.getSecureHealthCheckUrl())
-                .isEqualTo("https://myhost:8888/custom-health");
+                .isEqualTo("https://myhost:8888" + expectedHealthCheckUrlPath);
         application.stop().join();
     }
 }

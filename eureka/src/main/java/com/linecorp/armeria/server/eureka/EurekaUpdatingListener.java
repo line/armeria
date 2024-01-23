@@ -284,7 +284,8 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         final String baseURL = sessionProtocol.uriText() + "://" +
                                hostnameOrIpAddr(hostnameOrIpAddr) + ':' + portWrapper.getPort();
         if (oldHealthCheckUrlPath != null) {
-            return baseURL + oldHealthCheckUrlPath;
+            return !oldHealthCheckUrlPath.isEmpty() && oldHealthCheckUrlPath.charAt(0) == '/' ?
+                   baseURL + oldHealthCheckUrlPath : baseURL + "/" + oldHealthCheckUrlPath;
         }
         final ServiceConfig healthCheckServiceConfig = healthCheckService.get();
         final Route route = healthCheckServiceConfig.route();
