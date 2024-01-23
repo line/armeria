@@ -28,12 +28,22 @@ testing {
                     testTask.configure {
                         group = "Verification"
                         description = "Runs the TestNG unit tests"
+                        dependsOn(tasks.copyShadedTestClasses)
+                        val shadedTestTask = tasks.shadedTest.get()
+                        testClassesDirs = shadedTestTask.testClassesDirs
+                        classpath = shadedTestTask.testClassesDirs
+                        doFirst {
+                            classpath += project.files(configurations.shadedJarTestRuntime.get().resolve())
+                        }
                     }
                 }
+            }
+
+            dependencies {
+                runtimeOnly(libs.junit.testng.engine)
             }
         }
     }
 }
 
-tasks.shadedTest { finalizedBy(testing.suites.named("testNg")) }
 tasks.check { dependsOn(testing.suites.named("testNg")) }

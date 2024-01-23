@@ -3497,7 +3497,6 @@ homelink.one
 homelinux.com
 homelinux.net
 homelinux.org
-homeoffice.gov.uk
 homes
 homesecuritymac.com
 homesecuritypc.com
@@ -7342,7 +7341,6 @@ sc.ls
 sc.tz
 sc.ug
 sc.us
-sca
 scalebook.scw.cloud
 scb
 sch.ae
