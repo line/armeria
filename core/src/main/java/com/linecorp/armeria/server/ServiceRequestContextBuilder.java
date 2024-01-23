@@ -22,8 +22,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import javax.net.ssl.SSLSession;
@@ -234,17 +232,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         if (timedOut()) {
             requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
-            requestCancellationScheduler = CancellationScheduler.of(0);
-            final CountDownLatch latch = new CountDownLatch(1);
-            eventLoop().execute(() -> {
-                requestCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ true);
-                latch.countDown();
-            });
-
-            try {
-                latch.await(1000, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException ignored) {
-            }
+            requestCancellationScheduler = CancellationScheduler.ofServer(0);
+            requestCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
         }
 
         // Build the context with the properties set by a user and the fake objects.
