@@ -122,7 +122,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
 
     @Override
     public void init(EventExecutor eventLoop) {
-        checkState(this.eventLoop == null, "Scheduler is already initialized with %s", this.eventLoop);
+        checkState(this.eventLoop == null, "Can't init() more than once");
         this.eventLoop = eventLoop;
     }
 
