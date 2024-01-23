@@ -302,8 +302,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -315,8 +314,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -328,8 +326,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified
      * {@code keyCertChainInputStream} and cleartext {@code keyInputStream}.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)}.
      */
     @Deprecated
     @Override
@@ -341,8 +338,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified
      * {@code keyCertChainInputStream} and {@code keyInputStream} and {@code keyPassword}.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -358,8 +354,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -371,8 +366,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -384,8 +378,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override
@@ -398,8 +391,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)}.
      */
     @Deprecated
     @Override

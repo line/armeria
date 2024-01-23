@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -80,7 +79,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final SerializationFormat serializationFormat;
     private final PoolKey poolKey;
     private final HttpClientFactory clientFactory;
-    private final TlsProvider tlsProvider;
 
     @Nullable
     private ScheduledFuture<?> sessionTimeoutFuture;
@@ -132,7 +130,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, int connectionTimeoutMillis,
                        SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
-                       PoolKey poolKey, HttpClientFactory clientFactory, TlsProvider tlsProvider) {
+                       PoolKey poolKey, HttpClientFactory clientFactory) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
@@ -142,7 +140,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.serializationFormat = serializationFormat;
         this.poolKey = poolKey;
         this.clientFactory = clientFactory;
-        this.tlsProvider = tlsProvider;
 
         if (!poolKey.proxyConfig.proxyType().isForwardProxy()) {
             scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
@@ -526,10 +523,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             }
             if (proxyDestinationAddress != null) {
                 channelPool.connect(proxyDestinationAddress, retryProtocol, serializationFormat,
-                                    poolKey, sessionPromise, tlsProvider);
+                                    poolKey, sessionPromise);
             } else {
-                channelPool.connect(remoteAddress, retryProtocol, serializationFormat, poolKey, sessionPromise,
-                                    tlsProvider);
+                channelPool.connect(remoteAddress, retryProtocol, serializationFormat, poolKey, sessionPromise);
             }
         } else {
             // Fail all pending responses.

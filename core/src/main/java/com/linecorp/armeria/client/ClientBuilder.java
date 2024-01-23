@@ -30,8 +30,6 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -206,16 +204,6 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     public ClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (ClientBuilder) super.endpointRemapper(endpointRemapper);
-    }
-
-    @Override
-    public ClientBuilder tls(TlsKeyPair tlsKeyPair) {
-        return (ClientBuilder) super.tls(tlsKeyPair);
-    }
-
-    @Override
-    public ClientBuilder tlsProvider(TlsProvider tlsProvider) {
-        return (ClientBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override
