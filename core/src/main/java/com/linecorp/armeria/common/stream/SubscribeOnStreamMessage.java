@@ -96,38 +96,22 @@ final class SubscribeOnStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onSubscribe(Subscription s) {
-            if (downstreamExecutor.inEventLoop()) {
-                downstream.onSubscribe(s);
-            } else {
-                downstreamExecutor.execute(() -> downstream.onSubscribe(s));
-            }
+            downstreamExecutor.execute(() -> downstream.onSubscribe(s));
         }
 
         @Override
         public void onNext(T t) {
-            if (downstreamExecutor.inEventLoop()) {
-                downstream.onNext(t);
-            } else {
-                downstreamExecutor.execute(() -> downstream.onNext(t));
-            }
+            downstreamExecutor.execute(() -> downstream.onNext(t));
         }
 
         @Override
         public void onError(Throwable t) {
-            if (downstreamExecutor.inEventLoop()) {
-                downstream.onError(t);
-            } else {
-                downstreamExecutor.execute(() -> downstream.onError(t));
-            }
+            downstreamExecutor.execute(() -> downstream.onError(t));
         }
 
         @Override
         public void onComplete() {
-            if (downstreamExecutor.inEventLoop()) {
-                downstream.onComplete();
-            } else {
-                downstreamExecutor.execute(downstream::onComplete);
-            }
+            downstreamExecutor.execute(downstream::onComplete);
         }
     }
 }
