@@ -183,7 +183,7 @@ public final class DefaultServiceRequestContext
         } else {
             this.requestCancellationScheduler =
                     CancellationScheduler.ofServer(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
-            this.requestCancellationScheduler.init(eventLoop());
+            this.requestCancellationScheduler.init(ch.eventLoop());
         }
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
