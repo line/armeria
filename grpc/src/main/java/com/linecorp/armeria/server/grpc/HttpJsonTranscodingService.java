@@ -307,10 +307,15 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         desc.getFields().forEach(field -> {
             final JavaType type = field.getJavaType();
             final String fieldName;
-            if (useCamelCaseKeys) {
-                fieldName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, field.getName());
+
+            if (field.toProto().hasJsonName()) {
+                fieldName = field.toProto().getJsonName();
             } else {
-                fieldName = field.getName();
+                if (useCamelCaseKeys) {
+                    fieldName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, field.getName());
+                } else {
+                    fieldName = field.getName();
+                }
             }
             final String key = namePrefix + fieldName;
             switch (type) {
