@@ -33,11 +33,11 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
 
     static final HeadersSanitizer<String> INSTANCE = new TextHeadersSanitizerBuilder().build();
 
-    private final Set<CharSequence> maskingHeaders;
+    private final Set<AsciiString> maskingHeaders;
 
     private final Function<String, String> maskingFunction;
 
-    TextHeadersSanitizer(Set<CharSequence> maskingHeaders, Function<String, String> maskingFunction) {
+    TextHeadersSanitizer(Set<AsciiString> maskingHeaders, Function<String, String> maskingFunction) {
         this.maskingHeaders = maskingHeaders;
         this.maskingFunction = maskingFunction;
     }
@@ -65,19 +65,19 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
     }
 
     static void maskHeaders(
-            HttpHeaders headers, Set<CharSequence> maskingHeaders, Function<String, String> maskingFunction,
-            final BiConsumer<String, List<String>> consumer) {
-        final Map<String, List<String>> headersWithValuesAsList = new LinkedHashMap<>();
+            HttpHeaders headers, Set<AsciiString> maskingHeaders, Function<String, String> maskingFunction,
+            final BiConsumer<AsciiString, List<String>> consumer) {
+        final Map<AsciiString, List<String>> headersWithValuesAsList = new LinkedHashMap<>();
         for (Map.Entry<AsciiString, String> entry : headers) {
-            final String header = entry.getKey().toString().toLowerCase();
+            final AsciiString header = entry.getKey().toLowerCase();
             final String value = maskingHeaders.contains(header) ? maskingFunction.apply(entry.getValue())
                                                                  : entry.getValue();
             headersWithValuesAsList.computeIfAbsent(header, k -> new ArrayList<>()).add(value);
         }
 
-        final Set<Map.Entry<String, List<String>>> entries = headersWithValuesAsList.entrySet();
-        for (Map.Entry<String, List<String>> entry : entries) {
-            final String header = entry.getKey();
+        final Set<Map.Entry<AsciiString, List<String>>> entries = headersWithValuesAsList.entrySet();
+        for (Map.Entry<AsciiString, List<String>> entry : entries) {
+            final AsciiString header = entry.getKey();
             final List<String> values = entry.getValue();
             consumer.accept(header, values);
         }

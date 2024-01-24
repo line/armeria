@@ -22,19 +22,19 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
+
+import io.netty.util.AsciiString;
 
 /**
  * A skeletal builder implementation for {@link HeadersSanitizer}.
  */
 public abstract class AbstractHeadersSanitizerBuilder<T> {
 
-    private static final Set<CharSequence> DEFAULT_MASKING_HEADERS =
-            ImmutableSet.of(Ascii.toLowerCase(HttpHeaderNames.AUTHORIZATION),
-                            Ascii.toLowerCase(HttpHeaderNames.SET_COOKIE));
+    private static final Set<AsciiString> DEFAULT_MASKING_HEADERS =
+            ImmutableSet.of(HttpHeaderNames.AUTHORIZATION, HttpHeaderNames.SET_COOKIE);
 
-    private final Set<CharSequence> maskingHeaders = new HashSet<>();
+    private final Set<AsciiString> maskingHeaders = new HashSet<>();
 
     private Function<String, String> maskingFunction = header -> "****";
 
@@ -51,11 +51,11 @@ public abstract class AbstractHeadersSanitizerBuilder<T> {
      */
     public AbstractHeadersSanitizerBuilder<T> maskingHeaders(Iterable<? extends CharSequence> headers) {
         requireNonNull(headers, "headers");
-        headers.forEach(header -> maskingHeaders.add(Ascii.toLowerCase(header)));
+        headers.forEach(header -> maskingHeaders.add(AsciiString.of(header).toLowerCase()));
         return this;
     }
 
-    final Set<CharSequence> maskingHeaders() {
+    final Set<AsciiString> maskingHeaders() {
         if (!maskingHeaders.isEmpty()) {
             return ImmutableSet.copyOf(maskingHeaders);
         }

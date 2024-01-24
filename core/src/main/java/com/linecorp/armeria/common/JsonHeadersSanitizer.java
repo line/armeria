@@ -25,17 +25,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.netty.util.AsciiString;
+
 /**
  * A sanitizer that sanitizes {@link HttpHeaders} and returns {@link JsonNode}.
  */
 final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
 
     static final HeadersSanitizer<JsonNode> INSTANCE = new JsonHeadersSanitizerBuilder().build();
-    private final Set<CharSequence> maskingHeaders;
+    private final Set<AsciiString> maskingHeaders;
     private final Function<String, String> maskingFunction;
     private final ObjectMapper objectMapper;
 
-    JsonHeadersSanitizer(Set<CharSequence> maskingHeaders, Function<String, String> maskingFunction,
+    JsonHeadersSanitizer(Set<AsciiString> maskingHeaders, Function<String, String> maskingFunction,
                          ObjectMapper objectMapper) {
         this.maskingHeaders = maskingHeaders;
         this.maskingFunction = maskingFunction;
@@ -46,8 +48,8 @@ final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
     public JsonNode apply(RequestContext requestContext, HttpHeaders headers) {
         final ObjectNode result = objectMapper.createObjectNode();
         maskHeaders(headers, maskingHeaders, maskingFunction,
-                    (header, values) -> result.put(header, values.size() > 1 ?
-                                                           values.toString() : values.get(0)));
+                    (header, values) -> result.put(header.toString(), values.size() > 1 ?
+                                                                      values.toString() : values.get(0)));
 
         return result;
     }
