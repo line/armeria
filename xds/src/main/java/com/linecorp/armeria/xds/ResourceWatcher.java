@@ -16,15 +16,14 @@
 
 package com.linecorp.armeria.xds;
 
-import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
+import io.grpc.Status;
 
-/**
- * Handles callbacks for {@link SotwXdsStream}.
- * Note that it is important that exceptions are not raised from the callback.
- * Otherwise, the infinite loop will break as a discovery request is not sent.
- */
-interface XdsResponseHandler {
+@FunctionalInterface
+interface ResourceWatcher<T> {
 
-    void handleResponse(
-            ResourceParser resourceParser, DiscoveryResponse value, SotwXdsStream sender);
+    default void onError(XdsType type, Status error) {}
+
+    default void onResourceDoesNotExist(XdsType type, String resourceName) {}
+
+    void onChanged(T update);
 }

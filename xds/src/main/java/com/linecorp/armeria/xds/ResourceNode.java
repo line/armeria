@@ -16,15 +16,15 @@
 
 package com.linecorp.armeria.xds;
 
-import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
-/**
- * Handles callbacks for {@link SotwXdsStream}.
- * Note that it is important that exceptions are not raised from the callback.
- * Otherwise, the infinite loop will break as a discovery request is not sent.
- */
-interface XdsResponseHandler {
+interface ResourceNode<T> extends ResourceWatcher<T>, SafeCloseable {
 
-    void handleResponse(
-            ResourceParser resourceParser, DiscoveryResponse value, SotwXdsStream sender);
+    @Nullable
+    T currentResourceHolder();
+
+    XdsType type();
+
+    String name();
 }

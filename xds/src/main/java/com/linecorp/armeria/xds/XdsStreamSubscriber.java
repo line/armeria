@@ -16,29 +16,136 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+
+import io.grpc.Status;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ScheduledFuture;
 
 class XdsStreamSubscriber implements SafeCloseable {
 
-    private int reference = 1;
+    private static final Logger logger = LoggerFactory.getLogger(XdsStreamSubscriber.class);
 
-    XdsStreamSubscriber() {
+    private final XdsType type;
+    private final String resource;
+    private final long timeoutMillis;
+    private final EventExecutor eventLoop;
+
+    @Nullable
+    private AbstractResourceHolder data;
+    private boolean absent;
+    @Nullable
+    private ScheduledFuture<?> initialAbsentFuture;
+    private final Set<ResourceWatcher<AbstractResourceHolder>> resourceWatchers = new HashSet<>();
+
+    XdsStreamSubscriber(XdsType type, String resource, EventExecutor eventLoop, long timeoutMillis) {
+        this.type = type;
+        this.resource = resource;
+        this.eventLoop = eventLoop;
+        this.timeoutMillis = timeoutMillis;
+
+        restartTimer();
+    }
+
+    void restartTimer() {
+        if (data != null || absent) {  // resource already resolved
+            return;
+        }
+
+        initialAbsentFuture = eventLoop.schedule(() -> {
+            initialAbsentFuture = null;
+            onAbsent();
+        }, timeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    private void maybeCancelAbsentTimer() {
+        if (initialAbsentFuture != null && initialAbsentFuture.isCancellable()) {
+            initialAbsentFuture.cancel(false);
+            initialAbsentFuture = null;
+        }
     }
 
     @Override
     public void close() {
+        maybeCancelAbsentTimer();
     }
 
-    public int reference() {
-        return reference;
+    void onData(AbstractResourceHolder data) {
+        maybeCancelAbsentTimer();
+
+        final ResourceHolder oldData = this.data;
+        this.data = data;
+        absent = false;
+        if (!Objects.equals(oldData, data)) {
+            for (ResourceWatcher<AbstractResourceHolder> watcher: resourceWatchers) {
+                try {
+                    watcher.onChanged(data);
+                } catch (Exception e) {
+                    logger.warn("Unexpected exception while invoking {}.onChanged() with ({}, {}) for ({}).",
+                                getClass().getSimpleName(), type, resource, data, e);
+                }
+            }
+        }
     }
 
-    public void incRef() {
-        reference++;
+    @Nullable
+    ResourceHolder data() {
+        return data;
     }
 
-    public void decRef() {
-        reference--;
-        assert reference >= 0;
+    void onError(Status status) {
+        maybeCancelAbsentTimer();
+        for (ResourceWatcher<AbstractResourceHolder> watcher: resourceWatchers) {
+            try {
+                watcher.onError(type, status);
+            } catch (Exception e) {
+                logger.warn("Unexpected exception while invoking {}.onError() with ({}, {}) for ({}).",
+                            getClass().getSimpleName(), type, resource, status, e);
+            }
+        }
+    }
+
+    void onAbsent() {
+        maybeCancelAbsentTimer();
+
+        if (!absent) {
+            data = null;
+            absent = true;
+            for (ResourceWatcher<AbstractResourceHolder> watcher: resourceWatchers) {
+                try {
+                    watcher.onResourceDoesNotExist(type, resource);
+                } catch (Exception e) {
+                    logger.warn("Unexpected exception while invoking" +
+                                " {}.onResourceDoesNotExist() with ({}, {}).",
+                                getClass().getSimpleName(), type, resource, e);
+                }
+            }
+        }
+    }
+
+    boolean isEmpty() {
+        return resourceWatchers.isEmpty();
+    }
+
+    void registerWatcher(ResourceWatcher<AbstractResourceHolder> watcher) {
+        resourceWatchers.add(watcher);
+        if (data != null) {
+            watcher.onChanged(data);
+        } else if (absent) {
+            watcher.onResourceDoesNotExist(type, resource);
+        }
+    }
+
+    void unregisterWatcher(ResourceWatcher<AbstractResourceHolder> watcher) {
+        resourceWatchers.remove(watcher);
     }
 }

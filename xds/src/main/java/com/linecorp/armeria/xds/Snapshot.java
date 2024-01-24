@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,15 +16,14 @@
 
 package com.linecorp.armeria.xds;
 
-import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
-
 /**
- * Handles callbacks for {@link SotwXdsStream}.
- * Note that it is important that exceptions are not raised from the callback.
- * Otherwise, the infinite loop will break as a discovery request is not sent.
+ * A snapshot of the resource.
  */
-interface XdsResponseHandler {
+@FunctionalInterface
+public interface Snapshot<T extends ResourceHolder> {
 
-    void handleResponse(
-            ResourceParser resourceParser, DiscoveryResponse value, SotwXdsStream sender);
+    /**
+     * Returns the {@link ResourceHolder} of the current snapshot.
+     */
+    T holder();
 }

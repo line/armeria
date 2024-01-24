@@ -33,7 +33,7 @@ remote xDS resources. This document introduces a `XdsBootstrap` which is respons
 
 ### The XdsBootstrap API
 
-The `XdsBootstrap` is the entry point which stores a xDS `Bootstrap`, and retrieves xDS resources.
+The `XdsBootstrap` is the entry point which stores an xDS `Bootstrap`, and retrieves xDS resources.
 A `Bootstrap` contains information about where to initially fetch resources from. 
 New watches will use the control plane server specified.
 

@@ -16,15 +16,31 @@
 
 package com.linecorp.armeria.xds;
 
-import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Handles callbacks for {@link SotwXdsStream}.
- * Note that it is important that exceptions are not raised from the callback.
- * Otherwise, the infinite loop will break as a discovery request is not sent.
+ * A holder object for xDS resources. This is a holder object which
+ * is contained by {@link Snapshot} to:
+ * <ul>
+ *     <li>Provide additional metadata.</li>
+ *     <li>Unify unpacking child object logic.</li>
+ * </ul>
  */
-interface XdsResponseHandler {
+@UnstableApi
+public interface ResourceHolder {
 
-    void handleResponse(
-            ResourceParser resourceParser, DiscoveryResponse value, SotwXdsStream sender);
+    /**
+     * Returns the xDS type of the object.
+     */
+    XdsType type();
+
+    /**
+     * Returns the resource.
+     */
+    Object resource();
+
+    /**
+     * Returns the resource name.
+     */
+    String name();
 }

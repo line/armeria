@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -64,6 +65,7 @@ final class SotwXdsStream implements XdsStream {
 
     private final Map<XdsType, String> noncesMap = new EnumMap<>(XdsType.class);
     private final Map<XdsType, String> versionsMap = new EnumMap<>(XdsType.class);
+    private final Set<XdsType> targetTypes;
 
     SotwXdsStream(SotwDiscoveryStub stub,
                   Node node,
@@ -71,16 +73,28 @@ final class SotwXdsStream implements XdsStream {
                   EventExecutor eventLoop,
                   XdsResponseHandler responseHandler,
                   SubscriberStorage subscriberStorage) {
+        this(stub, node, backoff, eventLoop, responseHandler, subscriberStorage,
+             EnumSet.allOf(XdsType.class));
+    }
+
+    SotwXdsStream(SotwDiscoveryStub stub,
+                  Node node,
+                  Backoff backoff,
+                  EventExecutor eventLoop,
+                  XdsResponseHandler responseHandler,
+                  SubscriberStorage subscriberStorage,
+                  Set<XdsType> targetTypes) {
         this.stub = requireNonNull(stub, "stub");
         this.node = requireNonNull(node, "node");
         this.backoff = requireNonNull(backoff, "backoff");
-        this.eventLoop = requireNonNull(eventLoop, "eventloop");
+        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.responseHandler = requireNonNull(responseHandler, "responseHandler");
         this.subscriberStorage = requireNonNull(subscriberStorage, "subscriberStorage");
+        this.targetTypes = targetTypes;
     }
 
-    @Override
-    public void start() {
+    @VisibleForTesting
+    void start() {
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(this::start);
             return;
@@ -93,18 +107,21 @@ final class SotwXdsStream implements XdsStream {
         if (stopped) {
             return;
         }
-        if (requestObserver == null) {
-            requestObserver = stub.stream(responseObserver);
-        }
 
-        responseHandler.handleReset(this);
+        for (XdsType targetType : targetTypes) {
+            // check the resource type actually has subscriptions.
+            // otherwise a unintentional onMissing callback may be received
+            if (!subscriberStorage.resources(targetType).isEmpty()) {
+                resourcesUpdated(targetType);
+            }
+        }
     }
 
-    public void stop() {
+    void stop() {
         stop(Status.CANCELLED.withDescription("shutdown").asException());
     }
 
-    public void stop(Throwable throwable) {
+    void stop(Throwable throwable) {
         requireNonNull(throwable, "throwable");
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> stop(throwable));
@@ -116,28 +133,6 @@ final class SotwXdsStream implements XdsStream {
         }
         requestObserver.onError(throwable);
         requestObserver = null;
-    }
-
-    private void retryOrClose(Status status) {
-        if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> retryOrClose(status));
-            return;
-        }
-        if (stopped) {
-            // don't reschedule automatically since the user explicitly closed the stream
-            return;
-        }
-        requestObserver = null;
-        // wait backoff
-        connBackoffAttempts++;
-        final long nextDelayMillis = backoff.nextDelayMillis(connBackoffAttempts);
-        if (nextDelayMillis < 0) {
-            logger.warn("Stream closed with status {}, not retrying.", status);
-            return;
-        }
-        logger.info("Stream closed with status {}. Retrying for attempt ({}) in {}ms.",
-                    status, connBackoffAttempts, nextDelayMillis);
-        eventLoop.schedule(this::reset, nextDelayMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -167,31 +162,33 @@ final class SotwXdsStream implements XdsStream {
                                                         .build());
         }
         final DiscoveryRequest request = builder.build();
-        logger.debug("Sending discovery request: {}", request);
         if (errorDetail != null) {
             ackBackoffAttempts++;
+            logger.debug("Sending discovery request: {} with backoff attempt ({})",
+                         request, ackBackoffAttempts);
             eventLoop.schedule(() -> requestObserver.onNext(request),
                                backoff.nextDelayMillis(ackBackoffAttempts), TimeUnit.MILLISECONDS);
         } else {
             ackBackoffAttempts = 0;
+            logger.debug("Sending discovery request: {}", request);
             requestObserver.onNext(request);
         }
     }
 
-    public void ackResponse(XdsType type,
-                            String versionInfo, String nonce) {
+    void ackResponse(XdsType type, String versionInfo, String nonce) {
         versionsMap.put(type, versionInfo);
         sendDiscoveryRequest(type, versionInfo, subscriberStorage.resources(type),
                              nonce, null);
     }
 
-    public void nackResponse(XdsType type, String nonce, String errorDetail) {
+    void nackResponse(XdsType type, String nonce, String errorDetail) {
         sendDiscoveryRequest(type, versionsMap.get(type), subscriberStorage.resources(type),
                              nonce, errorDetail);
     }
 
     @Override
     public void resourcesUpdated(XdsType type) {
+        assert targetTypes.contains(type);
         final Set<String> resources = subscriberStorage.resources(type);
         sendDiscoveryRequest(type, versionsMap.get(type), resources, noncesMap.get(type), null);
     }
@@ -233,6 +230,28 @@ final class SotwXdsStream implements XdsStream {
         @Override
         public void onCompleted() {
             retryOrClose(Status.UNAVAILABLE.withDescription("Closed by server"));
+        }
+
+        private void retryOrClose(Status status) {
+            if (!eventLoop.inEventLoop()) {
+                eventLoop.execute(() -> retryOrClose(status));
+                return;
+            }
+            if (stopped) {
+                // don't reschedule automatically since the user explicitly closed the stream
+                return;
+            }
+            requestObserver = null;
+            // wait backoff
+            connBackoffAttempts++;
+            final long nextDelayMillis = backoff.nextDelayMillis(connBackoffAttempts);
+            if (nextDelayMillis < 0) {
+                logger.warn("Stream closed with status {}, not retrying.", status);
+                return;
+            }
+            logger.debug("Stream closed with status {}. Retrying for attempt ({}) in {}ms.",
+                         status, connBackoffAttempts, nextDelayMillis);
+            eventLoop.schedule(SotwXdsStream.this::reset, nextDelayMillis, TimeUnit.MILLISECONDS);
         }
     }
 }
