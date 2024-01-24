@@ -19,6 +19,8 @@ package com.linecorp.armeria.internal.common.metric;
 import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSummary;
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -81,30 +83,27 @@ public final class RequestMetricSupport {
                         reg.gauge(prefix.name(), prefix.tags(),
                                   new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
         activeRequestMetrics.increment();
-        ctx.log().whenComplete().thenAccept(requestLog -> {
-            onResponse(requestLog, meterIdPrefixFunction, server, successFunction);
-            activeRequestMetrics.decrement();
-        });
+
+        if (server) {
+            ctx.log().whenComplete().thenAccept(requestLog -> {
+                onResponseOnServerSide(requestLog, meterIdPrefixFunction, successFunction);
+                activeRequestMetrics.decrement();
+            });
+        } else {
+            ctx.log().whenComplete().thenAccept(requestLog -> {
+                onResponseOnClientSide(requestLog, meterIdPrefixFunction, successFunction);
+                activeRequestMetrics.decrement();
+            });
+        }
     }
 
-    private static void onResponse(
-            RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+    private static void onResponseOnClientSide(
+            RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction,
             SuccessFunction successFunction) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
         final boolean isSuccess = successFunction.isSuccess(ctx, log);
-
-        if (server) {
-            final ServiceRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
-                                                                          ServiceRequestMetrics.class,
-                                                                          DefaultServiceRequestMetrics::new);
-            updateMetrics(log, metrics, isSuccess);
-            if (log.responseCause() instanceof RequestTimeoutException) {
-                metrics.requestTimeouts().increment();
-            }
-            return;
-        }
 
         final ClientRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                      ClientRequestMetrics.class,
@@ -128,19 +127,50 @@ public final class RequestMetricSupport {
                                                             TimeUnit.NANOSECONDS);
             }
         }
-        if (log.requestCause() != null) {
-            if (log.requestCause() instanceof WriteTimeoutException) {
-                metrics.writeTimeouts().increment();
-            }
-        }
 
-        if (log.responseCause() instanceof ResponseTimeoutException) {
+        if (log.requestCause() != null && log.requestCause() instanceof WriteTimeoutException) {
+            metrics.writeTimeouts().increment();
+        }
+        if (log.responseCause() != null && log.responseCause() instanceof ResponseTimeoutException) {
             metrics.responseTimeouts().increment();
         }
 
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
-            updateRetryingClientMetrics(metrics, childrenSize, isSuccess);
+            updateRetryingClientMetrics(metrics, childrenSize, isSuccess, log.responseCause());
+        }
+    }
+
+    private static void updateRetryingClientMetrics(
+            ClientRequestMetrics metrics, int childrenSize, boolean isSuccess, @Nullable Throwable error) {
+
+        metrics.actualRequests().increment(childrenSize);
+
+        if (isSuccess) {
+            metrics.successAttempts().record(childrenSize);
+        } else {
+            if (error == null) {
+                metrics.failureAttempts().record(childrenSize);
+            } else {
+                metrics.failureAttempts(error).record(childrenSize);
+            }
+        }
+    }
+
+    private static void onResponseOnServerSide(
+            RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction,
+            SuccessFunction successFunction) {
+        final RequestContext ctx = log.context();
+        final MeterRegistry registry = ctx.meterRegistry();
+        final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
+        final boolean isSuccess = successFunction.isSuccess(ctx, log);
+
+        final ServiceRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
+                                                                      ServiceRequestMetrics.class,
+                                                                      DefaultServiceRequestMetrics::new);
+        updateMetrics(log, metrics, isSuccess);
+        if (log.responseCause() != null && log.responseCause() instanceof RequestTimeoutException) {
+            metrics.requestTimeouts().increment();
         }
     }
 
@@ -157,18 +187,6 @@ public final class RequestMetricSupport {
             metrics.success().increment();
         } else {
             metrics.failure().increment();
-        }
-    }
-
-    private static void updateRetryingClientMetrics(
-            ClientRequestMetrics metrics, int childrenSize, boolean isSuccess) {
-
-        metrics.actualRequests().increment(childrenSize);
-
-        if (isSuccess) {
-            metrics.successAttempts().record(childrenSize);
-        } else {
-            metrics.failureAttempts().record(childrenSize);
         }
     }
 
@@ -209,6 +227,8 @@ public final class RequestMetricSupport {
         DistributionSummary successAttempts();
 
         DistributionSummary failureAttempts();
+
+        DistributionSummary failureAttempts(Throwable error);
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -297,6 +317,8 @@ public final class RequestMetricSupport {
         @Nullable
         private DistributionSummary failureAttempts;
 
+        private final Map<String, DistributionSummary> failureAttemptsWithErrors;
+
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
             this.parent = parent;
@@ -314,6 +336,8 @@ public final class RequestMetricSupport {
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
+
+            failureAttemptsWithErrors = new HashMap<>();
         }
 
         @Override
@@ -372,6 +396,24 @@ public final class RequestMetricSupport {
             return failureAttempts = newDistributionSummary(parent,
                                                             idPrefix.name("actual.requests.attempts"),
                                                             idPrefix.tags("result", "failure"));
+        }
+
+        // TODO(miyoshi): 異なるエラーが発生した場合は異なる分布を持つカウンターを作成したい
+        @Override
+        public DistributionSummary failureAttempts(Throwable error) {
+            final String causeName = error.getClass().getSimpleName();
+
+            if (failureAttemptsWithErrors.containsKey(causeName)) {
+                return failureAttemptsWithErrors.get(causeName);
+            }
+
+            final DistributionSummary distributionSummary =
+                    newDistributionSummary(parent,
+                                           idPrefix.name("actual.requests.attempts"),
+                                           idPrefix.tags("result", "failure",
+                                                         "cause", causeName));
+            failureAttemptsWithErrors.put(causeName, distributionSummary);
+            return distributionSummary;
         }
     }
 

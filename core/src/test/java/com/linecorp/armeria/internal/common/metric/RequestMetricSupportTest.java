@@ -24,6 +24,8 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.InvalidResponseException;
+import com.linecorp.armeria.client.ResponseCancellationException;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.HttpMethod;
@@ -236,6 +238,28 @@ class RequestMetricSupportTest {
     }
 
     @Test
+    void firstRetryingRequestFailedAndTheSecondOneFailedWithOtherErrors() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ClientRequestContext ctx = setupClientRequestCtx(registry);
+
+        addLogInfoInDerivedCtxWithError(ctx, 500, ResponseCancellationException.get());
+
+        addLogInfoInDerivedCtxWithError(ctx, 500, new InvalidResponseException());
+        ctx.logBuilder().endResponseWithLastChild();
+
+        final Map<String, Double> measurements = measureAll(registry);
+        assertThat(measurements)
+                .containsEntry("foo.active.requests#value{method=POST,service=none}", 0.0)
+                .containsEntry("foo.requests#count{http.status=500,method=POST,result=failure,service=none}",
+                               1.0)
+                .containsEntry("foo.actual.requests#count{http.status=500,method=POST,service=none}", 2.0)
+                .containsEntry("foo.actual.requests.attempts#count{cause=InvalidResponseException," +
+                               "http.status=500,method=POST,result=failure,service=none}", 1.0)
+                .containsEntry("foo.actual.requests.attempts#total{cause=InvalidResponseException," +
+                               "http.status=500,method=POST,result=failure,service=none}", 2.0);
+    }
+
+    @Test
     void responseTimedOutInClientSide() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
@@ -310,6 +334,24 @@ class RequestMetricSupportTest {
         derivedCtx.logBuilder().responseLength(456);
         derivedCtx.logBuilder().endRequest();
         derivedCtx.logBuilder().endResponse();
+    }
+
+    private static void addLogInfoInDerivedCtxWithError(ClientRequestContext ctx, int statusCode,
+                                                        Throwable error) {
+        final ClientRequestContext derivedCtx =
+                ctx.newDerivedContext(ctx.id(), ctx.request(), ctx.rpcRequest(), ctx.endpoint());
+
+        ctx.logBuilder().addChild(derivedCtx.log());
+        derivedCtx.logBuilder().session(null, ctx.sessionProtocol(), newConnectionTimings());
+        derivedCtx.logBuilder().requestFirstBytesTransferred();
+        derivedCtx.logBuilder().requestContent(null, null);
+        derivedCtx.logBuilder().requestLength(123);
+
+        derivedCtx.logBuilder().responseHeaders(ResponseHeaders.of(statusCode));
+        derivedCtx.logBuilder().responseFirstBytesTransferred();
+        derivedCtx.logBuilder().responseLength(456);
+        derivedCtx.logBuilder().endRequest();
+        derivedCtx.logBuilder().endResponse(error);
     }
 
     @Test
