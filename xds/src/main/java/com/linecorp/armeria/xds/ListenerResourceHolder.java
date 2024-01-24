@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -86,6 +87,23 @@ public final class ListenerResourceHolder extends AbstractResourceHolder {
     @Nullable
     ResourceHolder primer() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final ListenerResourceHolder holder = (ListenerResourceHolder) object;
+        return Objects.equal(listener, holder.listener);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(listener);
     }
 
     @Override

@@ -55,6 +55,15 @@ public interface XdsBootstrap extends SafeCloseable {
     }
 
     /**
+     * Constructs a {@link XdsBootstrap} which watches resources using the provided
+     * {@link Bootstrap}.
+     */
+    @UnstableApi
+    static XdsBootstrap of(Bootstrap bootstrap, EventExecutor eventLoop) {
+        return new XdsBootstrapImpl(bootstrap, eventLoop);
+    }
+
+    /**
      * Represents a {@link Listener} root node of a bootstrap.
      * Users may hook watchers to the root node to listen to events.
      */

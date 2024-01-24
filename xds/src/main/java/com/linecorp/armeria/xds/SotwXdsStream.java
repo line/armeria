@@ -162,19 +162,20 @@ final class SotwXdsStream implements XdsStream {
                                                         .build());
         }
         final DiscoveryRequest request = builder.build();
-        logger.debug("Sending discovery request: {}", request);
         if (errorDetail != null) {
             ackBackoffAttempts++;
+            logger.debug("Sending discovery request: {} with backoff attempt ({})",
+                         request, ackBackoffAttempts);
             eventLoop.schedule(() -> requestObserver.onNext(request),
                                backoff.nextDelayMillis(ackBackoffAttempts), TimeUnit.MILLISECONDS);
         } else {
             ackBackoffAttempts = 0;
+            logger.debug("Sending discovery request: {}", request);
             requestObserver.onNext(request);
         }
     }
 
-    void ackResponse(XdsType type,
-                            String versionInfo, String nonce) {
+    void ackResponse(XdsType type, String versionInfo, String nonce) {
         versionsMap.put(type, versionInfo);
         sendDiscoveryRequest(type, versionInfo, subscriberStorage.resources(type),
                              nonce, null);
@@ -248,8 +249,8 @@ final class SotwXdsStream implements XdsStream {
                 logger.warn("Stream closed with status {}, not retrying.", status);
                 return;
             }
-            logger.info("Stream closed with status {}. Retrying for attempt ({}) in {}ms.",
-                        status, connBackoffAttempts, nextDelayMillis);
+            logger.debug("Stream closed with status {}. Retrying for attempt ({}) in {}ms.",
+                         status, connBackoffAttempts, nextDelayMillis);
             eventLoop.schedule(SotwXdsStream.this::reset, nextDelayMillis, TimeUnit.MILLISECONDS);
         }
     }

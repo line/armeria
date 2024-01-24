@@ -78,6 +78,9 @@ final class BootstrapApiConfigs {
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
         }
+        if (configSource != null && configSource.hasAds() && bootstrapAdsConfig != null) {
+            return bootstrapAdsConfig;
+        }
         if (bootstrapCdsConfig != null && bootstrapCdsConfig.hasApiConfigSource()) {
             return bootstrapCdsConfig;
         }
@@ -100,6 +103,9 @@ final class BootstrapApiConfigs {
     ConfigSource ldsConfigSource(@Nullable ConfigSource configSource) {
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
+        }
+        if (configSource != null && configSource.hasAds() && bootstrapAdsConfig != null) {
+            return bootstrapAdsConfig;
         }
         if (bootstrapLdsConfig != null && bootstrapLdsConfig.hasApiConfigSource()) {
             return bootstrapLdsConfig;

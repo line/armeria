@@ -27,7 +27,7 @@ import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 /**
  * A snapshot of a {@link Cluster} resource.
  */
-public class ClusterSnapshot implements Snapshot<ClusterResourceHolder> {
+public final class ClusterSnapshot implements Snapshot<ClusterResourceHolder> {
     private final ClusterResourceHolder clusterResourceHolder;
     @Nullable
     private final EndpointSnapshot endpointSnapshot;

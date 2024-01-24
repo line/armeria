@@ -76,8 +76,7 @@ final class ClusterResourceNode extends AbstractResourceNode<ClusterSnapshot> {
                                              snapshotWatcher, ResourceNodeType.DYNAMIC);
             children().add(node);
             xdsBootstrap().subscribe(configSource, node);
-        }
-        if (children().isEmpty()) {
+        } else {
             parentWatcher().snapshotUpdated(new ClusterSnapshot(holder));
         }
     }

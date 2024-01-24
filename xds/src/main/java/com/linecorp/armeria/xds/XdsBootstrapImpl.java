@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -45,12 +46,17 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     private boolean closed;
 
     XdsBootstrapImpl(Bootstrap bootstrap) {
-        this(bootstrap, ignored -> {});
+        this(bootstrap, CommonPools.workerGroup().next(), ignored -> {});
+    }
+
+    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop) {
+        this(bootstrap, eventLoop, ignored -> {});
     }
 
     @VisibleForTesting
-    XdsBootstrapImpl(Bootstrap bootstrap, Consumer<GrpcClientBuilder> configClientCustomizer) {
-        eventLoop = CommonPools.workerGroup().next();
+    XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
+                     Consumer<GrpcClientBuilder> configClientCustomizer) {
+        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.configClientCustomizer = configClientCustomizer;
         bootstrapApiConfigs = new BootstrapApiConfigs(bootstrap);
         bootstrapClusters = new BootstrapClusters(bootstrap, this);

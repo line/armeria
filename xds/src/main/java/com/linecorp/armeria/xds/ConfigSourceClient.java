@@ -118,7 +118,8 @@ final class ConfigSourceClient implements SafeCloseable {
         final Duration timeoutDuration = configSource.getInitialFetchTimeout();
         final Instant instant = Instant.ofEpochSecond(timeoutDuration.getSeconds(), timeoutDuration.getNanos());
         final long epochMilli = instant.toEpochMilli();
-        checkArgument(epochMilli >= 0, "Invalid invalidFetchTimeout received: (%s) >= 0", timeoutDuration);
+        checkArgument(epochMilli >= 0, "Invalid invalidFetchTimeout received: %s (expected >= 0)",
+                      timeoutDuration);
         return epochMilli;
     }
 }

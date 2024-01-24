@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
@@ -90,6 +91,9 @@ public class XdsEndpointGroupTest {
         }
     };
 
+    @RegisterExtension
+    static EventLoopExtension eventLoop = new EventLoopExtension();
+
     @BeforeEach
     void beforeEach() {
         final Cluster httpCluster = XdsTestResources.createCluster(clusterName, 0);
@@ -130,7 +134,7 @@ public class XdsEndpointGroupTest {
         final Cluster bootstrapCluster =
                 XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot(listenerName));
             final BlockingWebClient blockingClient = WebClient.of(SessionProtocol.HTTP, xdsEndpointGroup)
                                                               .blocking();
@@ -149,7 +153,7 @@ public class XdsEndpointGroupTest {
                 XdsTestResources.createTlsStaticCluster(httpsBootstrapClusterName, loadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
         final Consumer<GrpcClientBuilder> customizer = cb -> cb.factory(ClientFactory.insecure());
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap, customizer)) {
+        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap, eventLoop.get(), customizer)) {
             final EndpointGroup xdsEndpointGroup =
                     XdsEndpointGroup.of(xdsBootstrap.listenerRoot(httpsListenerName));
             final BlockingWebClient blockingClient = WebClient.builder(SessionProtocol.HTTPS, xdsEndpointGroup)
@@ -170,7 +174,7 @@ public class XdsEndpointGroupTest {
                                                                         loadAssignment);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(
                 XdsTestResources.bootstrap(configSource, cluster),
-                cb -> cb.factory(ClientFactory.insecure()))) {
+                eventLoop.get(), cb -> cb.factory(ClientFactory.insecure()))) {
             final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot(listenerName));
             final BlockingWebClient blockingClient = WebClient.builder(SessionProtocol.HTTP, xdsEndpointGroup)
                                                               .factory(ClientFactory.insecure())
