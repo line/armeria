@@ -56,17 +56,16 @@ final class SubscribeOnStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor downstreamExecutor,
                           SubscriptionOption... options) {
-        if (upstreamExecutor.inEventLoop()) {
-            if (upstreamExecutor == downstreamExecutor) {
-                upstream.subscribe(subscriber, downstreamExecutor, options);
-            } else {
-                upstream.subscribe(new SchedulingSubscriber<>(downstreamExecutor, subscriber),
-                                   upstreamExecutor, options);
-            }
+        final Subscriber<? super T> subscriber0;
+        if (upstreamExecutor == downstreamExecutor) {
+            subscriber0 = subscriber;
         } else {
-            upstreamExecutor.execute(() -> upstream.subscribe(
-                    new SchedulingSubscriber<>(downstreamExecutor, subscriber),
-                    upstreamExecutor, options));
+            subscriber0 = new SchedulingSubscriber<>(downstreamExecutor, subscriber);
+        }
+        if (upstreamExecutor.inEventLoop()) {
+            upstream.subscribe(subscriber0, downstreamExecutor, options);
+        } else {
+            upstreamExecutor.execute(() -> upstream.subscribe(subscriber0, upstreamExecutor, options));
         }
     }
 
