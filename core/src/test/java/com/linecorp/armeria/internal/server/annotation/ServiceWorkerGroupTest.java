@@ -88,6 +88,7 @@ class ServiceWorkerGroupTest {
                 return HttpResponse.of(new Publisher<HttpObject>() {
                     @Override
                     public void subscribe(Subscriber<? super HttpObject> s) {
+                        threadQueue.add(Thread.currentThread());
                         s.onSubscribe(new Subscription() {
                             @Override
                             public void request(long n) {

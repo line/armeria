@@ -74,7 +74,6 @@ class SubscribeOnStreamMessageTest {
         private final EventExecutor eventLoop;
 
         EventLoopCheckingStreamMessage(EventExecutor eventLoop) {
-            super();
             this.eventLoop = eventLoop;
         }
 
