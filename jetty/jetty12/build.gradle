@@ -20,6 +20,8 @@ def jetty11ProjectDir = project(':jetty11').projectDir
 tasks.register('generateSources', Copy.class) {
     from "${jetty11ProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
+    include '**/AbstractArmeriaEndPoint.java'
+    include '**/AbstractJettyServiceBuilder.java'
     include '**/ArmeriaConnector.java'
     include '**/ArmeriaEndPoint.java'
     include '**/ArmeriaThreadPool.java'

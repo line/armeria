@@ -25,6 +25,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Handler.Singleton;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
  */
 public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
 
+    final ImmutableList.Builder<Handler.Singleton> handlerWrappers = ImmutableList.builder();
     private final ImmutableList.Builder<EventListener> eventListeners = ImmutableList.builder();
 
     JettyServiceBuilder() {}
@@ -88,9 +90,14 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
         return (JettyServiceBuilder) super.handler(handler);
     }
 
-    @Override
+    /**
+     * Adds the specified {@link Handler.Wrapper} to the Jetty {@link Server}.
+     *
+     * @see Server#insertHandler(Singleton)
+     */
     public JettyServiceBuilder insertHandler(Handler.Singleton handler) {
-        return (JettyServiceBuilder) super.insertHandler(handler);
+        handlerWrappers.add(requireNonNull(handler, "handler"));
+        return this;
     }
 
     @Override

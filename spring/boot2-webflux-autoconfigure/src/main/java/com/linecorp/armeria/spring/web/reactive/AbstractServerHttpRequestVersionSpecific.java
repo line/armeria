@@ -27,7 +27,7 @@ import org.springframework.util.MultiValueMap;
  */
 abstract class AbstractServerHttpRequestVersionSpecific extends AbstractServerHttpRequest {
     protected AbstractServerHttpRequestVersionSpecific(HttpMethod unused, URI uri, String contextPath,
-                                                    MultiValueMap<String, String> headers) {
+                                                       MultiValueMap<String, String> headers) {
         super(uri, contextPath, headers);
     }
 }
