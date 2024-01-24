@@ -39,17 +39,11 @@ import io.netty.handler.codec.http2.Http2Stream;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
 
-    private final boolean enableServerHeader;
-    private final boolean enableDateHeader;
-
     ServerHttp2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
-                             AbstractHttp2ConnectionHandler connectionHandler,
-                             boolean enableDateHeader, boolean enableServerHeader) {
+                             AbstractHttp2ConnectionHandler connectionHandler) {
         super(connectionHandlerCtx, connectionHandler);
         assert keepAliveHandler() instanceof Http2ServerKeepAliveHandler ||
                keepAliveHandler() instanceof NoopKeepAliveHandler;
-        this.enableServerHeader = enableServerHeader;
-        this.enableDateHeader = enableDateHeader;
     }
 
     @Override
@@ -134,7 +128,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             }
 
             // Send RST_STREAM if the peer may still send something.
-            if (stream.state().localSideOpen()) {
+            if (stream.state().remoteSideOpen()) {
                 future = encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(),
                                                   ctx().voidPromise());
                 ctx().flush();

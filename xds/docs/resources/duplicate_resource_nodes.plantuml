@@ -1,0 +1,17 @@
+@startuml resourceTree
+
+object ControlPlaneA
+object ControlPlaneB
+object ClusterA
+object ClusterB
+object MyEndpoint
+MyEndpoint : host = "hostA:80"
+MyEndpoint : host = "hostB:80"
+
+ControlPlaneA --> ClusterA
+ClusterA --> MyEndpoint
+
+ControlPlaneB --> ClusterB
+ClusterB --> MyEndpoint
+
+@enduml

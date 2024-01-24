@@ -718,12 +718,12 @@ public interface FlagsProvider {
      * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
      *
      * <p>The default value of this flag is
-     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * {@value DefaultFlagsProvider#DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerHttp2MaxResetFramesPerMinute=<integer>} JVM option
      * to override the default value. {@code 0} means no protection should be applied.
      */
     @Nullable
-    default Integer defaultHttp2MaxResetFramesPerMinute() {
+    default Integer defaultServerHttp2MaxResetFramesPerMinute() {
         return null;
     }
 

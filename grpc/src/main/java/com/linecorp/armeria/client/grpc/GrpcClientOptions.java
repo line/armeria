@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.ClientOption;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.client.grpc.NullCallCredentials;
 import com.linecorp.armeria.internal.client.grpc.NullGrpcClientStubFactory;
+import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallCredentials;
@@ -44,6 +46,7 @@ import io.grpc.Codec;
 import io.grpc.Compressor;
 import io.grpc.DecompressorRegistry;
 import io.grpc.ServiceDescriptor;
+import io.grpc.Status;
 
 /**
  * {@link ClientOption}s to control gRPC-specific behavior.
@@ -164,6 +167,14 @@ public final class GrpcClientOptions {
      */
     public static final ClientOption<CallCredentials> CALL_CREDENTIALS =
             ClientOption.define("GRPC_CLIENT_CALL_CREDENTIALS", NullCallCredentials.INSTANCE);
+
+    /**
+     * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
+     * to a gRPC {@link Status}.
+     */
+    public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
+            ClientOption.define("EXCEPTION_HANDLER",
+                                (ctx, cause, metadata) -> GrpcStatus.fromThrowable(cause));
 
     private GrpcClientOptions() {}
 }

@@ -23,6 +23,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.internal.client.PendingExceptionUtil.setPendingException;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -294,18 +295,19 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     // A legacy HTTPS server such as Microsoft-IIS/8.5 may reset the connection
                     // if no cipher suites in common.
                     final String tlsVersion = sslHandler.engine().getSession().getProtocol();
-                    final IllegalStateException maybeHandshakeException = new IllegalStateException(
-                            "An unexpected exception during TLS handshake. " +
-                            "Possible reasons: no cipher suites in common, unsupported TLS version, etc. " +
+                    final PreTlsHandshakeException preTlsHandshakeException = new PreTlsHandshakeException(
+                            "An unexpected exception before a TLS handshake starts. The possible reason could" +
+                            " be one of: [connection forcefully closed by peer, unsupported TLS version, " +
+                            "no cipher suites in common, etc.] " +
                             "(TLS version: " + tlsVersion + ", cipher suites: " + sslCtx.cipherSuites() + ')',
                             cause);
-                    HttpSessionHandler.setPendingException(ctx, maybeHandshakeException);
+                    setPendingException(ctx, preTlsHandshakeException);
                     return;
                 }
                 if (handshakeFailed &&
                     cause instanceof DecoderException &&
                     cause.getCause() instanceof SSLException) {
-                    HttpSessionHandler.setPendingException(ctx, cause.getCause());
+                    setPendingException(ctx, cause.getCause());
                     return;
                 }
 

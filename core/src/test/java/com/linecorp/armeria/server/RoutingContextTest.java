@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 class RoutingContextTest {
@@ -61,7 +62,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.JSON_UTF_8 + ", " +
                                                             MediaType.XML_UTF_8 + "; q=0.8"),
-                                          reqTarget, RoutingStatus.OK);
+                                          reqTarget, RoutingStatus.OK, SessionProtocol.H2C);
         final RoutingContext ctx2 =
                 new DefaultRoutingContext(virtualHost, "example.com",
                                           RequestHeaders.of(HttpMethod.GET, "/hello",
@@ -69,7 +70,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.JSON_UTF_8 + ", " +
                                                             MediaType.XML_UTF_8 + "; q=0.8"),
-                                          reqTarget, RoutingStatus.OK);
+                                          reqTarget, RoutingStatus.OK, SessionProtocol.H2C);
         final RoutingContext ctx3 =
                 new DefaultRoutingContext(virtualHost, "example.com",
                                           RequestHeaders.of(HttpMethod.GET, "/hello",
@@ -77,7 +78,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.XML_UTF_8 + ", " +
                                                             MediaType.JSON_UTF_8 + "; q=0.8"),
-                                          reqTarget, RoutingStatus.OK);
+                                          reqTarget, RoutingStatus.OK, SessionProtocol.H2C);
 
         assertThat(ctx1.hashCode()).isEqualTo(ctx2.hashCode());
         assertThat(ctx1).isEqualTo(ctx2);
@@ -106,7 +107,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.JSON_UTF_8 + ", " +
                                                             MediaType.XML_UTF_8 + "; q=0.8"),
-                                          reqTarget, RoutingStatus.OK);
+                                          reqTarget, RoutingStatus.OK, SessionProtocol.H2C);
         final RoutingContext ctx2 =
                 new DefaultRoutingContext(virtualHost, "example.com",
                                           RequestHeaders.of(HttpMethod.POST, "/hello",
@@ -114,7 +115,7 @@ class RoutingContextTest {
                                                             HttpHeaderNames.ACCEPT,
                                                             MediaType.JSON_UTF_8 + ", " +
                                                             MediaType.XML_UTF_8 + "; q=0.8"),
-                                          reqTarget, RoutingStatus.OK);
+                                          reqTarget, RoutingStatus.OK, SessionProtocol.H2C);
         final RoutingContext ctx3 = ctx1.withMethod(HttpMethod.POST);
         assertThat(ctx1.hashCode()).isNotEqualTo(ctx3.hashCode());
         assertThat(ctx2.hashCode()).isEqualTo(ctx3.hashCode());
@@ -135,7 +136,7 @@ class RoutingContextTest {
         assertThat(reqTarget).isNotNull();
 
         return DefaultRoutingContext.of(virtualHost, "example.com",
-                                        reqTarget, headers, RoutingStatus.OK);
+                                        reqTarget, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     static VirtualHost virtualHost() {

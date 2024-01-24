@@ -17,6 +17,7 @@ package com.linecorp.armeria.common.websocket;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 
 /**
  * A {@link StreamMessage} that publishes {@link WebSocketFrame}s.
@@ -29,5 +30,13 @@ public interface WebSocket extends StreamMessage<WebSocketFrame> {
      */
     static WebSocketWriter streaming() {
         return new DefaultWebSocket();
+    }
+
+    /**
+     * Returns a new {@link WebSocket} whose stream is produced from the specified {@link StreamMessage}.
+     */
+    @UnstableApi
+    static WebSocket of(StreamMessage<WebSocketFrame> delegate) {
+        return new WebSocketWrapper(delegate);
     }
 }

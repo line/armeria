@@ -169,6 +169,7 @@ public final class Exceptions {
      * Returns {@code true} if the specified exception will cancel the current request or response stream.
      */
     public static boolean isStreamCancelling(Throwable cause) {
+        // TODO(minwoox): return true if the cause is "io.grpc.StatusRuntimeException: CANCELLED"
         requireNonNull(cause, "cause");
         if (cause instanceof UnprocessedRequestException) {
             cause = cause.getCause();

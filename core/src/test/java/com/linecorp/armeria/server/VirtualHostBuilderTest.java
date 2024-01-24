@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 
 import io.netty.handler.ssl.SslContextBuilder;
@@ -331,7 +332,8 @@ class VirtualHostBuilderTest {
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
         final RoutingContext routingContext = new DefaultRoutingContext(virtualHost(), "example.com",
                                                                         RequestHeaders.of(HttpMethod.GET, "/"),
-                                                                        reqTarget, RoutingStatus.OK);
+                                                                        reqTarget, RoutingStatus.OK,
+                                                                        SessionProtocol.H2C);
         final Routed<ServiceConfig> serviceConfig = virtualHost.findServiceConfig(routingContext);
         final HttpResponse res = serviceConfig.value().service().serve(null, null);
         assertThat(res.aggregate().join().status().code()).isEqualTo(200);
