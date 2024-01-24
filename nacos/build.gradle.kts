@@ -1,4 +1,4 @@
 dependencies {
-    // Caffeine
     implementation(libs.caffeine)
+    testImplementation(libs.testcontainers.junit.jupiter)
 }
