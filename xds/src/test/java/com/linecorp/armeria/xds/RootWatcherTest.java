@@ -16,7 +16,9 @@
 
 package com.linecorp.armeria.xds;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
 
@@ -34,6 +36,7 @@ class RootWatcherTest {
             final TestResourceWatcher watcher = new TestResourceWatcher();
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(resourceName);
             clusterRoot.close();
+            await().untilAsserted(() -> assertThat(clusterRoot.closed()).isTrue());
             assertThatThrownBy(() -> clusterRoot.addSnapshotWatcher(watcher))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("can't be registered since ClusterRoot is already closed.");

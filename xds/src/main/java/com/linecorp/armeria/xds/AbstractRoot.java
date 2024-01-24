@@ -26,6 +26,8 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
@@ -138,6 +140,11 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
                             watcher.getClass().getSimpleName(), methodName, t);
             }
         }
+    }
+
+    @VisibleForTesting
+    boolean closed() {
+        return closed;
     }
 
     @Override
