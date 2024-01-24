@@ -57,12 +57,14 @@ class RoutingContextSessionProtocolTest {
 
     @Test
     void upgradeRequest() throws InterruptedException {
-        final BlockingWebClient blockingClient =
-                WebClient.builder(server.httpUri())
-                         .factory(ClientFactory.builder().useHttp2Preface(false).build())
-                         .build()
-                         .blocking();
-        assertSessionProtocol(blockingClient, SessionProtocol.H2C);
+        try(ClientFactory factory = ClientFactory.builder().useHttp2Preface(false).build()) {
+            final BlockingWebClient blockingClient =
+                    WebClient.builder(server.httpUri())
+                             .factory(factory)
+                             .build()
+                             .blocking();
+            assertSessionProtocol(blockingClient, SessionProtocol.H2C);
+        }
     }
 
     private static void assertSessionProtocol(
