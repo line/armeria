@@ -71,6 +71,7 @@ final class ArmeriaWebSocketClient implements SafeCloseable {
             }
             webSocketClient0 = WebSocketClient.builder()
                                               .factory(armeriaHttpClientBuilder.clientFactory(true))
+                                              .aggregateContinuation(true)
                                               .build();
             this.webSocketClient = webSocketClient0;
             return webSocketClient0;

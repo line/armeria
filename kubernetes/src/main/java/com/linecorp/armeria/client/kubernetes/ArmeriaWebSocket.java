@@ -17,8 +17,6 @@
 package com.linecorp.armeria.client.kubernetes;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayDeque;
-import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.reactivestreams.Subscriber;
@@ -30,7 +28,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
-import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 
 import io.fabric8.kubernetes.client.http.WebSocket;
@@ -41,13 +38,9 @@ final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
     private final WebSocketWriter writer;
     private final AtomicLong pending = new AtomicLong();
     private final WebSocket.Listener listener;
-    private final StringBuilder textBuffer = new StringBuilder();
-    private final Queue<byte[]> binaryBuffer = new ArrayDeque<>();
 
     @Nullable
     private Subscription inboundSubscription;
-    @Nullable
-    private WebSocketFrameType lastFrameType;
 
     ArmeriaWebSocket(WebSocketWriter writer, WebSocket.Listener listener) {
         this.writer = writer;
@@ -105,25 +98,14 @@ final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
 
     @Override
     public void onNext(WebSocketFrame webSocketFrame) {
-        lastFrameType = webSocketFrame.type();
-        final boolean last = webSocketFrame.isFinalFragment();
         switch (webSocketFrame.type()) {
             case TEXT:
-                onText(webSocketFrame.text(), last);
+                // The listener will call `request()` when it consumes the buffer.
+                // See https://github.com/fabric8io/kubernetes-client/blob/56a6c2c4f336cc6f64c19029a55c2d3d0289344f/kubernetes-client/src/main/java/io/fabric8/kubernetes/client/dsl/internal/WatcherWebSocketListener.java
+                listener.onMessage(this, webSocketFrame.text());
                 break;
             case BINARY:
-                onBinary(webSocketFrame.array(), last);
-                break;
-            case CONTINUATION:
-                if (lastFrameType == WebSocketFrameType.TEXT) {
-                    onText(webSocketFrame.text(), last);
-                } else if (lastFrameType == WebSocketFrameType.BINARY) {
-                    onBinary(webSocketFrame.array(), last);
-                } else {
-                    throw new IllegalStateException("Unexpected frame type: " + lastFrameType + " (expected: " +
-                                                    WebSocketFrameType.TEXT + " or " +
-                                                    WebSocketFrameType.BINARY + ')');
-                }
+                listener.onMessage(this, webSocketFrame.byteBuf().nioBuffer());
                 break;
             case CLOSE:
                 final CloseWebSocketFrame closeWebSocketFrame = (CloseWebSocketFrame) webSocketFrame;
@@ -133,42 +115,8 @@ final class ArmeriaWebSocket implements WebSocket, Subscriber<WebSocketFrame> {
             case PONG:
                 request();
                 break;
-        }
-    }
-
-    private void onText(String text, boolean last) {
-        textBuffer.append(text);
-        if (last) {
-            final String value = textBuffer.toString();
-            textBuffer.setLength(0);
-            listener.onMessage(this, value);
-        } else {
-            request();
-        }
-    }
-
-    private void onBinary(byte[] bytes, boolean last) {
-        binaryBuffer.add(bytes);
-        if (last) {
-            int size = 0;
-            for (byte[] b : binaryBuffer) {
-                size += b.length;
-            }
-            final ByteBuffer buffer = ByteBuffer.allocate(size);
-            for (; ; ) {
-                final byte[] binary = binaryBuffer.poll();
-                if (binary == null) {
-                    break;
-                } else {
-                    buffer.put(binary);
-                }
-            }
-            buffer.flip();
-            // The listener will call `request()` when it consumes the buffer.
-            // See https://github.com/fabric8io/kubernetes-client/blob/56a6c2c4f336cc6f64c19029a55c2d3d0289344f/kubernetes-client/src/main/java/io/fabric8/kubernetes/client/dsl/internal/WatcherWebSocketListener.java
-            listener.onMessage(this, buffer);
-        } else {
-            request();
+            case CONTINUATION:
+                throw new Error(); // Never reach here. aggregateContinuation() is enabled.
         }
     }
 
