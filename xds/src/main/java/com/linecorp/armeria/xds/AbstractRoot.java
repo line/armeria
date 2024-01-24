@@ -40,7 +40,7 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
     @Nullable
     private T snapshot;
     private final Set<SnapshotWatcher<? super T>> snapshotWatchers = new HashSet<>();
-    private volatile boolean closed;
+    private boolean closed;
 
     AbstractRoot(EventExecutor eventLoop) {
         this.eventLoop = eventLoop;
@@ -59,6 +59,9 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
                    watcher, getClass().getSimpleName());
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> addSnapshotWatcher(watcher));
+            return;
+        }
+        if (closed) {
             return;
         }
         snapshotWatchers.add(watcher);
@@ -81,6 +84,9 @@ abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder>>
                    watcher, getClass().getSimpleName());
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> removeSnapshotWatcher(watcher));
+            return;
+        }
+        if (closed) {
             return;
         }
         snapshotWatchers.remove(watcher);

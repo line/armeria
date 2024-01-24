@@ -36,11 +36,11 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
 
     @Override
     public void close() {
-        super.close();
         if (!eventLoop().inEventLoop()) {
             eventLoop().execute(this::close);
             return;
         }
+        super.close();
         node.close();
     }
 }
