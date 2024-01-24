@@ -104,9 +104,14 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
         return (JettyServiceBuilder) super.handler(handler);
     }
 
-    @Override
+    /**
+     * Adds the specified {@link HandlerWrapper} to the Jetty {@link Server}.
+     *
+     * @see Server#insertHandler(HandlerWrapper)
+     */
     public JettyServiceBuilder handlerWrapper(HandlerWrapper handlerWrapper) {
-        return (JettyServiceBuilder) super.handlerWrapper(handlerWrapper);
+        handlerWrappers.add(requireNonNull(handlerWrapper, "handlerWrapper"));
+        return this;
     }
 
     @Override
