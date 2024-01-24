@@ -116,6 +116,34 @@ class QueryParamsBaseTest {
         params.add("baz", "false");
         assertThat(params.containsBoolean("baz", false)).isTrue();
         assertThat(params.containsBoolean("baz", true)).isFalse();
+
+        params.add("dup1", "v1");
+        params.add("dup1", "v2");
+        params.add("dup1", "true");
+        params.add("dup1", "false");
+        assertThat(params.containsBoolean("dup1", true)).isTrue();
+        assertThat(params.containsBoolean("dup1", false)).isTrue();
+
+        params.add("dup2", "v1");
+        params.add("dup2", "v2");
+        params.add("dup2", "1");
+        params.add("dup2", "0");
+        assertThat(params.containsBoolean("dup2", true)).isTrue();
+        assertThat(params.containsBoolean("dup2", false)).isTrue();
+
+        params.add("upperCase", "TRUE");
+        params.add("upperCase", "FALSE");
+        assertThat(params.getBoolean("upperCase")).isTrue();
+        assertThat(params.getLastBoolean("upperCase")).isFalse();
+        assertThat(params.containsBoolean("upperCase", true)).isTrue();
+        assertThat(params.containsBoolean("upperCase", false)).isTrue();
+
+        params.add("unsupported", "tRUE");
+        params.add("unsupported", "FaLsE");
+        assertThat(params.getBoolean("unsupported")).isNull();
+        assertThat(params.getLastBoolean("unsupported")).isNull();
+        assertThat(params.containsBoolean("unsupported", true)).isFalse();
+        assertThat(params.containsBoolean("unsupported", false)).isFalse();
     }
 
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest

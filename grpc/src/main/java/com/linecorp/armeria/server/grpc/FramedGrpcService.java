@@ -64,6 +64,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
+import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
@@ -323,7 +324,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             if (cancellationCause instanceof RequestTimeoutException) {
                 status = status.withDescription("Request timed out");
             }
-            call.close(status, new Metadata());
+            call.close(new ServerStatusAndMetadata(status, new Metadata(), true, true));
             return null;
         });
     }

@@ -17,37 +17,48 @@
 package com.linecorp.armeria.xds;
 
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+
+import io.netty.util.concurrent.EventExecutor;
 
 final class SubscriberStorage implements SafeCloseable {
 
-    // Accessed only from a single eventLoop
-    private final Map<XdsType, Map<String, XdsStreamSubscriber>> subscriberMap =
-            new HashMap<>();
+    private final EventExecutor eventLoop;
+    private final long timeoutMillis;
 
-    @Nullable
-    boolean register(XdsType type, String resourceName) {
-        if (!subscriberMap.containsKey(type)) {
-            subscriberMap.put(type, new HashMap<>());
-        }
-        XdsStreamSubscriber subscriber =
-                subscriberMap.get(type).get(resourceName);
-        if (subscriber != null) {
-            subscriber.incRef();
-            return false;
-        }
-        subscriber = new XdsStreamSubscriber();
-        subscriberMap.get(type).put(resourceName, subscriber);
-        return true;
+    private final Map<XdsType, Map<String, XdsStreamSubscriber>> subscriberMap =
+            new EnumMap<>(XdsType.class);
+
+    SubscriberStorage(EventExecutor eventLoop, long timeoutMillis) {
+        this.eventLoop = eventLoop;
+        this.timeoutMillis = timeoutMillis;
     }
 
-    @Nullable
-    boolean unregister(XdsType type, String resourceName) {
+    /**
+     * Returns {@code true} if a new subscriber is added.
+     */
+    boolean register(XdsType type, String resourceName, ResourceWatcher<AbstractResourceHolder> watcher) {
+        XdsStreamSubscriber subscriber =
+                subscriberMap.computeIfAbsent(type, key -> new HashMap<>()).get(resourceName);
+        boolean updated = false;
+        if (subscriber == null) {
+            subscriber = new XdsStreamSubscriber(type, resourceName, eventLoop, timeoutMillis);
+            subscriberMap.get(type).put(resourceName, subscriber);
+            updated = true;
+        }
+        subscriber.registerWatcher(watcher);
+        return updated;
+    }
+
+    /**
+     * Returns {@code true} if a subscriber is removed.
+     */
+    boolean unregister(XdsType type, String resourceName, ResourceWatcher<AbstractResourceHolder> watcher) {
         if (!subscriberMap.containsKey(type)) {
             return false;
         }
@@ -56,8 +67,8 @@ final class SubscriberStorage implements SafeCloseable {
             return false;
         }
         final XdsStreamSubscriber subscriber = resourceToSubscriber.get(resourceName);
-        subscriber.decRef();
-        if (subscriber.reference() == 0) {
+        subscriber.unregisterWatcher(watcher);
+        if (subscriber.isEmpty()) {
             resourceToSubscriber.remove(resourceName);
             subscriber.close();
             if (resourceToSubscriber.isEmpty()) {
@@ -82,6 +93,9 @@ final class SubscriberStorage implements SafeCloseable {
 
     @Override
     public void close() {
+        subscriberMap.values().forEach(subscribers -> {
+            subscribers.values().forEach(XdsStreamSubscriber::close);
+        });
         subscriberMap.clear();
     }
 }

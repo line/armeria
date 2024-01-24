@@ -19,6 +19,9 @@ package com.linecorp.armeria.xds;
 import com.google.protobuf.Message;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
+import io.envoyproxy.envoy.config.listener.v3.ListenerOrBuilder;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 
 final class ListenerResourceParser extends ResourceParser {
 
@@ -27,16 +30,37 @@ final class ListenerResourceParser extends ResourceParser {
     private ListenerResourceParser() {}
 
     @Override
+    ListenerResourceHolder parse(Message message) {
+        if (!(message instanceof Listener)) {
+            throw new IllegalArgumentException("message not type of Listener");
+        }
+        final ListenerResourceHolder holder = new ListenerResourceHolder((Listener) message);
+        final HttpConnectionManager connectionManager = holder.connectionManager();
+        if (connectionManager != null) {
+            if (connectionManager.hasRds()) {
+                final Rds rds = connectionManager.getRds();
+                XdsConverterUtil.validateConfigSource(rds.getConfigSource());
+            }
+        }
+        return holder;
+    }
+
+    @Override
     String name(Message message) {
         if (!(message instanceof Listener)) {
             throw new IllegalArgumentException("message not type of Listener");
         }
-        return ((Listener) message).getName();
+        return ((ListenerOrBuilder) message).getName();
     }
 
     @Override
     Class<Listener> clazz() {
         return Listener.class;
+    }
+
+    @Override
+    boolean isFullStateOfTheWorld() {
+        return true;
     }
 
     @Override
