@@ -178,7 +178,6 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
         return (JettyServiceBuilder) super.configurator(configurator);
     }
 
-
     /**
      * Returns a newly-created {@link JettyService} based on the properties of this builder.
      */
