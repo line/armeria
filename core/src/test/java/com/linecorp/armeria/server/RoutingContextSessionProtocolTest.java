@@ -57,7 +57,7 @@ class RoutingContextSessionProtocolTest {
 
     @Test
     void upgradeRequest() throws InterruptedException {
-        try(ClientFactory factory = ClientFactory.builder().useHttp2Preface(false).build()) {
+        try (ClientFactory factory = ClientFactory.builder().useHttp2Preface(false).build()) {
             final BlockingWebClient blockingClient =
                     WebClient.builder(server.httpUri())
                              .factory(factory)
