@@ -180,14 +180,15 @@ public final class DefaultClientRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
-            @Nullable EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(eventLoop, meterRegistry, sessionProtocol,
+        this(requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
              id, method, reqTarget, options, req, rpcReq, requestOptions, serviceRequestContext(),
-             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
+             requireNonNull(responseCancellationScheduler, "responseCancellationScheduler"),
+             requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -226,6 +227,9 @@ public final class DefaultClientRequestContext
               firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root), options.contextHook());
+        assert (eventLoop == null && responseCancellationScheduler == null) ||
+               (eventLoop != null && responseCancellationScheduler != null)
+                : "'eventLoop' and 'responseCancellationScheduler' should be both null or non-null";
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -240,7 +244,8 @@ public final class DefaultClientRequestContext
                 responseTimeoutMillis = options().responseTimeoutMillis();
             }
             this.responseCancellationScheduler =
-                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                    CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+            // the cancellationScheduler is not initialized here since the eventLoop is guaranteed to be null
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
@@ -427,6 +432,7 @@ public final class DefaultClientRequestContext
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
+            responseCancellationScheduler.init(eventLoop());
         }
     }
 
@@ -517,7 +523,7 @@ public final class DefaultClientRequestContext
         log = RequestLog.builder(this);
         log.startRequest();
         responseCancellationScheduler =
-                CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+                CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
@@ -534,6 +540,7 @@ public final class DefaultClientRequestContext
         // the root context.
         if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
             eventLoop = ctx.eventLoop().withoutContext();
+            responseCancellationScheduler.init(eventLoop());
         } else {
             acquireEventLoop(endpoint);
         }

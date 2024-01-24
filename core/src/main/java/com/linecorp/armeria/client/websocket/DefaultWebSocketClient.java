@@ -68,9 +68,10 @@ final class DefaultWebSocketClient implements WebSocketClient {
     private final boolean allowMaskMismatch;
     private final List<String> subprotocols;
     private final String joinedSubprotocols;
+    private final boolean aggregateContinuation;
 
     DefaultWebSocketClient(WebClient webClient, int maxFramePayloadLength, boolean allowMaskMismatch,
-                           List<String> subprotocols) {
+                           List<String> subprotocols, boolean aggregateContinuation) {
         this.webClient = webClient;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
@@ -80,6 +81,7 @@ final class DefaultWebSocketClient implements WebSocketClient {
         } else {
             joinedSubprotocols = "";
         }
+        this.aggregateContinuation = aggregateContinuation;
     }
 
     @Override
@@ -118,7 +120,8 @@ final class DefaultWebSocketClient implements WebSocketClient {
             }
 
             final WebSocketClientFrameDecoder decoder =
-                    new WebSocketClientFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch);
+                    new WebSocketClientFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch,
+                                                    aggregateContinuation);
             final WebSocketWrapper inbound = new WebSocketWrapper(split.body().decode(decoder, ctx.alloc()));
 
             result.complete(new WebSocketSession(ctx, responseHeaders, inbound, outboundFuture, encoder));
