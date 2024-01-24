@@ -775,17 +775,19 @@ version.ref = "kotlin-coroutine"
 [libraries.kubernetes-client-api]
 module = "io.fabric8:kubernetes-client-api"
 version.ref = "kubernetes-client"
+exclusions = ["org.slf4j:slf4j-api"]
 [libraries.kubernetes-client-impl]
 module = "io.fabric8:kubernetes-client"
 version.ref = "kubernetes-client"
-exclusions = ["io.fabric8:kubernetes-httpclient-okhttp"]
+exclusions = ["io.fabric8:kubernetes-httpclient-okhttp", "org.slf4j:slf4j-api"]
 [libraries.kubernetes-server-mock]
 module = "io.fabric8:kubernetes-server-mock"
 version.ref = "kubernetes-client"
+exclusions = ["org.slf4j:slf4j-api"]
 [libraries.kubernetes-junit-jupiter]
 module = "io.fabric8:kubernetes-junit-jupiter"
 version.ref = "kubernetes-client"
-exclusions = ["io.fabric8:kubernetes-httpclient-okhttp"]
+exclusions = ["io.fabric8:kubernetes-httpclient-okhttp", "org.slf4j:slf4j-api"]
 
 # Don't upgrade Logback 1.4.0 which requires Java 11
 # TODO(ikhoon): Upgrade Logback to 1.3.0 when Spring Boot 2 supports it.
