@@ -54,6 +54,11 @@ final class SubscribeOnStreamMessage<T> implements StreamMessage<T> {
     }
 
     @Override
+    public EventExecutor defaultSubscriberExecutor() {
+        return upstreamExecutor;
+    }
+
+    @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor downstreamExecutor,
                           SubscriptionOption... options) {
         final Subscriber<? super T> subscriber0;

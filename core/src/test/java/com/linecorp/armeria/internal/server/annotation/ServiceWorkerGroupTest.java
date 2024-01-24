@@ -124,7 +124,7 @@ class ServiceWorkerGroupTest {
     @ParameterizedTest
     @ValueSource(strings = {"/a", "/aggregated"})
     void testServiceWorkerGroup(String path) throws InterruptedException {
-        final AggregatedHttpResponse res = server.webClient().blocking()
+        final AggregatedHttpResponse res = server.blockingWebClient()
                                                  .execute(RequestHeaders.of(HttpMethod.GET, path));
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
@@ -134,7 +134,7 @@ class ServiceWorkerGroupTest {
 
     @Test
     void testDefaultServiceWorkerGroup() throws InterruptedException {
-        final AggregatedHttpResponse res = server.webClient().blocking()
+        final AggregatedHttpResponse res = server.blockingWebClient()
                                                  .execute(RequestHeaders.of(HttpMethod.GET, "/default"));
         assertThat(res.status()).isSameAs(HttpStatus.OK);
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);

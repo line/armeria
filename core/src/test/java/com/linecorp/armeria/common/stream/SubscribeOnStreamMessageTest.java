@@ -79,7 +79,7 @@ class SubscribeOnStreamMessageTest {
 
         @Override
         protected void subscribe0(EventExecutor executor, SubscriptionOption[] options) {
-            assert eventLoop.inEventLoop();
+            assertThat(eventLoop.inEventLoop()).isTrue();
         }
 
         @Override
@@ -98,26 +98,26 @@ class SubscribeOnStreamMessageTest {
 
         @Override
         public void onSubscribe(Subscription s) {
-            assert eventLoop2.get().inEventLoop();
+            assertThat(eventLoop2.get().inEventLoop()).isTrue();
             s.request(Long.MAX_VALUE);
             acc.add("onSubscribe");
         }
 
         @Override
         public void onNext(T t) {
-            assert eventLoop2.get().inEventLoop();
+            assertThat(eventLoop2.get().inEventLoop()).isTrue();
             acc.add(t.toString());
         }
 
         @Override
         public void onError(Throwable t) {
-            assert eventLoop2.get().inEventLoop();
+            assertThat(eventLoop2.get().inEventLoop()).isTrue();
             acc.add("onError");
         }
 
         @Override
         public void onComplete() {
-            assert eventLoop2.get().inEventLoop();
+            assertThat(eventLoop2.get().inEventLoop()).isTrue();
             acc.add("onComplete");
         }
     }
