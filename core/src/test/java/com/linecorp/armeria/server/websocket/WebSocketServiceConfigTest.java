@@ -29,7 +29,7 @@ class WebSocketServiceConfigTest {
 
     @Test
     void webSocketServiceDefaultConfigValues() {
-        final DefaultWebSocketService webSocketService = WebSocketService.of(new AbstractWebSocketHandler());
+        final WebSocketService webSocketService = WebSocketService.of(new AbstractWebSocketHandler());
         final Server server = Server.builder().service("/", webSocketService).build();
         assertThat(server.config().serviceConfigs()).hasSize(1);
         ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);

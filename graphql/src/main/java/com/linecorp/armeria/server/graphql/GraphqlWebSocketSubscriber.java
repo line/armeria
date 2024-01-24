@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.websocket.WebSocketWriter;
 @SuppressWarnings("ReactiveStreamsSubscriberImplementation")
 final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
     private static final Logger logger = LoggerFactory.getLogger(GraphqlWebSocketSubscriber.class);
+
     private final GraphqlWSSubProtocol graphqlWSSubProtocol;
     private final WebSocketWriter outgoing;
     @Nullable
@@ -40,7 +41,6 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
 
     @Override
     public void onSubscribe(Subscription s) {
-        assert this.subscription == null;
         subscription = s;
         s.request(1);
     }
@@ -60,6 +60,7 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
         switch (webSocketFrame.type()) {
             case BINARY:
                 graphqlWSSubProtocol.handleBinary(outgoing);
+                break;
             case TEXT:
                 // Parse the graphql-ws sub protocol. Maybe this could be done in a different thread so not
                 // to block the publisher?
@@ -99,6 +100,7 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
         the Subscription cancelled after having received the signal.
          */
         logger.trace("onError", t);
+        graphqlWSSubProtocol.cancel();
         subscription = null;
     }
 

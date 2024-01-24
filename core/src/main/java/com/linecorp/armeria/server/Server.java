@@ -49,7 +49,6 @@ import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.server.websocket.WebSocketService;
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,6 +78,7 @@ import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;

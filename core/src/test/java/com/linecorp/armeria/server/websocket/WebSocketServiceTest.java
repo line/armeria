@@ -92,7 +92,7 @@ class WebSocketServiceTest {
     @Test
     void testDecodedContinuationFrame() throws Exception {
         final CompletableFuture<List<WebSocketFrame>> collectFuture = new CompletableFuture<>();
-        final DefaultWebSocketService webSocketService = WebSocketService.of((ctx, in) -> {
+        final WebSocketService webSocketService = WebSocketService.of((ctx, in) -> {
             in.collect().thenAccept(collectFuture::complete);
             return WebSocket.streaming();
         });
