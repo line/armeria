@@ -183,6 +183,8 @@ public final class DefaultServiceRequestContext
         } else {
             this.requestCancellationScheduler =
                     CancellationScheduler.ofServer(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+            // the cancellation scheduler uses channelEventLoop since #start is called
+            // from the netty pipeline logic
             this.requestCancellationScheduler.init(ch.eventLoop());
         }
         this.sslSession = sslSession;

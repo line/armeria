@@ -121,12 +121,12 @@ class ServiceWorkerGroupTest {
 
         private boolean ready;
         @Nullable
-        private Subscriber<? super HttpObject> s;
+        private Subscriber<? super HttpObject> subscriber;
         private long request;
 
         @Override
         public void subscribe(Subscriber<? super HttpObject> s) {
-            this.s = s;
+            this.subscriber = s;
             threadQueue.add(Thread.currentThread());
             s.onSubscribe(new Subscription() {
                 @Override
@@ -147,14 +147,11 @@ class ServiceWorkerGroupTest {
             tryNotify();
         }
 
-        /**
-         * Both the mark as ready and request
-         */
         private void tryNotify() {
-            final Subscriber<? super HttpObject> s0 = s;
-            if (ready && s0 != null) {
-                s0.onNext(ResponseHeaders.builder(200).endOfStream(true).build());
-                s0.onComplete();
+            final Subscriber<? super HttpObject> subscriber0 = subscriber;
+            if (request > 0 && ready && subscriber0 != null) {
+                subscriber0.onNext(ResponseHeaders.builder(200).endOfStream(true).build());
+                subscriber0.onComplete();
             }
         }
     }
