@@ -21,7 +21,6 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -88,7 +87,7 @@ class ServiceWorkerGroupTest {
                 return HttpResponse.of(200);
             });
             sb.service("/subscribe", (ctx, req) -> {
-                SignallingPublisher publisher = new SignallingPublisher();
+                final SignallingPublisher publisher = new SignallingPublisher();
                 req.subscribe(new Subscriber<HttpObject>() {
                     @Override
                     public void onSubscribe(Subscription s) {

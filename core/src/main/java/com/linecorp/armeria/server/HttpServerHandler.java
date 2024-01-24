@@ -391,7 +391,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (needsDirectExecution) {
             res = serve0(req, serviceCfg, service, reqCtx);
         } else {
-            res = HttpResponse.of(() -> serve0(req, serviceCfg, service, reqCtx),
+            res = HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx),
                                   serviceEventLoop)
                               .subscribeOn(serviceEventLoop);
         }
@@ -445,7 +445,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private HttpResponse serve0(DecodedHttpRequest req,
+    private HttpResponse serve0(HttpRequest req,
                                 ServiceConfig serviceCfg,
                                 HttpService service,
                                 DefaultServiceRequestContext reqCtx) {
