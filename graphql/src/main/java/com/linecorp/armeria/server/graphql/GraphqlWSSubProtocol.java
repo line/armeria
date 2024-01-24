@@ -95,6 +95,10 @@ class GraphqlWSSubProtocol {
      */
     @Nullable
     public void handleText(String event, WebSocketWriter out) {
+        if (!out.isOpen()) {
+            return;
+        }
+
         try {
             final Map<String, Object> eventMap = parseJsonString(event, JSON_MAP);
             final String type = toStringFromJson(eventMap.get("type"));
