@@ -725,7 +725,7 @@ version.ref = "junit-pioneer"
 
 [libraries.junit-testng-engine]
 module = "org.junit.support:testng-engine"
-version = "1.0.4"
+version = "1.0.5"
 
 [libraries.jwt]
 module = "com.auth0:java-jwt"
