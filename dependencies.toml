@@ -130,7 +130,6 @@ spring6 = "6.0.13"
 spring-boot2 = "2.7.16"
 spring-boot3 = "3.1.4"
 testcontainers = "1.19.1"
-testng = "7.5.1"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
 thrift013 = { strictly = "0.13.0" }
@@ -1201,11 +1200,6 @@ version.ref = "spring-boot3"
 module = "org.testcontainers:consul"
 [libraries.testcontainers-junit-jupiter]
 module = "org.testcontainers:junit-jupiter"
-
-# jdk 11 is required from testng version 7.6
-[libraries.testng]
-module = "org.testng:testng"
-version.ref = "testng"
 
 [libraries.thrift09]
 module = "org.apache.thrift:libthrift"

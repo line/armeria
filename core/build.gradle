@@ -126,7 +126,7 @@ dependencies {
     }
 
     // TestNG
-    testImplementation libs.testng
+    runtimeOnly libs.junit.testng.engine
 
     // JUnit Pioneer
     testImplementation libs.junit.pioneer
@@ -202,34 +202,6 @@ testing.suites {
     }
 }
 tasks.check.dependsOn testing.suites.testStreaming
-
-// Run the test cases based on reactive-streams-tck only with non-flaky mode
-if (rootProject.findProperty('flakyTests') != 'true') {
-    testing.suites {
-        testNg(JvmTestSuite) {
-            useTestNG()
-
-            targets.configureEach {
-                testTask.configure {
-
-                    project.ext.configureCommonTestSettings(it)
-                    include '/com/linecorp/armeria/**/common/**'
-                    dependsOn tasks.copyShadedTestClasses
-                    scanForTestClasses = false
-                    testClassesDirs = tasks.shadedTest.testClassesDirs
-                    classpath = testClassesDirs
-                    doFirst {
-                        classpath += project.files(configurations.shadedJarTestRuntime.resolve())
-                    }
-                }
-            }
-            dependencies {
-                runtimeOnly libs.junit.testng.engine
-            }
-        }
-    }
-    tasks.check.dependsOn testing.suites.testNg
-}
 
 if (tasks.findByName('trimShadedJar')) {
     tasks.trimShadedJar.configure {
