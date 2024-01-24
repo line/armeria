@@ -15,14 +15,27 @@
  */
 package com.linecorp.armeria.server.websocket;
 
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.websocket.WebSocket;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
 /**
- * Marker interface for services that handle WebSocket requests.
+ * An {@link HttpService} that supports <a href="https://datatracker.ietf.org/doc/html/rfc6455">
+ * The WebSocket Protocol</a>.
+ * This service has a few different default values for {@link ServiceConfig} from a normal {@link HttpService}
+ * because of the nature of WebSocket. See {@link WebSocketServiceBuilder} for more information.
  */
-public interface WebSocketService {
+@UnstableApi
+public interface WebSocketService extends HttpService {
+
     /**
-     * Returns a new {@link DefaultWebSocketService} with the {@link WebSocketServiceHandler}.
+     * Returns a new {@link WebSocketService} with the {@link WebSocketServiceHandler}.
      */
-    static DefaultWebSocketService of(WebSocketServiceHandler handler) {
+    static WebSocketService of(WebSocketServiceHandler handler) {
         return new WebSocketServiceBuilder(handler).build();
     }
 
@@ -32,4 +45,26 @@ public interface WebSocketService {
     static WebSocketServiceBuilder builder(WebSocketServiceHandler handler) {
         return new WebSocketServiceBuilder(handler);
     }
+
+    @Override
+    default HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        final WebSocketUpgradeResult upgradeResult = protocolHandler().upgrade(ctx, req);
+        if (!upgradeResult.isSuccess()) {
+            return upgradeResult.fallbackResponse();
+        }
+
+        final WebSocket in = protocolHandler().decode(ctx, req);
+        final WebSocket out = serve(ctx, in);
+        return protocolHandler().encode(ctx, out);
+    }
+
+    /**
+     * Serves the specified {@link WebSocket} and returns the {@link WebSocket} to send responses.
+     */
+    WebSocket serve(ServiceRequestContext ctx, WebSocket in) throws Exception;
+
+    /**
+     * Returns the {@link WebSocketProtocolHandler} of this service.
+     */
+    WebSocketProtocolHandler protocolHandler();
 }

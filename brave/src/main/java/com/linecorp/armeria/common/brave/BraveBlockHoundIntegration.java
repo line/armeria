@@ -29,6 +29,10 @@ public final class BraveBlockHoundIntegration implements BlockHoundIntegration {
 
     @Override
     public void applyTo(Builder builder) {
+        // zipkin-reporter v2
         builder.allowBlockingCallsInside("zipkin2.reporter.AsyncReporter$BoundedAsyncReporter", "report");
+        // zipkin-reporter v3
+        builder.allowBlockingCallsInside(
+            "zipkin2.reporter.internal.AsyncReporter$BoundedAsyncReporter", "report");
     }
 }

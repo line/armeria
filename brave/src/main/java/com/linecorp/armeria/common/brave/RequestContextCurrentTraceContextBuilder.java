@@ -39,7 +39,7 @@ public final class RequestContextCurrentTraceContextBuilder extends CurrentTrace
 
     /**
      * Sets a regular expression that matches names of threads that should be considered non-request
-     * threads, meaning they may have spans created for clients outside of the context of an Armeria
+     * threads, meaning they may have spans created for clients outside the context of an Armeria
      * request. For example, this can be set to {@code "RMI TCP Connection"} if you use RMI to serve
      * monitoring requests.
      *

@@ -18,8 +18,6 @@ package com.linecorp.armeria.internal.common;
 
 import java.util.concurrent.CompletableFuture;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 
@@ -27,8 +25,12 @@ import io.netty.util.concurrent.EventExecutor;
 
 public interface CancellationScheduler {
 
-    static CancellationScheduler of(long timeoutNanos) {
-        return new DefaultCancellationScheduler(timeoutNanos);
+    static CancellationScheduler ofClient(long timeoutNanos) {
+        return new DefaultCancellationScheduler(timeoutNanos, false);
+    }
+
+    static CancellationScheduler ofServer(long timeoutNanos) {
+        return new DefaultCancellationScheduler(timeoutNanos, true);
     }
 
     /**
@@ -59,7 +61,11 @@ public interface CancellationScheduler {
         public void run(Throwable cause) { /* no-op */ }
     };
 
-    void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server);
+    void initAndStart(EventExecutor eventLoop, CancellationTask task);
+
+    void init(EventExecutor eventLoop);
+
+    void start(CancellationTask task);
 
     void clearTimeout();
 
@@ -88,9 +94,6 @@ public interface CancellationScheduler {
 
     @Deprecated
     CompletableFuture<Void> whenTimedOut();
-
-    @VisibleForTesting
-    boolean isInitialized();
 
     enum State {
         INIT,
