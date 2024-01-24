@@ -94,7 +94,7 @@ public final class GraphqlServiceBuilder {
     private boolean enableWebSocket;
 
     @Nullable
-    private Consumer<WebSocketServiceBuilder> webSocketBuilderCustomizer;
+    private Consumer<WebSocketServiceBuilder> webSocketServiceCustomizer;
 
     GraphqlServiceBuilder() {}
 
@@ -281,9 +281,10 @@ public final class GraphqlServiceBuilder {
     /**
      * Sets an optional {@link WebSocketServiceBuilder} customizer.
      */
-    public GraphqlServiceBuilder webSocketBuilderCustomizer(
-            Consumer<WebSocketServiceBuilder> webSocketBuilderCustomizer) {
-        this.webSocketBuilderCustomizer = webSocketBuilderCustomizer;
+    public GraphqlServiceBuilder webSocketServiceCustomizer(
+            Consumer<WebSocketServiceBuilder> webSocketServiceCustomizer) {
+        requireNonNull(webSocketServiceCustomizer, "webSocketServiceCustomizer");
+        this.webSocketServiceCustomizer = webSocketServiceCustomizer;
         return this;
     }
 
@@ -316,7 +317,7 @@ public final class GraphqlServiceBuilder {
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
-        checkArgument(enableWebSocket || webSocketBuilderCustomizer == null,
+        checkArgument(enableWebSocket || webSocketServiceCustomizer == null,
                       "enableWebSocket must be true to customize WebSocketServiceBuilder");
 
         final GraphQLSchema schema = buildSchema();
@@ -359,7 +360,7 @@ public final class GraphqlServiceBuilder {
                                                                                errorHandler);
         if (enableWebSocket) {
             return new GraphqlWebSocketService(graphqlService, dataLoaderRegistryFactory,
-                                               webSocketBuilderCustomizer);
+                                               webSocketServiceCustomizer);
         } else {
             return graphqlService;
         }

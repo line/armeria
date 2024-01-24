@@ -42,13 +42,14 @@ final class GraphqlWebSocketService implements GraphqlService, WebSocketService,
     GraphqlWebSocketService(
             DefaultGraphqlService graphqlService,
             Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
-            @Nullable Consumer<WebSocketServiceBuilder> webSocketBuilderCustomizer) {
+            @Nullable Consumer<WebSocketServiceBuilder> webSocketServiceCustomizer) {
         final WebSocketServiceBuilder webSocketServiceBuilder =
                 WebSocketService.builder(this)
                                 .fallbackService(graphqlService)
-                                .subprotocols(GRAPHQL_TRANSPORT_WS);
-        if (webSocketBuilderCustomizer != null) {
-            webSocketBuilderCustomizer.accept(webSocketServiceBuilder);
+                                .subprotocols(GRAPHQL_TRANSPORT_WS)
+                                .aggregateContinuation(true);
+        if (webSocketServiceCustomizer != null) {
+            webSocketServiceCustomizer.accept(webSocketServiceBuilder);
         }
         delegate = webSocketServiceBuilder.build();
         graphqlExecutor = graphqlService;
