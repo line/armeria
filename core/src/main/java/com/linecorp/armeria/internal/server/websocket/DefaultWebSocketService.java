@@ -93,11 +93,12 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private final Set<String> subprotocols;
     private final Set<String> allowedOrigins;
     private final boolean allowAnyOrigin;
+    private final boolean aggregateContinuation;
 
     public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
                                    int maxFramePayloadLength, boolean allowMaskMismatch,
                                    Set<String> subprotocols, Set<String> allowedOrigins,
-                                   boolean allowAnyOrigin) {
+                                   boolean allowAnyOrigin, boolean aggregateContinuation) {
         this.handler = handler;
         this.fallbackService = fallbackService;
         this.maxFramePayloadLength = maxFramePayloadLength;
@@ -105,6 +106,7 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         this.subprotocols = subprotocols;
         this.allowedOrigins = allowedOrigins;
         this.allowAnyOrigin = allowAnyOrigin;
+        this.aggregateContinuation = aggregateContinuation;
     }
 
     @Override
@@ -339,7 +341,8 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     @Override
     public WebSocket decode(ServiceRequestContext ctx, HttpRequest req) {
         final WebSocketServiceFrameDecoder decoder =
-                new WebSocketServiceFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch);
+                new WebSocketServiceFrameDecoder(ctx, maxFramePayloadLength, allowMaskMismatch,
+                                                 aggregateContinuation);
         ctx.setAttr(DECODER, decoder);
         return new WebSocketWrapper(req.decode(decoder, ctx.alloc()));
     }
