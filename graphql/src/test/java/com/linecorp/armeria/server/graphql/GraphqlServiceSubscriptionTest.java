@@ -61,7 +61,7 @@ class GraphqlServiceSubscriptionTest {
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
-                                  .useWebSocket(true)
+                                  .enableWebSocket(true)
                                   .runtimeWiring(c -> {
                                       final StaticDataFetcher bar = new StaticDataFetcher("bar");
                                       c.type("Query",

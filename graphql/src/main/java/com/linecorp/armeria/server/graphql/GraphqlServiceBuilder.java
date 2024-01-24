@@ -91,7 +91,7 @@ public final class GraphqlServiceBuilder {
 
     private ExecutionIdGenerator executionIdGenerator = ExecutionIdGenerator.of();
 
-    private boolean useWebSocket;
+    private boolean enableWebSocket;
 
     @Nullable
     private Consumer<WebSocketServiceBuilder> webSocketBuilderCustomizer;
@@ -271,10 +271,10 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Sets whether [[GraphQL over WebSocket Protocol](https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md)] is supported.
+     * Enable <a href="https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md">GraphQL over WebSocket Protocol</a>.
      */
-    public GraphqlServiceBuilder useWebSocket(boolean useWebSocket) {
-        this.useWebSocket = useWebSocket;
+    public GraphqlServiceBuilder enableWebSocket(boolean enableWebSocket) {
+        this.enableWebSocket = enableWebSocket;
         return this;
     }
 
@@ -316,8 +316,8 @@ public final class GraphqlServiceBuilder {
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
-        checkArgument(useWebSocket || webSocketBuilderCustomizer == null,
-                      "useWebSocket must be true to customize WebSocketServiceBuilder");
+        checkArgument(enableWebSocket || webSocketBuilderCustomizer == null,
+                      "enableWebSocket must be true to customize WebSocketServiceBuilder");
 
         final GraphQLSchema schema = buildSchema();
         GraphQL.Builder builder = GraphQL.newGraphQL(schema)
@@ -353,12 +353,16 @@ public final class GraphqlServiceBuilder {
             errorHandler = this.errorHandler.orElse(GraphqlErrorHandler.of());
         }
 
-        return new DefaultGraphqlService(builder.build(),
-                                         dataLoaderRegistryFactory,
-                                         useBlockingTaskExecutor,
-                                         errorHandler,
-                                         useWebSocket,
-                                         webSocketBuilderCustomizer);
+        final DefaultGraphqlService graphqlService = new DefaultGraphqlService(builder.build(),
+                                                                               dataLoaderRegistryFactory,
+                                                                               useBlockingTaskExecutor,
+                                                                               errorHandler);
+        if (enableWebSocket) {
+            return new GraphqlWebSocketService(graphqlService, dataLoaderRegistryFactory,
+                                               webSocketBuilderCustomizer);
+        } else {
+            return graphqlService;
+        }
     }
 
     private GraphQLSchema buildSchema() {

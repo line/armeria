@@ -16,12 +16,10 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp2WebSocketUpgradeRequest;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
@@ -32,32 +30,20 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.common.ExchangeType;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
-import com.linecorp.armeria.common.websocket.WebSocket;
-import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
-import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
-import com.linecorp.armeria.server.websocket.DefaultWebSocketService;
-import com.linecorp.armeria.server.websocket.WebSocketService;
-import com.linecorp.armeria.server.websocket.WebSocketServiceBuilder;
-import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 
 import graphql.ExecutionInput;
-import graphql.ExecutionInput.Builder;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
-import graphql.execution.ExecutionId;
 
-final class DefaultGraphqlService extends AbstractGraphqlService
-        implements GraphqlService, WebSocketService, WebSocketServiceHandler, GraphqlExecutor {
+final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService, GraphqlExecutor {
+
     private static final Logger logger = LoggerFactory.getLogger(DefaultGraphqlService.class);
 
     private final GraphQL graphQL;
@@ -69,50 +55,15 @@ final class DefaultGraphqlService extends AbstractGraphqlService
 
     private final GraphqlErrorHandler errorHandler;
 
-    @Nullable
-    private final DefaultWebSocketService webSocketService;
-
     DefaultGraphqlService(
             GraphQL graphQL,
             Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
-            boolean useBlockingTaskExecutor,
-            GraphqlErrorHandler errorHandler,
-            boolean useWebSocket,
-            @Nullable
-            Consumer<WebSocketServiceBuilder> webSocketBuilderCustomizer) {
+            boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistryFunction = requireNonNull(dataLoaderRegistryFunction,
                                                          "dataLoaderRegistryFunction");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.errorHandler = errorHandler;
-
-        if (useWebSocket) {
-            final WebSocketServiceBuilder webSocketBuilder = WebSocketService.builder(this);
-            if (webSocketBuilderCustomizer != null) {
-                webSocketBuilderCustomizer.accept(webSocketBuilder);
-            }
-            webSocketService = webSocketBuilder.subprotocols("graphql-transport-ws").build();
-        } else {
-            webSocketService = null;
-        }
-    }
-
-    @Override
-    protected HttpResponse doWebSocketUpgrade(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        if (webSocketService != null) {
-            return webSocketService.serve(ctx, req);
-        } else {
-            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                   "GraphQL over WebSocket Protocol is disabled");
-        }
-    }
-
-    @Override
-    public ExchangeType exchangeType(RoutingContext routingContext) {
-        if (isHttp2WebSocketUpgradeRequest(routingContext.headers()) && webSocketService != null) {
-            return ExchangeType.BIDI_STREAMING;
-        }
-        return super.exchangeType(routingContext);
     }
 
     @Override
@@ -148,42 +99,19 @@ final class DefaultGraphqlService extends AbstractGraphqlService
         return execute(ctx, executionInput, produceType);
     }
 
-    /**
-     * WebSocket operations are handled here.
-     */
     @Override
-    public CompletableFuture<ExecutionResult> executeGraphql(ServiceRequestContext ctx, Builder builder) {
-        final ExecutionInput executionInput = builder
-                .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
-                .executionId(ExecutionId.generate())
-                .build();
-
+    public CompletableFuture<ExecutionResult> executeGraphql(ServiceRequestContext ctx, ExecutionInput input) {
         if (useBlockingTaskExecutor) {
-            return CompletableFuture.supplyAsync(() -> graphQL.execute(executionInput),
+            return CompletableFuture.supplyAsync(() -> graphQL.execute(input),
                                                  ctx.blockingTaskExecutor());
         } else {
-            return graphQL.executeAsync(executionInput);
+            return graphQL.executeAsync(input);
         }
-    }
-
-    @Override
-    public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
-        final WebSocketWriter outgoing = WebSocket.streaming();
-        final GraphqlWSSubProtocol protocol = new GraphqlWSSubProtocol(ctx, this);
-
-        in.subscribe(new GraphqlWebSocketSubscriber(protocol, outgoing));
-
-        return outgoing;
     }
 
     private HttpResponse execute(
             ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
-        final CompletableFuture<ExecutionResult> future;
-        if (useBlockingTaskExecutor) {
-            future = CompletableFuture.supplyAsync(() -> graphQL.execute(input), ctx.blockingTaskExecutor());
-        } else {
-            future = graphQL.executeAsync(input);
-        }
+        final CompletableFuture<ExecutionResult> future = executeGraphql(ctx, input);
         return HttpResponse.of(
                 future.handle((executionResult, cause) -> {
                     if (executionResult.getData() instanceof Publisher) {

@@ -20,10 +20,10 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import graphql.ExecutionInput.Builder;
+import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 
 @FunctionalInterface
 interface GraphqlExecutor {
-    CompletableFuture<ExecutionResult> executeGraphql(ServiceRequestContext ctx, Builder builder);
+    CompletableFuture<ExecutionResult> executeGraphql(ServiceRequestContext ctx, ExecutionInput input);
 }

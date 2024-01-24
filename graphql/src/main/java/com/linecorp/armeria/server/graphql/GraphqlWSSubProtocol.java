@@ -23,8 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,9 +57,9 @@ import graphql.language.SourceLocation;
  */
 class GraphqlWSSubProtocol {
     private static final Logger logger = LoggerFactory.getLogger(GraphqlWSSubProtocol.class);
-    private final GraphqlExecutor graphqlExecutor;
-    private final HashMap<String, ExecutionResultSubscriber> graphqlSubscriptions = new HashMap<>();
     private static final ObjectMapper mapper = new ObjectMapper();
+
+    private final HashMap<String, ExecutionResultSubscriber> graphqlSubscriptions = new HashMap<>();
 
     private static final TypeReference<Map<String, Object>> JSON_MAP =
             new TypeReference<Map<String, Object>>() {};
@@ -65,13 +67,20 @@ class GraphqlWSSubProtocol {
     private boolean connectionInitiated;
 
     private final ServiceRequestContext ctx;
+    private final GraphqlExecutor graphqlExecutor;
+    private final Function<? super ServiceRequestContext, ? extends DataLoaderRegistry>
+            dataLoaderRegistryFunction;
     private final Map<String, Object> upgradeCtx;
     private Map<String, Object> connectionCtx = ImmutableMap.of();
 
-    GraphqlWSSubProtocol(ServiceRequestContext ctx, GraphqlExecutor executor) {
-        upgradeCtx = GraphqlServiceContexts.graphqlContext(ctx);
-        graphqlExecutor = executor;
+    GraphqlWSSubProtocol(
+            ServiceRequestContext ctx,
+            GraphqlExecutor graphqlExecutor,
+            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction) {
         this.ctx = ctx;
+        this.graphqlExecutor = graphqlExecutor;
+        this.dataLoaderRegistryFunction = dataLoaderRegistryFunction;
+        upgradeCtx = GraphqlServiceContexts.graphqlContext(ctx);
     }
 
     /**
@@ -130,14 +139,16 @@ class GraphqlWSSubProtocol {
                         final Map<String, Object> variables = toMapFromJson(payload.get("variables"));
                         final Map<String, Object> extensions = toMapFromJson(payload.get("extensions"));
 
-                        final ExecutionInput.Builder executionInput =
+                        final ExecutionInput executionInput =
                                 ExecutionInput.newExecutionInput()
                                               .graphQLContext(connectionCtx)
                                               .graphQLContext(upgradeCtx)
                                               .query(query)
                                               .variables(variables)
                                               .operationName(operationName)
-                                              .extensions(extensions);
+                                              .extensions(extensions)
+                                              .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
+                                              .build();
 
                         final CompletableFuture<ExecutionResult> future =
                                 graphqlExecutor.executeGraphql(ctx, executionInput);
@@ -179,8 +190,7 @@ class GraphqlWSSubProtocol {
         } catch (WebSocketCloseException e) {
             logger.debug("Error while handling event", e);
             out.close(e.getWebSocketCloseStatus());
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.debug("Error while handling event", e);
             out.close(e);
         }
