@@ -150,8 +150,8 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
     @Override
     public void serverStarted(Server server) throws Exception {
-        this.instanceInfo = fillAndCreateNewInfo(initialInstanceInfo, server);
-        this.appName = instanceInfo.getAppName();
+        instanceInfo = fillAndCreateNewInfo(initialInstanceInfo, server);
+        appName = instanceInfo.getAppName();
         register(instanceInfo);
     }
 
