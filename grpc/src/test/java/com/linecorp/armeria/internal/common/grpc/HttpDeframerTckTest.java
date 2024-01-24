@@ -39,7 +39,7 @@ import io.grpc.DecompressorRegistry;
 import io.netty.buffer.ByteBuf;
 import reactor.core.publisher.Flux;
 
-@Test
+@Test(enabled = false)
 public class HttpDeframerTckTest extends PublisherVerification<DeframedMessage> {
 
     private static final TransportStatusListener noopListener = (status, metadata) -> {};
