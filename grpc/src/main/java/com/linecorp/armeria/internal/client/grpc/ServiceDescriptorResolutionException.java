@@ -27,19 +27,15 @@ import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
 public final class ServiceDescriptorResolutionException extends RuntimeException {
 
     private static final long serialVersionUID = -4062645240586772465L;
-    private final String factorySimpleName;
+    private final String stubFactoryName;
 
-    public ServiceDescriptorResolutionException(String factorySimpleName, Throwable cause) {
+    public ServiceDescriptorResolutionException(String stubFactoryName, Throwable cause) {
         super(requireNonNull(cause, "cause"));
-        this.factorySimpleName = requireNonNull(factorySimpleName, "factorySimpleName");
-    }
-
-    public String factorySimpleName() {
-        return factorySimpleName;
+        this.stubFactoryName = requireNonNull(stubFactoryName, "stubFactoryName");
     }
 
     @Override
     public String toString() {
-        return factorySimpleName + '=' + getCause().toString();
+        return stubFactoryName + '=' + getCause().toString();
     }
 }
