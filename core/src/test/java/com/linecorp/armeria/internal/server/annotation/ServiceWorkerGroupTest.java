@@ -21,6 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,12 +40,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.DefaultEventLoop;
@@ -85,29 +88,77 @@ class ServiceWorkerGroupTest {
                 return HttpResponse.of(200);
             });
             sb.service("/subscribe", (ctx, req) -> {
-                return HttpResponse.of(new Publisher<HttpObject>() {
+                SignallingPublisher publisher = new SignallingPublisher();
+                req.subscribe(new Subscriber<HttpObject>() {
                     @Override
-                    public void subscribe(Subscriber<? super HttpObject> s) {
+                    public void onSubscribe(Subscription s) {
                         threadQueue.add(Thread.currentThread());
-                        s.onSubscribe(new Subscription() {
-                            @Override
-                            public void request(long n) {
-                                threadQueue.add(Thread.currentThread());
-                                s.onNext(ResponseHeaders.builder(200).endOfStream(true).build());
-                                s.onComplete();
-                            }
+                    }
 
-                            @Override
-                            public void cancel() {
-                            }
-                        });
+                    @Override
+                    public void onNext(HttpObject httpObject) {
+                        threadQueue.add(Thread.currentThread());
+                    }
+
+                    @Override
+                    public void onError(Throwable t) {
+                        threadQueue.add(Thread.currentThread());
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        threadQueue.add(Thread.currentThread());
+                        publisher.markReady();
                     }
                 });
+                return HttpResponse.of(publisher);
             });
 
             sb.serviceWorkerGroup(defaultExecutor, true);
         }
     };
+
+    static class SignallingPublisher implements Publisher<HttpObject> {
+
+        private boolean ready;
+        @Nullable
+        private Subscriber<? super HttpObject> s;
+        private long request;
+
+        @Override
+        public void subscribe(Subscriber<? super HttpObject> s) {
+            this.s = s;
+            threadQueue.add(Thread.currentThread());
+            s.onSubscribe(new Subscription() {
+                @Override
+                public void request(long n) {
+                    threadQueue.add(Thread.currentThread());
+                    request += n;
+                    tryNotify();
+                }
+
+                @Override
+                public void cancel() {
+                }
+            });
+        }
+
+        void markReady() {
+            ready = true;
+            tryNotify();
+        }
+
+        /**
+         * Both the mark as ready and request
+         */
+        private void tryNotify() {
+            final Subscriber<? super HttpObject> s0 = s;
+            if (ready && s0 != null) {
+                s0.onNext(ResponseHeaders.builder(200).endOfStream(true).build());
+                s0.onComplete();
+            }
+        }
+    }
 
     @BeforeEach
     void beforeEach() {
@@ -130,6 +181,17 @@ class ServiceWorkerGroupTest {
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
         final EventLoop ctxEventLoop = server.requestContextCaptor().poll().eventLoop().withoutContext();
         assertThat(ctxEventLoop).isSameAs(aExecutor);
+        assertThat(threadQueue).allSatisfy(t -> assertThat(aExecutor.inEventLoop(t)).isTrue());
+    }
+
+    @Test
+    void aggregatingRequest() throws InterruptedException {
+        final AggregatedHttpResponse res = server.blockingWebClient().post("/aggregated-string", "hello");
+        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        assertThat(server.requestContextCaptor().size()).isEqualTo(1);
+        final EventLoop ctxEventLoop = server.requestContextCaptor().poll().eventLoop().withoutContext();
+        assertThat(ctxEventLoop).isSameAs(aExecutor);
+        assertThat(threadQueue).allSatisfy(t -> assertThat(aExecutor.inEventLoop(t)).isTrue());
     }
 
     @Test
@@ -189,12 +251,20 @@ class ServiceWorkerGroupTest {
     static class MyAnnotatedServiceA {
         @Get("/a")
         public HttpResponse httpResponseLoggingServiceTest() {
+            threadQueue.add(Thread.currentThread());
             return HttpResponse.of(HttpStatus.OK);
         }
 
         @Get("/aggregated")
         public String aggregated() {
+            threadQueue.add(Thread.currentThread());
             return "aggregated";
+        }
+
+        @Post("/aggregated-string")
+        public String aggregated(String request) {
+            threadQueue.add(Thread.currentThread());
+            return request + ", World!";
         }
     }
 
