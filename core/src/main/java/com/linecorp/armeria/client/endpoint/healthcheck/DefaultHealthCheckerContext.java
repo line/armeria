@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -299,6 +300,7 @@ final class DefaultHealthCheckerContext
         return future;
     }
 
+    @VisibleForTesting
     int refCnt() {
         return refCnt;
     }

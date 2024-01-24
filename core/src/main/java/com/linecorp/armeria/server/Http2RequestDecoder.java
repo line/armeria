@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -63,7 +65,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
     private final ServerConfig cfg;
     private final Channel channel;
-    private final String scheme;
+    private final AsciiString scheme;
     @Nullable
     private ServerHttp2ObjectEncoder encoder;
 
@@ -73,7 +75,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final IntObjectMap<@Nullable DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
 
-    Http2RequestDecoder(ServerConfig cfg, Channel channel, String scheme, KeepAliveHandler keepAliveHandler) {
+    Http2RequestDecoder(ServerConfig cfg, Channel channel,
+                        AsciiString scheme, KeepAliveHandler keepAliveHandler) {
         this.cfg = cfg;
         this.channel = channel;
         this.scheme = scheme;
@@ -137,7 +140,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Convert the Netty Http2Headers into Armeria RequestHeaders.
             final RequestHeaders headers =
                     ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream,
-                                                            scheme, cfg, reqTarget);
+                                                            scheme.toString(), cfg, reqTarget);
 
             // Reject a request with an unsupported method.
             switch (method) {
@@ -181,7 +184,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
-            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers, reqTarget);
+            final RoutingContext routingCtx =
+                    newRoutingContext(cfg, ctx.channel(),
+                                      // scheme is http or https
+                                      scheme == SCHEME_HTTP ? SessionProtocol.H2C : SessionProtocol.H2,
+                                      headers, reqTarget);
             if (routingCtx.status().routeMustExist()) {
                 try {
                     // Find the service that matches the path.

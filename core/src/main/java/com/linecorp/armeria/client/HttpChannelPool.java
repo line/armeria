@@ -475,7 +475,7 @@ final class HttpChannelPool implements AsyncCloseable {
                         : "raddr: " + remoteAddr + ", laddr: " + localAddr;
                 try {
                     listener.connectionOpen(protocol, remoteAddr, localAddr, channel);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     if (logger.isWarnEnabled()) {
                         logger.warn("{} Exception handling {}.connectionOpen()",
                                     channel, listener.getClass().getName(), e);
@@ -515,7 +515,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
                     try {
                         listener.connectionClosed(protocol, remoteAddr, localAddr, channel);
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         if (logger.isWarnEnabled()) {
                             logger.warn("{} Exception handling {}.connectionClosed()",
                                         channel, listener.getClass().getName(), e);

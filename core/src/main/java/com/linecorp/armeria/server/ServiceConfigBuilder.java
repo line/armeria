@@ -44,8 +44,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
+import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
-import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.netty.channel.EventLoopGroup;
 
@@ -343,7 +343,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                                                                      unhandledExceptionsReporter);
         }
 
-        final boolean webSocket = service.as(WebSocketService.class) != null;
+        final boolean webSocket = service.as(DefaultWebSocketService.class) != null;
         final long requestTimeoutMillis;
         if (this.requestTimeoutMillis != null) {
             requestTimeoutMillis = this.requestTimeoutMillis;

@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -93,7 +94,8 @@ public class RoutersBenchmark {
     @Benchmark
     public Routed<ServiceConfig> exactMatch() {
         final RoutingContext ctx = DefaultRoutingContext.of(HOST, "localhost", METHOD1_REQ_TARGET,
-                                                            METHOD1_HEADERS, RoutingStatus.OK);
+                                                            METHOD1_HEADERS, RoutingStatus.OK,
+                                                            SessionProtocol.H2C);
         final Routed<ServiceConfig> routed = ROUTER.find(ctx);
         if (routed.value() != SERVICES.get(0)) {
             throw new IllegalStateException("Routing error");
@@ -105,7 +107,7 @@ public class RoutersBenchmark {
     public Routed<ServiceConfig> exactMatch_wrapped() {
         final RoutingContext ctx = new RoutingContextWrapper(
                 DefaultRoutingContext.of(HOST, "localhost", METHOD1_REQ_TARGET,
-                                         METHOD1_HEADERS, RoutingStatus.OK));
+                                         METHOD1_HEADERS, RoutingStatus.OK, SessionProtocol.H2C));
         final Routed<ServiceConfig> routed = ROUTER.find(ctx);
         if (routed.value() != SERVICES.get(0)) {
             throw new IllegalStateException("Routing error");

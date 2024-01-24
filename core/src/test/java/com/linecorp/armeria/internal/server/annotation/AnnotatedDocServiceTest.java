@@ -73,6 +73,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumesBinary;
+import com.linecorp.armeria.server.annotation.ConsumesOctetStream;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Get;
@@ -84,6 +85,7 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProducesOctetStream;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
@@ -164,6 +166,8 @@ class AnnotatedDocServiceTest {
         addOverload2MethodInfo(methodInfos);
         addMarkdownDescriptionMethodInfo(methodInfos);
         addMermaidDescriptionMethodInfo(methodInfos);
+        addImplicitRequestObjectMethodInfo(methodInfos);
+
         final Map<Class<?>, DescriptionInfo> serviceDescription = ImmutableMap.of(
                 MyService.class, DescriptionInfo.of("My service class"));
 
@@ -406,6 +410,21 @@ class AnnotatedDocServiceTest {
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
+    private static void addImplicitRequestObjectMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/implicit/request/object")
+                                                  .availableMimeTypes(MediaType.OCTET_STREAM,
+                                                                      MediaType.JSON_UTF_8)
+                                                  .build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of(
+                FieldInfo.builder("body", toTypeSignature(byte[].class))
+                         .requirement(REQUIRED).build());
+        final MethodInfo methodInfo = new MethodInfo(
+                MyService.class.getName(), "implicitRequestObject", 0,
+                TypeSignature.ofStruct(HttpResponse.class), fieldInfos,
+                ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.POST, DescriptionInfo.empty());
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
     private static void addExamples(JsonNode json) {
         // Add the global example.
         ((ArrayNode) json.get("exampleHeaders")).add(mapper.valueToTree(EXAMPLE_HEADERS_ALL));
@@ -632,6 +651,13 @@ class AnnotatedDocServiceTest {
         @Get("/mermaid")
         public HttpResponse mermaid() {
             return HttpResponse.of(200);
+        }
+
+        @Post("/implicit/request/object")
+        @ConsumesOctetStream
+        @ProducesOctetStream
+        public HttpResponse implicitRequestObject(byte[] body) {
+            return HttpResponse.of(HttpStatus.OK, MediaType.OCTET_STREAM, body);
         }
     }
 
