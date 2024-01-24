@@ -145,7 +145,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
      */
     EurekaUpdatingListener(EurekaWebClient client, InstanceInfo instanceInfo) {
         this.client = client;
-        this.initialInstanceInfo = instanceInfo;
+        initialInstanceInfo = instanceInfo;
     }
 
     @Override
