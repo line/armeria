@@ -17,20 +17,19 @@
 package com.linecorp.armeria.common;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 import io.netty.util.AsciiString;
-import scala.collection.generic.Sorted;
 
 /**
  * A sanitizer that sanitizes {@link HttpHeaders} and returns {@link String}.
  */
-public final class TextHeadersSanitizer implements HeadersSanitizer<String> {
+final class TextHeadersSanitizer implements HeadersSanitizer<String> {
 
     static final HeadersSanitizer<String> INSTANCE = new TextHeadersSanitizerBuilder().build();
 
@@ -56,6 +55,18 @@ public final class TextHeadersSanitizer implements HeadersSanitizer<String> {
             sb.append('[');
         }
 
+        maskHeaders(headers, maskingHeaders, maskingFunction,
+                    (header, values) -> sb.append(header).append('=')
+                                          .append(values.size() > 1 ?
+                                                  values.toString() : values.get(0)).append(", "));
+
+        sb.setCharAt(sb.length() - 2, ']');
+        return sb.substring(0, sb.length() - 1);
+    }
+
+    static void maskHeaders(
+            HttpHeaders headers, Set<CharSequence> maskingHeaders, Function<String, String> maskingFunction,
+            final BiConsumer<String, List<String>> consumer) {
         final Map<String, List<String>> headersWithValuesAsList = new LinkedHashMap<>();
         for (Map.Entry<AsciiString, String> entry : headers) {
             final String header = entry.getKey().toString().toLowerCase();
@@ -68,12 +79,7 @@ public final class TextHeadersSanitizer implements HeadersSanitizer<String> {
         for (Map.Entry<String, List<String>> entry : entries) {
             final String header = entry.getKey();
             final List<String> values = entry.getValue();
-
-            sb.append(header).append('=')
-              .append(values.size() > 1 ? values.toString() : values.get(0)).append(", ");
+            consumer.accept(header, values);
         }
-
-        sb.setCharAt(sb.length() - 2, ']');
-        return sb.substring(0, sb.length() - 1);
     }
 }

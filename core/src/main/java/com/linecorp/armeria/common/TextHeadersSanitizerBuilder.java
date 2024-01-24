@@ -16,33 +16,23 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.Set;
 import java.util.function.Function;
 
 /**
- * A builder implementation for {@link TextHeadersSanitizer}.
+ * A builder implementation for Text {@link HeadersSanitizer}.
  */
 public final class TextHeadersSanitizerBuilder extends AbstractHeadersSanitizerBuilder<String> {
 
-    /**
-     * Sets the {@link Set} which includes headers to mask before logging.
-     */
     @Override
     public TextHeadersSanitizerBuilder maskingHeaders(CharSequence... headers) {
         return (TextHeadersSanitizerBuilder) super.maskingHeaders(headers);
     }
 
-    /**
-     * Sets the {@link Set} which includes headers to mask before logging.
-     */
     @Override
     public TextHeadersSanitizerBuilder maskingHeaders(Iterable<? extends CharSequence> headers) {
         return (TextHeadersSanitizerBuilder) super.maskingHeaders(headers);
     }
 
-    /**
-     * Sets the {@link Function} to use to mask headers before logging.
-     */
     @Override
     public TextHeadersSanitizerBuilder maskingFunction(Function<String, String> maskingFunction) {
         return (TextHeadersSanitizerBuilder) super.maskingFunction(maskingFunction);
@@ -51,9 +41,7 @@ public final class TextHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
     /**
      * Returns a newly created text {@link HeadersSanitizer} based on the properties of this builder.
      */
-    public TextHeadersSanitizer build() {
-        final Set<CharSequence> maskingHeaders = maskingHeaders();
-        return new TextHeadersSanitizer(!maskingHeaders.isEmpty() ? maskingHeaders : defaultMaskingHeaders(),
-                                        maskingFunction());
+    public HeadersSanitizer<String> build() {
+        return new TextHeadersSanitizer(maskingHeaders(), maskingFunction());
     }
 }

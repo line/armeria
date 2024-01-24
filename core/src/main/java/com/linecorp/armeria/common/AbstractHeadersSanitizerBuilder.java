@@ -18,50 +18,55 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 
+import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableSet;
+
 /**
  * A skeletal builder implementation for {@link HeadersSanitizer}.
  */
-abstract class AbstractHeadersSanitizerBuilder<T> {
+public abstract class AbstractHeadersSanitizerBuilder<T> {
+
+    private static final Set<CharSequence> DEFAULT_MASKING_HEADERS =
+            ImmutableSet.of(Ascii.toLowerCase(HttpHeaderNames.AUTHORIZATION),
+                            Ascii.toLowerCase(HttpHeaderNames.SET_COOKIE));
 
     private final Set<CharSequence> maskingHeaders = new HashSet<>();
 
-    private Function<String, String> mask = (header) -> "****";
+    private Function<String, String> maskingFunction = header -> "****";
 
     /**
-     * Sets the {@link Set} which includes headers to mask before logging.
+     * Sets the headers to mask before logging.
      */
     public AbstractHeadersSanitizerBuilder<T> maskingHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
-        Arrays.stream(headers).map(header -> header.toString().toLowerCase()).forEach(maskingHeaders::add);
-        return this;
+        return maskingHeaders(ImmutableSet.copyOf(headers));
     }
 
     /**
-     * Sets the {@link Set} which includes headers to mask before logging.
+     * Sets the headers to mask before logging.
      */
     public AbstractHeadersSanitizerBuilder<T> maskingHeaders(Iterable<? extends CharSequence> headers) {
         requireNonNull(headers, "headers");
-        headers.forEach(header -> maskingHeaders.add(header.toString().toLowerCase()));
+        headers.forEach(header -> maskingHeaders.add(Ascii.toLowerCase(header)));
         return this;
     }
 
-    /**
-     * Returns the {@link Set} which includes headers to mask before logging.
-     */
     final Set<CharSequence> maskingHeaders() {
-        return maskingHeaders;
+        if (!maskingHeaders.isEmpty()) {
+            return ImmutableSet.copyOf(maskingHeaders);
+        }
+        return DEFAULT_MASKING_HEADERS;
     }
 
     /**
      * Sets the {@link Function} to use to maskFunction headers before logging.
      */
     public AbstractHeadersSanitizerBuilder<T> maskingFunction(Function<String, String> maskingFunction) {
-        this.mask = requireNonNull(maskingFunction, "maskingFunction");
+        this.maskingFunction = requireNonNull(maskingFunction, "maskingFunction");
         return this;
     }
 
@@ -69,13 +74,6 @@ abstract class AbstractHeadersSanitizerBuilder<T> {
      * Returns the {@link Function} to use to mask headers before logging.
      */
     final Function<String, String> maskingFunction() {
-        return mask;
-    }
-
-    protected final Set<CharSequence> defaultMaskingHeaders() {
-        final HashSet<CharSequence> defaultMaskingHeaders = new HashSet<>();
-        defaultMaskingHeaders.add(HttpHeaderNames.AUTHORIZATION.toLowerCase().toString());
-        defaultMaskingHeaders.add(HttpHeaderNames.SET_COOKIE.toLowerCase().toString());
-        return defaultMaskingHeaders;
+        return maskingFunction;
     }
 }

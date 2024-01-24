@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 /**
  * A sanitizer that sanitizes {@link HttpHeaders}.
  */
+@FunctionalInterface
 public interface HeadersSanitizer<T> extends BiFunction<RequestContext, HttpHeaders, T> {
     /**
      * Returns the default text {@link HeadersSanitizer}.

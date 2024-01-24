@@ -16,12 +16,8 @@
 
 package com.linecorp.armeria.common;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
+import static com.linecorp.armeria.common.TextHeadersSanitizer.maskHeaders;
+
 import java.util.Set;
 import java.util.function.Function;
 
@@ -29,12 +25,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import io.netty.util.AsciiString;
-
 /**
  * A sanitizer that sanitizes {@link HttpHeaders} and returns {@link JsonNode}.
  */
-public final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
+final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
 
     static final HeadersSanitizer<JsonNode> INSTANCE = new JsonHeadersSanitizerBuilder().build();
     private final Set<CharSequence> maskingHeaders;
@@ -51,21 +45,9 @@ public final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
     @Override
     public JsonNode apply(RequestContext requestContext, HttpHeaders headers) {
         final ObjectNode result = objectMapper.createObjectNode();
-        final Map<String, List<String>> headersWithValuesAsList = new LinkedHashMap<>();
-        for (Map.Entry<AsciiString, String> entry : headers) {
-            final String header = entry.getKey().toString().toLowerCase();
-            final String value = maskingHeaders.contains(header) ? maskingFunction.apply(entry.getValue())
-                                                                 : entry.getValue();
-            headersWithValuesAsList.computeIfAbsent(header, k -> new ArrayList<>()).add(value);
-        }
-
-        final Set<Entry<String, List<String>>> entries = headersWithValuesAsList.entrySet();
-        for (Map.Entry<String, List<String>> entry : entries) {
-            final String header = entry.getKey();
-            final List<String> values = entry.getValue();
-
-            result.put(header, values.size() > 1 ? values.toString() : values.get(0));
-        }
+        maskHeaders(headers, maskingHeaders, maskingFunction,
+                    (header, values) -> result.put(header, values.size() > 1 ?
+                                                           values.toString() : values.get(0)));
 
         return result;
     }
