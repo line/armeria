@@ -140,7 +140,6 @@ public abstract class AbstractJettyServiceBuilder {
         return this;
     }
 
-
     /**
      * Sets the graceful stop time of the {@link Server#stop()} in milliseconds.
      *
