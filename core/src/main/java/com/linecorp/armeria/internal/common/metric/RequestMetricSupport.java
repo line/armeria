@@ -398,7 +398,6 @@ public final class RequestMetricSupport {
                                                             idPrefix.tags("result", "failure"));
         }
 
-        // TODO(miyoshi): 異なるエラーが発生した場合は異なる分布を持つカウンターを作成したい
         @Override
         public DistributionSummary failureAttempts(Throwable error) {
             final String causeName = error.getClass().getSimpleName();
