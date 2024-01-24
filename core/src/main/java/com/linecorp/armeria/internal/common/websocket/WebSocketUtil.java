@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.common.websocket;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static io.netty.util.AsciiString.contentEquals;
 import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
 import static io.netty.util.AsciiString.trim;
@@ -29,6 +30,7 @@ import com.google.common.hash.Hashing;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -146,11 +148,24 @@ public final class WebSocketUtil {
         } else {
             closeStatus = WebSocketCloseStatus.INTERNAL_SERVER_ERROR;
         }
-        String reasonPhrase = cause.getMessage();
+        // If the length of the phrase exceeds 125 characters, it is truncated to satisfy the
+        // <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5">specification</a>.
+        String reasonPhrase = truncate(cause.getMessage());
         if (reasonPhrase == null) {
             reasonPhrase = closeStatus.reasonPhrase();
         }
         return WebSocketFrame.ofClose(closeStatus, reasonPhrase);
+    }
+
+    @Nullable
+    private static String truncate(@Nullable String message) {
+        if (isNullOrEmpty(message)) {
+            return null;
+        }
+        if (message.length() <= 125) {
+            return message;
+        }
+        return message.substring(0, 111) + "...(truncated)"; // + 14 characters
     }
 
     private WebSocketUtil() {}

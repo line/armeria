@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
+import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.HttpService;
@@ -61,6 +62,7 @@ public final class WebSocketServiceBuilder {
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
+    private boolean aggregateContinuation;
     @Nullable
     private HttpService fallbackService;
 
@@ -107,6 +109,19 @@ public final class WebSocketServiceBuilder {
      */
     public WebSocketServiceBuilder subprotocols(Iterable<String> subprotocols) {
         this.subprotocols = ImmutableSet.copyOf(requireNonNull(subprotocols, "subprotocols"));
+        return this;
+    }
+
+    /**
+     * Sets whether to aggregate the subsequent continuation frames of the incoming
+     * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame into a single
+     * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame.
+     * If the length of the aggregated frames exceeds the {@link #maxFramePayloadLength(int)},
+     * a close frame with the status {@link WebSocketCloseStatus#MESSAGE_TOO_BIG} is sent to the peer.
+     * Note that enabling this feature may lead to increased memory usage, so use it with caution.
+     */
+    public WebSocketServiceBuilder aggregateContinuation(boolean aggregateContinuation) {
+        this.aggregateContinuation = aggregateContinuation;
         return this;
     }
 
@@ -160,6 +175,7 @@ public final class WebSocketServiceBuilder {
      */
     public WebSocketService build() {
         return new DefaultWebSocketService(handler, fallbackService, maxFramePayloadLength, allowMaskMismatch,
-                                           subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN));
+                                           subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN),
+                                           aggregateContinuation);
     }
 }
