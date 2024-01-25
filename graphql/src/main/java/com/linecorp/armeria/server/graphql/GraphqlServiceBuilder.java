@@ -271,7 +271,7 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Enable <a href="https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md">GraphQL over WebSocket Protocol</a>.
+     * Enables <a href="https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md">GraphQL over WebSocket Protocol</a>.
      */
     public GraphqlServiceBuilder enableWebSocket(boolean enableWebSocket) {
         this.enableWebSocket = enableWebSocket;
