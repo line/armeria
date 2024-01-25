@@ -37,7 +37,6 @@ import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
@@ -72,7 +71,7 @@ import reactor.test.StepVerifier;
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-@AutoConfigureMetrics
+@EnableTestMetrics
 @EnableAutoConfiguration
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
 @Timeout(unit = TimeUnit.MILLISECONDS, value = 30_000L)
@@ -333,7 +332,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
     @SpringBootTest(classes = ArmeriaSpringActuatorAutoConfigurationCorsTest.TestConfiguration.class)
     @ActiveProfiles({ "local", "autoConfTest", "autoConfTestCors" })
     @DirtiesContext
-    @AutoConfigureMetrics
+    @EnableTestMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     @Timeout(10)

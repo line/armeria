@@ -26,7 +26,7 @@ import io.grpc.StatusRuntimeException;
  * A class that is used to cache {@link StatusRuntimeException} created from
  * {@link Status#asRuntimeException(Metadata)}.
  */
-public final class StatusAndMetadata {
+public class StatusAndMetadata {
 
     private final Status status;
     @Nullable

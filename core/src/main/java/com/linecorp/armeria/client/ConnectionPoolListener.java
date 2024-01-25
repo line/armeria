@@ -70,6 +70,10 @@ public interface ConnectionPoolListener extends Unwrappable {
      *   <td>{@code armeria.client.connections#count{state="closed"}}</td>
      *   <td>The number of closed connections.</td>
      * </tr>
+     * <tr>
+     *   <td>{@code armeria.client.connections#value{state="active"}}</td>
+     *   <td>The number of active connections.</td>
+     * </tr>
      * </table>
      */
     @UnstableApi
@@ -94,6 +98,10 @@ public interface ConnectionPoolListener extends Unwrappable {
      * <tr>
      *   <td>{@code <name>#count{state="closed"}}</td>
      *   <td>The number of closed connections.</td>
+     * </tr>
+     * <tr>
+     *   <td>{@code <name>#value{state="active"}}</td>
+     *   <td>The number of active connections.</td>
      * </tr>
      * </table>
      */
