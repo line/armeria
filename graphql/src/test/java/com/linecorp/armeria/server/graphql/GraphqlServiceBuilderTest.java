@@ -36,6 +36,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 
+import graphql.GraphQL;
+import graphql.GraphQL.Builder;
 import graphql.execution.instrumentation.SimplePerformantInstrumentation;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLTypeVisitor;
@@ -165,5 +167,14 @@ class GraphqlServiceBuilderTest {
         })
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+    }
+
+    @Test
+    void graphqlAndSchemaCannotSetTogether() throws URISyntaxException {
+        final GraphQLSchema schema = makeGraphQLSchema();
+        final GraphQL graphQL = new Builder(schema).build();
+        assertThatThrownBy(() -> GraphqlService.builder().graphql(graphQL).schema(schema))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("are mutually exclusive.");
     }
 }
