@@ -29,7 +29,6 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.server.reactive.AbstractServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.SslInfo;
 import org.springframework.util.LinkedMultiValueMap;
@@ -52,16 +51,15 @@ import reactor.core.scheduler.Schedulers;
 /**
  * A {@link ServerHttpRequest} implementation for the Armeria HTTP server.
  */
-final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
+final class ArmeriaServerHttpRequest extends AbstractServerHttpRequestVersionSpecific {
 
     private final ServiceRequestContext ctx;
     private final HttpRequest req;
     private final Flux<DataBuffer> body;
 
-    ArmeriaServerHttpRequest(ServiceRequestContext ctx,
-                             HttpRequest req,
+    ArmeriaServerHttpRequest(ServiceRequestContext ctx, HttpRequest req,
                              DataBufferFactoryWrapper<?> factoryWrapper) {
-        super(uri(ctx, req), null, springHeaders(req.headers()));
+        super(HttpMethod.valueOf(ctx.method().name()), uri(ctx, req), null, springHeaders(req.headers()));
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = req;
 
@@ -127,7 +125,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
         return HttpMethod.valueOf(req.method().name());
     }
 
-    @Override
+    // This method exists only for Spring 5 and 6.0.x compatibility.
     public String getMethodValue() {
         return req.method().name();
     }
