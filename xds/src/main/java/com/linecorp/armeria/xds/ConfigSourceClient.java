@@ -90,14 +90,14 @@ final class ConfigSourceClient implements SafeCloseable {
     }
 
     void addSubscriber(XdsType type, String resourceName,
-                       ResourceWatcher<AbstractResourceHolder> watcher) {
+                       ResourceWatcher<?> watcher) {
         if (subscriberStorage.register(type, resourceName, watcher)) {
             updateResources(type);
         }
     }
 
     boolean removeSubscriber(XdsType type, String resourceName,
-                             ResourceWatcher<AbstractResourceHolder> watcher) {
+                             ResourceWatcher<?> watcher) {
         if (subscriberStorage.unregister(type, resourceName, watcher)) {
             updateResources(type);
         }

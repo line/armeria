@@ -229,12 +229,12 @@ class AggregatingNodeTest {
         // verify route
         final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
         final String routeName = routeSnapshot.holder().resource().getName();
-        final RouteConfiguration snapshotRouteConfiuration = snapshot.routes().resources().get(routeName);
-        assertThat(routeSnapshot.holder().resource()).isEqualTo(snapshotRouteConfiuration);
+        final RouteConfiguration snapshotRouteConfiguration = snapshot.routes().resources().get(routeName);
+        assertThat(routeSnapshot.holder().resource()).isEqualTo(snapshotRouteConfiguration);
 
         int i = 0;
         for (Entry<VirtualHost, List<ClusterSnapshot>> e : routeSnapshot.virtualHostMap().entrySet()) {
-            final VirtualHost snapshotVirtualHost = snapshotRouteConfiuration.getVirtualHosts(i++);
+            final VirtualHost snapshotVirtualHost = snapshotRouteConfiguration.getVirtualHosts(i++);
             assertThat(e.getKey()).isEqualTo(snapshotVirtualHost);
             final List<ClusterSnapshot> clusterSnapshots = e.getValue();
             for (int j = 0; j < clusterSnapshots.size(); j++) {

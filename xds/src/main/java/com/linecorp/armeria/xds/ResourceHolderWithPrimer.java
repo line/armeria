@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -24,31 +24,19 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 /**
- * A holder object for xDS resources. This is a holder object which
- * is contained by {@link Snapshot} to:
- * <ul>
- *     <li>Provide additional metadata.</li>
- *     <li>Unify unpacking child object logic.</li>
- * </ul>
+ * A resource holder that has its primer.
  *
+ * @param <SELF> the type of this
  * @param <T> the type of the resource. Can be {@link Listener}, {@link RouteConfiguration}, {@link Cluster} or
  *            {@link ClusterLoadAssignment}.
+ * @param <U> the type of the primer
  */
-@UnstableApi
-public interface ResourceHolder<T> {
+abstract class ResourceHolderWithPrimer
+        <SELF extends ResourceHolderWithPrimer<SELF, T, U>, T, U extends ResourceHolder<?>>
+        implements ResourceHolder<T> {
 
-    /**
-     * Returns the xDS type of the object.
-     */
-    XdsType type();
+    abstract SELF withPrimer(@Nullable U primer);
 
-    /**
-     * Returns the resource.
-     */
-    T resource();
-
-    /**
-     * Returns the resource name.
-     */
-    String name();
+    @Nullable
+    abstract U primer();
 }

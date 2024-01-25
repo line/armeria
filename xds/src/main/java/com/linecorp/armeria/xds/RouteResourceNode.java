@@ -37,22 +37,24 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.grpc.Status;
 
-final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
+final class RouteResourceNode
+        extends AbstractResourceNodeWithPrimer<RouteResourceHolder, ListenerResourceHolder> {
 
     private final List<ClusterSnapshot> clusterSnapshotList = new ArrayList<>();
 
     private final Set<Integer> pending = new HashSet<>();
     private final ClusterSnapshotWatcher snapshotWatcher = new ClusterSnapshotWatcher();
+    private final SnapshotWatcher<RouteSnapshot> parentWatcher;
 
     RouteResourceNode(@Nullable ConfigSource configSource, String resourceName,
-                      XdsBootstrapImpl xdsBootstrap, @Nullable ResourceHolder primer,
+                      XdsBootstrapImpl xdsBootstrap, @Nullable ListenerResourceHolder primer,
                       SnapshotWatcher<RouteSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
         super(xdsBootstrap, configSource, ROUTE, resourceName, primer, parentWatcher, resourceNodeType);
+        this.parentWatcher = parentWatcher;
     }
 
     @Override
-    public void doOnChanged(ResourceHolder update) {
-        final RouteResourceHolder holder = (RouteResourceHolder) update;
+    public void doOnChanged(RouteResourceHolder holder) {
         clusterSnapshotList.clear();
         pending.clear();
         final RouteConfiguration routeConfiguration = holder.resource();
@@ -78,13 +80,8 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
             }
         }
         if (children().isEmpty()) {
-            parentWatcher().snapshotUpdated(new RouteSnapshot(holder, Collections.emptyList()));
+            parentWatcher.snapshotUpdated(new RouteSnapshot(holder, Collections.emptyList()));
         }
-    }
-
-    @Override
-    public RouteResourceHolder currentResourceHolder() {
-        return (RouteResourceHolder) super.currentResourceHolder();
     }
 
     private class ClusterSnapshotWatcher implements SnapshotWatcher<ClusterSnapshot> {
@@ -104,18 +101,18 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
             if (!pending.isEmpty()) {
                 return;
             }
-            parentWatcher().snapshotUpdated(
+            parentWatcher.snapshotUpdated(
                     new RouteSnapshot(current, ImmutableList.copyOf(clusterSnapshotList)));
         }
 
         @Override
         public void onError(XdsType type, Status status) {
-            parentWatcher().onError(type, status);
+            parentWatcher.onError(type, status);
         }
 
         @Override
         public void onMissing(XdsType type, String resourceName) {
-            parentWatcher().onMissing(type, resourceName);
+            parentWatcher.onMissing(type, resourceName);
         }
     }
 }

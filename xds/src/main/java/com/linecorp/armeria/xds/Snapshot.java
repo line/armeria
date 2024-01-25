@@ -20,7 +20,7 @@ package com.linecorp.armeria.xds;
  * A snapshot of the resource.
  */
 @FunctionalInterface
-public interface Snapshot<T extends ResourceHolder> {
+public interface Snapshot<T extends ResourceHolder<?>> {
 
     /**
      * Returns the {@link ResourceHolder} of the current snapshot.

@@ -126,8 +126,7 @@ class ClientTimeoutTest {
         final ClusterLoadAssignment loadAssignment =
                 XdsTestResources.loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
         final Cluster cluster = XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, cluster);
-        return bootstrap;
+        return XdsTestResources.bootstrap(configSource, cluster);
     }
 
     @Test

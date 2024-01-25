@@ -55,7 +55,7 @@ class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
         return blockingFirst("onMissing", List.class);
     }
 
-    <T> T  blockingChanged(Class<T> clazz) {
+    <T> T blockingChanged(Class<T> clazz) {
         return blockingFirst("snapshotUpdated", clazz);
     }
 

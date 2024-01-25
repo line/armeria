@@ -98,8 +98,9 @@ class SotwXdsStreamTest {
         }
 
         @Override
-        public void handleResponse(ResourceParser resourceParser, DiscoveryResponse value,
-                                   SotwXdsStream sender) {
+        public <T extends ResourceHolder<?>> void handleResponse(ResourceParser<T> resourceParser,
+                                                                 DiscoveryResponse value,
+                                                                 SotwXdsStream sender) {
             responses.add(value);
             sender.ackResponse(resourceParser.type(), value.getVersionInfo(), value.getNonce());
         }
@@ -215,7 +216,9 @@ class SotwXdsStreamTest {
         final CountDownLatch latch = new CountDownLatch(1);
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
-            public void handleResponse(ResourceParser type, DiscoveryResponse value, SotwXdsStream sender) {
+            public <T extends ResourceHolder<?>> void handleResponse(ResourceParser<T> type,
+                                                                     DiscoveryResponse value,
+                                                                     SotwXdsStream sender) {
                 if (cntRef.getAndIncrement() < 3) {
                     throw new RuntimeException("test");
                 }
@@ -259,8 +262,9 @@ class SotwXdsStreamTest {
         final AtomicInteger nackResponses = new AtomicInteger();
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
-            public void handleResponse(ResourceParser resourceParser,
-                                       DiscoveryResponse value, SotwXdsStream sender) {
+            public <T extends ResourceHolder<?>> void handleResponse(ResourceParser<T> resourceParser,
+                                                                     DiscoveryResponse value,
+                                                                     SotwXdsStream sender) {
                 if (ackRef.get()) {
                     super.handleResponse(resourceParser, value, sender);
                 } else {

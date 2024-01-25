@@ -29,8 +29,7 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
     ListenerRoot(XdsBootstrapImpl xdsBootstrap, String resourceName) {
         super(xdsBootstrap.eventLoop());
-        node = new ListenerResourceNode(null, resourceName, xdsBootstrap, null,
-                                        this, ResourceNodeType.DYNAMIC);
+        node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.DYNAMIC);
         xdsBootstrap.subscribe(node);
     }
 

@@ -21,7 +21,7 @@ import com.google.protobuf.Message;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.RouteConfigurationOrBuilder;
 
-final class RouteResourceParser extends ResourceParser {
+final class RouteResourceParser extends ResourceParser<RouteResourceHolder> {
 
     public static final RouteResourceParser INSTANCE = new RouteResourceParser();
 

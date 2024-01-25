@@ -18,6 +18,11 @@ package com.linecorp.armeria.xds;
 
 import io.grpc.Status;
 
+/**
+ * A resource watcher.
+ *
+ * @param <T> the type of the {@link ResourceHolder} that is notified
+ */
 @FunctionalInterface
 interface ResourceWatcher<T> {
 

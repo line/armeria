@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
@@ -28,7 +26,8 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 /**
  * A resource holder object for a {@link RouteConfiguration}.
  */
-public final class RouteResourceHolder extends AbstractResourceHolder {
+public final class RouteResourceHolder
+        extends ResourceHolderWithPrimer<RouteResourceHolder, RouteConfiguration, ListenerResourceHolder> {
 
     private final RouteConfiguration routeConfiguration;
 
@@ -61,12 +60,11 @@ public final class RouteResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    RouteResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    RouteResourceHolder withPrimer(@Nullable ListenerResourceHolder primer) {
         if (primer == null) {
             return this;
         }
-        checkArgument(primer instanceof ListenerResourceHolder);
-        return new RouteResourceHolder(routeConfiguration, (ListenerResourceHolder) primer);
+        return new RouteResourceHolder(routeConfiguration, primer);
     }
 
     @Override

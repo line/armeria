@@ -50,21 +50,21 @@ final class BootstrapApiConfigs {
         }
     }
 
-    ConfigSource remapConfigSource(XdsType type, @Nullable ConfigSource configSource,
-                                   String resourceName) {
+    ConfigSource configSource(XdsType type, String resourceName, ResourceNode<?> node) {
         if (type == XdsType.LISTENER) {
-            return ldsConfigSource(configSource);
+            return ldsConfigSource(node);
         } else if (type == XdsType.ROUTE) {
-            return rdsConfigSource(configSource, resourceName);
+            return rdsConfigSource(node, resourceName);
         } else if (type == XdsType.CLUSTER) {
-            return cdsConfigSource(configSource, resourceName);
+            return cdsConfigSource(node, resourceName);
         } else {
             assert type == XdsType.ENDPOINT;
-            return edsConfigSource(configSource, resourceName);
+            return edsConfigSource(node, resourceName);
         }
     }
 
-    ConfigSource edsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
+    ConfigSource edsConfigSource(ResourceNode<?> node, String resourceName) {
+        final ConfigSource configSource = node.configSource();
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
         }
@@ -74,7 +74,8 @@ final class BootstrapApiConfigs {
         throw new IllegalArgumentException("Cannot find an EDS config source for " + resourceName);
     }
 
-    ConfigSource cdsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
+    ConfigSource cdsConfigSource(ResourceNode<?> node, String resourceName) {
+        final ConfigSource configSource = node.configSource();
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
         }
@@ -90,7 +91,8 @@ final class BootstrapApiConfigs {
         throw new IllegalArgumentException("Cannot find a CDS config source for route: " + resourceName);
     }
 
-    ConfigSource rdsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
+    ConfigSource rdsConfigSource(ResourceNode<?> node, String resourceName) {
+        final ConfigSource configSource = node.configSource();
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
         }
@@ -100,7 +102,8 @@ final class BootstrapApiConfigs {
         throw new IllegalArgumentException("Cannot find an RDS config source for route: " + resourceName);
     }
 
-    ConfigSource ldsConfigSource(@Nullable ConfigSource configSource) {
+    ConfigSource ldsConfigSource(ResourceNode<?> node) {
+        final ConfigSource configSource = node.configSource();
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
         }

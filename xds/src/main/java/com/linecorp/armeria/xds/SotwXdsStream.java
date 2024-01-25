@@ -203,7 +203,7 @@ final class SotwXdsStream implements XdsStream {
 
             logger.debug("Received discovery response: {}", value);
 
-            final ResourceParser resourceParser = fromTypeUrl(value.getTypeUrl());
+            final ResourceParser<?> resourceParser = fromTypeUrl(value.getTypeUrl());
             if (resourceParser == null) {
                 logger.warn("XDS stream Received unexpected type: {}", value.getTypeUrl());
                 return;

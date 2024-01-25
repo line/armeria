@@ -24,8 +24,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 final class XdsResourceParserUtil {
 
-    private static final Map<String, ResourceParser> typeUrlToResourceType = new HashMap<>();
-    private static final Map<XdsType, ResourceParser> typeToResourceType = new EnumMap<>(XdsType.class);
+    private static final Map<String, ResourceParser<?>> typeUrlToResourceType = new HashMap<>();
+    private static final Map<XdsType, ResourceParser<?>> typeToResourceType = new EnumMap<>(XdsType.class);
 
     static {
         typeUrlToResourceType.put(XdsType.ENDPOINT.typeUrl(), EndpointResourceParser.INSTANCE);
@@ -40,11 +40,11 @@ final class XdsResourceParserUtil {
     }
 
     @Nullable
-    static ResourceParser fromTypeUrl(String typeUrl) {
+    static ResourceParser<?> fromTypeUrl(String typeUrl) {
         return typeUrlToResourceType.get(typeUrl);
     }
 
-    static ResourceParser fromType(XdsType xdsType) {
+    static ResourceParser<?> fromType(XdsType xdsType) {
         return typeToResourceType.get(xdsType);
     }
 

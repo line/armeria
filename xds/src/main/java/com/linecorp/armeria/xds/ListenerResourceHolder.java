@@ -31,7 +31,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 /**
  * A resource holder object for a {@link Listener}.
  */
-public final class ListenerResourceHolder extends AbstractResourceHolder {
+public final class ListenerResourceHolder implements ResourceHolder<Listener> {
 
     private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
             "type.googleapis.com/" +
@@ -76,17 +76,6 @@ public final class ListenerResourceHolder extends AbstractResourceHolder {
     @Override
     public String name() {
         return listener.getName();
-    }
-
-    @Override
-    ListenerResourceHolder withPrimer(@Nullable ResourceHolder primer) {
-        return this;
-    }
-
-    @Override
-    @Nullable
-    ResourceHolder primer() {
-        throw new UnsupportedOperationException();
     }
 
     @Override

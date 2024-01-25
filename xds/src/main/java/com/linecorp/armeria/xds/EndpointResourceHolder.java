@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
@@ -28,7 +26,8 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 /**
  * A resource holder object for a {@link ClusterLoadAssignment}.
  */
-public final class EndpointResourceHolder extends AbstractResourceHolder {
+public final class EndpointResourceHolder
+        extends ResourceHolderWithPrimer<EndpointResourceHolder, ClusterLoadAssignment, ClusterResourceHolder> {
 
     private final ClusterLoadAssignment clusterLoadAssignment;
     @Nullable
@@ -39,9 +38,9 @@ public final class EndpointResourceHolder extends AbstractResourceHolder {
         primer = null;
     }
 
-    EndpointResourceHolder(ClusterResourceHolder primer, ClusterLoadAssignment clusterLoadAssignment) {
-        this.primer = primer;
+    EndpointResourceHolder(ClusterLoadAssignment clusterLoadAssignment, ClusterResourceHolder primer) {
         this.clusterLoadAssignment = clusterLoadAssignment;
+        this.primer = primer;
     }
 
     @Override
@@ -60,12 +59,11 @@ public final class EndpointResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    EndpointResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    EndpointResourceHolder withPrimer(@Nullable ClusterResourceHolder primer) {
         if (primer == null) {
             return this;
         }
-        checkArgument(primer instanceof ClusterResourceHolder);
-        return new EndpointResourceHolder((ClusterResourceHolder) primer, clusterLoadAssignment);
+        return new EndpointResourceHolder(clusterLoadAssignment, primer);
     }
 
     @Override

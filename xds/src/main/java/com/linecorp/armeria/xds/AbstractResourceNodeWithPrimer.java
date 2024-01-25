@@ -17,24 +17,26 @@
 package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
-/**
- * A resource node.
- *
- * @param <T> the type of the current {@link ResourceHolder}
- */
-interface ResourceNode<T> extends ResourceWatcher<T>, SafeCloseable {
+abstract class AbstractResourceNodeWithPrimer
+        <T extends ResourceHolderWithPrimer<T, ?, U>, U extends ResourceHolder<?>>
+        extends AbstractResourceNode<T> {
 
     @Nullable
-    ConfigSource configSource();
+    private final U primer;
 
-    @Nullable
-    T currentResourceHolder();
+    AbstractResourceNodeWithPrimer(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
+                                   XdsType type, String resourceName, @Nullable U primer,
+                                   SnapshotWatcher<?> parentWatcher, ResourceNodeType resourceNodeType) {
+        super(xdsBootstrap, configSource, type, resourceName, parentWatcher, resourceNodeType);
+        this.primer = primer;
+    }
 
-    XdsType type();
-
-    String name();
+    @Override
+    public void onChanged(T update) {
+        assert update.type() == type();
+        super.onChanged(update.withPrimer(primer));
+    }
 }

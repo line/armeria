@@ -29,7 +29,8 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 /**
  * A resource holder object for a {@link Cluster}.
  */
-public final class ClusterResourceHolder extends AbstractResourceHolder {
+public final class ClusterResourceHolder
+        extends ResourceHolderWithPrimer<ClusterResourceHolder, Cluster, RouteResourceHolder> {
 
     private final Cluster cluster;
     @Nullable
@@ -45,12 +46,11 @@ public final class ClusterResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    ClusterResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    ClusterResourceHolder withPrimer(@Nullable RouteResourceHolder primer) {
         if (primer == null) {
             return this;
         }
-        checkArgument(primer instanceof RouteResourceHolder);
-        return new ClusterResourceHolder(cluster, (RouteResourceHolder) primer);
+        return new ClusterResourceHolder(cluster, primer);
     }
 
     @Nullable

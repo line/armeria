@@ -27,7 +27,6 @@ import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
@@ -63,20 +62,16 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         bootstrapNode = bootstrap.hasNode() ? bootstrap.getNode() : Node.getDefaultInstance();
     }
 
-    void subscribe(ResourceNode<AbstractResourceHolder> node) {
-        subscribe(null, node);
-    }
-
-    void subscribe(@Nullable ConfigSource configSource, ResourceNode<AbstractResourceHolder> node) {
+    void subscribe(ResourceNode<?> node) {
         final XdsType type = node.type();
         final String name = node.name();
         final ConfigSource mappedConfigSource =
-                bootstrapApiConfigs.remapConfigSource(type, configSource, name);
+                bootstrapApiConfigs.configSource(type, name, node);
         subscribe0(mappedConfigSource, type, name, node);
     }
 
     private void subscribe0(ConfigSource configSource, XdsType type, String resourceName,
-                            ResourceNode<AbstractResourceHolder> node) {
+                            ResourceWatcher<?> node) {
         if (!eventLoop.inEventLoop()) {
             eventLoop.execute(() -> subscribe0(configSource, type, resourceName, node));
             return;
@@ -89,16 +84,16 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         client.addSubscriber(type, resourceName, node);
     }
 
-    void unsubscribe(@Nullable ConfigSource configSource, ResourceNode<AbstractResourceHolder> node) {
+    void unsubscribe(ResourceNode<?> node) {
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> unsubscribe(configSource, node));
+            eventLoop.execute(() -> unsubscribe(node));
             return;
         }
         checkState(!closed, "Attempting to unsubscribe to a closed XdsBootstrap");
         final XdsType type = node.type();
         final String resourceName = node.name();
         final ConfigSource mappedConfigSource =
-                bootstrapApiConfigs.remapConfigSource(type, configSource, resourceName);
+                bootstrapApiConfigs.configSource(type, resourceName, node);
         final ConfigSourceClient client = clientMap.get(mappedConfigSource);
         if (client != null && client.removeSubscriber(type, resourceName, node)) {
             client.close();

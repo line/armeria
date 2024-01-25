@@ -28,17 +28,17 @@ import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-abstract class ResourceParser {
+abstract class ResourceParser<T extends ResourceHolder<?>> {
 
     @Nullable
     abstract String name(Message message);
 
     abstract Class<? extends Message> clazz();
 
-    abstract AbstractResourceHolder parse(Message message);
+    abstract T parse(Message message);
 
-    ParsedResourcesHolder parseResources(List<Any> resources) {
-        final ImmutableMap.Builder<String, AbstractResourceHolder> parsedResources = ImmutableMap.builder();
+    ParsedResourcesHolder<T> parseResources(List<Any> resources) {
+        final ImmutableMap.Builder<String, T> parsedResources = ImmutableMap.builder();
         final ImmutableSet.Builder<String> invalidResources = ImmutableSet.builder();
         final ImmutableList.Builder<String> errors = ImmutableList.builder();
 
@@ -68,7 +68,7 @@ abstract class ResourceParser {
                 continue;
             }
 
-            final AbstractResourceHolder resourceUpdate;
+            final T resourceUpdate;
             try {
                 resourceUpdate = parse(unpackedMessage);
             } catch (Exception e) {
@@ -82,7 +82,7 @@ abstract class ResourceParser {
             parsedResources.put(name, resourceUpdate);
         }
 
-        return new ParsedResourcesHolder(parsedResources.build(), invalidResources.build(), errors.build());
+        return new ParsedResourcesHolder<>(parsedResources.build(), invalidResources.build(), errors.build());
     }
 
     // Do not confuse with the SotW approach: it is the mechanism in which the client must specify all

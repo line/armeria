@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.grpc.Status;
 
-abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceHolder> {
+abstract class AbstractResourceNode<T extends ResourceHolder<?>> implements ResourceNode<T> {
 
     private final Deque<ResourceNode<?>> children = new ArrayDeque<>();
 
@@ -33,21 +33,18 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
     private final ConfigSource configSource;
     private final XdsType type;
     private final String resourceName;
-    @Nullable
-    private final ResourceHolder primer;
-    private final SnapshotWatcher<? super T> parentWatcher;
+    private final SnapshotWatcher<?> parentWatcher;
     private final ResourceNodeType resourceNodeType;
     @Nullable
-    private AbstractResourceHolder current;
+    private T current;
 
     AbstractResourceNode(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
-                         XdsType type, String resourceName, @Nullable ResourceHolder primer,
-                         SnapshotWatcher<? super T> parentWatcher, ResourceNodeType resourceNodeType) {
+                         XdsType type, String resourceName,
+                         SnapshotWatcher<?> parentWatcher, ResourceNodeType resourceNodeType) {
         this.xdsBootstrap = xdsBootstrap;
         this.configSource = configSource;
         this.type = type;
         this.resourceName = resourceName;
-        this.primer = primer;
         this.parentWatcher = parentWatcher;
         this.resourceNodeType = resourceNodeType;
     }
@@ -56,12 +53,17 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
         return xdsBootstrap;
     }
 
-    private void setCurrent(@Nullable AbstractResourceHolder current) {
+    @Override
+    public ConfigSource configSource() {
+        return configSource;
+    }
+
+    private void setCurrent(@Nullable T current) {
         this.current = current;
     }
 
     @Override
-    public AbstractResourceHolder currentResourceHolder() {
+    public T currentResourceHolder() {
         return current;
     }
 
@@ -82,10 +84,8 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
     }
 
     @Override
-    public final void onChanged(AbstractResourceHolder update) {
+    public void onChanged(T update) {
         assert update.type() == type();
-
-        update = update.withPrimer(primer);
         setCurrent(update);
 
         final Deque<ResourceNode<?>> prevChildren = new ArrayDeque<>(children);
@@ -98,7 +98,7 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
         }
     }
 
-    abstract void doOnChanged(ResourceHolder update);
+    abstract void doOnChanged(T update);
 
     @Override
     public void close() {
@@ -107,16 +107,12 @@ abstract class AbstractResourceNode<T> implements ResourceNode<AbstractResourceH
         }
         children.clear();
         if (resourceNodeType == ResourceNodeType.DYNAMIC) {
-            xdsBootstrap.unsubscribe(configSource, this);
+            xdsBootstrap.unsubscribe(this);
         }
     }
 
     Deque<ResourceNode<?>> children() {
         return children;
-    }
-
-    SnapshotWatcher<? super T> parentWatcher() {
-        return parentWatcher;
     }
 
     @Override

@@ -22,7 +22,7 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
 import io.envoyproxy.envoy.config.cluster.v3.ClusterOrBuilder;
 
-final class ClusterResourceParser extends ResourceParser {
+final class ClusterResourceParser extends ResourceParser<ClusterResourceHolder> {
 
     static final ClusterResourceParser INSTANCE = new ClusterResourceParser();
 

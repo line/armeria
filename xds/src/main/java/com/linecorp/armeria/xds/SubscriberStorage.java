@@ -31,7 +31,7 @@ final class SubscriberStorage implements SafeCloseable {
     private final EventExecutor eventLoop;
     private final long timeoutMillis;
 
-    private final Map<XdsType, Map<String, XdsStreamSubscriber>> subscriberMap =
+    private final Map<XdsType, Map<String, XdsStreamSubscriber<?>>> subscriberMap =
             new EnumMap<>(XdsType.class);
 
     SubscriberStorage(EventExecutor eventLoop, long timeoutMillis) {
@@ -42,12 +42,13 @@ final class SubscriberStorage implements SafeCloseable {
     /**
      * Returns {@code true} if a new subscriber is added.
      */
-    boolean register(XdsType type, String resourceName, ResourceWatcher<AbstractResourceHolder> watcher) {
-        XdsStreamSubscriber subscriber =
-                subscriberMap.computeIfAbsent(type, key -> new HashMap<>()).get(resourceName);
+    <T> boolean register(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
+        //noinspection unchecked
+        XdsStreamSubscriber<T> subscriber = (XdsStreamSubscriber<T>) subscriberMap.computeIfAbsent(
+                type, key -> new HashMap<>()).get(resourceName);
         boolean updated = false;
         if (subscriber == null) {
-            subscriber = new XdsStreamSubscriber(type, resourceName, eventLoop, timeoutMillis);
+            subscriber = new XdsStreamSubscriber<>(type, resourceName, eventLoop, timeoutMillis);
             subscriberMap.get(type).put(resourceName, subscriber);
             updated = true;
         }
@@ -58,15 +59,17 @@ final class SubscriberStorage implements SafeCloseable {
     /**
      * Returns {@code true} if a subscriber is removed.
      */
-    boolean unregister(XdsType type, String resourceName, ResourceWatcher<AbstractResourceHolder> watcher) {
+    <T> boolean unregister(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
         if (!subscriberMap.containsKey(type)) {
             return false;
         }
-        final Map<String, XdsStreamSubscriber> resourceToSubscriber = subscriberMap.get(type);
+        final Map<String, XdsStreamSubscriber<?>> resourceToSubscriber = subscriberMap.get(type);
         if (!resourceToSubscriber.containsKey(resourceName)) {
             return false;
         }
-        final XdsStreamSubscriber subscriber = resourceToSubscriber.get(resourceName);
+        //noinspection unchecked
+        final XdsStreamSubscriber<T> subscriber =
+                (XdsStreamSubscriber<T>) resourceToSubscriber.get(resourceName);
         subscriber.unregisterWatcher(watcher);
         if (subscriber.isEmpty()) {
             resourceToSubscriber.remove(resourceName);
@@ -79,15 +82,20 @@ final class SubscriberStorage implements SafeCloseable {
         return false;
     }
 
-    Map<String, XdsStreamSubscriber> subscribers(XdsType type) {
-        return subscriberMap.getOrDefault(type, Collections.emptyMap());
+    <T> Map<String, XdsStreamSubscriber<T>> subscribers(XdsType type) {
+        return unsafeCast(subscriberMap.getOrDefault(type, Collections.emptyMap()));
+    }
+
+    static <T> T unsafeCast(Object obj) {
+        //noinspection unchecked
+        return (T) obj;
     }
 
     Set<String> resources(XdsType type) {
         return subscriberMap.getOrDefault(type, Collections.emptyMap()).keySet();
     }
 
-    Map<XdsType, Map<String, XdsStreamSubscriber>> allSubscribers() {
+    Map<XdsType, Map<String, XdsStreamSubscriber<?>>> allSubscribers() {
         return subscriberMap;
     }
 
