@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.testing.EqualsTester;
+
 class EventCountTest {
 
     @Test
@@ -56,10 +58,12 @@ class EventCountTest {
 
     @Test
     void testEquals() {
-        final EventCount ec = EventCount.of(1, 1);
-        assertThat(ec).isEqualTo(ec);
-        assertThat(EventCount.of(0, 0)).isEqualTo(EventCount.of(0, 0));
-        assertThat(EventCount.of(1, 0)).isNotEqualTo(EventCount.of(0, 0));
-        assertThat(EventCount.of(1, 0)).isNotEqualTo(new Object());
+        new EqualsTester()
+                .addEqualityGroup(EventCount.of(0, 0), EventCount.of(0, 0))
+                .addEqualityGroup(EventCount.of(1, 0), EventCount.of(1, 0))
+                .addEqualityGroup(EventCount.of(0, 1), EventCount.of(0, 1))
+                .addEqualityGroup(EventCount.of(1, 1), EventCount.of(1, 1))
+                .addEqualityGroup(new Object())
+                .testEquals();
     }
 }

@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test
 
 @GenerateNativeImageTrace
 class CoroutineRequestContextTest {
-
     @Test
     fun serviceRequestContext() {
         val ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build()

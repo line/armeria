@@ -42,6 +42,7 @@ import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.testing.EqualsTester;
 
 import io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName;
 import io.netty.util.AsciiString;
@@ -410,13 +411,9 @@ class HttpHeadersBaseTest {
         headers2.add("name2", "value2");
         headers2.add("name2", "value3");
 
-        assertThat(headers2).isEqualTo(headers1);
-        assertThat(headers1).isEqualTo(headers2);
-        assertThat(headers1).isEqualTo(headers1);
-        assertThat(headers2).isEqualTo(headers2);
-        assertThat(headers2.hashCode()).isEqualTo(headers1.hashCode());
-        assertThat(headers1.hashCode()).isEqualTo(headers1.hashCode());
-        assertThat(headers2.hashCode()).isEqualTo(headers2.hashCode());
+        new EqualsTester()
+                .addEqualityGroup(headers1, headers2)
+                .testEquals();
     }
 
     @Test
@@ -452,10 +449,10 @@ class HttpHeadersBaseTest {
         h1.set("name1", "value1");
         final HttpHeadersBase h2 = newEmptyHeaders();
         h2.set("name2", "value2");
-        assertThat(h1).isNotEqualTo(h2);
-        assertThat(h2).isNotEqualTo(h1);
-        assertThat(h1).isEqualTo(h1);
-        assertThat(h2).isEqualTo(h2);
+        new EqualsTester()
+                .addEqualityGroup(h1)
+                .addEqualityGroup(h2)
+                .testEquals();
     }
 
     @Test

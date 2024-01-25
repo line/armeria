@@ -21,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import com.google.common.testing.EqualsTester;
+
 import com.linecorp.armeria.common.ByteBufAccessMode;
 
 import io.netty.buffer.ByteBuf;
@@ -100,12 +102,13 @@ class ByteArrayBytesTest {
         final ByteBufBytes bufData =
                 new ByteBufBytes(Unpooled.directBuffer().writeInt(0x01020304), true);
 
-        assertThat(a).isEqualTo(a);
-        assertThat(a).isEqualTo(b);
+        new EqualsTester()
+                .addEqualityGroup(a, b)
+                .addEqualityGroup(c)
+                .addEqualityGroup(d)
+                .addEqualityGroup(new Object())
+                .testEquals();
         assertThat(a.array()).isEqualTo(bufData.array());
-        assertThat(a).isNotEqualTo(c);
-        assertThat(a).isNotEqualTo(d);
-        assertThat(a).isNotEqualTo(new Object());
 
         bufData.close();
     }

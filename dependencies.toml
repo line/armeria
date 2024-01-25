@@ -131,7 +131,7 @@ spring6 = "6.1.3"
 spring-boot2 = "2.7.18"
 spring-boot3 = "3.2.2"
 testcontainers = "1.19.3"
-testng = "7.9.0"
+testng = "7.5.1"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
 thrift013 = { strictly = "0.13.0" }
