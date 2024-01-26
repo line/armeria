@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
@@ -108,11 +109,11 @@ final class DefaultWebSocketClient implements WebSocketClient {
         final CompletableFuture<WebSocketSession> result = new CompletableFuture<>();
         split.headers().handle((responseHeaders, cause) -> {
             if (cause != null) {
-                fail(outboundFuture, response, result, cause);
+                fail(outboundFuture, split.body(), result, cause);
                 return null;
             }
             if (!validateResponseHeaders(ctx, requestHeaders, responseHeaders, outboundFuture,
-                                         response, result)) {
+                                         split.body(), result)) {
                 return null;
             }
 
@@ -150,19 +151,19 @@ final class DefaultWebSocketClient implements WebSocketClient {
 
     private boolean validateResponseHeaders(
             ClientRequestContext ctx, RequestHeaders requestHeaders, ResponseHeaders responseHeaders,
-            CompletableFuture<StreamMessage<HttpData>> outboundFuture, HttpResponse response,
+            CompletableFuture<StreamMessage<HttpData>> outboundFuture, ByteStreamMessage responseBody,
             CompletableFuture<WebSocketSession> result) {
         if (actualSessionProtocol(ctx).isExplicitHttp2()) {
             final HttpStatus status = responseHeaders.status();
             if (status != HttpStatus.OK) {
-                fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
+                fail(outboundFuture, responseBody, result, new WebSocketClientHandshakeException(
                         "invalid status: " + status + " (expected: " + HttpStatus.OK + ')',
                         responseHeaders));
                 return false;
             }
         } else {
             if (!isHttp1WebSocketResponse(responseHeaders)) {
-                fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
+                fail(outboundFuture, responseBody, result, new WebSocketClientHandshakeException(
                         "invalid response headers: " + responseHeaders, responseHeaders));
                 return false;
             }
@@ -170,12 +171,12 @@ final class DefaultWebSocketClient implements WebSocketClient {
             assert secWebSocketKey != null;
             final String secWebSocketAccept = responseHeaders.get(HttpHeaderNames.SEC_WEBSOCKET_ACCEPT);
             if (secWebSocketAccept == null) {
-                fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
+                fail(outboundFuture, responseBody, result, new WebSocketClientHandshakeException(
                         HttpHeaderNames.SEC_WEBSOCKET_ACCEPT + " is null.", responseHeaders));
                 return false;
             }
             if (!secWebSocketAccept.equals(generateSecWebSocketAccept(secWebSocketKey))) {
-                fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
+                fail(outboundFuture, responseBody, result, new WebSocketClientHandshakeException(
                         "invalid " + HttpHeaderNames.SEC_WEBSOCKET_ACCEPT + " header: " +
                         secWebSocketAccept, responseHeaders));
                 return false;
@@ -189,7 +190,7 @@ final class DefaultWebSocketClient implements WebSocketClient {
             // https://datatracker.ietf.org/doc/html/rfc6455#section-4.2.2
 
             if (responseSubprotocol != null && !subprotocols.contains(responseSubprotocol)) {
-                fail(outboundFuture, response, result, new WebSocketClientHandshakeException(
+                fail(outboundFuture, responseBody, result, new WebSocketClientHandshakeException(
                         "invalid " + HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL + " header: " +
                         responseSubprotocol + " (expected: one of " + subprotocols + ')',
                         responseHeaders));
@@ -205,10 +206,11 @@ final class DefaultWebSocketClient implements WebSocketClient {
         return ctx.log().ensureAvailable(RequestLogProperty.SESSION).sessionProtocol();
     }
 
-    private static void fail(CompletableFuture<StreamMessage<HttpData>> outboundFuture, HttpResponse response,
+    private static void fail(CompletableFuture<StreamMessage<HttpData>> outboundFuture,
+                             ByteStreamMessage responseBody,
                              CompletableFuture<WebSocketSession> result, Throwable cause) {
         outboundFuture.completeExceptionally(cause);
-        response.abort(cause);
+        responseBody.abort(cause);
         result.completeExceptionally(cause);
     }
 
