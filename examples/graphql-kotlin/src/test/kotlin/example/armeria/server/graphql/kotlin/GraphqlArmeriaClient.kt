@@ -3,6 +3,7 @@ package example.armeria.server.graphql.kotlin
 import com.expediagroup.graphql.client.GraphQLClient
 import com.expediagroup.graphql.client.serializer.GraphQLClientSerializer
 import com.expediagroup.graphql.client.serializer.defaultGraphQLSerializer
+import com.expediagroup.graphql.client.types.AutomaticPersistedQueriesSettings
 import com.expediagroup.graphql.client.types.GraphQLClientRequest
 import com.expediagroup.graphql.client.types.GraphQLClientResponse
 import com.linecorp.armeria.client.WebClient
@@ -17,6 +18,9 @@ class GraphqlArmeriaClient(
     private val uri: URI,
     private val client: WebClient = WebClient.of(),
     private val serializer: GraphQLClientSerializer = defaultGraphQLSerializer(),
+    // TODO(ikhoon): support Automatic Persisted Queries
+    //               See: https://github.com/ExpediaGroup/graphql-kotlin/issues/1640
+    override val automaticPersistedQueriesSettings: AutomaticPersistedQueriesSettings = AutomaticPersistedQueriesSettings()
 ) : GraphQLClient<HttpRequestBuilder> {
     override suspend fun <T : Any> execute(
         request: GraphQLClientRequest<T>,
