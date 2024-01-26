@@ -1563,6 +1563,17 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
     public VirtualHostBuilder virtualHost(String hostnamePattern) {
+        requireNonNull(hostnamePattern, "hostnamePattern");
+
+        final Optional<VirtualHostBuilder> vhost =
+                virtualHostBuilders.stream()
+                                   .filter(v -> !v.defaultVirtualHost() &&
+                                                v.equalsHostnamePattern(hostnamePattern))
+                                   .findFirst();
+        if (vhost.isPresent()) {
+            return vhost.get();
+        }
+
         final VirtualHostBuilder virtualHostBuilder =
                 new VirtualHostBuilder(this, false).hostnamePattern(hostnamePattern);
         virtualHostBuilders.add(virtualHostBuilder);
@@ -1577,6 +1588,19 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
     public VirtualHostBuilder virtualHost(String defaultHostname, String hostnamePattern) {
+        requireNonNull(defaultHostname, "defaultHostname");
+        requireNonNull(hostnamePattern, "hostnamePattern");
+
+        final Optional<VirtualHostBuilder> vhost =
+                virtualHostBuilders.stream()
+                                   .filter(v -> !v.defaultVirtualHost())
+                                   .filter(v -> v.equalsDefaultHostname(defaultHostname) &&
+                                                v.equalsHostnamePattern(hostnamePattern))
+                                   .findFirst();
+        if (vhost.isPresent()) {
+            return vhost.get();
+        }
+
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
                 .defaultHostname(defaultHostname)
                 .hostnamePattern(hostnamePattern);

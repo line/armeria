@@ -25,10 +25,10 @@ import static com.linecorp.armeria.server.ServerSslContextUtil.buildSslContext;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
-import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_WITH_NO_PORT_PATTERN;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
+import static com.linecorp.armeria.server.VirtualHost.validateHostnamePattern;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.isPseudoHeader;
 import static java.util.Objects.requireNonNull;
 
@@ -248,18 +248,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             hostnamePattern = hostAndPort.getHost();
         }
 
-        final boolean validHostnamePattern;
-        if (hostnamePattern.charAt(0) == '*') {
-            validHostnamePattern =
-                    hostnamePattern.length() >= 3 &&
-                    hostnamePattern.charAt(1) == '.' &&
-                    HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern.substring(2)).matches();
-        } else {
-            validHostnamePattern = HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern).matches();
-        }
-
-        checkArgument(validHostnamePattern,
-                      "hostnamePattern: %s (expected: *.<hostname> or <hostname>)", hostnamePattern);
+        validateHostnamePattern(hostnamePattern);
 
         this.hostnamePattern = normalizeHostnamePattern(hostnamePattern);
         return this;
@@ -1523,6 +1512,26 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             return selfSignedCertificate = new SelfSignedCertificate(defaultHostname);
         }
         return selfSignedCertificate;
+    }
+
+    boolean equalsDefaultHostname(String defaultHostname) {
+        return normalizeDefaultHostname(defaultHostname).equals(this.defaultHostname);
+    }
+
+    boolean equalsHostnamePattern(String hostnamePattern) {
+        checkArgument(!hostnamePattern.isEmpty(), "hostnamePattern is empty.");
+
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        if (hostAndPort.hasPort()) {
+            if (port != hostAndPort.getPort()) {
+                return false;
+            }
+            hostnamePattern = hostAndPort.getHost();
+        }
+
+        validateHostnamePattern(hostnamePattern);
+
+        return hostnamePattern.equals(this.hostnamePattern);
     }
 
     int port() {
