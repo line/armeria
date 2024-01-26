@@ -22,8 +22,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
-
 import io.grpc.ServerInterceptor;
 
 /**
@@ -36,7 +34,7 @@ import io.grpc.ServerInterceptor;
 public @interface GrpcInterceptor {
 
     /**
-     * {@link GrpcExceptionHandlerFunction} implementation type.
+     * {@link ServerInterceptor} implementation type.
      */
     Class<? extends ServerInterceptor> value();
 }
