@@ -1,4 +1,3 @@
-// TODO(ikhoon): Declare the version in dependencies.tom
 plugins {
     alias libs.plugins.jkube
 }
