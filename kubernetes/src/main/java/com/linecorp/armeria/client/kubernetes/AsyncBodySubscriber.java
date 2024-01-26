@@ -28,8 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpData;
 
 import io.fabric8.kubernetes.client.http.AsyncBody;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 
 final class AsyncBodySubscriber implements Subscriber<HttpData>, AsyncBody {
     private final AsyncBody.Consumer<List<ByteBuffer>> consumer;
