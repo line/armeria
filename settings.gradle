@@ -249,7 +249,7 @@ includeWithFlags ':examples:dropwizard-example',                   'java11'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:graphql-example',                      'java11'
 project(':examples:graphql-example').projectDir = file('examples/graphql')
-includeWithFlags ':examples:graphql-kotlin-example',               'java11', 'kotlin'
+includeWithFlags ':examples:graphql-kotlin-example',               'java17', 'kotlin'
 project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
 includeWithFlags ':examples:graphql-sangria-example',              'java11', 'scala_2.13'
 project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')

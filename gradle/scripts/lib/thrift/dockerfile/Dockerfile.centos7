@@ -6,7 +6,7 @@ FROM centos:centos7 as builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 # see https://archive.apache.org/dist/thrift/
-ENV THRIFT_VERSION=0.18.1
+ENV THRIFT_VERSION=0.19.0
 
 # see https://thrift.apache.org/docs/install/centos.html
 RUN yum update -y -q && \
@@ -26,7 +26,7 @@ RUN yum update -y -q && \
 
 ADD https://archive.apache.org/dist/thrift/${THRIFT_VERSION}/thrift-${THRIFT_VERSION}.tar.gz /tmp/thrift.tar.gz
 
-RUN echo "04c6f10e5d788ca78e13ee2ef0d2152c7b070c0af55483d6b942e29cff296726 /tmp/thrift.tar.gz" | sha256sum -c && \
+RUN echo "d49c896c2724a78701e05cfccf6cf70b5db312d82a17efe951b441d300ccf275 /tmp/thrift.tar.gz" | sha256sum -c && \
   tar xzf /tmp/thrift.tar.gz -C /tmp
 
 RUN cd /tmp/thrift-${THRIFT_VERSION} && \

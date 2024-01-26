@@ -317,7 +317,6 @@ module = "com.google.dagger:dagger-producers"
 version.ref = "dagger"
 
 # DGS is used only for testing in it:dgs module.
-# A minimum of java 17 is required for 6.x.x
 [libraries.dgs]
 module = "com.netflix.graphql.dgs:graphql-dgs-client"
 version.ref = "dgs"

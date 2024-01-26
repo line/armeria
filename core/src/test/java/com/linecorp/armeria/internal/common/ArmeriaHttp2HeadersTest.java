@@ -368,7 +368,6 @@ class ArmeriaHttp2HeadersTest {
         headers2.add("name2", "value2");
         headers2.add("name2", "value3");
 
-
         new EqualsTester()
                 .addEqualityGroup(headers1, headers2)
                 .testEquals();

@@ -81,12 +81,12 @@ internal class CoroutineServerInterceptorTest {
         runTest {
             val client =
                 GrpcClients.builder(server.httpUri())
-                    .auth(AuthToken.ofOAuth2(token))
+                    .auth(AuthToken.ofOAuth2(TOKEN))
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
             assertThat(client.unaryCall(SimpleRequest.newBuilder().setFillUsername(true).build()).username)
-                .isEqualTo(username)
+                .isEqualTo(USER_NAME)
         }
     }
 
@@ -115,12 +115,12 @@ internal class CoroutineServerInterceptorTest {
         runTest {
             val client =
                 GrpcClients.builder(server.httpUri())
-                    .auth(AuthToken.ofOAuth2(token))
+                    .auth(AuthToken.ofOAuth2(TOKEN))
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
             client.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance()).collect {
-                assertThat(it.payload.body.toStringUtf8()).isEqualTo(username)
+                assertThat(it.payload.body.toStringUtf8()).isEqualTo(USER_NAME)
             }
         }
     }
@@ -152,7 +152,7 @@ internal class CoroutineServerInterceptorTest {
         runTest {
             val client =
                 GrpcClients.builder(server.httpUri())
-                    .auth(AuthToken.ofOAuth2(token))
+                    .auth(AuthToken.ofOAuth2(TOKEN))
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
@@ -191,12 +191,12 @@ internal class CoroutineServerInterceptorTest {
         runTest {
             val client =
                 GrpcClients.builder(server.httpUri())
-                    .auth(AuthToken.ofOAuth2(token))
+                    .auth(AuthToken.ofOAuth2(TOKEN))
                     .pathPrefix(path)
                     .build(TestServiceGrpcKt.TestServiceCoroutineStub::class.java)
 
             client.fullDuplexCall(listOf(StreamingOutputCallRequest.getDefaultInstance()).asFlow()).collect {
-                assertThat(it.payload.body.toStringUtf8()).isEqualTo(username)
+                assertThat(it.payload.body.toStringUtf8()).isEqualTo(USER_NAME)
             }
         }
     }
@@ -274,8 +274,8 @@ internal class CoroutineServerInterceptorTest {
                 }
             }
 
-        private const val username = "Armeria"
-        private const val token = "token-1234"
+        private const val USER_NAME = "Armeria"
+        private const val TOKEN = "token-1234"
 
         private val executorDispatcher =
             Executors.newSingleThreadExecutor(
@@ -287,7 +287,7 @@ internal class CoroutineServerInterceptorTest {
                 Authorizer { ctx: ServiceRequestContext, _: Metadata ->
                     val future = CompletableFuture<Boolean>()
                     ctx.eventLoop().schedule({
-                        if (ctx.request().headers().contains("Authorization", "Bearer $token")) {
+                        if (ctx.request().headers().contains("Authorization", "Bearer $TOKEN")) {
                             future.complete(true)
                         } else {
                             future.complete(false)
@@ -389,7 +389,7 @@ internal class CoroutineServerInterceptorTest {
                 }
 
                 if (request.fillUsername) {
-                    return SimpleResponse.newBuilder().setUsername(username).build()
+                    return SimpleResponse.newBuilder().setUsername(USER_NAME).build()
                 }
                 return SimpleResponse.getDefaultInstance()
             }
@@ -399,7 +399,7 @@ internal class CoroutineServerInterceptorTest {
                     for (i in 1..5) {
                         delay(500)
                         assertContextPropagation()
-                        emit(buildReply(username))
+                        emit(buildReply(USER_NAME))
                     }
                 }
             }
@@ -417,7 +417,7 @@ internal class CoroutineServerInterceptorTest {
                     requests.collect {
                         delay(500)
                         assertContextPropagation()
-                        emit(buildReply(username))
+                        emit(buildReply(USER_NAME))
                     }
                 }
             }

@@ -6,8 +6,10 @@ dependencies {
 
     api libs.javax.annotation
 
-    // thrift api depends on httpclient4
+    // Use httpclient4 to reuse the same test code in thrift0.13
     testImplementation libs.apache.httpclient4
+    // thrift api depends on httpclient5
+    testImplementation libs.apache.httpclient5
 
     // Jetty, for testing TServlet interoperability.
     testImplementation libs.jetty94.webapp
@@ -49,6 +51,9 @@ task generateTestSources(type: Copy) {
     from("${thrift013ProjectDir}/src/test/java") {
         exclude '**/THttp2Client.java'
         exclude '**/ThriftDocServicePluginTest.java'
+        exclude '**/ThriftOverHttp1Test.java'
+        // TODO(ikhoon): Implement ThriftOverHttpClientTServletIntegrationTest for Thrift 0.19.
+        exclude '**/ThriftOverHttpClientTServletIntegrationTest.java'
     }
     from "${thrift014ProjectDir}/src/test/java"
     from "${thrift017ProjectDir}/src/test/java"
@@ -56,7 +61,7 @@ task generateTestSources(type: Copy) {
     into "${project.ext.genSrcDir}/test/java"
 }
 
-def thriftFullVersion = libs.thrift018.get().versionConstraint.requiredVersion
+def thriftFullVersion = libs.thrift019.get().versionConstraint.requiredVersion
 ext {
     thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'));
     testThriftSrcDirs = ["$thrift013ProjectDir/src/test/thrift", "$thrift018ProjectDir/src/test/thrift"]
