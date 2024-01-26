@@ -1151,6 +1151,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     default StreamMessage<T> subscribeOn(EventExecutor eventExecutor) {
+        requireNonNull(eventExecutor, "eventExecutor");
         return new SubscribeOnStreamMessage<>(this, eventExecutor);
     }
 }
