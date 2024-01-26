@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.maybeTruncate;
 import static java.util.Collections.emptyList;
 
 import java.util.Collections;
@@ -188,8 +189,9 @@ class GraphqlWSSubProtocol {
                     }
                     return;
                 default:
-                    throw new GraphqlWebSocketCloseException(4400,
-                                                             "Unknown event type: " + type.substring(0, 30));
+                    final String reasonPhrase = maybeTruncate("Unknown event type: " + type);
+                    assert reasonPhrase != null;
+                    throw new GraphqlWebSocketCloseException(4400, reasonPhrase);
             }
         } catch (GraphqlWebSocketCloseException e) {
             logger.debug("Error while handling event", e);
