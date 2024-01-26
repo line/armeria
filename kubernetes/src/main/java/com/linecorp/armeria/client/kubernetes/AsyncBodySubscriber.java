@@ -53,15 +53,7 @@ final class AsyncBodySubscriber implements Subscriber<HttpData>, AsyncBody {
     @Override
     public void onNext(HttpData item) {
         try {
-            final ByteBuf byteBuf = item.byteBuf();
-            final ByteBuffer buffer;
-            if (byteBuf.nioBufferCount() == 1) {
-                buffer = byteBuf.nioBuffer();
-            } else {
-
-                buffer = ByteBuffer.wrap(ByteBufUtil.getBytes(byteBuf));
-            }
-            consumer.consume(ImmutableList.of(buffer), this);
+            consumer.consume(ImmutableList.of(item.byteBuf().nioBuffer()), this);
         } catch (Exception e) {
             subscription.join().cancel();
             done.completeExceptionally(e);
