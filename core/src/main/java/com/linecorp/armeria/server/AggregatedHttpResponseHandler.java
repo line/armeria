@@ -57,7 +57,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     @Override
     public Void apply(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
-        final EventLoop eventLoop = reqCtx.eventLoop();
+        final EventLoop eventLoop = ctx.channel().eventLoop();
         if (eventLoop.inEventLoop()) {
             apply0(response, cause);
         } else {
