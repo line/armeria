@@ -150,7 +150,7 @@ public final class WebSocketUtil {
         }
         // If the length of the phrase exceeds 125 characters, it is truncated to satisfy the
         // <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5">specification</a>.
-        String reasonPhrase = truncate(cause.getMessage());
+        String reasonPhrase = maybeTruncate(cause.getMessage());
         if (reasonPhrase == null) {
             reasonPhrase = closeStatus.reasonPhrase();
         }
@@ -158,7 +158,7 @@ public final class WebSocketUtil {
     }
 
     @Nullable
-    private static String truncate(@Nullable String message) {
+    public static String maybeTruncate(@Nullable String message) {
         if (isNullOrEmpty(message)) {
             return null;
         }
