@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -55,23 +56,23 @@ final class RegisterInstanceClient {
         requireNonNull(serviceName, "serviceName");
         requireNonNull(ip, "ip");
 
-        final String params = NacosClientUtil.queryParams(namespaceId, groupName, serviceName, clusterName,
-                                                           null, app, ip, port, weight)
-                                              .toQueryString();
+        final QueryParamsBuilder paramsBuilder = NacosClientUtil
+                .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, null, app,
+                                    ip, port, weight);
 
         if (loginClient == null) {
             return webClient.prepare()
                             .post(instanceApiPath)
-                            .content(MediaType.FORM_DATA, params)
+                            .content(MediaType.FORM_DATA, paramsBuilder.toQueryString())
                             .execute();
         } else {
             return HttpResponse.of(
                     loginClient.login()
                                .thenApply(accessToken -> {
-                                   final String paramsWithToken = new StringBuilder(params)
-                                           .append("&accessToken=")
-                                           .append(accessToken)
-                                           .toString();
+                                   final String paramsWithToken = paramsBuilder
+                                           .add("accessToken", accessToken)
+                                           .build()
+                                           .toQueryString();
                                    return webClient.prepare()
                                             .post(instanceApiPath)
                                             .content(MediaType.FORM_DATA, paramsWithToken)
@@ -89,23 +90,23 @@ final class RegisterInstanceClient {
         requireNonNull(serviceName, "serviceName");
         requireNonNull(ip, "ip");
 
-        final String params = NacosClientUtil.queryParams(namespaceId, groupName, serviceName, clusterName,
-                                                           null, app, ip, port, weight)
-                                              .toQueryString();
+        final QueryParamsBuilder paramsBuilder = NacosClientUtil
+                .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, null, app,
+                                    ip, port, weight);
 
         if (loginClient == null) {
             return webClient.prepare()
                             .delete(instanceApiPath)
-                            .content(MediaType.FORM_DATA, params)
+                            .content(MediaType.FORM_DATA, paramsBuilder.build().toQueryString())
                             .execute();
         } else {
             return HttpResponse.of(
                     loginClient.login()
                                .thenApply(accessToken -> {
-                                   final String paramsWithToken = new StringBuilder(params)
-                                           .append("&accessToken=")
-                                           .append(accessToken)
-                                           .toString();
+                                   final String paramsWithToken = paramsBuilder
+                                           .add("accessToken", accessToken)
+                                           .build()
+                                           .toQueryString();
                                    return webClient.prepare()
                                             .delete(instanceApiPath)
                                             .content(MediaType.FORM_DATA, paramsWithToken)
