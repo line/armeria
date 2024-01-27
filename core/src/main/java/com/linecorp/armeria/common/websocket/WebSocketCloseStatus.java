@@ -31,6 +31,9 @@
 
 package com.linecorp.armeria.common.websocket;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -46,20 +49,20 @@ public final class WebSocketCloseStatus {
      * {@code 1000} indicates a normal closure.
      */
     public static final WebSocketCloseStatus NORMAL_CLOSURE =
-        new WebSocketCloseStatus(1000, "Bye");
+            new WebSocketCloseStatus(1000, "Bye");
 
     /**
      * {@code 1001} indicates that an endpoint is "going away", such as a server
      * going down or a browser having navigated away from a page.
      */
     public static final WebSocketCloseStatus ENDPOINT_UNAVAILABLE =
-        new WebSocketCloseStatus(1001, "Endpoint unavailable");
+            new WebSocketCloseStatus(1001, "Endpoint unavailable");
 
     /**
      * {@code 1002} indicates that an endpoint is terminating the connection due to a protocol error.
      */
     public static final WebSocketCloseStatus PROTOCOL_ERROR =
-        new WebSocketCloseStatus(1002, "Protocol error");
+            new WebSocketCloseStatus(1002, "Protocol error");
 
     /**
      * {@code 1003} indicates that an endpoint is terminating the connection because it has received
@@ -67,7 +70,7 @@ public final class WebSocketCloseStatus {
      * receives a binary message).
      */
     public static final WebSocketCloseStatus INVALID_MESSAGE_TYPE =
-        new WebSocketCloseStatus(1003, "Invalid message type");
+            new WebSocketCloseStatus(1003, "Invalid message type");
 
     /**
      * {@code 1007} indicates that an endpoint is terminating the connection
@@ -75,7 +78,7 @@ public final class WebSocketCloseStatus {
      * consistent with the type of the message (e.g., non-UTF-8 [RFC3629] data within a text message).
      */
     public static final WebSocketCloseStatus INVALID_PAYLOAD_DATA =
-        new WebSocketCloseStatus(1007, "Invalid payload data");
+            new WebSocketCloseStatus(1007, "Invalid payload data");
 
     /**
      * {@code 1008} indicates that an endpoint is terminating the connection
@@ -85,14 +88,14 @@ public final class WebSocketCloseStatus {
      * is a need to hide specific details about the policy.
      */
     public static final WebSocketCloseStatus POLICY_VIOLATION =
-        new WebSocketCloseStatus(1008, "Policy violation");
+            new WebSocketCloseStatus(1008, "Policy violation");
 
     /**
      * {@code 1009} indicates that an endpoint is terminating the connection
      * because it has received a message that is too big for it to process.
      */
     public static final WebSocketCloseStatus MESSAGE_TOO_BIG =
-        new WebSocketCloseStatus(1009, "Message too big");
+            new WebSocketCloseStatus(1009, "Message too big");
 
     /**
      * {@code 1010} indicates that an endpoint (client) is terminating the connection
@@ -103,14 +106,14 @@ public final class WebSocketCloseStatus {
      * because it can fail the WebSocket handshake instead.
      */
     public static final WebSocketCloseStatus MANDATORY_EXTENSION =
-        new WebSocketCloseStatus(1010, "Mandatory extension");
+            new WebSocketCloseStatus(1010, "Mandatory extension");
 
     /**
      * {@code 1011} indicates that a server is terminating the connection
      * because it encountered an unexpected condition that prevented it from fulfilling the request.
      */
     public static final WebSocketCloseStatus INTERNAL_SERVER_ERROR =
-        new WebSocketCloseStatus(1011, "Internal server error");
+            new WebSocketCloseStatus(1011, "Internal server error");
 
     /**
      * {@code 1012} (IANA Registry, Non RFC 6455) indicates that the service is restarted.
@@ -118,7 +121,7 @@ public final class WebSocketCloseStatus {
      * of 5 - 30 seconds.
      */
     public static final WebSocketCloseStatus SERVICE_RESTART =
-        new WebSocketCloseStatus(1012, "Service Restart");
+            new WebSocketCloseStatus(1012, "Service Restart");
 
     /**
      * {@code 1013} (IANA Registry, Non RFC 6455) indicates that the service is experiencing overload.
@@ -126,7 +129,7 @@ public final class WebSocketCloseStatus {
      * or reconnect to the same IP upon user action.
      */
     public static final WebSocketCloseStatus TRY_AGAIN_LATER =
-        new WebSocketCloseStatus(1013, "Try Again Later");
+            new WebSocketCloseStatus(1013, "Try Again Later");
 
     /**
      * {@code 1014} (IANA Registry, Non RFC 6455) indicates that the server was acting as a gateway or
@@ -134,7 +137,7 @@ public final class WebSocketCloseStatus {
      * This is similar to 502 HTTP Status Code.
      */
     public static final WebSocketCloseStatus BAD_GATEWAY =
-        new WebSocketCloseStatus(1014, "Bad Gateway");
+            new WebSocketCloseStatus(1014, "Bad Gateway");
 
     // 1004, 1005, 1006, 1015 are reserved and should never be used by user
 
@@ -144,7 +147,7 @@ public final class WebSocketCloseStatus {
      * that no status code was actually present.
      */
     public static final WebSocketCloseStatus EMPTY =
-        new WebSocketCloseStatus(1005, "Empty");
+            new WebSocketCloseStatus(1005, "Empty");
 
     /**
      * {@code 1006} is a reserved value and MUST NOT be set as a status code in a Close control frame
@@ -152,7 +155,7 @@ public final class WebSocketCloseStatus {
      * connection was closed abnormally, e.g., without sending or receiving a Close control frame.
      */
     public static final WebSocketCloseStatus ABNORMAL_CLOSURE =
-        new WebSocketCloseStatus(1006, "Abnormal closure");
+            new WebSocketCloseStatus(1006, "Abnormal closure");
 
     /**
      * {@code 1015} is a reserved value and MUST NOT be set as a status code in a Close control frame
@@ -161,7 +164,20 @@ public final class WebSocketCloseStatus {
      * (e.g., the server certificate can't be verified).
      */
     public static final WebSocketCloseStatus TLS_HANDSHAKE_FAILED =
-        new WebSocketCloseStatus(1015, "TLS handshake failed");
+            new WebSocketCloseStatus(1015, "TLS handshake failed");
+
+    /**
+     * Creates a new {@link WebSocketCloseStatus} whose status is in the range 4000-4999 for private use.
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.2">rfc6455</a>.
+     *
+     * <p>Note that {@code reasonPhrase} must be 125 bytes or less.
+     */
+    public static WebSocketCloseStatus ofPrivateUse(int code, String reasonPhrase) {
+        checkArgument(code >= 4000 && code < 5000, "code: %s (expected: 4000 <= code < 5000)", code);
+        checkArgument(reasonPhrase.getBytes().length <= 125, "reasonPhrase: %s (expected: <= 125 bytes)",
+                      reasonPhrase);
+        return new WebSocketCloseStatus(code, requireNonNull(reasonPhrase, "reasonPhrase"));
+    }
 
     /**
      * Tells whether the {@code code} is valid.

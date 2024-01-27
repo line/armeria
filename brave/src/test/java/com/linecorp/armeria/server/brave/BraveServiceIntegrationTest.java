@@ -24,9 +24,9 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-import org.junit.After;
-import org.junit.AssumptionViolatedException;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
@@ -127,25 +127,25 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
     @Test
     @Override
     public void notFound() {
-        throw new AssumptionViolatedException(
+        Assumptions.abort(
                 "Armeria yields 'get /*' as a span name for a non-existent mapping.");
     }
 
     @Test
     @Override
     public void httpStatusCodeSettable_onUncaughtException() {
-        throw new AssumptionViolatedException(
+        Assumptions.abort(
             "Can't currently control the HTTP status code on uncaught exception. #2656");
     }
 
     @Test
     @Override
     public void httpStatusCodeSettable_onUncaughtException_async() {
-        throw new AssumptionViolatedException(
+        Assumptions.abort(
             "Can't currently control the HTTP status code on uncaught exception. #2656");
     }
 
-    @After
+    @AfterEach
     @Override
     public void close() throws Exception {
         if (server != null) {

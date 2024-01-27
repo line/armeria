@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLSession;
 
@@ -116,17 +114,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         if (timedOut()) {
             responseCancellationScheduler = CancellationScheduler.finished(false);
         } else {
-            responseCancellationScheduler = CancellationScheduler.of(0);
-            final CountDownLatch latch = new CountDownLatch(1);
-            eventLoop().execute(() -> {
-                responseCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ false);
-                latch.countDown();
-            });
-
-            try {
-                latch.await(1000, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException ignored) {
-            }
+            responseCancellationScheduler = CancellationScheduler.ofClient(0);
+            responseCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
         }
 
         final DefaultClientRequestContext ctx = new DefaultClientRequestContext(

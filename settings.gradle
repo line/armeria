@@ -97,6 +97,8 @@ includeWithFlags ':jetty10',                             'java11', 'publish', 'r
 project(':jetty10').projectDir = file('jetty/jetty10')
 includeWithFlags ':jetty11',                             'java11', 'publish', 'relocate'
 project(':jetty11').projectDir = file('jetty/jetty11')
+includeWithFlags ':jetty12',                             'java17', 'publish', 'relocate', 'no_aggregation'
+project(':jetty12').projectDir = file('jetty/jetty12')
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
@@ -170,7 +172,7 @@ project(':thrift0.18').projectDir = file('thrift/thrift0.18')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
-includeWithFlags ':xds',                                 'java', 'relocate'
+includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
@@ -204,7 +206,7 @@ includeWithFlags ':it:nio',                                    'java', 'relocate
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
-includeWithFlags ':it:spring:boot3-jetty11',                   'java17', 'relocate'
+includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-mixed-tomcat10',            'java17', 'relocate'

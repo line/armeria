@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,17 +25,27 @@ import com.linecorp.armeria.common.annotation.Nullable;
 final class XdsResourceParserUtil {
 
     private static final Map<String, ResourceParser> typeUrlToResourceType = new HashMap<>();
+    private static final Map<XdsType, ResourceParser> typeToResourceType = new EnumMap<>(XdsType.class);
 
     static {
         typeUrlToResourceType.put(XdsType.ENDPOINT.typeUrl(), EndpointResourceParser.INSTANCE);
         typeUrlToResourceType.put(XdsType.CLUSTER.typeUrl(), ClusterResourceParser.INSTANCE);
         typeUrlToResourceType.put(XdsType.LISTENER.typeUrl(), ListenerResourceParser.INSTANCE);
         typeUrlToResourceType.put(XdsType.ROUTE.typeUrl(), RouteResourceParser.INSTANCE);
+
+        typeToResourceType.put(XdsType.ENDPOINT, EndpointResourceParser.INSTANCE);
+        typeToResourceType.put(XdsType.CLUSTER, ClusterResourceParser.INSTANCE);
+        typeToResourceType.put(XdsType.LISTENER, ListenerResourceParser.INSTANCE);
+        typeToResourceType.put(XdsType.ROUTE, RouteResourceParser.INSTANCE);
     }
 
     @Nullable
     static ResourceParser fromTypeUrl(String typeUrl) {
         return typeUrlToResourceType.get(typeUrl);
+    }
+
+    static ResourceParser fromType(XdsType xdsType) {
+        return typeToResourceType.get(xdsType);
     }
 
     private XdsResourceParserUtil() {}

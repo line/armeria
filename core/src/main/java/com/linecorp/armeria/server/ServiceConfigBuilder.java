@@ -42,9 +42,12 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
+import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
-import com.linecorp.armeria.server.websocket.WebSocketService;
+
+import io.netty.channel.EventLoopGroup;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {
 
@@ -75,6 +78,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private Long requestAutoAbortDelayMillis;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private EventLoopGroup serviceWorkerGroup;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
     private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
@@ -289,6 +294,22 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         return this;
     }
 
+    @Override
+    public ServiceConfigBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                   boolean shutdownOnStop) {
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(serviceWorkerGroup));
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder serviceWorkerGroup(int numThreads) {
+        final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
+        return serviceWorkerGroup(workerGroup, true);
+    }
+
     void shutdownSupports(List<ShutdownSupport> shutdownSupports) {
         requireNonNull(shutdownSupports, "shutdownSupports");
         this.shutdownSupports.addAll(shutdownSupports);
@@ -308,6 +329,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         SuccessFunction defaultSuccessFunction,
                         long defaultRequestAutoAbortDelayMillis,
                         Path defaultMultipartUploadsLocation,
+                        EventLoopGroup defaultServiceWorkerGroup,
                         HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
@@ -321,7 +343,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                                                                      unhandledExceptionsReporter);
         }
 
-        final boolean webSocket = service.as(WebSocketService.class) != null;
+        final boolean webSocket = service.as(DefaultWebSocketService.class) != null;
         final long requestTimeoutMillis;
         if (this.requestTimeoutMillis != null) {
             requestTimeoutMillis = this.requestTimeoutMillis;
@@ -366,6 +388,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 successFunction != null ? successFunction : defaultSuccessFunction,
                 requestAutoAbortDelayMillis,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
+                serviceWorkerGroup != null ? serviceWorkerGroup : defaultServiceWorkerGroup,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
                 requestIdGenerator != null ? requestIdGenerator : defaultRequestIdGenerator, errorHandler,
@@ -385,6 +408,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("blockingTaskExecutor", blockingTaskExecutor)
                           .add("successFunction", successFunction)
                           .add("multipartUploadsLocation", multipartUploadsLocation)
+                          .add("serviceWorkerGroup", serviceWorkerGroup)
                           .add("shutdownSupports", shutdownSupports)
                           .add("defaultHeaders", defaultHeaders)
                           .add("serviceErrorHandler", serviceErrorHandler)

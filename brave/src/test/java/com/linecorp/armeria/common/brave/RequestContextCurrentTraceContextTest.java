@@ -17,8 +17,6 @@
 package com.linecorp.armeria.common.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.mockito.stubbing.Answer;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -55,10 +52,7 @@ class RequestContextCurrentTraceContextTest {
     @BeforeEach
     void setUp() {
         when(eventLoop.inEventLoop()).thenReturn(true);
-        doAnswer((Answer<Void>) invocation -> {
-            invocation.<Runnable>getArgument(0).run();
-            return null;
-        }).when(eventLoop).execute(any());
+        when(eventLoop.next()).thenReturn(eventLoop);
 
         ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                    .eventLoop(eventLoop)

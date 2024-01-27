@@ -19,14 +19,11 @@ package com.linecorp.armeria.server.jetty;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.SessionIdManager;
-import org.eclipse.jetty.server.handler.HandlerWrapper;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +37,6 @@ public abstract class AbstractJettyServiceBuilder {
 
     final ImmutableMap.Builder<String, Object> attrs = ImmutableMap.builder();
     final ImmutableList.Builder<Bean> beans = ImmutableList.builder();
-    final ImmutableList.Builder<HandlerWrapper> handlerWrappers = ImmutableList.builder();
     final ImmutableList.Builder<Consumer<? super Server>> customizers = ImmutableList.builder();
 
     @Nullable
@@ -54,10 +50,7 @@ public abstract class AbstractJettyServiceBuilder {
     @Nullable
     RequestLog requestLog;
     @Nullable
-    Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
-    @Nullable
     Long stopTimeoutMillis;
-    boolean tlsReverseDnsLookup;
 
     AbstractJettyServiceBuilder() {}
 
@@ -130,16 +123,6 @@ public abstract class AbstractJettyServiceBuilder {
     }
 
     /**
-     * Adds the specified {@link HandlerWrapper} to the Jetty {@link Server}.
-     *
-     * @see Server#insertHandler(HandlerWrapper)
-     */
-    public AbstractJettyServiceBuilder handlerWrapper(HandlerWrapper handlerWrapper) {
-        handlerWrappers.add(requireNonNull(handlerWrapper, "handlerWrapper"));
-        return this;
-    }
-
-    /**
      * Adds the specified {@link HttpConfiguration} to the Jetty {@link Server}.
      * This method is a type-safe alias of {@link #bean(Object)}.
      */
@@ -158,51 +141,12 @@ public abstract class AbstractJettyServiceBuilder {
     }
 
     /**
-     * Sets the {@link SessionIdManager} of the Jetty {@link Server}. This method is a shortcut for:
-     * <pre>{@code
-     * sessionIdManagerFactory(server -> sessionIdManager);
-     * }</pre>
-     *
-     * @see Server#setSessionIdManager(SessionIdManager)
-     */
-    public AbstractJettyServiceBuilder sessionIdManager(SessionIdManager sessionIdManager) {
-        requireNonNull(sessionIdManager, "sessionIdManager");
-        return sessionIdManagerFactory(server -> sessionIdManager);
-    }
-
-    /**
-     * Sets the factory that creates a new instance of {@link SessionIdManager} for the Jetty {@link Server}.
-     *
-     * @see Server#setSessionIdManager(SessionIdManager)
-     */
-    public AbstractJettyServiceBuilder sessionIdManagerFactory(
-            Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory) {
-        requireNonNull(sessionIdManagerFactory, "sessionIdManagerFactory");
-        this.sessionIdManagerFactory = sessionIdManagerFactory;
-        return this;
-    }
-
-    /**
      * Sets the graceful stop time of the {@link Server#stop()} in milliseconds.
      *
      * @see Server#setStopTimeout(long)
      */
     public AbstractJettyServiceBuilder stopTimeoutMillis(long stopTimeoutMillis) {
         this.stopTimeoutMillis = stopTimeoutMillis;
-        return this;
-    }
-
-    /**
-     * Sets whether Jetty has to perform reverse DNS lookup for the remote IP address on a TLS connection.
-     * By default, this flag is disabled because it is known to cause performance issues when the DNS server
-     * is not responsive enough. However, you might want to take the risk and enable it if you want the same
-     * behavior with Jetty 9.3 when mTLS is enabled.
-     *
-     * @see <a href="https://github.com/eclipse/jetty.project/issues/1235">Jetty issue #1235</a>
-     * @see <a href="https://github.com/eclipse/jetty.project/commit/de7c146bd741307cd924a9dcef386d516e75b1e9">Jetty commit de7c146</a>
-     */
-    public AbstractJettyServiceBuilder tlsReverseDnsLookup(boolean tlsReverseDnsLookup) {
-        this.tlsReverseDnsLookup = tlsReverseDnsLookup;
         return this;
     }
 
