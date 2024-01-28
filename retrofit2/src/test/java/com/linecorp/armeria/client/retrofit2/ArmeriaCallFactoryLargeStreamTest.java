@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -100,6 +101,10 @@ class ArmeriaCallFactoryLargeStreamTest {
 
     @Test
     void largeStream() throws Exception {
+        Server.builder()
+                .route()
+                .serviceWorkerGroup()
+                .build()
         final WebClient webClient =
                 WebClient.builder(server.httpUri())
                          .maxResponseLength(Long.MAX_VALUE)
