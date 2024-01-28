@@ -167,6 +167,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Nullable
     private Object rawResponseContent;
 
+    @Nullable
+    private TracingContext tracingContext;
+
     DefaultRequestLog(RequestContext ctx) {
         this.ctx = requireNonNull(ctx, "ctx");
     }
@@ -596,6 +599,17 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         hasLastChild = true;
         final RequestLogAccess lastChild = children.get(children.size() - 1);
         propagateResponseSideLog(lastChild.partial());
+    }
+
+    @Nullable
+    @Override
+    public TracingContext tracingContext() {
+        return this.tracingContext;
+    }
+
+    @Override
+    public void tracingContext(TracingContext tracingContext) {
+        this.tracingContext = requireNonNull(tracingContext, "tracingContext");
     }
 
     private void propagateResponseSideLog(RequestLog lastChild) {
@@ -1842,6 +1856,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public HttpHeaders responseTrailers() {
             return responseTrailers;
+        }
+
+        @Nullable
+        @Override
+        public TracingContext tracingContext() {
+            return tracingContext;
         }
 
         @Override

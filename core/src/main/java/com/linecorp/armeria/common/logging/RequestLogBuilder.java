@@ -424,6 +424,11 @@ public interface RequestLogBuilder extends RequestLogAccess {
      */
     void defer(Iterable<RequestLogProperty> properties);
 
+    /**
+     * Fills the tracing context.
+     */
+    void tracingContext(TracingContext tracingContext);
+
     // Methods related with nested logs
 
     /**

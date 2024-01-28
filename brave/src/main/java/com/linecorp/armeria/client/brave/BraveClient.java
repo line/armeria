@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.brave.SpanConverter;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
 
 import brave.Span;
@@ -126,6 +127,8 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
             // Make the span the current span and run scope decorators when the ctx is pushed.
             ctxExtension.hook(() -> currentTraceContext.newScope(span.context()));
         }
+
+        ctx.logBuilder().tracingContext(SpanConverter.toLogTracingContext(span));
 
         maybeAddTagsToSpan(ctx, braveReq, span);
         try (SpanInScope ignored = tracer.withSpanInScope(span)) {

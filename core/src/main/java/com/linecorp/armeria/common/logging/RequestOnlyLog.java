@@ -272,6 +272,16 @@ public interface RequestOnlyLog extends RequestLogAccess {
     HttpHeaders requestTrailers();
 
     /**
+     * Returns the tracing context log of the {@link Request}.
+     * Note that a {@link Service} or a {@link Client} must be decorated
+     * with BraveService or BraveClient decorators of armeria-brave module to enable the tracing.
+     *
+     * @return the tracing context.
+     */
+    @Nullable
+    TracingContext tracingContext();
+
+    /**
      * Returns the string representation of the {@link Request}, with no sanitization of headers or content.
      * This method is a shortcut for:
      * <pre>{@code
