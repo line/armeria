@@ -27,6 +27,6 @@ import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
  */
 interface XdsResponseHandler {
 
-    <T extends ResourceHolder<U>, U extends Message> void handleResponse(
+    <T extends XdsResource, U extends Message> void handleResponse(
             ResourceParser<T, U> resourceParser, DiscoveryResponse value, SotwXdsStream sender);
 }

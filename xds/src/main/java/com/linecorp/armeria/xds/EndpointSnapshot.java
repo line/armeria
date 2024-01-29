@@ -26,15 +26,15 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  * A snapshot of a {@link ClusterLoadAssignment} resource.
  */
 @UnstableApi
-public final class EndpointSnapshot implements Snapshot<EndpointResourceHolder> {
-    private final EndpointResourceHolder endpoint;
+public final class EndpointSnapshot implements Snapshot<EndpointXdsResource> {
+    private final EndpointXdsResource endpoint;
 
-    EndpointSnapshot(EndpointResourceHolder endpoint) {
+    EndpointSnapshot(EndpointXdsResource endpoint) {
         this.endpoint = endpoint;
     }
 
     @Override
-    public EndpointResourceHolder holder() {
+    public EndpointXdsResource xdsResource() {
         return endpoint;
     }
 

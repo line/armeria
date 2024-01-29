@@ -104,22 +104,22 @@ class DynamicResourcesTest {
                     cache.getSnapshot(GROUP).listeners().resources().get(listenerName);
             final ListenerSnapshot listenerSnapshot =
                     watcher.blockingChanged(ListenerSnapshot.class);
-            assertThat(listenerSnapshot.holder().resource()).isEqualTo(expectedListener);
+            assertThat(listenerSnapshot.xdsResource().resource()).isEqualTo(expectedListener);
 
             final RouteConfiguration expectedRoute =
                     cache.getSnapshot(GROUP).routes().resources().get(routeName);
             final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
-            assertThat(routeSnapshot.holder().resource()).isEqualTo(expectedRoute);
+            assertThat(routeSnapshot.xdsResource().resource()).isEqualTo(expectedRoute);
 
             final Cluster expectedCluster =
                     cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
             final ClusterSnapshot clusterSnapshot = routeSnapshot.clusterSnapshots().get(0);
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
 
             final ClusterLoadAssignment expectedEndpoint =
                     cache.getSnapshot(GROUP).endpoints().resources().get(clusterName);
             final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-            assertThat(endpointSnapshot.holder().resource()).isEqualTo(expectedEndpoint);
+            assertThat(endpointSnapshot.xdsResource().resource()).isEqualTo(expectedEndpoint);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());

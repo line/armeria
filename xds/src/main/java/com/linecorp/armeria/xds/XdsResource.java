@@ -16,28 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.protobuf.Message;
-
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
-import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
-
 /**
- * A holder object for xDS resources. This is a holder object which
+ * A object for xDS resources. This is a holder object which
  * is contained by {@link Snapshot} to:
  * <ul>
  *     <li>Provide additional metadata.</li>
  *     <li>Unify unpacking child object logic.</li>
  * </ul>
- *
- * @param <T> the type of the resource. Can be {@link Listener}, {@link RouteConfiguration}, {@link Cluster} or
- *            {@link ClusterLoadAssignment}.
  */
 @UnstableApi
-public interface ResourceHolder<T extends Message> {
+public interface XdsResource {
 
     /**
      * Returns the xDS type of the object.
@@ -47,7 +37,7 @@ public interface ResourceHolder<T extends Message> {
     /**
      * Returns the resource.
      */
-    T resource();
+    Object resource();
 
     /**
      * Returns the resource name.

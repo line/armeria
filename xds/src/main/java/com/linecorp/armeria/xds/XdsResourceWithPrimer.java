@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,19 +16,12 @@
 
 package com.linecorp.armeria.xds;
 
-import io.grpc.Status;
+import com.linecorp.armeria.common.annotation.Nullable;
 
-/**
- * A resource watcher.
- *
- * @param <T> the type of the {@link XdsResource} that is notified
- */
-@FunctionalInterface
-interface ResourceWatcher<T> {
+abstract class XdsResourceWithPrimer<T extends XdsResourceWithPrimer<T>> implements XdsResource {
 
-    default void onError(XdsType type, Status error) {}
+    abstract T withPrimer(@Nullable XdsResource primer);
 
-    default void onResourceDoesNotExist(XdsType type, String resourceName) {}
-
-    void onChanged(T update);
+    @Nullable
+    abstract XdsResource primer();
 }

@@ -18,15 +18,15 @@ package com.linecorp.armeria.xds;
 
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
-final class EndpointResourceParser extends ResourceParser<EndpointResourceHolder, ClusterLoadAssignment> {
+final class EndpointResourceParser extends ResourceParser<EndpointXdsResource, ClusterLoadAssignment> {
 
     static final EndpointResourceParser INSTANCE = new EndpointResourceParser();
 
     private EndpointResourceParser() {}
 
     @Override
-    EndpointResourceHolder parse(ClusterLoadAssignment message) {
-        return new EndpointResourceHolder(message);
+    EndpointXdsResource parse(ClusterLoadAssignment message) {
+        return new EndpointXdsResource(message);
     }
 
     @Override

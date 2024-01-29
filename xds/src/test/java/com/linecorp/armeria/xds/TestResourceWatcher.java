@@ -52,6 +52,7 @@ class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
     }
 
     List<Object> blockingMissing() {
+        //noinspection unchecked
         return blockingFirst("onMissing", List.class);
     }
 

@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.grpc.Status;
 
-abstract class AbstractResourceNode<T extends ResourceHolder<?>> implements ResourceNode<T> {
+abstract class AbstractResourceNode<T extends XdsResource> implements ResourceNode<T> {
 
     private final Deque<ResourceNode<?>> children = new ArrayDeque<>();
 
@@ -63,7 +63,7 @@ abstract class AbstractResourceNode<T extends ResourceHolder<?>> implements Reso
     }
 
     @Override
-    public T currentResourceHolder() {
+    public T currentResource() {
         return current;
     }
 

@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
 
-abstract class AbstractRoot<T extends Snapshot<? extends ResourceHolder<?>>>
+abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
         implements SnapshotWatcher<T>, SafeCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractRoot.class);

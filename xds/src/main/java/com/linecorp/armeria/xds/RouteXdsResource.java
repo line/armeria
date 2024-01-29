@@ -22,27 +22,25 @@ import com.google.common.base.Objects;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 /**
- * A resource holder object for a {@link RouteConfiguration}.
+ * A resource object for a {@link RouteConfiguration}.
  */
 @UnstableApi
-public final class RouteResourceHolder
-        extends ResourceHolderWithPrimer<RouteResourceHolder, RouteConfiguration, Listener> {
+public final class RouteXdsResource extends XdsResourceWithPrimer<RouteXdsResource> {
 
     private final RouteConfiguration routeConfiguration;
 
     @Nullable
-    private final ResourceHolder<Listener> primer;
+    private final XdsResource primer;
 
-    RouteResourceHolder(RouteConfiguration routeConfiguration) {
+    RouteXdsResource(RouteConfiguration routeConfiguration) {
         this.routeConfiguration = routeConfiguration;
         primer = null;
     }
 
-    RouteResourceHolder(RouteConfiguration routeConfiguration, ResourceHolder<Listener> primer) {
+    RouteXdsResource(RouteConfiguration routeConfiguration, XdsResource primer) {
         this.routeConfiguration = routeConfiguration;
         this.primer = primer;
     }
@@ -63,16 +61,16 @@ public final class RouteResourceHolder
     }
 
     @Override
-    RouteResourceHolder withPrimer(@Nullable ResourceHolder<Listener> primer) {
+    RouteXdsResource withPrimer(@Nullable XdsResource primer) {
         if (primer == null) {
             return this;
         }
-        return new RouteResourceHolder(routeConfiguration, primer);
+        return new RouteXdsResource(routeConfiguration, primer);
     }
 
     @Override
     @Nullable
-    ResourceHolder<Listener> primer() {
+    XdsResource primer() {
         return primer;
     }
 
@@ -84,7 +82,7 @@ public final class RouteResourceHolder
         if (object == null || getClass() != object.getClass()) {
             return false;
         }
-        final RouteResourceHolder that = (RouteResourceHolder) object;
+        final RouteXdsResource that = (RouteXdsResource) object;
         return Objects.equal(routeConfiguration, that.routeConfiguration) &&
                Objects.equal(primer, that.primer);
     }

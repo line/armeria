@@ -19,20 +19,20 @@ package com.linecorp.armeria.xds;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
 
-final class ClusterResourceParser extends ResourceParser<ClusterResourceHolder, Cluster> {
+final class ClusterResourceParser extends ResourceParser<ClusterXdsResource, Cluster> {
 
     static final ClusterResourceParser INSTANCE = new ClusterResourceParser();
 
     private ClusterResourceParser() {}
 
     @Override
-    ClusterResourceHolder parse(Cluster cluster) {
-        final ClusterResourceHolder holder = new ClusterResourceHolder(cluster);
+    ClusterXdsResource parse(Cluster cluster) {
+        final ClusterXdsResource resource = new ClusterXdsResource(cluster);
         if (cluster.hasEdsClusterConfig()) {
             final EdsClusterConfig eds = cluster.getEdsClusterConfig();
             XdsConverterUtil.validateConfigSource(eds.getEdsConfig());
         }
-        return holder;
+        return resource;
     }
 
     @Override

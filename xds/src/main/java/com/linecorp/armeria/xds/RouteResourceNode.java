@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
-import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.Route.ActionCase;
 import io.envoyproxy.envoy.config.route.v3.RouteAction;
@@ -38,8 +37,7 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.grpc.Status;
 
-final class RouteResourceNode
-        extends AbstractResourceNodeWithPrimer<RouteResourceHolder, Listener> {
+final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsResource> {
 
     private final List<ClusterSnapshot> clusterSnapshotList = new ArrayList<>();
 
@@ -48,17 +46,17 @@ final class RouteResourceNode
     private final SnapshotWatcher<RouteSnapshot> parentWatcher;
 
     RouteResourceNode(@Nullable ConfigSource configSource, String resourceName,
-                      XdsBootstrapImpl xdsBootstrap, @Nullable ListenerResourceHolder primer,
+                      XdsBootstrapImpl xdsBootstrap, @Nullable ListenerXdsResource primer,
                       SnapshotWatcher<RouteSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
         super(xdsBootstrap, configSource, ROUTE, resourceName, primer, parentWatcher, resourceNodeType);
         this.parentWatcher = parentWatcher;
     }
 
     @Override
-    public void doOnChanged(RouteResourceHolder holder) {
+    public void doOnChanged(RouteXdsResource resource) {
         clusterSnapshotList.clear();
         pending.clear();
-        final RouteConfiguration routeConfiguration = holder.resource();
+        final RouteConfiguration routeConfiguration = resource.resource();
         int index = 0;
         for (VirtualHost virtualHost: routeConfiguration.getVirtualHostsList()) {
             for (Route route: virtualHost.getRoutesList()) {
@@ -74,14 +72,14 @@ final class RouteResourceNode
                 pending.add(index);
                 final ClusterResourceNode node =
                         new ClusterResourceNode(null, cluster, xdsBootstrap(),
-                                                holder, snapshotWatcher, virtualHost, route,
+                                                resource, snapshotWatcher, virtualHost, route,
                                                 index++, ResourceNodeType.DYNAMIC);
                 children().add(node);
                 xdsBootstrap().subscribe(node);
             }
         }
         if (children().isEmpty()) {
-            parentWatcher.snapshotUpdated(new RouteSnapshot(holder, Collections.emptyList()));
+            parentWatcher.snapshotUpdated(new RouteSnapshot(resource, Collections.emptyList()));
         }
     }
 
@@ -89,11 +87,11 @@ final class RouteResourceNode
 
         @Override
         public void snapshotUpdated(ClusterSnapshot newSnapshot) {
-            final RouteResourceHolder current = currentResourceHolder();
+            final RouteXdsResource current = currentResource();
             if (current == null) {
                 return;
             }
-            if (!Objects.equals(current, newSnapshot.holder().primer())) {
+            if (!Objects.equals(current, newSnapshot.xdsResource().primer())) {
                 return;
             }
             clusterSnapshotList.set(newSnapshot.index(), newSnapshot);

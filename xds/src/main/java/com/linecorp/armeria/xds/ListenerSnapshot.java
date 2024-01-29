@@ -27,20 +27,20 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
  * A snapshot of a {@link Listener} resource.
  */
 @UnstableApi
-public final class ListenerSnapshot implements Snapshot<ListenerResourceHolder> {
+public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
 
-    private final ListenerResourceHolder listenerHolder;
+    private final ListenerXdsResource listenerXdsResource;
     @Nullable
     private final RouteSnapshot routeSnapshot;
 
-    ListenerSnapshot(ListenerResourceHolder listenerHolder, @Nullable RouteSnapshot routeSnapshot) {
-        this.listenerHolder = listenerHolder;
+    ListenerSnapshot(ListenerXdsResource listenerXdsResource, @Nullable RouteSnapshot routeSnapshot) {
+        this.listenerXdsResource = listenerXdsResource;
         this.routeSnapshot = routeSnapshot;
     }
 
     @Override
-    public ListenerResourceHolder holder() {
-        return listenerHolder;
+    public ListenerXdsResource xdsResource() {
+        return listenerXdsResource;
     }
 
     /**
@@ -55,7 +55,7 @@ public final class ListenerSnapshot implements Snapshot<ListenerResourceHolder> 
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
-                          .add("listenerHolder", listenerHolder)
+                          .add("listenerXdsResource", listenerXdsResource)
                           .add("routeSnapshot", routeSnapshot)
                           .toString();
     }

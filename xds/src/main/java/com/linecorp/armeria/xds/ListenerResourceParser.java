@@ -20,23 +20,23 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 
-final class ListenerResourceParser extends ResourceParser<ListenerResourceHolder, Listener> {
+final class ListenerResourceParser extends ResourceParser<ListenerXdsResource, Listener> {
 
     static final ListenerResourceParser INSTANCE = new ListenerResourceParser();
 
     private ListenerResourceParser() {}
 
     @Override
-    ListenerResourceHolder parse(Listener message) {
-        final ListenerResourceHolder holder = new ListenerResourceHolder(message);
-        final HttpConnectionManager connectionManager = holder.connectionManager();
+    ListenerXdsResource parse(Listener message) {
+        final ListenerXdsResource resource = new ListenerXdsResource(message);
+        final HttpConnectionManager connectionManager = resource.connectionManager();
         if (connectionManager != null) {
             if (connectionManager.hasRds()) {
                 final Rds rds = connectionManager.getRds();
                 XdsConverterUtil.validateConfigSource(rds.getConfigSource());
             }
         }
-        return holder;
+        return resource;
     }
 
     @Override

@@ -70,7 +70,7 @@ public final class XdsEndpointGroup extends DynamicEndpointGroup {
                     routeSnapshot.clusterSnapshots().stream()
                                  .map(ClusterSnapshot::endpointSnapshot)
                                  .filter(Objects::nonNull)
-                                 .map(endpointSnapshot -> endpointSnapshot.holder().resource())
+                                 .map(endpointSnapshot -> endpointSnapshot.xdsResource().resource())
                                  .collect(Collectors.toList());
             setEndpoints(convertEndpoints(endpoints));
         };
@@ -81,7 +81,7 @@ public final class XdsEndpointGroup extends DynamicEndpointGroup {
     XdsEndpointGroup(ClusterSnapshot clusterSnapshot) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         checkArgument(endpointSnapshot != null, "No endpoints are defined for cluster %s", clusterSnapshot);
-        setEndpoints(convertEndpoints(endpointSnapshot.holder().resource()));
+        setEndpoints(convertEndpoints(endpointSnapshot.xdsResource().resource()));
         safeCloseable = () -> {};
     }
 

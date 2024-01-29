@@ -67,7 +67,7 @@ final class ConfigSourceClient implements SafeCloseable {
 
         endpointGroup = new XdsEndpointGroup(clusterSnapshot);
         final boolean ads = apiConfigSource.getApiType() == ApiType.AGGREGATED_GRPC;
-        final UpstreamTlsContext tlsContext = clusterSnapshot.holder().upstreamTlsContext();
+        final UpstreamTlsContext tlsContext = clusterSnapshot.xdsResource().upstreamTlsContext();
         final SessionProtocol sessionProtocol =
                 tlsContext != null ? SessionProtocol.HTTPS : SessionProtocol.HTTP;
         final GrpcClientBuilder builder = GrpcClients.builder(sessionProtocol, endpointGroup);

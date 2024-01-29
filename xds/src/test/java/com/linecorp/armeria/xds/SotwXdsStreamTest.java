@@ -99,7 +99,7 @@ class SotwXdsStreamTest {
         }
 
         @Override
-        public <T extends ResourceHolder<U>, U extends Message> void handleResponse(
+        public <T extends XdsResource, U extends Message> void handleResponse(
                 ResourceParser<T, U> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
             responses.add(value);
             sender.ackResponse(resourceParser.type(), value.getVersionInfo(), value.getNonce());
@@ -216,7 +216,7 @@ class SotwXdsStreamTest {
         final CountDownLatch latch = new CountDownLatch(1);
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
-            public <T extends ResourceHolder<U>, U extends Message> void handleResponse(
+            public <T extends XdsResource, U extends Message> void handleResponse(
                     ResourceParser<T, U> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
                 if (cntRef.getAndIncrement() < 3) {
                     throw new RuntimeException("test");
@@ -261,7 +261,7 @@ class SotwXdsStreamTest {
         final AtomicInteger nackResponses = new AtomicInteger();
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
-            public <T extends ResourceHolder<U>, U extends Message> void handleResponse(
+            public <T extends XdsResource, U extends Message> void handleResponse(
                     ResourceParser<T, U> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
                 if (ackRef.get()) {
                     super.handleResponse(resourceParser, value, sender);

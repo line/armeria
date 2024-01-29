@@ -27,12 +27,10 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.route.v3.Route;
-import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.grpc.Status;
 
-final class ClusterResourceNode
-        extends AbstractResourceNodeWithPrimer<ClusterResourceHolder, RouteConfiguration> {
+final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXdsResource> {
 
     @Nullable
     private final VirtualHost virtualHost;
@@ -44,7 +42,7 @@ final class ClusterResourceNode
 
     ClusterResourceNode(@Nullable ConfigSource configSource,
                         String resourceName, XdsBootstrapImpl xdsBootstrap,
-                        @Nullable RouteResourceHolder primer,
+                        @Nullable RouteXdsResource primer,
                         SnapshotWatcher<ClusterSnapshot> parentWatcher,
                         ResourceNodeType resourceNodeType) {
         super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentWatcher, resourceNodeType);
@@ -56,7 +54,7 @@ final class ClusterResourceNode
 
     ClusterResourceNode(@Nullable ConfigSource configSource,
                         String resourceName, XdsBootstrapImpl xdsBootstrap,
-                        @Nullable RouteResourceHolder primer, SnapshotWatcher<ClusterSnapshot> parentWatcher,
+                        @Nullable RouteXdsResource primer, SnapshotWatcher<ClusterSnapshot> parentWatcher,
                         VirtualHost virtualHost, Route route, int index, ResourceNodeType resourceNodeType) {
         super(xdsBootstrap, configSource, CLUSTER, resourceName, primer, parentWatcher, resourceNodeType);
         this.parentWatcher = parentWatcher;
@@ -66,34 +64,34 @@ final class ClusterResourceNode
     }
 
     @Override
-    public void doOnChanged(ClusterResourceHolder holder) {
-        final Cluster cluster = holder.resource();
+    public void doOnChanged(ClusterXdsResource resource) {
+        final Cluster cluster = resource.resource();
         if (cluster.hasLoadAssignment()) {
             final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
             final EndpointResourceNode node =
                     StaticResourceUtils.staticEndpoint(xdsBootstrap(), cluster.getName(),
-                                                       holder, snapshotWatcher, loadAssignment);
+                                                       resource, snapshotWatcher, loadAssignment);
             children().add(node);
         } else if (cluster.hasEdsClusterConfig()) {
             final ConfigSource configSource = cluster.getEdsClusterConfig().getEdsConfig();
             final EndpointResourceNode node =
-                    new EndpointResourceNode(configSource, cluster.getName(), xdsBootstrap(), holder,
+                    new EndpointResourceNode(configSource, cluster.getName(), xdsBootstrap(), resource,
                                              snapshotWatcher, ResourceNodeType.DYNAMIC);
             children().add(node);
             xdsBootstrap().subscribe(node);
         } else {
-            parentWatcher.snapshotUpdated(new ClusterSnapshot(holder));
+            parentWatcher.snapshotUpdated(new ClusterSnapshot(resource));
         }
     }
 
     private class EndpointSnapshotWatcher implements SnapshotWatcher<EndpointSnapshot> {
         @Override
         public void snapshotUpdated(EndpointSnapshot newSnapshot) {
-            final ClusterResourceHolder current = currentResourceHolder();
+            final ClusterXdsResource current = currentResource();
             if (current == null) {
                 return;
             }
-            if (!Objects.equals(newSnapshot.holder().primer(), current)) {
+            if (!Objects.equals(newSnapshot.xdsResource().primer(), current)) {
                 return;
             }
             parentWatcher.snapshotUpdated(

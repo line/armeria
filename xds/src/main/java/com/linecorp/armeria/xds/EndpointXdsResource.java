@@ -22,26 +22,24 @@ import com.google.common.base.Objects;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 /**
- * A resource holder object for a {@link ClusterLoadAssignment}.
+ * A resource object for a {@link ClusterLoadAssignment}.
  */
 @UnstableApi
-public final class EndpointResourceHolder
-        extends ResourceHolderWithPrimer<EndpointResourceHolder, ClusterLoadAssignment, Cluster> {
+public final class EndpointXdsResource extends XdsResourceWithPrimer<EndpointXdsResource> {
 
     private final ClusterLoadAssignment clusterLoadAssignment;
     @Nullable
-    private final ResourceHolder<Cluster> primer;
+    private final XdsResource primer;
 
-    EndpointResourceHolder(ClusterLoadAssignment clusterLoadAssignment) {
+    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment) {
         this.clusterLoadAssignment = clusterLoadAssignment;
         primer = null;
     }
 
-    EndpointResourceHolder(ClusterLoadAssignment clusterLoadAssignment, ResourceHolder<Cluster> primer) {
+    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment, XdsResource primer) {
         this.clusterLoadAssignment = clusterLoadAssignment;
         this.primer = primer;
     }
@@ -62,16 +60,16 @@ public final class EndpointResourceHolder
     }
 
     @Override
-    EndpointResourceHolder withPrimer(@Nullable ResourceHolder<Cluster> primer) {
+    EndpointXdsResource withPrimer(@Nullable XdsResource primer) {
         if (primer == null) {
             return this;
         }
-        return new EndpointResourceHolder(clusterLoadAssignment, primer);
+        return new EndpointXdsResource(clusterLoadAssignment, primer);
     }
 
     @Override
     @Nullable
-    ResourceHolder<Cluster> primer() {
+    XdsResource primer() {
         return primer;
     }
 
@@ -83,9 +81,9 @@ public final class EndpointResourceHolder
         if (object == null || getClass() != object.getClass()) {
             return false;
         }
-        final EndpointResourceHolder holder = (EndpointResourceHolder) object;
-        return Objects.equal(clusterLoadAssignment, holder.clusterLoadAssignment) &&
-               Objects.equal(primer, holder.primer);
+        final EndpointXdsResource resource = (EndpointXdsResource) object;
+        return Objects.equal(clusterLoadAssignment, resource.clusterLoadAssignment) &&
+               Objects.equal(primer, resource.primer);
     }
 
     @Override

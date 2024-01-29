@@ -24,7 +24,7 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 /**
  * A resource node.
  *
- * @param <T> the type of the current {@link ResourceHolder}
+ * @param <T> the type of the current {@link XdsResource}
  */
 interface ResourceNode<T> extends ResourceWatcher<T>, SafeCloseable {
 
@@ -32,7 +32,7 @@ interface ResourceNode<T> extends ResourceWatcher<T>, SafeCloseable {
     ConfigSource configSource();
 
     @Nullable
-    T currentResourceHolder();
+    T currentResource();
 
     XdsType type();
 

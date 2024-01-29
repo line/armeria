@@ -33,15 +33,15 @@ import io.envoyproxy.envoy.config.route.v3.VirtualHost;
  * A snapshot of a {@link RouteConfiguration} resource.
  */
 @UnstableApi
-public final class RouteSnapshot implements Snapshot<RouteResourceHolder> {
+public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
 
-    private final RouteResourceHolder routeResourceHolder;
+    private final RouteXdsResource routeXdsResource;
     private final List<ClusterSnapshot> clusterSnapshots;
 
     private final Map<VirtualHost, List<ClusterSnapshot>> virtualHostMap;
 
-    RouteSnapshot(RouteResourceHolder routeResourceHolder, List<ClusterSnapshot> clusterSnapshots) {
-        this.routeResourceHolder = routeResourceHolder;
+    RouteSnapshot(RouteXdsResource routeXdsResource, List<ClusterSnapshot> clusterSnapshots) {
+        this.routeXdsResource = routeXdsResource;
         this.clusterSnapshots = clusterSnapshots;
 
         final LinkedHashMap<VirtualHost, List<ClusterSnapshot>> virtualHostMap = new LinkedHashMap<>();
@@ -55,8 +55,8 @@ public final class RouteSnapshot implements Snapshot<RouteResourceHolder> {
     }
 
     @Override
-    public RouteResourceHolder holder() {
-        return routeResourceHolder;
+    public RouteXdsResource xdsResource() {
+        return routeXdsResource;
     }
 
     /**
@@ -78,7 +78,7 @@ public final class RouteSnapshot implements Snapshot<RouteResourceHolder> {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
-                          .add("routeResourceHolder", routeResourceHolder)
+                          .add("routeXdsResource", routeXdsResource)
                           .add("clusterSnapshots", clusterSnapshots)
                           .toString();
     }

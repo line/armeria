@@ -28,7 +28,7 @@ import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-abstract class ResourceParser<T extends ResourceHolder<U>, U extends Message> {
+abstract class ResourceParser<T extends XdsResource, U extends Message> {
 
     @Nullable
     abstract String name(U message);

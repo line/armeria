@@ -28,7 +28,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 import io.grpc.Status;
 
-final class ListenerResourceNode extends AbstractResourceNode<ListenerResourceHolder> {
+final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResource> {
 
     private final RouteResourceWatcher snapshotWatcher = new RouteResourceWatcher();
     private final SnapshotWatcher<ListenerSnapshot> parentWatcher;
@@ -41,13 +41,13 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerResourceHo
     }
 
     @Override
-    public void doOnChanged(ListenerResourceHolder holder) {
-        final HttpConnectionManager connectionManager = holder.connectionManager();
+    public void doOnChanged(ListenerXdsResource resource) {
+        final HttpConnectionManager connectionManager = resource.connectionManager();
         if (connectionManager != null) {
             if (connectionManager.hasRouteConfig()) {
                 final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
                 final RouteResourceNode node =
-                        StaticResourceUtils.staticRoute(xdsBootstrap(), routeConfig.getName(), holder,
+                        StaticResourceUtils.staticRoute(xdsBootstrap(), routeConfig.getName(), resource,
                                                         snapshotWatcher, routeConfig);
                 children().add(node);
             }
@@ -56,14 +56,14 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerResourceHo
                 final String routeName = rds.getRouteConfigName();
                 final ConfigSource configSource = rds.getConfigSource();
                 final RouteResourceNode routeResourceNode =
-                        new RouteResourceNode(configSource, routeName, xdsBootstrap(), holder,
+                        new RouteResourceNode(configSource, routeName, xdsBootstrap(), resource,
                                               snapshotWatcher, ResourceNodeType.DYNAMIC);
                 children().add(routeResourceNode);
                 xdsBootstrap().subscribe(routeResourceNode);
             }
         }
         if (children().isEmpty()) {
-            parentWatcher.snapshotUpdated(new ListenerSnapshot(holder, null));
+            parentWatcher.snapshotUpdated(new ListenerSnapshot(resource, null));
         }
     }
 
@@ -71,11 +71,11 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerResourceHo
 
         @Override
         public void snapshotUpdated(RouteSnapshot newSnapshot) {
-            final ListenerResourceHolder current = currentResourceHolder();
+            final ListenerXdsResource current = currentResource();
             if (current == null) {
                 return;
             }
-            if (!Objects.equals(newSnapshot.holder().primer(), current)) {
+            if (!Objects.equals(newSnapshot.xdsResource().primer(), current)) {
                 return;
             }
             parentWatcher.snapshotUpdated(new ListenerSnapshot(current, newSnapshot));
