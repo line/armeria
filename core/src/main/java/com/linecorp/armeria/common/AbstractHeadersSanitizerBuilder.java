@@ -31,6 +31,9 @@ import io.netty.util.AsciiString;
  */
 public abstract class AbstractHeadersSanitizerBuilder<T> {
 
+    // Referenced from:
+    // - https://docs.rs/tower-http/latest/tower_http/sensitive_headers/index.html
+    // - https://techdocs.akamai.com/edge-diagnostics/reference/sensitive-headers
     private static final Set<AsciiString> DEFAULT_MASKING_HEADERS =
             ImmutableSet.of(HttpHeaderNames.AUTHORIZATION, HttpHeaderNames.COOKIE,
                             HttpHeaderNames.SET_COOKIE, HttpHeaderNames.PROXY_AUTHORIZATION);
