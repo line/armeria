@@ -20,6 +20,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -27,6 +28,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 /**
  * A resource holder object for a {@link ClusterLoadAssignment}.
  */
+@UnstableApi
 public final class EndpointResourceHolder
         extends ResourceHolderWithPrimer<EndpointResourceHolder, ClusterLoadAssignment, Cluster> {
 

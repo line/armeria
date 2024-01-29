@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.route.v3.Route;
@@ -27,6 +28,7 @@ import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 /**
  * A snapshot of a {@link Cluster} resource.
  */
+@UnstableApi
 public final class ClusterSnapshot implements Snapshot<ClusterResourceHolder> {
     private final ClusterResourceHolder clusterResourceHolder;
     @Nullable

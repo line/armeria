@@ -20,6 +20,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
@@ -27,6 +28,7 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 /**
  * A resource holder object for a {@link RouteConfiguration}.
  */
+@UnstableApi
 public final class RouteResourceHolder
         extends ResourceHolderWithPrimer<RouteResourceHolder, RouteConfiguration, Listener> {
 

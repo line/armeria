@@ -24,12 +24,15 @@ import java.util.Map;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
 /**
  * A snapshot of a {@link RouteConfiguration} resource.
  */
+@UnstableApi
 public final class RouteSnapshot implements Snapshot<RouteResourceHolder> {
 
     private final RouteResourceHolder routeResourceHolder;

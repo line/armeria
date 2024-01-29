@@ -19,12 +19,14 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 
 /**
  * A snapshot of a {@link Listener} resource.
  */
+@UnstableApi
 public final class ListenerSnapshot implements Snapshot<ListenerResourceHolder> {
 
     private final ListenerResourceHolder listenerHolder;

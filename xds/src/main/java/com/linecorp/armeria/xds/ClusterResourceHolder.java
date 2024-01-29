@@ -22,6 +22,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
@@ -30,6 +31,7 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 /**
  * A resource holder object for a {@link Cluster}.
  */
+@UnstableApi
 public final class ClusterResourceHolder
         extends ResourceHolderWithPrimer<ClusterResourceHolder, Cluster, RouteConfiguration> {
 

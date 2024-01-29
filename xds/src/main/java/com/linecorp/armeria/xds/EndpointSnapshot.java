@@ -18,11 +18,14 @@ package com.linecorp.armeria.xds;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 /**
  * A snapshot of a {@link ClusterLoadAssignment} resource.
  */
+@UnstableApi
 public final class EndpointSnapshot implements Snapshot<EndpointResourceHolder> {
     private final EndpointResourceHolder endpoint;
 

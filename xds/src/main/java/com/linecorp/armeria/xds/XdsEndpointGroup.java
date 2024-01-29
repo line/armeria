@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
@@ -46,6 +47,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
  * Note that it is important to shut down the endpoint group to clean up resources
  * for the provided {@link XdsBootstrap}.
  */
+@UnstableApi
 public final class XdsEndpointGroup extends DynamicEndpointGroup {
 
     private final SafeCloseable safeCloseable;

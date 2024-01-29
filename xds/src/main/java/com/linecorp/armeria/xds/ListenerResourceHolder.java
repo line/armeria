@@ -24,6 +24,7 @@ import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
@@ -31,6 +32,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 /**
  * A resource holder object for a {@link Listener}.
  */
+@UnstableApi
 public final class ListenerResourceHolder implements ResourceHolder<Listener> {
 
     private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
