@@ -20,7 +20,8 @@ if [[ "$WORKFLOW_CHANGES" -eq "0" ]]; then
   exit 0
 fi
 
-MAINTAINERS=("ikhoon" "jrhee17" "minwoox" "trustin")
+# dependabot is a special user that is used to update dependencies in the workflow files.
+MAINTAINERS=("ikhoon" "dependabot" "jrhee17" "minwoox" "trustin")
 for maintainer in "${MAINTAINERS[@]}"
 do
   if [[ $maintainer == "$GITHUB_ACTOR" ]]; then
