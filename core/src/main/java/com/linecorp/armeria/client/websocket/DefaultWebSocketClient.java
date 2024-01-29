@@ -33,10 +33,12 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -83,16 +85,17 @@ final class DefaultWebSocketClient implements WebSocketClient {
     }
 
     @Override
-    public CompletableFuture<WebSocketSession> connect(String path) {
+    public CompletableFuture<WebSocketSession> connect(String path, HttpHeaders headers,
+                                                       RequestOptions requestOptions) {
         requireNonNull(path, "path");
-        final RequestHeaders requestHeaders = webSocketHeaders(path);
+        final RequestHeaders requestHeaders = webSocketHeaders(path, headers);
 
         final CompletableFuture<StreamMessage<HttpData>> outboundFuture = new CompletableFuture<>();
         final HttpRequest request = HttpRequest.of(requestHeaders, StreamMessage.of(outboundFuture));
         final HttpResponse response;
         final ClientRequestContext ctx;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            response = webClient.execute(request);
+            response = webClient.execute(request, requestOptions);
             ctx = captor.get();
         }
         final SplitHttpResponse split =
@@ -127,21 +130,27 @@ final class DefaultWebSocketClient implements WebSocketClient {
         return result;
     }
 
-    private RequestHeaders webSocketHeaders(String path) {
-        final RequestHeadersBuilder builder;
+    private RequestHeaders webSocketHeaders(String path, HttpHeaders headers) {
+        final RequestHeadersBuilder builder = RequestHeaders.builder();
+        if (!headers.isEmpty()) {
+            headers.forEach((k, v) -> builder.add(k, v));
+        }
+
         if (scheme().sessionProtocol().isExplicitHttp2()) {
-            builder = RequestHeaders.builder(HttpMethod.CONNECT, path)
-                                    .set(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString());
+            builder.method(HttpMethod.CONNECT)
+                   .path(path)
+                   .set(HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET.toString());
         } else {
-            builder = RequestHeaders.builder(HttpMethod.GET, path)
-                                    .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString())
-                                    .set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString());
             final String secWebSocketKey = generateSecWebSocketKey();
-            builder.set(HttpHeaderNames.SEC_WEBSOCKET_KEY, secWebSocketKey);
+            builder.method(HttpMethod.GET)
+                   .path(path)
+                   .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString())
+                   .set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString())
+                   .set(HttpHeaderNames.SEC_WEBSOCKET_KEY, secWebSocketKey);
         }
 
         builder.set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, "13");
-        if (!subprotocols.isEmpty()) {
+        if (!builder.contains(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL) && !subprotocols.isEmpty()) {
             builder.set(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, joinedSubprotocols);
         }
 
