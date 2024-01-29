@@ -14,12 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.logging;
 
 import java.util.function.BiFunction;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -28,9 +31,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
 @FunctionalInterface
 public interface HeadersSanitizer<T> extends BiFunction<RequestContext, HttpHeaders, T> {
     /**
-     * Returns the default text {@link HeadersSanitizer}.
-     * {@link HttpHeaderNames#AUTHORIZATION}, {@link HttpHeaderNames#COOKIE}, {@link HttpHeaderNames#SET_COOKIE},
-     * and {@link HttpHeaderNames#PROXY_AUTHORIZATION} are masked.
+     * Returns the default text {@link HeadersSanitizer} that masks
+     * {@link HttpHeaderNames#AUTHORIZATION}, {@link HttpHeaderNames#COOKIE},
+     * {@link HttpHeaderNames#SET_COOKIE}, and {@link HttpHeaderNames#PROXY_AUTHORIZATION} with {@code ****}.
      */
     static HeadersSanitizer<String> ofText() {
         return TextHeadersSanitizer.INSTANCE;
@@ -44,9 +47,9 @@ public interface HeadersSanitizer<T> extends BiFunction<RequestContext, HttpHead
     }
 
     /**
-     * Returns the default json {@link HeadersSanitizer}.
-     * {@link HttpHeaderNames#AUTHORIZATION}, {@link HttpHeaderNames#COOKIE}, {@link HttpHeaderNames#SET_COOKIE},
-     * and {@link HttpHeaderNames#PROXY_AUTHORIZATION} are masked.
+     * Returns the default JSON {@link HeadersSanitizer} that masks
+     * {@link HttpHeaderNames#AUTHORIZATION}, {@link HttpHeaderNames#COOKIE},
+     * {@link HttpHeaderNames#SET_COOKIE}, and {@link HttpHeaderNames#PROXY_AUTHORIZATION} with {@code ****}.
      */
     static HeadersSanitizer<JsonNode> ofJson() {
         return JsonHeadersSanitizer.INSTANCE;

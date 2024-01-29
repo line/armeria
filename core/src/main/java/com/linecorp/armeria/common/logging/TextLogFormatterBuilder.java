@@ -20,7 +20,6 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.util.function.BiFunction;
 
-import com.linecorp.armeria.common.HeadersSanitizer;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;

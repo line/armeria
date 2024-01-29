@@ -14,11 +14,9 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
-
-import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +43,7 @@ public final class JsonHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
     }
 
     @Override
-    public JsonHeadersSanitizerBuilder maskingFunction(Function<String, String> maskingFunction) {
+    public JsonHeadersSanitizerBuilder maskingFunction(HeaderMaskingFunction maskingFunction) {
         return (JsonHeadersSanitizerBuilder) super.maskingFunction(maskingFunction);
     }
 

@@ -14,16 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.TextHeadersSanitizer.maskHeaders;
+import static com.linecorp.armeria.common.logging.TextHeadersSanitizer.maskHeaders;
 
 import java.util.Set;
-import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.util.AsciiString;
 
@@ -34,10 +36,10 @@ final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
 
     static final HeadersSanitizer<JsonNode> INSTANCE = new JsonHeadersSanitizerBuilder().build();
     private final Set<AsciiString> maskingHeaders;
-    private final Function<String, String> maskingFunction;
+    private final HeaderMaskingFunction maskingFunction;
     private final ObjectMapper objectMapper;
 
-    JsonHeadersSanitizer(Set<AsciiString> maskingHeaders, Function<String, String> maskingFunction,
+    JsonHeadersSanitizer(Set<AsciiString> maskingHeaders, HeaderMaskingFunction maskingFunction,
                          ObjectMapper objectMapper) {
         this.maskingHeaders = maskingHeaders;
         this.maskingFunction = maskingFunction;

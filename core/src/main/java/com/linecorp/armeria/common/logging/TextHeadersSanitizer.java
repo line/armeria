@@ -14,16 +14,19 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.logging;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.RequestContext;
 
 import io.netty.util.AsciiString;
 
@@ -36,9 +39,10 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
 
     private final Set<AsciiString> maskingHeaders;
 
-    private final Function<String, String> maskingFunction;
+    private final HeaderMaskingFunction maskingFunction;
 
-    TextHeadersSanitizer(Set<AsciiString> maskingHeaders, Function<String, String> maskingFunction) {
+    TextHeadersSanitizer(Set<AsciiString> maskingHeaders,
+                         HeaderMaskingFunction maskingFunction) {
         this.maskingHeaders = maskingHeaders;
         this.maskingFunction = maskingFunction;
     }
@@ -66,19 +70,30 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
     }
 
     static void maskHeaders(
-            HttpHeaders headers, Set<AsciiString> maskingHeaders, Function<String, String> maskingFunction,
-            final BiConsumer<AsciiString, List<String>> consumer) {
+            HttpHeaders headers, Set<AsciiString> maskingHeaders,
+            HeaderMaskingFunction maskingFunction,
+            BiConsumer<AsciiString, List<String>> consumer) {
         for (AsciiString headerName : headers.names()) {
             List<String> values = headers.getAll(headerName);
             if (maskingHeaders.contains(headerName)) {
                 // Mask the header values.
                 if (values.size() == 1) {
-                    values = ImmutableList.of(maskingFunction.apply(values.get(0)));
+                    final String masked = maskingFunction.mask(headerName, values.get(0));
+                    if (masked == null) {
+                        values = ImmutableList.of();
+                    } else {
+                        values = ImmutableList.of(masked);
+                    }
                 } else {
-                    values = values.stream().map(maskingFunction).collect(toImmutableList());
+                    values = values.stream()
+                                   .map(value -> maskingFunction.mask(headerName, value))
+                                   .filter(Objects::nonNull)
+                                   .collect(toImmutableList());
                 }
             }
-            consumer.accept(headerName, values);
+            if (!values.isEmpty()) {
+                consumer.accept(headerName, values);
+            }
         }
     }
 }

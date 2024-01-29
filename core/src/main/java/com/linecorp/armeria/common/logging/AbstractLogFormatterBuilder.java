@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.HeadersSanitizer;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;

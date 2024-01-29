@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
+
+import com.linecorp.armeria.common.HttpHeaderNames;
 
 import io.netty.util.AsciiString;
 
@@ -41,7 +43,9 @@ public abstract class AbstractHeadersSanitizerBuilder<T> {
 
     private final Set<AsciiString> maskingHeaders = new HashSet<>();
 
-    private Function<String, String> maskingFunction = header -> "****";
+    private HeaderMaskingFunction maskingFunction = HeaderMaskingFunction.of();
+
+    AbstractHeadersSanitizerBuilder() {}
 
     /**
      * Sets the headers to mask before logging.
@@ -69,8 +73,21 @@ public abstract class AbstractHeadersSanitizerBuilder<T> {
 
     /**
      * Sets the {@link Function} to use to maskFunction headers before logging.
+     * The default maskingFunction is {@link HeaderMaskingFunction#of()}
+     *
+     * <pre>{@code
+     * builder.maskingFunction((name, value) -> {
+     *   if (name.equals(HttpHeaderNames.AUTHORIZATION)) {
+     *      return "****";
+     *   } else if (name.equals(HttpHeaderNames.COOKIE)) {
+     *     return name.substring(0, 4) + "****";
+     *   } else {
+     *     return value;
+     *   }
+     * }
+     * }</pre>
      */
-    public AbstractHeadersSanitizerBuilder<T> maskingFunction(Function<String, String> maskingFunction) {
+    public AbstractHeadersSanitizerBuilder<T> maskingFunction(HeaderMaskingFunction maskingFunction) {
         this.maskingFunction = requireNonNull(maskingFunction, "maskingFunction");
         return this;
     }
@@ -78,7 +95,7 @@ public abstract class AbstractHeadersSanitizerBuilder<T> {
     /**
      * Returns the {@link Function} to use to mask headers before logging.
      */
-    final Function<String, String> maskingFunction() {
+    final HeaderMaskingFunction maskingFunction() {
         return maskingFunction;
     }
 }

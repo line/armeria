@@ -14,9 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
-
-import java.util.function.Function;
+package com.linecorp.armeria.common.logging;
 
 /**
  * A builder implementation for Text {@link HeadersSanitizer}.
@@ -34,7 +32,7 @@ public final class TextHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
     }
 
     @Override
-    public TextHeadersSanitizerBuilder maskingFunction(Function<String, String> maskingFunction) {
+    public TextHeadersSanitizerBuilder maskingFunction(HeaderMaskingFunction maskingFunction) {
         return (TextHeadersSanitizerBuilder) super.maskingFunction(maskingFunction);
     }
 
