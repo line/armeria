@@ -22,7 +22,6 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 import org.apache.thrift.TException;
-import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +45,6 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import testing.thrift.main.HelloService;
-import testing.thrift.main.HelloService.AsyncIface;
 
 class ThriftServiceLogNameTest {
 
@@ -54,20 +52,10 @@ class ThriftServiceLogNameTest {
             (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
 
     private static final HelloService.AsyncIface HELLO_SERVICE_HANDLER =
-            new AsyncIface() {
-                @Override
-                public void hello(String name, AsyncMethodCallback<String> resultHandler) throws TException {
-                    capturedCtx = ServiceRequestContext.current();
-                    resultHandler.onComplete("Hello " + name);
-                }
+            (name, resultHandler) -> {
+                capturedCtx = ServiceRequestContext.current();
+                resultHandler.onComplete("Hello " + name);
             };
-
-    private static class HelloServiceImpl implements HelloService.AsyncIface {
-        @Override
-        public void hello(String name, AsyncMethodCallback<String> resultHandler) throws TException {
-
-        }
-    }
 
     private static ServiceRequestContext capturedCtx;
 
