@@ -17,9 +17,9 @@
 package com.linecorp.armeria.common.kotlin
 
 import com.linecorp.armeria.common.ContextAwareExecutor
-import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Converts an instance of [ContextAwareExecutor] to an implementation of [CoroutineDispatcher].
