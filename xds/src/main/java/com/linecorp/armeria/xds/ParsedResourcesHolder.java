@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-final class ParsedResourcesHolder<T> {
+final class ParsedResourcesHolder<T extends XdsResource> {
     private final Map<String, T> parsedResources;
     private final Set<String> invalidResources;
     private final List<String> errors;

@@ -24,7 +24,7 @@ import io.grpc.Status;
  * @param <T> the type of the {@link XdsResource} that is notified
  */
 @FunctionalInterface
-interface ResourceWatcher<T> {
+interface ResourceWatcher<T extends XdsResource> {
 
     default void onError(XdsType type, Status error) {}
 

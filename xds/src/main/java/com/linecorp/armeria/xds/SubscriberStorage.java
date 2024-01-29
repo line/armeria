@@ -42,7 +42,7 @@ final class SubscriberStorage implements SafeCloseable {
     /**
      * Returns {@code true} if a new subscriber is added.
      */
-    <T> boolean register(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
+    <T extends XdsResource> boolean register(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
         //noinspection unchecked
         XdsStreamSubscriber<T> subscriber = (XdsStreamSubscriber<T>) subscriberMap.computeIfAbsent(
                 type, key -> new HashMap<>()).get(resourceName);
@@ -59,7 +59,7 @@ final class SubscriberStorage implements SafeCloseable {
     /**
      * Returns {@code true} if a subscriber is removed.
      */
-    <T> boolean unregister(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
+    <T extends XdsResource> boolean unregister(XdsType type, String resourceName, ResourceWatcher<T> watcher) {
         if (!subscriberMap.containsKey(type)) {
             return false;
         }
@@ -82,7 +82,7 @@ final class SubscriberStorage implements SafeCloseable {
         return false;
     }
 
-    <T> Map<String, XdsStreamSubscriber<T>> subscribers(XdsType type) {
+    <T extends XdsResource> Map<String, XdsStreamSubscriber<T>> subscribers(XdsType type) {
         return unsafeCast(subscriberMap.getOrDefault(type, Collections.emptyMap()));
     }
 

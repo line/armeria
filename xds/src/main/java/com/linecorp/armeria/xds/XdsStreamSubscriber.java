@@ -31,7 +31,7 @@ import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
-class XdsStreamSubscriber<T> implements SafeCloseable {
+class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(XdsStreamSubscriber.class);
 
