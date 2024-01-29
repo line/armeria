@@ -126,7 +126,7 @@ dependencies {
     }
 
     // TestNG
-    runtimeOnly libs.junit.testng.engine
+    testRuntimeOnly libs.junit.testng.engine
 
     // JUnit Pioneer
     testImplementation libs.junit.pioneer
