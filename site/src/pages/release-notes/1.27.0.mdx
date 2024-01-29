@@ -80,7 +80,7 @@ date: 2024-01-30
 - **Kubernetes Client Integration**: You can now use the popular [Fabric Kubernetes client](https://github.com/fabric8io/kubernetes-client)
   seamlessly on top of Armeria when using the `armeria-kubernetes` module. #5167
 - **WebSocket Service Fallback**: You can now set up a fallback service for 
-  <type://WebSocketService> to handle non-WebSocket requests seamlessly with
+  <type://WebSocketService> to handle both WebSocket and non-WebSocket requests on the same path with
   <type://WebSocketServiceBuilder#fallbackService(HttpService)> #5368
   ```java
   WebSocketService webSocketService = 
@@ -104,7 +104,7 @@ date: 2024-01-30
     .aggregateContinuation(true)
     .build(); 
   ```
-- **Active Connection Monitoring**: You can track the number of active connections with 
+- **Active Connection Monitoring**: You can monitor the number of active connections with 
   `armeria.client.connections#value{state="active"}` for your clients when using 
   <type://ConnectionPoolListener#metricCollecting(MeterRegistry)> #4277 #5288
   ```java
@@ -152,10 +152,10 @@ date: 2024-01-30
 
 ## 🛠️ Bug fixes
 
-- The completion of <type://ClientRequestContext#whenResponseCancelling()> and <type://ClientRequestContext#whenResponseCancelled()>
-  is now guaranteed even if <type://RequestContext#cancel()> is invoked before the initialization of 
+- The completions of <type://ClientRequestContext#whenResponseCancelling()> and <type://ClientRequestContext#whenResponseCancelled()>
+  are now guaranteed even if <type://RequestContext#cancel()> is invoked before the initialization of 
   the timeout scheduler. #5212
-- Fixed a leak within a WebSocket client when an invalid response is received. #5412
+- Fixed a leak within <type://WebSocketClient> when an invalid response is received. #5412
 - [`json_name` pseudo-option](https://protobuf.com/docs/language-spec#default-json-names) in protobuf files is 
   now correctly respected for matching query parameters during gRPC HTTP/JSON transcoding. #5193 #5366
 - Implicit request objects are now correctly converted. #5389 #5393
