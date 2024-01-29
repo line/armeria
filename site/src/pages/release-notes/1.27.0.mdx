@@ -1,11 +1,11 @@
 ---
-date: 2024-01-28
+date: 2024-01-29
 ---
 
 ## 🌟 New features
 
-- **xDS-based EndpointGroup**: You can utilize xDS protocols to create <type://XdsEndpointGroup> for service
-  discovery. #5342 #5336
+- **xDS-based EndpointGroup**: You can utilize [xDS protocol](https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol)
+  to create <type://XdsEndpointGroup> for service discovery. #5342 #5336
   ```java
   XdsBootstrap bootstrap = XdsBootstrap.of(...);
   EndpointGroup endpointGroup = XdsEndpointGroup.of(boostrap.listenerRoot("my-envoy-service"));
@@ -40,17 +40,7 @@ date: 2024-01-28
        .build(apiService)
     .build();
   ```
-- **Custom Exception Handling for gRPC clients**: You can customize how your gRPC clients respond to exceptions
-  by implementing <type://GrpcExceptionHandlerFunction>. #5347 #5351
-  ```java
-  GrpcClients
-    .builder("https://my-grpc-server.com") 
-    .exceptionHandler((ctx, cause, metadata) -> {
-      // Handle the exception.
-      return Status.INTERNAL.withDescription("Something went wrong");
-    })
-  ```
-- **Thrift Service Decorators**: You can now utilize <type://@Decorator> annotations to conveniently apply
+- **Thrift Service Decorators**: You can now use <type://@Decorator> annotations to conveniently apply
   custom logic to Thrift services. #4230 #5356
   ```java
   @Decorator(ClassDecorator.class)
@@ -77,15 +67,26 @@ date: 2024-01-28
     .requestHeadersSanitizer(headersSanitizer)
     ...
   ```
+- **Custom Exception Handling for gRPC clients**: You can customize how your gRPC clients respond to exceptions
+  by implementing <type://GrpcExceptionHandlerFunction>. #5347 #5351
+  ```java
+  GrpcClients
+    .builder("https://my-grpc-server.com") 
+    .exceptionHandler((ctx, cause, metadata) -> {
+      // Handle the exception.
+      return Status.INTERNAL.withDescription("Something went wrong");
+    })
+  ```
 - **Kubernetes Client Integration**: You can now use the popular [Fabric Kubernetes client](https://github.com/fabric8io/kubernetes-client)
   seamlessly on top of Armeria when using the `armeria-kubernetes` module. #5167
-- **WebSocket Service Fallback**: Now, it is possible to set up a fallback service for 
-- <type://WebSocketService> to handle non-WebSocket requests seamlessly with
+- **WebSocket Service Fallback**: You can now set up a fallback service for 
+  <type://WebSocketService> to handle non-WebSocket requests seamlessly with
   <type://WebSocketServiceBuilder#fallbackService(HttpService)> #5368
   ```java
   WebSocketService webSocketService = 
-    WebSocketService.builder()
-      // The fallback service is used when the request 
+    WebSocketService
+      .builder()
+      // The fallback service is used when the request
       // is not a WebSocket request.
       .fallbackService(httpService)
       .build();
@@ -95,7 +96,7 @@ date: 2024-01-28
     .build();
   ```
 - **WebSocket Frame Aggregation**: You can now enable to aggregate WebSocket continuation frames for simplified 
-- message processing using <type://WebSocketServiceBuilder#aggregateContinuation(boolean)>. #5357
+  message processing using <type://WebSocketServiceBuilder#aggregateContinuation(boolean)>. #5357
   ```java
   WebSocketService
     .builder()
@@ -107,19 +108,17 @@ date: 2024-01-28
   `armeria.client.connections#value{state="active"}` for your clients when using 
   <type://ConnectionPoolListener#metricCollecting(MeterRegistry)> #4277 #5288
   ```java
+  ConnectionPoolListener connectionPoolListener =
+    ConnectionPoolListener.metricCollecting(meterRegistry);
+
   ClientFactory clientFactory =
     ClientFactory
       .builder()
-      .connectionPoolListener(ConnectionPoolListener.metricCollecting(meterRegistry))
+      .connectionPoolListener(connectionPoolListener)
       .build();
-  WebClient
-    .builder("https://my-backend.com")
-    .factory(clientFactory)
-    .build();
   ```
 - **Graceful Executor Shutdown**: You can now gracefully terminate a custom `ExecutorService` in sync with the
-- <type://Server>'s shutdown procedure using <type://ServerListenerBuilder#shutdownWhenStopped(ExecutorService,Duration)>
-  and <type://ServerListenerBuilder#shutdownWhenStopped(ExecutorService,Duration)> #5031 #5087
+  <type://Server>'s shutdown procedure. #5031 #5087
   ```java
   ServerListener
     .builder()
@@ -130,7 +129,7 @@ date: 2024-01-28
     .build()
   ```
 - **Session Protocol in RoutingContext**: You can now acquire <type://SessionProtocol> directly from
-  <type://RoutingContext#sessionProtocol()> for enhanced routing and <type://EchangeType> decisions.
+  <type://RoutingContext#sessionProtocol()> for enhanced routing and <type://ExchangeType> decisions.
 - **Eureka Health Check Customization**: You can override the default health check URL when registering with 
   Eureka. #5369
   ```java
@@ -146,25 +145,26 @@ date: 2024-01-28
 - Annotated services now support <type://HttpResult> wrapped in RxJava objects #5380 #5386
 - You can now create <type://HttpFile> with 
   [Spring Boot nested JAR URL](https://docs.spring.io/spring-boot/docs/current/reference/html/executable-jar.html#appendix.executable-jar.jarfile-class.compatibility). #5390 #5391
-- <type://WebsocketService> is restructured as an interface, allowing for custom implementations. #5368
+- <type://WebSocketService> is restructured as an interface, allowing for custom implementations. #5368
 - Introduce <type://PreTlsHandshakeException> to better report exceptions occurring before a TLS handshake
   initiates. #5344
 - Error messages for gRPC client stub generation have been clarified. #5387
 
 ## 🛠️ Bug fixes
 
-- <type://ClientRequestContext#whenResponseCancelling()> and <type://ClientRequestContext#whenResponseCancelled()>
-  is now correctly completed even if the  `CancellationScheduler` has not been initialized #5212
+- The completion of <type://ClientRequestContext#whenResponseCancelling()> and <type://ClientRequestContext#whenResponseCancelled()>
+  is now guaranteed even if <type://RequestContext#cancel()> is invoked before the initialization of 
+  the timeout scheduler. #5212
 - Fixed a leak within a WebSocket client when an invalid response is received. #5412
-- `json_name` attribute in protobuf files is now correctly used for matching query parameters during
-  gRPC HTTP/JSON transcoding. #5193 #5366
+- [`json_name` pseudo-option](https://protobuf.com/docs/language-spec#default-json-names) in protobuf files is 
+  now correctly respected for matching query parameters during gRPC HTTP/JSON transcoding. #5193 #5366
 - Implicit request objects are now correctly converted. #5389 #5393
-- Fixed an issue with handling an empty reason phase in WebSocket Close frames. #5388
-- <type://Flags> logging is now consistent, irrespective of <type://RequestContextExportingAppender> 
-  configurations in `logback.xml`. #5327 #5361
+- <type://CloseWebSocketFrame> with empty reason phrases are now correctly handled. #5388
+- <type://Flags> now correctly logs all messages when <type://RequestContextExportingAppender> is configured in 
+  `logback.xml`. #5327 #5361
 - You no longer see <type://EndpointSelectionTimeoutException> when <type://HealthCheckedEndpointGroup> is 
-  initialized with duplicate `Endpoint`s. #5343
-- <type://HttpHeaders#containsBoolean(CharSequence,boolean)> now checks across all header entries with the same
+  initialized with duplicate <typeplural://Endpoint>. #5343
+- <type://HttpHeaders#containsBoolean(CharSequence,boolean)> now checks all header entries with the same
   name. #5319
 - <type://GrpcService> provides more consistent `ServerCall.Listener` behavior under error conditions #5273
 
@@ -172,7 +172,7 @@ date: 2024-01-28
 
 - Updated [Production Checklist](/docs/advanced-production-checklist) with guidance on 
   using <type://ClientFactoryBuilder#maxNumEventLoopsPerEndpoint(int)>. This addition will help you mitigate 
-- potential client-side bottlenecks. #5297
+  potential client-side bottlenecks. #5297
 
 ## 🏚️ Deprecations
 
