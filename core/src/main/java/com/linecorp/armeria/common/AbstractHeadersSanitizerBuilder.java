@@ -32,7 +32,8 @@ import io.netty.util.AsciiString;
 public abstract class AbstractHeadersSanitizerBuilder<T> {
 
     private static final Set<AsciiString> DEFAULT_MASKING_HEADERS =
-            ImmutableSet.of(HttpHeaderNames.AUTHORIZATION, HttpHeaderNames.SET_COOKIE);
+            ImmutableSet.of(HttpHeaderNames.AUTHORIZATION, HttpHeaderNames.COOKIE,
+                            HttpHeaderNames.SET_COOKIE, HttpHeaderNames.PROXY_AUTHORIZATION);
 
     private final Set<AsciiString> maskingHeaders = new HashSet<>();
 
