@@ -45,7 +45,7 @@ final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
     }
 
     @Override
-    public JsonNode apply(RequestContext requestContext, HttpHeaders headers) {
+    public JsonNode sanitize(RequestContext requestContext, HttpHeaders headers) {
         final ObjectNode result = objectMapper.createObjectNode();
         maskHeaders(headers, maskingHeaders, maskingFunction,
                     (header, values) -> result.put(header.toString(), values.size() > 1 ?

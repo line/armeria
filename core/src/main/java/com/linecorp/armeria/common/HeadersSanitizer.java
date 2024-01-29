@@ -20,6 +20,8 @@ import java.util.function.BiFunction;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * A sanitizer that sanitizes {@link HttpHeaders}.
  */
@@ -51,5 +53,18 @@ public interface HeadersSanitizer<T> extends BiFunction<RequestContext, HttpHead
      */
     static JsonHeadersSanitizerBuilder builderForJson() {
         return new JsonHeadersSanitizerBuilder();
+    }
+
+    /**
+     * Sanitizes the specified {@link HttpHeaders}.
+     * If {@code null} is returned, the specified {@link HttpHeaders} will be excluded from the log.
+     */
+    @Nullable
+    T sanitize(RequestContext requestContext, HttpHeaders headers);
+
+    @Nullable
+    @Override
+    default T apply(RequestContext requestContext, HttpHeaders entries) {
+        return sanitize(requestContext, entries);
     }
 }
