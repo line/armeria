@@ -18,7 +18,7 @@ package com.linecorp.armeria.xds;
 
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
-final class RouteResourceParser extends ResourceParser<RouteXdsResource, RouteConfiguration> {
+final class RouteResourceParser extends ResourceParser<RouteConfiguration, RouteXdsResource> {
 
     public static final RouteResourceParser INSTANCE = new RouteResourceParser();
 

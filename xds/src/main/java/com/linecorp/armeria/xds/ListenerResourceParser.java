@@ -20,7 +20,7 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 
-final class ListenerResourceParser extends ResourceParser<ListenerXdsResource, Listener> {
+final class ListenerResourceParser extends ResourceParser<Listener, ListenerXdsResource> {
 
     static final ListenerResourceParser INSTANCE = new ListenerResourceParser();
 

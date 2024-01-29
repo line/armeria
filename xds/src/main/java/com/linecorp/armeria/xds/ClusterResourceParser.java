@@ -19,7 +19,7 @@ package com.linecorp.armeria.xds;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
 
-final class ClusterResourceParser extends ResourceParser<ClusterXdsResource, Cluster> {
+final class ClusterResourceParser extends ResourceParser<Cluster, ClusterXdsResource> {
 
     static final ClusterResourceParser INSTANCE = new ClusterResourceParser();
 
