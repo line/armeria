@@ -27,11 +27,12 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.route.v3.Route;
+import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.grpc.Status;
 
 final class ClusterResourceNode
-        extends AbstractResourceNodeWithPrimer<ClusterResourceHolder, RouteResourceHolder> {
+        extends AbstractResourceNodeWithPrimer<ClusterResourceHolder, RouteConfiguration> {
 
     @Nullable
     private final VirtualHost virtualHost;

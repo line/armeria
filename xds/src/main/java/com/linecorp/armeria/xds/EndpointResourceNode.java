@@ -20,10 +20,11 @@ import static com.linecorp.armeria.xds.XdsType.ENDPOINT;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
 final class EndpointResourceNode
-        extends AbstractResourceNodeWithPrimer<EndpointResourceHolder, ClusterResourceHolder> {
+        extends AbstractResourceNodeWithPrimer<EndpointResourceHolder, Cluster> {
 
     private final SnapshotWatcher<EndpointSnapshot> parentWatcher;
 

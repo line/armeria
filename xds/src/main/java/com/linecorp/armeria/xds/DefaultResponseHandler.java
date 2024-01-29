@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import java.util.Map;
 
 import com.google.common.base.Joiner;
+import com.google.protobuf.Message;
 
 import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
 import io.grpc.Status;
@@ -33,9 +34,8 @@ final class DefaultResponseHandler implements XdsResponseHandler {
     }
 
     @Override
-    public <T extends ResourceHolder<?>> void handleResponse(ResourceParser<T> resourceParser,
-                                                             DiscoveryResponse response,
-                                                             SotwXdsStream sender) {
+    public <T extends ResourceHolder<U>, U extends Message> void handleResponse(
+            ResourceParser<T, U> resourceParser, DiscoveryResponse response, SotwXdsStream sender) {
         final ParsedResourcesHolder<T> holder =
                 resourceParser.parseResources(response.getResourcesList());
         String errorDetail = null;

@@ -21,25 +21,26 @@ import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 /**
  * A resource holder object for a {@link RouteConfiguration}.
  */
 public final class RouteResourceHolder
-        extends ResourceHolderWithPrimer<RouteResourceHolder, RouteConfiguration, ListenerResourceHolder> {
+        extends ResourceHolderWithPrimer<RouteResourceHolder, RouteConfiguration, Listener> {
 
     private final RouteConfiguration routeConfiguration;
 
     @Nullable
-    private final ListenerResourceHolder primer;
+    private final ResourceHolder<Listener> primer;
 
     RouteResourceHolder(RouteConfiguration routeConfiguration) {
         this.routeConfiguration = routeConfiguration;
         primer = null;
     }
 
-    RouteResourceHolder(RouteConfiguration routeConfiguration, ListenerResourceHolder primer) {
+    RouteResourceHolder(RouteConfiguration routeConfiguration, ResourceHolder<Listener> primer) {
         this.routeConfiguration = routeConfiguration;
         this.primer = primer;
     }
@@ -60,7 +61,7 @@ public final class RouteResourceHolder
     }
 
     @Override
-    RouteResourceHolder withPrimer(@Nullable ListenerResourceHolder primer) {
+    RouteResourceHolder withPrimer(@Nullable ResourceHolder<Listener> primer) {
         if (primer == null) {
             return this;
         }
@@ -69,7 +70,7 @@ public final class RouteResourceHolder
 
     @Override
     @Nullable
-    ListenerResourceHolder primer() {
+    ResourceHolder<Listener> primer() {
         return primer;
     }
 

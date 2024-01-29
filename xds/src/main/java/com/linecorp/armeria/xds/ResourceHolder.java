@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import com.google.protobuf.Message;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -35,7 +37,7 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
  *            {@link ClusterLoadAssignment}.
  */
 @UnstableApi
-public interface ResourceHolder<T> {
+public interface ResourceHolder<T extends Message> {
 
     /**
      * Returns the xDS type of the object.

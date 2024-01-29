@@ -21,24 +21,25 @@ import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 /**
  * A resource holder object for a {@link ClusterLoadAssignment}.
  */
 public final class EndpointResourceHolder
-        extends ResourceHolderWithPrimer<EndpointResourceHolder, ClusterLoadAssignment, ClusterResourceHolder> {
+        extends ResourceHolderWithPrimer<EndpointResourceHolder, ClusterLoadAssignment, Cluster> {
 
     private final ClusterLoadAssignment clusterLoadAssignment;
     @Nullable
-    private final ClusterResourceHolder primer;
+    private final ResourceHolder<Cluster> primer;
 
     EndpointResourceHolder(ClusterLoadAssignment clusterLoadAssignment) {
         this.clusterLoadAssignment = clusterLoadAssignment;
         primer = null;
     }
 
-    EndpointResourceHolder(ClusterLoadAssignment clusterLoadAssignment, ClusterResourceHolder primer) {
+    EndpointResourceHolder(ClusterLoadAssignment clusterLoadAssignment, ResourceHolder<Cluster> primer) {
         this.clusterLoadAssignment = clusterLoadAssignment;
         this.primer = primer;
     }
@@ -59,7 +60,7 @@ public final class EndpointResourceHolder
     }
 
     @Override
-    EndpointResourceHolder withPrimer(@Nullable ClusterResourceHolder primer) {
+    EndpointResourceHolder withPrimer(@Nullable ResourceHolder<Cluster> primer) {
         if (primer == null) {
             return this;
         }
@@ -68,7 +69,7 @@ public final class EndpointResourceHolder
 
     @Override
     @Nullable
-    ClusterResourceHolder primer() {
+    ResourceHolder<Cluster> primer() {
         return primer;
     }
 

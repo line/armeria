@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import com.google.protobuf.Message;
+
 import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
 
 /**
@@ -25,6 +27,6 @@ import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
  */
 interface XdsResponseHandler {
 
-    <T extends ResourceHolder<?>> void handleResponse(
-            ResourceParser<T> resourceParser, DiscoveryResponse value, SotwXdsStream sender);
+    <T extends ResourceHolder<U>, U extends Message> void handleResponse(
+            ResourceParser<T, U> resourceParser, DiscoveryResponse value, SotwXdsStream sender);
 }

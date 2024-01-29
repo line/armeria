@@ -16,31 +16,22 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.protobuf.Message;
-
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignmentOrBuilder;
 
-final class EndpointResourceParser extends ResourceParser<EndpointResourceHolder> {
+final class EndpointResourceParser extends ResourceParser<EndpointResourceHolder, ClusterLoadAssignment> {
 
     static final EndpointResourceParser INSTANCE = new EndpointResourceParser();
 
     private EndpointResourceParser() {}
 
     @Override
-    EndpointResourceHolder parse(Message message) {
-        if (!(message instanceof ClusterLoadAssignment)) {
-            throw new IllegalArgumentException("message not type of ClusterLoadAssignment");
-        }
-        return new EndpointResourceHolder((ClusterLoadAssignment) message);
+    EndpointResourceHolder parse(ClusterLoadAssignment message) {
+        return new EndpointResourceHolder(message);
     }
 
     @Override
-    String name(Message message) {
-        if (!(message instanceof ClusterLoadAssignment)) {
-            throw new IllegalArgumentException("message not type of ClusterLoadAssignment");
-        }
-        return ((ClusterLoadAssignmentOrBuilder) message).getClusterName();
+    String name(ClusterLoadAssignment message) {
+        return message.getClusterName();
     }
 
     @Override

@@ -16,25 +16,19 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.protobuf.Message;
-
 import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.envoyproxy.envoy.config.listener.v3.ListenerOrBuilder;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 
-final class ListenerResourceParser extends ResourceParser<ListenerResourceHolder> {
+final class ListenerResourceParser extends ResourceParser<ListenerResourceHolder, Listener> {
 
     static final ListenerResourceParser INSTANCE = new ListenerResourceParser();
 
     private ListenerResourceParser() {}
 
     @Override
-    ListenerResourceHolder parse(Message message) {
-        if (!(message instanceof Listener)) {
-            throw new IllegalArgumentException("message not type of Listener");
-        }
-        final ListenerResourceHolder holder = new ListenerResourceHolder((Listener) message);
+    ListenerResourceHolder parse(Listener message) {
+        final ListenerResourceHolder holder = new ListenerResourceHolder(message);
         final HttpConnectionManager connectionManager = holder.connectionManager();
         if (connectionManager != null) {
             if (connectionManager.hasRds()) {
@@ -46,11 +40,8 @@ final class ListenerResourceParser extends ResourceParser<ListenerResourceHolder
     }
 
     @Override
-    String name(Message message) {
-        if (!(message instanceof Listener)) {
-            throw new IllegalArgumentException("message not type of Listener");
-        }
-        return ((ListenerOrBuilder) message).getName();
+    String name(Listener message) {
+        return message.getName();
     }
 
     @Override

@@ -16,19 +16,21 @@
 
 package com.linecorp.armeria.xds;
 
+import com.google.protobuf.Message;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
 abstract class AbstractResourceNodeWithPrimer
-        <T extends ResourceHolderWithPrimer<T, ?, U>, U extends ResourceHolder<?>>
+        <T extends ResourceHolderWithPrimer<T, ?, U>, U extends Message>
         extends AbstractResourceNode<T> {
 
     @Nullable
-    private final U primer;
+    private final ResourceHolder<U> primer;
 
     AbstractResourceNodeWithPrimer(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
-                                   XdsType type, String resourceName, @Nullable U primer,
+                                   XdsType type, String resourceName, @Nullable ResourceHolder<U> primer,
                                    SnapshotWatcher<?> parentWatcher, ResourceNodeType resourceNodeType) {
         super(xdsBootstrap, configSource, type, resourceName, parentWatcher, resourceNodeType);
         this.primer = primer;

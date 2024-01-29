@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.Route.ActionCase;
 import io.envoyproxy.envoy.config.route.v3.RouteAction;
@@ -38,7 +39,7 @@ import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.grpc.Status;
 
 final class RouteResourceNode
-        extends AbstractResourceNodeWithPrimer<RouteResourceHolder, ListenerResourceHolder> {
+        extends AbstractResourceNodeWithPrimer<RouteResourceHolder, Listener> {
 
     private final List<ClusterSnapshot> clusterSnapshotList = new ArrayList<>();
 

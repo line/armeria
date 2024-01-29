@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import com.google.protobuf.Message;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -32,11 +34,11 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
  * @param <U> the type of the primer
  */
 abstract class ResourceHolderWithPrimer
-        <SELF extends ResourceHolderWithPrimer<SELF, T, U>, T, U extends ResourceHolder<?>>
+        <SELF extends ResourceHolderWithPrimer<SELF, T, U>, T extends Message, U extends Message>
         implements ResourceHolder<T> {
 
-    abstract SELF withPrimer(@Nullable U primer);
+    abstract SELF withPrimer(@Nullable ResourceHolder<U> primer);
 
     @Nullable
-    abstract U primer();
+    abstract ResourceHolder<U> primer();
 }

@@ -24,29 +24,30 @@ import com.google.common.base.Objects;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
 /**
  * A resource holder object for a {@link Cluster}.
  */
 public final class ClusterResourceHolder
-        extends ResourceHolderWithPrimer<ClusterResourceHolder, Cluster, RouteResourceHolder> {
+        extends ResourceHolderWithPrimer<ClusterResourceHolder, Cluster, RouteConfiguration> {
 
     private final Cluster cluster;
     @Nullable
-    private final RouteResourceHolder primer;
+    private final ResourceHolder<RouteConfiguration> primer;
 
     ClusterResourceHolder(Cluster cluster) {
         this(cluster, null);
     }
 
-    ClusterResourceHolder(Cluster cluster, @Nullable RouteResourceHolder primer) {
+    ClusterResourceHolder(Cluster cluster, @Nullable ResourceHolder<RouteConfiguration> primer) {
         this.cluster = cluster;
         this.primer = primer;
     }
 
     @Override
-    ClusterResourceHolder withPrimer(@Nullable RouteResourceHolder primer) {
+    ClusterResourceHolder withPrimer(@Nullable ResourceHolder<RouteConfiguration> primer) {
         if (primer == null) {
             return this;
         }
@@ -85,7 +86,7 @@ public final class ClusterResourceHolder
     }
 
     @Override
-    RouteResourceHolder primer() {
+    ResourceHolder<RouteConfiguration> primer() {
         return primer;
     }
 

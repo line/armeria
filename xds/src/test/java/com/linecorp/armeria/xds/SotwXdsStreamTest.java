@@ -33,6 +33,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Duration;
+import com.google.protobuf.Message;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -98,9 +99,8 @@ class SotwXdsStreamTest {
         }
 
         @Override
-        public <T extends ResourceHolder<?>> void handleResponse(ResourceParser<T> resourceParser,
-                                                                 DiscoveryResponse value,
-                                                                 SotwXdsStream sender) {
+        public <T extends ResourceHolder<U>, U extends Message> void handleResponse(
+                ResourceParser<T, U> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
             responses.add(value);
             sender.ackResponse(resourceParser.type(), value.getVersionInfo(), value.getNonce());
         }
@@ -216,9 +216,8 @@ class SotwXdsStreamTest {
         final CountDownLatch latch = new CountDownLatch(1);
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
-            public <T extends ResourceHolder<?>> void handleResponse(ResourceParser<T> type,
-                                                                     DiscoveryResponse value,
-                                                                     SotwXdsStream sender) {
+            public <T extends ResourceHolder<U>, U extends Message> void handleResponse(
+                    ResourceParser<T, U> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
                 if (cntRef.getAndIncrement() < 3) {
                     throw new RuntimeException("test");
                 }
@@ -227,7 +226,7 @@ class SotwXdsStreamTest {
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
-                super.handleResponse(type, value, sender);
+                super.handleResponse(resourceParser, value, sender);
             }
         };
 
@@ -262,9 +261,8 @@ class SotwXdsStreamTest {
         final AtomicInteger nackResponses = new AtomicInteger();
         final TestResponseHandler responseHandler = new TestResponseHandler() {
             @Override
-            public <T extends ResourceHolder<?>> void handleResponse(ResourceParser<T> resourceParser,
-                                                                     DiscoveryResponse value,
-                                                                     SotwXdsStream sender) {
+            public <T extends ResourceHolder<U>, U extends Message> void handleResponse(
+                    ResourceParser<T, U> resourceParser, DiscoveryResponse value, SotwXdsStream sender) {
                 if (ackRef.get()) {
                     super.handleResponse(resourceParser, value, sender);
                 } else {

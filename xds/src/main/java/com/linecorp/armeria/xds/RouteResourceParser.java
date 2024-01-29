@@ -16,31 +16,22 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.protobuf.Message;
-
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
-import io.envoyproxy.envoy.config.route.v3.RouteConfigurationOrBuilder;
 
-final class RouteResourceParser extends ResourceParser<RouteResourceHolder> {
+final class RouteResourceParser extends ResourceParser<RouteResourceHolder, RouteConfiguration> {
 
     public static final RouteResourceParser INSTANCE = new RouteResourceParser();
 
     private RouteResourceParser() {}
 
     @Override
-    RouteResourceHolder parse(Message message) {
-        if (!(message instanceof RouteConfiguration)) {
-            throw new IllegalArgumentException("message not type of RouteConfiguration");
-        }
-        return new RouteResourceHolder((RouteConfiguration) message);
+    RouteResourceHolder parse(RouteConfiguration message) {
+        return new RouteResourceHolder(message);
     }
 
     @Override
-    String name(Message message) {
-        if (!(message instanceof RouteConfiguration)) {
-            throw new IllegalArgumentException("message not type of RouteConfiguration");
-        }
-        return ((RouteConfigurationOrBuilder) message).getName();
+    String name(RouteConfiguration message) {
+        return message.getName();
     }
 
     @Override

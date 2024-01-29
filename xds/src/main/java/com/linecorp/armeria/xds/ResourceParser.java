@@ -28,14 +28,14 @@ import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-abstract class ResourceParser<T extends ResourceHolder<?>> {
+abstract class ResourceParser<T extends ResourceHolder<U>, U extends Message> {
 
     @Nullable
-    abstract String name(Message message);
+    abstract String name(U message);
 
-    abstract Class<? extends Message> clazz();
+    abstract Class<U> clazz();
 
-    abstract T parse(Message message);
+    abstract T parse(U message);
 
     ParsedResourcesHolder<T> parseResources(List<Any> resources) {
         final ImmutableMap.Builder<String, T> parsedResources = ImmutableMap.builder();
@@ -45,7 +45,7 @@ abstract class ResourceParser<T extends ResourceHolder<?>> {
         for (int i = 0; i < resources.size(); i++) {
             final Any resource = resources.get(i);
 
-            final Message unpackedMessage;
+            final U unpackedMessage;
             try {
                 unpackedMessage = resource.unpack(clazz());
             } catch (InvalidProtocolBufferException e) {

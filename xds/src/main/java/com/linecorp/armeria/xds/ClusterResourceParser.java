@@ -16,24 +16,17 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.protobuf.Message;
-
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
-import io.envoyproxy.envoy.config.cluster.v3.ClusterOrBuilder;
 
-final class ClusterResourceParser extends ResourceParser<ClusterResourceHolder> {
+final class ClusterResourceParser extends ResourceParser<ClusterResourceHolder, Cluster> {
 
     static final ClusterResourceParser INSTANCE = new ClusterResourceParser();
 
     private ClusterResourceParser() {}
 
     @Override
-    ClusterResourceHolder parse(Message message) {
-        if (!(message instanceof Cluster)) {
-            throw new IllegalArgumentException("message not type of Cluster");
-        }
-        final Cluster cluster = (Cluster) message;
+    ClusterResourceHolder parse(Cluster cluster) {
         final ClusterResourceHolder holder = new ClusterResourceHolder(cluster);
         if (cluster.hasEdsClusterConfig()) {
             final EdsClusterConfig eds = cluster.getEdsClusterConfig();
@@ -43,11 +36,8 @@ final class ClusterResourceParser extends ResourceParser<ClusterResourceHolder> 
     }
 
     @Override
-    String name(Message message) {
-        if (!(message instanceof Cluster)) {
-            throw new IllegalArgumentException("message not type of Cluster");
-        }
-        return ((ClusterOrBuilder) message).getName();
+    String name(Cluster cluster) {
+        return cluster.getName();
     }
 
     @Override
