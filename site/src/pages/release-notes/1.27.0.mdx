@@ -62,6 +62,21 @@ date: 2024-01-28
     }
   }
   ```
+- **Sensitive Header Masking**: You can now easily mask request and response headers
+  using <type://HeadersSanitizer>. #5175 #5188
+  ```java
+  HeadersSanitizer<String> headersSanitizer =
+   HeadersSanitizer
+     .builderForText()
+     .maskingHeaders("Authorization", "API-Key", "Proxy-Authorization")
+     ...
+     .build();
+  
+  LogFormatter
+    .builderForText()
+    .requestHeadersSanitizer(headersSanitizer)
+    ...
+  ```
 - **Kubernetes Client Integration**: You can now use the popular [Fabric Kubernetes client](https://github.com/fabric8io/kubernetes-client)
   seamlessly on top of Armeria when using the `armeria-kubernetes` module. #5167
 - **WebSocket Service Fallback**: Now, it is possible to set up a fallback service for 
@@ -116,8 +131,6 @@ date: 2024-01-28
   ```
 - **Session Protocol in RoutingContext**: You can now acquire <type://SessionProtocol> directly from
   <type://RoutingContext#sessionProtocol()> for enhanced routing and <type://EchangeType> decisions.
-- You can now easily mask request and response headers with ... #5175 #5188
-  - TODO(ikhoon): TBU
 - **Eureka Health Check Customization**: You can override the default health check URL when registering with 
   Eureka. #5369
   ```java
