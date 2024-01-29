@@ -28,7 +28,7 @@ abstract class AbstractResourceNodeWithPrimer<T extends XdsResourceWithPrimer<T>
 
     AbstractResourceNodeWithPrimer(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
                                    XdsType type, String resourceName, @Nullable XdsResource primer,
-                                   SnapshotWatcher<?> parentWatcher, ResourceNodeType resourceNodeType) {
+                                   SnapshotWatcher<? extends Snapshot<T>> parentWatcher, ResourceNodeType resourceNodeType) {
         super(xdsBootstrap, configSource, type, resourceName, parentWatcher, resourceNodeType);
         this.primer = primer;
     }

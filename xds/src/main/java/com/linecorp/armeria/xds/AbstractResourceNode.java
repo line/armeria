@@ -33,14 +33,15 @@ abstract class AbstractResourceNode<T extends XdsResource> implements ResourceNo
     private final ConfigSource configSource;
     private final XdsType type;
     private final String resourceName;
-    private final SnapshotWatcher<?> parentWatcher;
+    private final SnapshotWatcher<? extends Snapshot<T>> parentWatcher;
     private final ResourceNodeType resourceNodeType;
     @Nullable
     private T current;
 
     AbstractResourceNode(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
                          XdsType type, String resourceName,
-                         SnapshotWatcher<?> parentWatcher, ResourceNodeType resourceNodeType) {
+                         SnapshotWatcher<? extends Snapshot<T>> parentWatcher,
+                         ResourceNodeType resourceNodeType) {
         this.xdsBootstrap = xdsBootstrap;
         this.configSource = configSource;
         this.type = type;
