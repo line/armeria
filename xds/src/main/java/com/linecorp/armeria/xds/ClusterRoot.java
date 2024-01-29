@@ -40,7 +40,7 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
             eventLoop().execute(this::close);
             return;
         }
-        super.close();
         node.close();
+        super.close();
     }
 }

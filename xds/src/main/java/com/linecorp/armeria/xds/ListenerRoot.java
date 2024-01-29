@@ -40,7 +40,7 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
             eventLoop().execute(this::close);
             return;
         }
-        super.close();
         node.close();
+        super.close();
     }
 }

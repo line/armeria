@@ -141,6 +141,7 @@ class XdsClientIntegrationTest {
 
             // try removing the watcher for cluster1
             clusterRoot.close();
+            await().untilAsserted(() -> assertThat(clusterRoot.closed()).isTrue());
 
             cache.setSnapshot(
                     GROUP,
