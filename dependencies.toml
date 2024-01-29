@@ -135,7 +135,6 @@ spring6 = "6.1.3"
 spring-boot2 = "2.7.18"
 spring-boot3 = "3.2.2"
 testcontainers = "1.19.1"
-testng = "7.5.1"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
 thrift013 = { strictly = "0.13.0" }
@@ -752,7 +751,7 @@ version.ref = "junit-pioneer"
 
 [libraries.junit-testng-engine]
 module = "org.junit.support:testng-engine"
-version = "1.0.4"
+version = "1.0.5"
 
 [libraries.jwt]
 module = "com.auth0:java-jwt"
@@ -1248,11 +1247,6 @@ version.ref = "spring-boot3"
 module = "org.testcontainers:consul"
 [libraries.testcontainers-junit-jupiter]
 module = "org.testcontainers:junit-jupiter"
-
-# jdk 11 is required from testng version 7.6
-[libraries.testng]
-module = "org.testng:testng"
-version.ref = "testng"
 
 [libraries.thrift09]
 module = "org.apache.thrift:libthrift"
