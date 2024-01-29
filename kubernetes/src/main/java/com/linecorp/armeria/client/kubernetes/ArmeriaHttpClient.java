@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
@@ -52,13 +53,13 @@ final class ArmeriaHttpClient
     private final ArmeriaWebSocketClient webSocketClient;
 
     ArmeriaHttpClient(ArmeriaHttpClientBuilder armeriaHttpClientBuilder, WebClient webClient) {
-        super(armeriaHttpClientBuilder);
+        super(armeriaHttpClientBuilder, new AtomicBoolean());
         this.webClient = webClient;
         webSocketClient = new ArmeriaWebSocketClient(armeriaHttpClientBuilder);
     }
 
     @Override
-    public void close() {
+    public void doClose() {
         webClient.options().factory().close();
         webSocketClient.close();
     }

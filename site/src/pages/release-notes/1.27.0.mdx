@@ -41,7 +41,7 @@ date: 2024-01-29
     .build();
   ```
 - **Thrift Service Decorators**: You can now use <type://@Decorator> annotations to conveniently apply
-  custom logic to Thrift services. #4230 #5356
+  custom decorators to Thrift services. #4230 #5356
   ```java
   @Decorator(ClassDecorator.class)
   class MyHelloService implements HelloService.AsyncIface {
@@ -130,8 +130,8 @@ date: 2024-01-29
   ```
 - **Session Protocol in RoutingContext**: You can now acquire <type://SessionProtocol> directly from
   <type://RoutingContext#sessionProtocol()> for enhanced routing and <type://ExchangeType> decisions.
-- **Eureka Health Check Customization**: You can override the default health check URL when registering with 
-  Eureka. #5369
+- **Eureka Health Check Customization**: You can override the default health check URL when registering a service
+  with Eureka. #5369
   ```java
   EurekaUpdatingListener
     .builder()
@@ -142,7 +142,7 @@ date: 2024-01-29
 
 ## 📈 Improvements
 
-- Annotated services now support <type://HttpResult> wrapped in RxJava objects #5380 #5386
+- Annotated services now support <type://HttpResult> wrapped in RxJava objects. #5380 #5386
 - You can now create <type://HttpFile> with 
   [Spring Boot nested JAR URL](https://docs.spring.io/spring-boot/docs/current/reference/html/executable-jar.html#appendix.executable-jar.jarfile-class.compatibility). #5390 #5391
 - <type://WebSocketService> is restructured as an interface, allowing for custom implementations. #5368
