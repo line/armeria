@@ -66,27 +66,27 @@ public class RoutersBenchmark {
                 new ServiceConfig(route1, route1,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(), 0, multipartUploadsLocation, ImmutableList.of(),
-                                  HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler,
-                                  NOOP_CONTEXT_HOOK),
+                                  SuccessFunction.always(), 0, multipartUploadsLocation,
+                                  CommonPools.workerGroup(), ImmutableList.of(), HttpHeaders.of(),
+                                  ctx -> RequestId.random(), serviceErrorHandler, NOOP_CONTEXT_HOOK),
                 new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(), 0, multipartUploadsLocation, ImmutableList.of(),
-                                  HttpHeaders.of(), ctx -> RequestId.random(), serviceErrorHandler,
-                                  NOOP_CONTEXT_HOOK));
+                                  SuccessFunction.always(), 0, multipartUploadsLocation,
+                                  CommonPools.workerGroup(), ImmutableList.of(), HttpHeaders.of(),
+                                  ctx -> RequestId.random(), serviceErrorHandler, NOOP_CONTEXT_HOOK));
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
                                              defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
-                                             CommonPools.blockingTaskExecutor(),
-                                             SuccessFunction.always(), 0, multipartUploadsLocation,
+                                             CommonPools.blockingTaskExecutor(), SuccessFunction.always(), 0,
+                                             multipartUploadsLocation, CommonPools.workerGroup(),
                                              ImmutableList.of(), HttpHeaders.of(), ctx -> RequestId.random(),
                                              serviceErrorHandler, NOOP_CONTEXT_HOOK);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, defaultLogName, 0, 0, false,
                 AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), 0, SuccessFunction.ofDefault(),
-                multipartUploadsLocation, ImmutableList.of(),
+                multipartUploadsLocation, CommonPools.workerGroup(), ImmutableList.of(),
                 ctx -> RequestId.random());
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }

@@ -33,6 +33,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A {@link ContextPathAnnotatedServiceConfigSetters} builder which configures an {@link AnnotatedService}
  * under a set of context paths.
@@ -227,6 +229,18 @@ public final class ContextPathAnnotatedServiceConfigSetters
     public ContextPathAnnotatedServiceConfigSetters requestAutoAbortDelayMillis(
             long delayMillis) {
         return (ContextPathAnnotatedServiceConfigSetters) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
+    public ContextPathAnnotatedServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                                       boolean shutdownOnStop) {
+        return (ContextPathAnnotatedServiceConfigSetters)
+                super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public ContextPathAnnotatedServiceConfigSetters serviceWorkerGroup(int numThreads) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.serviceWorkerGroup(numThreads);
     }
 
     @Override

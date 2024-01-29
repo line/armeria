@@ -236,10 +236,12 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             requestCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
         }
 
+        final EventLoop serviceWorkerGroup = eventLoop();
+
         // Build the context with the properties set by a user and the fake objects.
         final Channel ch = fakeChannel();
         return new DefaultServiceRequestContext(
-                serviceCfg, ch, meterRegistry(), sessionProtocol(), id(), routingCtx,
+                serviceCfg, ch, serviceWorkerGroup, meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, exchangeType, req, sslSession(), proxiedAddresses,
                 clientAddress, remoteAddress(), localAddress(),
                 requestCancellationScheduler,

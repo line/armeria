@@ -64,6 +64,7 @@ jetty12 = "12.0.5"
 jetty93 = "9.3.30.v20211001"
 jetty94 = "9.4.52.v20230823"
 jetty-alpn-api = "1.1.3.v20160715"
+jkube = "1.15.0"
 jmh-core = "1.37"
 jmh-gradle-plugin = "0.7.2"
 joor = "0.9.15"
@@ -80,6 +81,7 @@ kotlin = "1.9.22"
 kotlin-coroutine = "1.7.3"
 krotodc = "1.0.6"
 ktlint-gradle-plugin = "12.1.0"
+kubernetes-client = "6.9.2"
 logback12 = "1.2.13"
 logback13 = "1.3.14"
 logback14 = "1.4.14"
@@ -101,6 +103,8 @@ okhttp4 = "4.12.0" # For testing
 # Don"t upgrade OpenSAML to 4.x that requires Java 11.
 opensaml = "3.4.6"
 osdetector = "1.7.3"
+# Used for kubernetes-chaos-tests
+picocli = "4.7.5"
 proguard = "7.3.1"
 prometheus = "0.16.0"
 # Ensure that we use the same Protobuf version as what gRPC depends on.
@@ -142,8 +146,6 @@ spring6 = "6.1.3"
 spring-boot2 = "2.7.18"
 spring-boot3 = "3.2.2"
 testcontainers = "1.19.3"
-# Don't upgrade TestNG to 7.6 that requires Java 11
-testng = "7.5.1"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
 thrift013 = { strictly = "0.13.0" }
@@ -757,7 +759,7 @@ version.ref = "junit-pioneer"
 
 [libraries.junit-testng-engine]
 module = "org.junit.support:testng-engine"
-version = "1.0.4"
+version = "1.0.5"
 
 [libraries.jwt]
 module = "com.auth0:java-jwt"
@@ -798,6 +800,23 @@ version.ref = "kotlin-coroutine"
 [libraries.kotlin-coroutines-debug]
 module = "org.jetbrains.kotlinx:kotlinx-coroutines-debug"
 version.ref = "kotlin-coroutine"
+
+[libraries.kubernetes-client-api]
+module = "io.fabric8:kubernetes-client-api"
+version.ref = "kubernetes-client"
+exclusions = ["org.slf4j:slf4j-api"]
+[libraries.kubernetes-client-impl]
+module = "io.fabric8:kubernetes-client"
+version.ref = "kubernetes-client"
+exclusions = ["io.fabric8:kubernetes-httpclient-okhttp", "org.slf4j:slf4j-api"]
+[libraries.kubernetes-server-mock]
+module = "io.fabric8:kubernetes-server-mock"
+version.ref = "kubernetes-client"
+exclusions = ["org.slf4j:slf4j-api"]
+[libraries.kubernetes-junit-jupiter]
+module = "io.fabric8:kubernetes-junit-jupiter"
+version.ref = "kubernetes-client"
+exclusions = ["io.fabric8:kubernetes-httpclient-okhttp", "org.slf4j:slf4j-api"]
 
 # TODO(ikhoon): Upgrade Logback to 1.3.0 when Spring Boot 2 supports it.
 [libraries.logback12]
@@ -910,6 +929,10 @@ module = 'io.netty:netty-tcnative-boringssl-static'
 [libraries.netty-io_uring]
 module = "io.netty.incubator:netty-incubator-transport-native-io_uring"
 version.ref = "netty-incubator-transport-native-io_uring"
+
+[libraries.picocli]
+module = "info.picocli:picocli"
+version.ref = "picocli"
 
 [libraries.prometheus]
 module = "io.prometheus:simpleclient_common"
@@ -1224,10 +1247,6 @@ module = "org.testcontainers:consul"
 [libraries.testcontainers-junit-jupiter]
 module = "org.testcontainers:junit-jupiter"
 
-[libraries.testng]
-module = "org.testng:testng"
-version.ref = "testng"
-
 [libraries.thrift09]
 module = "org.apache.thrift:libthrift"
 version.ref = "thrift09"
@@ -1354,6 +1373,7 @@ module = "io.github.resilience4j:resilience4j-micrometer"
 version.ref = "resilience4j"
 
 [plugins]
+jkube = { id = "org.eclipse.jkube.kubernetes", version.ref = "jkube" }
 jmh = { id = "me.champeau.jmh", version.ref = "jmh-gradle-plugin" }
 osdetector = { id = "com.google.osdetector", version.ref = "osdetector" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

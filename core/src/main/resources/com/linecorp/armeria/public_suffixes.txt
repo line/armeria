@@ -6,6 +6,7 @@
 !city.sendai.jp
 !city.yokohama.jp
 !www.ck
+*.001.test.code-builder-stg.platform.salesforce.com
 *.0emm.com
 *.advisor.ws
 *.alces.network
@@ -299,6 +300,8 @@ ae
 ae.org
 aeg
 aejrie.no
+aem.live
+aem.page
 aero
 aero.mv
 aero.tt
@@ -634,6 +637,7 @@ ath.cx
 athleta
 atl.jelastic.vps-host.net
 atm.pl
+atmeta.com
 ato.br
 atsugi.kanagawa.jp
 atsuma.hokkaido.jp
@@ -757,7 +761,6 @@ balsfjord.no
 bambina.jp
 bamble.no
 banamex
-bananarepublic
 band
 bandai.fukushima.jp
 bando.ibaraki.jp
@@ -6059,7 +6062,6 @@ olayan
 olayangroup
 olbia-tempio.it
 olbiatempio.it
-oldnavy
 olecko.pl
 olkusz.pl
 ollo
