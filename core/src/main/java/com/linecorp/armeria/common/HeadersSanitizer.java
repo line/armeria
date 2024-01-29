@@ -29,6 +29,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public interface HeadersSanitizer<T> extends BiFunction<RequestContext, HttpHeaders, T> {
     /**
      * Returns the default text {@link HeadersSanitizer}.
+     * {@link HttpHeaderNames#AUTHORIZATION}, {@link HttpHeaderNames#COOKIE}, {@link HttpHeaderNames#SET_COOKIE},
+     * and {@link HttpHeaderNames#PROXY_AUTHORIZATION} are masked.
      */
     static HeadersSanitizer<String> ofText() {
         return TextHeadersSanitizer.INSTANCE;
@@ -43,6 +45,8 @@ public interface HeadersSanitizer<T> extends BiFunction<RequestContext, HttpHead
 
     /**
      * Returns the default json {@link HeadersSanitizer}.
+     * {@link HttpHeaderNames#AUTHORIZATION}, {@link HttpHeaderNames#COOKIE}, {@link HttpHeaderNames#SET_COOKIE},
+     * and {@link HttpHeaderNames#PROXY_AUTHORIZATION} are masked.
      */
     static HeadersSanitizer<JsonNode> ofJson() {
         return JsonHeadersSanitizer.INSTANCE;
