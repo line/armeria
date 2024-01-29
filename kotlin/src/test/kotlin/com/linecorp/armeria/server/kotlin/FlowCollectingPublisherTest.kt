@@ -46,7 +46,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                     emit(it)
                 }
             },
-            eventLoopGroup.next()
+            eventLoopGroup.next(),
         )
 
     override fun createFailedPublisher(): FlowCollectingPublisher<Long> =
@@ -54,7 +54,7 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
             flow {
                 throw Throwable()
             },
-            eventLoopGroup.next()
+            eventLoopGroup.next(),
         )
 
     @Test
@@ -70,21 +70,23 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                 }
             },
             executor = EventLoopGroups.directEventLoop(),
-            context = MoreExecutors.directExecutor().asCoroutineDispatcher()
-        ).subscribe(object : Subscriber<Int> {
-            override fun onSubscribe(s: Subscription) {
-                subscription = s
-                subscription.request(1L)
-            }
+            context = MoreExecutors.directExecutor().asCoroutineDispatcher(),
+        ).subscribe(
+            object : Subscriber<Int> {
+                override fun onSubscribe(s: Subscription) {
+                    subscription = s
+                    subscription.request(1L)
+                }
 
-            override fun onNext(t: Int) {}
+                override fun onNext(t: Int) {}
 
-            override fun onError(t: Throwable) {}
+                override fun onError(t: Throwable) {}
 
-            override fun onComplete() {
-                queue.add(-1)
-            }
-        })
+                override fun onComplete() {
+                    queue.add(-1)
+                }
+            },
+        )
 
         assertThat(queue.poll()).isEqualTo(0)
         assertThat(queue.poll(100L, TimeUnit.MILLISECONDS)).isNull()
@@ -109,21 +111,23 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                 }
             }.buffer(capacity = 1),
             executor = EventLoopGroups.directEventLoop(),
-            context = MoreExecutors.directExecutor().asCoroutineDispatcher()
-        ).subscribe(object : Subscriber<Int> {
-            override fun onSubscribe(s: Subscription) {
-                subscription = s
-                subscription.request(1L)
-            }
+            context = MoreExecutors.directExecutor().asCoroutineDispatcher(),
+        ).subscribe(
+            object : Subscriber<Int> {
+                override fun onSubscribe(s: Subscription) {
+                    subscription = s
+                    subscription.request(1L)
+                }
 
-            override fun onNext(t: Int) {}
+                override fun onNext(t: Int) {}
 
-            override fun onError(t: Throwable) {}
+                override fun onError(t: Throwable) {}
 
-            override fun onComplete() {
-                queue.add(-1)
-            }
-        })
+                override fun onComplete() {
+                    queue.add(-1)
+                }
+            },
+        )
 
         assertThat(queue.poll()).isEqualTo(0)
         assertThat(queue.poll()).isEqualTo(1)
@@ -149,16 +153,18 @@ internal class FlowCollectingPublisherTest : PublisherVerification<Long>(TestEnv
                 emit(1)
             },
             eventLoopGroup.next(),
-            context
-        ).subscribe(object : Subscriber<Int> {
-            override fun onSubscribe(s: Subscription) {}
+            context,
+        ).subscribe(
+            object : Subscriber<Int> {
+                override fun onSubscribe(s: Subscription) {}
 
-            override fun onNext(t: Int) {}
+                override fun onNext(t: Int) {}
 
-            override fun onError(t: Throwable) {}
+                override fun onError(t: Throwable) {}
 
-            override fun onComplete() {}
-        })
+                override fun onComplete() {}
+            },
+        )
         await().untilAsserted { assertThat(coroutineNameCaptor.get()).isEqualTo(context) }
     }
 }

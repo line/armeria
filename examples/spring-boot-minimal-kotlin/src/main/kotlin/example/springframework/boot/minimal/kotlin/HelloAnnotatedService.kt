@@ -17,7 +17,6 @@ import org.springframework.validation.annotation.Validated
 @Validated
 @ExceptionHandler(ValidationExceptionHandler::class)
 class HelloAnnotatedService {
-
     @Get("/")
     fun defaultHello(): String = "Hello, world! Try sending a GET request to /hello/armeria"
 
@@ -29,6 +28,6 @@ class HelloAnnotatedService {
     fun hello(
         @Param
         @Size(min = 3, max = 10, message = "name should have between 3 and 10 characters")
-        name: String
+        name: String,
     ): String = "Hello, $name! This message is from Armeria annotated service!"
 }

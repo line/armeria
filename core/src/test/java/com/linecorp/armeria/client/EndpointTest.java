@@ -32,6 +32,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.testing.EqualsTester;
 
 import com.linecorp.armeria.client.Endpoint.Type;
 import com.linecorp.armeria.common.Attributes;
@@ -454,9 +455,10 @@ class EndpointTest {
         final Endpoint a1 = Endpoint.of("a");
         final Endpoint a2 = Endpoint.of("a");
 
-        assertThat(a1).isNotEqualTo(new Object());
-        assertThat(a1).isEqualTo(a1);
-        assertThat(a1).isEqualTo(a2);
+        new EqualsTester()
+                .addEqualityGroup(a1, a2)
+                .addEqualityGroup(new Object())
+                .testEquals();
     }
 
     @Test
@@ -468,6 +470,7 @@ class EndpointTest {
         final Endpoint e = Endpoint.of("a", 80).withIpAddr("::1");
         final Endpoint f = Endpoint.of("a", 80).withWeight(500); // Weight not part of comparison
         final Endpoint g = Endpoint.of("g", 80);
+
         assertThat(a).isNotEqualTo(b);
         assertThat(b).isEqualTo(c);
         assertThat(b).isNotEqualTo(d);
