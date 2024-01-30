@@ -56,7 +56,7 @@ abstract class AbstractHeadersSanitizerBuilder<T> {
     }
 
     /**
-     * Sets the headers to mask before logging.
+     * Adds the headers to mask before logging.
      */
     public AbstractHeadersSanitizerBuilder<T> sensitiveHeaders(Iterable<? extends CharSequence> headers) {
         requireNonNull(headers, "headers");
