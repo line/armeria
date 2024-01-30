@@ -16,26 +16,27 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.XdsType.ENDPOINT;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
-final class EndpointResourceNode extends AbstractResourceNodeWithPrimer<EndpointXdsResource> {
+abstract class AbstractResourceNodeWithPrimer<T extends XdsResourceWithPrimer<T>>
+        extends AbstractResourceNode<T> {
 
-    private final SnapshotWatcher<EndpointSnapshot> parentWatcher;
+    @Nullable
+    private final XdsResource primer;
 
-    EndpointResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, XdsBootstrapImpl xdsBootstrap,
-                         @Nullable ClusterXdsResource primer,
-                         SnapshotWatcher<EndpointSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, ENDPOINT, resourceName, primer, parentWatcher, resourceNodeType);
-        this.parentWatcher = parentWatcher;
+    AbstractResourceNodeWithPrimer(XdsBootstrapImpl xdsBootstrap, @Nullable ConfigSource configSource,
+                                   XdsType type, String resourceName, @Nullable XdsResource primer,
+                                   SnapshotWatcher<? extends Snapshot<T>> parentWatcher,
+                                   ResourceNodeType resourceNodeType) {
+        super(xdsBootstrap, configSource, type, resourceName, parentWatcher, resourceNodeType);
+        this.primer = primer;
     }
 
     @Override
-    void doOnChanged(EndpointXdsResource update) {
-        parentWatcher.snapshotUpdated(new EndpointSnapshot(update));
+    public void onChanged(T update) {
+        assert update.type() == type();
+        super.onChanged(update.withPrimer(primer));
     }
 }

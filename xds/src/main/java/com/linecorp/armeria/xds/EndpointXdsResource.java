@@ -16,32 +16,32 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 /**
- * A resource holder object for a {@link ClusterLoadAssignment}.
+ * A resource object for a {@link ClusterLoadAssignment}.
  */
-public final class EndpointResourceHolder extends AbstractResourceHolder {
+@UnstableApi
+public final class EndpointXdsResource extends XdsResourceWithPrimer<EndpointXdsResource> {
 
     private final ClusterLoadAssignment clusterLoadAssignment;
     @Nullable
-    private final ClusterResourceHolder primer;
+    private final XdsResource primer;
 
-    EndpointResourceHolder(ClusterLoadAssignment clusterLoadAssignment) {
+    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment) {
         this.clusterLoadAssignment = clusterLoadAssignment;
         primer = null;
     }
 
-    EndpointResourceHolder(ClusterResourceHolder primer, ClusterLoadAssignment clusterLoadAssignment) {
-        this.primer = primer;
+    EndpointXdsResource(ClusterLoadAssignment clusterLoadAssignment, XdsResource primer) {
         this.clusterLoadAssignment = clusterLoadAssignment;
+        this.primer = primer;
     }
 
     @Override
@@ -60,17 +60,16 @@ public final class EndpointResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    EndpointResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    EndpointXdsResource withPrimer(@Nullable XdsResource primer) {
         if (primer == null) {
             return this;
         }
-        checkArgument(primer instanceof ClusterResourceHolder);
-        return new EndpointResourceHolder((ClusterResourceHolder) primer, clusterLoadAssignment);
+        return new EndpointXdsResource(clusterLoadAssignment, primer);
     }
 
     @Override
     @Nullable
-    ClusterResourceHolder primer() {
+    XdsResource primer() {
         return primer;
     }
 
@@ -82,9 +81,9 @@ public final class EndpointResourceHolder extends AbstractResourceHolder {
         if (object == null || getClass() != object.getClass()) {
             return false;
         }
-        final EndpointResourceHolder holder = (EndpointResourceHolder) object;
-        return Objects.equal(clusterLoadAssignment, holder.clusterLoadAssignment) &&
-               Objects.equal(primer, holder.primer);
+        final EndpointXdsResource resource = (EndpointXdsResource) object;
+        return Objects.equal(clusterLoadAssignment, resource.clusterLoadAssignment) &&
+               Objects.equal(primer, resource.primer);
     }
 
     @Override

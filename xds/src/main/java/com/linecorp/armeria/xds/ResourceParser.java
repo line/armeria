@@ -28,24 +28,24 @@ import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
-abstract class ResourceParser {
+abstract class ResourceParser<I extends Message, O extends XdsResource> {
 
     @Nullable
-    abstract String name(Message message);
+    abstract String name(I message);
 
-    abstract Class<? extends Message> clazz();
+    abstract Class<I> clazz();
 
-    abstract AbstractResourceHolder parse(Message message);
+    abstract O parse(I message);
 
-    ParsedResourcesHolder parseResources(List<Any> resources) {
-        final ImmutableMap.Builder<String, AbstractResourceHolder> parsedResources = ImmutableMap.builder();
+    ParsedResourcesHolder<O> parseResources(List<Any> resources) {
+        final ImmutableMap.Builder<String, O> parsedResources = ImmutableMap.builder();
         final ImmutableSet.Builder<String> invalidResources = ImmutableSet.builder();
         final ImmutableList.Builder<String> errors = ImmutableList.builder();
 
         for (int i = 0; i < resources.size(); i++) {
             final Any resource = resources.get(i);
 
-            final Message unpackedMessage;
+            final I unpackedMessage;
             try {
                 unpackedMessage = resource.unpack(clazz());
             } catch (InvalidProtocolBufferException e) {
@@ -68,7 +68,7 @@ abstract class ResourceParser {
                 continue;
             }
 
-            final AbstractResourceHolder resourceUpdate;
+            final O resourceUpdate;
             try {
                 resourceUpdate = parse(unpackedMessage);
             } catch (Exception e) {
@@ -82,7 +82,7 @@ abstract class ResourceParser {
             parsedResources.put(name, resourceUpdate);
         }
 
-        return new ParsedResourcesHolder(parsedResources.build(), invalidResources.build(), errors.build());
+        return new ParsedResourcesHolder<>(parsedResources.build(), invalidResources.build(), errors.build());
     }
 
     // Do not confuse with the SotW approach: it is the mechanism in which the client must specify all

@@ -24,14 +24,16 @@ import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 
 /**
- * A resource holder object for a {@link Listener}.
+ * A resource object for a {@link Listener}.
  */
-public final class ListenerResourceHolder extends AbstractResourceHolder {
+@UnstableApi
+public final class ListenerXdsResource implements XdsResource {
 
     private static final String HTTP_CONNECTION_MANAGER_TYPE_URL =
             "type.googleapis.com/" +
@@ -41,7 +43,7 @@ public final class ListenerResourceHolder extends AbstractResourceHolder {
     @Nullable
     private final HttpConnectionManager connectionManager;
 
-    ListenerResourceHolder(Listener listener) {
+    ListenerXdsResource(Listener listener) {
         this.listener = listener;
 
         final Any apiListener = listener.getApiListener().getApiListener();
@@ -79,17 +81,6 @@ public final class ListenerResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    ListenerResourceHolder withPrimer(@Nullable ResourceHolder primer) {
-        return this;
-    }
-
-    @Override
-    @Nullable
-    ResourceHolder primer() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public boolean equals(Object object) {
         if (this == object) {
             return true;
@@ -97,8 +88,8 @@ public final class ListenerResourceHolder extends AbstractResourceHolder {
         if (object == null || getClass() != object.getClass()) {
             return false;
         }
-        final ListenerResourceHolder holder = (ListenerResourceHolder) object;
-        return Objects.equal(listener, holder.listener);
+        final ListenerXdsResource resource = (ListenerXdsResource) object;
+        return Objects.equal(listener, resource.listener);
     }
 
     @Override

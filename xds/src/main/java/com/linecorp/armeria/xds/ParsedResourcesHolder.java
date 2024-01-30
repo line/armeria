@@ -20,12 +20,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-final class ParsedResourcesHolder {
-    private final Map<String, AbstractResourceHolder> parsedResources;
+final class ParsedResourcesHolder<T extends XdsResource> {
+    private final Map<String, T> parsedResources;
     private final Set<String> invalidResources;
     private final List<String> errors;
 
-    ParsedResourcesHolder(Map<String, AbstractResourceHolder> parsedResources,
+    ParsedResourcesHolder(Map<String, T> parsedResources,
                           Set<String> invalidResources,
                           List<String> errors) {
         this.parsedResources = parsedResources;
@@ -33,7 +33,7 @@ final class ParsedResourcesHolder {
         this.errors = errors;
     }
 
-    Map<String, AbstractResourceHolder> parsedResources() {
+    Map<String, T> parsedResources() {
         return parsedResources;
     }
 

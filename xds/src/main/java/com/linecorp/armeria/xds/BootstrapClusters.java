@@ -28,7 +28,7 @@ import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.StaticResources;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.grpc.Status;
 
-final class BootstrapClusters implements SnapshotWatcher<Snapshot<?>> {
+final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
 
     private final Map<String, ClusterSnapshot> clusterSnapshots = new HashMap<>();
 
@@ -46,10 +46,8 @@ final class BootstrapClusters implements SnapshotWatcher<Snapshot<?>> {
     }
 
     @Override
-    public void snapshotUpdated(Snapshot<?> newSnapshot) {
-        assert newSnapshot instanceof ClusterSnapshot;
-        final ClusterSnapshot clusterSnapshot = (ClusterSnapshot) newSnapshot;
-        clusterSnapshots.put(clusterSnapshot.holder().name(), clusterSnapshot);
+    public void snapshotUpdated(ClusterSnapshot newSnapshot) {
+        clusterSnapshots.put(newSnapshot.xdsResource().name(), newSnapshot);
     }
 
     @Nullable

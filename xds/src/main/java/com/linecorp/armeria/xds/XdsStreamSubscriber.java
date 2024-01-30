@@ -31,7 +31,7 @@ import io.grpc.Status;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
-class XdsStreamSubscriber implements SafeCloseable {
+class XdsStreamSubscriber<T extends XdsResource> implements SafeCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(XdsStreamSubscriber.class);
 
@@ -41,11 +41,11 @@ class XdsStreamSubscriber implements SafeCloseable {
     private final EventExecutor eventLoop;
 
     @Nullable
-    private AbstractResourceHolder data;
+    private T data;
     private boolean absent;
     @Nullable
     private ScheduledFuture<?> initialAbsentFuture;
-    private final Set<ResourceWatcher<AbstractResourceHolder>> resourceWatchers = new HashSet<>();
+    private final Set<ResourceWatcher<T>> resourceWatchers = new HashSet<>();
 
     XdsStreamSubscriber(XdsType type, String resource, EventExecutor eventLoop, long timeoutMillis) {
         this.type = type;
@@ -79,14 +79,14 @@ class XdsStreamSubscriber implements SafeCloseable {
         maybeCancelAbsentTimer();
     }
 
-    void onData(AbstractResourceHolder data) {
+    void onData(T data) {
         maybeCancelAbsentTimer();
 
-        final ResourceHolder oldData = this.data;
+        final T oldData = this.data;
         this.data = data;
         absent = false;
         if (!Objects.equals(oldData, data)) {
-            for (ResourceWatcher<AbstractResourceHolder> watcher: resourceWatchers) {
+            for (ResourceWatcher<T> watcher: resourceWatchers) {
                 try {
                     watcher.onChanged(data);
                 } catch (Exception e) {
@@ -98,13 +98,13 @@ class XdsStreamSubscriber implements SafeCloseable {
     }
 
     @Nullable
-    ResourceHolder data() {
+    T data() {
         return data;
     }
 
     void onError(Status status) {
         maybeCancelAbsentTimer();
-        for (ResourceWatcher<AbstractResourceHolder> watcher: resourceWatchers) {
+        for (ResourceWatcher<?> watcher: resourceWatchers) {
             try {
                 watcher.onError(type, status);
             } catch (Exception e) {
@@ -120,7 +120,7 @@ class XdsStreamSubscriber implements SafeCloseable {
         if (!absent) {
             data = null;
             absent = true;
-            for (ResourceWatcher<AbstractResourceHolder> watcher: resourceWatchers) {
+            for (ResourceWatcher<?> watcher: resourceWatchers) {
                 try {
                     watcher.onResourceDoesNotExist(type, resource);
                 } catch (Exception e) {
@@ -136,7 +136,7 @@ class XdsStreamSubscriber implements SafeCloseable {
         return resourceWatchers.isEmpty();
     }
 
-    void registerWatcher(ResourceWatcher<AbstractResourceHolder> watcher) {
+    void registerWatcher(ResourceWatcher<T> watcher) {
         resourceWatchers.add(watcher);
         if (data != null) {
             watcher.onChanged(data);
@@ -145,7 +145,7 @@ class XdsStreamSubscriber implements SafeCloseable {
         }
     }
 
-    void unregisterWatcher(ResourceWatcher<AbstractResourceHolder> watcher) {
+    void unregisterWatcher(ResourceWatcher<?> watcher) {
         resourceWatchers.remove(watcher);
     }
 }

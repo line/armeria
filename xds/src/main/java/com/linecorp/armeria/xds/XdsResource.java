@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,12 +16,31 @@
 
 package com.linecorp.armeria.xds;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
-abstract class AbstractResourceHolder implements ResourceHolder {
+/**
+ * An object for xDS resources. This is a holder object which
+ * is contained by {@link Snapshot} to:
+ * <ul>
+ *     <li>Provide additional metadata.</li>
+ *     <li>Unify unpacking child object logic.</li>
+ * </ul>
+ */
+@UnstableApi
+public interface XdsResource {
 
-    abstract AbstractResourceHolder withPrimer(@Nullable ResourceHolder primer);
+    /**
+     * Returns the xDS type of the object.
+     */
+    XdsType type();
 
-    @Nullable
-    abstract ResourceHolder primer();
+    /**
+     * Returns the resource.
+     */
+    Object resource();
+
+    /**
+     * Returns the resource name.
+     */
+    String name();
 }

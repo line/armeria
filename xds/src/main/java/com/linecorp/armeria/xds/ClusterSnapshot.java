@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.route.v3.Route;
@@ -27,8 +28,9 @@ import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 /**
  * A snapshot of a {@link Cluster} resource.
  */
-public final class ClusterSnapshot implements Snapshot<ClusterResourceHolder> {
-    private final ClusterResourceHolder clusterResourceHolder;
+@UnstableApi
+public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
+    private final ClusterXdsResource clusterXdsResource;
     @Nullable
     private final EndpointSnapshot endpointSnapshot;
     @Nullable
@@ -37,17 +39,17 @@ public final class ClusterSnapshot implements Snapshot<ClusterResourceHolder> {
     private final Route route;
     private final int index;
 
-    ClusterSnapshot(ClusterResourceHolder clusterResourceHolder, EndpointSnapshot endpointSnapshot,
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource, EndpointSnapshot endpointSnapshot,
                     @Nullable VirtualHost virtualHost, @Nullable Route route, int index) {
-        this.clusterResourceHolder = clusterResourceHolder;
+        this.clusterXdsResource = clusterXdsResource;
         this.endpointSnapshot = endpointSnapshot;
         this.virtualHost = virtualHost;
         this.route = route;
         this.index = index;
     }
 
-    ClusterSnapshot(ClusterResourceHolder clusterResourceHolder) {
-        this.clusterResourceHolder = clusterResourceHolder;
+    ClusterSnapshot(ClusterXdsResource clusterXdsResource) {
+        this.clusterXdsResource = clusterXdsResource;
         endpointSnapshot = null;
         virtualHost = null;
         route = null;
@@ -55,8 +57,8 @@ public final class ClusterSnapshot implements Snapshot<ClusterResourceHolder> {
     }
 
     @Override
-    public ClusterResourceHolder holder() {
-        return clusterResourceHolder;
+    public ClusterXdsResource xdsResource() {
+        return clusterXdsResource;
     }
 
     /**
@@ -91,7 +93,7 @@ public final class ClusterSnapshot implements Snapshot<ClusterResourceHolder> {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
-                          .add("clusterResourceHolder", clusterResourceHolder)
+                          .add("clusterXdsResource", clusterXdsResource)
                           .add("endpointSnapshot", endpointSnapshot)
                           .add("virtualHost", virtualHost)
                           .add("route", route)

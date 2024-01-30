@@ -22,35 +22,41 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 
 /**
- * A resource holder object for a {@link Cluster}.
+ * A resource object for a {@link Cluster}.
  */
-public final class ClusterResourceHolder extends AbstractResourceHolder {
+@UnstableApi
+public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsResource> {
 
     private final Cluster cluster;
     @Nullable
-    private final RouteResourceHolder primer;
+    private final XdsResource primer;
 
-    ClusterResourceHolder(Cluster cluster) {
+    ClusterXdsResource(Cluster cluster) {
         this(cluster, null);
     }
 
-    ClusterResourceHolder(Cluster cluster, @Nullable RouteResourceHolder primer) {
+    ClusterXdsResource(Cluster cluster, @Nullable XdsResource primer) {
         this.cluster = cluster;
         this.primer = primer;
     }
 
     @Override
-    ClusterResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    ClusterXdsResource withPrimer(@Nullable XdsResource primer) {
         if (primer == null) {
             return this;
         }
-        checkArgument(primer instanceof RouteResourceHolder);
-        return new ClusterResourceHolder(cluster, (RouteResourceHolder) primer);
+        return new ClusterXdsResource(cluster, primer);
+    }
+
+    @Override
+    XdsResource primer() {
+        return primer;
     }
 
     @Nullable
@@ -85,11 +91,6 @@ public final class ClusterResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    RouteResourceHolder primer() {
-        return primer;
-    }
-
-    @Override
     public boolean equals(Object object) {
         if (this == object) {
             return true;
@@ -97,7 +98,7 @@ public final class ClusterResourceHolder extends AbstractResourceHolder {
         if (object == null || getClass() != object.getClass()) {
             return false;
         }
-        final ClusterResourceHolder that = (ClusterResourceHolder) object;
+        final ClusterXdsResource that = (ClusterXdsResource) object;
         return Objects.equal(cluster, that.cluster) && Objects.equal(
                 primer, that.primer);
     }
