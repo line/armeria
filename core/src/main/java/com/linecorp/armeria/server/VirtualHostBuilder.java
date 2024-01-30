@@ -1522,7 +1522,10 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         checkArgument(!hostnamePattern.isEmpty(), "hostnamePattern is empty.");
 
         final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
-        if (hostAndPort.hasPort()) {
+        if (port == -1 ^ !hostAndPort.hasPort()) {
+            return false;
+        }
+        if (port != -1) {
             if (port != hostAndPort.getPort()) {
                 return false;
             }
