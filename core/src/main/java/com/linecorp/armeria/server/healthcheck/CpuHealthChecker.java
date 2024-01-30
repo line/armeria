@@ -130,13 +130,8 @@ final class CpuHealthChecker implements HealthChecker {
             final Method method = operatingSystemBeanClass.getMethod(name);
             return LOOKUP.unreflect(method);
         } catch (ClassCastException | NoSuchMethodException | SecurityException | IllegalAccessException e) {
-            logger.warn(
-                    "Failed to detect method {}.{} for {}",
-                    operatingSystemBeanClass.getSimpleName(),
-                    name,
-                    CpuHealthChecker.class.getSimpleName(),
-                    e
-            );
+            logger.warn("Failed to detect method {}.{} for {}", operatingSystemBeanClass.getSimpleName(),
+                        name, CpuHealthChecker.class.getSimpleName(), e);
             return null;
         }
     }
