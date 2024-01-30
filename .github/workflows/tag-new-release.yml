@@ -57,7 +57,7 @@ jobs:
           java-version: '19'
 
       - name: Set up Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
 
       - name: Bump up version
         run: |
