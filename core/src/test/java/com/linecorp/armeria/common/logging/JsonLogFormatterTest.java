@@ -79,11 +79,11 @@ class JsonLogFormatterTest {
     }
 
     @Test
-    void defaultMaskingHeadersShouldBeOverridable() {
+    void defaultSensitiveHeadersShouldBeOverridable() {
         final LogFormatter logFormatter = LogFormatter.builderForJson()
                                                       .responseHeadersSanitizer(
                                                               HeadersSanitizer.builderForJson()
-                                                                              .maskingHeaders("Cache-Control")
+                                                                              .sensitiveHeaders("Cache-Control")
                                                                               .build())
                                                       .build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/hello"));
@@ -108,7 +108,7 @@ class JsonLogFormatterTest {
         final LogFormatter logFormatter = LogFormatter.builderForJson()
                                                       .requestHeadersSanitizer(
                                                               HeadersSanitizer.builderForJson()
-                                                                              .maskingHeaders("accept")
+                                                                              .sensitiveHeaders("accept")
                                                                               .maskingFunction(maskingFunction)
                                                                               .build())
                                                       .build();
@@ -136,7 +136,7 @@ class JsonLogFormatterTest {
         final LogFormatter logFormatter = LogFormatter.builderForJson()
                                                       .responseHeadersSanitizer(
                                                               HeadersSanitizer.builderForJson()
-                                                                              .maskingHeaders("content-type")
+                                                                              .sensitiveHeaders("content-type")
                                                                               .maskingFunction(maskingFunction)
                                                                               .build())
                                                       .build();
@@ -163,8 +163,8 @@ class JsonLogFormatterTest {
         final LogFormatter logFormatter = LogFormatter.builderForJson()
                                                       .requestHeadersSanitizer(
                                                               HeadersSanitizer.builderForJson()
-                                                                              .maskingHeaders("accept-encoding")
-                                                                              .maskingHeaders("content-type")
+                                                                              .sensitiveHeaders("accept-encoding")
+                                                                              .sensitiveHeaders("content-type")
                                                                               .maskingFunction(maskingFunction)
                                                                               .build())
                                                       .build();
@@ -190,7 +190,7 @@ class JsonLogFormatterTest {
                 LogFormatter.builderForJson()
                             .responseHeadersSanitizer(
                                     HeadersSanitizer.builderForJson()
-                                                    .maskingHeaders("set-cookie", "multiple-header")
+                                                    .sensitiveHeaders("set-cookie", "multiple-header")
                                                     .maskingFunction((name, value) -> null)
                                                     .build())
                             .build();

@@ -35,13 +35,13 @@ import io.netty.util.AsciiString;
 final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
 
     static final HeadersSanitizer<JsonNode> INSTANCE = new JsonHeadersSanitizerBuilder().build();
-    private final Set<AsciiString> maskingHeaders;
+    private final Set<AsciiString> sensitiveHeaders;
     private final HeaderMaskingFunction maskingFunction;
     private final ObjectMapper objectMapper;
 
-    JsonHeadersSanitizer(Set<AsciiString> maskingHeaders, HeaderMaskingFunction maskingFunction,
+    JsonHeadersSanitizer(Set<AsciiString> sensitiveHeaders, HeaderMaskingFunction maskingFunction,
                          ObjectMapper objectMapper) {
-        this.maskingHeaders = maskingHeaders;
+        this.sensitiveHeaders = sensitiveHeaders;
         this.maskingFunction = maskingFunction;
         this.objectMapper = objectMapper;
     }
@@ -49,7 +49,7 @@ final class JsonHeadersSanitizer implements HeadersSanitizer<JsonNode> {
     @Override
     public JsonNode sanitize(RequestContext requestContext, HttpHeaders headers) {
         final ObjectNode result = objectMapper.createObjectNode();
-        maskHeaders(headers, maskingHeaders, maskingFunction,
+        maskHeaders(headers, sensitiveHeaders, maskingFunction,
                     (header, values) -> result.put(header.toString(), values.size() > 1 ?
                                                                       values.toString() : values.get(0)));
 

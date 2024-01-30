@@ -57,7 +57,7 @@ abstract class AbstractLogFormatterBuilder<T> {
      * HeadersSanitizer<String> headersSanitizer =
      *   HeadersSanitizer
      *     .builderForText()
-     *     .maskingHeaders("Authorization", "Cookie")
+     *     .sensitiveHeaders("Authorization", "Cookie")
      *     ...
      *     .build();
      *
@@ -92,7 +92,7 @@ abstract class AbstractLogFormatterBuilder<T> {
      * HeadersSanitizer<String> headersSanitizer =
      *   HeadersSanitizer
      *     .builderForText()
-     *     .maskingHeaders("Set-Cookie")
+     *     .sensitiveHeaders("Set-Cookie")
      *     ...
      *     .build();
      *
@@ -126,7 +126,7 @@ abstract class AbstractLogFormatterBuilder<T> {
      * HeadersSanitizer<String> headersSanitizer =
      *   HeadersSanitizer
      *     .builderForText()
-     *     .maskingHeaders("...")
+     *     .sensitiveHeaders("...")
      *     ...
      *     .build();
      *
@@ -160,7 +160,7 @@ abstract class AbstractLogFormatterBuilder<T> {
      * HeadersSanitizer<String> headersSanitizer =
      *   HeadersSanitizer
      *     .builderForText()
-     *     .maskingHeaders("...")
+     *     .sensitiveHeaders("...")
      *     ...
      *     .build();
      *
@@ -194,7 +194,7 @@ abstract class AbstractLogFormatterBuilder<T> {
      * HeadersSanitizer<String> headersSanitizer =
      *   HeadersSanitizer
      *     .builderForText()
-     *     .maskingHeaders("...")
+     *     .sensitiveHeaders("...")
      *     ...
      *     .build();
      *

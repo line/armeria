@@ -37,13 +37,13 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
 
     static final HeadersSanitizer<String> INSTANCE = new TextHeadersSanitizerBuilder().build();
 
-    private final Set<AsciiString> maskingHeaders;
+    private final Set<AsciiString> sensitiveHeaders;
 
     private final HeaderMaskingFunction maskingFunction;
 
-    TextHeadersSanitizer(Set<AsciiString> maskingHeaders,
+    TextHeadersSanitizer(Set<AsciiString> sensitiveHeaders,
                          HeaderMaskingFunction maskingFunction) {
-        this.maskingHeaders = maskingHeaders;
+        this.sensitiveHeaders = sensitiveHeaders;
         this.maskingFunction = maskingFunction;
     }
 
@@ -60,7 +60,7 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
             sb.append('[');
         }
 
-        maskHeaders(headers, maskingHeaders, maskingFunction,
+        maskHeaders(headers, sensitiveHeaders, maskingFunction,
                     (header, values) -> sb.append(header).append('=')
                                           .append(values.size() > 1 ?
                                                   values.toString() : values.get(0)).append(", "));
@@ -70,12 +70,12 @@ final class TextHeadersSanitizer implements HeadersSanitizer<String> {
     }
 
     static void maskHeaders(
-            HttpHeaders headers, Set<AsciiString> maskingHeaders,
+            HttpHeaders headers, Set<AsciiString> sensitiveHeaders,
             HeaderMaskingFunction maskingFunction,
             BiConsumer<AsciiString, List<String>> consumer) {
         for (AsciiString headerName : headers.names()) {
             List<String> values = headers.getAll(headerName);
-            if (maskingHeaders.contains(headerName)) {
+            if (sensitiveHeaders.contains(headerName)) {
                 // Mask the header values.
                 if (values.size() == 1) {
                     final String masked = maskingFunction.mask(headerName, values.get(0));

@@ -33,13 +33,13 @@ public final class JsonHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
     private ObjectMapper objectMapper;
 
     @Override
-    public JsonHeadersSanitizerBuilder maskingHeaders(CharSequence... headers) {
-        return (JsonHeadersSanitizerBuilder) super.maskingHeaders(headers);
+    public JsonHeadersSanitizerBuilder sensitiveHeaders(CharSequence... headers) {
+        return (JsonHeadersSanitizerBuilder) super.sensitiveHeaders(headers);
     }
 
     @Override
-    public JsonHeadersSanitizerBuilder maskingHeaders(Iterable<? extends CharSequence> headers) {
-        return (JsonHeadersSanitizerBuilder) super.maskingHeaders(headers);
+    public JsonHeadersSanitizerBuilder sensitiveHeaders(Iterable<? extends CharSequence> headers) {
+        return (JsonHeadersSanitizerBuilder) super.sensitiveHeaders(headers);
     }
 
     @Override
@@ -61,6 +61,6 @@ public final class JsonHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
     public HeadersSanitizer<JsonNode> build() {
         final ObjectMapper objectMapper = this.objectMapper != null ?
                                           this.objectMapper : JacksonUtil.newDefaultObjectMapper();
-        return new JsonHeadersSanitizer(maskingHeaders(), maskingFunction(), objectMapper);
+        return new JsonHeadersSanitizer(sensitiveHeaders(), maskingFunction(), objectMapper);
     }
 }

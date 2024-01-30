@@ -88,11 +88,11 @@ class TextLogFormatterTest {
     }
 
     @Test
-    void defaultMaskingHeadersShouldBeOverridable() {
+    void defaultSensitiveHeadersShouldBeOverridable() {
         final LogFormatter logFormatter = LogFormatter.builderForText()
                                                       .responseHeadersSanitizer(
                                                               HeadersSanitizer.builderForText()
-                                                                              .maskingHeaders("Cache-Control")
+                                                                              .sensitiveHeaders("Cache-Control")
                                                                               .build())
                                                       .build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/hello"));
@@ -117,8 +117,8 @@ class TextLogFormatterTest {
         final LogFormatter logFormatter = LogFormatter.builderForText()
                                                       .requestHeadersSanitizer(
                                                               HeadersSanitizer.builderForText()
-                                                                              .maskingHeaders("cookie",
-                                                                                              "authorization")
+                                                                              .sensitiveHeaders("cookie",
+                                                                                                "authorization")
                                                                               .maskingFunction(maskingFunction)
                                                                               .build())
                                                       .build();
@@ -153,8 +153,8 @@ class TextLogFormatterTest {
         final LogFormatter logFormatter = LogFormatter.builderForText()
                                                       .responseHeadersSanitizer(
                                                               HeadersSanitizer.builderForText()
-                                                                              .maskingHeaders("content-type",
-                                                                                              "set-cookie")
+                                                                              .sensitiveHeaders("content-type",
+                                                                                                "set-cookie")
                                                                               .maskingFunction(maskingFunction)
                                                                               .build())
                                                       .build();
@@ -187,8 +187,8 @@ class TextLogFormatterTest {
         final LogFormatter logFormatter = LogFormatter.builderForText()
                                                       .requestHeadersSanitizer(
                                                               HeadersSanitizer.builderForText()
-                                                                              .maskingHeaders("accept-encoding")
-                                                                              .maskingHeaders("content-type")
+                                                                              .sensitiveHeaders("accept-encoding")
+                                                                              .sensitiveHeaders("content-type")
                                                                               .maskingFunction(maskingFunction)
                                                                               .build())
                                                       .build();
@@ -214,7 +214,7 @@ class TextLogFormatterTest {
                 LogFormatter.builderForText()
                             .responseHeadersSanitizer(
                                     HeadersSanitizer.builderForText()
-                                                    .maskingHeaders("set-cookie", "multiple-header")
+                                                    .sensitiveHeaders("set-cookie", "multiple-header")
                                                     .maskingFunction((name, value) -> null)
                                                     .build())
                             .build();

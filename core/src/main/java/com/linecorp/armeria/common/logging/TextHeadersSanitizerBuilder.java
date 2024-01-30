@@ -22,13 +22,13 @@ package com.linecorp.armeria.common.logging;
 public final class TextHeadersSanitizerBuilder extends AbstractHeadersSanitizerBuilder<String> {
 
     @Override
-    public TextHeadersSanitizerBuilder maskingHeaders(CharSequence... headers) {
-        return (TextHeadersSanitizerBuilder) super.maskingHeaders(headers);
+    public TextHeadersSanitizerBuilder sensitiveHeaders(CharSequence... headers) {
+        return (TextHeadersSanitizerBuilder) super.sensitiveHeaders(headers);
     }
 
     @Override
-    public TextHeadersSanitizerBuilder maskingHeaders(Iterable<? extends CharSequence> headers) {
-        return (TextHeadersSanitizerBuilder) super.maskingHeaders(headers);
+    public TextHeadersSanitizerBuilder sensitiveHeaders(Iterable<? extends CharSequence> headers) {
+        return (TextHeadersSanitizerBuilder) super.sensitiveHeaders(headers);
     }
 
     @Override
@@ -40,6 +40,6 @@ public final class TextHeadersSanitizerBuilder extends AbstractHeadersSanitizerB
      * Returns a newly created text {@link HeadersSanitizer} based on the properties of this builder.
      */
     public HeadersSanitizer<String> build() {
-        return new TextHeadersSanitizer(maskingHeaders(), maskingFunction());
+        return new TextHeadersSanitizer(sensitiveHeaders(), maskingFunction());
     }
 }

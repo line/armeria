@@ -25,6 +25,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AsciiString;
 
@@ -37,38 +38,42 @@ public abstract class AbstractHeadersSanitizerBuilder<T> {
     // - https://docs.rs/tower-http/latest/tower_http/sensitive_headers/index.html
     // - https://techdocs.akamai.com/edge-diagnostics/reference/sensitive-headers
     // - https://cloud.spring.io/spring-cloud-netflix/multi/multi__router_and_filter_zuul.html#_cookies_and_sensitive_headers
-    private static final Set<AsciiString> DEFAULT_MASKING_HEADERS =
+    private static final Set<AsciiString> DEFAULT_SENSITIVE_HEADERS =
             ImmutableSet.of(HttpHeaderNames.AUTHORIZATION, HttpHeaderNames.COOKIE,
                             HttpHeaderNames.SET_COOKIE, HttpHeaderNames.PROXY_AUTHORIZATION);
 
-    private final Set<AsciiString> maskingHeaders = new HashSet<>();
+    @Nullable
+    private Set<AsciiString> sensitiveHeaders;
 
     private HeaderMaskingFunction maskingFunction = HeaderMaskingFunction.of();
 
     AbstractHeadersSanitizerBuilder() {}
 
     /**
-     * Sets the headers to mask before logging.
+     * Adds the headers to mask before logging.
      */
-    public AbstractHeadersSanitizerBuilder<T> maskingHeaders(CharSequence... headers) {
+    public AbstractHeadersSanitizerBuilder<T> sensitiveHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
-        return maskingHeaders(ImmutableSet.copyOf(headers));
+        return sensitiveHeaders(ImmutableSet.copyOf(headers));
     }
 
     /**
      * Sets the headers to mask before logging.
      */
-    public AbstractHeadersSanitizerBuilder<T> maskingHeaders(Iterable<? extends CharSequence> headers) {
+    public AbstractHeadersSanitizerBuilder<T> sensitiveHeaders(Iterable<? extends CharSequence> headers) {
         requireNonNull(headers, "headers");
-        headers.forEach(header -> maskingHeaders.add(AsciiString.of(header).toLowerCase()));
+        if (sensitiveHeaders == null) {
+            sensitiveHeaders = new HashSet<>();
+        }
+        headers.forEach(header -> sensitiveHeaders.add(AsciiString.of(header).toLowerCase()));
         return this;
     }
 
-    final Set<AsciiString> maskingHeaders() {
-        if (!maskingHeaders.isEmpty()) {
-            return ImmutableSet.copyOf(maskingHeaders);
+    final Set<AsciiString> sensitiveHeaders() {
+        if (sensitiveHeaders != null) {
+            return ImmutableSet.copyOf(sensitiveHeaders);
         }
-        return DEFAULT_MASKING_HEADERS;
+        return DEFAULT_SENSITIVE_HEADERS;
     }
 
     /**
