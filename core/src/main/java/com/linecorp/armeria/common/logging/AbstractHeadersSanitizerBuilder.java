@@ -32,7 +32,7 @@ import io.netty.util.AsciiString;
 /**
  * A skeletal builder implementation for {@link HeadersSanitizer}.
  */
-public abstract class AbstractHeadersSanitizerBuilder<T> {
+abstract class AbstractHeadersSanitizerBuilder<T> {
 
     // Referenced from:
     // - https://docs.rs/tower-http/latest/tower_http/sensitive_headers/index.html
@@ -46,8 +46,6 @@ public abstract class AbstractHeadersSanitizerBuilder<T> {
     private Set<AsciiString> sensitiveHeaders;
 
     private HeaderMaskingFunction maskingFunction = HeaderMaskingFunction.of();
-
-    AbstractHeadersSanitizerBuilder() {}
 
     /**
      * Adds the headers to mask before logging.
@@ -83,7 +81,7 @@ public abstract class AbstractHeadersSanitizerBuilder<T> {
      * <pre>{@code
      * builder.maskingFunction((name, value) -> {
      *   if (name.equals(HttpHeaderNames.AUTHORIZATION)) {
-     *      return "****";
+     *     return "****";
      *   } else if (name.equals(HttpHeaderNames.COOKIE)) {
      *     return name.substring(0, 4) + "****";
      *   } else {
