@@ -58,7 +58,7 @@ date: 2024-01-30
   HeadersSanitizer<String> headersSanitizer =
    HeadersSanitizer
      .builderForText()
-     .maskingHeaders("Authorization", "API-Key", "Proxy-Authorization")
+     .sensitiveHeaders("Authorization", "API-Key", "Proxy-Authorization")
      ...
      .build();
   
