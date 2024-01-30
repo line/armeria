@@ -73,8 +73,8 @@ final class CpuHealthChecker implements HealthChecker {
         operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));
         operatingSystemBean = ManagementFactory.getOperatingSystemMXBean();
         final MethodHandle getCpuLoad = detectMethod("getCpuLoad");
-        systemCpuUsage = getCpuLoad != null ? getCpuLoad : detectMethod("getSystemCpuLoad");
-        processCpuUsage = detectMethod("getProcessCpuLoad");
+        systemCpuLoad = getCpuLoad != null ? getCpuLoad : detectMethod("getSystemCpuLoad");
+        processCpuLoad = detectMethod("getProcessCpuLoad");
         currentSystemCpuUsageSupplier = () -> invoke(systemCpuUsage);
         currentProcessCpuUsageSupplier = () -> invoke(processCpuUsage);
     }
