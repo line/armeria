@@ -16,34 +16,3 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         freeCompilerArgs += listOf("-opt-in=kotlin.RequiresOptIn")
     }
 }
-
-testing {
-    suites {
-        @Suppress("UNUSED_VARIABLE")
-        val testNg by registering(JvmTestSuite::class) {
-            useTestNG()
-
-            targets {
-                all {
-                    testTask.configure {
-                        group = "Verification"
-                        description = "Runs the TestNG unit tests"
-                        dependsOn(tasks.copyShadedTestClasses)
-                        val shadedTestTask = tasks.shadedTest.get()
-                        testClassesDirs = shadedTestTask.testClassesDirs
-                        classpath = shadedTestTask.testClassesDirs
-                        doFirst {
-                            classpath += project.files(configurations.shadedJarTestRuntime.get().resolve())
-                        }
-                    }
-                }
-            }
-
-            dependencies {
-                runtimeOnly(libs.junit.testng.engine)
-            }
-        }
-    }
-}
-
-tasks.check { dependsOn(testing.suites.named("testNg")) }

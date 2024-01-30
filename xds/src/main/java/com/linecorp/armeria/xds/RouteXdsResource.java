@@ -16,31 +16,31 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 /**
- * A resource holder object for a {@link RouteConfiguration}.
+ * A resource object for a {@link RouteConfiguration}.
  */
-public final class RouteResourceHolder extends AbstractResourceHolder {
+@UnstableApi
+public final class RouteXdsResource extends XdsResourceWithPrimer<RouteXdsResource> {
 
     private final RouteConfiguration routeConfiguration;
 
     @Nullable
-    private final ListenerResourceHolder primer;
+    private final XdsResource primer;
 
-    RouteResourceHolder(RouteConfiguration routeConfiguration) {
+    RouteXdsResource(RouteConfiguration routeConfiguration) {
         this.routeConfiguration = routeConfiguration;
         primer = null;
     }
 
-    RouteResourceHolder(RouteConfiguration routeConfiguration, ListenerResourceHolder primer) {
+    RouteXdsResource(RouteConfiguration routeConfiguration, XdsResource primer) {
         this.routeConfiguration = routeConfiguration;
         this.primer = primer;
     }
@@ -61,17 +61,16 @@ public final class RouteResourceHolder extends AbstractResourceHolder {
     }
 
     @Override
-    RouteResourceHolder withPrimer(@Nullable ResourceHolder primer) {
+    RouteXdsResource withPrimer(@Nullable XdsResource primer) {
         if (primer == null) {
             return this;
         }
-        checkArgument(primer instanceof ListenerResourceHolder);
-        return new RouteResourceHolder(routeConfiguration, (ListenerResourceHolder) primer);
+        return new RouteXdsResource(routeConfiguration, primer);
     }
 
     @Override
     @Nullable
-    ListenerResourceHolder primer() {
+    XdsResource primer() {
         return primer;
     }
 
@@ -83,7 +82,7 @@ public final class RouteResourceHolder extends AbstractResourceHolder {
         if (object == null || getClass() != object.getClass()) {
             return false;
         }
-        final RouteResourceHolder that = (RouteResourceHolder) object;
+        final RouteXdsResource that = (RouteXdsResource) object;
         return Objects.equal(routeConfiguration, that.routeConfiguration) &&
                Objects.equal(primer, that.primer);
     }

@@ -28,25 +28,26 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 import io.grpc.Status;
 
-final class ListenerResourceNode extends AbstractResourceNode<ListenerSnapshot> {
+final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResource> {
 
     private final RouteResourceWatcher snapshotWatcher = new RouteResourceWatcher();
+    private final SnapshotWatcher<ListenerSnapshot> parentWatcher;
 
     ListenerResourceNode(@Nullable ConfigSource configSource,
-                         String resourceName, XdsBootstrapImpl xdsBootstrap, @Nullable ResourceHolder primer,
+                         String resourceName, XdsBootstrapImpl xdsBootstrap,
                          SnapshotWatcher<ListenerSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
-        super(xdsBootstrap, configSource, LISTENER, resourceName, primer, parentWatcher, resourceNodeType);
+        super(xdsBootstrap, configSource, LISTENER, resourceName, parentWatcher, resourceNodeType);
+        this.parentWatcher = parentWatcher;
     }
 
     @Override
-    public void doOnChanged(ResourceHolder update) {
-        final ListenerResourceHolder holder = (ListenerResourceHolder) update;
-        final HttpConnectionManager connectionManager = holder.connectionManager();
+    public void doOnChanged(ListenerXdsResource resource) {
+        final HttpConnectionManager connectionManager = resource.connectionManager();
         if (connectionManager != null) {
             if (connectionManager.hasRouteConfig()) {
                 final RouteConfiguration routeConfig = connectionManager.getRouteConfig();
                 final RouteResourceNode node =
-                        StaticResourceUtils.staticRoute(xdsBootstrap(), routeConfig.getName(), holder,
+                        StaticResourceUtils.staticRoute(xdsBootstrap(), routeConfig.getName(), resource,
                                                         snapshotWatcher, routeConfig);
                 children().add(node);
             }
@@ -55,44 +56,39 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerSnapshot> 
                 final String routeName = rds.getRouteConfigName();
                 final ConfigSource configSource = rds.getConfigSource();
                 final RouteResourceNode routeResourceNode =
-                        new RouteResourceNode(configSource, routeName, xdsBootstrap(), holder,
+                        new RouteResourceNode(configSource, routeName, xdsBootstrap(), resource,
                                               snapshotWatcher, ResourceNodeType.DYNAMIC);
                 children().add(routeResourceNode);
-                xdsBootstrap().subscribe(configSource, routeResourceNode);
+                xdsBootstrap().subscribe(routeResourceNode);
             }
         }
         if (children().isEmpty()) {
-            parentWatcher().snapshotUpdated(new ListenerSnapshot(holder, null));
+            parentWatcher.snapshotUpdated(new ListenerSnapshot(resource, null));
         }
-    }
-
-    @Override
-    public ListenerResourceHolder currentResourceHolder() {
-        return (ListenerResourceHolder) super.currentResourceHolder();
     }
 
     private class RouteResourceWatcher implements SnapshotWatcher<RouteSnapshot> {
 
         @Override
         public void snapshotUpdated(RouteSnapshot newSnapshot) {
-            final ListenerResourceHolder current = currentResourceHolder();
+            final ListenerXdsResource current = currentResource();
             if (current == null) {
                 return;
             }
-            if (!Objects.equals(newSnapshot.holder().primer(), current)) {
+            if (!Objects.equals(newSnapshot.xdsResource().primer(), current)) {
                 return;
             }
-            parentWatcher().snapshotUpdated(new ListenerSnapshot(current, newSnapshot));
+            parentWatcher.snapshotUpdated(new ListenerSnapshot(current, newSnapshot));
         }
 
         @Override
         public void onMissing(XdsType type, String resourceName) {
-            parentWatcher().onMissing(type, resourceName);
+            parentWatcher.onMissing(type, resourceName);
         }
 
         @Override
         public void onError(XdsType type, Status status) {
-            parentWatcher().onError(type, status);
+            parentWatcher.onError(type, status);
         }
     }
 }

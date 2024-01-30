@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 
 /**
@@ -23,14 +25,14 @@ import io.envoyproxy.envoy.config.listener.v3.Listener;
  * Users may query the latest value of this resource or add a watcher to be notified of changes.
  * Note that it is important to close this resource to avoid leaking connections to the control plane server.
  */
+@UnstableApi
 public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
     private final ListenerResourceNode node;
 
     ListenerRoot(XdsBootstrapImpl xdsBootstrap, String resourceName) {
         super(xdsBootstrap.eventLoop());
-        node = new ListenerResourceNode(null, resourceName, xdsBootstrap, null,
-                                        this, ResourceNodeType.DYNAMIC);
+        node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.DYNAMIC);
         xdsBootstrap.subscribe(node);
     }
 
@@ -40,7 +42,7 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
             eventLoop().execute(this::close);
             return;
         }
-        super.close();
         node.close();
+        super.close();
     }
 }

@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds;
 import java.util.Map;
 
 import com.google.common.base.Joiner;
+import com.google.protobuf.Message;
 
 import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
 import io.grpc.Status;
@@ -33,9 +34,9 @@ final class DefaultResponseHandler implements XdsResponseHandler {
     }
 
     @Override
-    public void handleResponse(
-            ResourceParser resourceParser, DiscoveryResponse response, SotwXdsStream sender) {
-        final ParsedResourcesHolder holder =
+    public <I extends Message, O extends XdsResource> void handleResponse(
+            ResourceParser<I, O> resourceParser, DiscoveryResponse response, SotwXdsStream sender) {
+        final ParsedResourcesHolder<O> holder =
                 resourceParser.parseResources(response.getResourcesList());
         String errorDetail = null;
         if (holder.errors().isEmpty()) {
@@ -45,11 +46,11 @@ final class DefaultResponseHandler implements XdsResponseHandler {
             sender.nackResponse(resourceParser.type(), response.getNonce(), errorDetail);
         }
 
-        final Map<String, XdsStreamSubscriber> subscribedResources =
+        final Map<String, XdsStreamSubscriber<O>> subscribedResources =
                 storage.subscribers(resourceParser.type());
-        for (Map.Entry<String, XdsStreamSubscriber> entry : subscribedResources.entrySet()) {
+        for (Map.Entry<String, XdsStreamSubscriber<O>> entry : subscribedResources.entrySet()) {
             final String resourceName = entry.getKey();
-            final XdsStreamSubscriber subscriber = entry.getValue();
+            final XdsStreamSubscriber<O> subscriber = entry.getValue();
 
             if (holder.parsedResources().containsKey(resourceName)) {
                 // Happy path: the resource updated successfully. Notify the watchers of the update.

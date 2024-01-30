@@ -21,6 +21,7 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -36,13 +37,16 @@ public final class ConnectProxyConfig extends ProxyConfig {
     @Nullable
     private final String password;
 
+    private final HttpHeaders headers;
+
     private final boolean useTls;
 
     ConnectProxyConfig(InetSocketAddress proxyAddress, @Nullable String username,
-                       @Nullable String password, boolean useTls) {
+                       @Nullable String password, HttpHeaders headers, boolean useTls) {
         this.proxyAddress = proxyAddress;
         this.username = username;
         this.password = password;
+        this.headers = headers;
         this.useTls = useTls;
     }
 
@@ -65,6 +69,13 @@ public final class ConnectProxyConfig extends ProxyConfig {
     @Nullable
     public String password() {
         return password;
+    }
+
+    /**
+     * Returns the configured {@link HttpHeaders}.
+     */
+    public HttpHeaders headers() {
+        return headers;
     }
 
     /**
@@ -91,12 +102,13 @@ public final class ConnectProxyConfig extends ProxyConfig {
         return useTls == that.useTls &&
                proxyAddress.equals(that.proxyAddress) &&
                Objects.equals(username, that.username) &&
-               Objects.equals(password, that.password);
+               Objects.equals(password, that.password) &&
+               headers.equals(that.headers);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(proxyAddress, username, password, useTls);
+        return Objects.hash(proxyAddress, username, password, headers, useTls);
     }
 
     @Override
@@ -106,6 +118,8 @@ public final class ConnectProxyConfig extends ProxyConfig {
                           .add("proxyAddress", proxyAddress())
                           .add("username", username())
                           .add("password", maskPassword(username(), password()))
+                          // Headers are omitted since they may contain sensitive information such as
+                          // (Proxy-)Authorization.
                           .add("useTls", useTls())
                           .toString();
     }

@@ -20,7 +20,6 @@ import com.linecorp.armeria.common.logging.LogFormatter
 import org.junit.jupiter.api.Test
 
 class Jsr305StrictTest {
-
     @Test
     fun shouldAllowReturningNulls() {
         // Make sure the code compiles with `-Xjsr305=strict`

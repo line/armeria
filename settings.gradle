@@ -103,6 +103,7 @@ includeWithFlags ':junit4',                              'java', 'publish', 'rel
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'native'
+includeWithFlags ':kubernetes',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate', 'no_aggregation'
 project(':logback').projectDir = file('logback/logback')
 includeWithFlags ':logback12',                           'java', 'publish', 'relocate', 'native'
@@ -198,6 +199,7 @@ includeWithFlags ':it:grpc:reactor',                           'java', 'relocate
 includeWithFlags ':it:flags-provider',                         'java', 'relocate'
 includeWithFlags ':it:jackson-provider',                       'java', 'relocate'
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'
+includeWithFlags ':it:kubernetes-chaos-tests',                 'java', 'relocate'
 includeWithFlags ':it:logback1.4',                             'java11', 'relocate'
 includeWithFlags ':it:micrometer1.3',                          'java', 'relocate'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
@@ -247,7 +249,7 @@ includeWithFlags ':examples:dropwizard-example',                   'java11'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:graphql-example',                      'java11'
 project(':examples:graphql-example').projectDir = file('examples/graphql')
-includeWithFlags ':examples:graphql-kotlin-example',               'java11', 'kotlin'
+includeWithFlags ':examples:graphql-kotlin-example',               'java17', 'kotlin'
 project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
 includeWithFlags ':examples:graphql-sangria-example',              'java11', 'scala_2.13'
 project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')

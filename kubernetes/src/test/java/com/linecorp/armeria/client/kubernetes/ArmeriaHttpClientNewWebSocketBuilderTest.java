@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,15 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.client.kubernetes;
 
-package com.linecorp.armeria.xds;
+import io.fabric8.kubernetes.client.http.AbstractHttpClientNewWebSocketBuilderTest;
+import io.fabric8.kubernetes.client.http.HttpClient;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
-abstract class AbstractResourceHolder implements ResourceHolder {
-
-    abstract AbstractResourceHolder withPrimer(@Nullable ResourceHolder primer);
-
-    @Nullable
-    abstract ResourceHolder primer();
+@SuppressWarnings("JUnitTestCaseWithNoTests")
+class ArmeriaHttpClientNewWebSocketBuilderTest extends AbstractHttpClientNewWebSocketBuilderTest {
+    @Override
+    protected HttpClient.Factory getHttpClientFactory() {
+        return new ArmeriaHttpClientFactory();
+    }
 }

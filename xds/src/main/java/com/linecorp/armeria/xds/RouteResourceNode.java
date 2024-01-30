@@ -37,25 +37,26 @@ import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 import io.grpc.Status;
 
-final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
+final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsResource> {
 
     private final List<ClusterSnapshot> clusterSnapshotList = new ArrayList<>();
 
     private final Set<Integer> pending = new HashSet<>();
     private final ClusterSnapshotWatcher snapshotWatcher = new ClusterSnapshotWatcher();
+    private final SnapshotWatcher<RouteSnapshot> parentWatcher;
 
     RouteResourceNode(@Nullable ConfigSource configSource, String resourceName,
-                      XdsBootstrapImpl xdsBootstrap, @Nullable ResourceHolder primer,
+                      XdsBootstrapImpl xdsBootstrap, @Nullable ListenerXdsResource primer,
                       SnapshotWatcher<RouteSnapshot> parentWatcher, ResourceNodeType resourceNodeType) {
         super(xdsBootstrap, configSource, ROUTE, resourceName, primer, parentWatcher, resourceNodeType);
+        this.parentWatcher = parentWatcher;
     }
 
     @Override
-    public void doOnChanged(ResourceHolder update) {
-        final RouteResourceHolder holder = (RouteResourceHolder) update;
+    public void doOnChanged(RouteXdsResource resource) {
         clusterSnapshotList.clear();
         pending.clear();
-        final RouteConfiguration routeConfiguration = holder.resource();
+        final RouteConfiguration routeConfiguration = resource.resource();
         int index = 0;
         for (VirtualHost virtualHost: routeConfiguration.getVirtualHostsList()) {
             for (Route route: virtualHost.getRoutesList()) {
@@ -71,31 +72,26 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
                 pending.add(index);
                 final ClusterResourceNode node =
                         new ClusterResourceNode(null, cluster, xdsBootstrap(),
-                                                holder, snapshotWatcher, virtualHost, route,
+                                                resource, snapshotWatcher, virtualHost, route,
                                                 index++, ResourceNodeType.DYNAMIC);
                 children().add(node);
                 xdsBootstrap().subscribe(node);
             }
         }
         if (children().isEmpty()) {
-            parentWatcher().snapshotUpdated(new RouteSnapshot(holder, Collections.emptyList()));
+            parentWatcher.snapshotUpdated(new RouteSnapshot(resource, Collections.emptyList()));
         }
-    }
-
-    @Override
-    public RouteResourceHolder currentResourceHolder() {
-        return (RouteResourceHolder) super.currentResourceHolder();
     }
 
     private class ClusterSnapshotWatcher implements SnapshotWatcher<ClusterSnapshot> {
 
         @Override
         public void snapshotUpdated(ClusterSnapshot newSnapshot) {
-            final RouteResourceHolder current = currentResourceHolder();
+            final RouteXdsResource current = currentResource();
             if (current == null) {
                 return;
             }
-            if (!Objects.equals(current, newSnapshot.holder().primer())) {
+            if (!Objects.equals(current, newSnapshot.xdsResource().primer())) {
                 return;
             }
             clusterSnapshotList.set(newSnapshot.index(), newSnapshot);
@@ -104,18 +100,18 @@ final class RouteResourceNode extends AbstractResourceNode<RouteSnapshot> {
             if (!pending.isEmpty()) {
                 return;
             }
-            parentWatcher().snapshotUpdated(
+            parentWatcher.snapshotUpdated(
                     new RouteSnapshot(current, ImmutableList.copyOf(clusterSnapshotList)));
         }
 
         @Override
         public void onError(XdsType type, Status status) {
-            parentWatcher().onError(type, status);
+            parentWatcher.onError(type, status);
         }
 
         @Override
         public void onMissing(XdsType type, String resourceName) {
-            parentWatcher().onMissing(type, resourceName);
+            parentWatcher.onMissing(type, resourceName);
         }
     }
 }

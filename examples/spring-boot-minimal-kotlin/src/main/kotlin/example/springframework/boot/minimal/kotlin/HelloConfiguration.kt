@@ -12,7 +12,6 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration
 class HelloConfiguration {
-
     /**
      * A user can configure a [Server] by providing an [ArmeriaServerConfigurator] bean.
      */

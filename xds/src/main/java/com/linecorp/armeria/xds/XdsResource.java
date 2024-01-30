@@ -19,7 +19,7 @@ package com.linecorp.armeria.xds;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A holder object for xDS resources. This is a holder object which
+ * An object for xDS resources. This is a holder object which
  * is contained by {@link Snapshot} to:
  * <ul>
  *     <li>Provide additional metadata.</li>
@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * </ul>
  */
 @UnstableApi
-public interface ResourceHolder {
+public interface XdsResource {
 
     /**
      * Returns the xDS type of the object.
