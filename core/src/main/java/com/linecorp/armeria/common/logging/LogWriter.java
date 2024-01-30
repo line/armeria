@@ -67,6 +67,11 @@ public interface LogWriter {
     void logResponse(RequestLog log);
 
     /**
+     * Writes the request-side {@link RequestOnlyLog} and the response-side {@link RequestLog} at once.
+     */
+    void log(RequestLog log);
+
+    /**
      * Returns a new {@link LogWriter} which combines two {@link LogWriter}s.
      */
     default LogWriter andThen(LogWriter after) {
@@ -87,6 +92,15 @@ public interface LogWriter {
                     LogWriter.this.logResponse(log);
                 } finally {
                     after.logResponse(log);
+                }
+            }
+
+            @Override
+            public void log(RequestLog log) {
+                try {
+                    LogWriter.this.log(log);
+                } finally {
+                    after.log(log);
                 }
             }
         };
