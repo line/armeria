@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -160,13 +162,14 @@ class JsonLogFormatterTest {
     @Test
     void maskRequestHeadersWithDuplicateHeaderName() {
         final HeaderMaskingFunction maskingFunction = (name, value) -> "****armeria****";
+        final HeadersSanitizer<JsonNode> headersSanitizer =
+                HeadersSanitizer.builderForJson()
+                                .sensitiveHeaders("accept-encoding")
+                                .sensitiveHeaders("content-type")
+                                .maskingFunction(maskingFunction)
+                                .build();
         final LogFormatter logFormatter = LogFormatter.builderForJson()
-                                                      .requestHeadersSanitizer(
-                                                              HeadersSanitizer.builderForJson()
-                                                                              .sensitiveHeaders("accept-encoding")
-                                                                              .sensitiveHeaders("content-type")
-                                                                              .maskingFunction(maskingFunction)
-                                                                              .build())
+                                                      .requestHeadersSanitizer(headersSanitizer)
                                                       .build();
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/hello",
                                                                  "Accept-Encoding", "gzip",

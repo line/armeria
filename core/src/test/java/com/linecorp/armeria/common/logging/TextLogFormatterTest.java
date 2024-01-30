@@ -184,13 +184,14 @@ class TextLogFormatterTest {
     @Test
     void maskRequestHeadersWithDuplicateHeaderName() {
         final HeaderMaskingFunction maskingFunction = (name, value) -> "****armeria****";
+        final HeadersSanitizer<String> headersSanitizer =
+                HeadersSanitizer.builderForText()
+                                .sensitiveHeaders("accept-encoding")
+                                .sensitiveHeaders("content-type")
+                                .maskingFunction(maskingFunction)
+                                .build();
         final LogFormatter logFormatter = LogFormatter.builderForText()
-                                                      .requestHeadersSanitizer(
-                                                              HeadersSanitizer.builderForText()
-                                                                              .sensitiveHeaders("accept-encoding")
-                                                                              .sensitiveHeaders("content-type")
-                                                                              .maskingFunction(maskingFunction)
-                                                                              .build())
+                                                      .requestHeadersSanitizer(headersSanitizer)
                                                       .build();
         final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/hello",
                                                                  "Accept-Encoding", "gzip",
@@ -226,11 +227,11 @@ class TextLogFormatterTest {
         log.endResponse();
 
         final String responseLog = logFormatter.formatResponse(log);
-        final Matcher matcher1 = Pattern.compile("\"set-cookie\"=\"(.*?)\"").matcher(responseLog);
+        final Matcher matcher1 = Pattern.compile("set-cookie=(.*?)[,\\]]").matcher(responseLog);
         assertThat(matcher1.find()).isFalse();
-        final Matcher matcher2 = Pattern.compile("\"multiple-header\"=\"(.*?)\"").matcher(responseLog);
+        final Matcher matcher2 = Pattern.compile("multiple-header=(.*?)[,\\]]").matcher(responseLog);
         assertThat(matcher2.find()).isFalse();
-        final Matcher matcher3 = Pattern.compile("\"cache-control\"=\"(.*?)\"").matcher(responseLog);
+        final Matcher matcher3 = Pattern.compile("cache-control=(.*?)[,\\]]").matcher(responseLog);
         assertThat(matcher3.find()).isTrue();
         assertThat(matcher3.group(1)).isEqualTo("no-cache");
     }
