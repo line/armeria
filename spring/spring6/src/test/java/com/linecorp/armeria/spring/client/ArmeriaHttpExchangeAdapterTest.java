@@ -29,7 +29,6 @@
  * limitations under the License.
  */
 
-
 package com.linecorp.armeria.spring.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -184,13 +183,13 @@ class ArmeriaHttpExchangeAdapterTest {
         assertThat(server.takeRequest(1, TimeUnit.SECONDS)).isNull();
     }
 
-
     @Test
     void ignoredUriBuilderFactory() throws Exception {
         final String expectedResponseBody = "hello";
         prepareResponse(response -> response.status(200).content(expectedResponseBody));
         final URI dynamicUri = server.httpUri().resolve("/greeting/123");
-        final UriBuilderFactory factory = new DefaultUriBuilderFactory(anotherServer.httpUri().resolve("/").toString());
+        final UriBuilderFactory factory = new DefaultUriBuilderFactory(
+                anotherServer.httpUri().resolve("/").toString());
 
         final String actualBody = initService().getWithIgnoredUriBuilderFactory(dynamicUri, factory);
 
@@ -246,6 +245,5 @@ class ArmeriaHttpExchangeAdapterTest {
 
         @GetExchange("/greeting")
         String getWithIgnoredUriBuilderFactory(URI uri, UriBuilderFactory uriBuilderFactory);
-
     }
 }

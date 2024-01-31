@@ -56,6 +56,18 @@ import reactor.core.publisher.Mono;
 
 /**
  * A {@link ReactorHttpExchangeAdapter} implementation for the Armeria {@link WebClient}.
+ *
+ * <p><pre>{@code
+ * import com.linecorp.armeria.client.WebClient;
+ * import org.springframework.web.service.invoker.HttpServiceProxyFactory;
+ *
+ * WebClient webClient = ...;
+ * ArmeriaHttpExchangeAdapter adapter = ArmeriaHttpExchangeAdapter.of(webClient);
+ * MyService service =
+ *   HttpServiceProxyFactory.builderFor(adapter)
+ *                          .build()
+ *                          .createClient(MyService.class);
+ * }</pre>
  */
 public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchangeAdapter {
 
@@ -144,13 +156,13 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
      * Sends the specified {@link HttpRequestValues} to the {@link WebClient} and returns the response.
      *
      * <p><h4>Implementation note</h4>
-     * In order to encode {@link HttpRequestValues#getBodyValue()} to {@link HttpData}, we
-     * need to convert the {@link HttpRequestValues} to {@link ClientRequest} first. The serialization process
-     * is delegated to the {@link ClientRequest}. After that, the request is written to
-     * {@link ArmeriaClientHttpRequest} to send the request via the {@link WebClient}.
+     * In order to encode {@link HttpRequestValues#getBodyValue()} to {@link HttpData}, we need to convert
+     * the {@link HttpRequestValues} to {@link ClientRequest} first. The serialization process is delegated to
+     * the {@link ClientRequest}. After that, the request is written to {@link ArmeriaClientHttpRequest} to send
+     * the request via the {@link WebClient}.
      *
-     * <p>The response handling has to be done in the reverse order. Armeria {@link HttpResponse} is converted into
-     * {@link ArmeriaClientHttpResponse} first and then converted into {@link ClientResponse}.
+     * <p>The response handling has to be done in the reverse order. Armeria {@link HttpResponse} is converted
+     * into {@link ArmeriaClientHttpResponse} first and then converted into {@link ClientResponse}.
      */
     private Mono<ClientResponse> execute(HttpRequestValues requestValues) {
         final URI uri;
