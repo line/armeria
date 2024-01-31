@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import reactor.core.publisher.Flux;

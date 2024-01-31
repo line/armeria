@@ -36,6 +36,9 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpRequest;
+import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpResponse;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import reactor.core.publisher.Mono;
 

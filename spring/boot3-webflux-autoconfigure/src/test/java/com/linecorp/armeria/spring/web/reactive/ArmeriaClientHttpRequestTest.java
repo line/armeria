@@ -38,6 +38,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpRequest;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

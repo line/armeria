@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.spring.web.reactive;
+package com.linecorp.armeria.spring.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
@@ -36,15 +36,15 @@ import io.netty.buffer.Unpooled;
  * A wrapper of the configured {@link DataBufferFactory}. This wrapper is in charge of converting objects
  * between {@link DataBuffer} of Spring framework and {@link HttpData} of Armeria.
  */
-final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
+public final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
 
-    static final DataBufferFactoryWrapper<NettyDataBufferFactory> DEFAULT =
+    public static final DataBufferFactoryWrapper<NettyDataBufferFactory> DEFAULT =
             new DataBufferFactoryWrapper<>(new NettyDataBufferFactory(PooledByteBufAllocator.DEFAULT));
 
     private final T delegate;
     private final Function<HttpData, DataBuffer> converter;
 
-    DataBufferFactoryWrapper(T delegate) {
+    public DataBufferFactoryWrapper(T delegate) {
         this.delegate = requireNonNull(delegate, "delegate");
         converter = delegate instanceof NettyDataBufferFactory ? this::withNettyDataBufferFactory
                                                                : this::withDataBufferFactory;
@@ -60,7 +60,7 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
     /**
      * Converts a {@link DataBuffer} into an {@link HttpData}.
      */
-    HttpData toHttpData(DataBuffer dataBuffer) {
+    public HttpData toHttpData(DataBuffer dataBuffer) {
         if (dataBuffer instanceof NettyDataBuffer) {
             return HttpData.wrap(((NettyDataBuffer) dataBuffer).getNativeBuffer());
         }
@@ -73,7 +73,7 @@ final class DataBufferFactoryWrapper<T extends DataBufferFactory> {
     /**
      * Converts an {@link HttpData} into a {@link DataBuffer}.
      */
-    DataBuffer toDataBuffer(HttpData httpData) {
+    public DataBuffer toDataBuffer(HttpData httpData) {
         requireNonNull(httpData, "httpData");
         if (!httpData.isPooled()) {
             return delegate.wrap(ByteBuffer.wrap(httpData.array()));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.spring.web.reactive;
+package com.linecorp.armeria.spring.internal.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -50,7 +51,7 @@ import reactor.core.publisher.Mono;
 /**
  * A {@link ClientHttpRequest} implementation for the Armeria HTTP client.
  */
-final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
+public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
     private final WebClient client;
 
@@ -66,8 +67,8 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
     @Nullable
     private HttpRequest request;
 
-    ArmeriaClientHttpRequest(WebClient client, HttpMethod httpMethod, String pathAndQuery,
-                             URI uri, DataBufferFactoryWrapper<?> factoryWrapper) {
+    public ArmeriaClientHttpRequest(WebClient client, HttpMethod httpMethod, String pathAndQuery,
+                                    URI uri, DataBufferFactoryWrapper<?> factoryWrapper) {
         this.client = requireNonNull(client, "client");
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.uri = requireNonNull(uri, "uri");
