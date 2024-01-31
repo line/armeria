@@ -35,6 +35,7 @@ import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.service.invoker.AbstractReactorHttpExchangeAdapter;
 import org.springframework.web.service.invoker.HttpRequestValues;
 import org.springframework.web.service.invoker.ReactiveHttpRequestValues;
+import org.springframework.web.service.invoker.ReactorHttpExchangeAdapter;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -43,6 +44,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpRequest;
@@ -52,13 +54,24 @@ import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+/**
+ * A {@link ReactorHttpExchangeAdapter} implementation for the Armeria {@link WebClient}.
+ */
 public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchangeAdapter {
 
+    /**
+     * Creates a new instance with the specified {@link WebClient}.
+     */
     public static ArmeriaHttpExchangeAdapter of(WebClient webClient) {
         return of(webClient, ExchangeStrategies.withDefaults());
     }
 
+    /**
+     * Creates a new instance with the specified {@link WebClient} and {@link ExchangeStrategies}.
+     */
     public static ArmeriaHttpExchangeAdapter of(WebClient webClient, ExchangeStrategies exchangeStrategies) {
+        requireNonNull(webClient, "webClient");
+        requireNonNull(exchangeStrategies, "exchangeStrategies");
         return new ArmeriaHttpExchangeAdapter(webClient, exchangeStrategies);
     }
 
@@ -127,8 +140,19 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
         return false;
     }
 
+    /**
+     * Sends the specified {@link HttpRequestValues} to the {@link WebClient} and returns the response.
+     *
+     * <p><h4>Implementation note</h4>
+     * In order to encode {@link HttpRequestValues#getBodyValue()} to {@link HttpData}, we
+     * need to convert the {@link HttpRequestValues} to {@link ClientRequest} first. The serialization process
+     * is delegated to the {@link ClientRequest}. After that, the request is written to
+     * {@link ArmeriaClientHttpRequest} to send the request via the {@link WebClient}.
+     *
+     * <p>The response handling has to be done in the reverse order. Armeria {@link HttpResponse} is converted into
+     * {@link ArmeriaClientHttpResponse} first and then converted into {@link ClientResponse}.
+     */
     private Mono<ClientResponse> execute(HttpRequestValues requestValues) {
-
         final URI uri;
         if (requestValues.getUri() != null) {
             uri = requestValues.getUri();

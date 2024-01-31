@@ -160,7 +160,7 @@ public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
     @VisibleForTesting
     @Nullable
-    HttpRequest request() {
+    public HttpRequest request() {
         return request;
     }
 
