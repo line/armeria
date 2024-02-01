@@ -122,6 +122,7 @@
 *.triton.zone
 *.tst.site
 *.uberspace.de
+*.upsun.app
 *.us-east-1.airflow.amazonaws.com
 *.us-east-2.airflow.amazonaws.com
 *.us-west-2.airflow.amazonaws.com
@@ -828,7 +829,6 @@ bbs.tr
 bbt
 bbva
 bc.ca
-bc.platform.sh
 bcg
 bci.dnstrace.pro
 bcn
@@ -6405,6 +6405,7 @@ padua.it
 page
 pagefrontapp.com
 pages.dev
+pages.gay
 pages.it.hs-heilbronn.de
 pages.torproject.net
 pages.wiardweb.com
@@ -8484,6 +8485,7 @@ upow.gov.pl
 upper.jp
 uppo.gov.pl
 ups
+upsunapp.com
 urakawa.hokkaido.jp
 urasoe.okinawa.jp
 urausu.hokkaido.jp
