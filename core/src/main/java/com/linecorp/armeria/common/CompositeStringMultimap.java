@@ -65,10 +65,10 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
      * }</pre>
      */
     @Nullable
-    private final CompositeStringMultimap<IN_NAME, NAME> additionals;
+    private final List<StringMultimap<IN_NAME, NAME>> additionals;
     private final List<StringMultimap<IN_NAME, NAME>> parents;
     @Nullable
-    private final CompositeStringMultimap<IN_NAME, NAME> defaults;
+    private final List<StringMultimap<IN_NAME, NAME>> defaults;
 
     @Nullable
     private StringMultimap<IN_NAME, NAME> appender;
@@ -84,9 +84,9 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
         this(null, parents, null, appenderSupplier);
     }
 
-    CompositeStringMultimap(@Nullable CompositeStringMultimap<IN_NAME, NAME> additionals,
+    CompositeStringMultimap(@Nullable List<StringMultimap<IN_NAME, NAME>> additionals,
                             List<StringMultimap<IN_NAME, NAME>> parents,
-                            @Nullable CompositeStringMultimap<IN_NAME, NAME> defaults,
+                            @Nullable List<StringMultimap<IN_NAME, NAME>> defaults,
                             Supplier<StringMultimap<IN_NAME, NAME>> appenderSupplier) {
         requireNonNull(parents, "parents");
         requireNonNull(appenderSupplier, "appenderSupplier");
@@ -103,13 +103,13 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
 
         final ImmutableList.Builder<StringMultimapGetters<IN_NAME, NAME>> builder = ImmutableList.builder();
         if (additionals != null) {
-            builder.add(additionals);
+            builder.addAll(additionals);
         }
 
         builder.addAll(parents);
 
         if (defaults != null) {
-            builder.add(defaults);
+            builder.addAll(defaults);
         }
 
         return delegates = builder.build();
@@ -169,7 +169,12 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
 
         String getLast = null;
         if (additionals != null) {
-            getLast = additionals.getLast(name);
+            for (StringMultimapGetters<IN_NAME, NAME> getter : additionals) {
+                final String res = getter.getLast(name);
+                if (res != null) {
+                    getLast = res;
+                }
+            }
         }
 
         if (getLast == null) {
@@ -182,7 +187,12 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
         }
 
         if (getLast == null && defaults != null) {
-            getLast = defaults.getLast(name);
+            for (StringMultimapGetters<IN_NAME, NAME> getter : defaults) {
+                final String res = getter.getLast(name);
+                if (res != null) {
+                    getLast = res;
+                }
+            }
         }
         return getLast;
     }
@@ -199,28 +209,39 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
     public List<String> getAll(IN_NAME name) {
         requireNonNull(name, "name");
         if (removed.contains(name)) {
-            return appender != null ? appender.getAll(name) : Collections.emptyList();
+            return appender != null ? appender.getAll(name) : ImmutableList.of();
         }
 
         final ImmutableList.Builder<String> builder = ImmutableList.builder();
-        final boolean additionalsContains = additionals != null ? additionals.contains(name) : false;
-        if (additionalsContains) {
-            builder.addAll(additionals.getAll(name));
-        }
-
-        boolean parentsContains = false;
-        if (!additionalsContains) {
-            for (StringMultimapGetters<IN_NAME, NAME> parent : parents) {
-                final List<String> res = parent.getAll(name);
+        boolean additionalsContain = false;
+        if (additionals != null) {
+            for (StringMultimapGetters<IN_NAME, NAME> getter : additionals) {
+                final List<String> res = getter.getAll(name);
                 if (!res.isEmpty()) {
                     builder.addAll(res);
-                    parentsContains = true;
+                    additionalsContain = true;
                 }
             }
         }
 
-        if (!additionalsContains && !parentsContains && defaults != null) {
-            builder.addAll(defaults.getAll(name));
+        boolean parentsContain = false;
+        if (!additionalsContain) {
+            for (StringMultimapGetters<IN_NAME, NAME> parent : parents) {
+                final List<String> res = parent.getAll(name);
+                if (!res.isEmpty()) {
+                    builder.addAll(res);
+                    parentsContain = true;
+                }
+            }
+        }
+
+        if (!additionalsContain && !parentsContain && defaults != null) {
+            for (StringMultimapGetters<IN_NAME, NAME> getter : defaults) {
+                final List<String> res = getter.getAll(name);
+                if (!res.isEmpty()) {
+                    builder.addAll(res);
+                }
+            }
         }
 
         if (appender != null) {
@@ -554,20 +575,39 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
             return appender != null && containsPredicate.test(appender);
         }
 
-        if (additionals != null && additionals.contains(name)) {
-            return containsPredicate.test(additionals);
-        }
-
-        for (StringMultimapGetters<IN_NAME, NAME> delegate : delegates()) {
-            if (containsPredicate.test(delegate)) {
-                return true;
+        boolean additionalsContain = false;
+        if (additionals != null) {
+            for (StringMultimapGetters<IN_NAME, NAME> getter : additionals) {
+                if (containsPredicate.test(getter)) {
+                    return true;
+                }
+                if (getter.contains(name)) {
+                    additionalsContain = true;
+                }
             }
         }
 
-        if (defaults != null && !parents.contains(name)) {
-            return containsPredicate.test(defaults);
+        boolean parentsContain = false;
+        if (!additionalsContain) {
+            for (StringMultimapGetters<IN_NAME, NAME> parent : parents) {
+                if (containsPredicate.test(parent)) {
+                    return true;
+                }
+                if (parent.contains(name)) {
+                    parentsContain = true;
+                }
+            }
         }
-        return false;
+
+        if (!additionalsContain && !parentsContain && defaults != null) {
+            for (StringMultimapGetters<IN_NAME, NAME> getter : defaults) {
+                if (containsPredicate.test(getter)) {
+                    return true;
+                }
+            }
+        }
+
+        return appender != null ? containsPredicate.test(appender) : false;
     }
 
     @Override
@@ -643,9 +683,11 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
     public final Set<NAME> names() {
         final ImmutableSet.Builder<NAME> builder = ImmutableSet.builder();
         if (additionals != null) {
-            for (NAME name : additionals.names()) {
-                if (!removed.contains(name.toString())) {
-                    builder.add(name);
+            for (StringMultimapGetters<IN_NAME, NAME> getters : additionals) {
+                for (NAME name : getters.names()) {
+                    if (!removed.contains(name.toString())) {
+                        builder.add(name);
+                    }
                 }
             }
         }
@@ -659,9 +701,11 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
         }
 
         if (defaults != null) {
-            for (NAME name : defaults.names()) {
-                if (!removed.contains(name.toString())) {
-                    builder.add(name);
+            for (StringMultimapGetters<IN_NAME, NAME> getters : defaults) {
+                for (NAME name : getters.names()) {
+                    if (!removed.contains(name.toString())) {
+                        builder.add(name);
+                    }
                 }
             }
         }
@@ -676,8 +720,12 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
     public Iterator<Entry<NAME, String>> iterator() {
         Iterator<Entry<NAME, String>> additionalsIterator = null;
         if (additionals != null) {
-            additionalsIterator = Iterators.filter(additionals.iterator(),
-                                                   entry -> !removed.contains(entry.getKey().toString()));
+            additionalsIterator = Iterators.concat(
+                    additionals.stream()
+                               .map(StringMultimapGetters::iterator)
+                               .map(it -> Iterators.filter(
+                                       it, entry -> !removed.contains(entry.getKey().toString())))
+                               .iterator());
         }
 
         final Iterator<Entry<NAME, String>> parentsIterators = Iterators.concat(
@@ -687,8 +735,12 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
                            if (removed.contains(entry.getKey().toString())) {
                                return false;
                            }
-                           if (additionals != null && additionals.contains(entry.getKey())) {
-                               return false;
+                           if (additionals != null) {
+                               for (StringMultimapGetters<IN_NAME, NAME> getter : additionals) {
+                                   if (getter.contains(entry.getKey())) {
+                                       return false;
+                                   }
+                               }
                            }
                            return true;
                        }))
@@ -696,20 +748,28 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
 
         Iterator<Entry<NAME, String>> defaultsIterator = null;
         if (defaults != null) {
-            defaultsIterator = Iterators.filter(defaults.iterator(), entry -> {
-                if (removed.contains(entry.getKey().toString())) {
-                    return false;
-                }
-                if (additionals != null && additionals.contains(entry.getKey())) {
-                    return false;
-                }
-                for (StringMultimapGetters<IN_NAME, NAME> parent : parents) {
-                    if (parent.contains(entry.getKey())) {
-                        return false;
-                    }
-                }
-                return true;
-            });
+            defaultsIterator = Iterators.concat(
+                    defaults.stream()
+                            .map(StringMultimapGetters::iterator)
+                            .map(it -> Iterators.filter(it, entry -> {
+                                if (removed.contains(entry.getKey().toString())) {
+                                    return false;
+                                }
+                                if (additionals != null) {
+                                    for (StringMultimapGetters<IN_NAME, NAME> getter : additionals) {
+                                        if (getter.contains(entry.getKey())) {
+                                            return false;
+                                        }
+                                    }
+                                }
+                                for (StringMultimapGetters<IN_NAME, NAME> parent : parents) {
+                                    if (parent.contains(entry.getKey())) {
+                                        return false;
+                                    }
+                                }
+                                return true;
+                            }))
+                            .iterator());
         }
 
         Iterator<Entry<NAME, String>> appenderIterator = null;
@@ -1033,7 +1093,9 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
 
     final void clear() {
         if (additionals != null) {
-            additionals.clear();
+            for (StringMultimap<IN_NAME, NAME> multimap : additionals) {
+                multimap.clear();
+            }
         }
 
         for (StringMultimap<IN_NAME, NAME> parent : parents) {
@@ -1041,7 +1103,9 @@ abstract class CompositeStringMultimap<IN_NAME extends CharSequence, NAME extend
         }
 
         if (defaults != null) {
-            defaults.clear();
+            for (StringMultimap<IN_NAME, NAME> multimap : defaults) {
+                multimap.clear();
+            }
         }
 
         if (appender != null) {

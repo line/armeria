@@ -46,15 +46,18 @@ class CompositeHttpHeadersBase
         super(from(parents), DEFAULT_APPENDER_SUPPLIER);
     }
 
-    CompositeHttpHeadersBase(@Nullable CompositeStringMultimap<CharSequence, AsciiString> additionals,
+    CompositeHttpHeadersBase(@Nullable List<HttpHeaderGetters> additionals,
                              List<HttpHeaderGetters> parents,
-                             @Nullable CompositeStringMultimap<CharSequence, AsciiString> defaults) {
-        super(additionals, from(parents), defaults, DEFAULT_APPENDER_SUPPLIER);
+                             @Nullable List<HttpHeaderGetters> defaults) {
+        super(additionals != null ? from(additionals) : null,
+              from(parents),
+              defaults != null ? from(defaults) : null,
+              DEFAULT_APPENDER_SUPPLIER);
     }
 
     private static List<StringMultimap<CharSequence, AsciiString>> from(HttpHeaderGetters... headers) {
         if (headers.length == 0) {
-            return Collections.emptyList();
+            return ImmutableList.of();
         }
 
         final ImmutableList.Builder<StringMultimap<CharSequence, AsciiString>> builder =
@@ -72,7 +75,7 @@ class CompositeHttpHeadersBase
 
     private static List<StringMultimap<CharSequence, AsciiString>> from(List<HttpHeaderGetters> headers) {
         if (headers.isEmpty()) {
-            return Collections.emptyList();
+            return ImmutableList.of();
         }
 
         final ImmutableList.Builder<StringMultimap<CharSequence, AsciiString>> builder =
