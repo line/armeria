@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.StringMultimap.DEFAULT_SIZE_HINT;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -93,77 +92,63 @@ class CompositeHttpHeadersBase
 
     final void contentLength(long contentLength) {
         checkArgument(contentLength >= 0, "contentLength: %s (expected: >= 0)", contentLength);
+        remove0(HttpHeaderNames.CONTENT_LENGTH);
         ((HttpHeadersBase) appender()).contentLength(contentLength);
     }
 
     @Override
     public long contentLength() {
-        long contentLength = -1;
-
-        for (StringMultimapGetters<CharSequence, AsciiString> delegate : delegates()) {
-            final HttpHeaderGetters getter = (HttpHeaderGetters) delegate;
-            if (getter.isContentLengthUnknown()) {
-                return -1;
-            }
-
-            final long length = getter.contentLength();
-            if (length < 0) {
-                continue;
-            }
-
-            if (contentLength < 0) {
-                contentLength = 0;
-            }
-            contentLength += length;
-        }
-
-        return contentLength;
+        return getLong(HttpHeaderNames.CONTENT_LENGTH, -1);
     }
 
     final void contentLengthUnknown() {
+        remove0(HttpHeaderNames.CONTENT_LENGTH);
         ((HttpHeadersBase) appender()).contentLengthUnknown();
     }
 
     @Override
     public boolean isContentLengthUnknown() {
-        for (StringMultimapGetters<CharSequence, AsciiString> delegate : delegates()) {
-            if (((HttpHeaderGetters) delegate).isContentLengthUnknown()) {
-                return true;
-            }
-        }
-        return false;
+        return ((HttpHeaderGetters) appender()).isContentLengthUnknown();
     }
 
     final void contentType(MediaType contentType) {
         requireNonNull(contentType, "contentType");
+        remove0(HttpHeaderNames.CONTENT_TYPE);
         ((HttpHeadersBase) appender()).contentType(contentType);
     }
 
     @Override
     public @Nullable MediaType contentType() {
-        for (StringMultimapGetters<CharSequence, AsciiString> delegate : delegates()) {
-            final MediaType contentType = ((HttpHeaderGetters) delegate).contentType();
-            if (contentType != null) {
-                return contentType;
-            }
+        final String contentTypeString = get(HttpHeaderNames.CONTENT_TYPE);
+        if (contentTypeString == null) {
+            return null;
         }
-        return null;
+
+        try {
+            return MediaType.parse(contentTypeString);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     final void contentDisposition(ContentDisposition contentDisposition) {
         requireNonNull(contentDisposition, "contentDisposition");
+        remove0(HttpHeaderNames.CONTENT_DISPOSITION);
         ((HttpHeadersBase) appender()).contentDisposition(contentDisposition);
     }
 
     @Override
     public @Nullable ContentDisposition contentDisposition() {
-        for (StringMultimapGetters<CharSequence, AsciiString> delegate : delegates()) {
-            final ContentDisposition contentDisposition = ((HttpHeaderGetters) delegate).contentDisposition();
-            if (contentDisposition != null) {
-                return contentDisposition;
-            }
+        final String contentDispositionString = get(HttpHeaderNames.CONTENT_DISPOSITION);
+        if (contentDispositionString == null) {
+            return null;
         }
-        return null;
+
+        try {
+            return ContentDisposition.parse(contentDispositionString);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     final void endOfStream(boolean endOfStream) {
@@ -172,12 +157,7 @@ class CompositeHttpHeadersBase
 
     @Override
     public boolean isEndOfStream() {
-        for (StringMultimapGetters<CharSequence, AsciiString> delegate : delegates()) {
-            if (((HttpHeaderGetters) delegate).isEndOfStream()) {
-                return true;
-            }
-        }
-        return false;
+        return ((HttpHeaderGetters) appender()).isEndOfStream();
     }
 
     @Override

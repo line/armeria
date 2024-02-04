@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
@@ -69,6 +70,9 @@ class CompositeHttpHeadersBaseTest {
         assertThat(headers.contentLength()).isEqualTo(-1);
         assertThat(headers.get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
 
+        assertThatThrownBy(() -> headers.contentLength(-1))
+                .isExactlyInstanceOf(IllegalArgumentException.class);
+
         headers.contentLength(0);
         assertThat(headers.isContentLengthUnknown()).isFalse();
         assertThat(headers.contentLength()).isEqualTo(0);
@@ -87,24 +91,34 @@ class CompositeHttpHeadersBaseTest {
 
     @Test
     void contentLengths() {
-        final CompositeHttpHeadersBase allContentLengthKnown =
+        final CompositeHttpHeadersBase contentLengths =
                 new CompositeHttpHeadersBase(HttpHeaders.of(),
-                                             HttpHeaders.builder().contentLength(100).build(),
-                                             HttpHeaders.builder().contentLength(200).build(),
-                                             HttpHeaders.builder().contentLength(300).build(),
-                                             HttpHeaders.of());
-        assertThat(allContentLengthKnown.isContentLengthUnknown()).isFalse();
-        assertThat(allContentLengthKnown.contentLength()).isEqualTo(600);
-
-        final CompositeHttpHeadersBase someContentLengthUnknown =
-                new CompositeHttpHeadersBase(HttpHeaders.of(),
-                                             HttpHeaders.builder().contentLength(100).build(),
                                              HttpHeaders.builder().contentLengthUnknown().build(),
+                                             HttpHeaders.builder().contentLength(100).build(),
                                              HttpHeaders.builder().contentLength(200).build(),
                                              HttpHeaders.builder().contentLength(300).build(),
                                              HttpHeaders.of());
-        assertThat(someContentLengthUnknown.isContentLengthUnknown()).isTrue();
-        assertThat(someContentLengthUnknown.contentLength()).isEqualTo(-1);
+        assertThat(contentLengths.isContentLengthUnknown()).isFalse();
+        assertThat(contentLengths.contentLength()).isEqualTo(100);
+
+        contentLengths.contentLengthUnknown();
+        assertThat(contentLengths.isContentLengthUnknown()).isTrue();
+        assertThat(contentLengths.contentLength()).isEqualTo(-1);
+
+        contentLengths.contentLength(500);
+        assertThat(contentLengths.isContentLengthUnknown()).isFalse();
+        assertThat(contentLengths.contentLength()).isEqualTo(500);
+
+        final CompositeHttpHeadersBase unknown =
+                new CompositeHttpHeadersBase(HttpHeaders.of(),
+                                             HttpHeaders.builder().contentLengthUnknown().build(),
+                                             HttpHeaders.of());
+        assertThat(unknown.isContentLengthUnknown()).isFalse();
+        assertThat(unknown.contentLength()).isEqualTo(-1);
+
+        unknown.contentLength(500);
+        assertThat(unknown.isContentLengthUnknown()).isFalse();
+        assertThat(unknown.contentLength()).isEqualTo(500);
     }
 
     @Test
@@ -133,9 +147,17 @@ class CompositeHttpHeadersBaseTest {
         assertThat(contentTypes.contentType()).isEqualTo(MediaType.PNG);
         assertThat(contentTypes.get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(MediaType.PNG.toString());
 
+        contentTypes.contentType(MediaType.JPEG);
+        assertThat(contentTypes.contentType()).isEqualTo(MediaType.JPEG);
+        assertThat(contentTypes.get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(MediaType.JPEG.toString());
+
         final CompositeHttpHeadersBase unknown = new CompositeHttpHeadersBase(HttpHeaders.of());
         assertThat(unknown.contentType()).isNull();
         assertThat(unknown.get(HttpHeaderNames.CONTENT_TYPE)).isNull();
+
+        unknown.contentType(MediaType.GIF);
+        assertThat(unknown.contentType()).isEqualTo(MediaType.GIF);
+        assertThat(unknown.get(HttpHeaderNames.CONTENT_TYPE)).isEqualTo(MediaType.GIF.toString());
     }
 
     @Test
@@ -167,9 +189,17 @@ class CompositeHttpHeadersBaseTest {
         assertThat(contentDispositions.contentDisposition()).isEqualTo(typeA);
         assertThat(contentDispositions.get(HttpHeaderNames.CONTENT_DISPOSITION)).isEqualTo(typeA.toString());
 
+        contentDispositions.contentDisposition(typeB);
+        assertThat(contentDispositions.contentDisposition()).isEqualTo(typeB);
+        assertThat(contentDispositions.get(HttpHeaderNames.CONTENT_DISPOSITION)).isEqualTo(typeB.toString());
+
         final CompositeHttpHeadersBase unknown = new CompositeHttpHeadersBase(HttpHeaders.of());
         assertThat(unknown.contentDisposition()).isNull();
         assertThat(unknown.get(HttpHeaderNames.CONTENT_DISPOSITION)).isNull();
+
+        unknown.contentDisposition(typeB);
+        assertThat(unknown.contentDisposition()).isEqualTo(typeB);
+        assertThat(unknown.get(HttpHeaderNames.CONTENT_DISPOSITION)).isEqualTo(typeB.toString());
     }
 
     @Test
@@ -191,9 +221,21 @@ class CompositeHttpHeadersBaseTest {
                                              HttpHeaders.builder().endOfStream(true).build(),
                                              HttpHeaders.builder().endOfStream(false).build(),
                                              HttpHeaders.of());
+        assertThat(endOfStreams.isEndOfStream()).isFalse();
+
+        endOfStreams.endOfStream(true);
         assertThat(endOfStreams.isEndOfStream()).isTrue();
 
+        endOfStreams.endOfStream(false);
+        assertThat(endOfStreams.isEndOfStream()).isFalse();
+
         final CompositeHttpHeadersBase unknown = new CompositeHttpHeadersBase(HttpHeaders.of());
+        assertThat(unknown.isEndOfStream()).isFalse();
+
+        unknown.endOfStream(true);
+        assertThat(unknown.isEndOfStream()).isTrue();
+
+        unknown.endOfStream(false);
         assertThat(unknown.isEndOfStream()).isFalse();
     }
 
@@ -273,17 +315,6 @@ class CompositeHttpHeadersBaseTest {
                                              HttpHeaders.of());
         other2.endOfStream(true);
         assertThat(headers.equals(other2)).isFalse();
-
-        final CompositeHttpHeadersBase other3 =
-                new CompositeHttpHeadersBase(HttpHeaders.of(),
-                                             HttpHeaders.builder().add("k1", "v1").build(),
-                                             HttpHeaders.builder()
-                                                        .add("k2", "v2")
-                                                        .endOfStream(true)
-                                                        .build(),
-                                             HttpHeaders.builder().add("k3", "v3").build(),
-                                             HttpHeaders.of());
-        assertThat(headers.equals(other3)).isFalse();
     }
 
     @Test
@@ -314,7 +345,7 @@ class CompositeHttpHeadersBaseTest {
         headers.endOfStream(true);
         assertThat(headers.toString()).isEqualTo("[EOS]");
         assertThat(new CompositeHttpHeadersBase(HttpHeaders.of().toBuilder().endOfStream(true)).toString())
-                .isEqualTo("[EOS]");
+                .isEqualTo("[]");
     }
 
     @Test
