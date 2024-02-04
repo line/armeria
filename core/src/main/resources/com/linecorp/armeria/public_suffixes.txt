@@ -1564,6 +1564,9 @@ co.za
 co.zm
 co.zw
 coach
+cockpit.fr-par.scw.cloud
+cockpit.nl-ams.scw.cloud
+cockpit.pl-waw.scw.cloud
 cocotte.jp
 codeberg.page
 codes
