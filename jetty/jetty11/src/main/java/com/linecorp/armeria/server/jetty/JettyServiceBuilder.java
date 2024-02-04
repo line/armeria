@@ -44,6 +44,11 @@ import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
 
     private final ImmutableList.Builder<EventListener> eventListeners = ImmutableList.builder();
+    private final ImmutableList.Builder<HandlerWrapper> handlerWrappers = ImmutableList.builder();
+
+    @Nullable
+    private Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
+    private boolean tlsReverseDnsLookup;
 
     JettyServiceBuilder() {}
 
@@ -90,9 +95,14 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
         return (JettyServiceBuilder) super.handler(handler);
     }
 
-    @Override
+    /**
+     * Adds the specified {@link HandlerWrapper} to the Jetty {@link Server}.
+     *
+     * @see Server#insertHandler(HandlerWrapper)
+     */
     public JettyServiceBuilder handlerWrapper(HandlerWrapper handlerWrapper) {
-        return (JettyServiceBuilder) super.handlerWrapper(handlerWrapper);
+        handlerWrappers.add(requireNonNull(handlerWrapper, "handlerWrapper"));
+        return this;
     }
 
     @Override
@@ -105,15 +115,29 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
         return (JettyServiceBuilder) super.requestLog(requestLog);
     }
 
-    @Override
+    /**
+     * Sets the {@link SessionIdManager} of the Jetty {@link Server}. This method is a shortcut for:
+     * <pre>{@code
+     * sessionIdManagerFactory(server -> sessionIdManager);
+     * }</pre>
+     *
+     * @see Server#setSessionIdManager(SessionIdManager)
+     */
     public JettyServiceBuilder sessionIdManager(SessionIdManager sessionIdManager) {
-        return (JettyServiceBuilder) super.sessionIdManager(sessionIdManager);
+        requireNonNull(sessionIdManager, "sessionIdManager");
+        return sessionIdManagerFactory(server -> sessionIdManager);
     }
 
-    @Override
+    /**
+     * Sets the factory that creates a new instance of {@link SessionIdManager} for the Jetty {@link Server}.
+     *
+     * @see Server#setSessionIdManager(SessionIdManager)
+     */
     public JettyServiceBuilder sessionIdManagerFactory(
             Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory) {
-        return (JettyServiceBuilder) super.sessionIdManagerFactory(sessionIdManagerFactory);
+        requireNonNull(sessionIdManagerFactory, "sessionIdManagerFactory");
+        this.sessionIdManagerFactory = sessionIdManagerFactory;
+        return this;
     }
 
     @Override
@@ -121,9 +145,18 @@ public final class JettyServiceBuilder extends AbstractJettyServiceBuilder {
         return (JettyServiceBuilder) super.stopTimeoutMillis(stopTimeoutMillis);
     }
 
-    @Override
+    /**
+     * Sets whether Jetty has to perform reverse DNS lookup for the remote IP address on a TLS connection.
+     * By default, this flag is disabled because it is known to cause performance issues when the DNS server
+     * is not responsive enough. However, you might want to take the risk and enable it if you want the same
+     * behavior with Jetty 9.3 when mTLS is enabled.
+     *
+     * @see <a href="https://github.com/eclipse/jetty.project/issues/1235">Jetty issue #1235</a>
+     * @see <a href="https://github.com/eclipse/jetty.project/commit/de7c146bd741307cd924a9dcef386d516e75b1e9">Jetty commit de7c146</a>
+     */
     public JettyServiceBuilder tlsReverseDnsLookup(boolean tlsReverseDnsLookup) {
-        return (JettyServiceBuilder) super.tlsReverseDnsLookup(tlsReverseDnsLookup);
+        this.tlsReverseDnsLookup = tlsReverseDnsLookup;
+        return this;
     }
 
     @Override

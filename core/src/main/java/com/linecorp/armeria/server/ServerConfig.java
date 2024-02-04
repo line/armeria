@@ -103,8 +103,7 @@ public interface ServerConfig {
     List<ServiceConfig> serviceConfigs();
 
     /**
-     * Returns the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
-     * {@link Service#serve(ServiceRequestContext, Request)}.
+     * Returns the worker {@link EventLoopGroup} which is responsible for performing socket I/O.
      */
     EventLoopGroup workerGroup();
 

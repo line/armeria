@@ -14,7 +14,6 @@ import kotlin.coroutines.coroutineContext
 
 @CoroutineNameDecorator(name = "default")
 class DecoratingService {
-
     @Get("/foo")
     suspend fun foo(): HttpResponse {
         log.info("My name is ${coroutineContext[CoroutineName]?.name}")
