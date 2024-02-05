@@ -20,7 +20,7 @@ No preparation is required for this step.
 
 ## 1. Create a service file
 
-Create a service file, BlogService.java. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java). We'll add on service methods in this class in later steps.
+Create a service file, `BlogService.java`. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java). We'll add on service methods in this class in later steps.
 
 ```java filename=BlogService.java
 package example.armeria.server.blog;
@@ -37,7 +37,7 @@ public final class BlogService {
 
 In [Step 1. Create a server](/tutorials/rest/blog/create-server), we added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add an empty blog service, instead.
 
-1. From Main.java, remove the dummy service at line 4.
+1. From `Main.java`, remove the dummy service at line 4.
   ```java filename=Main.java highlight=4 showlineno=true
   static Server newServer(int port) {
     ...

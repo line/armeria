@@ -200,50 +200,24 @@ public final class BlogService {
 }
 ```
 
-## 5. Test deleting a blog post
+## 5. Test handling an exception
 
-Let's test deleting a blog post.
+Add a test method as follows to test if our exception handler is working properly.
 
-1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/create-server) by running the `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
-2. Create a couple of blog posts to test deleting a blog post and get the ID value returned. Enter the cURL commands below.
+```java filename=BlogServiceTest.java
+@Test
+@Order(5)
+void badRequestExceptionHandlerWhenTryingDeleteMissingBlogPost() throws JsonProcessingException {
+    final WebClient client = WebClient.of(server.httpUri());
+    final AggregatedHttpResponse res = client.delete("/blogs/100").aggregate().join();
+    assertThat(res.status()).isSameAs(HttpStatus.BAD_REQUEST);
+    assertThatJson(res.contentUtf8()).isEqualTo("{\"error\":\"The blog post does not exist. ID: 100\"}");
+}
+```
 
-  ```bash
-  $ curl --request POST 'localhost:8080/blogs' \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"First post for testing", "content":"Test deletion."}'
-  ```
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
 
-  ```bash
-  $ curl --request POST 'localhost:8080/blogs' \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"Second post for testing", "content":"Test deleting a post."}'
-  ```
-
-  For each command, you'll get a response similar to the following.
-
-  ```bash
-  {"id":0,"title":"First post for testing","content":"Test deletion.","createdAt":...,"modifiedAt":...}
-
-  {"id":1,"title":"Second post for testing","content":"Test deleting a post.","createdAt":...,"modifiedAt":...}
-  ```
-
-3. Let's delete the second blog with the ID, `0`. Since our service method doesn't return anything, you won't see any response.
-
-  ```bash
-  $ curl --request DELETE 'localhost:8080/blogs/0'
-  ```
-
-4. Let's retrieve the blog post list to see if the post has been deleted successfully.
-
-  ```bash
-  $ curl --request GET 'localhost:8080/blogs'
-  ```
-
-  The response contains only one blog post. We can tell that the blog post with the ID `0` has been removed.
-
-  ```bash
-  {"id":1,"title":"Second post for testing","content":"Test deleting a post.","createdAt":...,"modifiedAt":...}
-  ```
 You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 
 ## Next step

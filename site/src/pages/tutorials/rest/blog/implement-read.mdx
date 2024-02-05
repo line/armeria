@@ -221,92 +221,84 @@ public Iterable<BlogPost> getBlogPosts(@Param @Default("true") boolean descendin
 </TabPane>
 </Tabs>
 
-## 5. Test retrieving a blog post
+## 5. Test retrieving a single post
 
-Let's test retrieving a single and multiple posts.
+Let's test if we can retrieve a blog post we created.
 
-1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/create-server) by running the 
-   `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
-2. Create a couple of blog posts to test retrieving a blog post and get the ID value returned. Enter the cURL commands below.
+1. In the `BlogServiceTest` class, add a test method to retrieve the first blog post with ID `0`.
+  ```java filename=BlogServiceTest.java
+  @Test
+  void getBlogPost() throws JsonProcessingException {
+    final WebClient client = WebClient.of(server.httpUri());
+    final AggregatedHttpResponse res = client.get("/blogs/0").aggregate().join();
+    final Map<String, Object> expected = Map.of("id", 0,
+                "title", "My first blog",
+                "content", "Hello Armeria!");
 
-  ```bash
-  $ curl --request POST 'localhost:8080/blogs' \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"First post for testing", "content":"Test reading."}'
+    assertThatJson(res.contentUtf8()).whenIgnoringPaths("createdAt", "modifiedAt")
+                .isEqualTo(mapper.writeValueAsString(expected));
+  }
   ```
+2. Add annotations to configure the order our test methods will be executed.
+  The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve in the `getBlogPost()` method.
+  ```java filename=BlogServiceTest.java
+  import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+  import org.junit.jupiter.api.Order;
+  import org.junit.jupiter.api.TestMethodOrder;
 
-  ```bash
-  $ curl --request POST 'localhost:8080/blogs' \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"Second post for testing", "content":"Test reading a post."}'
-  ```
+  @TestMethodOrder(OrderAnnotation.class) // Add this
+  class BlogServiceTest {
+    ...
 
-  For each command, you'll get a response similar to the following.
-
-  ```bash
-  {"id":0,"title":"First post for testing","content":"Test reading.","createdAt":...,"modifiedAt":...}
-
-  {"id":1,"title":"Second post for testing","content":"Test reading a post.","createdAt":...,"modifiedAt":...}
-  ```
-
-3. Try retrieving blog posts we just created:
-
-    <Tabs defaultActiveKey="1">
-    <TabPane tab="Single post" key="1">
-
-    Let's try retrieving the second blog post we created. Pass the path parameter (blog ID) as `1`.
-
-    ```bash
-    $ curl --request GET 'localhost:8080/blogs/1'
-    ```
-
-    You'll get a return value similar to this:
-
-    ```bash
-    {
-      "id":1,
-      "title":"Second post for testing",
-      "content":"Test reading a post.",
-      "createdAt":...,
-      "modifiedAt":...
+    @Test
+    @Order(1) // Add this
+    void createBlogPost() throws JsonProcessingException {
+      ...
     }
-    ```
 
-    </TabPane>
-    <TabPane tab="Multiple posts" key="2">
+    @Test
+    @Order(2) // Add this
+    void getBlogPost() throws JsonProcessingException {
+      ...
+    }
+  }
+  ```
+3. Run all the test cases on your IDE or using Gradle.
 
-    Let's try retrieving all the blog posts we've created.
+  Your client retrieved a blog post from the server successfully if the test is passed.
 
-    ```bash
-    $ curl --request GET 'localhost:8080/blogs'
-    ```
+## 6. Test retrieving multiple posts
 
-    You'll get a return value similar to this:
+Finally, let's test if we can retrieve multiple posts.
+Add a test method like the following to create the second blog post and test retrieving the list of blog posts.
 
-    ```bash
-    [
-      {
-        "id":1,
-        "title":"Second post for testing",
-        "content":"Test reading a post.",
-        "createdAt":...,
-        "modifiedAt":...
-      },
-      {
-        "id":0,
-        "title":"First post for testing",
-        "content":"Test reading.",
-        "createdAt":...,
-        "modifiedAt":...
-      }
-    ]
-    ```
+```java filename=BlogServiceTest.java
+import java.util.List;
 
-    </TabPane>
-    </Tabs>
+@Test
+@Order(3)
+void getBlogPosts() throws JsonProcessingException {
+  final WebClient client = WebClient.of(server.httpUri());
+  final HttpRequest request = createBlogPostRequest(Map.of("title", "My second blog",
+                "content", "Armeria is awesome!"));
+  client.execute(request).aggregate().join();
+  final AggregatedHttpResponse res = client.get("/blogs").aggregate().join();
+  final List<Map<String, Object>> expected = List.of(
+          Map.of("id", 1,
+                 "title", "My second blog",
+                 "content", "Armeria is awesome!"),
+          Map.of("id", 0,
+                 "title", "My first blog",
+                 "content", "Hello Armeria!"));
+  assertThatJson(res.contentUtf8()).whenIgnoringPaths("[*].createdAt", "[*].modifiedAt")
+                .isEqualTo(mapper.writeValueAsString(expected));
+}
+```
+
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
 
 You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
-
 
 ## Next step
 
