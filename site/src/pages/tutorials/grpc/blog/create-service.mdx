@@ -1,0 +1,97 @@
+---
+menuTitle: "Create a service"
+order: 1
+type: step
+targetLang: java
+---
+
+# Creating a service
+
+Let's begin by creating a simple service with a dummy method in a proto file and implementing the service in Java.
+
+<TutorialSteps current={1} />
+
+## What you need
+
+No preparation is required for this step. Do check that you've prepared the [prerequisites](/tutorials/grpc/blog/#prerequisites).
+
+## 1. Create a proto file
+
+Create a file, `blog.proto` in the `{project_root}/src/main/proto` folder as follows.
+This tutorial uses [Protocol Buffers version 3](https://developers.google.com/protocol-buffers/docs/proto3).
+
+```protobuf filename=blog.proto
+syntax = "proto3";
+
+package example.armeria.blog.grpc;
+option java_package = "example.armeria.blog.grpc";
+option java_multiple_files = true;
+```
+
+<Tip>
+
+  See [Sample service structure](/tutorials/grpc/blog#sample-service-structure) for the overall folder structure.
+
+</Tip>
+
+## 2. Define a service
+
+In the proto file, let's define the `BlogService` service with the `Hello()` method and a response type for the method.
+
+```protobuf filename=blog.proto
+import "google/protobuf/empty.proto";
+
+service BlogService {
+  rpc Hello (google.protobuf.Empty) returns (HelloResponse) {}
+}
+
+message HelloResponse {
+  string message = 1;
+}
+```
+
+## 3. Compile the proto file
+
+Compile the `blog.proto` file to generate Java code.
+You can refer to the full [build.gradle](https://github.com/line/armeria-examples/tree/main/tutorials/thrift/build.gradle) file for generating code with [Gradle Thrift Plugin](https://github.com/jruyi/thrift-gradle-plugin).
+
+```bash
+./gradlew generateProto
+```
+
+You'll see the generated Java code in the `{project_root}/build/generated/source/proto/main` folder.
+
+## 4. Implement the service
+
+Now, let's implement the service in Java.
+
+1. Create a file, `BlogService.java`.
+2. Declare the `BlogService` class extending the `BlogServiceImplBase` class generated in the previous step.
+  ```java filename=BlogService.java
+  package example.armeria.server.blog.grpc;
+
+  final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {}
+  ```
+3. In the `BlogService` class, override the `hello()` method, a dummy method for temporary use to test the connection between server and client.
+  ```java filename=BlogService.java
+  import com.google.protobuf.Empty;
+  import io.grpc.stub.StreamObserver;
+  ...
+  @Override
+  public void hello(Empty req, StreamObserver<HelloMessage> responseObserver) {
+      final HelloMessage msg = HelloMessage.newBuilder()
+               .setMessage("Hello, Armeria!")
+               .build();
+      responseObserver.onNext(msg);
+      responseObserver.onCompleted();
+  }
+  ```
+
+## What's next
+
+In this step, we've created a simple service with a dummy method.
+
+Next, at [Step 2. Run a server](/tutorials/grpc/blog/run-server), we'll create and run a server with the service we've created.
+Also, we'll run a test to make a call to the service.
+
+<TutorialSteps current={1} />

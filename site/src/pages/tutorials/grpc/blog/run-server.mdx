@@ -1,0 +1,127 @@
+---
+menuTitle: "Run a server"
+order: 2
+type: step
+targetLang: java
+---
+
+# Running a server
+
+In this step, we'll create and run a server with the service we created in the previous step.
+Also, we'll test making a call to the service.
+
+<TutorialSteps current={2} />
+
+## What you need
+
+You need to have the files obtained from previous steps:
+
+- `blog.proto`
+- `BlogService.java`
+
+## 1. Create a server
+
+Let's create a server to serve our service.
+
+1. Create the `Main` class for the server.
+  You can see the full version of the file [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/Main.java).
+  ```java filename=Main.java
+  package example.armeria.server.blog.grpc;
+
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+
+  public final class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+  }
+  ```
+2. Add the `newServer()` method in the `Main` class as follows.
+  We are using Armeria's <type://GrpcService> to handle gRPC calls.
+  ```java filename=Main.java
+  import com.linecorp.armeria.server.grpc.GrpcService;
+  ...
+  static Server newServer(int port) throws Exception {
+      final GrpcService grpcService =
+              GrpcService.builder()
+                         .addService(new BlogService())
+                         .build();
+  }
+  ```
+3. Create and return a server instance using Armeria's <type://ServerBuilder>.
+  Note that the service instance, `grpcService`, is added to the server instance.
+  ```java filename=Main.java
+  import com.linecorp.armeria.server.Server;
+  ...
+  static Server newServer(int port) throws Exception {
+      ...
+      return Server.builder()
+                   .http(port)
+                   .service(grpcService) // Add the service to server
+                   .build();
+  }
+  ```
+4. Add the `main()` method in the `Main` class as follows.
+  ```java filename=Main.java
+  public static void main(String[] args) throws Exception {
+      final Server server = newServer(8080);
+
+      server.closeOnJvmShutdown().thenRun(() -> {
+          logger.info("Server has been stopped.");
+      });
+
+      server.start().join();
+  }
+  ```
+
+## 2. Run the server
+
+Run the `Main.main()` method on your IDE or using Gradle.
+```bash
+./gradlew run
+```
+
+Your server is running if you see the following message.
+```bash
+[armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0%0]:8080 - http://127.0.0.1:8080/
+```
+
+## 3. Test connecting to the server
+
+Let's create test code and connect to the server by sending a request using a client stub.
+Note that we'll use test code to verify what we implement along the way.
+
+1. Create a file, `BlogServiceTest.java`, under `{project_root}/src/test/java/example/armeria/server/blog/grpc` as follows.
+  You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/src/test/java/example/armeria/server/blog/grpc/BlogServiceTest.java).
+  ```java filename=BlogServiceTest.java
+  package example.armeria.server.blog.grpc;
+
+  class BlogServiceTest {}
+  ```
+2. In the `BlogServiceTest` class, add a test method as follows.
+  ```java filename=BlogServiceTest.java
+  @Test
+  void hello() {
+      final BlogServiceBlockingStub client = GrpcClients.newClient(URI.create("http://127.0.0.1:8080"),
+                BlogServiceBlockingStub.class);
+      final HelloResponse response = client.hello(Empty.getDefaultInstance());
+      final String message = response.getMessage();
+      assertThat(message).isEqualTo("Hello, Armeria!");
+      System.out.println(response);
+  }
+  ```
+3. Make sure that your server is running.
+  If you have not stopped the server, it should already be running.
+  Otherwise, [re-run the server](#2-run-the-server).
+4. Run the test case on your IDE or using Gradle.
+  ```
+  ./gradlew test
+  ```
+  Your client sent a request to the service successfully if the test passes.
+
+## What's next
+
+In this step, we've created and run a server.
+
+Next, at [Step 3. Define service methods](/tutorials/grpc/blog/define-service-methods), we'll define service methods to implement later on.
+
+<TutorialSteps current={2} />
