@@ -142,14 +142,14 @@ Add a test method to retrieve a blog post with an invalid ID, asserting an excep
 
 ```java filename=BlogServiceTest.java
 @Test
-@Order(3)
+@Order(2)
 void getInvalidBlogPost() throws JsonProcessingException {
   final Throwable exception = catchThrowable(() -> {
       client.getBlogPost(GetBlogPostRequest.newBuilder().setId(Integer.MAX_VALUE).build());
   });
-  assertThat(exception).isInstanceOf(StatusRuntimeException.class);
-  assertThat(exception).extracting("status.code").isEqualTo(Code.NOT_FOUND);
-  assertThat(exception)
+  final StatusRuntimeException statusException = (StatusRuntimeException) exception;
+    assertThat(statusException.getStatus().getCode()).isEqualTo(Code.NOT_FOUND);
+    assertThat(statusException)
           .hasMessageContaining("The blog post does not exist. ID: " + Integer.MAX_VALUE);
 }
 ```
@@ -164,7 +164,7 @@ Add a test method like the following to create the second blog post and test ret
 
 ```java filename=BlogServiceTest.java
 @Test
-@Order(4)
+@Order(3)
 void listBlogPosts() throws JsonProcessingException {
   final CreateBlogPostRequest newBlogPost = CreateBlogPostRequest.newBuilder()
                 .setTitle("My second blog")

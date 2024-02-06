@@ -83,7 +83,7 @@ Add a test method like the following.
 
 ```java filename=BlogServiceTest.java
 @Test
-@Order(7)
+@Order(6)
 void deleteBlogPost() {
   final DeleteBlogPostRequest reqeust = DeleteBlogPostRequest.newBuilder()
                                                              .setId(1)
@@ -92,9 +92,11 @@ void deleteBlogPost() {
   final Throwable exception = catchThrowable(() -> {
     client.getBlogPost(GetBlogPostRequest.newBuilder().setId(1).build());
   });
-  assertThat(exception).isInstanceOf(StatusRuntimeException.class);
-  assertThat(exception).extracting("status.code").isEqualTo(Code.NOT_FOUND);
-  assertThat(exception).hasMessageContaining("The blog post does not exist. ID: 1");
+
+  final StatusRuntimeException statusException = (StatusRuntimeException) exception;
+  assertThat(statusException.getStatus().getCode()).isEqualTo(Code.NOT_FOUND);
+  assertThat(statusException)
+          .hasMessageContaining("The blog post does not exist. ID: 1");
 }
 ```
 
@@ -109,13 +111,14 @@ Add a test method like the following.
 ```java filename=BlogServiceTest.java
 @Test
 @Order(7)
-void deleteInvalidBlogPost() throws JsonProcessingException {
+void badRequestExceptionHandlerWhenTryingDeleteMissingBlogPost() throws JsonProcessingException {
   final Throwable exception = catchThrowable(() -> {
     client.deleteBlogPost(DeleteBlogPostRequest.newBuilder().setId(100).build());
   });
-  assertThat(exception).isInstanceOf(StatusRuntimeException.class);
-  assertThat(exception).extracting("status.code").isEqualTo(Code.NOT_FOUND);
-  assertThat(exception).hasMessageContaining("The blog post does not exist. ID: 100");
+  final StatusRuntimeException statusException = (StatusRuntimeException) exception;
+  assertThat(statusException.getStatus().getCode()).isEqualTo(Code.NOT_FOUND);
+  assertThat(statusException)
+          .hasMessageContaining("The blog post does not exist. ID: 100");
 }
 ```
 

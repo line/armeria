@@ -57,7 +57,7 @@ Armeria's [request converter](/docs/server-annotated-service#converting-an-http-
 
 We can use Armeria's default <type://JacksonRequestConverterFunction> as is, but here let's give a go at customizing a request converter for our blog post requests. We want to convert blog post details into a Java object.
 
-1. Create a BlogPostRequestConverter.java file and declare a class, implementing the <type://RequestConverterFunction> interface. For the sake of simplicity, generate impromptu IDs for this tutorial.
+1. Create a `BlogPostRequestConverter.java` file and declare a class, implementing the <type://RequestConverterFunction> interface. For the sake of simplicity, generate impromptu IDs for this tutorial.
 
   ```java filename=BlogRequestConverter.java
   package example.armeria.server.blog;
@@ -175,8 +175,10 @@ Let's return a response for blog post creation:
 
 ## 5. Create a test file
 
-Create the `BlogServiceTest.java` file as follows.
+Let's start writing test code.
 We'll use test code to verify what we implement along the way.
+
+Create the `BlogServiceTest.java` file as follows.
 You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/test/java/example/armeria/server/blog/BlogServiceTest.java).
 
 ```java filename=BlogServiceTest.java
@@ -191,9 +193,8 @@ class BlogServiceTest {
 
 ## 6. Register a ServerExtension
 
-Let's use Armeria's <type://ServerExtension>.
-This approach will automatically set-up and tear-down a server before tests are run.
-This is more efficient than directly connecting to the server, as it eliminates the need to execute the main method  to set up a server before running our tests.
+Armeria's <type://ServerExtension> automatically handles set-up and tear-down of a server for testing.
+This is more efficient than directly connecting to the server, as it eliminates the need to execute the main method to set up a server before running our tests.
 
 In the `BlogServiceTest` class, register a <type://ServerExtension> as follows.
 Note that the service instance is added to the configuration.
@@ -217,6 +218,8 @@ class BlogServiceTest {
 
 ## 7. Test creating a blog post
 
+Let's test if we can create a blog post.
+
 1. In the `BlogServiceTest` class, add a private method as follows.
   ```java filename=BlogServiceTest.java
   import java.util.Map;
@@ -235,6 +238,9 @@ class BlogServiceTest {
 2. Add a test method as follows to test creating a blog post.
   ```java filename=BlogServiceTest.java
   import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+  import org.junit.jupiter.api.Test;
+  import com.linecorp.armeria.client.WebClient;
+  import com.linecorp.armeria.common.AggregatedHttpResponse;
   ...
   @Test
   void createBlogPost() throws JsonProcessingException {
@@ -263,7 +269,7 @@ You can test this also with Armeria's [Documentation service](/docs/server-docse
 ## Next step
 
 In this step, we've written a method to implement a CREATE operation and used Armeria's annotations; <type://@Post> and <type://@RequestConverter>.
-We've also written a test method and registered <type://ServerExtension> to our test.
+We've also registered <type://ServerExtension> to our test and written a test method.
 
 Next, at [Step 5. Implement READ](/tutorials/rest/blog/implement-read), we'll implement a READ operation to read a
 single post and also multiple posts.

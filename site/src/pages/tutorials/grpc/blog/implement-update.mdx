@@ -118,7 +118,7 @@ Add a method like the following.
 
 ```java filename=BlogServiceTest.java
 @Test
-  @Order(5)
+  @Order(4)
   void updateBlogPosts() throws JsonProcessingException {
     final UpdateBlogPostRequest request = UpdateBlogPostRequest.newBuilder()
                 .setId(0)
@@ -155,7 +155,7 @@ To check that our exception handler is working, let's try updating a post which 
 2. Add a test method to update a blog post with an invalid ID, asserting an exception is thrown as expected.
   ```java filename=BlogServiceTest.java
   @Test
-  @Order(6)
+  @Order(5)
   void updateInvalidBlogPost() {
     final Throwable exception = catchThrowable(() -> {
        client.updateBlogPost(UpdateBlogPostRequest.newBuilder()
@@ -164,10 +164,10 @@ To check that our exception handler is working, let's try updating a post which 
                 .setContent("Hello awesome Armeria!")
                 .build());
     });
-    assertThat(exception).isInstanceOf(StatusRuntimeException.class);
-    assertThat(exception).extracting("status.code").isEqualTo(Code.NOT_FOUND);
-    assertThat(exception)
-            .hasMessageContaining("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+    final StatusRuntimeException statusException = (StatusRuntimeException) exception;
+    assertThat(statusException.getStatus().getCode()).isEqualTo(Code.NOT_FOUND);
+    assertThat(statusException)
+                .hasMessageContaining("The blog post does not exist. ID: " + Integer.MAX_VALUE);
   }
   ```
 3. Run all the test cases on your IDE or using Gradle.

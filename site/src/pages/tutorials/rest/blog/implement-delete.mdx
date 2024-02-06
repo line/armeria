@@ -108,7 +108,7 @@ What if there is no such post to delete? We can check if the blog exists before 
   ```
 
 2. Create an exception handler for the blog service:
-   1. Create a file, BadRequestExceptionHandler.java.
+   1. Create a file, `BadRequestExceptionHandler.java`.
    2. In the file, declare a custom exception handler implementing Armeria's <type://ExceptionHandlerFunction> interface.
 
    ```java filename=BadRequestExceptionHandler.java
@@ -196,7 +196,7 @@ public final class BlogService {
 }
 ```
 
-## 5. Test handling an exception
+## 5. Test an error case
 
 Add a test method as follows to test if our exception handler is working properly.
 
