@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import com.linecorp.armeria.server.ServerErrorHandler;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -73,6 +74,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
             Optional<List<DependencyInjector>> dependencyInjectors,
+            Optional<List<ServerErrorHandler>> serverErrorHandlers,
             BeanFactory beanFactory) {
 
         if (!armeriaServerConfigurators.isPresent() &&
@@ -98,6 +100,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")),
                                            metricCollectingServiceConfigurators.orElse(ImmutableList.of()),
                                            dependencyInjectors.orElse(ImmutableList.of()),
+                                           serverErrorHandlers.orElse(ImmutableList.of()),
                                            beanFactory);
 
         return serverBuilder.build();

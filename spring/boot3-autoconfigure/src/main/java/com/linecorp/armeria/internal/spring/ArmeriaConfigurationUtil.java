@@ -41,6 +41,7 @@ import java.util.regex.Pattern;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
+import com.linecorp.armeria.server.ServerErrorHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
@@ -110,6 +111,7 @@ public final class ArmeriaConfigurationUtil {
             MeterIdPrefixFunction meterIdPrefixFunction,
             List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators,
             List<DependencyInjector> dependencyInjectors,
+            List<ServerErrorHandler> serverErrorHandlers,
             BeanFactory beanFactory) {
 
         requireNonNull(server, "server");
@@ -203,6 +205,7 @@ public final class ArmeriaConfigurationUtil {
         if (settings.isEnableAutoInjection()) {
             server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
         }
+        serverErrorHandlers.forEach(server::errorHandler);
     }
 
     private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,
