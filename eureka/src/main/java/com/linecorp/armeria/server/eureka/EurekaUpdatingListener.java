@@ -190,8 +190,12 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     }
 
     private static InstanceInfo fillAndCreateNewInfo(InstanceInfo oldInfo, Server server) {
-        final String defaultHostname = server.defaultHostname();
-        final String hostName = oldInfo.getHostName() != null ? oldInfo.getHostName() : defaultHostname;
+        final String hostName;
+        if (oldInfo.getHostName() != null) {
+            hostName = oldInfo.getHostName();
+        } else {
+            hostName = withoutPort(server.defaultHostname());
+        }
         final String appName = oldInfo.getAppName() != null ? oldInfo.getAppName() : hostName;
 
         final Inet4Address defaultInet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
@@ -240,6 +244,19 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                                 oldInfo.getLeaseInfo(), oldInfo.getMetadata());
     }
 
+    /**
+     * Strip any port in {@linkplain Server#defaultHostname()}, so that it can be used in Eureka
+     * registration as a {@code hostName} or {@code vipAddress}.
+     */
+    private static String withoutPort(String hostname) {
+        final int hostnameColonIdx = hostname.lastIndexOf(':');
+        if (hostnameColonIdx < 0) {
+            return hostname;
+        }
+
+        return hostname.substring(0, hostnameColonIdx);
+    }
+
     private static PortWrapper portWrapper(Server server, PortWrapper oldPortWrapper,
                                            SessionProtocol protocol) {
         if (oldPortWrapper.isEnabled()) {
@@ -266,7 +283,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         if (!portWrapper.isEnabled()) {
             return null;
         }
-        return vipAddress != null ? vipAddress : hostName + ':' + portWrapper.getPort();
+        return vipAddress != null ? vipAddress : hostName;
     }
 
     @Nullable
