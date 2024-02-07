@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.brave;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.same;
@@ -218,7 +219,9 @@ class BraveClientTest {
         assertThatThrownBy(() -> blockingWebClient.get("/"))
                 .isInstanceOf(UnprocessedRequestException.class)
                 .hasCauseInstanceOf(EmptyEndpointGroupException.class);
-        assertThat(collector.spans()).hasSize(1);
+        await().untilAsserted(() -> {
+            assertThat(collector.spans()).hasSize(1);
+        });
         final MutableSpan span = collector.spans().poll();
         assertThat(span.tag("http.host")).isEqualTo("UNKNOWN");
         assertThat(span.tag("http.url")).isEqualTo("http:/");

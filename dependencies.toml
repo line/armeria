@@ -242,10 +242,6 @@ relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.s
 [libraries.brave5]
 module = "io.zipkin.brave:brave"
 version.ref = "brave5"
-# ":site:javadoc" fails when we use a newer version of Javadoc.
-javadocs = [
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave/5.6.3/",
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/5.6.3/"]
 [libraries.brave5-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
 version.ref = "brave5"
@@ -259,10 +255,9 @@ version.ref = "brave5"
 [libraries.brave6]
 module = "io.zipkin.brave:brave"
 version.ref = "brave6"
-# ":site:javadoc" fails when we use a newer version of Javadoc.
 javadocs = [
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave/5.6.3/",
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/5.6.3/"]
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave/6.0.0/",
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/6.0.0/"]
 [libraries.brave6-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
 version.ref = "brave6"
