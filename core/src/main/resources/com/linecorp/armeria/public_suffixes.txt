@@ -1825,6 +1825,10 @@ cx.ua
 cy
 cy.eu.org
 cya.gg
+cyclic-app.com
+cyclic.app
+cyclic.cloud
+cyclic.co.in
 cymru
 cyon.link
 cyon.site
