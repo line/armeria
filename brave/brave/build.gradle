@@ -1,3 +1,10 @@
 dependencies {
-    api project(':brave5')
+    api project(':brave6')
+    // Brave 5.x depended on zipkin-reporter-brave, but Brave 6.x has no
+    // dependencies. We add back dependencies that allow ZipkinSpanHandler to
+    // compile. This allows people to migrate without managing these
+    // dependencies on their own. Those who want a dependency-free integration
+    // can use armeria-brave6.
+    api libs.zipkin.reporter.brave // For AsyncZipkinSpanHandler (native Brave)
+    api libs.zipkin // For ZipkinSpanHandler (uses Zipkin core types)
 }

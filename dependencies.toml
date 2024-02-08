@@ -9,7 +9,7 @@ assertj = "3.25.2"
 awaitility = "4.2.0"
 blockhound = "1.0.8.RELEASE"
 bouncycastle = "1.70"
-brave5 = "5.18.0"
+brave5 = "5.18.1"
 brave6 = "6.0.0"
 brotli4j = "1.15.0"
 bucket4j = "7.6.0"
@@ -159,6 +159,8 @@ tomcat8 = "8.5.98"
 tomcat9 = "9.0.85"
 tomcat10 = "10.1.18"
 xml-apis = "1.4.01"
+zipkin = "3.0.6"
+zipkin-reporter = "3.2.1"
 # Ensure that we use the same ZooKeeper version as what Curator depends on.
 # See: https://github.com/apache/curator/blob/master/pom.xml
 #      (Switch to the right tag to find out the right version.)
@@ -1363,6 +1365,14 @@ version.ref = "java-websocket"
 [libraries.xml-apis]
 module = "xml-apis:xml-apis"
 version.ref = "xml-apis"
+
+[libraries.zipkin]
+module = "io.zipkin.zipkin2:zipkin"
+version.ref = "zipkin"
+
+[libraries.zipkin-reporter-brave]
+module = "io.zipkin.reporter2:zipkin-reporter-brave"
+version.ref = "zipkin-reporter"
 
 [libraries.zookeeper]
 module = "org.apache.zookeeper:zookeeper"
