@@ -102,12 +102,12 @@ final class LoginClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class LoginResult {
-        String accessToken;
+        private final String accessToken;
 
-        Integer tokenTtl;
+        private final Integer tokenTtl;
 
         @Nullable
-        Boolean globalAdmin;
+        private final Boolean globalAdmin;
 
         @JsonCreator
         LoginResult(@JsonProperty("accessToken") String accessToken, @JsonProperty("tokenTtl") Integer tokenTtl,

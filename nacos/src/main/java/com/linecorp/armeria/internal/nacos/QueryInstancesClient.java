@@ -109,7 +109,7 @@ final class QueryInstancesClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class QueryInstancesResponse {
-        Data data;
+        private final Data data;
 
         @JsonCreator
         QueryInstancesResponse(@JsonProperty("data") Data data) {
@@ -119,7 +119,7 @@ final class QueryInstancesClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class Data {
-        List<Host> hosts;
+        private final List<Host> hosts;
 
         @JsonCreator
         Data(@JsonProperty("hosts") List<Host> hosts) {
@@ -130,44 +130,44 @@ final class QueryInstancesClient {
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class Host {
         @Nullable
-        String instanceId;
+        private final String instanceId;
 
-        String ip;
+        private final String ip;
 
-        Integer port;
-
-        @Nullable
-        Double weight;
+        private final Integer port;
 
         @Nullable
-        Boolean healthy;
+        private final Double weight;
 
         @Nullable
-        Boolean enabled;
+        private final Boolean healthy;
 
         @Nullable
-        Boolean ephemeral;
+        private final Boolean enabled;
 
         @Nullable
-        String clusterName;
+        private final Boolean ephemeral;
 
         @Nullable
-        String serviceName;
+        private final String clusterName;
 
         @Nullable
-        Map<String, Object> metadata;
+        private final String serviceName;
 
         @Nullable
-        Integer instanceHeartBeatInterval;
+        private final Map<String, Object> metadata;
 
         @Nullable
-        String instanceIdGenerator;
+        private final Integer instanceHeartBeatInterval;
 
         @Nullable
-        Integer instanceHeartBeatTimeOut;
+        private final String instanceIdGenerator;
 
         @Nullable
-        Integer ipDeleteTimeout;
+        private final Integer instanceHeartBeatTimeOut;
+
+        @Nullable
+        private final Integer ipDeleteTimeout;
 
         @JsonCreator
         Host(@JsonProperty("instanceId") @Nullable String instanceId, @JsonProperty("ip") String ip,
