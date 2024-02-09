@@ -1719,7 +1719,6 @@ com.vu
 com.ws
 com.ye
 com.zm
-comcast
 commbank
 commune.am
 community
@@ -8974,7 +8973,6 @@ x443.pw
 xbox
 xen.prgmr.com
 xerox
-xfinity
 xihuan
 xii.jp
 xin
