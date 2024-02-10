@@ -81,17 +81,17 @@ final class LoginClient extends SimpleDecoratingHttpClient {
 
     private final WebClient webClient;
 
-    private final String username;
-
-    private final String password;
+    private final String queryParamsForLogin;
 
     LoginClient(HttpClient delegate, WebClient webClient, String username, String password) {
         super(delegate);
 
         this.delegate = requireNonNull(delegate, "delegate");
         this.webClient = requireNonNull(webClient, "webClient");
-        this.username = requireNonNull(username, "username");
-        this.password = requireNonNull(password, "password");
+        this.queryParamsForLogin = QueryParams.builder()
+                .add("username", requireNonNull(username, "username"))
+                .add("password", requireNonNull(password, "password"))
+                .toQueryString();
     }
 
     private CompletableFuture<String> login() {
@@ -101,11 +101,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
 
     private CompletableFuture<LoginResult> loginInternal() {
         return webClient.prepare().post("/v1/auth/login")
-                .content(MediaType.FORM_DATA,
-                        QueryParams.builder()
-                                .add("username", username)
-                                .add("password", password)
-                                .toQueryString())
+                .content(MediaType.FORM_DATA, queryParamsForLogin)
                 .asJson(LoginResult.class)
                 .as(HttpEntity::content)
                 .execute();
