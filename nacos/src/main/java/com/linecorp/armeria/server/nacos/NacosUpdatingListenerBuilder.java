@@ -69,7 +69,7 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters {
     NacosUpdatingListenerBuilder(URI nacosUri, String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
         checkArgument(!this.serviceName.isEmpty(), "serviceName can't be empty");
-        nacosClientBuilder = NacosClient.builder(nacosUri);
+        nacosClientBuilder = NacosClient.builder(nacosUri, serviceName);
     }
 
     /**

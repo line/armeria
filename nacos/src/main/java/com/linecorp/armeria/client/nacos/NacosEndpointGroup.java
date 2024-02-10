@@ -70,41 +70,17 @@ public class NacosEndpointGroup extends DynamicEndpointGroup {
 
     private final NacosClient nacosClient;
 
-    private final String serviceName;
-
     private final long registryFetchIntervalMillis;
-
-    @Nullable
-    private final String namespaceId;
-
-    @Nullable
-    private final String groupName;
-
-    @Nullable
-    private final String clusterName;
-
-    @Nullable
-    private final String app;
-
-    private final boolean useHealthyEndpoints;
 
     @Nullable
     private volatile ScheduledFuture<?> scheduledFuture;
 
     NacosEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
-                       long selectionTimeoutMillis, NacosClient nacosClient, String serviceName,
-                       long registryFetchIntervalMillis, @Nullable String namespaceId,
-                       @Nullable String groupName, @Nullable String clusterName,
-                       @Nullable String app, boolean useHealthyEndpoints) {
+                       long selectionTimeoutMillis, NacosClient nacosClient,
+                       long registryFetchIntervalMillis) {
         super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
         this.nacosClient = requireNonNull(nacosClient, "nacosClient");
-        this.serviceName = requireNonNull(serviceName, "serviceName");
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
-        this.namespaceId = namespaceId;
-        this.groupName = groupName;
-        this.clusterName = clusterName;
-        this.app = app;
-        this.useHealthyEndpoints = useHealthyEndpoints;
 
         update();
     }
@@ -118,8 +94,7 @@ public class NacosEndpointGroup extends DynamicEndpointGroup {
         final EventLoop eventLoop;
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            response = nacosClient.endpoints(serviceName, namespaceId, groupName, clusterName,
-                                             useHealthyEndpoints, app);
+            response = nacosClient.endpoints();
             eventLoop = captor.get().eventLoop().withoutContext();
         }
 
@@ -128,14 +103,12 @@ public class NacosEndpointGroup extends DynamicEndpointGroup {
                 return null;
             }
             if (cause != null) {
-                logger.warn("Unexpected exception while fetching the registry from: {}" +
-                        " (serviceName: {})", nacosClient.uri(), serviceName, cause);
+                logger.warn("Unexpected exception while fetching the registry from: {}", nacosClient.uri(), cause);
             } else {
                 setEndpoints(endpoints);
             }
 
-            scheduledFuture = eventLoop.schedule(this::update,
-                    registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
+            scheduledFuture = eventLoop.schedule(this::update, registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
             return null;
         });
     }
@@ -153,15 +126,7 @@ public class NacosEndpointGroup extends DynamicEndpointGroup {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                 .omitNullValues()
-                .add("serviceName", serviceName)
                 .add("registryFetchIntervalMillis", registryFetchIntervalMillis)
-                .add("namespaceId", namespaceId)
-                .add("groupName", groupName)
-                .add("clusterName", clusterName)
-                .add("app", app)
-                .add("useHealthyEndpoints", useHealthyEndpoints)
-                .add("clusterName", clusterName)
-                .add("serviceName", serviceName)
                 .toString();
     }
 }

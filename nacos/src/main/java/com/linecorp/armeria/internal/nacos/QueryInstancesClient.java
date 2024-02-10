@@ -40,42 +40,42 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class QueryInstancesClient {
 
-    static QueryInstancesClient of(NacosClient nacosClient, String nacosApiVersion) {
-        return new QueryInstancesClient(nacosClient, nacosApiVersion);
+    static QueryInstancesClient of(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+                                   @Nullable String namespaceId, @Nullable String groupName,
+                                   @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
+        return new QueryInstancesClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName, clusterName,
+                healthyOnly, app);
     }
 
     private final WebClient webClient;
 
-    private final String nacosApiVersion;
+    private final String pathForQuery;
 
-    QueryInstancesClient(NacosClient nacosClient, String nacosApiVersion) {
+    QueryInstancesClient(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+                         @Nullable String namespaceId, @Nullable String groupName,
+                         @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
         webClient = nacosClient.nacosWebClient();
-        this.nacosApiVersion = nacosApiVersion;
+
+        final StringBuilder pathBuilder = new StringBuilder("/").append(nacosApiVersion).append("/ns/instance/list?");
+        final QueryParamsBuilder paramsBuilder = NacosClientUtil
+                .queryParamsBuilder(namespaceId, groupName, requireNonNull(serviceName, "serviceName"),
+                        clusterName, healthyOnly, app, null, null, null);
+        pathBuilder.append(paramsBuilder.build().toQueryString());
+
+        this.pathForQuery = pathBuilder.toString();
     }
 
-    CompletableFuture<List<Endpoint>> endpoints(String serviceName, @Nullable String namespaceId,
-                                                @Nullable String groupName, @Nullable String clusterName,
-                                                @Nullable Boolean healthyOnly, @Nullable String app) {
-        requireNonNull(serviceName, "serviceName");
-        return queryInstances(serviceName, namespaceId, groupName, clusterName, healthyOnly, app)
+    CompletableFuture<List<Endpoint>> endpoints() {
+        return queryInstances()
                 .thenApply(response -> response.data.hosts.stream()
                         .map(QueryInstancesClient::toEndpoint)
                         .filter(Objects::nonNull)
                         .collect(toImmutableList()));
     }
 
-    CompletableFuture<QueryInstancesResponse> queryInstances(String serviceName, @Nullable String namespaceId,
-                                                 @Nullable String groupName, @Nullable String clusterName,
-                                                 @Nullable Boolean healthyOnly, @Nullable String app) {
-        requireNonNull(serviceName, "serviceName");
-        final StringBuilder path = new StringBuilder("/").append(nacosApiVersion).append("/ns/instance/list?");
-        final QueryParamsBuilder paramsBuilder = NacosClientUtil
-                .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, healthyOnly, app, null,
-                                    null, null);
-        path.append(paramsBuilder.build().toQueryString());
-
+    CompletableFuture<QueryInstancesResponse> queryInstances() {
         return webClient.prepare()
-                .get(path.toString())
+                .get(pathForQuery)
                 .asJson(QueryInstancesResponse.class)
                 .as(HttpEntity::content)
                 .execute();

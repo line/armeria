@@ -25,7 +25,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.nacos.NacosClient;
 import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
 
@@ -45,30 +44,13 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
 
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
-    private final String serviceName;
-
     private long registryFetchIntervalMillis = DEFAULT_CHECK_INTERVAL_MILLIS;
-
-    @Nullable
-    private String namespaceId;
-
-    @Nullable
-    private String groupName;
-
-    @Nullable
-    private String clusterName;
-
-    @Nullable
-    private String app;
-
-    private boolean useHealthyEndpoints;
 
     private final NacosClientBuilder nacosClientBuilder;
 
     NacosEndpointGroupBuilder(URI nacosUri, String serviceName) {
         super(Flags.defaultResponseTimeoutMillis());
-        this.serviceName = requireNonNull(serviceName, "serviceName");
-        nacosClientBuilder = NacosClient.builder(nacosUri);
+        nacosClientBuilder = NacosClient.builder(nacosUri, requireNonNull(serviceName, "serviceName"));
     }
 
     /**
@@ -85,7 +67,7 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
      * that match the specified 'namespaceId' value.
      */
     public NacosEndpointGroupBuilder namespaceId(String namespaceId) {
-        this.namespaceId = requireNonNull(namespaceId, "namespaceId");
+        nacosClientBuilder.namespaceId(namespaceId);
         return this;
     }
 
@@ -95,7 +77,7 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
      * that match the specified 'groupName' value.
      */
     public NacosEndpointGroupBuilder groupName(String groupName) {
-        this.groupName = requireNonNull(groupName);
+        nacosClientBuilder.groupName(groupName);
         return this;
     }
 
@@ -105,7 +87,7 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
      * that match the specified 'clusterName' value.
      */
     public NacosEndpointGroupBuilder clusterName(String clusterName) {
-        this.clusterName = requireNonNull(clusterName);
+        nacosClientBuilder.clusterName(clusterName);
         return this;
     }
 
@@ -115,7 +97,7 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
      * to query only instances that match the specified 'app' value.
      */
     public NacosEndpointGroupBuilder app(String app) {
-        this.app = requireNonNull(app);
+        nacosClientBuilder.app(app);
         return this;
     }
 
@@ -125,7 +107,7 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
      * If not set, false is used by default.
      */
     public NacosEndpointGroupBuilder useHealthyEndpoints(boolean useHealthyEndpoints) {
-        this.useHealthyEndpoints = useHealthyEndpoints;
+        nacosClientBuilder.healthyOnly(useHealthyEndpoints);
         return this;
     }
 
@@ -170,10 +152,8 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
      * Returns a newly-created {@link NacosEndpointGroup}.
      */
     public NacosEndpointGroup build() {
-        return new NacosEndpointGroup(selectionStrategy, shouldAllowEmptyEndpoints(),
-                                      selectionTimeoutMillis(), nacosClientBuilder.build(),
-                                      serviceName, registryFetchIntervalMillis, namespaceId,
-                                      groupName, clusterName, app, useHealthyEndpoints);
+        return new NacosEndpointGroup(selectionStrategy, shouldAllowEmptyEndpoints(), selectionTimeoutMillis(),
+                nacosClientBuilder.build(), registryFetchIntervalMillis);
     }
 
     @Override

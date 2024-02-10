@@ -38,8 +38,26 @@ public final class NacosClientBuilder implements NacosConfigSetters {
     @Nullable
     private String password;
 
-    NacosClientBuilder(URI nacosUri) {
+    final private String serviceName;
+
+    @Nullable
+    private String namespaceId;
+
+    @Nullable
+    private String groupName;
+
+    @Nullable
+    private String clusterName;
+
+    @Nullable
+    private Boolean healthyOnly;
+
+    @Nullable
+    private String app;
+
+    NacosClientBuilder(URI nacosUri, String serviceName) {
         this.nacosUri = requireNonNull(nacosUri, "nacosUri");
+        this.serviceName = requireNonNull(serviceName, "serviceName");
     }
 
     @Override
@@ -63,6 +81,36 @@ public final class NacosClientBuilder implements NacosConfigSetters {
         return this;
     }
 
+    public NacosClientBuilder namespaceId(String namespaceId) {
+        this.namespaceId = requireNonNull(namespaceId);
+
+        return this;
+    }
+
+    public NacosClientBuilder groupName(String groupName) {
+        this.groupName = requireNonNull(groupName);
+
+        return this;
+    }
+
+    public NacosClientBuilder clusterName(String clusterName) {
+        this.clusterName = requireNonNull(clusterName);
+
+        return this;
+    }
+
+    public NacosClientBuilder healthyOnly(Boolean healthyOnly) {
+        this.healthyOnly = requireNonNull(healthyOnly);
+
+        return this;
+    }
+
+    public NacosClientBuilder app(String app) {
+        this.app = requireNonNull(app);
+
+        return this;
+    }
+
     public NacosClient build() {
         final URI uri;
         try {
@@ -72,6 +120,7 @@ public final class NacosClientBuilder implements NacosConfigSetters {
             throw new IllegalArgumentException(e);
         }
 
-        return new NacosClient(uri, nacosApiVersion, username, password);
+        return new NacosClient(uri, nacosApiVersion, username, password, serviceName, namespaceId,
+                               groupName, clusterName, healthyOnly, app);
     }
 }

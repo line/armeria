@@ -37,8 +37,8 @@ public final class NacosClient {
                     .maxTotalAttempts(3)
                     .build());
 
-    public static NacosClientBuilder builder(URI nacosUri) {
-        return new NacosClientBuilder(nacosUri);
+    public static NacosClientBuilder builder(URI nacosUri, String serviceName) {
+        return new NacosClientBuilder(nacosUri, serviceName);
     }
 
     private final WebClient webClient;
@@ -47,7 +47,9 @@ public final class NacosClient {
 
     private final RegisterInstanceClient registerInstanceClient;
 
-    NacosClient(URI uri, String nacosApiVersion, @Nullable String username, @Nullable String password) {
+    NacosClient(URI uri, String nacosApiVersion, @Nullable String username, @Nullable String password,
+                String serviceName, @Nullable String namespaceId, @Nullable String groupName,
+                @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
         final WebClientBuilder builder = WebClient.builder(uri)
                 .decorator(retryingClientDecorator);
 
@@ -57,15 +59,13 @@ public final class NacosClient {
 
         webClient = builder.build();
 
-        queryInstancesClient = QueryInstancesClient.of(this, nacosApiVersion);
+        queryInstancesClient = QueryInstancesClient.of(this, nacosApiVersion, serviceName, namespaceId,
+                groupName, clusterName, healthyOnly, app);
         registerInstanceClient = RegisterInstanceClient.of(this, nacosApiVersion);
     }
 
-    public CompletableFuture<List<Endpoint>> endpoints(String serviceName, @Nullable String namespaceId,
-                                                       @Nullable String groupName, @Nullable String clusterName,
-                                                       @Nullable Boolean healthyOnly, @Nullable String app) {
-        return queryInstancesClient.endpoints(serviceName, namespaceId, groupName,
-                clusterName, healthyOnly, app);
+    public CompletableFuture<List<Endpoint>> endpoints() {
+        return queryInstancesClient.endpoints();
     }
 
     /**

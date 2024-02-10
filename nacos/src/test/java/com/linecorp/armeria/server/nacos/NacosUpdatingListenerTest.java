@@ -86,7 +86,7 @@ class NacosUpdatingListenerTest extends NacosTestBase {
     void testEndpointsCountOfListeningServiceWithAServerStopAndStart() {
         // Checks sample endpoints created when initialized.
         await().untilAsserted(() -> {
-            assertThat(client().endpoints(serviceName, null, null, null, null, null)
+            assertThat(client(null, null).endpoints()
                                .join()).hasSameSizeAs(sampleEndpoints);
         });
 
@@ -94,8 +94,8 @@ class NacosUpdatingListenerTest extends NacosTestBase {
         servers.get(0).stop().join();
 
         await().untilAsserted(() -> {
-            final List<Endpoint> results = client()
-                    .endpoints(serviceName, null, null, null, null, null).join();
+            final List<Endpoint> results = client(null, null)
+                    .endpoints().join();
             assertThat(results).hasSize(sampleEndpoints.size() - 1);
         });
 
@@ -103,7 +103,7 @@ class NacosUpdatingListenerTest extends NacosTestBase {
         servers.get(0).start().join();
 
         await().untilAsserted(() -> {
-            assertThat(client().endpoints(serviceName, null, null, null, null, null)
+            assertThat(client(null, null).endpoints()
                                .join()).hasSameSizeAs(sampleEndpoints);
         });
     }
@@ -127,9 +127,7 @@ class NacosUpdatingListenerTest extends NacosTestBase {
         server.addListener(listener);
         server.start().join();
         await().untilAsserted(() -> {
-            assertThat(client().endpoints("testThatGroupNameIsSpecified",
-                                          null, "groupName", null,
-                                          null, null).join())
+            assertThat(client("testThatGroupNameIsSpecified", "groupName").endpoints().join())
                     .hasSize(1);
         });
         server.stop();

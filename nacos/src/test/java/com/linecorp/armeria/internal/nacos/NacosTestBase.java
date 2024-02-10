@@ -77,25 +77,26 @@ public abstract class NacosTestBase {
 
     protected NacosTestBase() {}
 
-    @Nullable
-    private static NacosClient nacosClient;
-
     @BeforeAll
-    static void start() throws Throwable {
+    static void start() {
         // Initialize Nacos Client
         nacosUri = URI.create(
                 "http://" + nacosContainer.getHost() + ':' + nacosContainer.getMappedPort(8848));
-
-        nacosClient = NacosClient.builder(nacosUri)
-                .authorization(NACOS_AUTH_SECRET, NACOS_AUTH_SECRET)
-                .build();
     }
 
-    protected static NacosClient client() {
-        if (nacosClient == null) {
-            throw new IllegalStateException("nacos client has not initialized");
+    protected static NacosClient client(@Nullable String serviceName, @Nullable String groupName) {
+        final NacosClientBuilder builder;
+        if (serviceName != null) {
+            builder = NacosClient.builder(nacosUri, serviceName);
+        } else {
+            builder = NacosClient.builder(nacosUri, NacosTestBase.serviceName);
         }
-        return nacosClient;
+
+        if (groupName != null) {
+            builder.groupName(groupName);
+        }
+        return builder.authorization(NACOS_AUTH_SECRET, NACOS_AUTH_SECRET)
+                .build();
     }
 
     protected static URI nacosUri() {

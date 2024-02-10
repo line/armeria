@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.nacos;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
@@ -39,7 +40,8 @@ class NacosClientBuilderTest extends NacosTestBase {
     @Test
     void nacosApiVersionCanNotStartsWithSlash() {
         assertThrows(IllegalArgumentException.class, () ->
-                NacosClient.builder(URI.create("http://localhost:8500")).nacosApiVersion("/v1"));
-        NacosClient.builder(URI.create("http://localhost:8500")).nacosApiVersion("v1");
+                NacosClient.builder(URI.create("http://localhost:8500"), serviceName).nacosApiVersion("/v1"));
+        assertDoesNotThrow(() ->
+                NacosClient.builder(URI.create("http://localhost:8500"), serviceName).nacosApiVersion("v1"));
     }
 }
