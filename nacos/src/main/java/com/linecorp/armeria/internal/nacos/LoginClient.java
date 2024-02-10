@@ -18,7 +18,13 @@ package com.linecorp.armeria.internal.nacos;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.*;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -29,20 +35,16 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.HttpEntity;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A Nacos client that is responsible for
  * <a href="https://nacos.io/en-us/docs/auth.html">Nacos Authentication</a>.
  */
-final class LoginClient {
-
-    static LoginClient of(NacosClient nacosClient, String username, String password) {
-        return new LoginClient(nacosClient, username, password);
+final class LoginClient extends SimpleDecoratingHttpClient {
+    public static Function<? super HttpClient, LoginClient> newDecorator(WebClient webClient,
+                                                                         String username, String password) {
+        return delegate -> new LoginClient(delegate, webClient, username, password);
     }
 
     private static final String NACOS_ACCESS_TOKEN_CACHE_KEY = "NACOS_ACCESS_TOKEN_CACHE_KEY";
@@ -67,7 +69,15 @@ final class LoginClient {
                     return currentDuration;
                 }
             })
-            .buildAsync((key, executor) -> loginInternal());
+            .buildAsync((key, executor) -> {
+                try {
+                    return loginInternal();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+    private final HttpClient delegate;
 
     private final WebClient webClient;
 
@@ -75,15 +85,16 @@ final class LoginClient {
 
     private final String password;
 
-    LoginClient(NacosClient nacosClient, String username, String password) {
-        requireNonNull(nacosClient, "nacosClient");
-        webClient = nacosClient.nacosWebClient();
+    LoginClient(HttpClient delegate, WebClient webClient, String username, String password) {
+        super(delegate);
 
+        this.delegate = requireNonNull(delegate, "delegate");
+        this.webClient = requireNonNull(webClient, "webClient");
         this.username = requireNonNull(username, "username");
         this.password = requireNonNull(password, "password");
     }
 
-    public CompletableFuture<String> login() {
+    private CompletableFuture<String> login() {
         return tokenCache.get(NACOS_ACCESS_TOKEN_CACHE_KEY)
                 .thenApply(loginResult -> loginResult.accessToken);
     }
@@ -98,6 +109,21 @@ final class LoginClient {
                 .asJson(LoginResult.class)
                 .as(HttpEntity::content)
                 .execute();
+    }
+
+    @Override
+    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
+        CompletableFuture<HttpResponse> future = login().thenApply(accessToken -> {
+            try {
+                return delegate.execute(ctx, req.mapHeaders(headers -> headers.toBuilder()
+                        .set(HttpHeaderNames.AUTHORIZATION, "Bearer " + accessToken)
+                        .build()));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        return HttpResponse.of(future);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -51,17 +51,14 @@ public final class NacosClient {
         final WebClientBuilder builder = WebClient.builder(uri)
                 .decorator(retryingClientDecorator);
 
-        webClient = builder.build();
-
-        final LoginClient loginClient;
         if (username != null && password != null) {
-            loginClient = LoginClient.of(this, username, password);
-        } else {
-            loginClient = null;
+            builder.decorator(LoginClient.newDecorator(builder.build(), username, password));
         }
 
-        queryInstancesClient = QueryInstancesClient.of(this, loginClient, nacosApiVersion);
-        registerInstanceClient = RegisterInstanceClient.of(this, loginClient, nacosApiVersion);
+        webClient = builder.build();
+
+        queryInstancesClient = QueryInstancesClient.of(this, nacosApiVersion);
+        registerInstanceClient = RegisterInstanceClient.of(this, nacosApiVersion);
     }
 
     public CompletableFuture<List<Endpoint>> endpoints(String serviceName, @Nullable String namespaceId,

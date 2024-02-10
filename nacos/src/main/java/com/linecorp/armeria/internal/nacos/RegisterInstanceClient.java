@@ -29,22 +29,17 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class RegisterInstanceClient {
 
-    static RegisterInstanceClient of(NacosClient nacosClient, @Nullable LoginClient loginClient,
+    static RegisterInstanceClient of(NacosClient nacosClient,
                                      String nacosApiVersion) {
-        return new RegisterInstanceClient(nacosClient, loginClient, nacosApiVersion);
+        return new RegisterInstanceClient(nacosClient, nacosApiVersion);
     }
 
     private final WebClient webClient;
 
-    @Nullable
-    private final LoginClient loginClient;
-
     private final String instanceApiPath;
 
-    RegisterInstanceClient(NacosClient nacosClient, @Nullable LoginClient loginClient,
-                           String nacosApiVersion) {
+    RegisterInstanceClient(NacosClient nacosClient, String nacosApiVersion) {
         webClient = nacosClient.nacosWebClient();
-        this.loginClient = loginClient;
         instanceApiPath = new StringBuilder("/").append(nacosApiVersion).append("/ns/instance").toString();
     }
 
@@ -60,26 +55,10 @@ final class RegisterInstanceClient {
                 .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, null, app,
                                     ip, port, weight);
 
-        if (loginClient == null) {
-            return webClient.prepare()
-                            .post(instanceApiPath)
-                            .content(MediaType.FORM_DATA, paramsBuilder.toQueryString())
-                            .execute();
-        } else {
-            return HttpResponse.of(
-                    loginClient.login()
-                               .thenApply(accessToken -> {
-                                   final String paramsWithToken = paramsBuilder
-                                           .add("accessToken", accessToken)
-                                           .build()
-                                           .toQueryString();
-                                   return webClient.prepare()
-                                            .post(instanceApiPath)
-                                            .content(MediaType.FORM_DATA, paramsWithToken)
-                                            .execute();
-                               })
-            );
-        }
+        return webClient.prepare()
+                .post(instanceApiPath)
+                .content(MediaType.FORM_DATA, paramsBuilder.toQueryString())
+                .execute();
     }
 
     /**
@@ -94,25 +73,9 @@ final class RegisterInstanceClient {
                 .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, null, app,
                                     ip, port, weight);
 
-        if (loginClient == null) {
-            return webClient.prepare()
-                            .delete(instanceApiPath)
-                            .content(MediaType.FORM_DATA, paramsBuilder.build().toQueryString())
-                            .execute();
-        } else {
-            return HttpResponse.of(
-                    loginClient.login()
-                               .thenApply(accessToken -> {
-                                   final String paramsWithToken = paramsBuilder
-                                           .add("accessToken", accessToken)
-                                           .build()
-                                           .toQueryString();
-                                   return webClient.prepare()
-                                            .delete(instanceApiPath)
-                                            .content(MediaType.FORM_DATA, paramsWithToken)
-                                            .execute();
-                               })
-            );
-        }
+        return webClient.prepare()
+                .delete(instanceApiPath)
+                .content(MediaType.FORM_DATA, paramsBuilder.build().toQueryString())
+                .execute();
     }
 }

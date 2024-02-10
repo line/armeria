@@ -40,22 +40,16 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class QueryInstancesClient {
 
-    static QueryInstancesClient of(NacosClient nacosClient, @Nullable LoginClient loginClient,
-                                   String nacosApiVersion) {
-        return new QueryInstancesClient(nacosClient, loginClient, nacosApiVersion);
+    static QueryInstancesClient of(NacosClient nacosClient, String nacosApiVersion) {
+        return new QueryInstancesClient(nacosClient, nacosApiVersion);
     }
 
     private final WebClient webClient;
 
-    @Nullable
-    private final LoginClient loginClient;
-
     private final String nacosApiVersion;
 
-    QueryInstancesClient(NacosClient nacosClient, @Nullable LoginClient loginClient,
-                         String nacosApiVersion) {
+    QueryInstancesClient(NacosClient nacosClient, String nacosApiVersion) {
         webClient = nacosClient.nacosWebClient();
-        this.loginClient = loginClient;
         this.nacosApiVersion = nacosApiVersion;
     }
 
@@ -79,21 +73,12 @@ final class QueryInstancesClient {
                 .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, healthyOnly, app, null,
                                     null, null);
         path.append(paramsBuilder.build().toQueryString());
-        if (loginClient == null) {
-            return webClient.prepare()
-                    .get(path.toString())
-                    .asJson(QueryInstancesResponse.class)
-                    .as(HttpEntity::content)
-                    .execute();
-        } else {
-            return loginClient.login().thenCompose(accessToken ->
-                    webClient.prepare()
-                            .get(path.append("&accessToken=").append(accessToken).toString())
-                            .asJson(QueryInstancesResponse.class)
-                            .as(HttpEntity::content)
-                            .execute()
-            );
-        }
+
+        return webClient.prepare()
+                .get(path.toString())
+                .asJson(QueryInstancesResponse.class)
+                .as(HttpEntity::content)
+                .execute();
     }
 
     @Nullable
