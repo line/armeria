@@ -31,7 +31,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpEntity;
-import com.linecorp.armeria.common.QueryParamsBuilder;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -57,10 +57,10 @@ final class QueryInstancesClient {
         webClient = nacosClient.nacosWebClient();
 
         final StringBuilder pathBuilder = new StringBuilder("/").append(nacosApiVersion).append("/ns/instance/list?");
-        final QueryParamsBuilder paramsBuilder = NacosClientUtil
-                .queryParamsBuilder(namespaceId, groupName, requireNonNull(serviceName, "serviceName"),
+        final QueryParams params = NacosClientUtil
+                .queryParams(namespaceId, groupName, requireNonNull(serviceName, "serviceName"),
                         clusterName, healthyOnly, app, null, null, null);
-        pathBuilder.append(paramsBuilder.build().toQueryString());
+        pathBuilder.append(params.toQueryString());
 
         this.pathForQuery = pathBuilder.toString();
     }

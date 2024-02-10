@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.QueryParamsBuilder;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -71,13 +71,13 @@ final class RegisterInstanceClient {
      * Registers a service into the Nacos.
      */
     HttpResponse register(String ip, int port, int weight) {
-        final QueryParamsBuilder paramsBuilder = NacosClientUtil
-                .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, null, app,
+        final QueryParams params = NacosClientUtil
+                .queryParams(namespaceId, groupName, serviceName, clusterName, null, app,
                         requireNonNull(ip, "ip"), port, weight);
 
         return webClient.prepare()
                 .post(instanceApiPath)
-                .content(MediaType.FORM_DATA, paramsBuilder.build().toQueryString())
+                .content(MediaType.FORM_DATA, params.toQueryString())
                 .execute();
     }
 
@@ -85,13 +85,13 @@ final class RegisterInstanceClient {
      * De-registers a service from the Nacos.
      */
     HttpResponse deregister(String ip, int port, int weight) {
-        final QueryParamsBuilder paramsBuilder = NacosClientUtil
-                .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, null, app,
+        final QueryParams params = NacosClientUtil
+                .queryParams(namespaceId, groupName, serviceName, clusterName, null, app,
                         requireNonNull(ip, "ip"), port, weight);
 
         return webClient.prepare()
                 .delete(instanceApiPath)
-                .content(MediaType.FORM_DATA, paramsBuilder.build().toQueryString())
+                .content(MediaType.FORM_DATA, params.toQueryString())
                 .execute();
     }
 }
