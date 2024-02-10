@@ -54,41 +54,20 @@ public class NacosUpdatingListener extends ServerListenerAdapter {
 
     private final NacosClient nacosClient;
 
-    private final String serviceName;
-
     @Nullable
     private final Endpoint endpoint;
 
-    @Nullable
-    private final String namespaceId;
-
-    @Nullable
-    private final String groupName;
-
-    @Nullable
-    private final String clusterName;
-
-    @Nullable
-    private final String app;
-
     private volatile boolean isRegistered;
 
-    NacosUpdatingListener(NacosClient nacosClient, String serviceName, @Nullable Endpoint endpoint,
-                          @Nullable String namespaceId, @Nullable String groupName,
-                          @Nullable String clusterName, @Nullable String app) {
+    NacosUpdatingListener(NacosClient nacosClient, @Nullable Endpoint endpoint) {
         this.nacosClient = requireNonNull(nacosClient, "nacosClient");
-        this.serviceName = requireNonNull(serviceName, "serviceName");
         this.endpoint = endpoint;
-        this.namespaceId = namespaceId;
-        this.groupName = groupName;
-        this.clusterName = clusterName;
-        this.app = app;
     }
 
     @Override
-    public void serverStarted(Server server) throws Exception {
+    public void serverStarted(Server server) {
         final Endpoint endpoint = getEndpoint(server);
-        nacosClient.register(serviceName, endpoint, namespaceId, groupName, clusterName, app)
+        nacosClient.register(endpoint)
                 .aggregate()
                 .handle((res, cause) -> {
                     if (cause != null) {
@@ -144,7 +123,7 @@ public class NacosUpdatingListener extends ServerListenerAdapter {
     public void serverStopping(Server server) {
         final Endpoint endpoint = getEndpoint(server);
         if (isRegistered) {
-            nacosClient.deregister(serviceName, endpoint, namespaceId, groupName, clusterName, app)
+            nacosClient.deregister(endpoint)
                     .aggregate()
                     .handle((res, cause) -> {
                         if (cause != null) {

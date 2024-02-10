@@ -46,18 +46,6 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters {
     @Nullable
     private Endpoint endpoint;
 
-    @Nullable
-    private String namespaceId;
-
-    @Nullable
-    private String groupName;
-
-    @Nullable
-    private String clusterName;
-
-    @Nullable
-    private String app;
-
     private final NacosClientBuilder nacosClientBuilder;
 
     /**
@@ -88,7 +76,7 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters {
      * @param namespaceId the namespace ID to register.
      */
     public NacosUpdatingListenerBuilder namespaceId(String namespaceId) {
-        this.namespaceId = requireNonNull(namespaceId, "namespaceId");
+        nacosClientBuilder.namespaceId(namespaceId);
         return this;
     }
 
@@ -98,7 +86,7 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters {
      * @param groupName the group name of the instance.
      */
     public NacosUpdatingListenerBuilder groupName(String groupName) {
-        this.groupName = requireNonNull(groupName, "groupName");
+        nacosClientBuilder.groupName(groupName);
         return this;
     }
 
@@ -108,7 +96,7 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters {
      * @param clusterName the cluster name of the instance.
      */
     public NacosUpdatingListenerBuilder clusterName(String clusterName) {
-        this.clusterName = requireNonNull(clusterName, "clusterName");
+        nacosClientBuilder.clusterName(clusterName);
         return this;
     }
 
@@ -118,7 +106,7 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters {
      * @param app app name of the instance.
      */
     public NacosUpdatingListenerBuilder app(String app) {
-        this.app = requireNonNull(app, "app");
+        nacosClientBuilder.app(app);
         return this;
     }
 
@@ -139,7 +127,6 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters {
      * Nacos when the {@link Server} starts.
      */
     public NacosUpdatingListener build() {
-        return new NacosUpdatingListener(nacosClientBuilder.build(), serviceName, endpoint, namespaceId,
-                                         groupName, clusterName, app);
+        return new NacosUpdatingListener(nacosClientBuilder.build(), endpoint);
     }
 }

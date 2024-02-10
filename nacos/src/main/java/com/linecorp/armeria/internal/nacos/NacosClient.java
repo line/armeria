@@ -61,7 +61,8 @@ public final class NacosClient {
 
         queryInstancesClient = QueryInstancesClient.of(this, nacosApiVersion, serviceName, namespaceId,
                 groupName, clusterName, healthyOnly, app);
-        registerInstanceClient = RegisterInstanceClient.of(this, nacosApiVersion);
+        registerInstanceClient = RegisterInstanceClient.of(this, nacosApiVersion, serviceName, namespaceId,
+                groupName, clusterName, app);
     }
 
     public CompletableFuture<List<Endpoint>> endpoints() {
@@ -71,37 +72,21 @@ public final class NacosClient {
     /**
      * Registers a instance to Nacos with service name.
      *
-     * @param serviceName a service name that identifying a service.
      * @param endpoint an endpoint of service to register
-     * @param namespaceId the namespace ID of the service instance.
-     * @param groupName the group name of the service.
-     * @param clusterName the cluster name of the service.
-     * @param app the application name associated with the service.
      * @return a {@link HttpResponse} indicating the result of the registration operation.
      */
-    public HttpResponse register(String serviceName, Endpoint endpoint, @Nullable String namespaceId,
-                                 @Nullable String groupName, @Nullable String clusterName,
-                                 @Nullable String app) {
-        return registerInstanceClient.register(serviceName, endpoint.host(), endpoint.port(), endpoint.weight(),
-                                               namespaceId, groupName, clusterName, app);
+    public HttpResponse register(Endpoint endpoint) {
+        return registerInstanceClient.register(endpoint.host(), endpoint.port(), endpoint.weight());
     }
 
     /**
      * De-registers a instance to Nacos with service name.
      *
-     * @param serviceName a service name that identifying a service.
      * @param endpoint an endpoint of service to register
-     * @param namespaceId the namespace ID of the service instance.
-     * @param groupName the group name of the service.
-     * @param clusterName the cluster name of the service.
-     * @param app the application name associated with the service.
      * @return a {@link HttpResponse} indicating the result of the de-registration operation.
      */
-    public HttpResponse deregister(String serviceName, Endpoint endpoint, @Nullable String namespaceId,
-                                   @Nullable String groupName, @Nullable String clusterName,
-                                   @Nullable String app) {
-        return registerInstanceClient.deregister(serviceName, endpoint.host(), endpoint.port(),
-                                                 endpoint.weight(), namespaceId, groupName, clusterName, app);
+    public HttpResponse deregister(Endpoint endpoint) {
+        return registerInstanceClient.deregister(endpoint.host(), endpoint.port(), endpoint.weight());
     }
 
     /**

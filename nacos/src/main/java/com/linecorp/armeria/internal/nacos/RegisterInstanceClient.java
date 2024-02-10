@@ -29,49 +29,65 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class RegisterInstanceClient {
 
-    static RegisterInstanceClient of(NacosClient nacosClient,
-                                     String nacosApiVersion) {
-        return new RegisterInstanceClient(nacosClient, nacosApiVersion);
+    static RegisterInstanceClient of(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+                                     @Nullable String namespaceId, @Nullable String groupName,
+                                     @Nullable String clusterName, @Nullable String app) {
+        return new RegisterInstanceClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName,
+                clusterName, app);
     }
 
     private final WebClient webClient;
 
     private final String instanceApiPath;
 
-    RegisterInstanceClient(NacosClient nacosClient, String nacosApiVersion) {
+    private final String serviceName;
+
+    @Nullable
+    private final String namespaceId;
+
+    @Nullable
+    private final String groupName;
+
+    @Nullable
+    private final String clusterName;
+
+    @Nullable
+    private final String app;
+
+    RegisterInstanceClient(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+                           @Nullable String namespaceId, @Nullable String groupName,
+                           @Nullable String clusterName, @Nullable String app) {
         webClient = nacosClient.nacosWebClient();
         instanceApiPath = new StringBuilder("/").append(nacosApiVersion).append("/ns/instance").toString();
+
+        this.serviceName = requireNonNull(serviceName, "serviceName");
+        this.namespaceId = namespaceId;
+        this.groupName = groupName;
+        this.clusterName = clusterName;
+        this.app = app;
     }
 
     /**
      * Registers a service into the Nacos.
      */
-    HttpResponse register(String serviceName, String ip, int port, int weight, @Nullable String namespaceId,
-                          @Nullable String groupName, @Nullable String clusterName, @Nullable String app) {
-        requireNonNull(serviceName, "serviceName");
-        requireNonNull(ip, "ip");
-
+    HttpResponse register(String ip, int port, int weight) {
         final QueryParamsBuilder paramsBuilder = NacosClientUtil
                 .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, null, app,
-                                    ip, port, weight);
+                        requireNonNull(ip, "ip"), port, weight);
 
         return webClient.prepare()
                 .post(instanceApiPath)
-                .content(MediaType.FORM_DATA, paramsBuilder.toQueryString())
+                .content(MediaType.FORM_DATA, paramsBuilder.build().toQueryString())
                 .execute();
     }
 
     /**
      * De-registers a service from the Nacos.
      */
-    HttpResponse deregister(String serviceName, String ip, int port, int weight, @Nullable String namespaceId,
-                            @Nullable String groupName, @Nullable String clusterName, @Nullable String app) {
-        requireNonNull(serviceName, "serviceName");
-        requireNonNull(ip, "ip");
-
+    HttpResponse deregister(String ip, int port, int weight) {
         final QueryParamsBuilder paramsBuilder = NacosClientUtil
                 .queryParamsBuilder(namespaceId, groupName, serviceName, clusterName, null, app,
-                                    ip, port, weight);
+                        requireNonNull(ip, "ip"), port, weight);
 
         return webClient.prepare()
                 .delete(instanceApiPath)
