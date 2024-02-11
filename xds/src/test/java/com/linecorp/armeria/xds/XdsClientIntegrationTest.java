@@ -80,7 +80,7 @@ class XdsClientIntegrationTest {
 
             // Updates are propagated for the initial value
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
 
             // Updates are propagated if the cache is updated
             cache.setSnapshot(
@@ -91,7 +91,7 @@ class XdsClientIntegrationTest {
                             ImmutableList.of(), "2"));
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expectedCluster2 = cache.getSnapshot(GROUP).clusters().resources().get(clusterName);
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster2);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster2);
 
             // Updates aren't propagated after the watch is removed
             clusterRoot.close();
@@ -118,7 +118,7 @@ class XdsClientIntegrationTest {
 
             // Updates are propagated for the initial value
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
 
             // Updates are propagated if the cache is updated
             cache.setSnapshot(
@@ -131,16 +131,17 @@ class XdsClientIntegrationTest {
                             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "2"));
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expectedCluster2 = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster2);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster2);
 
             final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot("cluster2");
             clusterRoot2.addSnapshotWatcher(watcher);
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expectedCluster3 = cache.getSnapshot(GROUP).clusters().resources().get("cluster2");
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster3);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster3);
 
             // try removing the watcher for cluster1
             clusterRoot.close();
+            await().untilAsserted(() -> assertThat(clusterRoot.closed()).isTrue());
 
             cache.setSnapshot(
                     GROUP,
@@ -152,7 +153,7 @@ class XdsClientIntegrationTest {
                             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), "3"));
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expectedCluster4 = cache.getSnapshot(GROUP).clusters().resources().get("cluster2");
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster4);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster4);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -170,13 +171,13 @@ class XdsClientIntegrationTest {
             // Updates are propagated for the initial value
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
             ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
 
             // add another watcher and check that the event is propagated immediately
             final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot("cluster1");
             clusterRoot2.addSnapshotWatcher(watcher);
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
@@ -195,7 +196,7 @@ class XdsClientIntegrationTest {
 
             // Updates are propagated for the initial value
             final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
 
             // abort the current connection
             final ServiceRequestContextCaptor captor = server.requestContextCaptor();
@@ -211,7 +212,7 @@ class XdsClientIntegrationTest {
                             ImmutableList.of(), "2"));
             clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             final Cluster expectedCluster2 = cache.getSnapshot(GROUP).clusters().resources().get("cluster1");
-            assertThat(clusterSnapshot.holder().resource()).isEqualTo(expectedCluster2);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster2);
 
             await().pollDelay(100, TimeUnit.MILLISECONDS)
                    .untilAsserted(() -> assertThat(watcher.events()).isEmpty());

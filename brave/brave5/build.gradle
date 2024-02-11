@@ -1,0 +1,26 @@
+dependencies {
+    api libs.brave5
+    api libs.brave5.instrumentation.http
+
+    if (project.ext.targetJavaVersion >= 11) {
+        testImplementation project(':thrift0.18')
+    } else {
+        testImplementation project(':thrift0.17')
+    }
+
+    testImplementation libs.brave5.context.slf4j
+    testImplementation libs.brave5.instrumentation.http.tests
+}
+
+def brave6ProjectDir = "${rootProject.projectDir}/brave/brave6"
+tasks.compileJava.source "${brave6ProjectDir}/src/main/java"
+tasks.processResources.from "${brave6ProjectDir}/src/main/resources"
+tasks.compileTestJava.source "${brave6ProjectDir}/src/test/java"
+tasks.processTestResources.from "${brave6ProjectDir}/src/test/resources"
+tasks.sourcesJar.from "${brave6ProjectDir}/src/main/java"
+tasks.sourcesJar.from "${brave6ProjectDir}/src/main/resources"
+tasks.javadoc.source "${brave6ProjectDir}/src/main/java"
+
+ext {
+    testThriftSrcDirs = ["$brave6ProjectDir/src/test/thrift"]
+}

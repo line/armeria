@@ -19,7 +19,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.util.concurrent.TimeUnit
 
 class HelloServiceTest {
-
     @ParameterizedTest
     @MethodSource("uris")
     fun reply(uri: String) {
@@ -102,7 +101,6 @@ class HelloServiceTest {
     }
 
     companion object {
-
         private lateinit var server: Server
         private lateinit var blockingServer: Server
         private lateinit var helloService: HelloServiceCoroutineStub
@@ -126,8 +124,9 @@ class HelloServiceTest {
         }
 
         @JvmStatic
-        fun uris() = listOf(protoUri(), jsonUri(), blockingProtoUri(), blockingJsonUri())
-            .map { Arguments.of(it) }
+        fun uris() =
+            listOf(protoUri(), jsonUri(), blockingProtoUri(), blockingJsonUri())
+                .map { Arguments.of(it) }
 
         private fun protoUri(): String {
             return "gproto+http://127.0.0.1:" + server.activeLocalPort() + '/'

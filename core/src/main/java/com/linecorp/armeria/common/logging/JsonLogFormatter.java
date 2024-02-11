@@ -29,7 +29,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -46,17 +45,13 @@ final class JsonLogFormatter implements LogFormatter {
 
     static final LogFormatter DEFAULT_INSTANCE = new JsonLogFormatterBuilder().build();
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable JsonNode>
-            requestHeadersSanitizer;
+    private final HeadersSanitizer<JsonNode> requestHeadersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable JsonNode>
-            responseHeadersSanitizer;
+    private final HeadersSanitizer<JsonNode> responseHeadersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable JsonNode>
-            requestTrailersSanitizer;
+    private final HeadersSanitizer<JsonNode> requestTrailersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable JsonNode>
-            responseTrailersSanitizer;
+    private final HeadersSanitizer<JsonNode> responseTrailersSanitizer;
 
     private final BiFunction<? super RequestContext, Object, ? extends @Nullable JsonNode>
             requestContentSanitizer;
@@ -67,14 +62,10 @@ final class JsonLogFormatter implements LogFormatter {
     private final ObjectMapper objectMapper;
 
     JsonLogFormatter(
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable JsonNode> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable JsonNode> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable JsonNode> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable JsonNode> responseTrailersSanitizer,
+            HeadersSanitizer<JsonNode> requestHeadersSanitizer,
+            HeadersSanitizer<JsonNode> responseHeadersSanitizer,
+            HeadersSanitizer<JsonNode> requestTrailersSanitizer,
+            HeadersSanitizer<JsonNode> responseTrailersSanitizer,
             BiFunction<? super RequestContext, Object, ? extends @Nullable JsonNode> requestContentSanitizer,
             BiFunction<? super RequestContext, Object, ? extends @Nullable JsonNode> responseContentSanitizer,
             ObjectMapper objectMapper) {

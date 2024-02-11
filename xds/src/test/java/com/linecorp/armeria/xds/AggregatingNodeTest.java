@@ -195,7 +195,7 @@ class AggregatingNodeTest {
             await().untilAsserted(() -> assertThat(snapshotRef).isNotEmpty());
 
             final ListenerSnapshot listenerSnapshot = snapshotRef.removeFirst();
-            assertThat(listenerSnapshot.holder().resource())
+            assertThat(listenerSnapshot.xdsResource().resource())
                     .isEqualTo(cache.getSnapshot(GROUP).listeners().resources().get(listenerName));
             assertThat(listenerSnapshot.routeSnapshot()).isNull();
             await().pollDelay(100, TimeUnit.MILLISECONDS)
@@ -207,15 +207,15 @@ class AggregatingNodeTest {
         final Snapshot snapshot = cache.getSnapshot(GROUP);
 
         // verify cluster
-        assertThat(clusterSnapshot.holder().resource())
+        assertThat(clusterSnapshot.xdsResource().resource())
                 .isEqualTo(snapshot.clusters().resources().get(clusterName));
 
         // verify endpoint
-        if (clusterSnapshot.holder().resource().getType() == DiscoveryType.STATIC) {
-            assertThat(clusterSnapshot.endpointSnapshot().holder().resource())
+        if (clusterSnapshot.xdsResource().resource().getType() == DiscoveryType.STATIC) {
+            assertThat(clusterSnapshot.endpointSnapshot().xdsResource().resource())
                     .isEqualTo(snapshot.clusters().resources().get(clusterName).getLoadAssignment());
         } else {
-            assertThat(clusterSnapshot.endpointSnapshot().holder().resource())
+            assertThat(clusterSnapshot.endpointSnapshot().xdsResource().resource())
                     .isEqualTo(snapshot.endpoints().resources().get(clusterName));
         }
     }
@@ -223,28 +223,28 @@ class AggregatingNodeTest {
     private static void assertListenerSnapshot(ListenerSnapshot listenerSnapshot, String listenerName) {
         final Snapshot snapshot = cache.getSnapshot(GROUP);
         // verify listener
-        assertThat(listenerSnapshot.holder().resource())
+        assertThat(listenerSnapshot.xdsResource().resource())
                 .isEqualTo(snapshot.listeners().resources().get(listenerName));
 
         // verify route
         final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
-        final String routeName = routeSnapshot.holder().resource().getName();
-        final RouteConfiguration snapshotRouteConfiuration = snapshot.routes().resources().get(routeName);
-        assertThat(routeSnapshot.holder().resource()).isEqualTo(snapshotRouteConfiuration);
+        final String routeName = routeSnapshot.xdsResource().resource().getName();
+        final RouteConfiguration snapshotRouteConfiguration = snapshot.routes().resources().get(routeName);
+        assertThat(routeSnapshot.xdsResource().resource()).isEqualTo(snapshotRouteConfiguration);
 
         int i = 0;
         for (Entry<VirtualHost, List<ClusterSnapshot>> e : routeSnapshot.virtualHostMap().entrySet()) {
-            final VirtualHost snapshotVirtualHost = snapshotRouteConfiuration.getVirtualHosts(i++);
+            final VirtualHost snapshotVirtualHost = snapshotRouteConfiguration.getVirtualHosts(i++);
             assertThat(e.getKey()).isEqualTo(snapshotVirtualHost);
             final List<ClusterSnapshot> clusterSnapshots = e.getValue();
             for (int j = 0; j < clusterSnapshots.size(); j++) {
                 final ClusterSnapshot clusterSnapshot = clusterSnapshots.get(j);
                 assertThat(clusterSnapshot.route()).isEqualTo(snapshotVirtualHost.getRoutes(j));
-                final String clusterName = clusterSnapshot.holder().resource().getName();
-                assertThat(clusterSnapshot.holder().resource())
+                final String clusterName = clusterSnapshot.xdsResource().resource().getName();
+                assertThat(clusterSnapshot.xdsResource().resource())
                         .isEqualTo(snapshot.clusters().resources().get(clusterName));
                 final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-                assertThat(endpointSnapshot.holder().resource())
+                assertThat(endpointSnapshot.xdsResource().resource())
                         .isEqualTo(snapshot.endpoints().resources().get(clusterName));
             }
         }

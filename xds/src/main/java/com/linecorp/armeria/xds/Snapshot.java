@@ -16,14 +16,17 @@
 
 package com.linecorp.armeria.xds;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A snapshot of the resource.
  */
+@UnstableApi
 @FunctionalInterface
-public interface Snapshot<T extends ResourceHolder> {
+public interface Snapshot<T extends XdsResource> {
 
     /**
-     * Returns the {@link ResourceHolder} of the current snapshot.
+     * Returns the {@link XdsResource} of the current snapshot.
      */
-    T holder();
+    T xdsResource();
 }

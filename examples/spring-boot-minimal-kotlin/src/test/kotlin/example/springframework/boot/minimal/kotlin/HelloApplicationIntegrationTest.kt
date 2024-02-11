@@ -12,8 +12,9 @@ import org.springframework.test.context.ActiveProfiles
 
 @ActiveProfiles("testbed")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
-class HelloApplicationIntegrationTest(@Autowired server: Server) {
-
+class HelloApplicationIntegrationTest(
+    @Autowired server: Server,
+) {
     private val client: WebClient = WebClient.of("http://localhost:" + server.activeLocalPort())
 
     @Test

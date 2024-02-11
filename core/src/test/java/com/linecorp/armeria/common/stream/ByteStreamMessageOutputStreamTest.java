@@ -24,6 +24,7 @@ import static org.awaitility.Awaitility.await;
 import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -175,6 +176,12 @@ class ByteStreamMessageOutputStreamTest {
         StepVerifier.create(byteStreamMessage, 2)
                     .expectNext(httpData(0), httpData(1))
                     .then(byteStreamMessage::abort)
+                    .then(() -> {
+                        // Wait for the abortion to be completed.
+                        assertThatThrownBy(() -> byteStreamMessage.whenComplete().join())
+                                .isInstanceOf(CompletionException.class)
+                                .hasCauseInstanceOf(AbortedStreamException.class);
+                    })
                     .then(wait::countDown)
                     .verifyError(AbortedStreamException.class);
         end.await();
