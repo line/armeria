@@ -103,12 +103,14 @@ public class NacosEndpointGroup extends DynamicEndpointGroup {
                 return null;
             }
             if (cause != null) {
-                logger.warn("Unexpected exception while fetching the registry from: {}", nacosClient.uri(), cause);
+                logger.warn("Unexpected exception while fetching the registry from: {}",
+                            nacosClient.uri(), cause);
             } else {
                 setEndpoints(endpoints);
             }
 
-            scheduledFuture = eventLoop.schedule(this::update, registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
+            scheduledFuture = eventLoop.schedule(this::update,
+                                                 registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
             return null;
         });
     }

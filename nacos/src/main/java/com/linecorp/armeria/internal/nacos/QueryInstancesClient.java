@@ -42,9 +42,10 @@ final class QueryInstancesClient {
 
     static QueryInstancesClient of(NacosClient nacosClient, String nacosApiVersion, String serviceName,
                                    @Nullable String namespaceId, @Nullable String groupName,
-                                   @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
-        return new QueryInstancesClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName, clusterName,
-                healthyOnly, app);
+                                   @Nullable String clusterName, @Nullable Boolean healthyOnly,
+                                   @Nullable String app) {
+        return new QueryInstancesClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName,
+                                        clusterName, healthyOnly, app);
     }
 
     private final WebClient webClient;
@@ -56,7 +57,9 @@ final class QueryInstancesClient {
                          @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
         webClient = nacosClient.nacosWebClient();
 
-        final StringBuilder pathBuilder = new StringBuilder("/").append(nacosApiVersion).append("/ns/instance/list?");
+        final StringBuilder pathBuilder = new StringBuilder("/")
+                .append(nacosApiVersion)
+                .append("/ns/instance/list?");
         final QueryParams params = NacosClientUtil
                 .queryParams(namespaceId, groupName, requireNonNull(serviceName, "serviceName"),
                         clusterName, healthyOnly, app, null, null, null);

@@ -38,7 +38,7 @@ public final class NacosClientBuilder implements NacosConfigSetters {
     @Nullable
     private String password;
 
-    final private String serviceName;
+    private final String serviceName;
 
     @Nullable
     private String namespaceId;

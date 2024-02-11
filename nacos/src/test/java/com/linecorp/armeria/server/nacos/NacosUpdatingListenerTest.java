@@ -27,8 +27,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.internal.nacos.NacosTestBase;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
@@ -42,7 +40,7 @@ class NacosUpdatingListenerTest extends NacosTestBase {
     private static volatile List<Endpoint> sampleEndpoints;
 
     @BeforeAll
-    static void startServers() throws JsonProcessingException {
+    static void startServers() {
 
         await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
             assertThatCode(() -> {
@@ -69,7 +67,7 @@ class NacosUpdatingListenerTest extends NacosTestBase {
     }
 
     @AfterAll
-    static void stopServers() throws Exception {
+    static void stopServers() {
         servers.forEach(Server::close);
         servers.clear();
     }
