@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 
 /**
@@ -30,9 +31,11 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
     private final ListenerResourceNode node;
 
-    ListenerRoot(XdsBootstrapImpl xdsBootstrap, String resourceName) {
+    ListenerRoot(XdsBootstrapImpl xdsBootstrap, ConfigSourceMapper configSourceMapper, String resourceName) {
         super(xdsBootstrap.eventLoop());
-        node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.DYNAMIC);
+        final ConfigSource configSource = configSourceMapper.ldsConfigSource(null, null);
+        node = new ListenerResourceNode(configSource, resourceName, xdsBootstrap,
+                                        this, ResourceNodeType.DYNAMIC);
         xdsBootstrap.subscribe(node);
     }
 

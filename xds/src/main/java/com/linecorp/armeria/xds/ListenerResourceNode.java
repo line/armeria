@@ -54,7 +54,8 @@ final class ListenerResourceNode extends AbstractResourceNode<ListenerXdsResourc
             if (connectionManager.hasRds()) {
                 final Rds rds = connectionManager.getRds();
                 final String routeName = rds.getRouteConfigName();
-                final ConfigSource configSource = rds.getConfigSource();
+                final ConfigSource configSource = configSourceMapper().rdsConfigSource(
+                        configSource(), rds.getConfigSource(), routeName);
                 final RouteResourceNode routeResourceNode =
                         new RouteResourceNode(configSource, routeName, xdsBootstrap(), resource,
                                               snapshotWatcher, ResourceNodeType.DYNAMIC);

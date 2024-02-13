@@ -66,16 +66,19 @@ final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXd
     @Override
     public void doOnChanged(ClusterXdsResource resource) {
         final Cluster cluster = resource.resource();
+        final String clusterName = cluster.getName();
         if (cluster.hasLoadAssignment()) {
             final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
             final EndpointResourceNode node =
-                    StaticResourceUtils.staticEndpoint(xdsBootstrap(), cluster.getName(),
+                    StaticResourceUtils.staticEndpoint(xdsBootstrap(), clusterName,
                                                        resource, snapshotWatcher, loadAssignment);
             children().add(node);
         } else if (cluster.hasEdsClusterConfig()) {
-            final ConfigSource configSource = cluster.getEdsClusterConfig().getEdsConfig();
+            final ConfigSource configSource =
+                    configSourceMapper().edsConfigSource(
+                            configSource(), cluster.getEdsClusterConfig().getEdsConfig(), clusterName);
             final EndpointResourceNode node =
-                    new EndpointResourceNode(configSource, cluster.getName(), xdsBootstrap(), resource,
+                    new EndpointResourceNode(configSource, clusterName, xdsBootstrap(), resource,
                                              snapshotWatcher, ResourceNodeType.DYNAMIC);
             children().add(node);
             xdsBootstrap().subscribe(node);

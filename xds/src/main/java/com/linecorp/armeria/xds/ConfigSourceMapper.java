@@ -22,7 +22,7 @@ import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.DynamicResources;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
-final class BootstrapApiConfigs {
+final class ConfigSourceMapper {
 
     @Nullable
     private final ConfigSource bootstrapCdsConfig;
@@ -31,7 +31,7 @@ final class BootstrapApiConfigs {
     @Nullable
     private final ConfigSource bootstrapAdsConfig;
 
-    BootstrapApiConfigs(Bootstrap bootstrap) {
+    ConfigSourceMapper(Bootstrap bootstrap) {
         if (bootstrap.hasDynamicResources()) {
             final DynamicResources dynamicResources = bootstrap.getDynamicResources();
             bootstrapCdsConfig = dynamicResources.getCdsConfig();
@@ -50,23 +50,13 @@ final class BootstrapApiConfigs {
         }
     }
 
-    ConfigSource configSource(XdsType type, String resourceName, ResourceNode<?> node) {
-        if (type == XdsType.LISTENER) {
-            return ldsConfigSource(node);
-        } else if (type == XdsType.ROUTE) {
-            return rdsConfigSource(node, resourceName);
-        } else if (type == XdsType.CLUSTER) {
-            return cdsConfigSource(node, resourceName);
-        } else {
-            assert type == XdsType.ENDPOINT;
-            return edsConfigSource(node, resourceName);
-        }
-    }
-
-    ConfigSource edsConfigSource(ResourceNode<?> node, String resourceName) {
-        final ConfigSource configSource = node.configSource();
+    ConfigSource edsConfigSource(@Nullable ConfigSource parentConfigSource,
+                                 @Nullable ConfigSource configSource, String resourceName) {
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
+        }
+        if (configSource != null && configSource.hasSelf() && parentConfigSource != null) {
+            return parentConfigSource;
         }
         if (bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
@@ -74,10 +64,13 @@ final class BootstrapApiConfigs {
         throw new IllegalArgumentException("Cannot find an EDS config source for " + resourceName);
     }
 
-    ConfigSource cdsConfigSource(ResourceNode<?> node, String resourceName) {
-        final ConfigSource configSource = node.configSource();
+    ConfigSource cdsConfigSource(@Nullable ConfigSource parentConfigSource,
+                                 @Nullable ConfigSource configSource, String resourceName) {
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
+        }
+        if (configSource != null && configSource.hasSelf() && parentConfigSource != null) {
+            return parentConfigSource;
         }
         if (configSource != null && configSource.hasAds() && bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
@@ -91,10 +84,13 @@ final class BootstrapApiConfigs {
         throw new IllegalArgumentException("Cannot find a CDS config source for route: " + resourceName);
     }
 
-    ConfigSource rdsConfigSource(ResourceNode<?> node, String resourceName) {
-        final ConfigSource configSource = node.configSource();
+    ConfigSource rdsConfigSource(@Nullable ConfigSource parentConfigSource, @Nullable ConfigSource configSource,
+                                 String resourceName) {
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
+        }
+        if (configSource != null && configSource.hasSelf() && parentConfigSource != null) {
+            return parentConfigSource;
         }
         if (bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
@@ -102,10 +98,13 @@ final class BootstrapApiConfigs {
         throw new IllegalArgumentException("Cannot find an RDS config source for route: " + resourceName);
     }
 
-    ConfigSource ldsConfigSource(ResourceNode<?> node) {
-        final ConfigSource configSource = node.configSource();
+    ConfigSource ldsConfigSource(@Nullable ConfigSource parentConfigSource,
+                                 @Nullable ConfigSource configSource) {
         if (configSource != null && configSource.hasApiConfigSource()) {
             return configSource;
+        }
+        if (configSource != null && configSource.hasSelf() && parentConfigSource != null) {
+            return parentConfigSource;
         }
         if (configSource != null && configSource.hasAds() && bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
