@@ -49,7 +49,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
-public class XdsEndpointGroupTest {
+class XdsEndpointGroupTest {
 
     private static final String GROUP = "key";
     private static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP);

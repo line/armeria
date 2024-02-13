@@ -20,11 +20,24 @@ import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
 final class StaticResourceUtils {
 
     private StaticResourceUtils() {}
+
+    static ListenerResourceNode staticListener(XdsBootstrapImpl xdsBootstrap,
+                                               SnapshotWatcher<ListenerSnapshot> parentWatcher,
+                                               Listener listener) {
+        final ListenerResourceParser resourceParser =
+                (ListenerResourceParser) XdsResourceParserUtil.fromType(XdsType.LISTENER);
+        final ListenerXdsResource parsed = resourceParser.parse(listener);
+        final ListenerResourceNode node = new ListenerResourceNode(null, listener.getName(), xdsBootstrap,
+                                                                   parentWatcher, STATIC);
+        node.onChanged(parsed);
+        return node;
+    }
 
     static RouteResourceNode staticRoute(XdsBootstrapImpl xdsBootstrap, String resourceName,
                                          ListenerXdsResource primer,

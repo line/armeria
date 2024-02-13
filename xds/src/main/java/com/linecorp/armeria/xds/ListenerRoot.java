@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.StaticResourceUtils.staticListener;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.listener.v3.Listener;
@@ -34,6 +36,13 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
         super(xdsBootstrap.eventLoop());
         node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.DYNAMIC);
         xdsBootstrap.subscribe(node);
+    }
+
+    ListenerRoot(XdsBootstrapImpl xdsBootstrap, Listener listener) {
+        super(xdsBootstrap.eventLoop());
+        node = staticListener(xdsBootstrap, this, listener);
+        // Don't call xdsBootstrap.subscribe(node) because listener has RDS or route config.
+        // See ListenerXdsResource.
     }
 
     @Override
