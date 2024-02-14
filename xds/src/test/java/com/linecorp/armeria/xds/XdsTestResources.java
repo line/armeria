@@ -143,17 +143,25 @@ public final class XdsTestResources {
                 .build();
     }
 
-    public static Bootstrap bootstrap(ConfigSource configSource, Cluster... cluster) {
+    public static Bootstrap bootstrap(ConfigSource configSource, Cluster cluster) {
+        return bootstrap(configSource, Listener.getDefaultInstance(), cluster);
+    }
+
+    public static Bootstrap bootstrap(ConfigSource configSource, Listener listener, Cluster cluster) {
+        final StaticResources.Builder staticResourceBuilder = StaticResources.newBuilder();
+        if (listener != Listener.getDefaultInstance()) {
+            staticResourceBuilder.addListeners(listener);
+        }
+        if (cluster != Cluster.getDefaultInstance()) {
+            staticResourceBuilder.addClusters(cluster);
+        }
         return Bootstrap
                 .newBuilder()
-                .setStaticResources(
-                        StaticResources.newBuilder()
-                                       .addAllClusters(ImmutableSet.copyOf(cluster)))
-                .setDynamicResources(
-                        DynamicResources
-                                .newBuilder()
-                                .setCdsConfig(configSource)
-                                .setAdsConfig(configSource.getApiConfigSource())
+                .setStaticResources(staticResourceBuilder.build())
+                .setDynamicResources(DynamicResources
+                                             .newBuilder()
+                                             .setCdsConfig(configSource)
+                                             .setAdsConfig(configSource.getApiConfigSource())
                 )
                 .build();
     }

@@ -123,35 +123,41 @@ class RouteMetadataSubsetTest {
                                                 uri.getHost(), uri.getPort());
         final Cluster bootstrapCluster =
                 XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
+        final Metadata routeMetadataMatch1 = Metadata.newBuilder().putFilterMetadata(
+                SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.newBuilder()
+                                                         .putFields("foo", stringValue("foo1"))
+                                                         .putFields("bar", stringValue("bar1"))
+                                                         .build()).build();
+        Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, listener(routeMetadataMatch1),
+                                                         bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final Metadata routeMetadataMatch1 = Metadata.newBuilder().putFilterMetadata(
-                    SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.newBuilder()
-                                                             .putFields("foo", stringValue("foo1"))
-                                                             .putFields("bar", stringValue("bar1"))
-                                                             .build()).build();
-            final EndpointGroup xdsEndpointGroup1 = XdsEndpointGroup.of(
-                    xdsBootstrap.listenerRoot(listener(routeMetadataMatch1)));
-            await().untilAsserted(() -> assertThat(xdsEndpointGroup1.endpoints())
+            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+            await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
                     .containsExactly(Endpoint.of("127.0.0.1", 8082)));
+        }
 
-            // No metadata. Fallback to all endpoints.
-            final Metadata routeMetadataMatch2 = Metadata.newBuilder().putFilterMetadata(
-                    SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.getDefaultInstance()).build();
-            final EndpointGroup xdsEndpointGroup2 = XdsEndpointGroup.of(
-                    xdsBootstrap.listenerRoot(listener(routeMetadataMatch2)));
-            await().untilAsserted(() -> assertThat(xdsEndpointGroup2.endpoints())
+        // No metadata. Fallback to all endpoints.
+        final Metadata routeMetadataMatch2 = Metadata.newBuilder().putFilterMetadata(
+                SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.getDefaultInstance()).build();
+        bootstrap = XdsTestResources.bootstrap(configSource, listener(routeMetadataMatch2),
+                                               bootstrapCluster);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+            await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
                     .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081),
                                                Endpoint.of("127.0.0.1", 8082)));
+        }
 
-            // No matched metadata. Fallback to all endpoints.
-            final Metadata routeMetadataMatch3 = Metadata.newBuilder().putFilterMetadata(
-                    SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.newBuilder()
-                                                             .putFields("foo", stringValue("foo1"))
-                                                             .build()).build();
-            final EndpointGroup xdsEndpointGroup3 = XdsEndpointGroup.of(
-                    xdsBootstrap.listenerRoot(listener(routeMetadataMatch3)));
-            await().untilAsserted(() -> assertThat(xdsEndpointGroup3.endpoints())
+        // No matched metadata. Fallback to all endpoints.
+        final Metadata routeMetadataMatch3 = Metadata.newBuilder().putFilterMetadata(
+                SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.newBuilder()
+                                                         .putFields("foo", stringValue("foo1"))
+                                                         .build()).build();
+        bootstrap = XdsTestResources.bootstrap(configSource, listener(routeMetadataMatch3),
+                                               bootstrapCluster);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+            await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
                     .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081),
                                                Endpoint.of("127.0.0.1", 8082)));
         }

@@ -40,6 +40,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     private final Map<ConfigSource, ConfigSourceClient> clientMap = new HashMap<>();
 
     private final BootstrapApiConfigs bootstrapApiConfigs;
+    private final BootstrapListeners bootstrapListeners;
     private final BootstrapClusters bootstrapClusters;
     private final Consumer<GrpcClientBuilder> configClientCustomizer;
     private final Node bootstrapNode;
@@ -59,6 +60,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.configClientCustomizer = configClientCustomizer;
         bootstrapApiConfigs = new BootstrapApiConfigs(bootstrap);
+        bootstrapListeners = new BootstrapListeners(bootstrap);
         bootstrapClusters = new BootstrapClusters(bootstrap, this);
         bootstrapNode = bootstrap.hasNode() ? bootstrap.getNode() : Node.getDefaultInstance();
     }
@@ -105,13 +107,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     @Override
     public ListenerRoot listenerRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ListenerRoot(this, resourceName);
-    }
-
-    @Override
-    public ListenerRoot listenerRoot(Listener listener) {
-        requireNonNull(listener, "listener");
-        return new ListenerRoot(this, listener);
+        return new ListenerRoot(this, resourceName, bootstrapListeners);
     }
 
     @Override

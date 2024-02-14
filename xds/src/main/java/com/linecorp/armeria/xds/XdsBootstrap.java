@@ -22,7 +22,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -69,16 +68,6 @@ public interface XdsBootstrap extends SafeCloseable {
      * Users may hook watchers to the root node to listen to events.
      */
     ListenerRoot listenerRoot(String resourceName);
-
-    /**
-     * Returns a new {@link ListenerRoot} that allows users to receive notifications when the resources
-     * in the tree are updated. The {@link HttpConnectionManager} in the {@link Listener} must have either,
-     * {@link HttpConnectionManager#hasRds()} or {@link HttpConnectionManager#hasRouteConfig()}.
-     *
-     * @deprecated This method will be removed once the {@link Listener} in {@link Bootstrap} is used.
-     */
-    @Deprecated
-    ListenerRoot listenerRoot(Listener listener);
 
     /**
      * Represents a {@link Cluster} root node of a bootstrap.
