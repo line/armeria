@@ -56,7 +56,7 @@ final class XdsConverterUtil {
             if (endpointMetadata.getFieldsCount() == 0) {
                 return false;
             }
-            return containsExactlyInAnyOrder(endpointMetadata, filterMetadata);
+            return containsFilterMetadata(filterMetadata, endpointMetadata);
         };
         return convertEndpoints(clusterLoadAssignment, lbEndpointPredicate);
     }
@@ -81,14 +81,16 @@ final class XdsConverterUtil {
                         })).collect(toImmutableList());
     }
 
-    private static boolean containsExactlyInAnyOrder(Struct metadata1, Struct metadata2) {
-        if (metadata1.getFieldsCount() != metadata2.getFieldsCount()) {
-            return false;
-        }
-        final Map<String, Value> metadata2Map = metadata2.getFieldsMap();
-        for (Entry<String, Value> entry : metadata1.getFieldsMap().entrySet()) {
-            final Value value = metadata2Map.get(entry.getKey());
-            if (value == null || !value.equals(entry.getValue())) {
+    private static boolean containsFilterMetadata(Struct filterMetadata, Struct endpointMetadata) {
+        final Map<String, Value> endpointMetadataMap = endpointMetadata.getFieldsMap();
+        for (Entry<String, Value> entry : filterMetadata.getFieldsMap().entrySet()) {
+            final Value filterMetadataValue = entry.getValue();
+            if (filterMetadataValue == Value.getDefaultInstance()) {
+                // If the value is the default, consider they are the same.
+                continue;
+            }
+            final Value value = endpointMetadataMap.get(entry.getKey());
+            if (value == null || !value.equals(filterMetadataValue)) {
                 return false;
             }
         }

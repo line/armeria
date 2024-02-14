@@ -74,7 +74,10 @@ public interface XdsBootstrap extends SafeCloseable {
      * Returns a new {@link ListenerRoot} that allows users to receive notifications when the resources
      * in the tree are updated. The {@link HttpConnectionManager} in the {@link Listener} must have either,
      * {@link HttpConnectionManager#hasRds()} or {@link HttpConnectionManager#hasRouteConfig()}.
+     *
+     * @deprecated This method will be removed once the {@link Listener} in {@link Bootstrap} is used.
      */
+    @Deprecated
     ListenerRoot listenerRoot(Listener listener);
 
     /**

@@ -72,6 +72,7 @@ class XdsConverterUtilTest {
                                            Struct.newBuilder()
                                                  .putFields("foo", stringValue("foo1"))
                                                  .putFields("bar", stringValue("bar1"))
+                                                 .putFields("baz", stringValue("baz1"))
                                                  .build())
                         .build();
         final LbEndpoint endpoint3 = endpoint("127.0.0.1", 8082, metadata3);
