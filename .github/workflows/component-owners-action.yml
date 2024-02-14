@@ -17,11 +17,7 @@ jobs:
     steps:
       - uses: dyladan/component-owners@main
         with:
-          # default: .github/component_owners.yml
           config-file: .github/component_owners.yml
-          # default: ${{ github.token }}
           repo-token: ${{ github.token }}
-          # default: true
           assign-owners: "false"
-          # default: true
           request-owner-reviews: "true"
