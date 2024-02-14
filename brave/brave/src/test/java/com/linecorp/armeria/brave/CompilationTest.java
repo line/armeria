@@ -38,7 +38,7 @@ import zipkin2.reporter.brave.ZipkinSpanHandler;
  * dependencies.
  */
 @MockitoSettings(strictness = Strictness.LENIENT)
-class CompilationTest {
+class BraveCompilationTest {
 
     TraceContext context = TraceContext.newBuilder().traceId(1).spanId(1).build();
     MutableSpan span = new MutableSpan();
