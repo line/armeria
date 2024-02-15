@@ -46,7 +46,6 @@ import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteAction;
-import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
 /**
  * Provides a simple {@link EndpointGroup} which listens to an xDS cluster to select endpoints.
@@ -157,10 +156,9 @@ public final class XdsEndpointGroup extends DynamicEndpointGroup {
     }
 
     private static Struct filterMetadata(ClusterSnapshot clusterSnapshot) {
-        final VirtualHost virtualHost = clusterSnapshot.virtualHost();
-        assert virtualHost != null;
-        final Route routes = virtualHost.getRoutes(0);
-        final RouteAction action = routes.getRoute();
+        final Route route = clusterSnapshot.route();
+        assert route != null;
+        final RouteAction action = route.getRoute();
         return action.getMetadataMatch().getFilterMetadataOrDefault(SUBSET_LOAD_BALANCING_FILTER_NAME,
                                                                     Struct.getDefaultInstance());
     }

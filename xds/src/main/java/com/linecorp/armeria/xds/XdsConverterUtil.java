@@ -84,13 +84,8 @@ final class XdsConverterUtil {
     private static boolean containsFilterMetadata(Struct filterMetadata, Struct endpointMetadata) {
         final Map<String, Value> endpointMetadataMap = endpointMetadata.getFieldsMap();
         for (Entry<String, Value> entry : filterMetadata.getFieldsMap().entrySet()) {
-            final Value filterMetadataValue = entry.getValue();
-            if (filterMetadataValue == Value.getDefaultInstance()) {
-                // If the value is the default, consider they are the same.
-                continue;
-            }
             final Value value = endpointMetadataMap.get(entry.getKey());
-            if (value == null || !value.equals(filterMetadataValue)) {
+            if (value == null || !value.equals(entry.getValue())) {
                 return false;
             }
         }
