@@ -230,12 +230,17 @@ public final class XdsTestResources {
     }
 
     public static Listener exampleListener(String listenerName, String routeName) {
+        final AggregatedConfigSource ads = AggregatedConfigSource.getDefaultInstance();
+        return exampleListener(listenerName, routeName, ConfigSource.newBuilder().setAds(ads).build());
+    }
+
+    public static Listener exampleListener(String listenerName, String routeName, ConfigSource configSource) {
         final HttpConnectionManager manager =
                 HttpConnectionManager
                         .newBuilder()
                         .setCodecType(CodecType.AUTO)
                         .setStatPrefix("ingress_http")
-                        .setRds(Rds.newBuilder().setRouteConfigName(routeName))
+                        .setRds(Rds.newBuilder().setRouteConfigName(routeName).setConfigSource(configSource))
                         .addHttpFilters(HttpFilter.newBuilder()
                                                   .setName("envoy.filters.http.router")
                                                   .setTypedConfig(Any.pack(Router.getDefaultInstance())))

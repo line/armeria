@@ -65,13 +65,15 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
                 }
                 final RouteAction routeAction = route.getRoute();
                 final String cluster = routeAction.getCluster();
+                final ConfigSource configSource =
+                        configSourceMapper().cdsConfigSource(configSource(), null, cluster);
 
                 // add a dummy element to the index list so that we can call List.set later
                 // without incurring an IndexOutOfBoundException when a snapshot is updated
                 clusterSnapshotList.add(null);
                 pending.add(index);
                 final ClusterResourceNode node =
-                        new ClusterResourceNode(null, cluster, xdsBootstrap(),
+                        new ClusterResourceNode(configSource, cluster, xdsBootstrap(),
                                                 resource, snapshotWatcher, virtualHost, route,
                                                 index++, ResourceNodeType.DYNAMIC);
                 children().add(node);
