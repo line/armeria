@@ -261,9 +261,9 @@ class EurekaUpdatingListenerTest {
             "custom-health,/custom-health,home-page,/home-page,status-page,/status-page",
             "/custom-health,/custom-health,/home-page,/home-page,/status-page,/status-page",
     })
-    void customHealthCheckPath(String healthCheckUrlPath, String expectedHealthCheckUrlPath,
-                               String homePageUrlPath, String expectedHomePageUrlPath,
-                               String statusPageUrlPath, String expectedStatusPageUrlPath)
+    void customPaths(String healthCheckUrlPath, String expectedHealthCheckUrlPath,
+                     String homePageUrlPath, String expectedHomePageUrlPath,
+                     String statusPageUrlPath, String expectedStatusPageUrlPath)
             throws IOException {
         final EurekaUpdatingListener listener =
                 EurekaUpdatingListener.builder(eurekaServer.httpUri())

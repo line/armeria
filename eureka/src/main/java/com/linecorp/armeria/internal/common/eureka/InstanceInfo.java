@@ -23,6 +23,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRootName;
@@ -36,8 +37,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * An instance information.
  */
-@JsonIgnoreProperties(
-        value = { "homePageUrlPath", "statusPageUrlPath", "healthCheckUrlPath" }, ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonRootName("instance")
 public final class InstanceInfo {
 
@@ -244,6 +244,7 @@ public final class InstanceInfo {
      * <p>When set, {@link #getHomePageUrl()} will be built with {@link #getHostName()} and {@link #getPort()}.
      */
     @Nullable
+    @JsonIgnore
     public String getHomePageUrlPath() {
         return homePageUrlPath;
     }
@@ -263,6 +264,7 @@ public final class InstanceInfo {
      * {@link #getPort()}.
      */
     @Nullable
+    @JsonIgnore
     public String getStatusPageUrlPath() {
         return statusPageUrlPath;
     }
@@ -282,6 +284,7 @@ public final class InstanceInfo {
      * {@link #getPort()} or {@link #getSecurePort()} for {@link #getSecureHealthCheckUrl()}.
      */
     @Nullable
+    @JsonIgnore
     public String getHealthCheckUrlPath() {
         return healthCheckUrlPath;
     }
