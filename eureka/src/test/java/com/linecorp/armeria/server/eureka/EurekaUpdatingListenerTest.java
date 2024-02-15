@@ -256,18 +256,22 @@ class EurekaUpdatingListenerTest {
     }
 
     @ParameterizedTest
-    @CsvSource(value = {
-            "'',/",
-            "custom-health,/custom-health",
-            "/custom-health,/custom-health",
+    @CsvSource({
+            "'',/,'',/,'',/",
+            "custom-health,/custom-health,home-page,/home-page,status-page,/status-page",
+            "/custom-health,/custom-health,/home-page,/home-page,/status-page,/status-page",
     })
-    void customHealthCheckPath(String healthCheckUrlPath, String expectedHealthCheckUrlPath)
+    void customHealthCheckPath(String healthCheckUrlPath, String expectedHealthCheckUrlPath,
+                               String homePageUrlPath, String expectedHomePageUrlPath,
+                               String statusPageUrlPath, String expectedStatusPageUrlPath)
             throws IOException {
         final EurekaUpdatingListener listener =
                 EurekaUpdatingListener.builder(eurekaServer.httpUri())
                                       .renewalInterval(Duration.ofSeconds(2))
                                       .leaseDuration(Duration.ofSeconds(10))
                                       .hostname("myhost")
+                                      .homePageUrlPath(homePageUrlPath)
+                                      .statusPageUrlPath(statusPageUrlPath)
                                       .healthCheckUrlPath(healthCheckUrlPath)
                                       .port(88)
                                       .securePort(8888)
@@ -285,8 +289,9 @@ class EurekaUpdatingListenerTest {
         await().until(() -> registerContentCaptor.get() != null);
         final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
                                                            InstanceInfo.class);
-        assertThat(instanceInfo.getHealthCheckUrl())
-                .isEqualTo("http://myhost:88" + expectedHealthCheckUrlPath);
+        assertThat(instanceInfo.getHomePageUrl()).isEqualTo("http://myhost:88" + expectedHomePageUrlPath);
+        assertThat(instanceInfo.getStatusPageUrl()).isEqualTo("http://myhost:88" + expectedStatusPageUrlPath);
+        assertThat(instanceInfo.getHealthCheckUrl()).isEqualTo("http://myhost:88" + expectedHealthCheckUrlPath);
         assertThat(instanceInfo.getSecureHealthCheckUrl())
                 .isEqualTo("https://myhost:8888" + expectedHealthCheckUrlPath);
         application.stop().join();

@@ -36,7 +36,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * An instance information.
  */
-@JsonIgnoreProperties(value = { "healthCheckUrlPath" }, ignoreUnknown = true)
+@JsonIgnoreProperties(
+        value = { "homePageUrlPath", "statusPageUrlPath", "healthCheckUrlPath" }, ignoreUnknown = true)
 @JsonRootName("instance")
 public final class InstanceInfo {
 
@@ -62,7 +63,11 @@ public final class InstanceInfo {
     private final InstanceStatus status;
 
     @Nullable
+    private final String homePageUrlPath;
+    @Nullable
     private final String homePageUrl;
+    @Nullable
+    private final String statusPageUrlPath;
     @Nullable
     private final String statusPageUrl;
     @Nullable
@@ -99,7 +104,7 @@ public final class InstanceInfo {
                         @JsonProperty("leaseInfo") LeaseInfo leaseInfo,
                         @Nullable @JsonProperty("metadata") Map<String, String> metadata) {
         this(instanceId, appName, appGroupName, hostName, ipAddr, vipAddress, secureVipAddress, port,
-             securePort, status, homePageUrl, statusPageUrl, null, healthCheckUrl,
+             securePort, status, null, homePageUrl, null, statusPageUrl, null, healthCheckUrl,
              secureHealthCheckUrl, dataCenterInfo, leaseInfo, metadata);
     }
 
@@ -116,7 +121,9 @@ public final class InstanceInfo {
                         PortWrapper port,
                         PortWrapper securePort,
                         InstanceStatus status,
+                        @Nullable String homePageUrlPath, // Not in JSON
                         @Nullable String homePageUrl,
+                        @Nullable String statusPageUrlPath, // Not in JSON
                         @Nullable String statusPageUrl,
                         @Nullable String healthCheckUrlPath, // Not in JSON
                         @Nullable String healthCheckUrl,
@@ -134,7 +141,9 @@ public final class InstanceInfo {
         this.port = requireNonNull(port, "port");
         this.securePort = requireNonNull(securePort, "securePort");
         this.status = requireNonNull(status, "status");
+        this.homePageUrlPath = homePageUrlPath;
         this.homePageUrl = homePageUrl;
+        this.statusPageUrlPath = statusPageUrlPath;
         this.statusPageUrl = statusPageUrl;
         this.healthCheckUrlPath = healthCheckUrlPath;
         this.healthCheckUrl = healthCheckUrl;
@@ -230,11 +239,32 @@ public final class InstanceInfo {
     }
 
     /**
+     * Returns the home page URL path of this instance.
+     *
+     * <p>When set, {@link #getHomePageUrl()} will be built with {@link #getHostName()} and {@link #getPort()}.
+     */
+    @Nullable
+    public String getHomePageUrlPath() {
+        return homePageUrlPath;
+    }
+
+    /**
      * Returns the home page URL of this instance.
      */
     @Nullable
     public String getHomePageUrl() {
         return homePageUrl;
+    }
+
+    /**
+     * Returns the status page URL path of this instance.
+     *
+     * <p>When set, {@link #getStatusPageUrl()} will be built with {@link #getHostName()} and
+     * {@link #getPort()}.
+     */
+    @Nullable
+    public String getStatusPageUrlPath() {
+        return statusPageUrlPath;
     }
 
     /**
@@ -327,7 +357,9 @@ public final class InstanceInfo {
                Objects.equal(port, that.port) &&
                Objects.equal(securePort, that.securePort) &&
                status == that.status &&
+               Objects.equal(homePageUrlPath, that.homePageUrlPath) &&
                Objects.equal(homePageUrl, that.homePageUrl) &&
+               Objects.equal(statusPageUrlPath, that.statusPageUrlPath) &&
                Objects.equal(statusPageUrl, that.statusPageUrl) &&
                Objects.equal(healthCheckUrlPath, that.healthCheckUrlPath) &&
                Objects.equal(healthCheckUrl, that.healthCheckUrl) &&
@@ -341,7 +373,8 @@ public final class InstanceInfo {
     public int hashCode() {
         return Objects.hashCode(instanceId, hostName, appName, appGroupName, ipAddr, vipAddress,
                                 secureVipAddress, port, securePort, status,
-                                homePageUrl, statusPageUrl, healthCheckUrlPath, healthCheckUrl,
+                                homePageUrlPath, homePageUrl, statusPageUrlPath, statusPageUrl,
+                                healthCheckUrlPath, healthCheckUrl,
                                 secureHealthCheckUrl, dataCenterInfo, leaseInfo, metadata);
     }
 
@@ -358,7 +391,9 @@ public final class InstanceInfo {
                                    .add("port", port)
                                    .add("securePort", securePort)
                                    .add("status", status)
+                                   .add("homePageUrlPath", homePageUrlPath)
                                    .add("homePageUrl", homePageUrl)
+                                   .add("statusPageUrlPath", statusPageUrlPath)
                                    .add("statusPageUrl", statusPageUrl)
                                    .add("healthCheckUrlPath", healthCheckUrlPath)
                                    .add("healthCheckUrl", healthCheckUrl)
