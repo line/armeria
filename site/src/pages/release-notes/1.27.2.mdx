@@ -9,6 +9,13 @@ date: 2024-02-14
 - Armeria's [Eureka](https://github.com/Netflix/eureka) integration no longer incorrectly appends
  port information to `vipAddress`. #5451
 - `homePageUrl` and `statusPageUrl` of an `InstanceInfo` in Eureka are correctly set if corresponding path properties are configured. #5464 #5465
+- You no longer see `IllegalArgumentException` when using <type://ConnectionPoolListener#metricCollecting(MeterRegistry)>. #5466
+
+## ☢️ Breaking changes
+
+- The `.connections` suffix is now automatically appended to the names of connection pool metrics. 
+  - If you use a custom <type://MeterIdPrefix> with <type://ConnectionPoolListener#metricCollecting(MeterRegistry,MeterIdPrefix)>, 
+    this changes will affect your meter naming. #5466
 
 ## 🙇 Thank you
 
