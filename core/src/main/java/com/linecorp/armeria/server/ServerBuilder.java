@@ -1565,10 +1565,12 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public VirtualHostBuilder virtualHost(String hostnamePattern) {
         requireNonNull(hostnamePattern, "hostnamePattern");
 
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
         final Optional<VirtualHostBuilder> vhost =
                 virtualHostBuilders.stream()
                                    .filter(v -> !v.defaultVirtualHost() &&
-                                                v.equalsHostnamePattern(hostnamePattern))
+                                                v.equalsHostnamePattern(hostAndPort.getHost(),
+                                                                        hostAndPort.getPortOrDefault(-1)))
                                    .findFirst();
         if (vhost.isPresent()) {
             return vhost.get();
@@ -1591,11 +1593,13 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         requireNonNull(defaultHostname, "defaultHostname");
         requireNonNull(hostnamePattern, "hostnamePattern");
 
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
         final Optional<VirtualHostBuilder> vhost =
                 virtualHostBuilders.stream()
                                    .filter(v -> !v.defaultVirtualHost())
                                    .filter(v -> v.equalsDefaultHostname(defaultHostname) &&
-                                                v.equalsHostnamePattern(hostnamePattern))
+                                                v.equalsHostnamePattern(hostAndPort.getHost(),
+                                                                        hostAndPort.getPortOrDefault(-1)))
                                    .findFirst();
         if (vhost.isPresent()) {
             return vhost.get();
