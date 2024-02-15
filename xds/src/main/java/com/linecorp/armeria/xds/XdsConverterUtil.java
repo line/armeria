@@ -48,7 +48,7 @@ final class XdsConverterUtil {
     }
 
     static List<Endpoint> convertEndpoints(ClusterLoadAssignment clusterLoadAssignment, Struct filterMetadata) {
-        checkArgument(filterMetadata.getFieldsCount() != 0,
+        checkArgument(filterMetadata.getFieldsCount() > 0,
                       "filterMetadata.getFieldsCount(): %s (expected: > 0)", filterMetadata.getFieldsCount());
         final Predicate<LbEndpoint> lbEndpointPredicate = lbEndpoint -> {
             final Struct endpointMetadata = lbEndpoint.getMetadata().getFilterMetadataOrDefault(

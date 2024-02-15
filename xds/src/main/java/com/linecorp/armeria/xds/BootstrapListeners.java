@@ -18,7 +18,6 @@ package com.linecorp.armeria.xds;
 import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.StaticResources;
@@ -29,7 +28,7 @@ final class BootstrapListeners {
     private final Map<String, ListenerXdsResource> listeners;
 
     BootstrapListeners(Bootstrap bootstrap) {
-        final Builder<String, ListenerXdsResource> builder = ImmutableMap.builder();
+        final ImmutableMap.Builder<String, ListenerXdsResource> builder = ImmutableMap.builder();
         if (bootstrap.hasStaticResources()) {
             final StaticResources staticResources = bootstrap.getStaticResources();
             for (Listener listener: staticResources.getListenersList()) {
