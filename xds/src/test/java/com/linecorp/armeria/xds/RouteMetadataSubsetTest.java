@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 import static com.linecorp.armeria.xds.XdsConverterUtilTest.sampleClusterLoadAssignment;
+import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.stringValue;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,8 +63,6 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 class RouteMetadataSubsetTest {
-
-    static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {

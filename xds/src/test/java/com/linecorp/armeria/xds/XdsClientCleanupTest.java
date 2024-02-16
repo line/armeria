@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -74,9 +75,8 @@ class XdsClientCleanupTest {
 
     @Test
     void testRemoveWatcher() throws Exception {
-        final String bootstrapClusterName = "bootstrap-cluster";
         final String clusterName = "cluster1";
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
             final Map<ConfigSource, ConfigSourceClient> clientMap = xdsBootstrap.clientMap();
@@ -89,9 +89,8 @@ class XdsClientCleanupTest {
 
     @Test
     void testMultipleWatchers() throws Exception {
-        final String bootstrapClusterName = "bootstrap-cluster";
         final String clusterName = "cluster1";
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final SafeCloseable closeable1 = xdsBootstrap.clusterRoot(clusterName);
             final SafeCloseable closeable2 = xdsBootstrap.clusterRoot(clusterName);
@@ -109,9 +108,8 @@ class XdsClientCleanupTest {
 
     @Test
     void closeIsValidOnce() throws Exception {
-        final String bootstrapClusterName = "bootstrap-cluster";
         final String clusterName = "cluster1";
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri(), bootstrapClusterName);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final ClusterRoot clusterRoot1 = xdsBootstrap.clusterRoot(clusterName);
             final ClusterRoot clusterRoot2 = xdsBootstrap.clusterRoot(clusterName);

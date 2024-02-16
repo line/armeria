@@ -63,6 +63,8 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 
 public final class XdsTestResources {
 
+    static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
+
     private XdsTestResources() {}
 
     public static LbEndpoint endpoint(String address, int port) {
@@ -102,6 +104,10 @@ public final class XdsTestResources {
         return createStaticCluster(bootstrapClusterName, loadAssignment);
     }
 
+    public static Bootstrap bootstrap(URI uri) {
+        return bootstrap(uri, BOOTSTRAP_CLUSTER_NAME);
+    }
+
     public static Bootstrap bootstrap(URI uri, String clusterName) {
         final Cluster cluster = bootstrapCluster(uri, clusterName);
         final ConfigSource configSource = basicConfigSource(clusterName);
@@ -125,24 +131,6 @@ public final class XdsTestResources {
                         StaticResources.newBuilder()
                                        .addAllClusters(ImmutableSet.copyOf(cluster)))
                 .setDynamicResources(dynamicResources)
-                .build();
-    }
-
-    public static Bootstrap bootstrap(URI uri) {
-        final String bootstrapClusterName = "bootstrap-cluster";
-        final Cluster cluster = bootstrapCluster(uri, bootstrapClusterName);
-        final ConfigSource configSource = basicConfigSource(bootstrapClusterName);
-        return Bootstrap
-                .newBuilder()
-                .setStaticResources(
-                        StaticResources.newBuilder()
-                                       .addAllClusters(ImmutableSet.of(cluster)))
-                .setDynamicResources(
-                        DynamicResources
-                                .newBuilder()
-                                .setCdsConfig(configSource)
-                                .setAdsConfig(configSource.getApiConfigSource())
-                )
                 .build();
     }
 
