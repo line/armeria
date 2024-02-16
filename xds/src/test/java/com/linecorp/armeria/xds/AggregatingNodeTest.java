@@ -32,6 +32,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -53,7 +54,7 @@ class AggregatingNodeTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(com.linecorp.armeria.server.ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) throws Exception {
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache);
             sb.service(GrpcService.builder()
                                   .addService(v3DiscoveryServer.getAggregatedDiscoveryServiceImpl())
