@@ -96,9 +96,14 @@ public final class XdsTestResources {
                                     .build();
     }
 
+    public static Cluster bootstrapCluster(URI uri, String bootstrapClusterName) {
+        final ClusterLoadAssignment loadAssignment =
+                loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
+        return createStaticCluster(bootstrapClusterName, loadAssignment);
+    }
+
     public static Bootstrap bootstrap(URI uri, String clusterName) {
-        final Cluster cluster = createStaticCluster(
-                clusterName, loadAssignment(clusterName, uri.getHost(), uri.getPort()));
+        final Cluster cluster = bootstrapCluster(uri, clusterName);
         final ConfigSource configSource = basicConfigSource(clusterName);
         return bootstrap(configSource, cluster);
     }
@@ -125,9 +130,7 @@ public final class XdsTestResources {
 
     public static Bootstrap bootstrap(URI uri) {
         final String bootstrapClusterName = "bootstrap-cluster";
-        final ClusterLoadAssignment loadAssignment =
-                loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
-        final Cluster cluster = createStaticCluster(bootstrapClusterName, loadAssignment);
+        final Cluster cluster = bootstrapCluster(uri, bootstrapClusterName);
         final ConfigSource configSource = basicConfigSource(bootstrapClusterName);
         return Bootstrap
                 .newBuilder()
@@ -147,14 +150,12 @@ public final class XdsTestResources {
         return bootstrap(configSource, Listener.getDefaultInstance(), cluster);
     }
 
-    public static Bootstrap bootstrap(ConfigSource configSource, Listener listener, Cluster cluster) {
+    public static Bootstrap bootstrap(ConfigSource configSource, Listener listener, Cluster... cluster) {
         final StaticResources.Builder staticResourceBuilder = StaticResources.newBuilder();
         if (listener != Listener.getDefaultInstance()) {
             staticResourceBuilder.addListeners(listener);
         }
-        if (cluster != Cluster.getDefaultInstance()) {
-            staticResourceBuilder.addClusters(cluster);
-        }
+        staticResourceBuilder.addAllClusters(ImmutableList.copyOf(cluster));
         return Bootstrap
                 .newBuilder()
                 .setStaticResources(staticResourceBuilder.build())

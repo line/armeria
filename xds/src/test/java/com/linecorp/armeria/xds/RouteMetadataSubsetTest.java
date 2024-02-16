@@ -18,11 +18,10 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 import static com.linecorp.armeria.xds.XdsConverterUtilTest.sampleClusterLoadAssignment;
+import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.stringValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-
-import java.net.URI;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -64,7 +63,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 
 class RouteMetadataSubsetTest {
 
-    private static final String bootstrapClusterName = "bootstrap-cluster";
+    static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -116,19 +115,15 @@ class RouteMetadataSubsetTest {
 
     @Test
     void routeMetadataMatch() {
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName);
-        final URI uri = server.httpUri();
-        final ClusterLoadAssignment loadAssignment =
-                XdsTestResources.loadAssignment(bootstrapClusterName,
-                                                uri.getHost(), uri.getPort());
-        final Cluster bootstrapCluster =
-                XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
+        final ConfigSource configSource = XdsTestResources.basicConfigSource(BOOTSTRAP_CLUSTER_NAME);
+        final Cluster bootstrapCluster = bootstrapCluster(server.httpUri(), BOOTSTRAP_CLUSTER_NAME);
         final Metadata routeMetadataMatch1 = Metadata.newBuilder().putFilterMetadata(
                 SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.newBuilder()
                                                          .putFields("foo", stringValue("foo1"))
                                                          .putFields("bar", stringValue("bar1"))
                                                          .build()).build();
-        Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, listener(routeMetadataMatch1),
+        Bootstrap bootstrap = XdsTestResources.bootstrap(configSource,
+                                                         staticResourceListener(routeMetadataMatch1),
                                                          bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
@@ -139,7 +134,7 @@ class RouteMetadataSubsetTest {
         // No metadata. Fallback to all endpoints.
         final Metadata routeMetadataMatch2 = Metadata.newBuilder().putFilterMetadata(
                 SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.getDefaultInstance()).build();
-        bootstrap = XdsTestResources.bootstrap(configSource, listener(routeMetadataMatch2),
+        bootstrap = XdsTestResources.bootstrap(configSource, staticResourceListener(routeMetadataMatch2),
                                                bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
@@ -153,7 +148,7 @@ class RouteMetadataSubsetTest {
                 SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.newBuilder()
                                                          .putFields("foo", stringValue("foo1"))
                                                          .build()).build();
-        bootstrap = XdsTestResources.bootstrap(configSource, listener(routeMetadataMatch3),
+        bootstrap = XdsTestResources.bootstrap(configSource, staticResourceListener(routeMetadataMatch3),
                                                bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
@@ -163,16 +158,22 @@ class RouteMetadataSubsetTest {
         }
     }
 
-    private static Listener listener(Metadata metadata) {
+    static Listener staticResourceListener() {
+        return staticResourceListener(Metadata.getDefaultInstance());
+    }
+
+    static Listener staticResourceListener(Metadata metadata) {
+        final RouteAction.Builder routeActionBuilder = RouteAction.newBuilder().setCluster("cluster");
+        if (metadata != Metadata.getDefaultInstance()) {
+            routeActionBuilder.setMetadataMatch(metadata);
+        }
         final VirtualHost virtualHost =
                 VirtualHost.newBuilder()
                            .setName("route")
                            .addDomains("*")
                            .addRoutes(Route.newBuilder()
                                            .setMatch(RouteMatch.newBuilder().setPrefix("/"))
-                                           .setRoute(RouteAction.newBuilder()
-                                                                .setMetadataMatch(metadata)
-                                                                .setCluster("cluster")))
+                                           .setRoute(routeActionBuilder))
                            .build();
         final HttpConnectionManager manager =
                 HttpConnectionManager
