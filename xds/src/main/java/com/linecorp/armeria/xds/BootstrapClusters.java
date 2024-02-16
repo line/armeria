@@ -43,7 +43,7 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
                     clusters.put(cluster.getName(), cluster);
                 } else {
                     throw new IllegalArgumentException(
-                            "Cluster must has a load assignment or EDS cluster config.");
+                            "Cluster must have a load assignment or EDS cluster config.");
                 }
             }
         }

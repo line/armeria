@@ -34,8 +34,7 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
 
     ClusterRoot(XdsBootstrapImpl xdsBootstrap, String resourceName) {
         super(xdsBootstrap.eventLoop());
-        final BootstrapClusters bootstrapClusters = xdsBootstrap.bootstrapClusters();
-        final Cluster cluster = bootstrapClusters.cluster(resourceName);
+        final Cluster cluster = xdsBootstrap.bootstrapClusters().cluster(resourceName);
         if (cluster != null) {
             node = staticCluster(xdsBootstrap, resourceName, this, cluster);
         } else {
