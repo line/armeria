@@ -42,7 +42,7 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
             snapshotUpdated(clusterSnapshot);
             node = null;
         } else {
-            final Cluster cluster = bootstrapClusters.edsCluster(resourceName);
+            final Cluster cluster = bootstrapClusters.edsConfigCluster(resourceName);
             if (cluster != null) {
                 node = staticCluster(xdsBootstrap, resourceName, this, cluster);
             } else {

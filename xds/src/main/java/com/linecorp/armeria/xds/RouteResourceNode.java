@@ -86,7 +86,7 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
                     continue;
                 }
 
-                final Cluster cluster = bootstrapClusters.edsCluster(clusterName);
+                final Cluster cluster = bootstrapClusters.edsConfigCluster(clusterName);
                 final ClusterResourceNode node;
                 if (cluster != null) {
                     node = staticCluster(xdsBootstrap(), clusterName, resource, snapshotWatcher, virtualHost,

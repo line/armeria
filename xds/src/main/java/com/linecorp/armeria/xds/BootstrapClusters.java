@@ -29,7 +29,7 @@ import io.grpc.Status;
 final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
 
     private final Map<String, ClusterSnapshot> clusterSnapshots = new HashMap<>();
-    private final Map<String, Cluster> edsClusters = new HashMap<>();
+    private final Map<String, Cluster> edsConfigClusters = new HashMap<>();
 
     BootstrapClusters(Bootstrap bootstrap, XdsBootstrapImpl xdsBootstrap) {
         if (bootstrap.hasStaticResources()) {
@@ -39,7 +39,7 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
                     // no need to clean this cluster up since it is fully static
                     StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), this, cluster);
                 } else if (cluster.hasEdsClusterConfig()) {
-                    edsClusters.put(cluster.getName(), cluster);
+                    edsConfigClusters.put(cluster.getName(), cluster);
                 } else {
                     throw new IllegalArgumentException(
                             "Cluster must has a load assignment or EDS cluster config.");
@@ -59,8 +59,8 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     }
 
     @Nullable
-    Cluster edsCluster(String clusterName) {
-        return edsClusters.get(clusterName);
+    Cluster edsConfigCluster(String clusterName) {
+        return edsConfigClusters.get(clusterName);
     }
 
     @Override
