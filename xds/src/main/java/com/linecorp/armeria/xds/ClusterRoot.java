@@ -18,7 +18,6 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.StaticResourceUtils.staticCluster;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -31,25 +30,18 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 @UnstableApi
 public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
 
-    @Nullable
     private final ClusterResourceNode node;
 
     ClusterRoot(XdsBootstrapImpl xdsBootstrap, String resourceName) {
         super(xdsBootstrap.eventLoop());
         final BootstrapClusters bootstrapClusters = xdsBootstrap.bootstrapClusters();
-        final ClusterSnapshot clusterSnapshot = bootstrapClusters.clusterSnapshot(resourceName);
-        if (clusterSnapshot != null) {
-            snapshotUpdated(clusterSnapshot);
-            node = null;
+        final Cluster cluster = bootstrapClusters.cluster(resourceName);
+        if (cluster != null) {
+            node = staticCluster(xdsBootstrap, resourceName, this, cluster);
         } else {
-            final Cluster cluster = bootstrapClusters.edsConfigCluster(resourceName);
-            if (cluster != null) {
-                node = staticCluster(xdsBootstrap, resourceName, this, cluster);
-            } else {
-                node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
-                                               null, this, ResourceNodeType.DYNAMIC);
-                xdsBootstrap.subscribe(node);
-            }
+            node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
+                                           null, this, ResourceNodeType.DYNAMIC);
+            xdsBootstrap.subscribe(node);
         }
     }
 
@@ -59,9 +51,7 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
             eventLoop().execute(this::close);
             return;
         }
-        if (node != null) {
-            node.close();
-        }
+        node.close();
         super.close();
     }
 }

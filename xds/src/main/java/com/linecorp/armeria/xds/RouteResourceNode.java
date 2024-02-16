@@ -60,7 +60,6 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
         pending.clear();
         final RouteConfiguration routeConfiguration = resource.resource();
         int index = 0;
-        boolean added = false;
         for (VirtualHost virtualHost: routeConfiguration.getVirtualHostsList()) {
             for (Route route: virtualHost.getRoutesList()) {
                 if (route.getActionCase() != ActionCase.ROUTE) {
@@ -74,19 +73,7 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
                 clusterSnapshotList.add(null);
                 pending.add(index);
 
-                final BootstrapClusters bootstrapClusters = xdsBootstrap().bootstrapClusters();
-                final ClusterSnapshot clusterSnapshot = bootstrapClusters.clusterSnapshot(clusterName);
-                if (clusterSnapshot != null) {
-                    final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-                    assert endpointSnapshot != null;
-                    snapshotWatcher.snapshotUpdated(new ClusterSnapshot(
-                            clusterSnapshot.xdsResource(), endpointSnapshot,
-                            virtualHost, route, index++));
-                    added = true;
-                    continue;
-                }
-
-                final Cluster cluster = bootstrapClusters.edsConfigCluster(clusterName);
+                final Cluster cluster = xdsBootstrap().bootstrapClusters().cluster(clusterName);
                 final ClusterResourceNode node;
                 if (cluster != null) {
                     node = staticCluster(xdsBootstrap(), clusterName, resource, snapshotWatcher, virtualHost,
@@ -99,10 +86,9 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
                     children().add(node);
                     xdsBootstrap().subscribe(node);
                 }
-                added = true;
             }
         }
-        if (!added) {
+        if (children().isEmpty()) {
             parentWatcher.snapshotUpdated(new RouteSnapshot(resource, Collections.emptyList()));
         }
     }

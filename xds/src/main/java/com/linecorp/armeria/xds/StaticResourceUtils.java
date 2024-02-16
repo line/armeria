@@ -57,7 +57,7 @@ final class StaticResourceUtils {
                                              Cluster cluster) {
         final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
                                                                  primer, parentWatcher, virtualHost, route,
-                                                                 index, ResourceNodeType.DYNAMIC);
+                                                                 index, STATIC);
         setClusterXdsResourceToNode(cluster, node);
         return node;
     }
