@@ -34,9 +34,6 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
         super(xdsBootstrap.eventLoop());
         final ListenerXdsResource listenerXdsResource = bootstrapListeners.staticListeners().get(resourceName);
         if (listenerXdsResource != null) {
-            // TODO(minwoox): Consider adding start method to XdsBootstrap and fetches all listeners and
-            //                clusters resources as Envoy does.
-            // https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#api-flow
             node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.STATIC);
             node.onChanged(listenerXdsResource);
         } else {
