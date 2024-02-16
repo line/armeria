@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,16 +29,21 @@ import io.grpc.Status;
 final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
 
     private final Map<String, ClusterSnapshot> clusterSnapshots = new HashMap<>();
+    private final Map<String, Cluster> edsClusters = new HashMap<>();
 
     BootstrapClusters(Bootstrap bootstrap, XdsBootstrapImpl xdsBootstrap) {
         if (bootstrap.hasStaticResources()) {
             final StaticResources staticResources = bootstrap.getStaticResources();
             for (Cluster cluster : staticResources.getClustersList()) {
-                checkArgument(cluster.hasLoadAssignment(),
-                              "Only fully static configurations are allowed for bootstrap clusters. " +
-                              "Violating cluster is %s", cluster);
-                // no need to clean this cluster up since it is fully static
-                StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), this, cluster);
+                if (cluster.hasLoadAssignment()) {
+                    // no need to clean this cluster up since it is fully static
+                    StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), null, this, cluster);
+                } else if (cluster.hasEdsClusterConfig()) {
+                    edsClusters.put(cluster.getName(), cluster);
+                } else {
+                    throw new IllegalArgumentException(
+                            "Cluster must has a load assignment or EDS cluster config.");
+                }
             }
         }
     }
@@ -51,8 +54,13 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     }
 
     @Nullable
-    ClusterSnapshot get(String name) {
-        return clusterSnapshots.get(name);
+    ClusterSnapshot clusterSnapshot(String clusterName) {
+        return clusterSnapshots.get(clusterName);
+    }
+
+    @Nullable
+    Cluster edsCluster(String clusterName) {
+        return edsClusters.get(clusterName);
     }
 
     @Override

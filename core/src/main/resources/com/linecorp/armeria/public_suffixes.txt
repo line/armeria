@@ -39,6 +39,7 @@
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
 *.compute.estate
+*.cprapid.com
 *.cryptonomic.net
 *.customer-oci.com
 *.dapps.earth

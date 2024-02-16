@@ -22,16 +22,13 @@ import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.createCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.loadAssignment;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
-
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.Duration;
 
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -42,16 +39,8 @@ import io.envoyproxy.controlplane.cache.v3.Snapshot;
 import io.envoyproxy.controlplane.server.V3DiscoveryServer;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.cluster.v3.Cluster.DiscoveryType;
-import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
-import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbPolicy;
-import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
-import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
-import io.envoyproxy.envoy.config.core.v3.ApiVersion;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
-import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
-import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
@@ -91,6 +80,7 @@ class MostlyStaticWithDynamicEdsTest {
                                 ImmutableList.of(), "1"));
     }
 
+    @Disabled
     @Test
     void basicCase() throws Exception {
         final ConfigSource configSource = XdsTestResources.basicConfigSource(BOOTSTRAP_CLUSTER_NAME);

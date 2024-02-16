@@ -64,6 +64,10 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         bootstrapNode = bootstrap.hasNode() ? bootstrap.getNode() : Node.getDefaultInstance();
     }
 
+    BootstrapClusters bootstrapClusters() {
+        return bootstrapClusters;
+    }
+
     void subscribe(ResourceNode<?> node) {
         final XdsType type = node.type();
         final String name = node.name();
