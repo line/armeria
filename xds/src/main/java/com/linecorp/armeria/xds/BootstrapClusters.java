@@ -37,7 +37,7 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
             for (Cluster cluster : staticResources.getClustersList()) {
                 if (cluster.hasLoadAssignment()) {
                     // no need to clean this cluster up since it is fully static
-                    StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), null, this, cluster);
+                    StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), this, cluster);
                 } else if (cluster.hasEdsClusterConfig()) {
                     edsClusters.put(cluster.getName(), cluster);
                 } else {

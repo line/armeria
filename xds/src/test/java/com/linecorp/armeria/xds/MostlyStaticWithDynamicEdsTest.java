@@ -23,8 +23,6 @@ import static com.linecorp.armeria.xds.XdsTestResources.createCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.loadAssignment;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -43,6 +41,7 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
 
 /**
  * This class ensures that the dynamic bootstrap configuration example at
@@ -59,6 +58,13 @@ class MostlyStaticWithDynamicEdsTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final V3DiscoveryServer v3DiscoveryServer = new V3DiscoveryServer(cache);
+            cache.setSnapshot(
+                    GROUP,
+                    Snapshot.create(ImmutableList.of(),
+                                    ImmutableList.of(loadAssignment("cluster", "127.0.0.1", 8080)),
+                                    ImmutableList.of(),
+                                    ImmutableList.of(),
+                                    ImmutableList.of(), "1"));
             sb.service(GrpcService.builder()
                                   .addService(v3DiscoveryServer.getAggregatedDiscoveryServiceImpl())
                                   .addService(v3DiscoveryServer.getListenerDiscoveryServiceImpl())
@@ -69,44 +75,33 @@ class MostlyStaticWithDynamicEdsTest {
         }
     };
 
-    @BeforeEach
-    void beforeEach() {
-        cache.setSnapshot(
-                GROUP,
-                Snapshot.create(ImmutableList.of(),
-                                ImmutableList.of(loadAssignment("cluster", "127.0.0.1", 8080)),
-                                ImmutableList.of(),
-                                ImmutableList.of(),
-                                ImmutableList.of(), "1"));
-    }
-
-    @Disabled
     @Test
     void basicCase() throws Exception {
         final ConfigSource configSource = XdsTestResources.basicConfigSource(BOOTSTRAP_CLUSTER_NAME);
         final Cluster bootstrapCluster = bootstrapCluster(server.httpUri(), BOOTSTRAP_CLUSTER_NAME);
         final Cluster staticCluster = createCluster("cluster");
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, staticResourceListener(),
+        final Listener listener = staticResourceListener();
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, listener,
                                                                bootstrapCluster, staticCluster);
         try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
             final TestResourceWatcher watcher = new TestResourceWatcher();
             listenerRoot.addSnapshotWatcher(watcher);
-            final Listener expectedListener =
-                    cache.getSnapshot(GROUP).listeners().resources().get("listener");
             final ListenerSnapshot listenerSnapshot =
                     watcher.blockingChanged(ListenerSnapshot.class);
-            assertThat(listenerSnapshot.xdsResource().resource()).isEqualTo(expectedListener);
+            System.err.println("listenerSnapshot: " + listenerSnapshot);
+            assertThat(listenerSnapshot.xdsResource().resource()).isEqualTo(listener);
 
             final RouteConfiguration expectedRoute =
-                    cache.getSnapshot(GROUP).routes().resources().get("route");
+                    listener.getApiListener()
+                            .getApiListener()
+                            .unpack(HttpConnectionManager.class)
+                            .getRouteConfig();
             final RouteSnapshot routeSnapshot = listenerSnapshot.routeSnapshot();
             assertThat(routeSnapshot.xdsResource().resource()).isEqualTo(expectedRoute);
 
-            final Cluster expectedCluster =
-                    cache.getSnapshot(GROUP).clusters().resources().get("cluster");
             final ClusterSnapshot clusterSnapshot = routeSnapshot.clusterSnapshots().get(0);
-            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
+            assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(staticCluster);
             final ClusterLoadAssignment expectedEndpoint =
                     cache.getSnapshot(GROUP).endpoints().resources().get("cluster");
             final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();

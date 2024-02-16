@@ -18,11 +18,11 @@ package com.linecorp.armeria.xds;
 
 import static com.linecorp.armeria.xds.ResourceNodeType.STATIC;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.config.route.v3.VirtualHost;
 
 final class StaticResourceUtils {
 
@@ -42,16 +42,31 @@ final class StaticResourceUtils {
     }
 
     static ClusterResourceNode staticCluster(XdsBootstrapImpl xdsBootstrap, String resourceName,
-                                             @Nullable RouteXdsResource primer,
                                              SnapshotWatcher<ClusterSnapshot> parentWatcher,
                                              Cluster cluster) {
+        final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
+                                                                 null, parentWatcher, STATIC);
+        setClusterXdsResourceToNode(cluster, node);
+        return node;
+    }
+
+    static ClusterResourceNode staticCluster(XdsBootstrapImpl xdsBootstrap, String resourceName,
+                                             RouteXdsResource primer,
+                                             SnapshotWatcher<ClusterSnapshot> parentWatcher,
+                                             VirtualHost virtualHost, Route route, int index,
+                                             Cluster cluster) {
+        final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
+                                                                 primer, parentWatcher, virtualHost, route,
+                                                                 index, ResourceNodeType.DYNAMIC);
+        setClusterXdsResourceToNode(cluster, node);
+        return node;
+    }
+
+    private static void setClusterXdsResourceToNode(Cluster cluster, ClusterResourceNode node) {
         final ClusterResourceParser resourceParser =
                 (ClusterResourceParser) XdsResourceParserUtil.fromType(XdsType.CLUSTER);
         final ClusterXdsResource parsed = resourceParser.parse(cluster);
-        final ClusterResourceNode node = new ClusterResourceNode(null, resourceName, xdsBootstrap,
-                                                                 primer, parentWatcher, STATIC);
         node.onChanged(parsed);
-        return node;
     }
 
     static EndpointResourceNode staticEndpoint(XdsBootstrapImpl xdsBootstrap, String resourceName,
