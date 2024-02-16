@@ -293,9 +293,8 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                hostnameOrIpAddr(hostnameOrIpAddr) + ':' + portWrapper.getPort();
     }
 
-    private static String concatPath(String baseURL, String oldHealthCheckUrlPath) {
-        return !oldHealthCheckUrlPath.isEmpty() && oldHealthCheckUrlPath.charAt(0) == '/' ?
-               baseURL + oldHealthCheckUrlPath : baseURL + '/' + oldHealthCheckUrlPath;
+    private static String concatPath(String baseURL, String path) {
+        return !path.isEmpty() && path.charAt(0) == '/' ? baseURL + path : baseURL + '/' + path;
     }
 
     @Nullable
