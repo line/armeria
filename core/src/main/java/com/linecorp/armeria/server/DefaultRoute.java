@@ -85,7 +85,7 @@ final class DefaultRoute implements Route {
         if (!headerPredicates.isEmpty()) {
             complexity += 1 << 3;
         }
-        // Exclude excludedRoutes from the complexity so that it isn't used hasDuplicateRouteCondition.
+        // Exclude excludedRoutes from the complexity so that it isn't used when finding duplicate route.
         this.complexity = complexity;
     }
 
@@ -316,11 +316,11 @@ final class DefaultRoute implements Route {
             return false;
         }
 
-        if (!pathType().hasTriePath() || !other.pathType().hasTriePath()) {
+        if (getClass() != other.getClass()) {
             return false;
         }
 
-        if (getClass() != other.getClass()) {
+        if (!pathType().hasTriePath() || !other.pathType().hasTriePath()) {
             return false;
         }
 
