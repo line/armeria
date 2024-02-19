@@ -266,7 +266,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         if (!portWrapper.isEnabled()) {
             return null;
         }
-        return vipAddress != null ? vipAddress : hostName + ':' + portWrapper.getPort();
+        return vipAddress != null ? vipAddress : hostName;
     }
 
     @Nullable

@@ -195,8 +195,8 @@ class EurekaUpdatingListenerTest {
         }
         final int port = application.activePort(SessionProtocol.HTTP).localAddress().getPort();
         final int securePort = application.activePort(SessionProtocol.HTTPS).localAddress().getPort();
-        builder.vipAddress(application.defaultHostname() + ':' + port)
-               .secureVipAddress(application.defaultHostname() + ':' + securePort)
+        builder.vipAddress(application.defaultHostname())
+               .secureVipAddress(application.defaultHostname())
                .port(port)
                .securePort(securePort)
                .healthCheckUrl("http://" + hostnameOrIpAddr + ':' + port + "/health")
