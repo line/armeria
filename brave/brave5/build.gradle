@@ -14,7 +14,6 @@ dependencies {
 
 def brave6ProjectDir = "${rootProject.projectDir}/brave/brave6"
 
-// Copy common files from jetty11 module to gen-src directory in order to use them as a source set.
 tasks.register('generateSources', Copy.class) {
     from "${brave6ProjectDir}/src"
     into "${project.ext.genSrcDir}"
