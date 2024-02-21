@@ -13,13 +13,18 @@ dependencies {
 }
 
 def brave6ProjectDir = "${rootProject.projectDir}/brave/brave6"
-tasks.compileJava.source "${brave6ProjectDir}/src/main/java"
-tasks.processResources.from "${brave6ProjectDir}/src/main/resources"
-tasks.compileTestJava.source "${brave6ProjectDir}/src/test/java"
-tasks.processTestResources.from "${brave6ProjectDir}/src/test/resources"
-tasks.sourcesJar.from "${brave6ProjectDir}/src/main/java"
-tasks.sourcesJar.from "${brave6ProjectDir}/src/main/resources"
-tasks.javadoc.source "${brave6ProjectDir}/src/main/java"
+
+// Copy common files from jetty11 module to gen-src directory in order to use them as a source set.
+tasks.register('generateSources', Copy.class) {
+    from "${brave6ProjectDir}/src"
+    into "${project.ext.genSrcDir}"
+    exclude '**/package-info.java'
+}
+
+tasks.compileJava.dependsOn(generateSources)
+tasks.processResources.dependsOn(generateSources)
+tasks.compileTestJava.dependsOn(generateSources)
+tasks.processTestResources.dependsOn(generateSources)
 
 ext {
     testThriftSrcDirs = ["$brave6ProjectDir/src/test/thrift"]
