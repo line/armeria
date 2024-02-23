@@ -1514,6 +1514,19 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         return selfSignedCertificate;
     }
 
+    VirtualHostBuilder hostnamePattern(String hostnamePattern, int port) {
+        if (defaultVirtualHost) {
+            throw new UnsupportedOperationException(
+                    "Cannot set hostnamePattern for the default virtual host builder");
+        }
+
+        this.hostnamePattern = hostnamePattern;
+        if (port >= 1 && port <= 65535) {
+            this.port = port;
+        }
+        return this;
+    }
+
     boolean equalsDefaultHostname(String defaultHostname) {
         return normalizeDefaultHostname(defaultHostname).equals(this.defaultHostname);
     }
@@ -1524,9 +1537,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         if (this.port != port) {
             return false;
         }
-
-        validateHostnamePattern(validHostnamePattern);
-
         return validHostnamePattern.equals(hostnamePattern);
     }
 
