@@ -27,6 +27,8 @@ import static com.linecorp.armeria.server.DefaultServerConfig.validateGreaterTha
 import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
+import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
+import static com.linecorp.armeria.server.VirtualHost.validateHostnamePattern;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static java.util.Objects.requireNonNull;
@@ -1566,16 +1568,20 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         requireNonNull(hostnamePattern, "hostnamePattern");
 
         final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+
+        validateHostnamePattern(hostAndPort.getHost());
+
+        final String normalizedHostnamePattern = normalizeHostnamePattern(hostAndPort.getHost());
+        final int port = hostAndPort.getPortOrDefault(-1);
         for (VirtualHostBuilder virtualHostBuilder : virtualHostBuilders) {
             if (!virtualHostBuilder.defaultVirtualHost() &&
-                virtualHostBuilder.equalsHostnamePattern(hostAndPort.getHost(),
-                                                         hostAndPort.getPortOrDefault(-1))) {
+                virtualHostBuilder.equalsHostnamePattern(normalizedHostnamePattern, port)) {
                 return virtualHostBuilder;
             }
         }
 
         final VirtualHostBuilder virtualHostBuilder =
-                new VirtualHostBuilder(this, false).hostnamePattern(hostnamePattern);
+                new VirtualHostBuilder(this, false).hostnamePattern(normalizedHostnamePattern, port);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1592,18 +1598,22 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         requireNonNull(hostnamePattern, "hostnamePattern");
 
         final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+
+        validateHostnamePattern(hostAndPort.getHost());
+
+        final String normalizedHostnamePattern = normalizeHostnamePattern(hostAndPort.getHost());
+        final int port = hostAndPort.getPortOrDefault(-1);
         for (VirtualHostBuilder virtualHostBuilder : virtualHostBuilders) {
             if (!virtualHostBuilder.defaultVirtualHost() &&
                 virtualHostBuilder.equalsDefaultHostname(defaultHostname) &&
-                virtualHostBuilder.equalsHostnamePattern(hostAndPort.getHost(),
-                                                         hostAndPort.getPortOrDefault(-1))) {
+                virtualHostBuilder.equalsHostnamePattern(normalizedHostnamePattern, port)) {
                 return virtualHostBuilder;
             }
         }
 
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
                 .defaultHostname(defaultHostname)
-                .hostnamePattern(hostnamePattern);
+                .hostnamePattern(normalizedHostnamePattern, port);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
