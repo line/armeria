@@ -1566,14 +1566,12 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         requireNonNull(hostnamePattern, "hostnamePattern");
 
         final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
-        final Optional<VirtualHostBuilder> vhost =
-                virtualHostBuilders.stream()
-                                   .filter(v -> !v.defaultVirtualHost() &&
-                                                v.equalsHostnamePattern(hostAndPort.getHost(),
-                                                                        hostAndPort.getPortOrDefault(-1)))
-                                   .findFirst();
-        if (vhost.isPresent()) {
-            return vhost.get();
+        for (VirtualHostBuilder virtualHostBuilder : virtualHostBuilders) {
+            if (!virtualHostBuilder.defaultVirtualHost() &&
+                virtualHostBuilder.equalsHostnamePattern(hostAndPort.getHost(),
+                                                         hostAndPort.getPortOrDefault(-1))) {
+                return virtualHostBuilder;
+            }
         }
 
         final VirtualHostBuilder virtualHostBuilder =
@@ -1594,15 +1592,13 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         requireNonNull(hostnamePattern, "hostnamePattern");
 
         final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
-        final Optional<VirtualHostBuilder> vhost =
-                virtualHostBuilders.stream()
-                                   .filter(v -> !v.defaultVirtualHost())
-                                   .filter(v -> v.equalsDefaultHostname(defaultHostname) &&
-                                                v.equalsHostnamePattern(hostAndPort.getHost(),
-                                                                        hostAndPort.getPortOrDefault(-1)))
-                                   .findFirst();
-        if (vhost.isPresent()) {
-            return vhost.get();
+        for (VirtualHostBuilder virtualHostBuilder : virtualHostBuilders) {
+            if (!virtualHostBuilder.defaultVirtualHost() &&
+                virtualHostBuilder.equalsDefaultHostname(defaultHostname) &&
+                virtualHostBuilder.equalsHostnamePattern(hostAndPort.getHost(),
+                                                         hostAndPort.getPortOrDefault(-1))) {
+                return virtualHostBuilder;
+            }
         }
 
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
