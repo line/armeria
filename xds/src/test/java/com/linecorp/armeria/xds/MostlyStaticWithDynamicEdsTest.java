@@ -89,7 +89,6 @@ class MostlyStaticWithDynamicEdsTest {
             listenerRoot.addSnapshotWatcher(watcher);
             final ListenerSnapshot listenerSnapshot =
                     watcher.blockingChanged(ListenerSnapshot.class);
-            System.err.println("listenerSnapshot: " + listenerSnapshot);
             assertThat(listenerSnapshot.xdsResource().resource()).isEqualTo(listener);
 
             final RouteConfiguration expectedRoute =
