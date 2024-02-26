@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
+import com.google.protobuf.Value;
 import com.google.protobuf.util.Durations;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -39,6 +40,7 @@ import io.envoyproxy.envoy.config.core.v3.ApiVersion;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
+import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -64,12 +66,17 @@ public final class XdsTestResources {
     private XdsTestResources() {}
 
     public static LbEndpoint endpoint(String address, int port) {
+        return endpoint(address, port, Metadata.getDefaultInstance());
+    }
+
+    public static LbEndpoint endpoint(String address, int port, Metadata metadata) {
         final SocketAddress socketAddress = SocketAddress.newBuilder()
                                                          .setAddress(address)
                                                          .setPortValue(port)
                                                          .build();
         return LbEndpoint
                 .newBuilder()
+                .setMetadata(metadata)
                 .setEndpoint(Endpoint.newBuilder()
                                      .setAddress(Address.newBuilder()
                                                         .setSocketAddress(socketAddress)
@@ -84,9 +91,8 @@ public final class XdsTestResources {
     public static ClusterLoadAssignment loadAssignment(String clusterName, String address, int port) {
         return ClusterLoadAssignment.newBuilder()
                                     .setClusterName(clusterName)
-                                    .addEndpoints(
-                                            LocalityLbEndpoints.newBuilder()
-                                                               .addLbEndpoints(endpoint(address, port)))
+                                    .addEndpoints(LocalityLbEndpoints.newBuilder()
+                                                                     .addLbEndpoints(endpoint(address, port)))
                                     .build();
     }
 
@@ -137,17 +143,25 @@ public final class XdsTestResources {
                 .build();
     }
 
-    public static Bootstrap bootstrap(ConfigSource configSource, Cluster... cluster) {
+    public static Bootstrap bootstrap(ConfigSource configSource, Cluster cluster) {
+        return bootstrap(configSource, Listener.getDefaultInstance(), cluster);
+    }
+
+    public static Bootstrap bootstrap(ConfigSource configSource, Listener listener, Cluster cluster) {
+        final StaticResources.Builder staticResourceBuilder = StaticResources.newBuilder();
+        if (listener != Listener.getDefaultInstance()) {
+            staticResourceBuilder.addListeners(listener);
+        }
+        if (cluster != Cluster.getDefaultInstance()) {
+            staticResourceBuilder.addClusters(cluster);
+        }
         return Bootstrap
                 .newBuilder()
-                .setStaticResources(
-                        StaticResources.newBuilder()
-                                       .addAllClusters(ImmutableSet.copyOf(cluster)))
-                .setDynamicResources(
-                        DynamicResources
-                                .newBuilder()
-                                .setCdsConfig(configSource)
-                                .setAdsConfig(configSource.getApiConfigSource())
+                .setStaticResources(staticResourceBuilder.build())
+                .setDynamicResources(DynamicResources
+                                             .newBuilder()
+                                             .setCdsConfig(configSource)
+                                             .setAdsConfig(configSource.getApiConfigSource())
                 )
                 .build();
     }
@@ -289,5 +303,9 @@ public final class XdsTestResources {
                                                         .setCluster(clusterName)));
         }
         return builder.build();
+    }
+
+    public static Value stringValue(String value) {
+        return Value.newBuilder().setStringValue(value).build();
     }
 }

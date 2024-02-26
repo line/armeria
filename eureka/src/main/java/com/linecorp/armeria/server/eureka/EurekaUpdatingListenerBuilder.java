@@ -287,10 +287,26 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     /**
+     * Sets the home page URL path used to automatically create {@link #homePageUrl(String)}.
+     */
+    public EurekaUpdatingListenerBuilder homePageUrlPath(String homePageUrlPath) {
+        instanceInfoBuilder.homePageUrlPath(homePageUrlPath);
+        return this;
+    }
+
+    /**
      * Sets the home page URL.
      */
     public EurekaUpdatingListenerBuilder homePageUrl(String homePageUrl) {
         instanceInfoBuilder.homePageUrl(homePageUrl);
+        return this;
+    }
+
+    /**
+     * Sets the status page URL path used to automatically create {@link #statusPageUrl(String)}.
+     */
+    public EurekaUpdatingListenerBuilder statusPageUrlPath(String statusPageUrlPath) {
+        instanceInfoBuilder.statusPageUrlPath(statusPageUrlPath);
         return this;
     }
 
