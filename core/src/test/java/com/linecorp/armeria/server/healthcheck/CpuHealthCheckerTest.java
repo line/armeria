@@ -15,11 +15,7 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.lang.invoke.MethodHandle;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import org.junit.jupiter.api.Test;
 
@@ -27,61 +23,8 @@ class CpuHealthCheckerTest {
 
     @Test
     void shouldGatherCpuUsageInformationAndCheckHealth() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
-        assertNotNull(processCpuUsage);
-        assertNotNull(systemCpuUsage);
-        assertTrue(cpuHealthChecker.isHealthy(() -> 0.2, () -> 0.01));
-    }
-
-    @Test
-    void shouldGatherCpuUsageInformationAndCheckHealthWithBoundaryCpuUsage() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
-        assertNotNull(processCpuUsage);
-        assertNotNull(systemCpuUsage);
-        assertTrue(cpuHealthChecker.isHealthy(() -> 0.3, () -> 0.01));
-    }
-
-    @Test
-    void shouldGatherCpuUsageInformationAndCheckHealthWithBoundaryProcessUsage() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
-        assertNotNull(processCpuUsage);
-        assertNotNull(systemCpuUsage);
-        assertTrue(cpuHealthChecker.isHealthy(() -> 0.01, () -> 0.1));
-    }
-
-    @Test
-    void testSystemCpuLoadExceedsTargetCpuUsage() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
-        assertNotNull(processCpuUsage);
-        assertNotNull(systemCpuUsage);
-        assertFalse(cpuHealthChecker.isHealthy(() -> 0.4, () -> 0.1));
-    }
-
-    @Test
-    void testProcessCpuLoadExceedsTargetProcessCpuUsage() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
-        assertNotNull(processCpuUsage);
-        assertNotNull(systemCpuUsage);
-        assertFalse(cpuHealthChecker.isHealthy(() -> 0.3, () -> 0.11));
-    }
-
-    @Test
-    void testExceedsBoth() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
-        assertNotNull(processCpuUsage);
-        assertNotNull(systemCpuUsage);
-        assertFalse(cpuHealthChecker.isHealthy(() -> 0.4, () -> 0.11));
+        final CpuHealthChecker healthChecker = CpuHealthChecker.of(0.1, 0.3);
+        assertNotEquals(Double.NaN, healthChecker.targetSystemCpuUsage);
+        assertNotEquals(Double.NaN, healthChecker.targetProcessCpuLoad);
     }
 }

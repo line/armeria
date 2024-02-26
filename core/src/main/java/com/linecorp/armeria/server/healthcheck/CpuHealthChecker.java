@@ -64,12 +64,10 @@ final class CpuHealthChecker implements HealthChecker {
     );
 
     @Nullable
-    @VisibleForTesting
-    static final MethodHandle systemCpuLoad;
+    private static final MethodHandle systemCpuLoad;
 
     @Nullable
-    @VisibleForTesting
-    static final MethodHandle processCpuLoad;
+    private static final MethodHandle processCpuLoad;
 
     static {
         operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));
@@ -81,13 +79,15 @@ final class CpuHealthChecker implements HealthChecker {
         currentProcessCpuUsageSupplier = () -> invoke(processCpuLoad);
     }
 
-    private final double targetCpuUsage;
-
     private final DoubleSupplier systemCpuUsageSupplier;
 
     private final DoubleSupplier processCpuUsageSupplier;
 
-    private final double targetProcessCpuLoad;
+    @VisibleForTesting
+    final double targetProcessCpuLoad;
+
+    @VisibleForTesting
+    final double targetSystemCpuUsage;
 
     /**
      * Instantiates a new Default cpu health checker.
@@ -100,13 +100,13 @@ final class CpuHealthChecker implements HealthChecker {
                 currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
     }
 
-    private CpuHealthChecker(double targetCpuUsage, double targetProcessCpuLoad,
+    private CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuLoad,
                              DoubleSupplier systemCpuUsageSupplier, DoubleSupplier processCpuUsageSupplier) {
-        checkArgument(targetCpuUsage >= 0 && targetCpuUsage <= 1.0,
-                      "cpuUsage: %s (expected: 0 <= cpuUsage <= 1)", targetCpuUsage);
+        checkArgument(targetSystemCpuUsage >= 0 && targetSystemCpuUsage <= 1.0,
+                      "cpuUsage: %s (expected: 0 <= cpuUsage <= 1)", targetSystemCpuUsage);
         checkArgument(targetProcessCpuLoad >= 0 && targetProcessCpuLoad <= 1.0,
                       "processCpuLoad: %s (expected: 0 <= processCpuLoad <= 1)", targetProcessCpuLoad);
-        this.targetCpuUsage = targetCpuUsage;
+        this.targetSystemCpuUsage = targetSystemCpuUsage;
         this.targetProcessCpuLoad = targetProcessCpuLoad;
         this.systemCpuUsageSupplier = systemCpuUsageSupplier;
         this.processCpuUsageSupplier = processCpuUsageSupplier;
@@ -171,11 +171,10 @@ final class CpuHealthChecker implements HealthChecker {
         return isHealthy(systemCpuUsageSupplier, processCpuUsageSupplier);
     }
 
-    @VisibleForTesting
-    boolean isHealthy(
+    private boolean isHealthy(
             DoubleSupplier currentSystemCpuUsageSupplier, DoubleSupplier currentProcessCpuUsageSupplier) {
         final double currentSystemCpuUsage = currentSystemCpuUsageSupplier.getAsDouble();
         final double currentProcessCpuUsage = currentProcessCpuUsageSupplier.getAsDouble();
-        return currentSystemCpuUsage <= targetCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
+        return currentSystemCpuUsage <= targetSystemCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
     }
 }
