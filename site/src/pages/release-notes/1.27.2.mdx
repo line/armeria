@@ -4,8 +4,8 @@ date: 2024-02-26
 
 ## 🔒 Security fixes
 
-- Armeria's SAML integration now rejects unsigned SAML responses by default. [CVE-2024-1735](https://github.com/line/armeria/security/advisories/GHSA-4m6j-23p2-8c54)
-  - You can set <type://SamlServiceProviderBuilder#signatureRequired(boolean)> to control whether to accept unsigned SAML responses.
+- Armeria's SAML integration now rejects unsigned SAML messages by default. [CVE-2024-1735](https://github.com/line/armeria/security/advisories/GHSA-4m6j-23p2-8c54)
+  - You can set <type://SamlServiceProviderBuilder#signatureRequired(boolean)> to control whether to accept unsigned SAML messages.
 
 ## 🛠️ Bug fixes
 
