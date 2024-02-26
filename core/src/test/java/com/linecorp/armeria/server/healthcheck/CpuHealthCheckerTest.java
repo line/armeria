@@ -27,61 +27,61 @@ class CpuHealthCheckerTest {
 
     @Test
     void shouldGatherCpuUsageInformationAndCheckHealth() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
-        assertTrue(cpuHealthChecker.isHealthy(() -> 2.0, () -> 1.0));
+        assertTrue(cpuHealthChecker.isHealthy(() -> 0.2, () -> 0.01));
     }
 
     @Test
     void shouldGatherCpuUsageInformationAndCheckHealthWithBoundaryCpuUsage() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
-        assertTrue(cpuHealthChecker.isHealthy(() -> 3.0, () -> 1.0));
+        assertTrue(cpuHealthChecker.isHealthy(() -> 0.3, () -> 0.01));
     }
 
     @Test
     void shouldGatherCpuUsageInformationAndCheckHealthWithBoundaryProcessUsage() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
-        assertTrue(cpuHealthChecker.isHealthy(() -> 1.0, () -> 10.0));
+        assertTrue(cpuHealthChecker.isHealthy(() -> 0.01, () -> 0.1));
     }
 
     @Test
-    void testGatheringCpuUsageInformation4() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+    void testSystemCpuLoadExceedsTargetCpuUsage() {
+        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
-        assertFalse(cpuHealthChecker.isHealthy(() -> 4.0, () -> 10.0));
+        assertFalse(cpuHealthChecker.isHealthy(() -> 0.4, () -> 0.1));
     }
 
     @Test
-    void testGatheringCpuUsageInformation5() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+    void testProcessCpuLoadExceedsTargetProcessCpuUsage() {
+        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
-        assertFalse(cpuHealthChecker.isHealthy(() -> 3.0, () -> 11.0));
+        assertFalse(cpuHealthChecker.isHealthy(() -> 0.3, () -> 0.11));
     }
 
     @Test
-    void testGatheringCpuUsageInformation6() {
-        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(3.0, 10);
-        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuUsage;
-        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuUsage;
+    void testExceedsBoth() {
+        final CpuHealthChecker cpuHealthChecker = CpuHealthChecker.of(0.3, 0.1);
+        final MethodHandle processCpuUsage = cpuHealthChecker.processCpuLoad;
+        final MethodHandle systemCpuUsage = cpuHealthChecker.systemCpuLoad;
         assertNotNull(processCpuUsage);
         assertNotNull(systemCpuUsage);
-        assertFalse(cpuHealthChecker.isHealthy(() -> 4.0, () -> 11.0));
+        assertFalse(cpuHealthChecker.isHealthy(() -> 0.4, () -> 0.11));
     }
 }

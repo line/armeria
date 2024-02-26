@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -63,11 +65,11 @@ final class CpuHealthChecker implements HealthChecker {
 
     @Nullable
     @VisibleForTesting
-    static final MethodHandle systemCpuUsage;
+    static final MethodHandle systemCpuLoad;
 
     @Nullable
     @VisibleForTesting
-    static final MethodHandle processCpuUsage;
+    static final MethodHandle processCpuLoad;
 
     static {
         operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));
@@ -75,8 +77,8 @@ final class CpuHealthChecker implements HealthChecker {
         final MethodHandle getCpuLoad = detectMethod("getCpuLoad");
         systemCpuLoad = getCpuLoad != null ? getCpuLoad : detectMethod("getSystemCpuLoad");
         processCpuLoad = detectMethod("getProcessCpuLoad");
-        currentSystemCpuUsageSupplier = () -> invoke(systemCpuUsage);
-        currentProcessCpuUsageSupplier = () -> invoke(processCpuUsage);
+        currentSystemCpuUsageSupplier = () -> invoke(systemCpuLoad);
+        currentProcessCpuUsageSupplier = () -> invoke(processCpuLoad);
     }
 
     private final double targetCpuUsage;
@@ -98,12 +100,22 @@ final class CpuHealthChecker implements HealthChecker {
                 currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
     }
 
-    private CpuHealthChecker(double cpuUsageThreshold, double processCpuLoadThreshold,
+    private CpuHealthChecker(double targetCpuUsage, double targetProcessCpuLoad,
                              DoubleSupplier systemCpuUsageSupplier, DoubleSupplier processCpuUsageSupplier) {
-        this.targetCpuUsage = cpuUsageThreshold;
-        this.targetProcessCpuLoad = processCpuLoadThreshold;
+        checkArgument(targetCpuUsage >= 0 && targetCpuUsage <= 1.0,
+                      "cpuUsage: %s (expected: 0 <= cpuUsage <= 1)", targetCpuUsage);
+        checkArgument(targetProcessCpuLoad >= 0 && targetProcessCpuLoad <= 1.0,
+                      "processCpuLoad: %s (expected: 0 <= processCpuLoad <= 1)", targetProcessCpuLoad);
+        this.targetCpuUsage = targetCpuUsage;
+        this.targetProcessCpuLoad = targetProcessCpuLoad;
         this.systemCpuUsageSupplier = systemCpuUsageSupplier;
         this.processCpuUsageSupplier = processCpuUsageSupplier;
+        checkState(operatingSystemBeanClass != null, "Unable to find an 'OperatingSystemMXBean' class");
+        checkState(operatingSystemBean != null, "Unable to find an 'OperatingSystemMXBean'");
+        checkState(systemCpuLoad != null, "Unable to find the method 'OperatingSystemMXBean.getCpuLoad'" +
+                                           " or 'OperatingSystemMXBean.getSystemCpuLoad'");
+        checkState(processCpuLoad != null,
+                   "Unable to find the method 'OperatingSystemMXBean.getProcessCpuLoad'");
     }
 
     private static double invoke(@Nullable MethodHandle mh) {
@@ -147,7 +159,7 @@ final class CpuHealthChecker implements HealthChecker {
         return null;
     }
 
-    public static CpuHealthChecker of(double targetCpuUsage, double targetProcessCpuLoad) {
+    static CpuHealthChecker of(double targetCpuUsage, double targetProcessCpuLoad) {
         return new CpuHealthChecker(targetCpuUsage, targetProcessCpuLoad);
     }
 
