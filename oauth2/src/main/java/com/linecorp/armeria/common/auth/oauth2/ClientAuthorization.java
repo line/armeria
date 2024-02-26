@@ -28,7 +28,6 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.auth.oauth2.CaseUtil;
 
 /**
@@ -43,8 +42,10 @@ import com.linecorp.armeria.internal.common.auth.oauth2.CaseUtil;
  * request. Therefore the designated supplier must cache the value in order to avoid unnecessary
  * network hops.
  * The authorization source might either provide complete authorization token or client credentials.
+ *
+ * @deprecated Use {@link ClientAuthentication} instead.
  */
-@UnstableApi
+@Deprecated
 public final class ClientAuthorization {
 
     private static final String DEFAULT_AUTHORIZATION_TYPE = "Basic";
@@ -69,7 +70,9 @@ public final class ClientAuthorization {
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
+     * @deprecated Use {@link ClientAuthentication#ofAuthorization(String, String)} instead.
      */
+    @Deprecated
     public static ClientAuthorization ofAuthorization(
             Supplier<String> authorizationSupplier, String authorizationType) {
         return new ClientAuthorization(requireNonNull(authorizationSupplier, "authorizationSupplier"),
@@ -82,7 +85,10 @@ public final class ClientAuthorization {
      * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
+     *
+     * @deprecated Use {@link ClientAuthentication#ofBasic(String)}} instead.
      */
+    @Deprecated
     public static ClientAuthorization ofBasicAuthorization(
             Supplier<String> authorizationSupplier) {
         return new ClientAuthorization(requireNonNull(authorizationSupplier, "authorizationSupplier"),
@@ -98,7 +104,10 @@ public final class ClientAuthorization {
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
+     * @deprecated Use {@link ClientAuthentication#ofClientPassword(String, String)} or
+     *             {@link ClientAuthentication#ofAuthorization(String, String)} instead.
      */
+    @Deprecated
     public static ClientAuthorization ofCredentials(
             Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
         return new ClientAuthorization(null,
@@ -112,7 +121,10 @@ public final class ClientAuthorization {
      * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param credentialsSupplier A supplier of client credentials.
+     *
+     * @deprecated Use {@link ClientAuthentication#ofClientPassword(String, String)} instead.
      */
+    @Deprecated
     public static ClientAuthorization ofCredentials(
             Supplier<? extends Map.Entry<String, String>> credentialsSupplier) {
         return new ClientAuthorization(null,
@@ -193,6 +205,23 @@ public final class ClientAuthorization {
         final QueryParamsBuilder formBuilder = QueryParams.builder();
         addAsBodyParameters(formBuilder);
         return formBuilder.build();
+    }
+
+    /**
+     * Converts this {@link ClientAuthorization} to a {@link ClientAuthentication}.
+     */
+    public ClientAuthentication toClientAuthentication() {
+        return new ClientAuthentication() {
+            @Override
+            public String asHeaderValue() {
+                return ClientAuthorization.this.asHeaderValue();
+            }
+
+            @Override
+            public void addAsBodyParameters(QueryParamsBuilder formBuilder) {
+                ClientAuthorization.this.addAsBodyParameters(formBuilder);
+            }
+        };
     }
 
     @Override

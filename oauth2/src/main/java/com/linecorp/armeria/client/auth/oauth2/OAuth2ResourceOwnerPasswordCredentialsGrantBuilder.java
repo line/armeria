@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
@@ -24,15 +25,15 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
-import com.linecorp.armeria.internal.client.auth.oauth2.AbstractAccessTokenRequest;
-import com.linecorp.armeria.internal.client.auth.oauth2.ResourceOwnerPasswordCredentialsTokenRequest;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 
 /**
  * Builds {@link OAuth2ClientCredentialsGrant}.
+ *
+ * @deprecated Use {@link OAuth2AuthorizationGrantBuilder} with
+ *             {@link AccessTokenRequest#ofResourceOwnerPassword(String, String)} instead.
  */
-@UnstableApi
+@Deprecated
 public final class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
         extends AbstractOAuth2AuthorizationGrantBuilder<OAuth2ResourceOwnerPasswordCredentialsGrantBuilder> {
 
@@ -60,21 +61,22 @@ public final class OAuth2ResourceOwnerPasswordCredentialsGrantBuilder
         return this;
     }
 
-    @Override
-    protected AbstractAccessTokenRequest buildObtainRequest(WebClient accessTokenEndpoint,
-                                                            String accessTokenEndpointPath,
-                                                            @Nullable ClientAuthorization clientAuthorization) {
-        return new ResourceOwnerPasswordCredentialsTokenRequest(
-                accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization,
-                requireNonNull(userCredentialsSupplier, "userCredentialsSupplier"));
-    }
-
     /**
      * Builds a new instance of {@link OAuth2ResourceOwnerPasswordCredentialsGrant} using configured parameters.
      */
     public OAuth2ResourceOwnerPasswordCredentialsGrant build() {
-        return new OAuth2ResourceOwnerPasswordCredentialsGrant(
-                (ResourceOwnerPasswordCredentialsTokenRequest) buildObtainRequest(),
-                buildRefreshRequest(), refreshBefore(), fallbackTokenProvider(), newTokenConsumer());
+        checkState(userCredentialsSupplier != null, "userCredentialsSupplier must be set.");
+        final ClientAuthentication clientAuthentication = buildClientAuthentication();
+        final Supplier<AccessTokenRequest> accessTokenRequestSupplier = () -> {
+            final Entry<String, String> userCredentials = userCredentialsSupplier.get();
+            requireNonNull(userCredentials, "userCredentials");
+            return AccessTokenRequest.ofResourceOwnerPassword(userCredentials.getKey(),
+                                                              userCredentials.getValue(),
+                                                              clientAuthentication, null);
+        };
+
+        final OAuth2AuthorizationGrant delegate = delegate().accessTokenRequest(accessTokenRequestSupplier)
+                                                            .build();
+        return new OAuth2ResourceOwnerPasswordCredentialsGrant(delegate);
     }
 }
