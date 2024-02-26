@@ -2,6 +2,11 @@
 date: 2024-02-14
 ---
 
+## 🔒 Security fixes
+
+- Armeria's SAML integration server now rejects unsigned SAML responses by default. [CVE-2024-1735](https://github.com/line/armeria/security/advisories/GHSA-4m6j-23p2-8c54)
+  - Unsigned SAML responses can be used by enabling <type://SamlServiceProviderBuilder#signatureRequired(boolean)>.
+
 ## 🛠️ Bug fixes
 
 - <type://XdsEndpointGroup> now supports [Subset based Load Balancing](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/subsets),
