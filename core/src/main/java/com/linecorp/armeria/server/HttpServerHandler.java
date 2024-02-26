@@ -76,6 +76,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -343,12 +344,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final InetSocketAddress localAddress = firstNonNull(localAddress(channel), UNKNOWN_ADDR);
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(remoteAddress, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
+        final EventLoop channelEventLoop = channel.eventLoop();
 
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
             final ServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
-                    channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx);
+                    channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx,
+                    channelEventLoop);
 
             // Handle 'OPTIONS * HTTP/1.1'.
             if (routingStatus == RoutingStatus.OPTIONS) {
@@ -367,17 +370,88 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RoutingResult routingResult = routed.routingResult();
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
-
+        final EventLoop serviceEventLoop;
+        final boolean needsDirectExecution;
+        final EventLoopGroup serviceWorkerGroup = serviceCfg.serviceWorkerGroup();
+        if (serviceWorkerGroup == config.workerGroup()) {
+            serviceEventLoop = channelEventLoop;
+            needsDirectExecution = true;
+        } else {
+            serviceEventLoop = serviceWorkerGroup.next();
+            needsDirectExecution = serviceEventLoop == channelEventLoop;
+        }
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, config.meterRegistry(), protocol,
+                serviceCfg, channel, serviceEventLoop, config.meterRegistry(), protocol,
                 nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros(), serviceCfg.contextHook());
 
+        final HttpResponse res;
+        req.init(reqCtx);
+        if (needsDirectExecution) {
+            res = serve0(req, serviceCfg, service, reqCtx);
+        } else {
+            res = HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx),
+                                  serviceEventLoop)
+                              .subscribeOn(serviceEventLoop);
+        }
+
+        // Keep track of the number of unfinished requests and
+        // clean up the request stream when response stream ends.
+        final boolean isTransientService =
+                serviceCfg.service().as(TransientService.class) != null;
+        if (!isTransientService) {
+            gracefulShutdownSupport.inc();
+        }
+        unfinishedRequests.put(req, res);
+
+        if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routed.route())) {
+            reqCtx.log().whenComplete().thenAccept(log -> {
+                final int statusCode = log.responseHeaders().status().code();
+                if (statusCode >= 200 && statusCode < 400) {
+                    RequestTargetCache.putForServer(req.path(), routingCtx.requestTarget());
+                }
+            });
+        }
+
+        final RequestAndResponseCompleteHandler handler =
+                new RequestAndResponseCompleteHandler(channelEventLoop, ctx, reqCtx, req,
+                                                      isTransientService);
+        req.whenComplete().handle(handler.requestCompleteHandler);
+
+        // A future which is completed when the all response objects are written to channel and
+        // the returned promises are done.
+        final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
+        resWriteFuture.handle(handler.responseCompleteHandler);
+
+        // Set the response to the request in order to be able to immediately abort the response
+        // when the peer cancels the stream.
+        req.setResponse(res);
+
+        if (req.isHttp1WebSocket()) {
+            assert responseEncoder instanceof Http1ObjectEncoder;
+            final WebSocketHttp1ResponseSubscriber resSubscriber =
+                    new WebSocketHttp1ResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+            res.subscribe(resSubscriber, channelEventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
+        } else if (reqCtx.exchangeType().isResponseStreaming()) {
+            final AbstractHttpResponseSubscriber resSubscriber =
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+            res.subscribe(resSubscriber, channelEventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
+        } else {
+            final AggregatedHttpResponseHandler resHandler =
+                    new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+            res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), channelEventLoop))
+               .handle(resHandler);
+        }
+    }
+
+    private HttpResponse serve0(HttpRequest req,
+                                ServiceConfig serviceCfg,
+                                HttpService service,
+                                DefaultServiceRequestContext reqCtx) {
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
             try {
-                req.init(reqCtx);
                 serviceResponse = service.serve(reqCtx, req);
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.
@@ -394,56 +468,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Recover the failed response with the error handler.
                 return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
             });
-            final HttpResponse res = serviceResponse;
-            final EventLoop eventLoop = channel.eventLoop();
-
-            // Keep track of the number of unfinished requests and
-            // clean up the request stream when response stream ends.
-            final boolean isTransientService =
-                    serviceCfg.service().as(TransientService.class) != null;
-            if (!isTransientService) {
-                gracefulShutdownSupport.inc();
-            }
-            unfinishedRequests.put(req, res);
-
-            if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routed.route())) {
-                reqCtx.log().whenComplete().thenAccept(log -> {
-                    final int statusCode = log.responseHeaders().status().code();
-                    if (statusCode >= 200 && statusCode < 400) {
-                        RequestTargetCache.putForServer(req.path(), routingCtx.requestTarget());
-                    }
-                });
-            }
-
-            final RequestAndResponseCompleteHandler handler =
-                    new RequestAndResponseCompleteHandler(eventLoop, ctx, reqCtx, req,
-                                                          isTransientService);
-            req.whenComplete().handle(handler.requestCompleteHandler);
-
-            // A future which is completed when the all response objects are written to channel and
-            // the returned promises are done.
-            final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
-            resWriteFuture.handle(handler.responseCompleteHandler);
-
-            // Set the response to the request in order to be able to immediately abort the response
-            // when the peer cancels the stream.
-            req.setResponse(res);
-
-            if (req.isHttp1WebSocket()) {
-                assert responseEncoder instanceof Http1ObjectEncoder;
-                final WebSocketHttp1ResponseSubscriber resSubscriber =
-                        new WebSocketHttp1ResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
-                res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
-            } else if (reqCtx.exchangeType().isResponseStreaming()) {
-                final AbstractHttpResponseSubscriber resSubscriber =
-                        new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
-                res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
-            } else {
-                final AggregatedHttpResponseHandler resHandler =
-                        new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture);
-                res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), eventLoop))
-                   .handle(resHandler);
-            }
+            return serviceResponse;
         }
     }
 
@@ -612,14 +637,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                                                    InetAddress clientAddress,
                                                                    InetSocketAddress remoteAddress,
                                                                    InetSocketAddress localAddress,
-                                                                   RoutingContext routingCtx) {
+                                                                   RoutingContext routingCtx,
+                                                                   EventLoop eventLoop) {
         final ServiceConfig serviceConfig = routingCtx.virtualHost().fallbackServiceConfig();
         final RoutingResult routingResult = RoutingResult.builder()
                                                          .path(routingCtx.path())
                                                          .build();
         return new DefaultServiceRequestContext(
                 serviceConfig,
-                channel, NoopMeterRegistry.get(), protocol(),
+                channel, eventLoop, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros(), NOOP_CONTEXT_HOOK);

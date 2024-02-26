@@ -6,6 +6,7 @@
 !city.sendai.jp
 !city.yokohama.jp
 !www.ck
+*.001.test.code-builder-stg.platform.salesforce.com
 *.0emm.com
 *.advisor.ws
 *.alces.network
@@ -28,6 +29,7 @@
 *.ca-central-1.airflow.amazonaws.com
 *.ck
 *.cloud.metacentrum.cz
+*.cloudapp.azure.com
 *.cloudera.site
 *.cn-north-1.airflow.amazonaws.com.cn
 *.cn-northwest-1.airflow.amazonaws.com.cn
@@ -37,6 +39,7 @@
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
 *.compute.estate
+*.cprapid.com
 *.cryptonomic.net
 *.customer-oci.com
 *.dapps.earth
@@ -65,10 +68,13 @@
 *.gateway.dev
 *.hosting.myjino.ru
 *.hosting.ovh.net
+*.id.pub
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
 *.kh
+*.kin.one
+*.kin.pub
 *.kitakyushu.jp
 *.kobe.jp
 *.kunden.ortsinfo.at
@@ -97,9 +103,12 @@
 *.paywhirl.com
 *.pg
 *.platformsh.site
+*.private.repost.aws
 *.quipelements.com
 *.r.appspot.com
 *.rss.my.id
+*.run.app
+*.s.brave.io
 *.s5y.io
 *.sa-east-1.airflow.amazonaws.com
 *.sapporo.jp
@@ -121,6 +130,7 @@
 *.triton.zone
 *.tst.site
 *.uberspace.de
+*.upsun.app
 *.us-east-1.airflow.amazonaws.com
 *.us-east-2.airflow.amazonaws.com
 *.us-west-2.airflow.amazonaws.com
@@ -152,6 +162,9 @@
 123website.ch
 123website.lu
 123website.nl
+12chars.dev
+12chars.it
+12chars.pro
 12hp.at
 12hp.ch
 12hp.de
@@ -192,9 +205,9 @@
 9guacu.br
 a.bg
 a.prod.fastly.net
-a.run.app
 a.se
 a.ssl.fastly.net
+a2hosted.com
 aa.no
 aaa
 aaa.pro
@@ -299,6 +312,8 @@ ae
 ae.org
 aeg
 aejrie.no
+aem.live
+aem.page
 aero
 aero.mv
 aero.tt
@@ -405,6 +420,7 @@ aland.fi
 alessandria.it
 alesund.no
 algard.no
+aliases121.com
 alibaba
 alipay
 allfinanz
@@ -634,6 +650,7 @@ ath.cx
 athleta
 atl.jelastic.vps-host.net
 atm.pl
+atmeta.com
 ato.br
 atsugi.kanagawa.jp
 atsuma.hokkaido.jp
@@ -716,7 +733,10 @@ azerbaijan.su
 azimuth.network
 azumino.nagano.jp
 azure
+azure-api.net
 azure-mobile.net
+azureedge.net
+azurefd.net
 azurestaticapps.net
 azurewebsites.net
 b-data.io
@@ -757,7 +777,6 @@ balsfjord.no
 bambina.jp
 bamble.no
 banamex
-bananarepublic
 band
 bandai.fukushima.jp
 bando.ibaraki.jp
@@ -825,7 +844,6 @@ bbs.tr
 bbt
 bbva
 bc.ca
-bc.platform.sh
 bcg
 bci.dnstrace.pro
 bcn
@@ -945,12 +963,12 @@ bl.it
 black
 blackbaudcdn.net
 blackfriday
+blob.core.windows.net
 blockbuster
 blog
 blog.bo
 blog.br
 blog.gt
-blog.kg
 blog.vu
 blogdns.com
 blogdns.net
@@ -1547,6 +1565,9 @@ co.za
 co.zm
 co.zw
 coach
+cockpit.fr-par.scw.cloud
+cockpit.nl-ams.scw.cloud
+cockpit.pl-waw.scw.cloud
 cocotte.jp
 codeberg.page
 codes
@@ -1699,7 +1720,6 @@ com.vu
 com.ws
 com.ye
 com.zm
-comcast
 commbank
 commune.am
 community
@@ -1752,6 +1772,7 @@ courses
 coz.br
 cpa
 cpa.pro
+cpserver.com
 cq.cn
 cr
 cr.it
@@ -1804,6 +1825,10 @@ cx.ua
 cy
 cy.eu.org
 cya.gg
+cyclic-app.com
+cyclic.app
+cyclic.cloud
+cyclic.co.in
 cymru
 cyon.link
 cyon.site
@@ -2463,6 +2488,7 @@ execute-api.ap-southeast-2.amazonaws.com
 execute-api.ap-southeast-3.amazonaws.com
 execute-api.ap-southeast-4.amazonaws.com
 execute-api.ca-central-1.amazonaws.com
+execute-api.ca-west-1.amazonaws.com
 execute-api.cn-north-1.amazonaws.com.cn
 execute-api.cn-northwest-1.amazonaws.com.cn
 execute-api.eu-central-1.amazonaws.com
@@ -2622,6 +2648,7 @@ florist
 floro.no
 flowers
 flt.cloud.muni.cz
+flutterflow.app
 fly
 fly.dev
 flynnhosting.net
@@ -3497,7 +3524,6 @@ homelink.one
 homelinux.com
 homelinux.net
 homelinux.org
-homeoffice.gov.uk
 homes
 homesecuritymac.com
 homesecuritypc.com
@@ -5867,6 +5893,8 @@ noshiro.akita.jp
 not.br
 notaires.fr
 notaires.km
+notebook-fips.ca-central-1.sagemaker.aws
+notebook-fips.ca-west-1.sagemaker.aws
 notebook-fips.us-east-1.sagemaker.aws
 notebook-fips.us-east-2.sagemaker.aws
 notebook-fips.us-gov-east-1.sagemaker.aws
@@ -5884,6 +5912,7 @@ notebook.ap-southeast-2.sagemaker.aws
 notebook.ap-southeast-3.sagemaker.aws
 notebook.ap-southeast-4.sagemaker.aws
 notebook.ca-central-1.sagemaker.aws
+notebook.ca-west-1.sagemaker.aws
 notebook.cn-north-1.sagemaker.com.cn
 notebook.cn-northwest-1.sagemaker.com.cn
 notebook.eu-central-1.sagemaker.aws
@@ -6060,7 +6089,6 @@ olayan
 olayangroup
 olbia-tempio.it
 olbiatempio.it
-oldnavy
 olecko.pl
 olkusz.pl
 ollo
@@ -6404,6 +6432,7 @@ padua.it
 page
 pagefrontapp.com
 pages.dev
+pages.gay
 pages.it.hs-heilbronn.de
 pages.torproject.net
 pages.wiardweb.com
@@ -6412,6 +6441,7 @@ pagexl.com
 palermo.it
 palmas.br
 panasonic
+panel.dev
 panel.gg
 pantheonsite.io
 parachuting.aero
@@ -6529,6 +6559,7 @@ plc.ly
 plc.uk
 plesk.page
 pleskns.com
+pley.games
 plo.ps
 plumbing
 plurinacional.bo
@@ -6908,7 +6939,6 @@ rugby
 ruhr
 rulez.jp
 run
-run.app
 ruovat.no
 rv.ua
 rw
@@ -6926,7 +6956,9 @@ s.bg
 s.se
 s3-1.amazonaws.com
 s3-accesspoint-fips.ca-central-1.amazonaws.com
+s3-accesspoint-fips.ca-west-1.amazonaws.com
 s3-accesspoint-fips.dualstack.ca-central-1.amazonaws.com
+s3-accesspoint-fips.dualstack.ca-west-1.amazonaws.com
 s3-accesspoint-fips.dualstack.us-east-1.amazonaws.com
 s3-accesspoint-fips.dualstack.us-east-2.amazonaws.com
 s3-accesspoint-fips.dualstack.us-gov-east-1.amazonaws.com
@@ -6951,6 +6983,7 @@ s3-accesspoint.ap-southeast-2.amazonaws.com
 s3-accesspoint.ap-southeast-3.amazonaws.com
 s3-accesspoint.ap-southeast-4.amazonaws.com
 s3-accesspoint.ca-central-1.amazonaws.com
+s3-accesspoint.ca-west-1.amazonaws.com
 s3-accesspoint.cn-north-1.amazonaws.com.cn
 s3-accesspoint.cn-northwest-1.amazonaws.com.cn
 s3-accesspoint.dualstack.af-south-1.amazonaws.com
@@ -6965,6 +6998,7 @@ s3-accesspoint.dualstack.ap-southeast-2.amazonaws.com
 s3-accesspoint.dualstack.ap-southeast-3.amazonaws.com
 s3-accesspoint.dualstack.ap-southeast-4.amazonaws.com
 s3-accesspoint.dualstack.ca-central-1.amazonaws.com
+s3-accesspoint.dualstack.ca-west-1.amazonaws.com
 s3-accesspoint.dualstack.cn-north-1.amazonaws.com.cn
 s3-accesspoint.dualstack.cn-northwest-1.amazonaws.com.cn
 s3-accesspoint.dualstack.eu-central-1.amazonaws.com
@@ -7025,7 +7059,9 @@ s3-external-1.amazonaws.com
 s3-fips-us-gov-east-1.amazonaws.com
 s3-fips-us-gov-west-1.amazonaws.com
 s3-fips.ca-central-1.amazonaws.com
+s3-fips.ca-west-1.amazonaws.com
 s3-fips.dualstack.ca-central-1.amazonaws.com
+s3-fips.dualstack.ca-west-1.amazonaws.com
 s3-fips.dualstack.us-east-1.amazonaws.com
 s3-fips.dualstack.us-east-2.amazonaws.com
 s3-fips.dualstack.us-gov-east-1.amazonaws.com
@@ -7098,6 +7134,7 @@ s3-website.ap-southeast-2.amazonaws.com
 s3-website.ap-southeast-3.amazonaws.com
 s3-website.ap-southeast-4.amazonaws.com
 s3-website.ca-central-1.amazonaws.com
+s3-website.ca-west-1.amazonaws.com
 s3-website.cn-north-1.amazonaws.com.cn
 s3-website.cn-northwest-1.amazonaws.com.cn
 s3-website.dualstack.af-south-1.amazonaws.com
@@ -7108,6 +7145,7 @@ s3-website.dualstack.ap-south-1.amazonaws.com
 s3-website.dualstack.ap-southeast-1.amazonaws.com
 s3-website.dualstack.ap-southeast-2.amazonaws.com
 s3-website.dualstack.ca-central-1.amazonaws.com
+s3-website.dualstack.ca-west-1.amazonaws.com
 s3-website.dualstack.cn-north-1.amazonaws.com.cn
 s3-website.dualstack.eu-central-1.amazonaws.com
 s3-website.dualstack.eu-south-1.amazonaws.com
@@ -7151,6 +7189,7 @@ s3.ap-southeast-2.amazonaws.com
 s3.ap-southeast-3.amazonaws.com
 s3.ap-southeast-4.amazonaws.com
 s3.ca-central-1.amazonaws.com
+s3.ca-west-1.amazonaws.com
 s3.cn-north-1.amazonaws.com.cn
 s3.cn-northwest-1.amazonaws.com.cn
 s3.dualstack.af-south-1.amazonaws.com
@@ -7165,6 +7204,7 @@ s3.dualstack.ap-southeast-2.amazonaws.com
 s3.dualstack.ap-southeast-3.amazonaws.com
 s3.dualstack.ap-southeast-4.amazonaws.com
 s3.dualstack.ca-central-1.amazonaws.com
+s3.dualstack.ca-west-1.amazonaws.com
 s3.dualstack.cn-north-1.amazonaws.com.cn
 s3.dualstack.cn-northwest-1.amazonaws.com.cn
 s3.dualstack.eu-central-1.amazonaws.com
@@ -7342,7 +7382,6 @@ sc.ls
 sc.tz
 sc.ug
 sc.us
-sca
 scalebook.scw.cloud
 scb
 sch.ae
@@ -7462,6 +7501,7 @@ servesarcasm.com
 service.gov.scot
 service.gov.uk
 service.one
+servicebus.windows.net
 services
 services.aero
 setagaya.tokyo.jp
@@ -8263,6 +8303,7 @@ trader.aero
 trading
 trading.aero
 traeumtgerade.de
+trafficmanager.net
 trafficplex.cloud
 trainer.aero
 training
@@ -8484,6 +8525,7 @@ upow.gov.pl
 upper.jp
 uppo.gov.pl
 ups
+upsunapp.com
 urakawa.hokkaido.jp
 urasoe.okinawa.jp
 urausu.hokkaido.jp
@@ -8646,6 +8688,7 @@ vfs.cloud9.eu-south-1.amazonaws.com
 vfs.cloud9.eu-west-1.amazonaws.com
 vfs.cloud9.eu-west-2.amazonaws.com
 vfs.cloud9.eu-west-3.amazonaws.com
+vfs.cloud9.il-central-1.amazonaws.com
 vfs.cloud9.me-south-1.amazonaws.com
 vfs.cloud9.sa-east-1.amazonaws.com
 vfs.cloud9.us-east-1.amazonaws.com
@@ -8703,7 +8746,6 @@ vn.ua
 voagat.no
 vodka
 volda.no
-volkswagen
 vologda.su
 volvo
 volyn.ua
@@ -8812,6 +8854,7 @@ webview-assets.aws-cloud9.eu-south-1.amazonaws.com
 webview-assets.aws-cloud9.eu-west-1.amazonaws.com
 webview-assets.aws-cloud9.eu-west-2.amazonaws.com
 webview-assets.aws-cloud9.eu-west-3.amazonaws.com
+webview-assets.aws-cloud9.il-central-1.amazonaws.com
 webview-assets.aws-cloud9.me-south-1.amazonaws.com
 webview-assets.aws-cloud9.sa-east-1.amazonaws.com
 webview-assets.aws-cloud9.us-east-1.amazonaws.com
@@ -8931,7 +8974,6 @@ x443.pw
 xbox
 xen.prgmr.com
 xerox
-xfinity
 xihuan
 xii.jp
 xin
@@ -9539,6 +9581,7 @@ zakopane.pl
 zama.kanagawa.jp
 zamami.okinawa.jp
 zao.miyagi.jp
+zap.cloud
 zaporizhzhe.ua
 zaporizhzhia.ua
 zappos

@@ -28,6 +28,7 @@ import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.testing.EqualsTester;
 
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -367,13 +368,9 @@ class ArmeriaHttp2HeadersTest {
         headers2.add("name2", "value2");
         headers2.add("name2", "value3");
 
-        assertThat(headers2).isEqualTo(headers1);
-        assertThat(headers1).isEqualTo(headers2);
-        assertThat(headers1).isEqualTo(headers1);
-        assertThat(headers2).isEqualTo(headers2);
-        assertThat(headers2.hashCode()).isEqualTo(headers1.hashCode());
-        assertThat(headers1.hashCode()).isEqualTo(headers1.hashCode());
-        assertThat(headers2.hashCode()).isEqualTo(headers2.hashCode());
+        new EqualsTester()
+                .addEqualityGroup(headers1, headers2)
+                .testEquals();
     }
 
     @Test
@@ -411,8 +408,8 @@ class ArmeriaHttp2HeadersTest {
         h2.set("name2", "value2");
         assertThat(h1).isNotEqualTo(h2);
         assertThat(h2).isNotEqualTo(h1);
-        assertThat(h1).isEqualTo(h1);
-        assertThat(h2).isEqualTo(h2);
+        assertThat(h1.equals(h1)).isTrue();
+        assertThat(h2.equals(h2)).isTrue();
     }
 
     @Test

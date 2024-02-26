@@ -81,6 +81,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.UnsupportedValueConverter;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -970,6 +972,21 @@ public final class ArmeriaHttpUtil {
             }
             outputHeaders.add(http1HeaderNaming.convert(name), value);
         }
+    }
+
+    /**
+     * Translates and adds HTTP/2 request headers to HTTP/1.1 headers.
+     *
+     * @param inputHeaders the HTTP/2 request headers to convert.
+     */
+    public static io.netty.handler.codec.http.HttpHeaders toNettyHttp1ClientHeaders(HttpHeaders inputHeaders) {
+        if (inputHeaders.isEmpty()) {
+            return EmptyHttpHeaders.INSTANCE;
+        }
+
+        final io.netty.handler.codec.http.HttpHeaders outputHeaders = new DefaultHttpHeaders(false);
+        toNettyHttp1Client(inputHeaders, outputHeaders, Http1HeaderNaming.ofDefault(), false);
+        return outputHeaders;
     }
 
     /**

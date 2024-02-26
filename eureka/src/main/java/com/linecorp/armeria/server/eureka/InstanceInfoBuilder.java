@@ -70,9 +70,15 @@ final class InstanceInfoBuilder {
     @Nullable
     private String secureVipAddress;
     @Nullable
+    private String homePageUrlPath;
+    @Nullable
     private String homePageUrl;
     @Nullable
+    private String statusPageUrlPath;
+    @Nullable
     private String statusPageUrl;
+    @Nullable
+    private String healthCheckUrlPath;
     @Nullable
     private String healthCheckUrl;
     @Nullable
@@ -179,6 +185,14 @@ final class InstanceInfoBuilder {
     }
 
     /**
+     * Sets the home page URL path.
+     */
+    InstanceInfoBuilder homePageUrlPath(String homePageUrlPath) {
+        this.homePageUrlPath = requireNonNull(homePageUrlPath, "homePageUrlPath");
+        return this;
+    }
+
+    /**
      * Sets the home page URL.
      */
     InstanceInfoBuilder homePageUrl(String homePageUrl) {
@@ -187,10 +201,26 @@ final class InstanceInfoBuilder {
     }
 
     /**
+     * Sets the status page URL path.
+     */
+    InstanceInfoBuilder statusPageUrlPath(String statusPageUrlPath) {
+        this.statusPageUrlPath = requireNonNull(statusPageUrlPath, "statusPageUrlPath");
+        return this;
+    }
+
+    /**
      * Sets the status page URL.
      */
     InstanceInfoBuilder statusPageUrl(String statusPageUrl) {
         this.statusPageUrl = requireNonNull(statusPageUrl, "statusPageUrl");
+        return this;
+    }
+
+    /**
+     * Sets the health check path.
+     */
+    InstanceInfoBuilder healthCheckUrlPath(String healthCheckUrlPath) {
+        this.healthCheckUrlPath = requireNonNull(healthCheckUrlPath, "healthCheckUrlPath");
         return this;
     }
 
@@ -241,9 +271,10 @@ final class InstanceInfoBuilder {
         final LeaseInfo leaseInfo = new LeaseInfo(renewalIntervalSeconds, leaseDurationSeconds);
         return new InstanceInfo(instanceId, appName, appGroupName, hostname, ipAddr, vipAddress,
                                 secureVipAddress, port, securePort, InstanceStatus.UP,
-                                homePageUrl, statusPageUrl, healthCheckUrl, secureHealthCheckUrl,
-                                new DataCenterInfo(dataCenterName, dataCenterMetadata),
-                                leaseInfo, metadata);
+                                homePageUrlPath, homePageUrl, statusPageUrlPath, statusPageUrl,
+                                healthCheckUrlPath, healthCheckUrl, secureHealthCheckUrl,
+                                new DataCenterInfo(dataCenterName, dataCenterMetadata), leaseInfo,
+                                metadata);
     }
 
     private static void validateIpAddr(String ipAddr, String name) {

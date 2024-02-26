@@ -17,7 +17,7 @@ env:
 jobs:
   tag-new-version:
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Validate inputs
@@ -51,13 +51,13 @@ jobs:
 
       - id: setup-jdk-19
         name: Set up JDK 19
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '19'
 
       - name: Set up Gradle
-        uses: gradle/gradle-build-action@v2
+        uses: gradle/gradle-build-action@v3
 
       - name: Bump up version
         run: |

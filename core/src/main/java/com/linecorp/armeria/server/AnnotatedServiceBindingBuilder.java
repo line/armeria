@@ -33,6 +33,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
  * {@link ServerBuilder#annotatedService()}.
@@ -258,6 +260,17 @@ public final class AnnotatedServiceBindingBuilder extends AbstractAnnotatedServi
     @Override
     public AnnotatedServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         return (AnnotatedServiceBindingBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                             boolean shutdownOnStop) {
+        return (AnnotatedServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (AnnotatedServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     /**

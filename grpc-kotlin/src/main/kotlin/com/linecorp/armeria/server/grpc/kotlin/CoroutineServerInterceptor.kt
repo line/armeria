@@ -56,11 +56,10 @@ import kotlin.reflect.full.memberProperties
  */
 @UnstableApi
 interface CoroutineServerInterceptor : AsyncServerInterceptor {
-
     override fun <I : Any, O : Any> asyncInterceptCall(
         call: ServerCall<I, O>,
         headers: Metadata,
-        next: ServerCallHandler<I, O>
+        next: ServerCallHandler<I, O>,
     ): CompletableFuture<ServerCall.Listener<I>> {
         // COROUTINE_CONTEXT_KEY.get():
         //   It is necessary to propagate the CoroutineContext set by the previous CoroutineContextServerInterceptor.
@@ -68,7 +67,7 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
         // GrpcContextElement.current():
         //   In gRPC-kotlin, the Coroutine Context is propagated using the gRPC Context.
         return CoroutineScope(
-            COROUTINE_CONTEXT_KEY.get() + GrpcContextElement.current()
+            COROUTINE_CONTEXT_KEY.get() + GrpcContextElement.current(),
         ).future {
             suspendedInterceptCall(call, headers, next)
         }
@@ -87,7 +86,7 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
     suspend fun <ReqT, RespT> suspendedInterceptCall(
         call: ServerCall<ReqT, RespT>,
         headers: Metadata,
-        next: ServerCallHandler<ReqT, RespT>
+        next: ServerCallHandler<ReqT, RespT>,
     ): ServerCall.Listener<ReqT>
 
     companion object {

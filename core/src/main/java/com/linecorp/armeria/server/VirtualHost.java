@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 
@@ -95,6 +97,7 @@ public final class VirtualHost {
     private final long requestAutoAbortDelayMillis;
     private final SuccessFunction successFunction;
     private final Path multipartUploadsLocation;
+    private final EventLoopGroup serviceWorkerGroup;
     private final List<ShutdownSupport> shutdownSupports;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
 
@@ -113,6 +116,7 @@ public final class VirtualHost {
                 long requestAutoAbortDelayMillis,
                 SuccessFunction successFunction,
                 Path multipartUploadsLocation,
+                EventLoopGroup serviceWorkerGroup,
                 List<ShutdownSupport> shutdownSupports,
                 Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         originalDefaultHostname = defaultHostname;
@@ -136,6 +140,7 @@ public final class VirtualHost {
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         this.successFunction = successFunction;
         this.multipartUploadsLocation = multipartUploadsLocation;
+        this.serviceWorkerGroup = serviceWorkerGroup;
         this.shutdownSupports = shutdownSupports;
         @SuppressWarnings("unchecked")
         final Function<RoutingContext, RequestId> castRequestIdGenerator =
@@ -162,7 +167,8 @@ public final class VirtualHost {
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
-                               successFunction, multipartUploadsLocation, shutdownSupports, requestIdGenerator);
+                               successFunction, multipartUploadsLocation, serviceWorkerGroup,
+                               shutdownSupports, requestIdGenerator);
     }
 
     /**
@@ -401,6 +407,16 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the service {@link EventLoopGroup}.
+     *
+     * @see ServiceConfig#serviceWorkerGroup()
+     */
+    @UnstableApi
+    public EventLoopGroup serviceWorkerGroup() {
+        return serviceWorkerGroup;
+    }
+
+    /**
      * Returns the {@link SuccessFunction} that determines whether a request was
      * handled successfully or not.
      */
@@ -530,7 +546,7 @@ public final class VirtualHost {
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
                                requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
-                               shutdownSupports, requestIdGenerator);
+                               serviceWorkerGroup, shutdownSupports, requestIdGenerator);
     }
 
     @Override

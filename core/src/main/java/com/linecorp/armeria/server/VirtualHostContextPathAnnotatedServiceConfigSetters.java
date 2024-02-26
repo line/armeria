@@ -32,6 +32,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A {@link VirtualHostContextPathAnnotatedServiceConfigSetters} builder which configures
  * an {@link AnnotatedService} under a set of context paths.
@@ -242,6 +244,18 @@ public final class VirtualHostContextPathAnnotatedServiceConfigSetters
             long delayMillis) {
         return (VirtualHostContextPathAnnotatedServiceConfigSetters)
                 super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
+    public VirtualHostContextPathAnnotatedServiceConfigSetters serviceWorkerGroup(
+            EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop) {
+        return (VirtualHostContextPathAnnotatedServiceConfigSetters)
+                super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public VirtualHostContextPathAnnotatedServiceConfigSetters serviceWorkerGroup(int numThreads) {
+        return (VirtualHostContextPathAnnotatedServiceConfigSetters) super.serviceWorkerGroup(numThreads);
     }
 
     @Override
