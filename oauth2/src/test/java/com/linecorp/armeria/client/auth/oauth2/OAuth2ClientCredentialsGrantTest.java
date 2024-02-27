@@ -56,7 +56,7 @@ import com.linecorp.armeria.server.auth.AuthService;
 import com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class OAuth2ClientCredentialsAccessTokenRequestTest {
+class OAuth2ClientCredentialsGrantTest {
 
     static final String CLIENT_CREDENTIALS = "dGVzdF9jbGllbnQ6Y2xpZW50X3NlY3JldA=="; //test_client:client_secret
     static final String SERVER_CREDENTIALS = "dGVzdF9zZXJ2ZXI6c2VydmVyX3NlY3JldA=="; //test_server:server_secret

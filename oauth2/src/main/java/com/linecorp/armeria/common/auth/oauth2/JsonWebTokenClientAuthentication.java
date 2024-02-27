@@ -25,6 +25,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 final class JsonWebTokenClientAuthentication implements ClientAuthentication {
 
+    // TODO(ikhoon): Add unit tests for this class.
+
     private final String jsonWebToken;
 
     JsonWebTokenClientAuthentication(String jsonWebToken) {
