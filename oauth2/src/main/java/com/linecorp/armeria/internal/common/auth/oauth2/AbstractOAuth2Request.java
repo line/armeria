@@ -84,6 +84,6 @@ public abstract class AbstractOAuth2Request implements OAuth2Request {
             // Mico-optimization: return the cached body parameters if available.
             return bodyParams;
         }
-        return OAuth2Request.super.bodyParams();
+        return bodyParams = OAuth2Request.super.bodyParams();
     }
 }

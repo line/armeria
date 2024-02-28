@@ -77,6 +77,17 @@ public interface AccessTokenRequest extends OAuth2Request {
      * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.3">RFC 6749, Section 4.3</a>.
      */
     static AccessTokenRequest ofResourceOwnerPassword(String username, String password,
+                                                      ClientAuthentication clientAuthentication) {
+        requireNonNull(clientAuthentication, "clientAuthentication");
+        return ofResourceOwnerPassword(username, password, clientAuthentication, null);
+    }
+
+    /**
+     * Creates a new {@link AccessTokenRequest} that is used to request an access token using the resource owner
+     * password credentials with the {@link ClientAuthentication}, as per
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.3">RFC 6749, Section 4.3</a>.
+     */
+    static AccessTokenRequest ofResourceOwnerPassword(String username, String password,
                                                       @Nullable ClientAuthentication clientAuthentication,
                                                       @Nullable List<String> scopes) {
         requireNonNull(username, "username");
@@ -89,8 +100,17 @@ public interface AccessTokenRequest extends OAuth2Request {
      * (JWT), as per <a href="https://datatracker.ietf.org/doc/html/rfc7523">RFC 7523</a>.
      */
     static AccessTokenRequest ofJsonWebToken(String jsonWebToken) {
-        // TODO(ikhoon): Consider providing a builder for the JSON Web Token.
         return ofJsonWebToken(jsonWebToken, null, null);
+    }
+
+    /**
+     * Creates a new {@link AccessTokenRequest} that is used to request an access token using the JSON Web Token
+     * (JWT), as per <a href="https://datatracker.ietf.org/doc/html/rfc7523">RFC 7523</a>.
+     */
+    static AccessTokenRequest ofJsonWebToken(String jsonWebToken,
+                                             ClientAuthentication clientAuthentication) {
+        requireNonNull(clientAuthentication, "clientAuthentication");
+        return ofJsonWebToken(jsonWebToken, clientAuthentication, null);
     }
 
     /**
@@ -101,6 +121,7 @@ public interface AccessTokenRequest extends OAuth2Request {
                                              @Nullable ClientAuthentication clientAuthentication,
                                              @Nullable List<String> scopes) {
         requireNonNull(jsonWebToken, "jsonWebToken");
+        // TODO(ikhoon): Consider providing a builder for creating JSON Web Token (JWT).
         return new JsonWebTokenAccessTokenRequest(jsonWebToken, clientAuthentication, scopes);
     }
 
