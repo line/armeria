@@ -121,15 +121,16 @@ class OAuth2ClientCredentialsGrantTest {
                        ).build(SERVICE));
             sb.service("/resource-read-write-update/",
                        AuthService.builder().addOAuth2(
-                               OAuth2TokenIntrospectionAuthorizer.
-                                       builder(introspectClient, "/introspect/token/")
+                               OAuth2TokenIntrospectionAuthorizer
+                                       .builder(introspectClient, "/introspect/token/")
                                        .realm("protected resource read-write-update")
                                        .accessTokenType("Bearer")
-                                       .clientAuthentication(() -> ClientAuthentication.ofBasic(SERVER_CREDENTIALS))
+                                       .clientAuthentication(() -> {
+                                           return ClientAuthentication.ofBasic(SERVER_CREDENTIALS);
+                                       })
                                        .permittedScope("read", "write", "update")
                                        .build()
                        ).build(SERVICE));
-
         }
     };
 
