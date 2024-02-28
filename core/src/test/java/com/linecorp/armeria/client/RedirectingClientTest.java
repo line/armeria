@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.client.RedirectingClient.resolveLocation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -28,16 +29,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
 import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
 import com.linecorp.armeria.client.redirect.UnexpectedProtocolRedirectException;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -98,7 +105,9 @@ class RedirectingClientTest {
             });
 
             sb.service("/removeDotSegments/foo", (ctx, req) -> HttpResponse.ofRedirect("./bar"))
-              .service("/removeDotSegments/bar", (ctx, req) -> HttpResponse.of(200));
+              .service("/removeDotSegments/bar", (ctx, req) -> HttpResponse.of(200))
+              .service("/removeDoubleDotSegments/foo",
+                       (ctx, req) -> HttpResponse.ofRedirect("../removeDotSegments/bar"));
 
             sb.service("/loop", (ctx, req) -> HttpResponse.ofRedirect("loop1"))
               .service("/loop1", (ctx, req) -> HttpResponse.ofRedirect("loop2"))
@@ -110,6 +119,16 @@ class RedirectingClientTest {
                 } else {
                     assertThat(ctx.method()).isSameAs(HttpMethod.POST);
                     return HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, "/differentHttpMethod");
+                }
+            });
+
+            sb.service("/unencodedLocation",
+                       (ctx, req) -> HttpResponse.ofRedirect("/unencodedLocation/foo bar?value=${P}"));
+            sb.service("/unencodedLocation/foo%20bar", (ctx, req) -> {
+                if ("${P}".equals(ctx.queryParam("value"))) {
+                    return HttpResponse.of(200);
+                } else {
+                    return HttpResponse.of(400);
                 }
             });
         }
@@ -147,6 +166,7 @@ class RedirectingClientTest {
 
     private static AggregatedHttpResponse sendRequest(int maxRedirects) {
         final WebClient client = WebClient.builder(server.httpUri())
+                .decorator(LoggingClient.newDecorator())
                                           .followRedirects(RedirectConfig.builder()
                                                                          .maxRedirects(maxRedirects)
                                                                          .build())
@@ -256,14 +276,17 @@ class RedirectingClientTest {
                                           .factory(ClientFactory.insecure())
                                           .followRedirects()
                                           .build();
-        final AggregatedHttpResponse res = client.get("/removeDotSegments/foo").aggregate().join();
-        assertThat(res.status()).isSameAs(HttpStatus.OK);
+        final AggregatedHttpResponse res1 = client.get("/removeDotSegments/foo").aggregate().join();
+        assertThat(res1.status()).isSameAs(HttpStatus.OK);
+        final AggregatedHttpResponse res2 = client.get("/removeDoubleDotSegments/foo").aggregate().join();
+        assertThat(res2.status()).isSameAs(HttpStatus.OK);
     }
 
     @Test
     void cyclicRedirectsException() {
         final WebClient client = Clients.builder(server.httpUri())
                                         .followRedirects()
+                                        .decorator(LoggingClient.newDecorator())
                                         .build(WebClient.class);
         assertThatThrownBy(() -> client.get("/loop").aggregate().join())
                 .hasMessageContainingAll("The original URI:", "/loop", "Redirect URIs:", "/loop1", "/loop2")
@@ -283,6 +306,109 @@ class RedirectingClientTest {
                     .isSameAs(HttpStatus.OK);
             assertThat(captor.get().log().whenComplete().join().children().size()).isEqualTo(2);
         }
+    }
+
+    @Test
+    void unencodedLocation() {
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .followRedirects()
+                                          .build();
+
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.get("/unencodedLocation").aggregate().join().status()).isSameAs(HttpStatus.OK);
+            ctx = captor.get();
+        }
+
+        final ImmutableList<RequestLog> logs = ctx.log().whenComplete().join()
+                                                  .children().stream()
+                                                  .map(log -> log.whenComplete().join())
+                                                  .collect(toImmutableList());
+
+        assertThat(logs.size()).isEqualTo(2);
+
+        final ResponseHeaders log1headers = logs.get(0).responseHeaders();
+        assertThat(log1headers.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
+        assertThat(log1headers.get(HttpHeaderNames.LOCATION))
+                .isEqualTo("/unencodedLocation/foo bar?value=${P}");
+
+        final RequestLog log2 = logs.get(1);
+        assertThat(log2.requestHeaders().path()).isEqualTo("/unencodedLocation/foo%20bar?value=$%7BP%7D");
+        assertThat(log2.responseHeaders().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void testResolveLocation() {
+        // Absolute paths and URIs should supersede the original path.
+        assertThat(resolveLocation("/a/", "/")).isEqualTo("/");
+        assertThat(resolveLocation("/a/", "/b")).isEqualTo("/b");
+        assertThat(resolveLocation("/a/", "https://foo")).isEqualTo("https://foo");
+
+        // Simple cases
+        assertThat(resolveLocation("/", "b")).isEqualTo("/b");
+        assertThat(resolveLocation("/", "b/")).isEqualTo("/b/");
+        assertThat(resolveLocation("/", "b/c")).isEqualTo("/b/c");
+        assertThat(resolveLocation("/", "b/c/")).isEqualTo("/b/c/");
+
+        assertThat(resolveLocation("/a", "b")).isEqualTo("/b");
+        assertThat(resolveLocation("/a", "b/")).isEqualTo("/b/");
+        assertThat(resolveLocation("/a", "b/c")).isEqualTo("/b/c");
+        assertThat(resolveLocation("/a", "b/c/")).isEqualTo("/b/c/");
+
+        assertThat(resolveLocation("/a/", "b")).isEqualTo("/a/b");
+        assertThat(resolveLocation("/a/", "b/")).isEqualTo("/a/b/");
+        assertThat(resolveLocation("/a/", "b/c")).isEqualTo("/a/b/c");
+        assertThat(resolveLocation("/a/", "b/c/")).isEqualTo("/a/b/c/");
+
+        // Single-dot cases
+        assertThat(resolveLocation("/", ".")).isEqualTo("/");
+        assertThat(resolveLocation("/", "b/.")).isEqualTo("/b/");
+        assertThat(resolveLocation("/", "b/./")).isEqualTo("/b/");
+        assertThat(resolveLocation("/", "b/./c")).isEqualTo("/b/c");
+
+        assertThat(resolveLocation("/a", ".")).isEqualTo("/");
+        assertThat(resolveLocation("/a", "b/.")).isEqualTo("/b/");
+        assertThat(resolveLocation("/a", "b/./c")).isEqualTo("/b/c");
+
+        assertThat(resolveLocation("/a/", ".")).isEqualTo("/a/");
+        assertThat(resolveLocation("/a/", "b/.")).isEqualTo("/a/b/");
+        assertThat(resolveLocation("/a/", "b/./c")).isEqualTo("/a/b/c");
+
+        // Double-dot cases
+        assertThat(resolveLocation("/", "..")).isNull();
+        assertThat(resolveLocation("/", "b/..")).isEqualTo("/");
+        assertThat(resolveLocation("/", "b/../")).isEqualTo("/");
+        assertThat(resolveLocation("/", "b/../c")).isEqualTo("/c");
+
+        assertThat(resolveLocation("/a", "..")).isNull();
+        assertThat(resolveLocation("/a", "b/..")).isEqualTo("/");
+        assertThat(resolveLocation("/a", "b/../c")).isEqualTo("/c");
+
+        assertThat(resolveLocation("/a/", "..")).isEqualTo("/");
+        assertThat(resolveLocation("/a/", "b/..")).isEqualTo("/a/");
+        assertThat(resolveLocation("/a/", "b/../c")).isEqualTo("/a/c");
+
+        // Multiple single- or double- dots
+        assertThat(resolveLocation("/", "././a")).isEqualTo("/a");
+        assertThat(resolveLocation("/", "a/././b")).isEqualTo("/a/b");
+        assertThat(resolveLocation("/", "a/./.")).isEqualTo("/a/");
+        assertThat(resolveLocation("/", "a/././")).isEqualTo("/a/");
+
+        assertThat(resolveLocation("/a", "././b")).isEqualTo("/b");
+        assertThat(resolveLocation("/a", "b/././c")).isEqualTo("/b/c");
+        assertThat(resolveLocation("/a", "b/./.")).isEqualTo("/b/");
+        assertThat(resolveLocation("/a", "b/././")).isEqualTo("/b/");
+
+        assertThat(resolveLocation("/a/b/", "../../c")).isEqualTo("/c");
+        assertThat(resolveLocation("/a/b/", "c/../../d")).isEqualTo("/a/d");
+        assertThat(resolveLocation("/a/b/", "c/../..")).isEqualTo("/a/");
+        assertThat(resolveLocation("/a/b/", "c/../../")).isEqualTo("/a/");
+
+        assertThat(resolveLocation("/a/b", "../../c")).isNull();
+        assertThat(resolveLocation("/a/b/c", "../../d")).isEqualTo("/d");
+        assertThat(resolveLocation("/a/b/c", "d/../../e")).isEqualTo("/a/e");
+        assertThat(resolveLocation("/a/b/c", "d/../..")).isEqualTo("/a/");
+        assertThat(resolveLocation("/a/b/c", "d/../../")).isEqualTo("/a/");
     }
 
     private static ClientFactory localhostAccessingClientFactory() {
