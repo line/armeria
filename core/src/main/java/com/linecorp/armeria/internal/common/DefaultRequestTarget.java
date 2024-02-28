@@ -595,11 +595,24 @@ public final class DefaultRequestTarget implements RequestTarget {
         final String encodedFragment = encodeFragmentToPercents(fragment);
 
         if (schemeAndAuthority != null) {
+            final String authority = schemeAndAuthority.getRawAuthority();
+            final String maybeHost = schemeAndAuthority.getHost();
+            final int maybePort = schemeAndAuthority.getPort();
+            final String host;
+            final int port;
+            if (maybeHost == null) {
+                host = authority;
+                port = -1;
+            } else {
+                host = maybeHost;
+                port = maybePort;
+            }
+
             return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
                                             schemeAndAuthority.getScheme(),
-                                            schemeAndAuthority.getRawAuthority(),
-                                            schemeAndAuthority.getHost(),
-                                            schemeAndAuthority.getPort(),
+                                            authority,
+                                            host,
+                                            port,
                                             encodedPath,
                                             encodedPath, encodedQuery,
                                             encodedFragment);
