@@ -81,6 +81,7 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
                 break;
             // PONG is a noop
             case PONG:
+                break;
             // Continuation is not mentioned in the spec. Should never happen.
             case CONTINUATION:
                 logger.trace("Ignoring frame type: {}", webSocketFrame.type());
