@@ -77,7 +77,6 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
                 subscription.request(1);
                 break;
             case CLOSE:
-                subscription.cancel();
                 outgoing.close();
                 break;
             // PONG is a noop
@@ -111,6 +110,7 @@ final class GraphqlWebSocketSubscriber implements Subscriber<WebSocketFrame> {
         the Subscription cancelled after having received the signal.
          */
         logger.trace("onComplete");
+        graphqlWSSubProtocol.cancel();
         subscription = null;
     }
 }
