@@ -36,17 +36,13 @@ final class ServiceRouteUtil {
         final int port = ChannelUtil.getPort(channel.localAddress(), 0);
         final String originalPath = headers.path();
 
-        final RoutingStatus routingStatus;
+        RoutingStatus routingStatus = RoutingStatus.OK;
         if (headers.method() == HttpMethod.OPTIONS) {
             if (isCorsPreflightRequest(headers)) {
                 routingStatus = RoutingStatus.CORS_PREFLIGHT;
             } else if ("*".equals(originalPath)) {
                 routingStatus = RoutingStatus.OPTIONS;
-            } else {
-                routingStatus = RoutingStatus.OK;
             }
-        } else {
-            routingStatus = RoutingStatus.OK;
         }
 
         return DefaultRoutingContext.of(serverConfig.findVirtualHost(hostname, port),
