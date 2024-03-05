@@ -28,7 +28,6 @@ import yaml from 'react-syntax-highlighter/dist/esm/languages/prism/yaml';
 // @ts-ignore
 import shellSession from 'refractor/lang/shell-session';
 /* eslint-enable import/no-extraneous-dependencies */
-
 import * as styles from './code-block.module.less';
 
 // Register 'none' language.
@@ -148,7 +147,10 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
     timeoutRef.current = setTimeout(() => setCopied(false), 1000);
   }, []);
 
-  const code = process(props.children);
+  const preprocessed = preprocess(props.children);
+  const normalized = normalizeIndentation(preprocessed);
+  const code = normalized.join('\n');
+
   if (code.length === 0) {
     return null;
   }
@@ -192,8 +194,45 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
   );
 };
 
+/**
+ * Calculates all existing indentations for each line, and normalizes the indentation.
+ * This is done by lining up the indentations and assigning a multiple of the provided {@param indent}.
+ * If a tab is found, then the {@param spacesPerTab} is used to convert to spaces.
+ */
+function normalizeIndentation(code: string[], indent: number = 2, spacesPerTab: number = 4): string[] {
+
+  /**
+   * Returns the number of spaces the provided string starts with.
+   */
+  function numSpaces(str: string,  spacesPerTab: number) {
+    let ret = 0;
+    for (let i = 0; i < str.length; i++) {
+      if (str.charAt(i) == ' ') {
+        ret++;
+      } else if(str.charAt(i) == '\t') {
+        ret += spacesPerTab;
+      } else {
+        break;
+      }
+    }
+    return ret;
+  }
+
+  const spacesSet = new Set(code.map(l => numSpaces(l, spacesPerTab)))
+  const spacesArr = [...spacesSet]
+  const spacesToIndent =
+      new Map<number, string>(
+        spacesArr.map((value, index) => [value, ' '.repeat(index * indent)]))
+  return code.map(line => {
+    const spaces = numSpaces(line, spacesPerTab);
+    return spacesToIndent.get(spaces) + line.trimStart()
+  });
+}
+
+
+
 // Removes the leading and trailing empty lines and trims extra white spaces.
-function process(code: React.ReactNode) {
+function preprocess(code: React.ReactNode): string[] {
   let skippedLeadingEmptyLines = false;
   let lastLineIdx = 0;
   let indentation = Number.MAX_SAFE_INTEGER;
@@ -228,12 +267,12 @@ function process(code: React.ReactNode) {
     .slice(0, lastLineIdx + 1);
 
   if (lines.length === 0) {
-    return '';
+    return [];
   }
 
   return (
     indentation !== 0 ? lines.map((line) => line.substring(indentation)) : lines
-  ).join('\n');
+  );
 }
 
 export default CodeBlock;
