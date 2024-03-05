@@ -88,6 +88,8 @@
 *.migration.run
 *.mm
 *.moonscale.io
+*.my.canva.site
+*.my.canvasite.cn
 *.nagoya.jp
 *.nodebalancer.linode.com
 *.nom.br
