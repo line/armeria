@@ -195,41 +195,42 @@ const CodeBlock: React.FC<CodeBlockProps> = (props) => {
 };
 
 /**
+ * Returns the number of spaces the provided string starts with.
+ */
+function numSpaces(str: string, spacesPerTab: number) {
+  let ret = 0;
+  for (let i = 0; i < str.length; i += 1) {
+    if (str.charAt(i) === ' ') {
+      ret += 1;
+    } else if (str.charAt(i) === '\t') {
+      ret += spacesPerTab;
+    } else {
+      break;
+    }
+  }
+  return ret;
+}
+
+/**
  * Calculates all existing indentations for each line, and normalizes the indentation.
  * This is done by lining up the indentations and assigning a multiple of the provided {@param indent}.
  * If a tab is found, then the {@param spacesPerTab} is used to convert to spaces.
  */
-function normalizeIndentation(code: string[], indent: number = 2, spacesPerTab: number = 4): string[] {
-
-  /**
-   * Returns the number of spaces the provided string starts with.
-   */
-  function numSpaces(str: string,  spacesPerTab: number) {
-    let ret = 0;
-    for (let i = 0; i < str.length; i++) {
-      if (str.charAt(i) == ' ') {
-        ret++;
-      } else if(str.charAt(i) == '\t') {
-        ret += spacesPerTab;
-      } else {
-        break;
-      }
-    }
-    return ret;
-  }
-
-  const spacesSet = new Set(code.map(l => numSpaces(l, spacesPerTab)))
-  const spacesArr = [...spacesSet]
-  const spacesToIndent =
-      new Map<number, string>(
-        spacesArr.map((value, index) => [value, ' '.repeat(index * indent)]))
-  return code.map(line => {
+function normalizeIndentation(
+  code: string[],
+  indent: number = 2,
+  spacesPerTab: number = 4,
+): string[] {
+  const spacesSet = new Set(code.map((l) => numSpaces(l, spacesPerTab)));
+  const spacesArr = [...spacesSet];
+  const spacesToIndent = new Map<number, string>(
+    spacesArr.map((value, index) => [value, ' '.repeat(index * indent)]),
+  );
+  return code.map((line) => {
     const spaces = numSpaces(line, spacesPerTab);
-    return spacesToIndent.get(spaces) + line.trimStart()
+    return spacesToIndent.get(spaces) + line.trimStart();
   });
 }
-
-
 
 // Removes the leading and trailing empty lines and trims extra white spaces.
 function preprocess(code: React.ReactNode): string[] {
@@ -270,9 +271,9 @@ function preprocess(code: React.ReactNode): string[] {
     return [];
   }
 
-  return (
-    indentation !== 0 ? lines.map((line) => line.substring(indentation)) : lines
-  );
+  return indentation !== 0
+    ? lines.map((line) => line.substring(indentation))
+    : lines;
 }
 
 export default CodeBlock;
