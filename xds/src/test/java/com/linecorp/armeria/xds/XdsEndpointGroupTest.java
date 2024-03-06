@@ -39,6 +39,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.client.endpoint.XdsEndpointGroup;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;

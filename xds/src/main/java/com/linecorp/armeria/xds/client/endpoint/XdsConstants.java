@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,13 +14,13 @@
  * under the License.
  */
 
-/**
- * Provides integrations with the
- * <a href="https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol">v3 gRPC-xDS protocol</a>.
- */
-@NonNullByDefault
-@UnstableApi
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.client.endpoint;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
-import com.linecorp.armeria.common.annotation.UnstableApi;
+final class XdsConstants {
+
+    // https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/subsets
+    public static final String SUBSET_LOAD_BALANCING_FILTER_NAME = "envoy.lb";
+    public static final String ENVOY_LB_FALLBACK_LIST = "fallback_list";
+
+    private XdsConstants() {}
+}

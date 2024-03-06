@@ -17,11 +17,14 @@
 package com.linecorp.armeria.xds;
 
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
+import com.google.protobuf.UInt32Value;
 import com.google.protobuf.Value;
 import com.google.protobuf.util.Durations;
 
@@ -40,6 +43,8 @@ import io.envoyproxy.envoy.config.core.v3.ApiVersion;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
+import io.envoyproxy.envoy.config.core.v3.HealthStatus;
+import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
@@ -60,30 +65,75 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
+import io.envoyproxy.envoy.type.v3.Percent;
 
 public final class XdsTestResources {
 
-    static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
+    public static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
 
     private XdsTestResources() {}
 
     public static LbEndpoint endpoint(String address, int port) {
-        return endpoint(address, port, Metadata.getDefaultInstance());
+        return endpoint(address, port, Metadata.getDefaultInstance(), 1,
+                        HealthStatus.HEALTHY);
+    }
+
+    public static LbEndpoint endpoint(String address, int port, int weight) {
+        return endpoint(address, port, Metadata.getDefaultInstance(), weight,
+                        HealthStatus.HEALTHY);
+    }
+
+    public static LbEndpoint endpoint(String address, int port, HealthStatus healthStatus) {
+        return endpoint(address, port, Metadata.getDefaultInstance(), 1, healthStatus);
+    }
+
+    public static LbEndpoint endpoint(String address, int port, HealthStatus healthStatus,
+                                      int weight) {
+        return endpoint(address, port, Metadata.getDefaultInstance(), weight, healthStatus);
     }
 
     public static LbEndpoint endpoint(String address, int port, Metadata metadata) {
+        return endpoint(address, port, metadata, 1, HealthStatus.HEALTHY);
+    }
+
+    public static LbEndpoint endpoint(String address, int port, Metadata metadata, int weight,
+                                      HealthStatus healthStatus) {
         final SocketAddress socketAddress = SocketAddress.newBuilder()
                                                          .setAddress(address)
                                                          .setPortValue(port)
                                                          .build();
         return LbEndpoint
                 .newBuilder()
+                .setLoadBalancingWeight(UInt32Value.of(weight))
                 .setMetadata(metadata)
+                .setHealthStatus(healthStatus)
                 .setEndpoint(Endpoint.newBuilder()
                                      .setAddress(Address.newBuilder()
                                                         .setSocketAddress(socketAddress)
                                                         .build())
                                      .build()).build();
+    }
+
+    public static LocalityLbEndpoints localityLbEndpoints(Locality locality,
+                                                          Collection<LbEndpoint> endpoints,
+                                                          Integer priority) {
+        return LocalityLbEndpoints.newBuilder()
+                                  .addAllLbEndpoints(endpoints)
+                                  .setLocality(locality)
+                                  .setPriority(priority)
+                                  .build();
+    }
+
+    public static LocalityLbEndpoints localityLbEndpoints(Locality locality,
+                                                          Collection<LbEndpoint> endpoints) {
+        return LocalityLbEndpoints.newBuilder()
+                                  .addAllLbEndpoints(endpoints)
+                                  .setLocality(locality)
+                                  .build();
+    }
+
+    public static LocalityLbEndpoints localityLbEndpoints(Locality locality, LbEndpoint... endpoints) {
+        return localityLbEndpoints(locality, Arrays.asList(endpoints));
     }
 
     public static ClusterLoadAssignment loadAssignment(String clusterName, URI uri) {
@@ -296,5 +346,23 @@ public final class XdsTestResources {
 
     public static Value stringValue(String value) {
         return Value.newBuilder().setStringValue(value).build();
+    }
+
+    public static Locality locality(String region) {
+        return Locality.newBuilder()
+                       .setRegion(region)
+                       .build();
+    }
+
+    public static Percent percent(int percent) {
+        return Percent.newBuilder().setValue(percent).build();
+    }
+
+    public static Bootstrap staticBootstrap(Listener listener, Cluster cluster) {
+        return Bootstrap.newBuilder()
+                        .setStaticResources(StaticResources.newBuilder()
+                                                           .addListeners(listener)
+                                                           .addClusters(cluster)
+                                                           .build()).build();
     }
 }
