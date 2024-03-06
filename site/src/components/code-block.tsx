@@ -222,7 +222,7 @@ function normalizeIndentation(
   spacesPerTab: number = 4,
 ): string[] {
   const spacesSet = new Set(code.map((l) => numSpaces(l, spacesPerTab)));
-  const spacesArr = [...spacesSet].sort();
+  const spacesArr = [...spacesSet].sort((n1, n2) => n1 - n2);
   const spacesToIndent = new Map<number, string>(
     spacesArr.map((value, index) => [value, ' '.repeat(index * indent)]),
   );
