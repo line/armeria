@@ -120,7 +120,10 @@ dependencies {
   implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
   implementation "com.linecorp.armeria:armeria-grpc:${versions['com.linecorp.armeria:armeria-bom']}"\n
   // Logging
-  runtimeOnly "ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}"
+  runtimeOnly "ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}"\n
+  testImplementation "org.junit.jupiter:junit-jupiter:${versions['org.junit:junit-bom']}"\n
+  testImplementation "com.linecorp.armeria:armeria-junit5:${versions['com.linecorp.armeria:armeria-bom']}"\n
+  testImplementation "org.assertj:assertj-core:${versions['org.assertj:assertj-core']}"
 }
 `}</CodeBlock>
 
