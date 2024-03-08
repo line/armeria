@@ -25,6 +25,7 @@ import java.util.Objects;
 
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RequestTargetForm;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -460,14 +461,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         }
 
         if (nextPos < 0) {
-            return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
-                                            schemeAndAuthority.getScheme(),
-                                            schemeAndAuthority.getRawAuthority(),
-                                            schemeAndAuthority.getHost(),
-                                            schemeAndAuthority.getPort(),
-                                            "/",
-                                            "/", null,
-                                            null);
+            return newAbsoluteTarget(schemeAndAuthority, "/", null, null);
         }
 
         return slowForClient(reqTarget, schemeAndAuthority, nextPos);
@@ -595,27 +589,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         final String encodedFragment = encodeFragmentToPercents(fragment);
 
         if (schemeAndAuthority != null) {
-            final String authority = schemeAndAuthority.getRawAuthority();
-            final String maybeHost = schemeAndAuthority.getHost();
-            final int maybePort = schemeAndAuthority.getPort();
-            final String host;
-            final int port;
-            if (maybeHost == null) {
-                host = authority;
-                port = -1;
-            } else {
-                host = maybeHost;
-                port = maybePort;
-            }
-
-            return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
-                                            schemeAndAuthority.getScheme(),
-                                            authority,
-                                            host,
-                                            port,
-                                            encodedPath,
-                                            encodedPath, encodedQuery,
-                                            encodedFragment);
+            return newAbsoluteTarget(schemeAndAuthority, encodedPath, encodedQuery, encodedFragment);
         } else {
             return new DefaultRequestTarget(RequestTargetForm.ORIGIN,
                                             null,
@@ -626,6 +600,52 @@ public final class DefaultRequestTarget implements RequestTarget {
                                             encodedPath, encodedQuery,
                                             encodedFragment);
         }
+    }
+
+    private static DefaultRequestTarget newAbsoluteTarget(
+            URI schemeAndAuthority, String encodedPath,
+            @Nullable String encodedQuery, @Nullable String encodedFragment) {
+
+        final String scheme = schemeAndAuthority.getScheme();
+        final String maybeAuthority = schemeAndAuthority.getRawAuthority();
+        final String maybeHost = schemeAndAuthority.getHost();
+        final int maybePort = schemeAndAuthority.getPort();
+        final String authority;
+        final String host;
+        final int port;
+        if (maybeHost == null) {
+            authority = maybeAuthority;
+            host = maybeAuthority;
+            port = -1;
+        } else {
+            host = maybeHost;
+
+            // Specify the port number only when necessary, so that https://foo/ and https://foo:443/
+            // are considered equal.
+            if (maybePort >= 0) {
+                final Scheme parsedScheme = Scheme.tryParse(scheme);
+                if (parsedScheme == null || parsedScheme.sessionProtocol().defaultPort() != maybePort) {
+                    authority = maybeAuthority;
+                    port = maybePort;
+                } else {
+                    authority = maybeHost;
+                    port = -1;
+                }
+            } else {
+                authority = maybeHost;
+                port = -1;
+            }
+        }
+
+        return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
+                                        scheme,
+                                        authority,
+                                        host,
+                                        port,
+                                        encodedPath,
+                                        encodedPath,
+                                        encodedQuery,
+                                        encodedFragment);
     }
 
     @Nullable

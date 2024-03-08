@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.client.RedirectingClient.resolveLocation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -40,10 +39,13 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -189,6 +191,7 @@ class RedirectingClientTest {
         requestCounter.set(0);
         final WebClient client1 = WebClient.builder(server.httpUri())
                                            .factory(ClientFactory.insecure())
+                                           .decorator(LoggingClient.newDecorator())
                                            // Allows HTTPS by default when allowProtocols is not specified.
                                            .followRedirects()
                                            .build();
@@ -341,75 +344,97 @@ class RedirectingClientTest {
     @Test
     void testResolveLocation() {
         // Absolute paths and URIs should supersede the original path.
-        assertThat(resolveLocation("/a/", "/")).isEqualTo("/");
-        assertThat(resolveLocation("/a/", "/b")).isEqualTo("/b");
-        assertThat(resolveLocation("/a/", "https://foo")).isEqualTo("https://foo");
+        assertThat(resolveLocation("/a/", "/")).isEqualTo("h2c://foo/");
+        assertThat(resolveLocation("/a/", "/b")).isEqualTo("h2c://foo/b");
+        assertThat(resolveLocation("/a/", "//bar")).isEqualTo("h2c://bar/");
+        assertThat(resolveLocation("/a/", "//bar/b")).isEqualTo("h2c://bar/b");
+        assertThat(resolveLocation("/a/", "https://bar")).isEqualTo("https://bar/");
+        assertThat(resolveLocation("/a/", "https://bar/b")).isEqualTo("https://bar/b");
+
+        // Should reject the absolute URI with an unknown scheme.
+        assertThat(resolveLocation("/a/", "a://bar")).isNull();
+
+        // Should normalize the scheme into "http" or "https" in an absolute URI,
+        // because we should not trust the response blindly, e.g. DDoS by enforcing HTTP/1.
+        assertThat(resolveLocation("/a/", "h1c://bar")).isEqualTo("http://bar/");
+        assertThat(resolveLocation("/a/", "h1://bar")).isEqualTo("https://bar/");
 
         // Simple cases
-        assertThat(resolveLocation("/", "b")).isEqualTo("/b");
-        assertThat(resolveLocation("/", "b/")).isEqualTo("/b/");
-        assertThat(resolveLocation("/", "b/c")).isEqualTo("/b/c");
-        assertThat(resolveLocation("/", "b/c/")).isEqualTo("/b/c/");
+        assertThat(resolveLocation("/", "b")).isEqualTo("h2c://foo/b");
+        assertThat(resolveLocation("/", "b/")).isEqualTo("h2c://foo/b/");
+        assertThat(resolveLocation("/", "b/c")).isEqualTo("h2c://foo/b/c");
+        assertThat(resolveLocation("/", "b/c/")).isEqualTo("h2c://foo/b/c/");
 
-        assertThat(resolveLocation("/a", "b")).isEqualTo("/b");
-        assertThat(resolveLocation("/a", "b/")).isEqualTo("/b/");
-        assertThat(resolveLocation("/a", "b/c")).isEqualTo("/b/c");
-        assertThat(resolveLocation("/a", "b/c/")).isEqualTo("/b/c/");
+        assertThat(resolveLocation("/a", "b")).isEqualTo("h2c://foo/b");
+        assertThat(resolveLocation("/a", "b/")).isEqualTo("h2c://foo/b/");
+        assertThat(resolveLocation("/a", "b/c")).isEqualTo("h2c://foo/b/c");
+        assertThat(resolveLocation("/a", "b/c/")).isEqualTo("h2c://foo/b/c/");
 
-        assertThat(resolveLocation("/a/", "b")).isEqualTo("/a/b");
-        assertThat(resolveLocation("/a/", "b/")).isEqualTo("/a/b/");
-        assertThat(resolveLocation("/a/", "b/c")).isEqualTo("/a/b/c");
-        assertThat(resolveLocation("/a/", "b/c/")).isEqualTo("/a/b/c/");
+        assertThat(resolveLocation("/a/", "b")).isEqualTo("h2c://foo/a/b");
+        assertThat(resolveLocation("/a/", "b/")).isEqualTo("h2c://foo/a/b/");
+        assertThat(resolveLocation("/a/", "b/c")).isEqualTo("h2c://foo/a/b/c");
+        assertThat(resolveLocation("/a/", "b/c/")).isEqualTo("h2c://foo/a/b/c/");
 
         // Single-dot cases
-        assertThat(resolveLocation("/", ".")).isEqualTo("/");
-        assertThat(resolveLocation("/", "b/.")).isEqualTo("/b/");
-        assertThat(resolveLocation("/", "b/./")).isEqualTo("/b/");
-        assertThat(resolveLocation("/", "b/./c")).isEqualTo("/b/c");
+        assertThat(resolveLocation("/", ".")).isEqualTo("h2c://foo/");
+        assertThat(resolveLocation("/", "b/.")).isEqualTo("h2c://foo/b/");
+        assertThat(resolveLocation("/", "b/./")).isEqualTo("h2c://foo/b/");
+        assertThat(resolveLocation("/", "b/./c")).isEqualTo("h2c://foo/b/c");
 
-        assertThat(resolveLocation("/a", ".")).isEqualTo("/");
-        assertThat(resolveLocation("/a", "b/.")).isEqualTo("/b/");
-        assertThat(resolveLocation("/a", "b/./c")).isEqualTo("/b/c");
+        assertThat(resolveLocation("/a", ".")).isEqualTo("h2c://foo/");
+        assertThat(resolveLocation("/a", "b/.")).isEqualTo("h2c://foo/b/");
+        assertThat(resolveLocation("/a", "b/./c")).isEqualTo("h2c://foo/b/c");
 
-        assertThat(resolveLocation("/a/", ".")).isEqualTo("/a/");
-        assertThat(resolveLocation("/a/", "b/.")).isEqualTo("/a/b/");
-        assertThat(resolveLocation("/a/", "b/./c")).isEqualTo("/a/b/c");
+        assertThat(resolveLocation("/a/", ".")).isEqualTo("h2c://foo/a/");
+        assertThat(resolveLocation("/a/", "b/.")).isEqualTo("h2c://foo/a/b/");
+        assertThat(resolveLocation("/a/", "b/./c")).isEqualTo("h2c://foo/a/b/c");
 
         // Double-dot cases
         assertThat(resolveLocation("/", "..")).isNull();
-        assertThat(resolveLocation("/", "b/..")).isEqualTo("/");
-        assertThat(resolveLocation("/", "b/../")).isEqualTo("/");
-        assertThat(resolveLocation("/", "b/../c")).isEqualTo("/c");
+        assertThat(resolveLocation("/", "b/..")).isEqualTo("h2c://foo/");
+        assertThat(resolveLocation("/", "b/../")).isEqualTo("h2c://foo/");
+        assertThat(resolveLocation("/", "b/../c")).isEqualTo("h2c://foo/c");
 
         assertThat(resolveLocation("/a", "..")).isNull();
-        assertThat(resolveLocation("/a", "b/..")).isEqualTo("/");
-        assertThat(resolveLocation("/a", "b/../c")).isEqualTo("/c");
+        assertThat(resolveLocation("/a", "b/..")).isEqualTo("h2c://foo/");
+        assertThat(resolveLocation("/a", "b/../c")).isEqualTo("h2c://foo/c");
 
-        assertThat(resolveLocation("/a/", "..")).isEqualTo("/");
-        assertThat(resolveLocation("/a/", "b/..")).isEqualTo("/a/");
-        assertThat(resolveLocation("/a/", "b/../c")).isEqualTo("/a/c");
+        assertThat(resolveLocation("/a/", "..")).isEqualTo("h2c://foo/");
+        assertThat(resolveLocation("/a/", "b/..")).isEqualTo("h2c://foo/a/");
+        assertThat(resolveLocation("/a/", "b/../c")).isEqualTo("h2c://foo/a/c");
 
         // Multiple single- or double- dots
-        assertThat(resolveLocation("/", "././a")).isEqualTo("/a");
-        assertThat(resolveLocation("/", "a/././b")).isEqualTo("/a/b");
-        assertThat(resolveLocation("/", "a/./.")).isEqualTo("/a/");
-        assertThat(resolveLocation("/", "a/././")).isEqualTo("/a/");
+        assertThat(resolveLocation("/", "././a")).isEqualTo("h2c://foo/a");
+        assertThat(resolveLocation("/", "a/././b")).isEqualTo("h2c://foo/a/b");
+        assertThat(resolveLocation("/", "a/./.")).isEqualTo("h2c://foo/a/");
+        assertThat(resolveLocation("/", "a/././")).isEqualTo("h2c://foo/a/");
 
-        assertThat(resolveLocation("/a", "././b")).isEqualTo("/b");
-        assertThat(resolveLocation("/a", "b/././c")).isEqualTo("/b/c");
-        assertThat(resolveLocation("/a", "b/./.")).isEqualTo("/b/");
-        assertThat(resolveLocation("/a", "b/././")).isEqualTo("/b/");
+        assertThat(resolveLocation("/a", "././b")).isEqualTo("h2c://foo/b");
+        assertThat(resolveLocation("/a", "b/././c")).isEqualTo("h2c://foo/b/c");
+        assertThat(resolveLocation("/a", "b/./.")).isEqualTo("h2c://foo/b/");
+        assertThat(resolveLocation("/a", "b/././")).isEqualTo("h2c://foo/b/");
 
-        assertThat(resolveLocation("/a/b/", "../../c")).isEqualTo("/c");
-        assertThat(resolveLocation("/a/b/", "c/../../d")).isEqualTo("/a/d");
-        assertThat(resolveLocation("/a/b/", "c/../..")).isEqualTo("/a/");
-        assertThat(resolveLocation("/a/b/", "c/../../")).isEqualTo("/a/");
+        assertThat(resolveLocation("/a/b/", "../../c")).isEqualTo("h2c://foo/c");
+        assertThat(resolveLocation("/a/b/", "c/../../d")).isEqualTo("h2c://foo/a/d");
+        assertThat(resolveLocation("/a/b/", "c/../..")).isEqualTo("h2c://foo/a/");
+        assertThat(resolveLocation("/a/b/", "c/../../")).isEqualTo("h2c://foo/a/");
 
         assertThat(resolveLocation("/a/b", "../../c")).isNull();
-        assertThat(resolveLocation("/a/b/c", "../../d")).isEqualTo("/d");
-        assertThat(resolveLocation("/a/b/c", "d/../../e")).isEqualTo("/a/e");
-        assertThat(resolveLocation("/a/b/c", "d/../..")).isEqualTo("/a/");
-        assertThat(resolveLocation("/a/b/c", "d/../../")).isEqualTo("/a/");
+        assertThat(resolveLocation("/a/b/c", "../../d")).isEqualTo("h2c://foo/d");
+        assertThat(resolveLocation("/a/b/c", "d/../../e")).isEqualTo("h2c://foo/a/e");
+        assertThat(resolveLocation("/a/b/c", "d/../..")).isEqualTo("h2c://foo/a/");
+        assertThat(resolveLocation("/a/b/c", "d/../../")).isEqualTo("h2c://foo/a/");
+    }
+
+    @Nullable
+    private String resolveLocation(String originalPath, String redirectLocation) {
+        final HttpRequest req = HttpRequest.builder()
+                                           .get(originalPath)
+                                           .header(HttpHeaderNames.AUTHORITY, "foo")
+                                           .build();
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final RequestTarget result = RedirectingClient.resolveLocation(ctx, redirectLocation);
+        return result != null ? result.toString() : null;
     }
 
     private static ClientFactory localhostAccessingClientFactory() {

@@ -464,7 +464,7 @@ public final class DefaultClientRequestContext
             // The connection will be established with the IP address but `host` set to the `Endpoint`
             // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
             // proxy based on an authority.
-            final String host = HostAndPort.fromString(removeUserInfo(authority)).getHost();
+            final String host = authorityToHost(authority);
             if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
                 endpoint = endpoint.withHost(host);
             }
@@ -485,6 +485,10 @@ public final class DefaultClientRequestContext
             }
         }
         internalRequestHeaders = headersBuilder.build();
+    }
+
+    private static String authorityToHost(String authority) {
+        return HostAndPort.fromString(removeUserInfo(authority)).getHost();
     }
 
     private static String removeUserInfo(String authority) {
@@ -748,6 +752,16 @@ public final class DefaultClientRequestContext
             origin = internalRequestHeaders.get(HttpHeaderNames.ORIGIN);
         }
         return origin;
+    }
+
+    @Override
+    public String host() {
+        final String authority = authority();
+        if (authority == null) {
+            return null;
+        }
+
+        return authorityToHost(authority);
     }
 
     @Override
