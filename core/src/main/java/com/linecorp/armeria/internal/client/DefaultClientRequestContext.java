@@ -773,7 +773,13 @@ public final class DefaultClientRequestContext
         final String fragment = fragment();
         try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tmp.stringBuilder();
-            buf.append(scheme).append("://").append(authority).append(path);
+            buf.append(scheme);
+            if (authority != null) {
+                buf.append("://").append(authority);
+            } else {
+                buf.append(':');
+            }
+            buf.append(path);
             if (query != null) {
                 buf.append('?').append(query);
             }
