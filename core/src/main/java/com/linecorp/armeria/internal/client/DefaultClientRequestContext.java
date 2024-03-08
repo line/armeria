@@ -753,8 +753,20 @@ public final class DefaultClientRequestContext
     @Override
     public URI uri() {
         final String scheme = getScheme(sessionProtocol());
-        try {
-            return new URI(scheme, authority(), path(), query(), fragment());
+        final String authority = authority();
+        final String path = path();
+        final String query = query();
+        final String fragment = fragment();
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tmp.stringBuilder();
+            buf.append(scheme).append("://").append(authority).append(path);
+            if (query != null) {
+                buf.append('?').append(query);
+            }
+            if (fragment != null) {
+                buf.append('#').append(fragment);
+            }
+            return new URI(buf.toString());
         } catch (URISyntaxException e) {
             throw new IllegalStateException("not a valid URI", e);
         }

@@ -335,6 +335,7 @@ class RedirectingClientTest {
         final RequestLog log2 = logs.get(1);
         assertThat(log2.requestHeaders().path()).isEqualTo("/unencodedLocation/foo%20bar?value=$%7BP%7D");
         assertThat(log2.responseHeaders().status()).isEqualTo(HttpStatus.OK);
+        assertThat(log2.context().uri().toString()).endsWith("/unencodedLocation/foo%20bar?value=$%7BP%7D");
     }
 
     @Test
