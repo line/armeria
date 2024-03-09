@@ -84,7 +84,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private final Watch nodeWatch;
     private final Watch serviceWatch;
     @Nullable
-    private Watch podWatch;
+    private volatile Watch podWatch;
 
     private final Map<String, String> podToNode = new NonBlockingHashMap<>();
     private final Map<String, String> nodeToIp = new NonBlockingHashMap<>();
@@ -128,10 +128,16 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                         nodePort = ports.get(0).getNodePort();
                         KubernetesEndpointGroup.this.service = service;
 
-                        if (podWatch != null) {
-                            podWatch.close();
+                        Watch podWatch0 = podWatch;
+                        if (podWatch0 != null) {
+                            podWatch0.close();
                         }
-                        podWatch = watchPod(service.getSpec().getSelector());
+                        podWatch0 = watchPod(service.getSpec().getSelector());
+                        if (closed) {
+                            podWatch0.close();
+                        } else {
+                            podWatch = podWatch0;
+                        }
                         break;
                     case DELETED:
                         logger.warn("{} service is deleted. (namespace: {})", serviceName, namespace);
@@ -159,6 +165,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
             @Override
             public void eventReceived(Action action, Pod resource) {
                 if (closed) {
+                    if (podWatch != null) {
+                        podWatch.close();
+                    }
                     return;
                 }
                 if (action == Action.ERROR || action == Action.BOOKMARK) {
@@ -269,6 +278,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         closed = true;
         serviceWatch.close();
         nodeWatch.close();
+        final Watch podWatch = this.podWatch;
         if (podWatch != null) {
             podWatch.close();
         }
