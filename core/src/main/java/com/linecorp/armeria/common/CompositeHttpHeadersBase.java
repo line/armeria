@@ -157,7 +157,12 @@ class CompositeHttpHeadersBase
 
     @Override
     public boolean isEndOfStream() {
-        return ((HttpHeaderGetters) appender()).isEndOfStream();
+        for (StringMultimapGetters<CharSequence, AsciiString> delegate : delegates()) {
+            if (((HttpHeaderGetters) delegate).isEndOfStream()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

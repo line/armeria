@@ -218,7 +218,7 @@ class CompositeHttpHeadersBaseTest {
     void endOfStreams() {
         final CompositeHttpHeadersBase endOfStreams =
                 new CompositeHttpHeadersBase(HttpHeaders.of(),
-                                             HttpHeaders.builder().endOfStream(true).build(),
+                                             HttpHeaders.builder().endOfStream(false).build(),
                                              HttpHeaders.builder().endOfStream(false).build(),
                                              HttpHeaders.of());
         assertThat(endOfStreams.isEndOfStream()).isFalse();
@@ -228,6 +228,16 @@ class CompositeHttpHeadersBaseTest {
 
         endOfStreams.endOfStream(false);
         assertThat(endOfStreams.isEndOfStream()).isFalse();
+
+        final CompositeHttpHeadersBase endOfStreamsSomeTrue =
+                new CompositeHttpHeadersBase(HttpHeaders.of(),
+                                             HttpHeaders.builder().endOfStream(true).build(),
+                                             HttpHeaders.builder().endOfStream(false).build(),
+                                             HttpHeaders.of());
+        assertThat(endOfStreamsSomeTrue.isEndOfStream()).isTrue();
+
+        endOfStreamsSomeTrue.endOfStream(false);
+        assertThat(endOfStreamsSomeTrue.isEndOfStream()).isTrue();
 
         final CompositeHttpHeadersBase unknown = new CompositeHttpHeadersBase(HttpHeaders.of());
         assertThat(unknown.isEndOfStream()).isFalse();
@@ -345,7 +355,7 @@ class CompositeHttpHeadersBaseTest {
         headers.endOfStream(true);
         assertThat(headers.toString()).isEqualTo("[EOS]");
         assertThat(new CompositeHttpHeadersBase(HttpHeaders.of().toBuilder().endOfStream(true)).toString())
-                .isEqualTo("[]");
+                .isEqualTo("[EOS]");
     }
 
     @Test
