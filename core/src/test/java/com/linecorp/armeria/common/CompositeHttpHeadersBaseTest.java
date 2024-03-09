@@ -298,6 +298,34 @@ class CompositeHttpHeadersBaseTest {
         other2.add("dup", "dup1");
         other2.add("dup", "dup2");
         assertThat(headers.equals(other2)).isTrue();
+
+        final HttpHeaders other3 = HttpHeaders.builder()
+                                              .add("k1", "v1")
+                                              .add("k2", "v2")
+                                              .add("k3", "v3")
+                                              .add("k4", "v4")
+                                              .add("k5", "v5")
+                                              .add("k6", "v6")
+                                              .add("dup", "dup1")
+                                              .add("dup", "dup2")
+                                              .build();
+        assertThat(headers.equals(other3)).isTrue();
+
+        final CompositeHttpHeadersBase headersEndOfStream =
+                new CompositeHttpHeadersBase(HttpHeaders.of(),
+                                             HttpHeaders.of("k1", "v1")
+                                                        .toBuilder()
+                                                        .endOfStream(true)
+                                                        .build(),
+                                             HttpHeaders.of("k2", "v2",
+                                                            "k3", "v3"));
+        final HttpHeaders other4 = HttpHeaders.builder()
+                                              .add("k1", "v1")
+                                              .add("k2", "v2")
+                                              .add("k3", "v3")
+                                              .endOfStream(true)
+                                              .build();
+        assertThat(headersEndOfStream.equals(other4)).isTrue();
     }
 
     @Test
@@ -325,6 +353,17 @@ class CompositeHttpHeadersBaseTest {
                                              HttpHeaders.of());
         other2.endOfStream(true);
         assertThat(headers.equals(other2)).isFalse();
+
+        final HttpHeaders other3 = HttpHeaders.of("k1", "v1");
+        assertThat(headers.equals(other3)).isFalse();
+
+        final HttpHeaders other4 = HttpHeaders.builder()
+                                              .add("k1", "v1")
+                                              .add("k2", "v2")
+                                              .add("k3", "v3")
+                                              .endOfStream(true)
+                                              .build();
+        assertThat(headers.equals(other4)).isFalse();
     }
 
     @Test
