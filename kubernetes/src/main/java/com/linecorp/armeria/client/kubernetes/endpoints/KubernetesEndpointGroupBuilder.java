@@ -29,24 +29,26 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.fabric8.kubernetes.client.KubernetesClient;
 
+/**
+ * A builder for creating a new {@link KubernetesEndpointGroup}.
+ */
 public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
 
-    private static final long DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS = 30000;
-    static final String DEFAULT_NAMESPACE = "default";
-
     private final KubernetesClient kubernetesClient;
+    private final boolean autoClose;
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
-    private String namespace = DEFAULT_NAMESPACE;
-
+    @Nullable
+    private String namespace;
     @Nullable
     private String serviceName;
+    @Nullable
+    private String portName;
 
-    private long registryFetchIntervalMillis = DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS;
-
-    KubernetesEndpointGroupBuilder(KubernetesClient kubernetesClient) {
-        super(Flags.defaultConnectTimeoutMillis());
+    KubernetesEndpointGroupBuilder(KubernetesClient kubernetesClient, boolean autoClose) {
+        super(Flags.defaultResponseTimeoutMillis());
         this.kubernetesClient = requireNonNull(kubernetesClient, "kubernetesClient");
+        this.autoClose = autoClose;
     }
 
     /**
@@ -64,6 +66,16 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
      */
     public KubernetesEndpointGroupBuilder serviceName(String serviceName) {
         this.serviceName = requireNonNull(serviceName, "serviceName");
+        return this;
+    }
+
+    /**
+     * Sets the name of the <a href="https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports">port</a>
+     * from which <a href="https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport">NodePort</a>
+     * should be fetched from. If not set, the first node port will be used.
+     */
+    public KubernetesEndpointGroupBuilder portName(String portName) {
+        this.portName = requireNonNull(portName, "portName");
         return this;
     }
 
@@ -95,8 +107,8 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
      */
     public KubernetesEndpointGroup build() {
         checkState(serviceName != null, "serviceName not set");
-        return new KubernetesEndpointGroup(kubernetesClient, namespace, serviceName, selectionStrategy,
-                                           shouldAllowEmptyEndpoints(),
+        return new KubernetesEndpointGroup(kubernetesClient, namespace, serviceName, portName, autoClose,
+                                           selectionStrategy, shouldAllowEmptyEndpoints(),
                                            selectionTimeoutMillis());
     }
 }

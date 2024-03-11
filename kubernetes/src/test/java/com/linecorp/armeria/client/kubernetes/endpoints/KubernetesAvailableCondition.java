@@ -16,22 +16,25 @@
 
 package com.linecorp.armeria.client.kubernetes.endpoints;
 
-import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import org.junit.jupiter.api.Test;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 
-import com.linecorp.armeria.client.Endpoint;
+final class KubernetesAvailableCondition {
 
-class KubernetesEndpointGroupTest {
+    private static final Logger logger = LoggerFactory.getLogger(KubernetesAvailableCondition.class);
 
-    @Test
-    void test() throws InterruptedException {
-        final KubernetesEndpointGroup endpointGroup =
-                KubernetesEndpointGroup.ofDefault("mongo-express-service");
-        final List<Endpoint> endpoints = endpointGroup.whenReady().join();
-        System.out.println(endpoints);
-        Thread.sleep(1000);
-        System.out.println(endpointGroup.endpoints());
-        // TODO(ikhoon): Add tests with
+    static boolean isRunning() {
+        try (KubernetesClient client = new KubernetesClientBuilder().build()) {
+            client.namespaces().list();
+            return true;
+        } catch (Exception cause) {
+            logger.trace("Kubernetes is not running", cause);
+            return false;
+        }
     }
+
+    private KubernetesAvailableCondition() {}
 }

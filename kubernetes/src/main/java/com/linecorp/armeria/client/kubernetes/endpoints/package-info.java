@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,10 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint;
+/**
+ * {@link com.linecorp.armeria.client.endpoint.EndpointGroup} for Kubernetes services.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.client.kubernetes.endpoints;
 
-class K8sEndpointGroupTest {
-
-    // TODO(ikhoon): Add tests
-
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

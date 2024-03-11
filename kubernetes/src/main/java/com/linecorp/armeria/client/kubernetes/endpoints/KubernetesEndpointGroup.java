@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client.kubernetes.endpoints;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.client.kubernetes.endpoints.KubernetesEndpointGroupBuilder.DEFAULT_NAMESPACE;
+import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Map;
@@ -32,12 +32,14 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.api.model.ServicePort;
+import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 import io.fabric8.kubernetes.client.Watch;
@@ -46,11 +48,50 @@ import io.fabric8.kubernetes.client.WatcherException;
 
 /**
  * A {@link DynamicEndpointGroup} that fetches node IPs and ports for each Pod from Kubernetes.
+ *
+ * <p>Note that the Kubernetes service must have a type of <a href="https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport">NodePort</a>
+ * or <a href="https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer">'LoadBalancer'</a>
+ * to expose a node port.
+ *
+ * <p>Example:
+ * <pre>{@code
+ * // Create a KubernetesEndpointGroup that fetches the endpoints of the 'my-service' service in the 'default'
+ * // namespace. The Kubernetes client will be created with the default configuration in the $HOME/.kube/config.
+ * KubernetesClient kubernetesClient = new KubernetesClientBuilder().build();
+ * KubernetesEndpointGroup
+ *   .builder(kubernetesClient)
+ *   .namespace("default")
+ *   .serviceName("my-service")
+ *   .build();
+ *
+ * // If you want to use a custom configuration, you can create a KubernetesEndpointGroup as follows:
+ * // The custom configuration would be useful when you want to access Kubernetes from outside the cluster.
+ * Config config =
+ *   new ConfigBuilder()
+ *     .withMasterUrl("https://my-k8s-master")
+ *     .withOauthToken("my-token")
+ *     .build();
+ * KubernetesEndpointGroup
+ *   .builder(config)
+ *   .namespace("my-namespace")
+ *   .serviceName("my-service")
+ *   .build();
+ * }</pre>
  */
 public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesEndpointGroup.class);
 
+    private static final KubernetesClient DEFAULT_CLIENT = new KubernetesClientBuilder().build();
+
+    static {
+        ShutdownHooks.addClosingTask(DEFAULT_CLIENT);
+    }
+
+    /**
+     * Returns a newly created {@link KubernetesEndpointGroup} with the specified {@link KubernetesClient},
+     * {@code namespace} and {@code serviceName}.
+     */
     public static KubernetesEndpointGroup of(KubernetesClient kubernetesClient, String namespace,
                                              String serviceName) {
         return builder(kubernetesClient)
@@ -59,27 +100,74 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 .build();
     }
 
-    public static KubernetesEndpointGroup ofDefault(String serviceName) {
-        return of(DEFAULT_NAMESPACE, serviceName);
-    }
-
-    public static KubernetesEndpointGroup of(String namespace, String serviceName) {
-        return builder(new KubernetesClientBuilder().build())
+    /**
+     * Returns a newly created {@link KubernetesEndpointGroup} with the specified {@link Config},
+     * {@code namespace} and {@code serviceName}.
+     */
+    public static KubernetesEndpointGroup of(Config config, String namespace, String serviceName) {
+        return builder(new KubernetesClientBuilder().withConfig(config).build(), true)
                 .namespace(namespace)
                 .serviceName(serviceName)
                 .build();
     }
 
     /**
-     * Returns a newly created {@link KubernetesEndpointGroupBuilder} with the specified {@link KubernetesClient}.
+     * Returns a newly created {@link KubernetesEndpointGroup} with the specified {@code serviceName}.
+     * The default configuration in the $HOME/.kube/config will be used to create a {@link KubernetesClient}.
+     */
+    public static KubernetesEndpointGroup of(String serviceName) {
+        return builder(DEFAULT_CLIENT, false)
+                .serviceName(serviceName)
+                .build();
+    }
+
+    /**
+     * Returns a newly created {@link KubernetesEndpointGroup} with the specified {@code namespace} and
+     * {@code serviceName}.
+     * The default configuration in the $HOME/.kube/config will be used to create a {@link KubernetesClient}.
+     */
+    public static KubernetesEndpointGroup of(String namespace, String serviceName) {
+        return builder(DEFAULT_CLIENT, false)
+                .namespace(namespace)
+                .serviceName(serviceName)
+                .build();
+    }
+
+    /**
+     * Returns a newly created {@link KubernetesEndpointGroupBuilder} with the specified
+     * {@link KubernetesClient}.
      */
     public static KubernetesEndpointGroupBuilder builder(KubernetesClient kubernetesClient) {
-        return new KubernetesEndpointGroupBuilder(kubernetesClient);
+        return new KubernetesEndpointGroupBuilder(kubernetesClient, false);
+    }
+
+    /**
+     * Returns a newly created {@link KubernetesEndpointGroupBuilder} with the specified
+     * {@link KubernetesClient}.
+     *
+     * @param autoClose whether to close the {@link KubernetesClient} when the {@link KubernetesEndpointGroup}
+     *                  is closed.
+     */
+    public static KubernetesEndpointGroupBuilder builder(KubernetesClient kubernetesClient, boolean autoClose) {
+        return new KubernetesEndpointGroupBuilder(kubernetesClient, autoClose);
+    }
+
+    /**
+     * Returns a newly created {@link KubernetesEndpointGroupBuilder} with the specified Kubernetes
+     * {@link Config}.
+     */
+    public static KubernetesEndpointGroupBuilder builder(Config kubeConfig) {
+        requireNonNull(kubeConfig, "kubeConfig");
+        return builder(new KubernetesClientBuilder().withConfig(kubeConfig).build(), true);
     }
 
     private final KubernetesClient client;
+    private final boolean autoClose;
+    @Nullable
     private final String namespace;
     private final String serviceName;
+    @Nullable
+    private final String portName;
 
     private final Watch nodeWatch;
     private final Watch serviceWatch;
@@ -95,13 +183,16 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
     private volatile boolean closed;
 
-    KubernetesEndpointGroup(KubernetesClient client, String namespace, String serviceName,
-                            EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
-                            long selectionTimeoutMillis) {
+    KubernetesEndpointGroup(KubernetesClient client, @Nullable String namespace, String serviceName,
+                            @Nullable String portName, boolean autoClose,
+                            EndpointSelectionStrategy selectionStrategy,
+                            boolean allowEmptyEndpoints, long selectionTimeoutMillis) {
         super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
         this.client = client;
         this.namespace = namespace;
         this.serviceName = serviceName;
+        this.portName = portName;
+        this.autoClose = autoClose;
         nodeWatch = watchNodes();
         serviceWatch = watchService();
     }
@@ -110,9 +201,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
      * Watches the service. {@link Watcher} will retry automatically on failures.
      */
     private Watch watchService() {
-        return client.services().inNamespace(namespace).withName(serviceName).watch(new Watcher<Service>() {
+        final Watcher<Service> watcher = new Watcher<Service>() {
             @Override
-            public void eventReceived(Action action, Service service) {
+            public void eventReceived(Action action, Service service0) {
                 if (closed) {
                     return;
                 }
@@ -120,19 +211,34 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 switch (action) {
                     case ADDED:
                     case MODIFIED:
-                        final List<ServicePort> ports = service.getSpec().getPorts();
-                        if (ports.isEmpty()) {
-                            logger.warn("No ports in the service: {}", service);
+                        final List<ServicePort> ports = service0.getSpec().getPorts();
+                        final Integer nodePort0 =
+                                ports.stream()
+                                     .filter(p -> portName == null || portName.equals(p.getName()))
+                                     .map(ServicePort::getNodePort)
+                                     .filter(Objects::nonNull)
+                                     .findFirst().orElse(null);
+                        if (nodePort0 == null) {
+                            if (portName != null) {
+                                logger.warn("No node port matching '{}' in the service: {}", portName,
+                                            service0);
+                            } else {
+                                logger.warn(
+                                        "No node port in the service. Either 'NodePort' or 'LoadBalancer' " +
+                                        "should be set as the type for your Kubernetes service to expose " +
+                                        "a node port. type:{}, service:{}", service0.getSpec().getType(),
+                                        service0);
+                            }
                             return;
                         }
-                        nodePort = ports.get(0).getNodePort();
-                        KubernetesEndpointGroup.this.service = service;
+                        service = service0;
+                        nodePort = nodePort0;
 
                         Watch podWatch0 = podWatch;
                         if (podWatch0 != null) {
                             podWatch0.close();
                         }
-                        podWatch0 = watchPod(service.getSpec().getSelector());
+                        podWatch0 = watchPod(service0.getSpec().getSelector());
                         if (closed) {
                             podWatch0.close();
                         } else {
@@ -157,17 +263,20 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 }
                 logger.warn("{} service watcher is closed. (namespace: {})", namespace, serviceName, cause);
             }
-        });
+        };
+
+        if (namespace == null) {
+            return client.services().withName(serviceName).watch(watcher);
+        } else {
+            return client.services().inNamespace(namespace).withName(serviceName).watch(watcher);
+        }
     }
 
     private Watch watchPod(Map<String, String> selector) {
-        return client.pods().inNamespace(namespace).withLabels(selector).watch(new Watcher<Pod>() {
+        final Watcher<Pod> watcher = new Watcher<Pod>() {
             @Override
             public void eventReceived(Action action, Pod resource) {
                 if (closed) {
-                    if (podWatch != null) {
-                        podWatch.close();
-                    }
                     return;
                 }
                 if (action == Action.ERROR || action == Action.BOOKMARK) {
@@ -196,14 +305,20 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
                 logger.warn("Pod watcher for {}/{} is closed.", namespace, serviceName, cause);
             }
-        });
+        };
+
+        if (namespace == null) {
+            return client.pods().withLabels(selector).watch(watcher);
+        } else {
+            return client.pods().inNamespace(namespace).withLabels(selector).watch(watcher);
+        }
     }
 
     /**
      * Fetches the internal IPs of the node.
      */
     private Watch watchNodes() {
-        return client.nodes().watch(new Watcher<Node>() {
+        final Watcher<Node> watcher = new Watcher<Node>() {
             @Override
             public void eventReceived(Action action, Node node) {
                 if (closed) {
@@ -239,7 +354,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 }
                 logger.warn("Node watcher for {}/{} is closed.", namespace, serviceName, cause);
             }
-        });
+        };
+
+        return client.nodes().watch(watcher);
     }
 
     private void maybeUpdateEndpoints() {
@@ -282,7 +399,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
         if (podWatch != null) {
             podWatch.close();
         }
-        client.close();
+        if (autoClose) {
+            client.close();
+        }
         super.doCloseAsync(future);
     }
 }
