@@ -203,7 +203,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                         failWithUnexpectedMessageType(ctx, msg, EMPTY_LAST_CONTENT.getClass());
                         return;
                     }
-                    // The state should be set to UPGRADE_COMPLETE before removing HttpClientCode.
+                    // The state should be set to UPGRADE_COMPLETE before removing HttpClientCodec.
                     // Because pipeline.remove() could trigger channelRead() recursively.
                     state = State.UPGRADE_COMPLETE;
                     final ChannelPipeline pipeline = ctx.pipeline();
