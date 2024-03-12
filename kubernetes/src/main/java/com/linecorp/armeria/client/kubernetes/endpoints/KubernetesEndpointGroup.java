@@ -47,11 +47,30 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 
 /**
- * A {@link DynamicEndpointGroup} that fetches node IPs and ports for each Pod from Kubernetes.
+ * A {@link DynamicEndpointGroup} that fetches node IPs and node ports for each Pod from Kubernetes.
  *
- * <p>Note that the Kubernetes service must have a type of <a href="https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport">NodePort</a>
+ * <p>Note that the Kubernetes service for client side load balancing must have a type of <a href="https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport">NodePort</a>
  * or <a href="https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer">'LoadBalancer'</a>
  * to expose a node port.
+ *
+ * <p>{@link KubernetesEndpointGroup} watches the nodes, services and pods in the Kubernetes cluster and updates
+ * the endpoints, so the credential in the {@link Config} used to create {@link KubernetesClient} should
+ * have permission to watch {@code services}, {@code nodes} and {@code pods}. Otherwise, the
+ * {@link KubernetesEndpointGroup} will not be able to fetch the endpoints.
+ *
+ * <p>For instance, the following <a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/#referring-to-subjects">RBAC</a>
+ * configuration is required:
+ * <pre>{@code
+ * apiVersion: rbac.authorization.k8s.io/v1
+ * kind: ClusterRole
+ * metadata:
+ *   name: my-cluster-role
+ * rules:
+ * - apiGroups: [""]
+ *   resources: ["pods", "services", "nodes"]
+ *   verbs: ["watch"]
+ * }</pre>
+ *
  *
  * <p>Example:
  * <pre>{@code
@@ -91,6 +110,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     /**
      * Returns a newly created {@link KubernetesEndpointGroup} with the specified {@link KubernetesClient},
      * {@code namespace} and {@code serviceName}.
+     *
+     * <p>Note that the {@link KubernetesClient} will not be automatically closed when the
+     * {@link KubernetesEndpointGroup} is closed.
      */
     public static KubernetesEndpointGroup of(KubernetesClient kubernetesClient, String namespace,
                                              String serviceName) {
@@ -136,6 +158,9 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     /**
      * Returns a newly created {@link KubernetesEndpointGroupBuilder} with the specified
      * {@link KubernetesClient}.
+     *
+     * <p>Note that the {@link KubernetesClient} will not be automatically closed when the
+     * {@link KubernetesEndpointGroup} is closed.
      */
     public static KubernetesEndpointGroupBuilder builder(KubernetesClient kubernetesClient) {
         return new KubernetesEndpointGroupBuilder(kubernetesClient, false);
@@ -198,7 +223,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     }
 
     /**
-     * Watches the service. {@link Watcher} will retry automatically on failures.
+     * Watches the service. {@link Watcher} will retry automatically on failures by {@link KubernetesClient}.
      */
     private Watch watchService() {
         final Watcher<Service> watcher = new Watcher<Service>() {
