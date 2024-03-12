@@ -47,14 +47,14 @@ import io.fabric8.kubernetes.client.Watcher;
 import io.fabric8.kubernetes.client.WatcherException;
 
 /**
- * A {@link DynamicEndpointGroup} that fetches node IPs and node ports for each Pod from Kubernetes.
+ * A {@link DynamicEndpointGroup} that fetches a node IP and a node port for each Pod from Kubernetes.
  *
- * <p>Note that the Kubernetes service for client side load balancing must have a type of <a href="https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport">NodePort</a>
+ * <p>Note that the Kubernetes service must have a type of <a href="https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport">NodePort</a>
  * or <a href="https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer">'LoadBalancer'</a>
- * to expose a node port.
+ * to expose a node port for client side load balancing.
  *
  * <p>{@link KubernetesEndpointGroup} watches the nodes, services and pods in the Kubernetes cluster and updates
- * the endpoints, so the credential in the {@link Config} used to create {@link KubernetesClient} should
+ * the endpoints, so the credentials in the {@link Config} used to create {@link KubernetesClient} should
  * have permission to watch {@code services}, {@code nodes} and {@code pods}. Otherwise, the
  * {@link KubernetesEndpointGroup} will not be able to fetch the endpoints.
  *
@@ -70,7 +70,6 @@ import io.fabric8.kubernetes.client.WatcherException;
  *   resources: ["pods", "services", "nodes"]
  *   verbs: ["watch"]
  * }</pre>
- *
  *
  * <p>Example:
  * <pre>{@code
@@ -355,15 +354,18 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 }
 
                 final String nodeName = node.getMetadata().getName();
-                final String nodeIp = node.getStatus().getAddresses().stream()
-                                          .filter(address -> "InternalIP".equals(address.getType()))
-                                          .map(NodeAddress::getAddress)
-                                          .findFirst().orElse(null);
-
                 switch (action) {
                     case ADDED:
                     case MODIFIED:
-                        nodeToIp.put(nodeName, nodeIp);
+                        final String nodeIp = node.getStatus().getAddresses().stream()
+                                                  .filter(address -> "InternalIP".equals(address.getType()))
+                                                  .map(NodeAddress::getAddress)
+                                                  .findFirst().orElse(null);
+                        if (nodeIp != null) {
+                            nodeToIp.put(nodeName, nodeIp);
+                        } else {
+                            logger.debug("No 'InternalIP' is found in {}. node: {}", nodeName, node);
+                        }
                         break;
                     case DELETED:
                         nodeToIp.remove(nodeName);
