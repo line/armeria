@@ -14,13 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.xds.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
-import static com.linecorp.armeria.xds.XdsConverterUtilTest.sampleClusterLoadAssignment;
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
+import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
 import static com.linecorp.armeria.xds.XdsTestResources.stringValue;
+import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
+import static com.linecorp.armeria.xds.client.endpoint.XdsConverterUtilTest.sampleClusterLoadAssignment;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -28,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
-import com.google.protobuf.Any;
 import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -36,6 +36,8 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsTestResources;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -50,17 +52,6 @@ import io.envoyproxy.envoy.config.core.v3.ApiVersion;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
-import io.envoyproxy.envoy.config.listener.v3.ApiListener;
-import io.envoyproxy.envoy.config.listener.v3.Listener;
-import io.envoyproxy.envoy.config.route.v3.Route;
-import io.envoyproxy.envoy.config.route.v3.RouteAction;
-import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
-import io.envoyproxy.envoy.config.route.v3.RouteMatch;
-import io.envoyproxy.envoy.config.route.v3.VirtualHost;
-import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager.CodecType;
-import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
 class RouteMetadataSubsetTest {
 
@@ -155,41 +146,5 @@ class RouteMetadataSubsetTest {
                     .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081),
                                                Endpoint.of("127.0.0.1", 8082)));
         }
-    }
-
-    static Listener staticResourceListener() {
-        return staticResourceListener(Metadata.getDefaultInstance());
-    }
-
-    static Listener staticResourceListener(Metadata metadata) {
-        final RouteAction.Builder routeActionBuilder = RouteAction.newBuilder().setCluster("cluster");
-        if (metadata != Metadata.getDefaultInstance()) {
-            routeActionBuilder.setMetadataMatch(metadata);
-        }
-        final VirtualHost virtualHost =
-                VirtualHost.newBuilder()
-                           .setName("route")
-                           .addDomains("*")
-                           .addRoutes(Route.newBuilder()
-                                           .setMatch(RouteMatch.newBuilder().setPrefix("/"))
-                                           .setRoute(routeActionBuilder))
-                           .build();
-        final HttpConnectionManager manager =
-                HttpConnectionManager
-                        .newBuilder()
-                        .setCodecType(CodecType.AUTO)
-                        .setStatPrefix("ingress_http")
-                        .setRouteConfig(RouteConfiguration.newBuilder()
-                                                          .setName("route")
-                                                          .addVirtualHosts(virtualHost)
-                                                          .build())
-                        .addHttpFilters(HttpFilter.newBuilder()
-                                                  .setName("envoy.filters.http.router")
-                                                  .setTypedConfig(Any.pack(Router.getDefaultInstance())))
-                        .build();
-        return Listener.newBuilder()
-               .setName("listener")
-               .setApiListener(ApiListener.newBuilder().setApiListener(Any.pack(manager)))
-               .build();
     }
 }
