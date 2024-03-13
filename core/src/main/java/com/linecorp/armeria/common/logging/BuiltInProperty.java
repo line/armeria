@@ -56,6 +56,15 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public enum BuiltInProperty {
     /**
+     * {@code "authenticated.user"} - the authenticated user if exists.
+     */
+    AUTHENTICATED_USER("authenticated.user", log -> {
+        if (log.isAvailable(RequestLogProperty.AUTHENTICATED_USER)) {
+            return log.authenticatedUser();
+        }
+        return null;
+    }),
+    /**
      * {@code "remote.host"} - the host name part of the remote socket address. Unavailable if the connection
      * is not established yet.
      */
