@@ -170,7 +170,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
      * {@link KubernetesClient}.
      *
      * @param autoClose whether to close the {@link KubernetesClient} when the {@link KubernetesEndpointGroup}
-     *                  is closed.
+     * is closed.
      */
     public static KubernetesEndpointGroupBuilder builder(KubernetesClient kubernetesClient, boolean autoClose) {
         return new KubernetesEndpointGroupBuilder(kubernetesClient, autoClose);
@@ -308,6 +308,11 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                 }
                 final String podName = resource.getMetadata().getName();
                 final String nodeName = resource.getSpec().getNodeName();
+                if (podName == null || nodeName == null) {
+                    logger.debug("Pod or node name is null. pod: {}, node: {}", podName, nodeName);
+                    return;
+                }
+
                 switch (action) {
                     case ADDED:
                     case MODIFIED:
@@ -361,11 +366,11 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                                                   .filter(address -> "InternalIP".equals(address.getType()))
                                                   .map(NodeAddress::getAddress)
                                                   .findFirst().orElse(null);
-                        if (nodeIp != null) {
-                            nodeToIp.put(nodeName, nodeIp);
-                        } else {
+                        if (nodeIp == null) {
                             logger.debug("No 'InternalIP' is found in {}. node: {}", nodeName, node);
+                            return;
                         }
+                        nodeToIp.put(nodeName, nodeIp);
                         break;
                     case DELETED:
                         nodeToIp.remove(nodeName);
