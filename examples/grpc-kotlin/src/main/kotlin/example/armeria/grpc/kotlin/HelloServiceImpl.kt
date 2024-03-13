@@ -99,7 +99,10 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
         suspend fun <T> withArmeriaBlockingContext(block: suspend CoroutineScope.() -> T): T =
             withContext(ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher(), block)
 
-        private fun buildReply(message: String): HelloReply = HelloReply.newBuilder().setMessage(message).build()
+        private fun buildReply(message: String): HelloReply =
+            HelloReply.newBuilder().setMessage(
+                message,
+            ).build()
 
         private fun toMessage(message: String): String = "Hello, $message!"
     }

@@ -95,7 +95,9 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
             CoroutineContextServerInterceptor::class.let { kclass ->
                 val companionObject = checkNotNull(kclass.companionObject)
                 val property = companionObject.memberProperties.single { it.name == "COROUTINE_CONTEXT_KEY" }
-                checkNotNull(property.getter.call(kclass.companionObjectInstance)) as Context.Key<CoroutineContext>
+                checkNotNull(
+                    property.getter.call(kclass.companionObjectInstance),
+                ) as Context.Key<CoroutineContext>
             }
     }
 }

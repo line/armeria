@@ -20,7 +20,8 @@ class GraphqlArmeriaClient(
     private val serializer: GraphQLClientSerializer = defaultGraphQLSerializer(),
     // TODO(ikhoon): support Automatic Persisted Queries
     //               See: https://github.com/ExpediaGroup/graphql-kotlin/issues/1640
-    override val automaticPersistedQueriesSettings: AutomaticPersistedQueriesSettings = AutomaticPersistedQueriesSettings(),
+    override val automaticPersistedQueriesSettings: AutomaticPersistedQueriesSettings =
+        AutomaticPersistedQueriesSettings(),
 ) : GraphQLClient<HttpRequestBuilder> {
     override suspend fun <T : Any> execute(
         request: GraphQLClientRequest<T>,

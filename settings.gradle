@@ -83,8 +83,6 @@ includeWithFlags ':version-catalog',                     'version-catalog'
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
-includeWithFlags ':brave',                               'java', 'publish', 'relocate', 'no_aggregation'
-project(':brave').projectDir = file('brave/brave')
 includeWithFlags ':brave5',                              'java', 'publish', 'relocate', 'no_aggregation'
 project(':brave5').projectDir = file('brave/brave5')
 includeWithFlags ':brave6',                              'java', 'publish', 'relocate', 'native'

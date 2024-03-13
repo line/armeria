@@ -256,7 +256,9 @@ class SuspendingAnnotatedServiceTest {
                                 @Get("/baz")
                                 suspend fun baz(): String {
                                     ServiceRequestContext.current()
-                                    assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
+                                    assertThat(
+                                        Thread.currentThread().name,
+                                    ).contains("armeria-common-blocking-tasks")
                                     return "OK"
                                 }
                             },
