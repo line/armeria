@@ -89,6 +89,7 @@ public final class XdsEndpointGroup extends DynamicEndpointGroup {
      * This may be useful if one would like to create an {@link EndpointGroup} based on
      * a {@link GrpcService}.
      */
+    @UnstableApi
     public static EndpointGroup of(ClusterSnapshot clusterSnapshot) {
         requireNonNull(clusterSnapshot, "clusterSnapshot");
         return new XdsEndpointGroup(clusterSnapshot);
