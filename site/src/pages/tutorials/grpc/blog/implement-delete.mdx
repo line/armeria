@@ -1,6 +1,6 @@
 ---
 menuTitle: "Implement DELETE"
-order: 7
+order: 6
 category: grpc
 tags:
   - server
@@ -14,14 +14,14 @@ So far, we created, read, and updated a blog post.
 Now, let's implement and make a call to delete a blog post.
 Also, we'll add Armeria's [Documentation Service](/docs/server-docservice) for testing our blog service.
 
-<TutorialSteps current={7} />
+<TutorialSteps current={6} />
 
 ## What you need
 
 You need to have the following files obtained from previous steps.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) the full version, instead of creating one yourself.
 
-- [Generated Java code](/tutorials/grpc/blog/create-service#3-compile-the-proto-file)
+- [Generated Java code](/tutorials/grpc/blog/define-service#6-compile-the-proto-file)
 - `BlogService.java`
 - `Main.java`
 - `BlogServiceTest.java`
@@ -190,7 +190,7 @@ The Documentation service automatically creates documentation of your service me
                 server.activeLocalPort());
   }
   ```
-5. Now, [re-run the server](/tutorials/grpc/blog/run-server#2-run-the-server).
+5. Otherwise, restart the server by running the `Main.main()` method.
 
   The server and services are launched successfully if you see this message.
   ```bash
@@ -232,4 +232,4 @@ We've also added [Documentation service](/docs/server-docservice) to our server.
 We've come to the end of this tutorial.
 Next, try adding more service methods to the tutorial or have a go at developing a service of your own.
 
-<TutorialSteps current={7} />
+<TutorialSteps current={6} />

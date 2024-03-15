@@ -1,31 +1,41 @@
 ---
-menuTitle: "Define service methods"
-order: 3
+menuTitle: "Define a service"
+order: 1
 type: step
 targetLang: java
 ---
 
-# Defining service methods
+# Defining a blog service and messages
 
-Previously, we ran a service on a server and also confirmed that our client could make a call to the service.
-In this step, we'll define service methods and other objects including request and response types.
+Let's begin by defining our gRPC blog service in a proto file.
 
-<TutorialSteps current={3} />
+<TutorialSteps current={1} />
 
 ## What you need
 
-You need to have the following files obtained from previous steps.
-You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) the full version, instead of creating one yourself.
+No preparation is required for this step. Do check that you've prepared the [prerequisites](/tutorials/grpc/blog/#prerequisites).
 
-- `blog.proto`
-- `BlogService.java`
-- `Main.java`
-- `BlogServiceTest.java`
+## 1. Create a proto file
 
-## 1. Define a blog post
+Create a file, `blog.proto` inside the directory, `{project_root}/src/main/proto`. This tutorial uses [Protocol Buffers version 3](https://developers.google.com/protocol-buffers/docs/proto3).
 
-In the `blog.proto` file, define the BlogPost message type with minimal data.
-You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/src/main/proto/blog.proto).
+```protobuf filename=blog.proto
+syntax = "proto3";
+
+package example.armeria.blog.grpc;
+option java_package = "example.armeria.blog.grpc";
+option java_multiple_files = true;
+```
+
+<Tip>
+
+  See [Sample service structure](/tutorials/grpc/blog#sample-service) for the overall folder structure.
+
+</Tip>
+
+## 2. Define a blog post
+
+In the proto file, define the `BlogPost` message type with minimal data.
 
 ```protobuf filename=blog.proto
 message BlogPost {
@@ -37,7 +47,7 @@ message BlogPost {
 }
 ```
 
-## 2. Add service methods
+## 3. Add service methods
 
 Add service methods to the blog service. We have two methods for retrieving blog posts; one is for retrieving a single post and another for multiple posts.
 
@@ -59,7 +69,7 @@ service BlogService {
 }
 ```
 
-## 3. Add request types
+## 4. Add request types
 
 Add request types for create, retrieve, update, and delete operations.
 
@@ -94,18 +104,23 @@ Add a response type to return multiple blog posts.
 
 ```protobuf filename=blog.proto
 message ListBlogPostsResponse {
-  repeated BlogPost blogs = 1;
+    repeated BlogPost blogs = 1;
 }
 ```
 
 ## 6. Compile the proto file
 
-[Compile the proto file](/tutorials/grpc/blog/create-service#3-compile-the-proto-file) to generate Java code.
+Compile the `blog.proto` file to generate Java code.
+You can refer to the full [build.gradle](https://github.com/line/armeria-examples/tree/main/tutorials/grpc/build.gradle) file for generating code with [protobuf-gradle-plugin](https://github.com/google/protobuf-gradle-plugin).
 
-## What's next
+```bash
+./gradlew generateProto
+```
 
-In this step, we've defined service methods to implement from now on.
+You'll see the generated Java code in the `{project_root}/build/generated/source/proto/main` folder.
 
-Next at [Step 4. Implement CREATE](/tutorials/grpc/blog/implement-create), we'll implement a CREATE operation to create a blog post.
+## Next step
 
-<TutorialSteps current={3} />
+In this step, we've defined a proto file for our service and generated Java code. Next, we'll [run a service](/tutorials/grpc/blog/run-service) and test the connection.
+
+<TutorialSteps current={1} />

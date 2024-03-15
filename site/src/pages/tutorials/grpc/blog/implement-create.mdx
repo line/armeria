@@ -1,6 +1,6 @@
 ---
 menuTitle: "Implement CREATE"
-order: 4
+order: 3
 category: grpc
 tags:
   - server
@@ -14,14 +14,14 @@ In the previous step, we defined service methods.
 In this step, we'll implement one of the service methods to create a blog post and again, try making a call to a service method.
 Also, we'll use Armeria's <type://ServerExtension> for testing.
 
-<TutorialSteps current={4} />
+<TutorialSteps current={3} />
 
 ## What you need
 
 You need to have the following files obtained from previous steps.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/grpc) the full version, instead of creating one yourself.
 
-- [Generated Java code](/tutorials/grpc/blog/create-service#3-compile-the-proto-file)
+- [Generated Java code](/tutorials/grpc/blog/define-service#6-compile-the-proto-file)
 - `BlogService.java`
 - `Main.java`
 - `BlogServiceTest.java`
@@ -46,7 +46,7 @@ Let's implement a service method `createBlogPost()` in the `BlogService` class.
     2. Save the post information in the map.
     3. Return the information of the blog post created.
   ```java filename=BlogService.java
-  import example.armeria.blog.grpc.Blog.BlogPost;
+  import java.time.Instant;
   import io.grpc.stub.StreamObserver;
 
   final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
@@ -75,7 +75,15 @@ This time, let's use Armeria's <type://ServerExtension> instead.
 This approach automatically handles set-up and tear-down of a server for testing.
 Now we don't have to invoke the main method to set up a server before running our tests.
 
-1. In the `BlogServiceTest` class, register a <type://ServerExtension> as follows.
+1. In the `BlogServiceTest` class, remove the `connect()` method to eliminate dependency on the main method.
+  ```java filename=BlogServiceTest.java
+  public class BlogServiceTest {
+    ...
+    @Test
+    void connect() {...} // Remove this method
+  }
+  ```
+2. Register a <type://ServerExtension> as follows.
   Note that the service instance is added to the configuration.
   ```java filename=BlogServiceTest.java
   import org.junit.jupiter.api.extension.RegisterExtension;
@@ -83,39 +91,31 @@ Now we don't have to invoke the main method to set up a server before running ou
   import com.linecorp.armeria.server.grpc.GrpcService;
   import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-  @RegisterExtension
-  static final ServerExtension server = new ServerExtension() {
+  public class BlogServiceTest {
+    ...
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
       @Override
       protected void configure(ServerBuilder sb) throws Exception {
-          sb.service(GrpcService.builder()
-                        // Add the service to the configuration
-                        .addService(new BlogService())
-                        .build());
+        sb.service(GrpcService.builder()
+                      // Add the service to the configuration
+                      .addService(new BlogService())
+                      .build());
       }
-  };
-  ```
-  2. Either remove the test method `hello()` or add the `@Disabled` annotation as follows
-  to prevent it from attempting a direct connection to the server.
-  ```java filename=BlogServiceTest.java
-  @Disabled // Add this
-  @Test
-  void hello() {
-    ...
+    };
   }
   ```
 
 ## 3. Set up a client for testing
 
-In the `BlogServiceTest` class, add a variable and a method as follows.
+In the `BlogServiceTest` class, add a method as follows.
 This will set up a client before executing each test cases.
 
 ```java filename=BlogServiceTest.java
-static BlogServiceBlockingStub client;
-
 @BeforeAll
 static void beforeAll() {
-    client = GrpcClients.newClient(server.httpUri(),
-                   BlogServiceBlockingStub.class);
+  client = GrpcClients.newClient(server.httpUri(),
+                 BlogServiceBlockingStub.class);
 }
 ```
 
@@ -152,6 +152,6 @@ The service worked as expected if you see the test case passed.
 In this step, we've implemented a method for creating a blog post.
 We've also registered <type://ServerExtension> to our test.
 
-Next, at [Step 5. Implement READ](/tutorials/grpc/blog/implement-read), we'll implement a READ operation to read a single post and also multiple posts.
+Next, at [Step 4. Implement READ](/tutorials/grpc/blog/implement-read), we'll implement a READ operation to read a single post and also multiple posts.
 
-<TutorialSteps current={4} />
+<TutorialSteps current={3} />

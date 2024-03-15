@@ -17,9 +17,8 @@
   ],
   "gRPC service":[
     "grpc/blog",
-    "grpc/blog/create-service",
-    "grpc/blog/run-server",
-    "grpc/blog/define-service-methods",
+    "grpc/blog/define-service",
+    "grpc/blog/run-service",
     "grpc/blog/implement-create",
     "grpc/blog/implement-read",
     "grpc/blog/implement-update",
