@@ -32,6 +32,8 @@
 package com.linecorp.armeria.spring.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
 import java.time.Duration;
@@ -40,6 +42,8 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 import org.springframework.lang.Nullable;
 import org.springframework.mock.web.MockMultipartFile;
@@ -56,12 +60,20 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
 
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseBuilder;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.mock.MockWebServerExtension;
 
@@ -93,6 +105,87 @@ class ArmeriaHttpExchangeAdapterTest {
                     .expectNext("Hello Spring!")
                     .expectComplete()
                     .verify(Duration.ofSeconds(5));
+    }
+
+    @ValueSource(strings = { "", "/", "/foo", "/foo/bar" })
+    @ParameterizedTest
+    void greetingWithPrefix(String prefix) {
+        prepareResponse(response -> response.status(HttpStatus.OK)
+                                            .header("Content-Type", "text/plain")
+                                            .content("Hello Spring!"));
+        final WebClient client = WebClient.of(server.httpUri().resolve(prefix));
+        StepVerifier.create(initService(client).getGreeting())
+                    .expectNext("Hello Spring!")
+                    .expectComplete()
+                    .verify(Duration.ofSeconds(5));
+
+        String expectedPath = "/greeting";
+        if (!"/".equals(prefix)) {
+            expectedPath = prefix + expectedPath;
+        }
+        assertThat(server.takeRequest().context().path()).isEqualTo(expectedPath);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "", "/", "/foo", "/foo/bar" })
+    void greetingWithEndpointGroup(String prefix) throws InterruptedException {
+        prepareResponse(response -> response.status(HttpStatus.OK)
+                                            .header("Content-Type", "text/plain")
+                                            .content("Hello Spring!"));
+
+        final SettableEndpointGroup endpointGroup = new SettableEndpointGroup();
+        final WebClient client;
+        if (!prefix.isEmpty()) {
+            client = WebClient.of(SessionProtocol.HTTP, endpointGroup, prefix);
+        } else {
+            client = WebClient.of(SessionProtocol.HTTP, endpointGroup);
+        }
+
+        final Service service = initService(client);
+        final Mono<String> greeting = service.getGreeting();
+        // Lazily add the endpoint after the request has been made.
+        endpointGroup.add(server.httpEndpoint());
+        StepVerifier.create(greeting)
+                    .expectNext("Hello Spring!")
+                    .expectComplete()
+                    .verify(Duration.ofSeconds(5));
+        final ServiceRequestContext ctx = server.requestContextCaptor().take();
+        if (prefix.isEmpty() || "/".equals(prefix)) {
+            assertThat(ctx.path()).isEqualTo("/greeting");
+        } else {
+            assertThat(ctx.path()).isEqualTo(prefix + "/greeting");
+        }
+    }
+
+    @Test
+    void greetingWithAbsoluteUri() {
+        // A pre-defined port should be used for testing the absolute URI.
+        final int serverPort = 65493;
+        final Server server = Server.builder()
+                                    .http(serverPort)
+                                    .service("/greeting", (ctx, req) -> HttpResponse.of("Hello Spring!"))
+                                    .build();
+
+        // Try to start the server and wait until it is ready to avoid port conflicts.
+        await().untilAsserted(() -> {
+            assertThatCode(() -> server.start().join())
+                    .doesNotThrowAnyException();
+        });
+
+        try (ClientFactory factory =
+                     ClientFactory.builder()
+                                  .addressResolverGroupFactory(eventLoopGroup -> {
+                                      return MockAddressResolverGroup.localhost();
+                                  }).build()) {
+            final WebClient nonBaseUriClient =
+                    WebClient.builder()
+                             .factory(factory)
+                             .build();
+            StepVerifier.create(initService(nonBaseUriClient).getGreetingAbsoluteUri())
+                        .expectNext("Hello Spring!")
+                        .expectComplete()
+                        .verify(Duration.ofSeconds(5));
+        }
     }
 
     // gh-29624
@@ -146,12 +239,13 @@ class ArmeriaHttpExchangeAdapterTest {
                         "Content-Type: text/plain;charset=UTF-8", "Content-Length: 5", "test2");
     }
 
-    @Test
-    void uriBuilderFactory() throws Exception {
+    @ValueSource(strings = { "/", "/foo", "/foo/bar" })
+    @ParameterizedTest
+    void uriBuilderFactory(String prefix) throws Exception {
         final String ignoredResponseBody = "hello";
         prepareResponse(response -> response.status(200).content(ignoredResponseBody));
         final UriBuilderFactory factory = new DefaultUriBuilderFactory(
-                anotherServer.httpUri().resolve("/").toString());
+                anotherServer.httpUri().resolve(prefix).toString());
 
         final String responseBody = "Hello Spring 2!";
         prepareAnotherResponse(response -> response.ok()
@@ -162,7 +256,11 @@ class ArmeriaHttpExchangeAdapterTest {
         final String actualBody = initService(WebClient.of()).getWithUriBuilderFactory(factory);
 
         assertThat(actualBody).isEqualTo(responseBody);
-        assertThat(anotherServer.takeRequest().context().path()).isEqualTo("/greeting");
+        String expectedPath = "/greeting";
+        if (!"/".equals(prefix)) {
+            expectedPath = prefix + expectedPath;
+        }
+        assertThat(anotherServer.takeRequest().context().path()).isEqualTo(expectedPath);
         assertThat(server.takeRequest(1, TimeUnit.SECONDS)).isNull();
     }
 
@@ -224,6 +322,11 @@ class ArmeriaHttpExchangeAdapterTest {
         @GetExchange("/greeting")
         Mono<String> getGreeting();
 
+        // A pre-defined port should be used for testing the absolute URI.
+        @GetExchange("http://foo.com:65493/greeting")
+        Mono<String> getGreetingAbsoluteUri();
+
+        // @RequestAttribute is not supported by Armeria.
         @GetExchange("/greeting")
         Mono<String> getGreetingWithAttribute(@RequestAttribute String myAttribute);
 
@@ -246,4 +349,16 @@ class ArmeriaHttpExchangeAdapterTest {
         @GetExchange("/greeting")
         String getWithIgnoredUriBuilderFactory(URI uri, UriBuilderFactory uriBuilderFactory);
     }
+
+    private static class SettableEndpointGroup extends DynamicEndpointGroup {
+
+        SettableEndpointGroup() {
+            super(EndpointSelectionStrategy.roundRobin());
+        }
+
+        void add(Endpoint endpoint) {
+            addEndpoint(endpoint);
+        }
+    }
+
 }

@@ -38,11 +38,9 @@ import org.springframework.web.service.invoker.ReactiveHttpRequestValues;
 import org.springframework.web.service.invoker.ReactorHttpExchangeAdapter;
 import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
@@ -94,12 +92,7 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
     private ArmeriaHttpExchangeAdapter(WebClient webClient, ExchangeStrategies exchangeStrategies) {
         this.webClient = webClient;
         this.exchangeStrategies = exchangeStrategies;
-        final URI baseUri = webClient.uri();
-        if (Clients.isUndefinedUri(baseUri)) {
-            uriBuilderFactory = new DefaultUriBuilderFactory();
-        } else {
-            uriBuilderFactory = new DefaultUriBuilderFactory(UriComponentsBuilder.fromUri(baseUri));
-        }
+        uriBuilderFactory = new DefaultUriBuilderFactory();
     }
 
     @Override

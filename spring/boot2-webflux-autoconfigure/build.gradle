@@ -74,7 +74,6 @@ task copySpring6Sources(type: Copy) {
     into "${project.ext.genSrcDir}/main/java"
 }
 
-
 // Copy the main and test sources from ':spring:boot3-webflux-autoconfigure'.
 task generateSources(type: Copy) {
     dependsOn(tasks.copyBoot3Sources)

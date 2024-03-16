@@ -76,9 +76,13 @@ public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
         headers = RequestHeaders.builder()
                                 .add(HttpHeaderNames.METHOD, httpMethod.name())
-                                .add(HttpHeaderNames.SCHEME, uri.getScheme())
-                                .add(HttpHeaderNames.AUTHORITY, uri.getRawAuthority())
                                 .add(HttpHeaderNames.PATH, requireNonNull(pathAndQuery, "pathAndQuery"));
+        if (uri.getScheme() != null) {
+            headers.add(HttpHeaderNames.SCHEME, uri.getScheme());
+        }
+        if (uri.getRawAuthority() != null) {
+            headers.add(HttpHeaderNames.AUTHORITY, uri.getRawAuthority());
+        }
     }
 
     @Override
