@@ -20,8 +20,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.Map.Entry;
+import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 import org.springframework.core.ParameterizedTypeReference;
@@ -45,7 +47,9 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SplitHttpResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpRequest;
 import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpResponse;
 import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
@@ -59,7 +63,7 @@ import reactor.core.publisher.Mono;
  * Spring HTTP Interface</a> on top of Armeria {@link WebClient}.
  *
  * <p>Example usage:
- * <p><pre>{@code
+ * <pre>{@code
  * import com.linecorp.armeria.client.WebClient;
  * import org.springframework.web.service.invoker.HttpServiceProxyFactory;
  *
@@ -78,26 +82,26 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
      * Creates a new instance with the specified {@link WebClient}.
      */
     public static ArmeriaHttpExchangeAdapter of(WebClient webClient) {
-        return of(webClient, ExchangeStrategies.withDefaults());
+        return builder(webClient).build();
     }
 
     /**
-     * Creates a new instance with the specified {@link WebClient} and {@link ExchangeStrategies}.
+     * Returns a new {@link ArmeriaHttpExchangeAdapterBuilder} with the specified {@link WebClient}.
      */
-    public static ArmeriaHttpExchangeAdapter of(WebClient webClient, ExchangeStrategies exchangeStrategies) {
-        requireNonNull(webClient, "webClient");
-        requireNonNull(exchangeStrategies, "exchangeStrategies");
-        return new ArmeriaHttpExchangeAdapter(webClient, exchangeStrategies);
+    public static ArmeriaHttpExchangeAdapterBuilder builder(WebClient webClient) {
+        return new ArmeriaHttpExchangeAdapterBuilder(webClient);
     }
 
     private final WebClient webClient;
-    private final UriBuilderFactory uriBuilderFactory;
     private final ExchangeStrategies exchangeStrategies;
+    private final UriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory();
+    private final List<Entry<Predicate<HttpStatus>, Mono<? extends Throwable>>> statusHandlers;
 
-    private ArmeriaHttpExchangeAdapter(WebClient webClient, ExchangeStrategies exchangeStrategies) {
+    ArmeriaHttpExchangeAdapter(WebClient webClient, ExchangeStrategies exchangeStrategies,
+                               List<Entry<Predicate<HttpStatus>, Mono<? extends Throwable>>> statusHandlers) {
         this.webClient = webClient;
         this.exchangeStrategies = exchangeStrategies;
-        uriBuilderFactory = new DefaultUriBuilderFactory();
+        this.statusHandlers = statusHandlers;
     }
 
     @Override
@@ -187,29 +191,29 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;
         final HttpMethod httpMethod = requestValues.getHttpMethod();
         checkArgument(httpMethod != null, "HTTP method is undefined. requestValues: %s", requestValues);
-        final ArmeriaClientHttpRequest request = new ArmeriaClientHttpRequest(webClient,
-                                                                              httpMethod,
-                                                                              pathAndQuery,
-                                                                              uri,
-                                                                              DataBufferFactoryWrapper.DEFAULT);
-        final Mono<HttpResponse> response = Mono.fromFuture(request.future());
+        final ArmeriaClientHttpRequest request =
+                new ArmeriaClientHttpRequest(webClient, httpMethod, pathAndQuery, uri,
+                                             DataBufferFactoryWrapper.DEFAULT);
 
-        return toClientRequest(requestValues, uri)
+        final Mono<HttpResponse> response = Mono.fromFuture(request.future());
+        return toClientRequest(requestValues, httpMethod, uri)
                 .writeTo(request, exchangeStrategies)
                 .then(response)
                 .flatMap(this::toClientResponse);
     }
 
-    private static <T> ClientRequest toClientRequest(HttpRequestValues requestValues, URI uri) {
+    private static <T> ClientRequest toClientRequest(HttpRequestValues requestValues, HttpMethod httpMethod,
+                                                     URI uri) {
         final ClientRequest.Builder builder =
-                ClientRequest.create(requestValues.getHttpMethod(), uri)
+                ClientRequest.create(httpMethod, uri)
                              .headers(headers -> headers.addAll(requestValues.getHeaders()))
                              .cookies(cookies -> cookies.addAll(requestValues.getCookies()));
 
         final Object bodyValue = requestValues.getBodyValue();
         if (bodyValue != null) {
             builder.body(BodyInserters.fromValue(bodyValue));
-        } else if (requestValues instanceof ReactiveHttpRequestValues reactiveRequestValues) {
+        } else if (requestValues instanceof ReactiveHttpRequestValues) {
+            final ReactiveHttpRequestValues reactiveRequestValues = (ReactiveHttpRequestValues) requestValues;
             @SuppressWarnings("unchecked")
             final Publisher<T> body = (Publisher<T>) reactiveRequestValues.getBodyPublisher();
             if (body != null) {
@@ -226,20 +230,39 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
 
     private Mono<ClientResponse> toClientResponse(HttpResponse response) {
         final SplitHttpResponse splitResponse = response.split();
-        final CompletableFuture<ClientResponse> future =
-                splitResponse.headers().thenApply(headers -> {
-                    final ArmeriaClientHttpResponse httpResponse =
-                            new ArmeriaClientHttpResponse(headers, splitResponse,
-                                                          DataBufferFactoryWrapper.DEFAULT);
+        return Mono.fromFuture(splitResponse.headers()).flatMap(headers -> {
+            final Mono<ClientResponse> errorMono = handleStatus(headers.status());
+            if (errorMono != null) {
+                splitResponse.body().abort();
+                return errorMono;
+            }
 
-                    final HttpStatusCode statusCode = HttpStatusCode.valueOf(httpResponse.getRawStatusCode());
-                    return ClientResponse.create(statusCode, exchangeStrategies)
-                                         .cookies(cookies -> cookies.addAll(httpResponse.getCookies()))
-                                         .headers(headers0 -> headers0.addAll(httpResponse.getHeaders()))
-                                         .body(httpResponse.getBody())
-                                         .build();
-                });
+            final ArmeriaClientHttpResponse httpResponse =
+                    new ArmeriaClientHttpResponse(headers, splitResponse,
+                                                  DataBufferFactoryWrapper.DEFAULT);
 
-        return Mono.fromFuture(future);
+            final HttpStatusCode statusCode = HttpStatusCode.valueOf(httpResponse.getRawStatusCode());
+            final ClientResponse clientResponse =
+                    ClientResponse.create(statusCode, exchangeStrategies)
+                                  .cookies(cookies -> cookies.addAll(httpResponse.getCookies()))
+                                  .headers(headers0 -> headers0.addAll(httpResponse.getHeaders()))
+                                  .body(httpResponse.getBody())
+                                  .build();
+            return Mono.just(clientResponse);
+        });
+    }
+
+    @Nullable
+    private <T> Mono<T> handleStatus(HttpStatus status) {
+        if (statusHandlers.isEmpty()) {
+            return null;
+        }
+
+        for (Entry<Predicate<HttpStatus>, Mono<? extends Throwable>> entry : statusHandlers) {
+            if (entry.getKey().test(status)) {
+                return entry.getValue().flatMap(Mono::error);
+            }
+        }
+        return null;
     }
 }

@@ -309,6 +309,54 @@ class ArmeriaHttpExchangeAdapterTest {
         assertThat(server.takeRequest(1, TimeUnit.SECONDS)).isNull();
     }
 
+    @Test
+    void handleStatus() {
+        final ArmeriaHttpExchangeAdapter adapter =
+                ArmeriaHttpExchangeAdapter.builder(server.webClient())
+                                          .statusHandler(HttpStatus.BAD_REQUEST,
+                                                         Mono.error(new IllegalArgumentException("bad input")))
+                                          .statusHandler(HttpStatus.INTERNAL_SERVER_ERROR,
+                                                         Mono.error(new IllegalStateException("server error")))
+                                          .statusHandler(status -> !status.isSuccess(),
+                                                         Mono.error(new RuntimeException("unexpected status")))
+                                          .build();
+
+        final Service service =
+                HttpServiceProxyFactory.builderFor(adapter)
+                                       .build()
+                                       .createClient(Service.class);
+
+        prepareResponse(response -> response.status(HttpStatus.BAD_REQUEST)
+                                            .header("Content-Type", "text/plain")
+                                            .content("Bad request"));
+        StepVerifier.create(service.getGreeting())
+                    .expectErrorSatisfies(throwable -> {
+                        assertThat(throwable).isInstanceOf(IllegalArgumentException.class)
+                                             .hasMessage("bad input");
+                    })
+                    .verify(Duration.ofSeconds(5));
+
+        prepareResponse(response -> response.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                            .header("Content-Type", "text/plain")
+                                            .content("Internal server error"));
+        StepVerifier.create(service.getGreeting())
+                    .expectErrorSatisfies(throwable -> {
+                        assertThat(throwable).isInstanceOf(IllegalStateException.class)
+                                             .hasMessage("server error");
+                    })
+                    .verify(Duration.ofSeconds(5));
+
+        prepareResponse(response -> response.status(HttpStatus.NOT_FOUND)
+                                            .header("Content-Type", "text/plain")
+                                            .content("Not found"));
+        StepVerifier.create(service.getGreeting())
+                    .expectErrorSatisfies(throwable -> {
+                        assertThat(throwable).isInstanceOf(RuntimeException.class)
+                                             .hasMessage("unexpected status");
+                    })
+                    .verify(Duration.ofSeconds(5));
+    }
+
     private static void prepareResponse(Consumer<HttpResponseBuilder> consumer) {
         final HttpResponseBuilder builder = HttpResponse.builder();
         consumer.accept(builder);
@@ -376,5 +424,4 @@ class ArmeriaHttpExchangeAdapterTest {
             addEndpoint(endpoint);
         }
     }
-
 }
