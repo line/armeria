@@ -55,13 +55,17 @@ import reactor.core.publisher.Mono;
 
 /**
  * A {@link ReactorHttpExchangeAdapter} implementation for the Armeria {@link WebClient}.
+ * This class is used to create <a href="https://docs.spring.io/spring-framework/reference/integration/rest-clients.html#rest-http-interface">
+ * Spring HTTP Interface</a> on top of Armeria {@link WebClient}.
  *
+ * <p>Example usage:
  * <p><pre>{@code
  * import com.linecorp.armeria.client.WebClient;
  * import org.springframework.web.service.invoker.HttpServiceProxyFactory;
  *
  * WebClient webClient = ...;
- * ArmeriaHttpExchangeAdapter adapter = ArmeriaHttpExchangeAdapter.of(webClient);
+ * ArmeriaHttpExchangeAdapter adapter =
+ *   ArmeriaHttpExchangeAdapter.of(webClient);
  * MyService service =
  *   HttpServiceProxyFactory.builderFor(adapter)
  *                          .build()
@@ -193,7 +197,7 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
         return toClientRequest(requestValues, uri)
                 .writeTo(request, exchangeStrategies)
                 .then(response)
-                .flatMap(ArmeriaHttpExchangeAdapter::toClientResponse);
+                .flatMap(this::toClientResponse);
     }
 
     private static <T> ClientRequest toClientRequest(HttpRequestValues requestValues, URI uri) {
