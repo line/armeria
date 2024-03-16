@@ -23,6 +23,7 @@ import java.util.Collection;
 
 import javax.inject.Inject;
 
+import com.linecorp.armeria.server.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -53,9 +54,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerPort;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Post;
@@ -170,6 +168,26 @@ class ArmeriaAutoConfigurationTest {
                         return (statusCode >= 200 && statusCode < 400) || statusCode == 404;
                     });
         }
+
+        @Bean
+        public ServerErrorHandler serverErrorHandler1() {
+            return (ctx, cause) -> {
+                if (cause instanceof ArithmeticException) {
+                    return HttpResponse.of("ArithmeticException was handled by serverErrorHandler!");
+                }
+                return null;
+            };
+        }
+
+        @Bean
+        public ServerErrorHandler serverErrorHandler2() {
+            return (ctx, cause) -> {
+                if (cause instanceof IllegalStateException) {
+                    return HttpResponse.of("IllegalStateException was handled by serverErrorHandler!");
+                }
+                return null;
+            };
+        }
     }
 
     public static class IllegalArgumentExceptionHandler implements ExceptionHandlerFunction {
@@ -220,6 +238,21 @@ class ArmeriaAutoConfigurationTest {
         @Post("/post")
         public JsonNode post(@RequestObject JsonNode jsonNode) {
             return jsonNode;
+        }
+
+        @Get("/unhandled1")
+        public AggregatedHttpResponse unhandled1() throws Exception {
+            throw new ArithmeticException();
+        }
+
+        @Get("/unhandled2")
+        public AggregatedHttpResponse unhandled2() throws Exception {
+            throw new IllegalStateException();
+        }
+
+        @Get("/unhandled3")
+        public AggregatedHttpResponse unhandled3() throws Exception {
+            throw new IllegalAccessException();
         }
     }
 
@@ -393,5 +426,38 @@ class ArmeriaAutoConfigurationTest {
         response = client.post("/internal/healthcheck", "{\"healthy\":false}");
         res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    /**
+     * When a ServerErrorHandler @Bean is present,
+     * Server.config().errorHandler() does not register a DefaultServerErrorHandler.
+     * Since DefaultServerErrorHandler is not public, test were forced to compare toString, which needs to be improved.
+     */
+    @Test
+    void testServerErrorHandlerRegistration() {
+        assertThat(server.config().errorHandler().toString()).isNotEqualTo("INSTANCE");
+    }
+
+    @Test
+    void testServerErrorHandler() throws Exception {
+        final WebClient client = WebClient.of(newUrl("h1c"));
+
+        // ArithmeticException will be handled by serverErrorHandler
+        final HttpResponse response1 = client.get("/annotated/unhandled1");
+        AggregatedHttpResponse res1 = response1.aggregate().join();
+        assertThat(res1.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res1.contentUtf8()).isEqualTo("ArithmeticException was handled by serverErrorHandler!");
+
+        // IllegalStateException will be handled by serverErrorHandler
+        final HttpResponse response2 = client.get("/annotated/unhandled2");
+        AggregatedHttpResponse res2 = response2.aggregate().join();
+        assertThat(res2.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res2.contentUtf8()).isEqualTo("IllegalStateException was handled by serverErrorHandler!");
+
+        // IllegalAccessException will be handled by DefaultServerErrorHandler which is used as the
+        // final fallback when all customized handlers return null
+        final HttpResponse response3 = client.get("/annotated/unhandled3");
+        AggregatedHttpResponse res3 = response3.aggregate().join();
+        assertThat(res3.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
