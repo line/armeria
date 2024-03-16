@@ -32,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.server.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -61,10 +62,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
-import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.InternalServices;
@@ -166,6 +163,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                meterIdPrefixFunctionOrDefault(),
                                                findBeans(MetricCollectingServiceConfigurator.class),
                                                findBeans(DependencyInjector.class),
+                                               findBeans(ServerErrorHandler.class),
                                                beanFactory);
         }
 
