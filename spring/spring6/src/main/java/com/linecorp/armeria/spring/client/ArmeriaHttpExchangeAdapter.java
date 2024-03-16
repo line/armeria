@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.spring.client;
 
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Publisher;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.reactive.function.BodyInserters;
@@ -178,10 +179,12 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
 
         final String path = uri.getRawPath();
         final String query = uri.getRawQuery();
-        checkState(!Strings.isNullOrEmpty(path), "path is undefined: %s", uri);
+        checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: %s", uri);
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;
+        final HttpMethod httpMethod = requestValues.getHttpMethod();
+        checkArgument(httpMethod != null, "HTTP method is undefined. requestValues: %s", requestValues);
         final ArmeriaClientHttpRequest request = new ArmeriaClientHttpRequest(webClient,
-                                                                              requestValues.getHttpMethod(),
+                                                                              httpMethod,
                                                                               pathAndQuery,
                                                                               uri,
                                                                               DataBufferFactoryWrapper.DEFAULT);
@@ -217,7 +220,7 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
         return builder.build();
     }
 
-    private static Mono<ClientResponse> toClientResponse(HttpResponse response) {
+    private Mono<ClientResponse> toClientResponse(HttpResponse response) {
         final SplitHttpResponse splitResponse = response.split();
         final CompletableFuture<ClientResponse> future =
                 splitResponse.headers().thenApply(headers -> {
@@ -226,7 +229,7 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
                                                           DataBufferFactoryWrapper.DEFAULT);
 
                     final HttpStatusCode statusCode = HttpStatusCode.valueOf(httpResponse.getRawStatusCode());
-                    return ClientResponse.create(statusCode)
+                    return ClientResponse.create(statusCode, exchangeStrategies)
                                          .cookies(cookies -> cookies.addAll(httpResponse.getCookies()))
                                          .headers(headers0 -> headers0.addAll(httpResponse.getHeaders()))
                                          .body(httpResponse.getBody())

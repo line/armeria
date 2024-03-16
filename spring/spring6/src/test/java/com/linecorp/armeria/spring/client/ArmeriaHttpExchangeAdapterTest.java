@@ -33,6 +33,7 @@ package com.linecorp.armeria.spring.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.net.URI;
@@ -55,6 +56,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.service.annotation.GetExchange;
+import org.springframework.web.service.annotation.HttpExchange;
 import org.springframework.web.service.annotation.PostExchange;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 import org.springframework.web.util.DefaultUriBuilderFactory;
@@ -105,6 +107,17 @@ class ArmeriaHttpExchangeAdapterTest {
                     .expectNext("Hello Spring!")
                     .expectComplete()
                     .verify(Duration.ofSeconds(5));
+    }
+
+    @Test
+    void greetingWithoutMethod() {
+        prepareResponse(response -> response.status(HttpStatus.OK)
+                                            .header("Content-Type", "text/plain")
+                                            .content("Hello Spring!"));
+
+        assertThatThrownBy(() -> initService().greetingWithoutMethod())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("HTTP method is undefined");
     }
 
     @ValueSource(strings = { "", "/", "/foo", "/foo/bar" })
@@ -318,6 +331,9 @@ class ArmeriaHttpExchangeAdapterTest {
     }
 
     private interface Service {
+
+        @HttpExchange("/greeting")
+        Mono<String> greetingWithoutMethod();
 
         @GetExchange("/greeting")
         Mono<String> getGreeting();
