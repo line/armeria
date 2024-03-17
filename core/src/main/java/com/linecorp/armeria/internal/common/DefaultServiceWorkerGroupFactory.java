@@ -14,10 +14,17 @@
  * under the License.
  */
 
-/**
- * Various classes used internally for JDK 12.
- */
-@NonNullByDefault
 package com.linecorp.armeria.internal.common;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.ServiceWorkerGroupFactory;
+
+import io.netty.channel.EventLoopGroup;
+
+public final class DefaultServiceWorkerGroupFactory implements ServiceWorkerGroupFactory {
+
+    @Override
+    public EventLoopGroup serviceWorkerGroup() {
+        // uses the workerGroup by default
+        return null;
+    }
+}

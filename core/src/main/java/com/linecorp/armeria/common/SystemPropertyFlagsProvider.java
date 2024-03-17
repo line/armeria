@@ -474,6 +474,29 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         return getLong("defaultUnhandledExceptionsReportIntervalMillis");
     }
 
+    @Override
+    @Nullable
+    @SuppressWarnings("unchecked")
+    public ServiceWorkerGroupFactory defaultServiceWorkerGroupFactory() {
+        final Class<ServiceWorkerGroupFactory> clazz;
+        final String className = getString("defaultServiceWorkerGroupFactory");
+        if (className == null) {
+            return null;
+        }
+        try {
+            clazz = (Class<ServiceWorkerGroupFactory>) Class.forName(className);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Could not find class: " + className, e);
+        }
+        try {
+            return clazz.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException("Exception instantiating class " + clazz.getSimpleName() + ". " +
+                                       "Consider checking if the provided class has an" +
+                                       " empty public constructor.", e);
+        }
+    }
+
     @Nullable
     private static Long getLong(String name) {
         return getAndParse(name, Long::parseLong);
@@ -513,5 +536,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
             value = Ascii.toLowerCase(value);
         }
         return value;
+    }
+
+    @Nullable
+    private static String getString(String name) {
+        final String fullName = PREFIX + name;
+        return System.getProperty(fullName);
     }
 }

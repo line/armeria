@@ -14,13 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common;
 
-final class CurrentJavaVersionSpecific {
+import com.linecorp.armeria.common.annotation.Nullable;
 
-    static JavaVersionSpecific get() {
-        return new Java21VersionSpecific();
-    }
+import io.netty.channel.EventLoopGroup;
 
-    private CurrentJavaVersionSpecific() {}
+/**
+ * TBU.
+ */
+public interface ServiceWorkerGroupFactory {
+
+    /**
+     * TBU.
+     */
+    @Nullable
+    EventLoopGroup serviceWorkerGroup();
 }

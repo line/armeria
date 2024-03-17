@@ -33,11 +33,8 @@ public final class CommonPools {
     // Threads spawned as needed and reused, with a 60s timeout and unbounded work queue.
     private static final BlockingTaskExecutor BLOCKING_TASK_EXECUTOR =
             BlockingTaskExecutor.builder().threadNamePrefix("armeria-common-blocking-tasks").build();
-    private static final EventLoopGroup WORKER_GROUP;
-
-    static  {
-        WORKER_GROUP = EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(), "armeria-common-worker", true);
-    }
+    private static final EventLoopGroup WORKER_GROUP =
+            EventLoopGroups.newEventLoopGroup(Flags.numCommonWorkers(), "armeria-common-worker", true);
 
     static {
         // Bind EventLoopMetrics for the common worker group.

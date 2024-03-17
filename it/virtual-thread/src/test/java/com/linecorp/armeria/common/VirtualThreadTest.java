@@ -18,31 +18,40 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit5.common.EventLoopGroupExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class VirtualThreadTest {
 
-    @RegisterExtension
-    static EventLoopGroupExtension eventLoopGroup =
-            new EventLoopGroupExtension(16, Thread.ofVirtual().factory());
+    static AtomicReference<Thread> serviceWorkerThread = new AtomicReference<>();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.serviceWorkerGroup(eventLoopGroup.get(), false);
-            sb.service("/", (ctx, req) -> HttpResponse.of(200));
+            sb.service("/", (ctx, req) -> {
+                serviceWorkerThread.set(Thread.currentThread());
+                return HttpResponse.of(200);
+            });
         }
     };
+
+    @BeforeEach
+    void beforeEach() {
+        serviceWorkerThread.set(null);
+    }
 
     @Test
     void testBasicCase() {
         final AggregatedHttpResponse res = server.blockingWebClient().get("/");
         assertThat(res.status().code()).isEqualTo(200);
+        final Thread thread = serviceWorkerThread.get();
+        assertThat(thread.isVirtual()).isTrue();
     }
 }

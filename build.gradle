@@ -87,6 +87,11 @@ allprojects {
             systemProperty "java.security.manager", "allow"
         }
 
+        if (project.ext.testJavaVersion == 21) {
+            systemProperty 'com.linecorp.armeria.defaultServiceWorkerGroupFactory',
+                    'com.linecorp.armeria.internal.common.VirtualThreadServiceWorkerGroupFactory'
+        }
+
         // required by blockhound for jvm 13+. See https://github.com/reactor/BlockHound/issues/33.
         if (rootProject.hasProperty('blockhound') && project.ext.testJavaVersion >= 13) {
             jvmArgs "-XX:+AllowRedefinitionToAddDeleteMethods"

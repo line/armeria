@@ -16,29 +16,20 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static java.util.Objects.requireNonNull;
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.ServiceWorkerGroupFactory;
 
-import java.util.concurrent.CompletableFuture;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
 
-import com.linecorp.armeria.common.RequestContext;
-
-/**
- * Implementation of {@link JavaVersionSpecific} using Java 12 APIs.
- */
-class Java21VersionSpecific extends JavaVersionSpecific {
+public final class VirtualThreadServiceWorkerGroupFactory implements ServiceWorkerGroupFactory {
 
     @Override
-    String name() {
-        return "Java 12+";
-    }
-
-    @Override
-    public long currentTimeMicros() {
-        return java9CurrentTimeMicros();
-    }
-
-    @Override
-    public <T> CompletableFuture<T> newContextAwareFuture(RequestContext ctx) {
-        return new Java21ContextAwareFuture<>(requireNonNull(ctx, "ctx"));
+    public EventLoopGroup serviceWorkerGroup() {
+        // TODO: create an EventLoopGroup tailored to virtual threads
+        return new DefaultEventLoopGroup(Flags.numCommonWorkers(),
+                                         Thread.ofVirtual()
+                                               .name("armeria-common-service-worker")
+                                               .factory());
     }
 }

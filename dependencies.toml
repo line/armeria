@@ -106,7 +106,7 @@ opensaml = "3.4.6"
 osdetector = "1.7.3"
 # Used for kubernetes-chaos-tests
 picocli = "4.7.5"
-proguard = "7.3.1"
+proguard = "7.4.2"
 prometheus = "0.16.0"
 # Ensure that we use the same Protobuf version as what gRPC depends on.
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
@@ -138,7 +138,7 @@ scala3 = "3.3.0"
 scalafmt-gradle-plugin = "1.16.2"
 scalapb = "0.11.15"
 scalapb-json = "0.12.1"
-shadow-gradle-plugin = "7.1.2"
+shadow-gradle-plugin = "8.1.7"
 shibboleth-utilities = "7.5.2"
 snappy = "1.1.10.5"
 slf4j = "1.7.36"
@@ -1165,8 +1165,9 @@ version.ref = "scalapb-json"
 module = "com.thesamet.scalapb:scalapb-json4s_3"
 version.ref = "scalapb-json"
 
+# https://github.com/johnrengelman/shadow/pull/876
 [libraries.shadow-gradle-plugin]
-module = "gradle.plugin.com.github.johnrengelman:shadow"
+module = "io.github.goooler.shadow:shadow-gradle-plugin"
 version.ref = "shadow-gradle-plugin"
 
 [libraries.slf4j-api]
