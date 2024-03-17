@@ -19,29 +19,23 @@ package com.linecorp.armeria.spring.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
-import java.util.function.Predicate;
-
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
-
-import reactor.core.publisher.Mono;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A builder for creating a new instance of {@link ArmeriaHttpExchangeAdapter}.
  */
+@UnstableApi
 public final class ArmeriaHttpExchangeAdapterBuilder {
 
     private final WebClient webClient;
     private ExchangeStrategies exchangeStrategies = ExchangeStrategies.withDefaults();
-    private final ImmutableList.Builder<Map.Entry<Predicate<HttpStatus>, Mono<? extends Throwable>>>
-            statusHandlers = ImmutableList.builder();
+    @Nullable
+    private StatusHandler statusHandler;
 
     ArmeriaHttpExchangeAdapterBuilder(WebClient webClient) {
         this.webClient = webClient;
@@ -58,32 +52,16 @@ public final class ArmeriaHttpExchangeAdapterBuilder {
     }
 
     /**
-     * Adds a status handler that handles the specified {@link HttpStatus} with the given exception function.
+     * Adds the {@link StatusHandler} that converts specific error {@link HttpStatus}s to a {@link Throwable}
+     * to be propagated downstream instead of the response.
      */
-    public ArmeriaHttpExchangeAdapterBuilder statusHandler(HttpStatus httpStatus,
-                                                           Mono<? extends Throwable> exceptionFunction) {
-        requireNonNull(httpStatus, "httpStatus");
-        return statusHandler(status -> status.equals(httpStatus), exceptionFunction);
-    }
-
-    /**
-     * Adds a status handler that handles the specified {@link HttpStatusClass} with the given exception
-     * function.
-     */
-    public ArmeriaHttpExchangeAdapterBuilder statusHandler(HttpStatusClass httpStatusClass,
-                                                           Mono<? extends Throwable> exceptionFunction) {
-        requireNonNull(httpStatusClass, "httpStatusClass");
-        return statusHandler(status -> status.codeClass() == httpStatusClass, exceptionFunction);
-    }
-
-    /**
-     * Adds a status handler that handles an arbitrary {@link HttpStatus} with the given exception function.
-     */
-    public ArmeriaHttpExchangeAdapterBuilder statusHandler(Predicate<HttpStatus> predicate,
-                                                           Mono<? extends Throwable> exceptionFunction) {
-        requireNonNull(predicate, "predicate");
-        requireNonNull(exceptionFunction, "exceptionFunction");
-        statusHandlers.add(Maps.immutableEntry(predicate, exceptionFunction));
+    public ArmeriaHttpExchangeAdapterBuilder statusHandler(StatusHandler statusHandler) {
+        requireNonNull(statusHandler, "statusHandler");
+        if (this.statusHandler == null) {
+            this.statusHandler = statusHandler;
+        } else {
+            this.statusHandler = this.statusHandler.orElse(statusHandler);
+        }
         return this;
     }
 
@@ -91,6 +69,6 @@ public final class ArmeriaHttpExchangeAdapterBuilder {
      * Returns a newly-created {@link ArmeriaHttpExchangeAdapter} based on the properties of this builder.
      */
     public ArmeriaHttpExchangeAdapter build() {
-        return new ArmeriaHttpExchangeAdapter(webClient, exchangeStrategies, statusHandlers.build());
+        return new ArmeriaHttpExchangeAdapter(webClient, exchangeStrategies, statusHandler);
     }
 }

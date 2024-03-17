@@ -20,10 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 import org.springframework.core.ParameterizedTypeReference;
@@ -44,12 +41,13 @@ import org.springframework.web.util.UriBuilderFactory;
 
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpRequest;
 import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpResponse;
 import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
@@ -76,6 +74,7 @@ import reactor.core.publisher.Mono;
  *                          .createClient(MyService.class);
  * }</pre>
  */
+@UnstableApi
 public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchangeAdapter {
 
     /**
@@ -95,13 +94,14 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
     private final WebClient webClient;
     private final ExchangeStrategies exchangeStrategies;
     private final UriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory();
-    private final List<Entry<Predicate<HttpStatus>, Mono<? extends Throwable>>> statusHandlers;
+    @Nullable
+    private final StatusHandler statusHandler;
 
     ArmeriaHttpExchangeAdapter(WebClient webClient, ExchangeStrategies exchangeStrategies,
-                               List<Entry<Predicate<HttpStatus>, Mono<? extends Throwable>>> statusHandlers) {
+                               @Nullable StatusHandler statusHandler) {
         this.webClient = webClient;
         this.exchangeStrategies = exchangeStrategies;
-        this.statusHandlers = statusHandlers;
+        this.statusHandler = statusHandler;
     }
 
     @Override
@@ -199,7 +199,11 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
         return toClientRequest(requestValues, httpMethod, uri)
                 .writeTo(request, exchangeStrategies)
                 .then(response)
-                .flatMap(this::toClientResponse);
+                .flatMap(res -> {
+                    final ClientRequestContext context = request.context();
+                    assert context != null;
+                    return toClientResponse(res, context);
+                });
     }
 
     private static <T> ClientRequest toClientRequest(HttpRequestValues requestValues, HttpMethod httpMethod,
@@ -228,13 +232,20 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
         return builder.build();
     }
 
-    private Mono<ClientResponse> toClientResponse(HttpResponse response) {
+    private Mono<ClientResponse> toClientResponse(HttpResponse response, ClientRequestContext ctx) {
         final SplitHttpResponse splitResponse = response.split();
         return Mono.fromFuture(splitResponse.headers()).flatMap(headers -> {
-            final Mono<ClientResponse> errorMono = handleStatus(headers.status());
-            if (errorMono != null) {
-                splitResponse.body().abort();
-                return errorMono;
+            if (statusHandler != null) {
+                final Throwable cause = statusHandler.handle(ctx, headers.status());
+                if (cause != null) {
+                    // It would be better to release the resources by consuming than sending an RST stream by
+                    // aborting. Because:
+                    // - The server may have sent a response body already.
+                    // - In general, a stream response is not expected with an error status.
+                    // - If too many RSTs are sent, it can be mistaken for 'Rapid Reset' attacks.
+                    splitResponse.body().subscribe();
+                    return Mono.error(cause);
+                }
             }
 
             final ArmeriaClientHttpResponse httpResponse =
@@ -250,19 +261,5 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
                                   .build();
             return Mono.just(clientResponse);
         });
-    }
-
-    @Nullable
-    private <T> Mono<T> handleStatus(HttpStatus status) {
-        if (statusHandlers.isEmpty()) {
-            return null;
-        }
-
-        for (Entry<Predicate<HttpStatus>, Mono<? extends Throwable>> entry : statusHandlers) {
-            if (entry.getKey().test(status)) {
-                return entry.getValue().flatMap(Mono::error);
-            }
-        }
-        return null;
     }
 }

@@ -35,6 +35,9 @@ import org.springframework.http.client.reactive.ClientHttpRequest;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -63,6 +66,8 @@ public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
     private final URI uri;
 
     private final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+    @Nullable
+    private volatile ClientRequestContext ctx;
 
     @Nullable
     private HttpRequest request;
@@ -132,6 +137,16 @@ public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
         return future;
     }
 
+    /**
+     * Returns the {@link ClientRequestContext} associated with this request.
+     * This method returns {@code null} until the request is sent.
+     * A non-{@code null} value is available only after {@link #future()} is complete.
+     */
+    @Nullable
+    public ClientRequestContext context() {
+        return ctx;
+    }
+
     @Override
     public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
         return write(Flux.from(body));
@@ -157,7 +172,10 @@ public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
         return () -> Mono.defer(() -> {
             assert request == null : request;
             request = supplier.get();
-            future.complete(client.execute(request));
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                future.complete(client.execute(request));
+                ctx = captor.get();
+            }
             return Mono.empty();
         });
     }

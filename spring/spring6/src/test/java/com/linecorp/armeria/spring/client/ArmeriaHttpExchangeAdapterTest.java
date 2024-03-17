@@ -310,16 +310,25 @@ class ArmeriaHttpExchangeAdapterTest {
     }
 
     @Test
-    void handleStatus() {
+    void testStatusHandler() {
         final ArmeriaHttpExchangeAdapter adapter =
-                ArmeriaHttpExchangeAdapter.builder(server.webClient())
-                                          .statusHandler(HttpStatus.BAD_REQUEST,
-                                                         Mono.error(new IllegalArgumentException("bad input")))
-                                          .statusHandler(HttpStatus.INTERNAL_SERVER_ERROR,
-                                                         Mono.error(new IllegalStateException("server error")))
-                                          .statusHandler(status -> !status.isSuccess(),
-                                                         Mono.error(new RuntimeException("unexpected status")))
-                                          .build();
+                ArmeriaHttpExchangeAdapter
+                        .builder(server.webClient())
+                        .statusHandler(
+                                StatusHandler.of(HttpStatus.BAD_REQUEST,
+                                                 ctx -> new IllegalArgumentException("bad input")))
+                        .statusHandler((ctx, status) -> {
+                            if (status.isServerError()) {
+                                return new IllegalStateException("server error");
+                            }
+                            return null;
+                        }).statusHandler((ctx, status) -> {
+                            if (!status.isSuccess()) {
+                                return new RuntimeException("unexpected status");
+                            }
+                            return null;
+                        })
+                        .build();
 
         final Service service =
                 HttpServiceProxyFactory.builderFor(adapter)
