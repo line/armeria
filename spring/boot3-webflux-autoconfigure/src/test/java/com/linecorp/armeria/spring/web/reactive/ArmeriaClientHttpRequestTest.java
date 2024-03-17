@@ -59,7 +59,8 @@ class ArmeriaClientHttpRequestTest {
 
     private static ArmeriaClientHttpRequest request() {
         return new ArmeriaClientHttpRequest(webClient, HttpMethod.GET, TEST_PATH_AND_QUERY,
-                                            URI.create("http://localhost"), DataBufferFactoryWrapper.DEFAULT);
+                                            URI.create("http://localhost"), DataBufferFactoryWrapper.DEFAULT,
+                                            null);
     }
 
     @Test

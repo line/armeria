@@ -38,6 +38,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -60,6 +61,8 @@ public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
     private final RequestHeadersBuilder headers;
     private final DataBufferFactoryWrapper<?> factoryWrapper;
+    @Nullable
+    private final RequestOptions requestOptions;
 
     private final HttpMethod httpMethod;
 
@@ -67,17 +70,19 @@ public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
     private final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
     @Nullable
-    private volatile ClientRequestContext ctx;
+    private ClientRequestContext ctx;
 
     @Nullable
     private HttpRequest request;
 
     public ArmeriaClientHttpRequest(WebClient client, HttpMethod httpMethod, String pathAndQuery,
-                                    URI uri, DataBufferFactoryWrapper<?> factoryWrapper) {
+                                    URI uri, DataBufferFactoryWrapper<?> factoryWrapper,
+                                    @Nullable RequestOptions requestOptions) {
         this.client = requireNonNull(client, "client");
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.uri = requireNonNull(uri, "uri");
         this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
+        this.requestOptions = requestOptions;
 
         headers = RequestHeaders.builder()
                                 .add(HttpHeaderNames.METHOD, httpMethod.name())
@@ -173,8 +178,14 @@ public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
             assert request == null : request;
             request = supplier.get();
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-                future.complete(client.execute(request));
+                final HttpResponse response;
+                if (requestOptions == null) {
+                    response = client.execute(request);
+                } else {
+                    response = client.execute(request, requestOptions);
+                }
                 ctx = captor.get();
+                future.complete(response);
             }
             return Mono.empty();
         });

@@ -39,6 +39,7 @@ import static org.awaitility.Awaitility.await;
 import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
@@ -63,6 +64,7 @@ import org.springframework.web.util.DefaultUriBuilderFactory;
 import org.springframework.web.util.UriBuilderFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
@@ -107,6 +109,31 @@ class ArmeriaHttpExchangeAdapterTest {
                     .expectNext("Hello Spring!")
                     .expectComplete()
                     .verify(Duration.ofSeconds(5));
+    }
+
+    @Test
+    void greetingWithRequestAttribute() {
+        final AtomicReference<ClientRequestContext> ctxRef = new AtomicReference<>();
+
+        final WebClient webClient =
+                WebClient.builder(server.httpUri())
+                         .decorator((delegate, ctx, req) -> {
+                             ctxRef.set(ctx);
+                             return delegate.execute(ctx, req);
+                         })
+                         .build();
+
+        prepareResponse(response -> response.status(HttpStatus.OK)
+                                            .header("Content-Type", "text/plain")
+                                            .content("Hello Spring!"));
+
+        StepVerifier.create(initService(webClient).getGreetingWithAttribute("myAttributeValue"))
+                    .expectNext("Hello Spring!")
+                    .expectComplete()
+                    .verify(Duration.ofSeconds(5));
+
+        assertThat(RequestAttributeAccess.get(ctxRef.get(), "myAttribute"))
+                .isEqualTo("myAttributeValue");
     }
 
     @Test
@@ -199,6 +226,7 @@ class ArmeriaHttpExchangeAdapterTest {
                         .expectComplete()
                         .verify(Duration.ofSeconds(5));
         }
+        server.closeAsync();
     }
 
     // gh-29624
@@ -399,7 +427,6 @@ class ArmeriaHttpExchangeAdapterTest {
         @GetExchange("http://foo.com:65493/greeting")
         Mono<String> getGreetingAbsoluteUri();
 
-        // @RequestAttribute is not supported by Armeria.
         @GetExchange("/greeting")
         Mono<String> getGreetingWithAttribute(@RequestAttribute String myAttribute);
 

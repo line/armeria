@@ -28,6 +28,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -42,6 +43,8 @@ import org.springframework.web.util.UriBuilderFactory;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.RequestOptionsBuilder;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
@@ -149,9 +152,13 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
         });
     }
 
+    /**
+     * Returns {@code true} because Armeria supports {@link RequestAttribute}. The attributes can be accessed
+     * in the Armeria decorators using {@link RequestAttributeAccess#get(ClientRequestContext, String)}.
+     */
     @Override
     public boolean supportsRequestAttributes() {
-        return false;
+        return true;
     }
 
     /**
@@ -185,15 +192,25 @@ public final class ArmeriaHttpExchangeAdapter extends AbstractReactorHttpExchang
             }
         }
 
+        final Map<String, Object> attributes = requestValues.getAttributes();
+        final RequestOptions requestOptions;
+        if (attributes.isEmpty()) {
+            requestOptions = null;
+        } else {
+            final RequestOptionsBuilder requestOptionsBuilder = RequestOptions.builder();
+            // Don't need to copy the attributes because it is immutable.
+            RequestAttributeAccess.set(requestOptionsBuilder, attributes);
+            requestOptions = requestOptionsBuilder.build();
+        }
         final String path = uri.getRawPath();
         final String query = uri.getRawQuery();
-        checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: %s", uri);
+        checkArgument(path != null, "path is undefined: %s", uri);
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;
         final HttpMethod httpMethod = requestValues.getHttpMethod();
         checkArgument(httpMethod != null, "HTTP method is undefined. requestValues: %s", requestValues);
         final ArmeriaClientHttpRequest request =
                 new ArmeriaClientHttpRequest(webClient, httpMethod, pathAndQuery, uri,
-                                             DataBufferFactoryWrapper.DEFAULT);
+                                             DataBufferFactoryWrapper.DEFAULT, requestOptions);
 
         final Mono<HttpResponse> response = Mono.fromFuture(request.future());
         return toClientRequest(requestValues, httpMethod, uri)

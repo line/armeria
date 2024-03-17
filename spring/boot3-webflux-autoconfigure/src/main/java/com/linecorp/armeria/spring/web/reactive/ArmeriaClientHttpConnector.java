@@ -108,7 +108,7 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
         checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: %s", uri);
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;
 
-        return new ArmeriaClientHttpRequest(webClient, method, pathAndQuery, uri, factoryWrapper);
+        return new ArmeriaClientHttpRequest(webClient, method, pathAndQuery, uri, factoryWrapper, null);
     }
 
     private CompletableFuture<ArmeriaClientHttpResponse> createResponse(HttpResponse response) {
