@@ -1,6 +1,6 @@
 ---
 menuTitle: "Implement UPDATE"
-order: 6
+order: 5
 category: thrift
 tags:
   - server
@@ -14,14 +14,14 @@ Previously, we created and read blog posts.
 Now, let's implement and make a call to update a blog post.
 We'll also learn how to handle an exception with a custom exception handler.
 
-<TutorialSteps current={6} />
+<TutorialSteps current={5} />
 
 ## What you need
 
 You need to have the following files obtained from previous steps.
 You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) the full version, instead of creating one yourself.
 
-- [Generated Java code](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file)
+- [Generated Java code](/tutorials/thrift/blog/define-service#3-compile-the-thrift-file)
 - `BlogServiceImpl.java`
 - `Main.java`
 - `BlogClient.java`
@@ -171,7 +171,7 @@ To check that our exception handler is working, let's try updating a post which 
 In this step, we've implemented a service method and client method for updating a blog post.
 We've also added an exception handler.
 
-Next, at [Step 7. Implement DELETE](/tutorials/thrift/blog/implement-delete), we'll implement a method
+Next, at [Step 6. Implement DELETE](/tutorials/thrift/blog/implement-delete), we'll implement a method
 for deleting a blog post and add a [Documentation Service](/docs/server-docservice) to our service.
 
-<TutorialSteps current={6} />
+<TutorialSteps current={5} />

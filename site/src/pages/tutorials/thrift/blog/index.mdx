@@ -36,7 +36,7 @@ This tutorial assumes that you have:
 To run and develop the sample service, set your computer with the following requirements:
 
 * JDK 11 or higher
-* Thrift compiler: Install a thrift compiler by either [building from source](https://thrift.apache.org/docs/install/) or using a package manager like `brew` or `apt` depending on your environment.
+* Thrift compiler: Install a Thrift compiler by either [building from source](https://thrift.apache.org/docs/install/) or using a package manager like `brew` or `apt` depending on your environment.
 
 ## Sample service
 
@@ -96,7 +96,7 @@ Using Armeria's [Documentation Service](/docs/server-docservice), you can easily
 
 Use the sample service's [build.gradle](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/build.gradle) file to start building the service from scratch.
 Below is a part of the `build.gradle` file for the sample service.
-This tutorial uses [thrift-gradle-plugin](https://plugins.gradle.org/plugin/org.jruyi.thrift) to compile thrift IDL files and generate stubs.
+This tutorial uses [thrift-gradle-plugin](https://plugins.gradle.org/plugin/org.jruyi.thrift) to compile Thrift IDL files and generate stubs.
 
 <CodeBlock language="groovy" filename="build.gradle">{`
 plugins {
@@ -127,10 +127,9 @@ tasks.withType(Test) {
 
 Start writing the blog service yourself by following the tutorial step by step:
 
-1. [Create a service](/tutorials/thrift/blog/create-service)
-2. [Run a server](/tutorials/thrift/blog/run-server)
-3. [Define service methods](/tutorials/thrift/blog/define-service-methods)
-4. [Implement CREATE](/tutorials/thrift/blog/implement-create)
-5. [Implement READ](/tutorials/thrift/blog/implement-read)
-6. [Implement UPDATE](/tutorials/thrift/blog/implement-update)
-7. [Implement DELETE](/tutorials/thrift/blog/implement-delete)
+1. [Define a service](/tutorials/thrift/blog/define-service)
+2. [Run a service](/tutorials/thrift/blog/run-service)
+3. [Implement CREATE](/tutorials/thrift/blog/implement-create)
+4. [Implement READ](/tutorials/thrift/blog/implement-read)
+5. [Implement UPDATE](/tutorials/thrift/blog/implement-update)
+6. [Implement DELETE](/tutorials/thrift/blog/implement-delete)
