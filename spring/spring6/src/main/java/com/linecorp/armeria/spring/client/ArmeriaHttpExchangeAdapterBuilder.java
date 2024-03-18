@@ -38,7 +38,7 @@ public final class ArmeriaHttpExchangeAdapterBuilder {
     private StatusHandler statusHandler;
 
     ArmeriaHttpExchangeAdapterBuilder(WebClient webClient) {
-        this.webClient = webClient;
+        this.webClient = requireNonNull(webClient, "webClient");
     }
 
     /**
