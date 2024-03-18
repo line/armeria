@@ -62,7 +62,7 @@ final class ConfigSourceClient implements SafeCloseable {
         final GrpcService grpcService = grpcServices.get(0);
         final EnvoyGrpc envoyGrpc = grpcService.getEnvoyGrpc();
         final String clusterName = envoyGrpc.getClusterName();
-        final ClusterSnapshot clusterSnapshot = bootstrapClusters.get(clusterName);
+        final ClusterSnapshot clusterSnapshot = bootstrapClusters.clusterSnapshot(clusterName);
         checkArgument(clusterSnapshot != null, "Unable to find static cluster '%s'", clusterName);
 
         endpointGroup = new XdsEndpointGroup(clusterSnapshot);
