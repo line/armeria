@@ -170,7 +170,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
      * {@link KubernetesClient}.
      *
      * @param autoClose whether to close the {@link KubernetesClient} when the {@link KubernetesEndpointGroup}
-     * is closed.
+     *                  is closed.
      */
     public static KubernetesEndpointGroupBuilder builder(KubernetesClient kubernetesClient, boolean autoClose) {
         return new KubernetesEndpointGroupBuilder(kubernetesClient, autoClose);
