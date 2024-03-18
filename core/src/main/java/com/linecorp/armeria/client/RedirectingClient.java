@@ -294,7 +294,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     @VisibleForTesting
     static RequestTarget resolveLocation(ClientRequestContext ctx, String location) {
         final long length = location.length();
-        assert length > 0 : location;
+        assert length > 0;
 
         final String resolvedUri;
         if (location.charAt(0) == '/') {
