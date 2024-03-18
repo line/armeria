@@ -42,8 +42,8 @@ import io.netty.util.AttributeKey;
  * WebClient
  *   .builder("http://example.com")
  *   .decorator((delegate, ctx, req) -> {
- *      final String requestId = RequestAttributeAccess.get(ctx, "requestId"));
- *      ctx.addAdditionalRequestHeader("X-Request-Id", requestId));
+ *      final String requestId = RequestAttributeAccess.get(ctx, "requestId");
+ *      ctx.addAdditionalRequestHeader("X-Request-Id", requestId);
  *     return delegate.execute(ctx, req);
  *   })
  *   .build();
