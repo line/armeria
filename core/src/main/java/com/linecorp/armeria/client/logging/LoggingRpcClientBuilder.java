@@ -64,8 +64,8 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     // Override the return type of the chaining methods in the superclass.
 
     @Override
-    protected LoggingRpcClientBuilder defaultLogger(Logger logger) {
-        return (LoggingRpcClientBuilder) super.defaultLogger(logger);
+    protected LoggingRpcClientBuilder defaultLogger(Logger defaultLogger) {
+        return (LoggingRpcClientBuilder) super.defaultLogger(defaultLogger);
     }
 
     @Override

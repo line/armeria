@@ -136,25 +136,29 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     // Override the return type of the chaining methods in the superclass.
 
     @Override
-    protected LoggingServiceBuilder defaultLogger(Logger logger) {
-        return (LoggingServiceBuilder) super.defaultLogger(logger);
+    protected LoggingServiceBuilder defaultLogger(Logger defaultLogger) {
+        return (LoggingServiceBuilder) super.defaultLogger(defaultLogger);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder logger(Logger logger) {
         return (LoggingServiceBuilder) super.logger(logger);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder logger(String loggerName) {
         return (LoggingServiceBuilder) super.logger(loggerName);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestLogLevel(LogLevel requestLogLevel) {
         return (LoggingServiceBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
         return (LoggingServiceBuilder) super.requestLogLevel(clazz, requestLogLevel);
@@ -167,31 +171,37 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         return (LoggingServiceBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
         return (LoggingServiceBuilder) super.responseLogLevel(status, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return (LoggingServiceBuilder) super.responseLogLevel(statusClass, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
         return (LoggingServiceBuilder) super.responseLogLevel(clazz, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         return (LoggingServiceBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder failureResponseLogLevel(LogLevel failureResponseLogLevel) {
         return (LoggingServiceBuilder) super.failureResponseLogLevel(failureResponseLogLevel);
@@ -204,6 +214,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
@@ -281,6 +292,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
         return (LoggingServiceBuilder) super.responseCauseFilter(responseCauseFilter);
