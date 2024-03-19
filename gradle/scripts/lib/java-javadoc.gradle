@@ -5,6 +5,7 @@ import java.security.MessageDigest
 
 def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
 def cacheDirName = 'caches/package-lists'
+def javadocCacheMapFileName = 'javadocCacheMapFile'
 
 Map<String, String> javadocLinkMap = [:]
 if (JavaVersion.current() >= JavaVersion.VERSION_11) {
@@ -29,7 +30,7 @@ allprojects {
 def cacheDir = rootProject.layout.buildDirectory.dir(cacheDirName)
 def offlineDownloadTask =
         rootProject.tasks.register("downloadJavadocPackageList", DownloadJavadocPackageListTask.class,
-                cacheDir, javadocLinkMap, offlineJavadoc)
+                cacheDir, javadocLinkMap, offlineJavadoc, javadocCacheMapFileName)
 
 // Configure the Javadoc tasks of all projects.
 allprojects {
@@ -343,7 +344,7 @@ allprojects {
         }
 
         doFirst {
-            def javadocCacheMapFile = cacheDir.get().file('javadocCacheMap').asFile
+            def javadocCacheMapFile = cacheDir.get().file(javadocCacheMapFileName).asFile
             if (javadocCacheMapFile.exists()) {
                 def url2File = new JsonSlurper().parseText(javadocCacheMapFile.text)
                 url2File.entrySet().forEach { e ->
@@ -386,11 +387,11 @@ class DownloadJavadocPackageListTask extends DefaultTask {
 
     @Inject
     DownloadJavadocPackageListTask(Provider<Directory> javadocCacheDir, Map<String, String> links,
-                                   boolean offlineJavadoc) {
+                                   boolean offlineJavadoc, String javadocCacheMapFileName) {
         this.links = links
         this.javadocCacheDir = javadocCacheDir
         this.offlineJavadoc = offlineJavadoc
-        this.javadocCacheMapFile = javadocCacheDir.map {it -> it.file('javadocCacheMapFile')}
+        this.javadocCacheMapFile = javadocCacheDir.map {it -> it.file(javadocCacheMapFileName)}
     }
 
     @TaskAction

@@ -34,7 +34,6 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
-import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
@@ -74,6 +73,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
+import com.linecorp.armeria.internal.common.thrift.ThriftMetadataAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftProtocolUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingService;
@@ -653,7 +653,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         // NB: The map returned by FieldMetaData.getStructMetaDataMap() is an EnumMap,
         //     so the parameter ordering is preserved correctly during iteration.
         final Set<? extends TFieldIdEnum> fields =
-                FieldMetaData.getStructMetaDataMap(thriftArgs.getClass()).keySet();
+                ThriftMetadataAccess.getStructMetaDataMap(thriftArgs.getClass()).keySet();
 
         // Handle the case where the number of arguments is 0 or 1.
         final int numFields = fields.size();

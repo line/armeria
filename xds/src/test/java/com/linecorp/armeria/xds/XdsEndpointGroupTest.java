@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
@@ -49,7 +50,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
-public class XdsEndpointGroupTest {
+class XdsEndpointGroupTest {
 
     private static final String GROUP = "key";
     private static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP);
@@ -59,7 +60,6 @@ public class XdsEndpointGroupTest {
     private static final String httpsListenerName = "https-listener1";
     private static final String routeName = "route1";
     private static final String httpsRouteName = "https-route1";
-    private static final String bootstrapClusterName = "bootstrap-cluster";
     private static final String httpsBootstrapClusterName = "https-bootstrap-cluster";
 
     @RegisterExtension
@@ -126,13 +126,13 @@ public class XdsEndpointGroupTest {
 
     @Test
     void testWithListener() {
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName);
+        final ConfigSource configSource = XdsTestResources.basicConfigSource(BOOTSTRAP_CLUSTER_NAME);
         final URI uri = server.httpUri();
         final ClusterLoadAssignment loadAssignment =
-                XdsTestResources.loadAssignment(bootstrapClusterName,
+                XdsTestResources.loadAssignment(BOOTSTRAP_CLUSTER_NAME,
                                                 uri.getHost(), uri.getPort());
         final Cluster bootstrapCluster =
-                XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
+                XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, loadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot(listenerName));

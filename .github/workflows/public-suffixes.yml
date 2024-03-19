@@ -37,7 +37,7 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v6
         with:
           # The title of the pull request.
           title: Update public suffix list

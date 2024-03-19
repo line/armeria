@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -111,21 +112,20 @@ class ClientTimeoutTest {
     }
 
     private static Bootstrap bootstrapWithTimeout(long timeoutMillis) {
-        final String bootstrapClusterName = "bootstrap-cluster";
         final Duration timeoutDuration =
                 Duration.newBuilder()
                         .setNanos((int) TimeUnit.MILLISECONDS.toNanos(timeoutMillis))
                         .build();
         final ConfigSource configSource =
                 ConfigSource.newBuilder()
-                            .setApiConfigSource(XdsTestResources.apiConfigSource(bootstrapClusterName,
+                            .setApiConfigSource(XdsTestResources.apiConfigSource(BOOTSTRAP_CLUSTER_NAME,
                                                                                  ApiType.GRPC))
                             .setInitialFetchTimeout(timeoutDuration)
                             .build();
         final URI uri = server.httpUri();
         final ClusterLoadAssignment loadAssignment =
-                XdsTestResources.loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
-        final Cluster cluster = XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
+                XdsTestResources.loadAssignment(BOOTSTRAP_CLUSTER_NAME, uri.getHost(), uri.getPort());
+        final Cluster cluster = XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, loadAssignment);
         return XdsTestResources.bootstrap(configSource, cluster);
     }
 

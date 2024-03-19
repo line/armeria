@@ -70,7 +70,11 @@ final class InstanceInfoBuilder {
     @Nullable
     private String secureVipAddress;
     @Nullable
+    private String homePageUrlPath;
+    @Nullable
     private String homePageUrl;
+    @Nullable
+    private String statusPageUrlPath;
     @Nullable
     private String statusPageUrl;
     @Nullable
@@ -181,10 +185,26 @@ final class InstanceInfoBuilder {
     }
 
     /**
+     * Sets the home page URL path.
+     */
+    InstanceInfoBuilder homePageUrlPath(String homePageUrlPath) {
+        this.homePageUrlPath = requireNonNull(homePageUrlPath, "homePageUrlPath");
+        return this;
+    }
+
+    /**
      * Sets the home page URL.
      */
     InstanceInfoBuilder homePageUrl(String homePageUrl) {
         this.homePageUrl = requireNonNull(homePageUrl, "homePageUrl");
+        return this;
+    }
+
+    /**
+     * Sets the status page URL path.
+     */
+    InstanceInfoBuilder statusPageUrlPath(String statusPageUrlPath) {
+        this.statusPageUrlPath = requireNonNull(statusPageUrlPath, "statusPageUrlPath");
         return this;
     }
 
@@ -251,8 +271,8 @@ final class InstanceInfoBuilder {
         final LeaseInfo leaseInfo = new LeaseInfo(renewalIntervalSeconds, leaseDurationSeconds);
         return new InstanceInfo(instanceId, appName, appGroupName, hostname, ipAddr, vipAddress,
                                 secureVipAddress, port, securePort, InstanceStatus.UP,
-                                homePageUrl, statusPageUrl, healthCheckUrlPath, healthCheckUrl,
-                                secureHealthCheckUrl,
+                                homePageUrlPath, homePageUrl, statusPageUrlPath, statusPageUrl,
+                                healthCheckUrlPath, healthCheckUrl, secureHealthCheckUrl,
                                 new DataCenterInfo(dataCenterName, dataCenterMetadata), leaseInfo,
                                 metadata);
     }

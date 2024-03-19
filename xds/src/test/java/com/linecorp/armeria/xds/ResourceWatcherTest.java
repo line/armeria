@@ -16,11 +16,18 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
+import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
+import static com.linecorp.armeria.xds.XdsTestResources.createCluster;
 import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 
@@ -34,8 +41,10 @@ import io.envoyproxy.controlplane.server.V3DiscoveryServer;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.DiscoveryType;
+import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
+import io.envoyproxy.envoy.config.listener.v3.Listener;
 
 class ResourceWatcherTest {
 
@@ -72,7 +81,7 @@ class ResourceWatcherTest {
 
         cache.setSnapshot(
                 GROUP,
-                Snapshot.create(ImmutableList.of(XdsTestResources.createCluster("cluster1"),
+                Snapshot.create(ImmutableList.of(createCluster("cluster1"),
                                                  TestResources.createCluster("cluster2", "127.0.0.3",
                                                                              8083, DiscoveryType.STATIC)),
                                 ImmutableList.of(clusterLoadAssignment),
@@ -80,10 +89,22 @@ class ResourceWatcherTest {
                                 ImmutableList.of(), ImmutableList.of(), "1"));
     }
 
-    @Test
-    void edsToEds() {
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void edsToEds(boolean useStaticCluster) {
         final String resourceName = "cluster1";
-        final Bootstrap bootstrap = XdsTestResources.bootstrap(server.httpUri());
+        final Bootstrap bootstrap;
+        final Cluster expectedCluster;
+        if (useStaticCluster) {
+            final ConfigSource configSource = XdsTestResources.basicConfigSource(BOOTSTRAP_CLUSTER_NAME);
+            final Cluster bootstrapCluster = bootstrapCluster(server.httpUri(), BOOTSTRAP_CLUSTER_NAME);
+            expectedCluster = createCluster(resourceName);
+            bootstrap = XdsTestResources.bootstrap(configSource, Listener.getDefaultInstance(),
+                                                   bootstrapCluster, expectedCluster);
+        } else {
+            expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(resourceName);
+            bootstrap = XdsTestResources.bootstrap(server.httpUri());
+        }
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final TestResourceWatcher watcher = new TestResourceWatcher();
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(resourceName);
@@ -91,7 +112,6 @@ class ResourceWatcherTest {
 
             ClusterSnapshot clusterSnapshot = watcher.blockingChanged(ClusterSnapshot.class);
             // the initial endpoint is fetched
-            final Cluster expectedCluster = cache.getSnapshot(GROUP).clusters().resources().get(resourceName);
             assertThat(clusterSnapshot.xdsResource().resource()).isEqualTo(expectedCluster);
 
             final ClusterLoadAssignment expectedEndpoints = cache.getSnapshot(GROUP)
@@ -104,9 +124,11 @@ class ResourceWatcherTest {
             // update the cache
             final ClusterLoadAssignment assignment =
                     XdsTestResources.loadAssignment(resourceName, "127.0.0.1", 8081);
+            final List<Cluster> clusters = useStaticCluster ? ImmutableList.of()
+                                                            : ImmutableList.of(expectedCluster);
             cache.setSnapshot(
                     GROUP,
-                    Snapshot.create(ImmutableList.of(TestResources.createCluster(resourceName)),
+                    Snapshot.create(clusters,
                                     ImmutableList.of(assignment),
                                     ImmutableList.of(),
                                     ImmutableList.of(), ImmutableList.of(), "2"));

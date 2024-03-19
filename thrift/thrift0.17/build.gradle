@@ -22,7 +22,7 @@ dependencies {
     testImplementation (libs.micrometer.tracing.integration.test) {
         exclude group: "org.mockito"
     }
-    testImplementation libs.brave.instrumentation.http.tests
+    testImplementation libs.brave6.instrumentation.http.tests
 }
 
 // Use the sources from ':thrift0.13' and ':thrift0.14'. ':thrift0.15' is empty so no need to copy anything.

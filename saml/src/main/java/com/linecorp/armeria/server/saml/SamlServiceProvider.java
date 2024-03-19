@@ -78,6 +78,7 @@ public final class SamlServiceProvider {
 
     private final SamlSingleSignOnHandler ssoHandler;
     private final SamlSingleLogoutHandler sloHandler;
+    private final boolean signatureRequired;
 
     /**
      * A class which helps a {@link Server} have a SAML-based authentication.
@@ -97,7 +98,8 @@ public final class SamlServiceProvider {
                         Collection<SamlEndpoint> sloEndpoints,
                         SamlRequestIdManager requestIdManager,
                         SamlSingleSignOnHandler ssoHandler,
-                        SamlSingleLogoutHandler sloHandler) {
+                        SamlSingleLogoutHandler sloHandler,
+                        boolean signatureRequired) {
         this.authorizer = requireNonNull(authorizer, "authorizer");
         this.entityId = requireNonNull(entityId, "entityId");
         this.hostname = hostname;
@@ -114,6 +116,7 @@ public final class SamlServiceProvider {
         this.requestIdManager = requireNonNull(requestIdManager, "requestIdManager");
         this.ssoHandler = requireNonNull(ssoHandler, "ssoHandler");
         this.sloHandler = requireNonNull(sloHandler, "sloHandler");
+        this.signatureRequired = signatureRequired;
 
         defaultAcsConfig = acsConfigs.stream().filter(SamlAssertionConsumerConfig::isDefault).findFirst()
                                      .orElseThrow(() -> new IllegalArgumentException(
@@ -242,6 +245,13 @@ public final class SamlServiceProvider {
      */
     SamlSingleLogoutHandler sloHandler() {
         return sloHandler;
+    }
+
+    /**
+     * Returns whether to require an SAML message to have a signature.
+     */
+    boolean isSignatureRequired() {
+        return signatureRequired;
     }
 
     /**

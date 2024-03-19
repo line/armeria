@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.thrift;
+package com.linecorp.armeria.internal.common.thrift;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-final class ThriftMetadataAccess {
+public final class ThriftMetadataAccess {
 
     private static final Logger logger = LoggerFactory.getLogger(ThriftMetadataAccess.class);
 
@@ -62,8 +62,8 @@ final class ThriftMetadataAccess {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends TBase<T, F>, F extends TFieldIdEnum>
-    Map<?, FieldMetaData> getStructMetaDataMap(Class<?> clazz) {
+    public static synchronized <T extends TBase<T, F>, F extends TFieldIdEnum>
+    Map<? extends TFieldIdEnum, FieldMetaData> getStructMetaDataMap(Class<?> clazz) {
         // Pre-initialize classes if there is a jar in the classpath with armeria-thrift <= 0.14
         // See the following issue for the motivation of pre-initializing classes
         // https://issues.apache.org/jira/browse/THRIFT-5430

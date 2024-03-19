@@ -394,7 +394,9 @@ internal class CoroutineServerInterceptorTest {
                 return SimpleResponse.getDefaultInstance()
             }
 
-            override fun streamingOutputCall(request: StreamingOutputCallRequest): Flow<StreamingOutputCallResponse> {
+            override fun streamingOutputCall(
+                request: StreamingOutputCallRequest,
+            ): Flow<StreamingOutputCallResponse> {
                 return flow {
                     for (i in 1..5) {
                         delay(500)
@@ -404,7 +406,9 @@ internal class CoroutineServerInterceptorTest {
                 }
             }
 
-            override suspend fun streamingInputCall(requests: Flow<StreamingInputCallRequest>): StreamingInputCallResponse {
+            override suspend fun streamingInputCall(
+                requests: Flow<StreamingInputCallRequest>,
+            ): StreamingInputCallResponse {
                 val names = requests.map { it.payload.body.toString() }.toList()
 
                 assertContextPropagation()
@@ -412,7 +416,9 @@ internal class CoroutineServerInterceptorTest {
                 return buildReply(names)
             }
 
-            override fun fullDuplexCall(requests: Flow<StreamingOutputCallRequest>): Flow<StreamingOutputCallResponse> {
+            override fun fullDuplexCall(
+                requests: Flow<StreamingOutputCallRequest>,
+            ): Flow<StreamingOutputCallResponse> {
                 return flow {
                     requests.collect {
                         delay(500)

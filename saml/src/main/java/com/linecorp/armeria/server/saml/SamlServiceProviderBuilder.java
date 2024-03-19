@@ -99,6 +99,8 @@ public final class SamlServiceProviderBuilder {
     @Nullable
     private SamlRequestIdManager requestIdManager;
 
+    private boolean signatureRequired = true;
+
     private SamlSingleSignOnHandler ssoHandler = new SamlSingleSignOnHandler() {
         @Override
         public CompletionStage<Void> beforeInitiatingSso(ServiceRequestContext ctx, HttpRequest req,
@@ -310,6 +312,21 @@ public final class SamlServiceProviderBuilder {
     }
 
     /**
+     * Sets whether to require the received SAML objects to be signed. If enabled, the received SAML objects
+     * are rejected when they are not signed or have invalid signature. Otherwise, the received SAML objects
+     * will be accepted even if they are not signed, although the objects with an invalid signature will still
+     * be rejected. It is <strong>strongly discouraged</strong> to disable this option because otherwise
+     * an attacker can forge an SAML object to bypass authentication. This option is enabled by default.
+     *
+     * @param signatureRequired {@code true} to reject the SAML objects without signature.
+     *                          {@code false} to accept the SAML objects without signature.
+     */
+    public SamlServiceProviderBuilder signatureRequired(boolean signatureRequired) {
+        this.signatureRequired = signatureRequired;
+        return this;
+    }
+
+    /**
      * Builds a {@link SamlServiceProvider} which helps a {@link Server} have a SAML-based
      * authentication.
      */
@@ -446,7 +463,8 @@ public final class SamlServiceProviderBuilder {
                                        sloEndpoints,
                                        requestIdManager,
                                        ssoHandler,
-                                       sloHandler);
+                                       sloHandler,
+                                       signatureRequired);
     }
 
     private static void validateSignatureAlgorithm(String signatureAlgorithm, Credential credential) {

@@ -160,8 +160,8 @@ dependencies {
     testImplementation (libs.micrometer.tracing.integration.test) {
         exclude group: "org.mockito"
     }
-    testImplementation libs.brave.context.slf4j
-    testImplementation libs.brave.instrumentation.http.tests
+    testImplementation libs.brave6.context.slf4j
+    testImplementation libs.brave6.instrumentation.http.tests
 }
 
 if (!rootProject.hasProperty('noWeb')) {

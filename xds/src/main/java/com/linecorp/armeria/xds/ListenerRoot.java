@@ -30,10 +30,16 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
     private final ListenerResourceNode node;
 
-    ListenerRoot(XdsBootstrapImpl xdsBootstrap, String resourceName) {
+    ListenerRoot(XdsBootstrapImpl xdsBootstrap, String resourceName, BootstrapListeners bootstrapListeners) {
         super(xdsBootstrap.eventLoop());
-        node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.DYNAMIC);
-        xdsBootstrap.subscribe(node);
+        final ListenerXdsResource listenerXdsResource = bootstrapListeners.staticListeners().get(resourceName);
+        if (listenerXdsResource != null) {
+            node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.STATIC);
+            node.onChanged(listenerXdsResource);
+        } else {
+            node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.DYNAMIC);
+            xdsBootstrap.subscribe(node);
+        }
     }
 
     @Override

@@ -104,17 +104,16 @@ final class ConnectionPoolMetrics {
         private int activeConnections;
 
         Meters(MeterIdPrefix idPrefix, List<Tag> commonTags, MeterRegistry registry) {
-            opened = Counter.builder(idPrefix.name())
+            opened = Counter.builder(idPrefix.name("connections"))
                             .tags(commonTags)
                             .tag(STATE, "opened")
                             .register(registry);
-            closed = Counter.builder(idPrefix.name())
+            closed = Counter.builder(idPrefix.name("connections"))
                             .tags(commonTags)
                             .tag(STATE, "closed")
                             .register(registry);
-            active = Gauge.builder(idPrefix.name(), this, Meters::activeConnections)
+            active = Gauge.builder(idPrefix.name("active.connections"), this, Meters::activeConnections)
                           .tags(commonTags)
-                          .tag(STATE, "active")
                           .register(registry);
         }
 
