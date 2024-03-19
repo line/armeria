@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
@@ -75,6 +74,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -172,12 +172,12 @@ public final class DefaultClientRequestContext
      * @param eventLoop the {@link EventLoop} associated with this context
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param id the {@link RequestId} that represents the identifier of the current {@link Request}
-     *           and {@link Response} pair.
+     * and {@link Response} pair.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
-     *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     * e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
@@ -197,12 +197,12 @@ public final class DefaultClientRequestContext
      *
      * @param sessionProtocol the {@link SessionProtocol} of the invocation
      * @param id the {@link RequestId} that contains the identifier of the current {@link Request}
-     *           and {@link Response} pair.
+     * and {@link Response} pair.
      * @param req the {@link HttpRequest} associated with this context
      * @param rpcReq the {@link RpcRequest} associated with this context
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
-     *                               e.g. {@code System.currentTimeMillis() * 1000}.
+     * e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
@@ -224,7 +224,7 @@ public final class DefaultClientRequestContext
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
+              guessExchangeType(requestOptions, req),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root), options.contextHook());
         assert (eventLoop == null && responseCancellationScheduler == null) ||
@@ -279,6 +279,17 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+    }
+
+    private static ExchangeType guessExchangeType(RequestOptions requestOptions, @Nullable HttpRequest req) {
+        final ExchangeType exchangeType = requestOptions.exchangeType();
+        if (exchangeType != null) {
+            return exchangeType;
+        }
+        if (req instanceof FixedStreamMessage) {
+            return ExchangeType.RESPONSE_STREAMING;
+        }
+        return ExchangeType.BIDI_STREAMING;
     }
 
     private static long requestAutoAbortDelayMillis(ClientOptions options, RequestOptions requestOptions) {
@@ -530,7 +541,7 @@ public final class DefaultClientRequestContext
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
-        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
+        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext(); ) {
             addAttr(i.next());
         }
 
@@ -843,7 +854,7 @@ public final class DefaultClientRequestContext
     @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
-        for (;;) {
+        for (; ; ) {
             final HttpHeaders oldValue = additionalRequestHeaders;
             final HttpHeadersBuilder builder = oldValue.toBuilder();
             mutator.accept(builder);
