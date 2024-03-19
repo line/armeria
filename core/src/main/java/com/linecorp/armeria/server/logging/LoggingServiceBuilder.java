@@ -140,6 +140,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.defaultLogger(defaultLogger);
     }
 
+    @Override
+    public LoggingServiceBuilder logWriter(LogWriter logWriter) {
+        return (LoggingServiceBuilder) super.logWriter(logWriter);
+    }
+
     @Deprecated
     @Override
     public LoggingServiceBuilder logger(Logger logger) {
@@ -296,10 +301,5 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     @Override
     public LoggingServiceBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
         return (LoggingServiceBuilder) super.responseCauseFilter(responseCauseFilter);
-    }
-
-    @Override
-    public LoggingServiceBuilder logWriter(LogWriter logWriter) {
-        return (LoggingServiceBuilder) super.logWriter(logWriter);
     }
 }

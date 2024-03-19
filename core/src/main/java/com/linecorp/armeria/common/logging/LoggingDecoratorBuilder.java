@@ -49,10 +49,7 @@ public abstract class LoggingDecoratorBuilder {
     private LogWriter logWriter;
     @Nullable
     private Logger defaultLogger;
-    /**
-     * {@link #logWriterBuilder} and {@link #logFormatterBuilder} are not null if true.
-     */
-    private boolean shouldBuildLogWriter;
+
     @Nullable
     private LogWriterBuilder logWriterBuilder;
     @Nullable
@@ -548,6 +545,7 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Don't use this method. null is always returned.
+     *
      * @deprecated Deprecated for removal in the next major version.
      */
     @Nullable
@@ -580,7 +578,7 @@ public abstract class LoggingDecoratorBuilder {
      */
     @UnstableApi
     public LoggingDecoratorBuilder logWriter(LogWriter logWriter) {
-        if (shouldBuildLogWriter) {
+        if (logWriterBuilder != null) {
             throw new IllegalStateException(
                     "The logWriter and the log properties cannot be set together.");
         }
@@ -596,7 +594,7 @@ public abstract class LoggingDecoratorBuilder {
             return logWriter;
         }
 
-        if (!shouldBuildLogWriter) {
+        if (logWriterBuilder == null) {
             // Neither logWriter nor log properties are set.
             if (defaultLogger != null) {
                 return LogWriter.of(defaultLogger);
@@ -605,7 +603,6 @@ public abstract class LoggingDecoratorBuilder {
             }
         }
 
-        assert logWriterBuilder != null;
         assert logFormatterBuilder != null;
         final LogFormatter logFormatter = logFormatterBuilder.build();
         logWriterBuilder.logFormatter(logFormatter);
@@ -619,10 +616,9 @@ public abstract class LoggingDecoratorBuilder {
         if (logWriter != null) {
             throw new IllegalStateException("The logWriter and the log properties cannot be set together.");
         }
-        if (shouldBuildLogWriter) {
+        if (logWriterBuilder != null) {
             return;
         }
-        shouldBuildLogWriter = true;
         logWriterBuilder = LogWriter.builder();
         logFormatterBuilder = LogFormatter.builderForText();
     }
