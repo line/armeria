@@ -83,7 +83,7 @@ Add a test method like the following.
 
 ```java filename=BlogServiceTest.java
 @Test
-@Order(6)
+@Order(7)
 void deleteBlogPost() {
   final DeleteBlogPostRequest request = DeleteBlogPostRequest.newBuilder()
                                                              .setId(1)
@@ -110,7 +110,7 @@ Add a test method like the following.
 
 ```java filename=BlogServiceTest.java
 @Test
-@Order(7)
+@Order(8)
 void badRequestExceptionHandlerWhenTryingDeleteMissingBlogPost() throws JsonProcessingException {
   final Throwable exception = catchThrowable(() -> {
     client.deleteBlogPost(DeleteBlogPostRequest.newBuilder().setId(100).build());

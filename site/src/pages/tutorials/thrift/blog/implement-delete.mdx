@@ -78,7 +78,8 @@ void deleteBlogPost() throws TException {
   assertThat(exception)
     .isInstanceOf(BlogNotFoundException.class)
     .extracting("reason")
-    .asString();
+    .asString()
+    .isEqualTo("The blog post does not exist. ID: 1");
 }
 ```
 

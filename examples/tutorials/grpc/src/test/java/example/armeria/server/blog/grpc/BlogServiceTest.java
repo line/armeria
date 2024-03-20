@@ -71,6 +71,7 @@ class BlogServiceTest {
         final BlogPost response = client.createBlogPost(request);
         assertThat(response.getTitle()).isEqualTo(request.getTitle());
         assertThat(response.getContent()).isEqualTo(request.getContent());
+        System.out.println(response);
     }
 
     @Test
@@ -80,10 +81,11 @@ class BlogServiceTest {
 
         assertThat(blogPost.getTitle()).isEqualTo("My first blog");
         assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
+        System.out.println(blogPost);
     }
 
     @Test
-    @Order(2)
+    @Order(3)
     void getInvalidBlogPost() throws JsonProcessingException {
         final Throwable exception = catchThrowable(() -> {
             client.getBlogPost(GetBlogPostRequest.newBuilder().setId(Integer.MAX_VALUE).build());
@@ -95,7 +97,7 @@ class BlogServiceTest {
     }
 
     @Test
-    @Order(3)
+    @Order(4)
     void listBlogPosts() throws JsonProcessingException {
         final CreateBlogPostRequest newBlogPost = CreateBlogPostRequest.newBuilder()
                                                                        .setTitle("My second blog")
@@ -116,10 +118,11 @@ class BlogServiceTest {
         final BlogPost secondBlog = blogs.get(1);
         assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
         assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
+        System.out.println(blogs);
     }
 
     @Test
-    @Order(4)
+    @Order(5)
     void updateBlogPosts() throws JsonProcessingException {
         final UpdateBlogPostRequest request = UpdateBlogPostRequest.newBuilder()
                                                                    .setId(0)
@@ -133,7 +136,40 @@ class BlogServiceTest {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
+    void updateInvalidBlogPost() {
+        final Throwable exception = catchThrowable(() -> {
+            client.updateBlogPost(UpdateBlogPostRequest.newBuilder()
+                                                       .setId(Integer.MAX_VALUE)
+                                                       .setTitle("My first blog")
+                                                       .setContent("Hello awesome Armeria!")
+                                                       .build());
+        });
+        final StatusRuntimeException statusException = (StatusRuntimeException) exception;
+        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.NOT_FOUND);
+        assertThat(statusException)
+                .hasMessageContaining("The blog post does not exist. ID: " + Integer.MAX_VALUE);
+    }
+
+    @Test
+    @Order(7)
+    void deleteBlogPost() {
+        final DeleteBlogPostRequest request = DeleteBlogPostRequest.newBuilder()
+                                                                   .setId(1)
+                                                                   .build();
+        client.deleteBlogPost(request);
+        final Throwable exception = catchThrowable(() -> {
+            client.getBlogPost(GetBlogPostRequest.newBuilder().setId(1).build());
+        });
+
+        final StatusRuntimeException statusException = (StatusRuntimeException) exception;
+        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.NOT_FOUND);
+        assertThat(statusException)
+                .hasMessageContaining("The blog post does not exist. ID: 1");
+    }
+
+    @Test
+    @Order(8)
     void badRequestExceptionHandlerWhenTryingDeleteMissingBlogPost() throws JsonProcessingException {
         final Throwable exception = catchThrowable(() -> {
             client.deleteBlogPost(DeleteBlogPostRequest.newBuilder().setId(100).build());

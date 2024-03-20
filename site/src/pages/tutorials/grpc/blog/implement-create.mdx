@@ -112,6 +112,8 @@ In the `BlogServiceTest` class, add a method as follows.
 This will set up a client before executing each test cases.
 
 ```java filename=BlogServiceTest.java
+import org.junit.jupiter.api.BeforeAll;
+
 @BeforeAll
 static void beforeAll() {
   client = GrpcClients.newClient(server.httpUri(),

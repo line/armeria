@@ -201,6 +201,8 @@ public final class BlogService {
 Add a test method as follows to test if our exception handler is working properly.
 
 ```java filename=BlogServiceTest.java
+import static org.assertj.core.api.Assertions.assertThat;
+
 @Test
 @Order(5)
 void badRequestExceptionHandlerWhenTryingDeleteMissingBlogPost() throws JsonProcessingException {

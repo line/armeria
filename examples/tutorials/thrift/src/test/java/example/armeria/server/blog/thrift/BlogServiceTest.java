@@ -27,8 +27,8 @@ class BlogServiceTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/thrift", THttpService.builder()
-                                              .exceptionHandler(new BlogServiceExceptionHandler())
                                               .addService(new BlogServiceImpl())
+                                              .exceptionHandler(new BlogServiceExceptionHandler())
                                               .build());
         }
     };
