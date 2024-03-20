@@ -1198,4 +1198,9 @@ public interface HttpResponse extends Response, HttpMessage {
             }
         });
     }
+
+    @Override
+    default HttpResponse subscribeOn(EventExecutor eventExecutor) {
+        return of(HttpMessage.super.subscribeOn(eventExecutor));
+    }
 }

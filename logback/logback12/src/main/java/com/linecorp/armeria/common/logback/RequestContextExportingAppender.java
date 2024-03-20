@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.slf4j.MDC;
@@ -67,10 +68,10 @@ public final class RequestContextExportingAppender
     private static final Splitter KEY_SPLITTER = Splitter.on(',').trimResults();
 
     private final AppenderAttachableImpl<ILoggingEvent> aai = new AppenderAttachableImpl<>();
-    private final RequestContextExporterBuilder builder = RequestContextExporter.builder();
     @Nullable
     private RequestContextExporter exporter;
     private boolean needsHashMap;
+    private Consumer<RequestContextExporterBuilder> customizer = unused -> {};
 
     @VisibleForTesting
     RequestContextExporter exporter() {
@@ -83,7 +84,7 @@ public final class RequestContextExportingAppender
      */
     public void addBuiltIn(BuiltInProperty property) {
         ensureNotStarted();
-        builder.builtIn(property);
+        configureExporter(builder -> builder.builtIn(property));
     }
 
     /**
@@ -94,7 +95,7 @@ public final class RequestContextExportingAppender
      */
     public void addAttribute(String alias, AttributeKey<?> attrKey) {
         ensureNotStarted();
-        builder.attr(alias, attrKey);
+        configureExporter(builder -> builder.attr(alias, attrKey));
     }
 
     /**
@@ -109,7 +110,7 @@ public final class RequestContextExportingAppender
         requireNonNull(alias, "alias");
         requireNonNull(attrKey, "attrKey");
         requireNonNull(stringifier, "stringifier");
-        builder.attr(alias, attrKey, stringifier);
+        configureExporter(builder -> builder.attr(alias, attrKey, stringifier));
     }
 
     /**
@@ -118,7 +119,7 @@ public final class RequestContextExportingAppender
     public void addRequestHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.requestHeader(name);
+        configureExporter(builder -> builder.requestHeader(name));
     }
 
     /**
@@ -127,7 +128,7 @@ public final class RequestContextExportingAppender
     public void addResponseHeader(CharSequence name) {
         ensureNotStarted();
         requireNonNull(name, "name");
-        builder.responseHeader(name);
+        configureExporter(builder -> builder.responseHeader(name));
     }
 
     /**
@@ -137,7 +138,7 @@ public final class RequestContextExportingAppender
     public void setPrefix(String prefix) {
         requireNonNull(prefix, "prefix");
         checkArgument(!prefix.isEmpty(), "prefix must not be empty");
-        builder.prefix(prefix);
+        configureExporter(builder -> builder.prefix(prefix));
     }
 
     /**
@@ -148,7 +149,7 @@ public final class RequestContextExportingAppender
     public void setExport(String mdcKey) {
         requireNonNull(mdcKey, "mdcKey");
         checkArgument(!mdcKey.isEmpty(), "mdcKey must not be empty");
-        builder.keyPattern(mdcKey);
+        configureExporter(builder -> builder.keyPattern(mdcKey));
     }
 
     /**
@@ -159,11 +160,13 @@ public final class RequestContextExportingAppender
     public void setExports(String mdcKeys) {
         requireNonNull(mdcKeys, "mdcKeys");
         checkArgument(!mdcKeys.isEmpty(), "mdcKeys must not be empty");
-        KEY_SPLITTER.split(mdcKeys)
-                    .forEach(mdcKey -> {
-                        checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
-                        builder.keyPattern(mdcKey);
-                    });
+        configureExporter(builder -> {
+            KEY_SPLITTER.split(mdcKeys)
+                        .forEach(mdcKey -> {
+                            checkArgument(!mdcKey.isEmpty(), "comma-separated MDC key must not be empty");
+                            builder.keyPattern(mdcKey);
+                        });
+        });
     }
 
     /**
@@ -172,13 +175,22 @@ public final class RequestContextExportingAppender
      */
     public void setExportGroup(ExportGroupConfig exportGroupConfiguration) {
         requireNonNull(exportGroupConfiguration, "exportGroupConfiguration");
-        builder.exportGroup(exportGroupConfiguration.build());
+        configureExporter(builder -> builder.exportGroup(exportGroupConfiguration.build()));
     }
 
     private void ensureNotStarted() {
         if (isStarted()) {
             throw new IllegalStateException("can't update the export list once started");
         }
+    }
+
+    /**
+     * Stores the specified {@link RequestContextExporterBuilder} customizer to be lazily applied when
+     * the exporter is built.
+     */
+    private void configureExporter(Consumer<RequestContextExporterBuilder> customizer) {
+        requireNonNull(customizer, "customizer");
+        this.customizer = this.customizer.andThen(customizer);
     }
 
     @Override
@@ -192,6 +204,10 @@ public final class RequestContextExportingAppender
                 aai.appendLoopOnAppenders(eventObject);
                 return;
             }
+            // Build the exporter lazily to prevent the customizer from initializing Flags.
+            // See: https://github.com/line/armeria/issues/5327
+            final RequestContextExporterBuilder builder = RequestContextExporter.builder();
+            customizer.accept(builder);
             exporter = builder.build();
         }
         final Map<String, String> contextMap = exporter.export();

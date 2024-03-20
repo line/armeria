@@ -31,6 +31,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A builder class for binding an {@link HttpService} to a virtual host fluently. This class can be instantiated
  * through {@link VirtualHostBuilder#annotatedService()}.
@@ -266,6 +268,18 @@ public final class VirtualHostAnnotatedServiceBindingBuilder extends AbstractAnn
     public VirtualHostAnnotatedServiceBindingBuilder contextHook(
             Supplier<? extends AutoCloseable> contextHook) {
         return (VirtualHostAnnotatedServiceBindingBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                                        boolean shutdownOnStop) {
+        return (VirtualHostAnnotatedServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup,
+                                                                                    shutdownOnStop);
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (VirtualHostAnnotatedServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     /**

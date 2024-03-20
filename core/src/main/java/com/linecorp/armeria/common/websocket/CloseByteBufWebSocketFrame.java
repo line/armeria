@@ -98,10 +98,10 @@ final class CloseByteBufWebSocketFrame extends ByteBufWebSocketFrame implements 
         }
 
         final int index = data.readerIndex();
-        data.readerIndex(index + 2);
-        if (!data.isReadable()) {
+        if (index + 2 >= data.writerIndex()) { // No reasonPhrase
             return null;
         }
+        data.readerIndex(index + 2);
         final String reasonPhrase = data.toString(StandardCharsets.UTF_8);
         data.readerIndex(index);
         return reasonPhrase;
