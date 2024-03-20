@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import com.linecorp.armeria.server.ServerErrorHandler;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -41,6 +40,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
@@ -155,7 +155,8 @@ public abstract class AbstractArmeriaAutoConfiguration {
         if (GRACEFUL_SHUTDOWN.equalsIgnoreCase(shutdown)) {
             return sb -> sb.gracefulShutdownTimeout(duration, duration);
         } else {
-            return sb -> {};
+            return sb -> {
+            };
         }
     }
 }
