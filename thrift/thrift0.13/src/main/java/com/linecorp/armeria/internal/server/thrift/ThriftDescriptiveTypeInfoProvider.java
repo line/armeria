@@ -48,6 +48,7 @@ import org.apache.thrift.protocol.TType;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.thrift.ThriftMetadataAccess;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.EnumInfo;

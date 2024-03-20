@@ -58,7 +58,8 @@ open class AnnotatedServiceFlowBenchmark {
 
                         @Get("/publisher")
                         @ProducesJsonSequences
-                        fun publisherBm(): Publisher<String> = Flux.fromStream(IntStream.range(0, 1000).mapToObj { it.toString() })
+                        fun publisherBm(): Publisher<String> =
+                            Flux.fromStream(IntStream.range(0, 1000).mapToObj { it.toString() })
                     },
                 )
                 .build()
