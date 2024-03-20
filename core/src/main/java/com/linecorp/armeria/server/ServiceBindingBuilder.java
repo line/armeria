@@ -25,6 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -33,6 +34,8 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
@@ -68,6 +71,7 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     private Route mappedRoute;
 
     ServiceBindingBuilder(ServerBuilder serverBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
     }
 
@@ -290,6 +294,17 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                    boolean shutdownOnStop) {
+        return (ServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public ServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (ServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
+    }
+
+    @Override
     public ServiceBindingBuilder requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         return (ServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
@@ -346,6 +361,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
     }
 
+    @Override
+    public ServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (ServiceBindingBuilder) super.contextHook(contextHook);
+    }
+
     /**
      * Sets the {@link HttpService} and returns the {@link ServerBuilder} that this
      * {@link ServiceBindingBuilder} was created from.
@@ -353,6 +373,7 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
      * @throws IllegalStateException if the path that the {@link HttpService} will be bound to is not specified
      */
     public ServerBuilder build(HttpService service) {
+        requireNonNull(service, "service");
         if (mappedRoute != null) {
             // mappedRoute is only set when the service is an HttpServiceWithRoutes
             assert service.as(HttpServiceWithRoutes.class) != null;

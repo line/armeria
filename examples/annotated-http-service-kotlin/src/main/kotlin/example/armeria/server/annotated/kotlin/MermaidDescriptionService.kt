@@ -35,11 +35,11 @@ class MermaidDescriptionService {
             Task in sec      :2014-01-12  , 12d
             another task      : 24d
         """,
-        markup = Markup.MERMAID
+        markup = Markup.MERMAID,
     )
     @Get("/mermaid")
     fun mermaid(
-        @Param param1: String
+        @Param param1: String,
     ): HttpResponse {
         return HttpResponse.of(200)
     }

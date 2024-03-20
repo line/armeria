@@ -17,8 +17,8 @@ package com.linecorp.armeria.server.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -26,12 +26,12 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class FileServiceAdditionalHeadersTest {
+class FileServiceAdditionalHeadersTest {
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.serviceUnder(
@@ -46,7 +46,7 @@ public class FileServiceAdditionalHeadersTest {
     };
 
     @Test
-    public void testAdditionalHeaders() {
+    void testAdditionalHeaders() {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/java/lang/Object.class");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);

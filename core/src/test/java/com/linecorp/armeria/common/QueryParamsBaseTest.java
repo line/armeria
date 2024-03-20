@@ -41,6 +41,7 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.testing.EqualsTester;
 
 class QueryParamsBaseTest {
 
@@ -116,6 +117,34 @@ class QueryParamsBaseTest {
         params.add("baz", "false");
         assertThat(params.containsBoolean("baz", false)).isTrue();
         assertThat(params.containsBoolean("baz", true)).isFalse();
+
+        params.add("dup1", "v1");
+        params.add("dup1", "v2");
+        params.add("dup1", "true");
+        params.add("dup1", "false");
+        assertThat(params.containsBoolean("dup1", true)).isTrue();
+        assertThat(params.containsBoolean("dup1", false)).isTrue();
+
+        params.add("dup2", "v1");
+        params.add("dup2", "v2");
+        params.add("dup2", "1");
+        params.add("dup2", "0");
+        assertThat(params.containsBoolean("dup2", true)).isTrue();
+        assertThat(params.containsBoolean("dup2", false)).isTrue();
+
+        params.add("upperCase", "TRUE");
+        params.add("upperCase", "FALSE");
+        assertThat(params.getBoolean("upperCase")).isTrue();
+        assertThat(params.getLastBoolean("upperCase")).isFalse();
+        assertThat(params.containsBoolean("upperCase", true)).isTrue();
+        assertThat(params.containsBoolean("upperCase", false)).isTrue();
+
+        params.add("unsupported", "tRUE");
+        params.add("unsupported", "FaLsE");
+        assertThat(params.getBoolean("unsupported")).isNull();
+        assertThat(params.getLastBoolean("unsupported")).isNull();
+        assertThat(params.containsBoolean("unsupported", true)).isFalse();
+        assertThat(params.containsBoolean("unsupported", false)).isFalse();
     }
 
     // Tests forked from io.netty.handler.codec.DefaultHeadersTest
@@ -378,13 +407,9 @@ class QueryParamsBaseTest {
         params2.add("name2", "value2");
         params2.add("name2", "value3");
 
-        assertThat(params2).isEqualTo(params1);
-        assertThat(params1).isEqualTo(params2);
-        assertThat(params1).isEqualTo(params1);
-        assertThat(params2).isEqualTo(params2);
-        assertThat(params2.hashCode()).isEqualTo(params1.hashCode());
-        assertThat(params1.hashCode()).isEqualTo(params1.hashCode());
-        assertThat(params2.hashCode()).isEqualTo(params2.hashCode());
+        new EqualsTester()
+                .addEqualityGroup(params1, params2)
+                .testEquals();
     }
 
     @Test
@@ -420,10 +445,11 @@ class QueryParamsBaseTest {
         p1.set("name1", "value1");
         final QueryParamsBase p2 = newEmptyParams();
         p2.set("name2", "value2");
-        assertThat(p1).isNotEqualTo(p2);
-        assertThat(p2).isNotEqualTo(p1);
-        assertThat(p1).isEqualTo(p1);
-        assertThat(p2).isEqualTo(p2);
+
+        new EqualsTester()
+                .addEqualityGroup(p1)
+                .addEqualityGroup(p2)
+                .testEquals();
     }
 
     @Test

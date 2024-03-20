@@ -30,7 +30,6 @@ import org.springframework.web.reactive.function.client.awaitBody
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class ClientCoroutineTest {
-
     @LocalServerPort
     private var port = 0
 
@@ -41,10 +40,11 @@ class ClientCoroutineTest {
 
     @PostConstruct
     fun setUp() {
-        client = WebClient.builder()
-            .baseUrl("http://127.0.0.1:$port")
-            .clientConnector(connector)
-            .build()
+        client =
+            WebClient.builder()
+                .baseUrl("http://127.0.0.1:$port")
+                .clientConnector(connector)
+                .build()
     }
 
     @Test
@@ -60,7 +60,7 @@ class ClientCoroutineTest {
                 assertThat(ex.cause).isInstanceOf(UnsupportedMediaTypeException::class.java)
                     .hasMessageContaining(
                         "Content type 'text/plain;charset=utf-8' not supported for " +
-                            "bodyType=com.linecorp.armeria.spring.kotlin.Abnormal"
+                            "bodyType=com.linecorp.armeria.spring.kotlin.Abnormal",
                     )
             }
         }

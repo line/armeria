@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.AbstractHttpResponseDecoder.contentTooLargeException;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 
 import org.slf4j.Logger;
@@ -24,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ProtocolViolationException;
@@ -153,7 +153,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         keepAliveHandler.destroy();
         if (res != null) {
-            res.close(ClosedSessionException.get());
+            res.close(newClosedSessionException(ctx));
         }
         ctx.fireChannelInactive();
     }
@@ -164,7 +164,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
             switch (state) {
                 case NEEDS_HANDSHAKE_RESPONSE:
                     if (!(msg instanceof HttpObject)) {
-                        ctx.fireChannelRead(msg);
+                        ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
                         return;
                     }
                     if (!(msg instanceof HttpResponse)) {
@@ -191,12 +191,10 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                     res.startResponse();
                     final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                     if (responseHeaders.status() == HttpStatus.SWITCHING_PROTOCOLS) {
-                        final ChannelPipeline pipeline = ctx.pipeline();
-                        pipeline.remove(HttpClientCodec.class);
                         state = State.NEEDS_HANDSHAKE_RESPONSE_END;
                     }
                     if (!res.tryWriteResponseHeaders(responseHeaders)) {
-                        fail(ctx, ClosedSessionException.get());
+                        fail(ctx, newClosedSessionException(ctx));
                     }
                     break;
                 case NEEDS_HANDSHAKE_RESPONSE_END:
@@ -205,7 +203,11 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                         failWithUnexpectedMessageType(ctx, msg, EMPTY_LAST_CONTENT.getClass());
                         return;
                     }
+                    // The state should be set to UPGRADE_COMPLETE before removing HttpClientCodec.
+                    // Because pipeline.remove() could trigger channelRead() recursively.
                     state = State.UPGRADE_COMPLETE;
+                    final ChannelPipeline pipeline = ctx.pipeline();
+                    pipeline.remove(HttpClientCodec.class);
                     break;
                 case UPGRADE_COMPLETE:
                     assert msg instanceof ByteBuf;

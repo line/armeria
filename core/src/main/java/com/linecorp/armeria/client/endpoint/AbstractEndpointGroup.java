@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.util.AbstractListenable;
 abstract class AbstractEndpointGroup extends AbstractListenable<List<Endpoint>> implements EndpointGroup {
 
     @Override
-    protected final List<Endpoint> latestValue() {
+    protected List<Endpoint> latestValue() {
         if (whenReady().isDone()) {
             return endpoints();
         }

@@ -57,7 +57,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     @Override
     public Void apply(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
-        final EventLoop eventLoop = reqCtx.eventLoop();
+        final EventLoop eventLoop = ctx.channel().eventLoop();
         if (eventLoop.inEventLoop()) {
             apply0(response, cause);
         } else {
@@ -68,6 +68,14 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     private void apply0(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
         clearTimeout();
+        // Close early to avoid sending data unnecessarily on a closed stream.
+        if (failIfStreamOrSessionClosed()) {
+            if (response != null) {
+                response.content().close();
+            }
+            return;
+        }
+
         if (cause != null) {
             cause = Exceptions.peel(cause);
             recoverAndWrite(cause);
@@ -75,11 +83,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         }
 
         assert response != null;
-        if (failIfStreamOrSessionClosed()) {
-            response.content().close();
-            return;
-        }
-
         logBuilder().startResponse();
         write(response, null);
     }
@@ -127,7 +130,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
     }
 
     private void resetAndFail(Throwable cause) {
-        responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL).addListener(f -> {
+        responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL, false).addListener(f -> {
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 fail(cause);
             }

@@ -96,6 +96,9 @@
   "name":"[Z"
 },
 {
+  "name":"[[Lio.netty.bootstrap.Bootstrap;"
+},
+{
   "name":"apple.security.AppleProvider",
   "methods":[{"name":"<init>","parameterTypes":[] }]
 },
@@ -317,14 +320,20 @@
   ]
 },
 {
+  "name":"com.google.protobuf.DescriptorProtos$FeatureSet",
+  "queriedMethods":[{"name":"newBuilder","parameterTypes":[] }]
+},
+{
   "name":"com.google.protobuf.DescriptorProtos$MethodOptions",
   "queriedMethods":[
-    {"name":"getDeprecated","parameterTypes":[] }, 
+    {"name":"getDeprecated","parameterTypes":[] },
+    {"name":"getFeatures","parameterTypes":[] },
     {"name":"getIdempotencyLevel","parameterTypes":[] }, 
     {"name":"getUninterpretedOption","parameterTypes":["int"] }, 
     {"name":"getUninterpretedOptionCount","parameterTypes":[] }, 
     {"name":"getUninterpretedOptionList","parameterTypes":[] }, 
     {"name":"hasDeprecated","parameterTypes":[] }, 
+    {"name":"hasFeatures","parameterTypes":[] }, 
     {"name":"hasIdempotencyLevel","parameterTypes":[] }
   ]
 },
@@ -333,17 +342,22 @@
   "queriedMethods":[
     {"name":"addUninterpretedOption","parameterTypes":["com.google.protobuf.DescriptorProtos$UninterpretedOption"] }, 
     {"name":"clearDeprecated","parameterTypes":[] }, 
+    {"name":"clearFeatures","parameterTypes":[] }, 
     {"name":"clearIdempotencyLevel","parameterTypes":[] }, 
     {"name":"clearUninterpretedOption","parameterTypes":[] }, 
     {"name":"getDeprecated","parameterTypes":[] }, 
+    {"name":"getFeatures","parameterTypes":[] }, 
+    {"name":"getFeaturesBuilder","parameterTypes":[] }, 
     {"name":"getIdempotencyLevel","parameterTypes":[] }, 
     {"name":"getUninterpretedOption","parameterTypes":["int"] }, 
     {"name":"getUninterpretedOptionBuilder","parameterTypes":["int"] }, 
     {"name":"getUninterpretedOptionCount","parameterTypes":[] }, 
     {"name":"getUninterpretedOptionList","parameterTypes":[] }, 
     {"name":"hasDeprecated","parameterTypes":[] }, 
+    {"name":"hasFeatures","parameterTypes":[] }, 
     {"name":"hasIdempotencyLevel","parameterTypes":[] }, 
     {"name":"setDeprecated","parameterTypes":["boolean"] }, 
+    {"name":"setFeatures","parameterTypes":["com.google.protobuf.DescriptorProtos$FeatureSet"] }, 
     {"name":"setIdempotencyLevel","parameterTypes":["com.google.protobuf.DescriptorProtos$MethodOptions$IdempotencyLevel"] }, 
     {"name":"setUninterpretedOption","parameterTypes":["int","com.google.protobuf.DescriptorProtos$UninterpretedOption"] }
   ]
@@ -1210,6 +1224,9 @@
   ]
 },
 {
+  "name":"com.linecorp.armeria.client.Bootstraps$1"
+},
+{
   "name":"com.linecorp.armeria.client.Http1ResponseDecoder",
   "queriedMethods":[
     {"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
@@ -1991,6 +2008,18 @@
   "queriedMethods":[{"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
 },
 {
+  "name":"com.linecorp.armeria.server.DefaultRoute",
+  "allDeclaredFields":true,
+  "queryAllDeclaredMethods":true,
+  "queryAllDeclaredConstructors":true,
+  "methods":[
+    {"name":"isCacheable","parameterTypes":[] }, 
+    {"name":"isFallback","parameterTypes":[] }, 
+    {"name":"pathType","parameterTypes":[] }, 
+    {"name":"patternString","parameterTypes":[] }
+  ]
+},
+{
   "name":"com.linecorp.armeria.server.Http1RequestDecoder",
   "queriedMethods":[
     {"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
@@ -2037,6 +2066,15 @@
 {
   "name":"com.linecorp.armeria.server.HttpServerUpgradeHandler",
   "queriedMethods":[{"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }]
+},
+{
+  "name":"com.linecorp.armeria.server.Route",
+  "queryAllDeclaredMethods":true
+},
+{
+  "name":"com.linecorp.armeria.server.RoutePathType",
+  "allDeclaredFields":true,
+  "queryAllDeclaredMethods":true
 },
 {
   "name":"com.linecorp.armeria.server.annotation.Blocking",
@@ -2289,6 +2327,7 @@
   "queryAllDeclaredMethods":true,
   "queryAllDeclaredConstructors":true,
   "methods":[
+    {"name":"docServiceRoute","parameterTypes":[] }, 
     {"name":"enums","parameterTypes":[] }, 
     {"name":"exampleHeaders","parameterTypes":[] }, 
     {"name":"exceptions","parameterTypes":[] }, 
@@ -2566,6 +2605,9 @@
 {
   "name":"com.sun.org.apache.xerces.internal.jaxp.datatype.DatatypeFactoryImpl",
   "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.sun.security.cert.internal.x509.X509V1CertImpl"
 },
 {
   "name":"graphql.com.google.common.collect.ImmutableCollection",
@@ -2994,6 +3036,10 @@
     {"name":"read","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
     {"name":"write","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object","io.netty.channel.ChannelPromise"] }
   ]
+},
+{
+  "name":"io.netty.handler.ssl.SslContextBuilder",
+  "fields":[{"name":"keyCertChain"}]
 },
 {
   "name":"io.netty.handler.ssl.SslHandler",
@@ -3549,7 +3595,10 @@
 },
 {
   "name":"java.nio.Bits",
-  "fields":[{"name":"UNALIGNED"}]
+  "fields":[
+    {"name":"MAX_MEMORY"}, 
+    {"name":"UNALIGNED"}
+  ]
 },
 {
   "name":"java.nio.Buffer",

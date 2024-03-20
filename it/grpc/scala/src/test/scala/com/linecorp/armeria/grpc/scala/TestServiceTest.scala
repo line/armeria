@@ -87,7 +87,7 @@ object TestServiceTest {
         GrpcService
           .builder()
           .addService(TestServiceGrpc.bindService(new TestServiceImpl, ExecutionContext.global))
-          .exceptionMapping {
+          .exceptionHandler {
             case (_, e: AuthError, _) =>
               Status.UNAUTHENTICATED.withDescription(e.getMessage).withCause(e)
             case _ => null

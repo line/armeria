@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.invokeHook;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
 import static java.util.Objects.requireNonNull;
@@ -231,8 +233,9 @@ public interface ServiceRequestContext extends RequestContext {
         }
 
         if (oldCtx.unwrapAll() == unwrapAll()) {
-            // Reentrance
-            return noopSafeCloseable();
+            // Reentrance, invoke only the hooks because some new hooks may have been added after the last push.
+            final SafeCloseable closeable = invokeHook(this);
+            return firstNonNull(closeable, noopSafeCloseable());
         }
 
         if (RequestContextUtil.equalsIgnoreWrapper(oldCtx.root(), this)) {

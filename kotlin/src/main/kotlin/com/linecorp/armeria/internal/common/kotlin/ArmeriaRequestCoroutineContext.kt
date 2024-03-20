@@ -25,17 +25,23 @@ import kotlin.coroutines.CoroutineContext
 /**
  * Propagates [ServiceRequestContext] over coroutines.
  */
+@Deprecated(
+    "Use RequestContext.asCoroutineContext() instead.",
+    ReplaceWith("RequestContext.asCoroutineContext()"),
+)
 class ArmeriaRequestCoroutineContext(
-    private val requestContext: ServiceRequestContext
+    private val requestContext: ServiceRequestContext,
 ) : ThreadContextElement<SafeCloseable>, AbstractCoroutineContextElement(Key) {
-
     companion object Key : CoroutineContext.Key<ArmeriaRequestCoroutineContext>
 
     override fun updateThreadContext(context: CoroutineContext): SafeCloseable {
         return requestContext.push()
     }
 
-    override fun restoreThreadContext(context: CoroutineContext, oldState: SafeCloseable) {
+    override fun restoreThreadContext(
+        context: CoroutineContext,
+        oldState: SafeCloseable,
+    ) {
         oldState.close()
     }
 }

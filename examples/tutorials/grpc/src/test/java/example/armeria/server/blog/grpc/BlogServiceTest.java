@@ -41,7 +41,7 @@ class BlogServiceTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(GrpcService.builder()
                                   .addService(new BlogService())
-                                  .exceptionMapping(new GrpcExceptionHandler())
+                                  .exceptionHandler(new GrpcExceptionHandler())
                                   .build());
         }
     };

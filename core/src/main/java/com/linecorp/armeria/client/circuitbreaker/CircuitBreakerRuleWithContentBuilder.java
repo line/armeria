@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
 
+import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -76,8 +77,8 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), hasResponseFilter);
-
+                                                    exceptionFilter(), totalDurationFilter(),
+                                                    hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
                 ruleFilter, decision, requiresResponseTrailers());
         if (!hasResponseFilter) {
@@ -262,6 +263,12 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onException();
     }
 
+    @SuppressWarnings("unchecked")
+    @Override
+    public CircuitBreakerRuleWithContentBuilder<T> onTimeoutException() {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onTimeoutException();
+    }
+
     /**
      * Reports a {@link Response} as a success or failure to a {@link CircuitBreaker},
      * or ignores it according to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and
@@ -272,5 +279,18 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
     @Override
     public CircuitBreakerRuleWithContentBuilder<T> onUnprocessed() {
         return (CircuitBreakerRuleWithContentBuilder<T>) super.onUnprocessed();
+    }
+
+    /**
+     * Adds the specified {@code totalDurationFilter} for a {@link CircuitBreakerRuleWithContent}.
+     * If the specified {@code totalDurationFilter} returns {@code true},
+     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
+     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public CircuitBreakerRuleWithContentBuilder<T> onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (CircuitBreakerRuleWithContentBuilder<T>) super.onTotalDuration(totalDurationFilter);
     }
 }

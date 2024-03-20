@@ -61,6 +61,7 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 
 /**
  * Builds a {@link WebSocketClient}.
@@ -80,6 +81,7 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
     private boolean allowMaskMismatch;
     private List<String> subprotocols = ImmutableList.of();
+    private boolean aggregateContinuation;
 
     WebSocketClientBuilder(URI uri) {
         super(validateUri(requireNonNull(uri, "uri")), null, null, null);
@@ -185,6 +187,17 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     }
 
     /**
+     * Sets whether to aggregate the subsequent continuation frames of the incoming
+     * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame into a single
+     * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame.
+     * Note that enabling this feature may lead to increased memory usage, so use it with caution.
+     */
+    public WebSocketClientBuilder aggregateContinuation(boolean aggregateContinuation) {
+        this.aggregateContinuation = aggregateContinuation;
+        return this;
+    }
+
+    /**
      * Sets whether to add an {@link HttpHeaderNames#ORIGIN} header automatically when sending
      * an {@link HttpRequest} when the {@link HttpRequest#headers()} does not have it.
      * It's {@code true} by default.
@@ -200,7 +213,8 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
      */
     public WebSocketClient build() {
         final WebClient webClient = buildWebClient();
-        return new DefaultWebSocketClient(webClient, maxFramePayloadLength, allowMaskMismatch, subprotocols);
+        return new DefaultWebSocketClient(webClient, maxFramePayloadLength, allowMaskMismatch, subprotocols,
+                                          aggregateContinuation);
     }
 
     // Override the return type of the chaining methods in the superclass.
@@ -370,5 +384,10 @@ public final class WebSocketClientBuilder extends AbstractWebClientBuilder {
     public WebSocketClientBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (WebSocketClientBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public WebSocketClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (WebSocketClientBuilder) super.contextHook(contextHook);
     }
 }

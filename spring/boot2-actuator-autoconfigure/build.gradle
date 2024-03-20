@@ -19,15 +19,22 @@ dependencies {
 // Use the sources from ':spring:boot3-actuator-autoconfigure'.
 def boot3Actuator = "boot3-actuator-autoconfigure"
 def boot3ActuatorProjectDir = "${rootProject.projectDir}/spring/$boot3Actuator"
+
+tasks.register('generateTestSources', Copy.class) {
+    from "${boot3ActuatorProjectDir}/src/test/java"
+    into "${project.ext.genSrcDir}/test/java"
+
+    exclude "**/EnableTestMetrics.java"
+}
+
 tasks.compileJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileJava)
 tasks.compileTestJava.dependsOn(project(":spring:$boot3Actuator").tasks.compileTestJava)
+tasks.compileTestJava.dependsOn(tasks.generateTestSources)
 tasks.sourcesJar.dependsOn(project(":spring:$boot3Actuator").tasks.sourcesJar)
 
 tasks.compileJava.source "${boot3ActuatorProjectDir}/src/main/java",
         "${boot3ActuatorProjectDir}/gen-src/main/java"
-tasks.processResources.from "${boot3ActuatorProjectDir}/src/main/resources"
-tasks.compileTestJava.source "${boot3ActuatorProjectDir}/src/test/java",
-        "${boot3ActuatorProjectDir}/gen-src/test/java"
+tasks.compileTestJava.source "${boot3ActuatorProjectDir}/gen-src/test/java"
 tasks.processTestResources.from "${boot3ActuatorProjectDir}/src/test/resources"
 tasks.sourcesJar.from "${boot3ActuatorProjectDir}/src/main/java", "${boot3ActuatorProjectDir}/gen-src/main/java"
 tasks.sourcesJar.from "${boot3ActuatorProjectDir}/src/main/resources"

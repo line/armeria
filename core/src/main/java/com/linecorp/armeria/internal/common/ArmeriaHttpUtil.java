@@ -81,6 +81,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.UnsupportedValueConverter;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -576,6 +578,11 @@ public final class ArmeriaHttpUtil {
         assert headers instanceof ArmeriaHttp2Headers;
         final HttpHeadersBuilder builder = ((ArmeriaHttp2Headers) headers).delegate();
         builder.endOfStream(endOfStream);
+        if (!builder.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+            // `isContentLengthUnknown` is set to true so as not to automatically fill the content-length when
+            // the HTTP objects are aggregated.
+            builder.contentLengthUnknown();
+        }
         // A CONNECT request might not have ":scheme". See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
@@ -614,6 +621,9 @@ public final class ArmeriaHttpUtil {
         assert http2Headers instanceof ArmeriaHttp2Headers;
         final HttpHeadersBuilder delegate = ((ArmeriaHttp2Headers) http2Headers).delegate();
         delegate.endOfStream(endOfStream);
+
+        maybeSetContentLengthUnknown(delegate.contains(HttpHeaderNames.CONTENT_LENGTH), delegate);
+
         HttpHeaders headers = delegate.build();
 
         if (request) {
@@ -726,6 +736,45 @@ public final class ArmeriaHttpUtil {
 
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
+        }
+
+        maybeSetContentLengthUnknown(inHeaders.contains(HttpHeaderNames.CONTENT_LENGTH), out);
+    }
+
+    private static void maybeSetContentLengthUnknown(boolean hasContentLength, HttpHeadersBuilder out) {
+        if (hasContentLength) {
+            return;
+        }
+
+        HttpMethod method = null;
+        if (out instanceof RequestHeadersBuilder) {
+            method = ((RequestHeadersBuilder) out).method();
+        }
+
+        final boolean isContentAlwaysEmpty;
+        if (method != null) {
+            isContentAlwaysEmpty = isContentAlwaysEmpty(method);
+        } else {
+            isContentAlwaysEmpty = false;
+        }
+
+        if (!isContentAlwaysEmpty) {
+            // Set isContentLengthUnknown to true not to override the content-length when the HTTP objects are
+            // aggregated.
+            out.contentLengthUnknown();
+        }
+    }
+
+    private static boolean isContentAlwaysEmpty(HttpMethod method) {
+        switch (method) {
+            case CONNECT:
+            case GET:
+            case HEAD:
+            case OPTIONS:
+            case TRACE:
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -929,6 +978,21 @@ public final class ArmeriaHttpUtil {
      * Translates and adds HTTP/2 request headers to HTTP/1.1 headers.
      *
      * @param inputHeaders the HTTP/2 request headers to convert.
+     */
+    public static io.netty.handler.codec.http.HttpHeaders toNettyHttp1ClientHeaders(HttpHeaders inputHeaders) {
+        if (inputHeaders.isEmpty()) {
+            return EmptyHttpHeaders.INSTANCE;
+        }
+
+        final io.netty.handler.codec.http.HttpHeaders outputHeaders = new DefaultHttpHeaders(false);
+        toNettyHttp1Client(inputHeaders, outputHeaders, Http1HeaderNaming.ofDefault(), false);
+        return outputHeaders;
+    }
+
+    /**
+     * Translates and adds HTTP/2 request headers to HTTP/1.1 headers.
+     *
+     * @param inputHeaders the HTTP/2 request headers to convert.
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ClientHeaders(
@@ -1001,12 +1065,17 @@ public final class ArmeriaHttpUtil {
      * does not meet the conditions above and {@link HttpHeaderNames#CONTENT_LENGTH} is not present
      * regardless of the fact that the content is empty or not.
      *
+     * <p>{@link ResponseHeaders#isEndOfStream()} is set to {@code true} if both {@link HttpData} and trailers
+     * are empty.
+     *
      * @throws IllegalArgumentException if the specified {@code content} is not empty when the specified
      *                                  {@link HttpStatus} is one of {@link HttpStatus#NO_CONTENT},
      *                                  {@link HttpStatus#RESET_CONTENT} and {@link HttpStatus#NOT_MODIFIED}.
      */
-    public static ResponseHeaders setOrRemoveContentLength(ResponseHeaders headers, HttpData content,
-                                                           HttpHeaders trailers) {
+    public static ResponseHeaders maybeUpdateContentLengthAndEndOfStream(ResponseHeaders headers,
+                                                                         HttpData content,
+                                                                         HttpHeaders trailers,
+                                                                         boolean isAggregatedResponse) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
@@ -1016,16 +1085,17 @@ public final class ArmeriaHttpUtil {
         if (isContentAlwaysEmptyWithValidation(status, content)) {
             if (status != HttpStatus.NOT_MODIFIED) {
                 if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                    final ResponseHeadersBuilder builder = headers.toBuilder();
-                    builder.remove(HttpHeaderNames.CONTENT_LENGTH);
-                    return builder.build();
+                    return headers.toBuilder()
+                                  .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
+                                  .endOfStream(true)
+                                  .build();
                 }
             } else {
                 // 304 response can have the "content-length" header when it is a response to a conditional
                 // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
             }
 
-            return headers;
+            return maybeSetEndOfStream(headers, 0, isAggregatedResponse);
         }
 
         if (!trailers.isEmpty()) {
@@ -1043,17 +1113,50 @@ public final class ArmeriaHttpUtil {
             return headers;
         }
 
-        if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
+        final long contentLength;
+        if (headers.isContentLengthUnknown()) {
+            // Do not set a content-length for a streaming response.
+            contentLength = -1;
+        } else {
+            if (headers.contentLength() > 0 && content.isEmpty()) {
+                // If HEAD method is used, a content-length can exist with an empty content.
+                contentLength = headers.contentLength();
+            } else {
+                contentLength = content.length();
+            }
+        }
+
+        if (contentLength >= 0) {
             return headers.toBuilder()
-                          .contentLength(content.length())
+                          .contentLength(contentLength)
                           .removeAndThen(HttpHeaderNames.TRANSFER_ENCODING)
                           .build();
         }
 
-        // The header contains "content-length" header and the content is empty.
+        // A streaming content or a content length is set and the content is empty.
         // Do not overwrite the header because a response to a HEAD request
-        // will have no content even if it has non-zero content-length header.
-        return headers;
+        // will have no content even if it has non-zero content-length header
+        // or a null content-length header for chunked-transfer encoding.
+        return maybeSetEndOfStream(headers, content.length(), isAggregatedResponse);
+    }
+
+    private static ResponseHeaders maybeSetEndOfStream(ResponseHeaders headers, int contentLength,
+                                                       boolean isAggregatedResponse) {
+        if (contentLength > 0) {
+            return headers;
+        }
+        if (isAggregatedResponse) {
+            // It is unnecessary to store endOfStream to headers for AggregatedHttpResponse since the length
+            // can be computed when the headers and data are aggregated.
+            return headers;
+        }
+        if (headers.isEndOfStream()) {
+            return headers;
+        }
+
+        return headers.toBuilder()
+                      .endOfStream(true)
+                      .build();
     }
 
     public static String convertHeaderValue(AsciiString name, CharSequence value) {

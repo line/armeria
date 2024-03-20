@@ -149,13 +149,16 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         delegate.addListener(this::setCandidates, true);
     }
 
-    private void setCandidates(List<Endpoint> candidates) {
-        final List<Endpoint> endpoints = healthCheckStrategy.select(candidates);
-        final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(endpoints.size());
+    private void setCandidates(List<Endpoint> endpoints) {
+        final List<Endpoint> candidates = healthCheckStrategy.select(endpoints);
+        final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(candidates.size());
 
         lock.lock();
         try {
-            for (Endpoint endpoint : endpoints) {
+            for (Endpoint endpoint : candidates) {
+                if (contexts.containsKey(endpoint)) {
+                    continue;
+                }
                 final DefaultHealthCheckerContext context = findContext(endpoint);
                 if (context != null) {
                     contexts.put(endpoint, context.retain());
@@ -256,6 +259,10 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private void destroyOldContexts(HealthCheckContextGroup contextGroup) {
         lock.lock();
         try {
+            if (!contextGroupChain.contains(contextGroup)) {
+                // The contextGroup is already removed by another callback of `contextGroup.whenInitialized()`.
+                return;
+            }
             final Iterator<HealthCheckContextGroup> it = contextGroupChain.iterator();
             while (it.hasNext()) {
                 final HealthCheckContextGroup maybeOldGroup = it.next();
