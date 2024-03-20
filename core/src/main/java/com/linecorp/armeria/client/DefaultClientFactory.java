@@ -81,8 +81,7 @@ final class DefaultClientFactory implements ClientFactory {
                 try {
                     Runtime.getRuntime().addShutdownHook(new Thread(ClientFactory::closeDefault));
                 } catch (IllegalStateException e) {
-                    logger.info("Trying to add shutdown hook during JVM shutdown, " +
-                            "skip it because it does not matter any more since the JVM is already shutting down");
+                    logger.info("Skipping shutdown hook addition: JVM is already shutting down");
                 }
             }
         }
