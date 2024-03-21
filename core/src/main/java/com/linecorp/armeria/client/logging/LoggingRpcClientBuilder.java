@@ -28,8 +28,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -51,14 +51,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
      * this builder.
      */
     public LoggingRpcClient build(RpcClient delegate) {
-        return new LoggingRpcClient(delegate,
-                                    logger(),
-                                    requestLogLevelMapper(),
-                                    responseLogLevelMapper(),
-                                    responseCauseFilter(),
-                                    successSampler(),
-                                    failureSampler(),
-                                    logFormatter());
+        return new LoggingRpcClient(delegate, logWriter(), successSampler(), failureSampler());
     }
 
     /**
@@ -69,6 +62,11 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    protected LoggingRpcClientBuilder defaultLogger(Logger logger) {
+        return (LoggingRpcClientBuilder) super.defaultLogger(logger);
+    }
 
     @Override
     public LoggingRpcClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
@@ -248,7 +246,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
-    public LoggingRpcClientBuilder logFormatter(LogFormatter logFormatter) {
-        return (LoggingRpcClientBuilder) super.logFormatter(logFormatter);
+    public LoggingRpcClientBuilder logWriter(LogWriter logWriter) {
+        return (LoggingRpcClientBuilder) super.logWriter(logWriter);
     }
 }

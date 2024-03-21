@@ -10,10 +10,12 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
 
 class ContextAwareService {
-
     @Get("/foo")
     @ProducesJson
-    suspend fun foo(@Param name: String, @Param id: Int): FooResponse {
+    suspend fun foo(
+        @Param name: String,
+        @Param id: Int,
+    ): FooResponse {
         log.info("Hello $name")
         // Make sure that current thread is request context aware
         ServiceRequestContext.current()

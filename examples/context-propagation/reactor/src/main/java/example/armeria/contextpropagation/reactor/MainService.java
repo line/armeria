@@ -105,6 +105,6 @@ public class MainService implements HttpService {
                     .map(content -> HttpResponse.of(content.toString()))
                     .onErrorResume(t -> Mono.just(HttpResponse.ofFailure(t)));
 
-        return HttpResponse.from(response.toFuture());
+        return HttpResponse.of(response.toFuture());
     }
 }

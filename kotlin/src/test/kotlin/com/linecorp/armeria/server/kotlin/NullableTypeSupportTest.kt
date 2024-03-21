@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.common.QueryParams
 import com.linecorp.armeria.common.annotation.Nullable
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.Get
@@ -34,6 +35,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.lang.reflect.ParameterizedType
 
+@GenerateNativeImageTrace
 class NullableTypeSupportTest {
     @ParameterizedTest
     @ValueSource(
@@ -42,8 +44,8 @@ class NullableTypeSupportTest {
             "/value-resolver/of-request-converter",
             "/value-resolver/of-bean-constructor",
             "/value-resolver/of-bean-field",
-            "/value-resolver/of-bean-method"
-        ]
+            "/value-resolver/of-bean-method",
+        ],
     )
     fun test_nullableParameters(testPath: String) {
         testNullableParameters("/nullable-type/$testPath")
@@ -74,84 +76,87 @@ class NullableTypeSupportTest {
     companion object {
         @JvmField
         @RegisterExtension
-        val server = object : ServerExtension() {
-            override fun configure(sb: ServerBuilder) {
-                sb.apply {
-                    annotatedService(
-                        "/nullable-type/value-resolver",
-                        object {
-                            @Get("/of-query-param")
-                            fun ofQueryParam(@Param a: String, @Param b: String?) =
-                                HttpResponse.of("a: $a, b: $b")
+        val server =
+            object : ServerExtension() {
+                override fun configure(sb: ServerBuilder) {
+                    sb.apply {
+                        annotatedService(
+                            "/nullable-type/value-resolver",
+                            object {
+                                @Get("/of-query-param")
+                                fun ofQueryParam(
+                                    @Param a: String,
+                                    @Param b: String?,
+                                ) = HttpResponse.of("a: $a, b: $b")
 
-                            @Get("/of-request-converter")
-                            @RequestConverter(FooBarRequestConverter::class)
-                            fun ofRequestConverter(foo: Foo, bar: Bar?) =
-                                HttpResponse.of("a: ${foo.value}, b: ${bar?.value}")
+                                @Get("/of-request-converter")
+                                @RequestConverter(FooBarRequestConverter::class)
+                                fun ofRequestConverter(
+                                    foo: Foo,
+                                    bar: Bar?,
+                                ) = HttpResponse.of("a: ${foo.value}, b: ${bar?.value}")
 
-                            @Get("/of-bean-constructor")
-                            fun ofBeanConstructor(baz: Baz) =
-                                HttpResponse.of("a: ${baz.a}, b: ${baz.b}")
+                                @Get("/of-bean-constructor")
+                                fun ofBeanConstructor(baz: Baz) = HttpResponse.of("a: ${baz.a}, b: ${baz.b}")
 
-                            @Get("/of-bean-field")
-                            fun ofBeanField(qux: Qux) =
-                                HttpResponse.of("a: ${qux.a}, b: ${qux.b}")
+                                @Get("/of-bean-field")
+                                fun ofBeanField(qux: Qux) = HttpResponse.of("a: ${qux.a}, b: ${qux.b}")
 
-                            @Get("/of-bean-method")
-                            fun ofBeanMethod(quux: Quux) =
-                                HttpResponse.of("a: ${quux.a}, b: ${quux.b}")
-                        }
-                    )
-                    sb.annotatedService(
-                        "/nullable-annot/value-resolver",
-                        object {
-                            @Get("/of-query-param")
-                            fun ofQueryParam(
-                                @Param a: String,
-                                @Nullable
-                                @Param
-                                b: String?
-                            ) =
-                                HttpResponse.of("a: $a, b: $b")
+                                @Get("/of-bean-method")
+                                fun ofBeanMethod(quux: Quux) = HttpResponse.of("a: ${quux.a}, b: ${quux.b}")
+                            },
+                        )
+                        sb.annotatedService(
+                            "/nullable-annot/value-resolver",
+                            object {
+                                @Get("/of-query-param")
+                                fun ofQueryParam(
+                                    @Param a: String,
+                                    @Nullable
+                                    @Param
+                                    b: String?,
+                                ) = HttpResponse.of("a: $a, b: $b")
 
-                            @Get("/of-request-converter")
-                            @RequestConverter(FooBarRequestConverter::class)
-                            fun ofRequestConverter(foo: Foo, @Nullable bar: Bar?) =
-                                HttpResponse.of("a: ${foo.value}, b: ${bar?.value}")
+                                @Get("/of-request-converter")
+                                @RequestConverter(FooBarRequestConverter::class)
+                                fun ofRequestConverter(
+                                    foo: Foo,
+                                    @Nullable bar: Bar?,
+                                ) = HttpResponse.of("a: ${foo.value}, b: ${bar?.value}")
 
-                            @Get("/of-bean-constructor")
-                            fun ofBeanConstructor(baz: Baz0) =
-                                HttpResponse.of("a: ${baz.a}, b: ${baz.b}")
+                                @Get("/of-bean-constructor")
+                                fun ofBeanConstructor(baz: Baz0) = HttpResponse.of("a: ${baz.a}, b: ${baz.b}")
 
-                            @Get("/of-bean-field")
-                            fun ofBeanField(qux: Qux0) =
-                                HttpResponse.of("a: ${qux.a}, b: ${qux.b}")
+                                @Get("/of-bean-field")
+                                fun ofBeanField(qux: Qux0) = HttpResponse.of("a: ${qux.a}, b: ${qux.b}")
 
-                            @Get("/of-bean-method")
-                            fun ofBeanMethod(quux: Quux0) =
-                                HttpResponse.of("a: ${quux.a}, b: ${quux.b}")
-                        }
-                    )
+                                @Get("/of-bean-method")
+                                fun ofBeanMethod(quux: Quux0) = HttpResponse.of("a: ${quux.a}, b: ${quux.b}")
+                            },
+                        )
+                    }
                 }
             }
-        }
 
         data class Foo(
-            val value: String
+            val value: String,
         )
 
         data class Bar(
-            val value: String
+            val value: String,
         )
 
-        class Baz(@Param("a") val a: String, @Param("b") val b: String?)
+        class Baz(
+            @Param("a") val a: String,
+            @Param("b") val b: String?,
+        )
 
         // Check for backward-compatibility
         class Baz0(
             @Param("a") val a: String,
             @Nullable
             @Param("b")
-            val b: String?
+            val b: String?,
         )
 
         class Qux {
@@ -175,7 +180,10 @@ class NullableTypeSupportTest {
             lateinit var a: String
             var b: String? = null
 
-            fun setter(@Param("a") a: String, @Param("b") b: String?) {
+            fun setter(
+                @Param("a") a: String,
+                @Param("b") b: String?,
+            ) {
                 this.a = a
                 this.b = b
             }
@@ -190,7 +198,7 @@ class NullableTypeSupportTest {
                 @Param("a") a: String,
                 @Nullable
                 @Param("b")
-                b: String?
+                b: String?,
             ) {
                 this.a = a
                 this.b = b
@@ -202,7 +210,7 @@ class NullableTypeSupportTest {
                 ctx: ServiceRequestContext,
                 request: AggregatedHttpRequest,
                 expectedResultType: Class<*>,
-                expectedParameterizedResultType: ParameterizedType?
+                expectedParameterizedResultType: ParameterizedType?,
             ): Any? {
                 if (expectedResultType.isAssignableFrom(Foo::class.java)) {
                     return ctx.queryParam("a")?.let { Foo(it) }

@@ -23,6 +23,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
+import static com.linecorp.armeria.internal.client.PendingExceptionUtil.setPendingException;
 import static io.netty.handler.codec.http.HttpClientUpgradeHandler.UpgradeEvent.UPGRADE_REJECTED;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
@@ -30,6 +31,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -40,16 +42,22 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -117,6 +125,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      */
     private static final long UPGRADE_RESPONSE_MAX_LENGTH = 16384;
 
+    private static final RequestOptions REQUEST_OPTIONS_FOR_UPGRADE_REQUEST =
+            RequestOptions.builder()
+                          .responseTimeoutMillis(0)
+                          .maxResponseLength(UPGRADE_RESPONSE_MAX_LENGTH).build();
+
     private enum HttpPreference {
         HTTP1_REQUIRED,
         HTTP2_PREFERRED,
@@ -124,16 +137,21 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     }
 
     private final HttpClientFactory clientFactory;
+    private final boolean webSocket;
     @Nullable
     private final SslContext sslCtx;
     private final HttpPreference httpPreference;
     @Nullable
     private SocketAddress remoteAddress;
 
+    private final SessionProtocol http1;
+    private final SessionProtocol http2;
+
     HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
-                                   SessionProtocol sessionProtocol,
+                                   boolean webSocket, SessionProtocol sessionProtocol,
                                    @Nullable SslContext sslCtx) {
         this.clientFactory = clientFactory;
+        this.webSocket = webSocket;
 
         if (sessionProtocol == HTTP || sessionProtocol == HTTPS) {
             httpPreference = HttpPreference.HTTP2_PREFERRED;
@@ -148,14 +166,18 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         if (sessionProtocol.isTls()) {
             this.sslCtx = sslCtx;
+            http1 = H1;
+            http2 = H2;
         } else {
             this.sslCtx = null;
+            http1 = H1C;
+            http2 = H2C;
         }
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise connectionPromise) throws Exception {
 
         // Remember the requested remote address for later use.
         this.remoteAddress = remoteAddress;
@@ -169,13 +191,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         p.addLast(ReadSuppressingAndChannelDeactivatingHandler.INSTANCE);
 
         try {
-            if (sslCtx != null) {
+            if (isHttps()) {
                 configureAsHttps(ch, remoteAddress);
             } else {
-                configureAsHttp(ch);
+                configureAsHttp(ch, connectionPromise);
             }
         } catch (Throwable t) {
-            promise.tryFailure(t);
+            connectionPromise.tryFailure(t);
             ctx.close();
             return;
         } finally {
@@ -184,14 +206,14 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
         }
 
-        ctx.connect(remoteAddress, localAddress, promise);
+        ctx.connect(remoteAddress, localAddress, connectionPromise);
     }
 
     /**
      * See <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>.
      */
     private void configureAsHttps(Channel ch, SocketAddress remoteAddr) {
-        assert sslCtx != null;
+        assert isHttps();
 
         final ChannelPipeline p = ch.pipeline();
         final SslHandler sslHandler;
@@ -208,7 +230,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         p.addLast(configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
-            private boolean handshakeFailed;
+            @Nullable
+            private Boolean handshakeFailed;
 
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
@@ -218,9 +241,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 }
 
                 final SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
-                if (!handshakeEvent.isSuccess()) {
+                handshakeFailed = !handshakeEvent.isSuccess();
+                if (handshakeFailed) {
                     // The connection will be closed automatically by SslHandler.
-                    handshakeFailed = true;
                     return;
                 }
 
@@ -241,6 +264,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
                     addBeforeSessionHandler(p, newHttp2ConnectionHandler(ch, H2));
                     protocol = H2;
+                } else if (clientFactory.useHttp2WithoutAlpn() && attemptUpgrade()) {
+                    configureUpgradeCodec(ch, h -> addBeforeSessionHandler(p, h));
+                    p.remove(this);
+                    return;
                 } else {
                     if (httpPreference != HttpPreference.HTTP1_REQUIRED) {
                         SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2);
@@ -263,10 +290,24 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                if (handshakeFailed == null) {
+                    // An exception was raised before the handshake event was completed.
+                    // A legacy HTTPS server such as Microsoft-IIS/8.5 may reset the connection
+                    // if no cipher suites in common.
+                    final String tlsVersion = sslHandler.engine().getSession().getProtocol();
+                    final PreTlsHandshakeException preTlsHandshakeException = new PreTlsHandshakeException(
+                            "An unexpected exception before a TLS handshake starts. The possible reason could" +
+                            " be one of: [connection forcefully closed by peer, unsupported TLS version, " +
+                            "no cipher suites in common, etc.] " +
+                            "(TLS version: " + tlsVersion + ", cipher suites: " + sslCtx.cipherSuites() + ')',
+                            cause);
+                    setPendingException(ctx, preTlsHandshakeException);
+                    return;
+                }
                 if (handshakeFailed &&
                     cause instanceof DecoderException &&
                     cause.getCause() instanceof SSLException) {
-                    HttpSessionHandler.setPendingException(ctx, cause.getCause());
+                    setPendingException(ctx, cause.getCause());
                     return;
                 }
 
@@ -298,50 +339,52 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         return sslHandler;
     }
 
-    // refer https://http2.github.io/http2-spec/#discover-http
-    private void configureAsHttp(Channel ch) {
-        final ChannelPipeline pipeline = ch.pipeline();
-        pipeline.addLast(TrafficLoggingHandler.CLIENT);
-
-        final boolean attemptUpgrade;
+    private boolean attemptUpgrade() {
         switch (httpPreference) {
             case HTTP1_REQUIRED:
-                attemptUpgrade = false;
-                break;
+                return false;
             case HTTP2_PREFERRED:
                 assert remoteAddress != null;
-                attemptUpgrade = !SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C);
-                break;
+                return !SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C);
             case HTTP2_REQUIRED:
-                attemptUpgrade = true;
-                break;
+                return true;
             default:
                 // Should never reach here.
                 throw new Error();
         }
+    }
 
-        if (attemptUpgrade) {
-            final Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch, H2C);
-            if (clientFactory.useHttp2Preface()) {
-                pipeline.addLast(new DowngradeHandler());
-                pipeline.addLast(http2Handler);
-            } else {
-                final HttpClientCodec http1Codec = newHttp1Codec(
-                        clientFactory.http1MaxInitialLineLength(),
-                        clientFactory.http1MaxHeaderSize(),
-                        clientFactory.http1MaxChunkSize());
-                final Http2ClientUpgradeCodec http2ClientUpgradeCodec =
-                        new Http2ClientUpgradeCodec(http2Handler);
-                final HttpClientUpgradeHandler http2UpgradeHandler =
-                        new HttpClientUpgradeHandler(
-                                http1Codec, http2ClientUpgradeCodec,
-                                (int) Math.min(Integer.MAX_VALUE, UPGRADE_RESPONSE_MAX_LENGTH));
+    private void configureUpgradeCodec(Channel ch, Consumer<ChannelHandler> pipelineCustomizer) {
+        final Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch, http2);
+        if (clientFactory.useHttp2Preface()) {
+            pipelineCustomizer.accept(new DowngradeHandler());
+            pipelineCustomizer.accept(http2Handler);
+        } else {
+            final HttpClientCodec http1Codec = newHttp1Codec(
+                    clientFactory.http1MaxInitialLineLength(),
+                    clientFactory.http1MaxHeaderSize(),
+                    clientFactory.http1MaxChunkSize());
+            final Http2ClientUpgradeCodec http2ClientUpgradeCodec =
+                    new Http2ClientUpgradeCodec(http2Handler);
+            final HttpClientUpgradeHandler http2UpgradeHandler =
+                    new HttpClientUpgradeHandler(
+                            http1Codec, http2ClientUpgradeCodec,
+                            (int) Math.min(Integer.MAX_VALUE, UPGRADE_RESPONSE_MAX_LENGTH));
 
-                pipeline.addLast(http1Codec);
-                pipeline.addLast(new WorkaroundHandler());
-                pipeline.addLast(http2UpgradeHandler);
-                pipeline.addLast(new UpgradeRequestHandler(http2Handler.responseDecoder()));
-            }
+            pipelineCustomizer.accept(http1Codec);
+            pipelineCustomizer.accept(new WorkaroundHandler());
+            pipelineCustomizer.accept(http2UpgradeHandler);
+            pipelineCustomizer.accept(new UpgradeRequestHandler(http2Handler.responseDecoder()));
+        }
+    }
+
+    // refer https://http2.github.io/http2-spec/#discover-http
+    private void configureAsHttp(Channel ch, ChannelPromise connectionPromise) {
+        final ChannelPipeline pipeline = ch.pipeline();
+        pipeline.addLast(TrafficLoggingHandler.CLIENT);
+
+        if (attemptUpgrade()) {
+            configureUpgradeCodec(ch, pipeline::addLast);
         } else {
             pipeline.addLast(newHttp1Codec(
                     clientFactory.http1MaxInitialLineLength(),
@@ -349,14 +392,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     clientFactory.http1MaxChunkSize()));
 
             // NB: We do not call finishSuccessfully() immediately here
-            //     because it triggers a userEvent that must be received by HttpSessionHandler,
-            //     which is only added after the connection attempt is successful.
-            pipeline.addLast(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                    ctx.pipeline().remove(this);
+            //     because HttpSessionHandler is added when connectionPromise completes.
+            connectionPromise.addListener(future -> {
+                if (future.isSuccess()) {
                     finishSuccessfully(pipeline, H1C);
-                    ctx.fireChannelActive();
                 }
             });
         }
@@ -366,7 +405,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     void finishSuccessfully(ChannelPipeline pipeline, SessionProtocol protocol) {
 
         if (protocol == H1 || protocol == H1C) {
-            addBeforeSessionHandler(pipeline, new Http1ResponseDecoder(pipeline.channel()));
+            addBeforeSessionHandler(
+                    pipeline, webSocket ? new WebSocketHttp1ClientChannelHandler(pipeline.channel())
+                                        : new Http1ResponseDecoder(pipeline.channel(),
+                                                                   clientFactory, protocol));
         } else if (protocol == H2 || protocol == H2C) {
             final int initialWindow = clientFactory.http2InitialConnectionWindowSize();
             if (initialWindow > DEFAULT_WINDOW_SIZE) {
@@ -374,7 +416,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }
         }
 
-        pipeline.channel().eventLoop().execute(() -> pipeline.fireUserEventTriggered(protocol));
+        pipeline.fireUserEventTriggered(protocol);
     }
 
     private static void incrementLocalWindowSize(ChannelPipeline pipeline, int delta) {
@@ -386,7 +428,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
     }
 
-    void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
+    private static void addBeforeSessionHandler(ChannelPipeline pipeline, ChannelHandler handler) {
         final ChannelHandlerContext lastContext = pipeline.lastContext();
         if (lastContext.handler().getClass() == HttpSessionHandler.class) {
             // Get the name of the HttpSessionHandler so that we can put our handlers before it.
@@ -407,7 +449,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         ctx.close();
     }
 
-    boolean isHttp2Protocol(SslHandler sslHandler) {
+    private boolean isHttps() {
+        return sslCtx != null;
+    }
+
+    private static boolean isHttp2Protocol(SslHandler sslHandler) {
         return ApplicationProtocolNames.HTTP_2.equals(sslHandler.applicationProtocol());
     }
 
@@ -443,7 +489,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (remoteAddress instanceof InetSocketAddress) {
                 final InetSocketAddress raddr = (InetSocketAddress) remoteAddress;
                 host = ArmeriaHttpUtil.authorityHeader(
-                        raddr.getHostString(), raddr.getPort(), H1C.defaultPort());
+                        raddr.getHostString(), raddr.getPort(), (isHttps() ? H1 : H1C).defaultPort());
             } else {
                 assert remoteAddress instanceof DomainSocketAddress : remoteAddress;
                 host = SystemInfo.hostname();
@@ -489,9 +535,16 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             }, ctx.channel().eventLoop());
 
             responseDecoder.reserveUnfinishedResponse(Integer.MAX_VALUE);
+            final DefaultClientRequestContext reqCtx = new DefaultClientRequestContext(
+                    ctx.channel().eventLoop(), Flags.meterRegistry(), H1C, RequestId.random(),
+                    com.linecorp.armeria.common.HttpMethod.OPTIONS,
+                    RequestTarget.forClient("*"), ClientOptions.of(),
+                    HttpRequest.of(com.linecorp.armeria.common.HttpMethod.OPTIONS, "*"),
+                    null, REQUEST_OPTIONS_FOR_UPGRADE_REQUEST, CancellationScheduler.noop(),
+                    System.nanoTime(), SystemInfo.currentTimeMicros());
+
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, null, ctx.channel().eventLoop(), /* response timeout */ 0,
-                                        UPGRADE_RESPONSE_MAX_LENGTH);
+            responseDecoder.addResponse(0, res, reqCtx, ctx.channel().eventLoop());
             ctx.fireChannelActive();
         }
 
@@ -566,7 +619,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         private void onUpgradeResponse(ChannelHandlerContext ctx, boolean success) {
             final UpgradeEvent upgradeEvt = this.upgradeEvt;
             assert upgradeEvt != null : "received an upgrade response before an UpgradeEvent";
-
             final ChannelPipeline p = ctx.pipeline();
 
             // Done with this handler, remove it from the pipeline.
@@ -575,28 +627,28 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (needsToClose) {
                 // Server wants us to close the connection, which means we cannot use this connection
                 // to send the request that contains the actual invocation.
-                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2C);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), http2);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
-                    finishWithNegotiationFailure(ctx, H2C, H1C, upgradeRejectionCause);
+                    finishWithNegotiationFailure(ctx, http2, http1, upgradeRejectionCause);
                 } else {
                     // We can silently retry with H1C.
-                    retryWithH1C(ctx);
+                    retryWith(ctx, http1);
                 }
                 return;
             }
 
             if (success) {
-                finishSuccessfully(p, H2C);
+                finishSuccessfully(p, http2);
             } else {
-                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2C);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), http2);
 
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
-                    finishWithNegotiationFailure(ctx, H2C, H1C, upgradeRejectionCause);
+                    finishWithNegotiationFailure(ctx, http2, http1, upgradeRejectionCause);
                     return;
                 }
 
-                finishSuccessfully(p, H1C);
+                finishSuccessfully(p, http1);
             }
         }
     }
@@ -622,20 +674,21 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             if (!isSettingsFrame(in)) { // The first frame must be a settings frame.
                 // Http2ConnectionHandler sent the connection preface, but the server responded with
                 // something else, which means the server does not support HTTP/2.
-                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2C);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), http2);
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
                     finishWithNegotiationFailure(
-                            ctx, H2C, H1C, "received a non-HTTP/2 response for the HTTP/2 connection preface");
+                            ctx, http2, http1,
+                            "received a non-HTTP/2 response for the HTTP/2 connection preface");
                 } else {
-                    // We can silently retry with H1C.
-                    retryWithH1C(ctx);
+                    // We can silently retry with HTTP/1.
+                    retryWith(ctx, http1);
                 }
 
                 // We are going to close the connection really soon, so we don't need the response.
                 in.skipBytes(in.readableBytes());
             } else {
                 // The server responded with a non-HTTP/1 response. Continue treating the connection as HTTP/2.
-                finishSuccessfully(p, H2C);
+                finishSuccessfully(p, http2);
             }
 
             p.remove(this);
@@ -654,18 +707,18 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 // If the connection has been closed even without receiving anything useful,
                 // it is likely that the server failed to decode the preface string.
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
-                    finishWithNegotiationFailure(ctx, H2C, H1C,
+                    finishWithNegotiationFailure(ctx, http2, http1,
                                                  "too little data to determine the HTTP version");
                 } else {
-                    // We can silently retry with H1C.
-                    retryWithH1C(ctx);
+                    // We can silently retry with HTTP/1.
+                    retryWith(ctx, http1);
                 }
             }
         }
     }
 
-    static void retryWithH1C(ChannelHandlerContext ctx) {
-        HttpSession.get(ctx.channel()).retryWithH1C();
+    static void retryWith(ChannelHandlerContext ctx, SessionProtocol protocol) {
+        HttpSession.get(ctx.channel()).retryWith(protocol);
         ctx.close();
     }
 

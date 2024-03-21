@@ -1,0 +1,162 @@
+---
+date: 2023-08-22
+---
+
+## 🌟 New features
+
+- **GraalVM Support**: Armeria now provides [GraalVM](https://www.graalvm.org/)
+  [reachability metadata](https://www.graalvm.org/latest/reference-manual/native-image/metadata/) to easily build
+  [GraalVM](https://www.graalvm.org/) native images. #5005
+- **Micrometer Observation Support**: Support for [Micrometer Observation](https://micrometer.io/docs/observation) is added.
+  Refer to <type://ObservationClient> or <type://ObservationService> for details on how to integrate with Armeria.  #4659 #4980
+  ```java
+  ObservationRegistry observationRegistry = ...
+  WebClient.builder()
+    .decorator(ObservationClient.newDecorator(observationRegistry))
+  ...
+  Server.builder()
+    .decorator(ObservationService.newDecorator(observationRegistry))
+  ...
+  ```
+- **WebSocket Client Support**: You can now send and receive data over [WebSocket](https://en.wikipedia.org/wiki/WebSocket)
+  using <type://WebSocketClient>. #4972
+  ```java
+  WebSocketClient client = WebSocketClient.of("ws://...");
+  client.connect("/").thenAccept(webSocketSession -> {
+    WebSocketWriter writer = WebSocket.streaming();
+    webSocketSessions.setOutbound(writer);
+    outbound.write("Hello!");
+
+    Subscriber<WebSocketFrame> subscriber = new Subscriber<WebSocketFrame>() {
+      ...
+    }
+    webSocketSessions.inbound().subscribe(subscriber);
+  });
+  ```
+- **Implement gRPC Richer Error Model More Easily**: You can now easily use gRPC
+  [Richer Error Model](https://grpc.io/docs/guides/error/#richer-error-model) via <type://GoogleGrpcStatusFunction>. #4614 #4986
+  ```java
+  GoogleGrpcStatusFunction statusFunction = (ctx, throwable, metadata) -> {
+    if (throwable instanceof MyException) {
+      return com.google.rpc.Status.newBuilder()
+        .setCode(Code.UNAUTHENTICATED.getNumber())
+        .addDetails(detail(throwable))
+        .build();
+    }
+    ...
+  };
+  Server.builder().service(
+    GrpcService.builder()
+      .exceptionMapping(statusFunction))
+  ```
+- **Set HTTP Trailers Easily**: You can now easily set trailers to be sent after the data stream using
+  <type://HttpRequest#of(RequestHeaders,Publisher,HttpHeaders)> or
+  <type://HttpResponse#of(ResponseHeaders,Publisher,HttpHeaders)>. #3959 #4727
+- **New API for Multipart Headers**: You can now retrieve headers from a multipart request in an annotated service
+  using <type://MultipartFile#headers()>. #5106
+- **Access RequestLogProperty Values More Easily**: <type://RequestLogAccess#getIfAvailable()>
+  has been introduced, which allows users to access a <type://RequestLogProperty> immediately if available. #4956 #4966
+- **Keep an Idle Connection Alive on PING**: The `keepAliveOnPing` option has been introduced. Enabling this option will keep
+  an idle connection alive when an HTTP/2 PING frame or `OPTIONS * HTTP/1.1` is received. The option can be configured
+  by <type://ServerBuilder#idleTimeout(Duration,boolean)> or <type://ClientFactoryBuilder#idleTimeout(Duration,boolean)>. #4794 #4806
+- **Create a StreamMessage from Future**: You can now easily create a <type://StreamMessage> from a `CompletionStage`
+  using <type://StreamMessage#of(CompletionStage<?>)>. #4995
+- **More Shortcuts for PrometheusExpositionService**: You can now create a <type://PrometheusExpositionService> without
+  specifying the default `CollectorRegistry` explicitly. #5134
+
+## 📈 Improvements
+
+- The number of event loops is equal to the number of cores by default when `io_uring` is used as the transport type. #5089
+- You can now customize error responses when a service for a request is not found
+  using <type://ServiceErrorHandler#renderStatus()>. #4996
+- Redirection for a trailing slash is done correctly even if a reverse proxy rewrites the path. #4994
+- <type://DocService> now tries to guess the correct route behind a reverse proxy. #4987
+- The `RetentionPolicy` of <type://@UnstableApi> annotation is now `CLASS` so that
+  bytecode analysis tools can detect the declaration and usage of unstable APIs. #5131
+
+## 🛠️ Bug fixes
+
+- <type://GrpcService> now returns an `INTERNAL` error code if an error occurs while serializing gRPC metadata. #4625 #4686
+- <type://DnsCache> now allows zero TTL for resolved DNS records. #5119
+- Armeria's DNS resolver doesn't cache a DNS whose query was timed out. #5117
+- Fixed a bug where headers could be written twice if `Content-Length` was exceeded during HTTP/2 cleartext upgrade. #5113
+- <type://ServiceRequestContext#localAddress()> and <type://ServiceRequestContext#remoteAddress()> now return
+  correct values when using domain sockets in abstract namespace. #5096
+- `armeria-logback12`, `armeria-logback13`, and `armeria-logback14` have been introduced for better
+  compatibility with [Logback](https://logback.qos.ch/). #5045 #5079 #5078 #5077
+- You can now use either an inline debug form or a modal debug form when using <type://DocService>. #5072
+- When using Spring integrations, even if `internal-services.port` and `management.server.port`
+  are set to the same value internal services are bound to the port only once. #4796 #5022
+- Exceptions that occurred during a TLS handshake are properly propagated to users. #4950
+- <type://AggregatedHttpObject#content(Charset)> now respects the `charset` attribute in the
+  `Content-Type` header if available. #4931  #4948
+- Routes with dynamic predicates are not incorrectly cached anymore. #4927 #4934
+
+## 📃 Documentation
+
+- A new page has been added which describes how to integrate Armeria with Spring Boot. #4670 #4957
+- Documentation on how <type://Flags> work in Armeria has been added. #4870
+- A new example on how to use [krotoDC](https://github.com/mscheong01/krotoDC) with Armeria has been added. #5092
+
+## ☢️ Breaking changes
+
+- The `toStringHelper()` method in <type://DynamicEndpointGroup> has been replaced
+  with `toString(Consumer)` to avoid exposing an internal API in the public API. #5132
+
+## 🏚️ Deprecations
+
+- <type://HttpResponse#from(CompletionStage)> and its variants methods are deprecated. #5075
+  - Use <type://HttpResponse#of(CompletionStage)> and its variants instead.
+
+## ⛓ Dependencies
+
+- gRPC-Java 1.56.0 → 1.57.2
+- GraphQL Kotlin 6.5.2 → 6.5.3
+- Guava 32.0.1-jre → 32.1.2-jre
+- Jakarta Websocket 2.1.0 → 2.1.1
+- Kafka client 3.4.0 → 3.4.1
+- Kotlin 1.8.22 → 1.9.0
+- Kotlin Coroutine 1.7.1 → 1.7.3
+- Logback 1.4.7 → 1.4.11
+- Micrometer 1.11.1 → 1.11.3
+- Netty 4.1.94.Final → 4.1.96.Final
+- Protobuf 3.22.3 → 3.24.0
+- Reactor 3.5.7 → 3.5.8
+- Resilience4j 2.0.2 → 2.1.0
+- Resteasy 5.0.5.Final → 5.0.7.Final
+- Sangria 4.0.0 → 4.0.1
+- scala-collection-compat 2.10.0 → 2.11.0
+- Spring 6.0.9 → 6.0.11
+- Spring Boot 2.7.12 → 2.7.14, 3.1.0 → 3.1.1
+- Tomcat 10.1.10 → 10.1.12
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Dogacel',
+  'KarboniteKream',
+  'Kyoungwoong',
+  'aki-s',
+  'anuraaga',
+  'baezzys',
+  'ceki',
+  'chrisryan10',
+  'ghkim3221',
+  'heowc',
+  'hyperxpro',
+  'ikhoon',
+  'jrhee17',
+  'marcingrzejszczak',
+  'minwoox',
+  'mscheong01',
+  'my4-dev',
+  'mynameisjwlee',
+  'r3mariano',
+  'ribafish',
+  'sh-cho',
+  'ta7uw',
+  'tomatophobia',
+  'trustin',
+  'wreulicke',
+  'yunjoopark'
+]} />

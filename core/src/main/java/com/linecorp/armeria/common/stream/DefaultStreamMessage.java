@@ -323,6 +323,11 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
             return;
         }
 
+        if (subscription.subscriber() instanceof AbortingSubscriber) {
+            // The stream is being aborted.
+            return;
+        }
+
         if (queue.isEmpty()) {
             return;
         }
@@ -480,7 +485,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
                 continue;
             }
 
-            if (e instanceof CompletableFuture) {
+            if (e instanceof AwaitDemandFuture) {
                 if (cause == null) {
                     cause = ClosedStreamException.get();
                 }

@@ -94,6 +94,9 @@ dependencies {
     api libs.jackson.datatype.jdk8
     api libs.jackson.datatype.jsr310
 
+    // Logback is only used for RequestScopedMdc integration.
+    compileOnly libs.logback14
+
     // Micrometer and other metric-related stuff
     api libs.micrometer.core
     optionalApi libs.micrometer.prometheus
@@ -123,7 +126,7 @@ dependencies {
     }
 
     // TestNG
-    testImplementation libs.testng
+    testRuntimeOnly libs.junit.testng.engine
 
     // JUnit Pioneer
     testImplementation libs.junit.pioneer
@@ -152,6 +155,13 @@ dependencies {
     optionalImplementation libs.brotli4j.osx
     optionalImplementation libs.brotli4j.osx.aarch64
     optionalImplementation libs.brotli4j.windows
+
+    // for testing the observation API with tracing
+    testImplementation (libs.micrometer.tracing.integration.test) {
+        exclude group: "org.mockito"
+    }
+    testImplementation libs.brave6.context.slf4j
+    testImplementation libs.brave6.instrumentation.http.tests
 }
 
 if (!rootProject.hasProperty('noWeb')) {
@@ -175,7 +185,7 @@ testing.suites {
 
                 project.ext.configureCommonTestSettings(it)
 
-                dependsOn(tasks.shadedTestClasses)
+                dependsOn(tasks.copyShadedTestClasses)
                 // Use small heap for streaming tests to quickly ensure we can stream the content larger than heap.
                 maxHeapSize = '64m'
 
@@ -191,34 +201,7 @@ testing.suites {
         }
     }
 }
-tasks.shadedTest.finalizedBy testing.suites.testStreaming
 tasks.check.dependsOn testing.suites.testStreaming
-
-// Run the test cases based on reactive-streams-tck only with non-flaky mode
-if (rootProject.findProperty('flakyTests') != 'true') {
-    testing.suites {
-        testNg(JvmTestSuite) {
-            useTestNG()
-
-            targets.configureEach {
-                testTask.configure {
-
-                    project.ext.configureCommonTestSettings(it)
-                    include '/com/linecorp/armeria/**/common/**'
-                    dependsOn tasks.shadedTestClasses
-                    scanForTestClasses = false
-                    testClassesDirs = tasks.shadedTest.testClassesDirs
-                    classpath = testClassesDirs
-                    doFirst {
-                        classpath += project.files(configurations.shadedJarTestRuntime.resolve())
-                    }
-                }
-            }
-        }
-    }
-    tasks.shadedTest.finalizedBy testing.suites.testNg
-    tasks.check.dependsOn testing.suites.testNg
-}
 
 if (tasks.findByName('trimShadedJar')) {
     tasks.trimShadedJar.configure {

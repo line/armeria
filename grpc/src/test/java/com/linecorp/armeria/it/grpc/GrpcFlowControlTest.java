@@ -19,39 +19,36 @@ package com.linecorp.armeria.it.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.grpc.testing.FlowControlTestServiceGrpc.FlowControlTestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.FlowControlTestServiceGrpc.FlowControlTestServiceStub;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.ClientCallStreamObserver;
 import io.grpc.stub.ClientResponseObserver;
 import io.grpc.stub.ServerCallStreamObserver;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.FlowControlTestServiceGrpc.FlowControlTestServiceImplBase;
+import testing.grpc.FlowControlTestServiceGrpc.FlowControlTestServiceStub;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
 
-public class GrpcFlowControlTest {
+@Timeout(15)
+class GrpcFlowControlTest {
 
     private static final int TOTAL_NUM_MESSAGES = 10;
     private static final int CAPPED_NUM_MESSAGES = 3;
@@ -61,8 +58,8 @@ public class GrpcFlowControlTest {
     private static SimpleRequest REQUEST;
     private static SimpleResponse RESPONSE;
 
-    @BeforeClass
-    public static void createMessages() {
+    @BeforeAll
+    static void createMessages() {
         PAYLOAD = Payload.newBuilder()
                          .setBody(ByteString.copyFromUtf8(Strings.repeat("a", 5 * 1024 * 1024)))
                          .build();
@@ -74,15 +71,15 @@ public class GrpcFlowControlTest {
                                  .build();
     }
 
-    @AfterClass
-    public static void destroyMessages() {
+    @AfterAll
+    static void destroyMessages() {
         // Dereference to reduce the memory pressure on the VM.
         PAYLOAD = null;
         REQUEST = null;
         RESPONSE = null;
     }
 
-    static class FlowControlService extends FlowControlTestServiceImplBase {
+    static final class FlowControlService extends FlowControlTestServiceImplBase {
         @Override
         public StreamObserver<SimpleRequest> noBackPressure(StreamObserver<SimpleResponse> responseObserver) {
             final AtomicInteger numRequests = new AtomicInteger();
@@ -181,8 +178,8 @@ public class GrpcFlowControlTest {
         }
     }
 
-    @ClassRule
-    public static ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.maxRequestLength(0);
@@ -196,13 +193,10 @@ public class GrpcFlowControlTest {
         }
     };
 
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(15, TimeUnit.SECONDS));
-
     private FlowControlTestServiceStub client;
 
-    @Before
-    public void setUp() {
+    @BeforeEach
+    void setUp() {
         client = GrpcClients.builder(server.httpUri())
                             .maxResponseLength(0)
                             .responseTimeoutMillis(0)
@@ -210,7 +204,7 @@ public class GrpcFlowControlTest {
     }
 
     @Test
-    public void noBackPressure() {
+    void noBackPressure() {
         final AtomicInteger numResponses = new AtomicInteger();
         final AtomicBoolean done = new AtomicBoolean();
         final StreamObserver<SimpleRequest> req = client.noBackPressure(new StreamObserver<SimpleResponse>() {
@@ -237,7 +231,7 @@ public class GrpcFlowControlTest {
     }
 
     @Test
-    public void serverBackPressure() {
+    void serverBackPressure() {
         final AtomicInteger numRequests = new AtomicInteger();
         final AtomicInteger numResponses = new AtomicInteger();
         final AtomicBoolean done = new AtomicBoolean();
@@ -285,7 +279,7 @@ public class GrpcFlowControlTest {
     }
 
     @Test
-    public void clientBackPressure() {
+    void clientBackPressure() {
         final AtomicInteger numResponses = new AtomicInteger();
         final AtomicBoolean done = new AtomicBoolean();
         final AtomicBoolean clientClosed = new AtomicBoolean();

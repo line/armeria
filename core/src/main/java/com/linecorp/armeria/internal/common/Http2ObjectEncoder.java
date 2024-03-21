@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedStreamException;
+
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -71,7 +72,7 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
             // Can't write to an outdated (closed) stream.
             data.close();
             return data.isEmpty() ? ctx.writeAndFlush(Unpooled.EMPTY_BUFFER)
-                                  : newFailedFuture(ClosedStreamException.get());
+                                  : newFailedFuture(newClosedStreamException(ctx));
         }
 
         // Cannot start a new stream with a DATA frame. It must start with a HEADERS frame.
@@ -82,11 +83,15 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     }
 
     @Override
-    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
+    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error,
+                                            boolean sendResetOnlyIfRemoteIsOpen) {
         final Http2Stream stream = encoder.connection().stream(streamId);
+
         // Send a RST_STREAM frame only for an active stream which did not send a RST_STREAM frame already.
         if (stream != null && !stream.isResetSent()) {
-            return encoder.writeRstStream(ctx, streamId, error.code(), ctx.newPromise());
+            if (!sendResetOnlyIfRemoteIsOpen || stream.state().remoteSideOpen()) {
+                return encoder.writeRstStream(ctx, streamId, error.code(), ctx.newPromise());
+            }
         }
 
         return ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);

@@ -2,133 +2,151 @@
 akka = "2.6.20"
 akka-http-cors = "1.0.0"
 akka-grpc-runtime = "1.0.3"
-apache-httpclient5 = "5.2.1"
+apache-httpclient5 = "5.3"
 apache-httpclient4 = "4.5.14"
-asm = "9.5"
-assertj = "3.24.2"
+asm = "9.6"
+assertj = "3.25.2"
 awaitility = "4.2.0"
 blockhound = "1.0.8.RELEASE"
 bouncycastle = "1.70"
-brave = "5.15.0"
-brotli4j = "1.11.0"
+brave5 = "5.18.1"
+brave6 = "6.0.0"
+brotli4j = "1.15.0"
 bucket4j = "7.6.0"
+# Don"t upgrade Caffeine to 3.x that requires Java 11.
 caffeine = "2.9.3"
 cglib = "3.3.0"
-checkerframework = "2.5.5"
+checkerframework = "2.5.6"
 checkstyle = "10.3.2"
-consul = "2.2.1"
-curator = "5.4.0"
-dagger = "2.45"
-dgs = "5.5.0"
+controlplane = "1.0.42"
+curator = "5.6.0"
+dagger = "2.50"
+dgs = "8.2.2"
 dropwizard1 = "1.3.29"
-dropwizard2 = "2.1.5"
-dropwizard-metrics = "4.2.18"
-errorprone = "2.18.0"
-errorprone-gradle-plugin = "3.0.1"
-eureka = "2.0.0"
+dropwizard2 = "2.1.10"
+dropwizard-metrics = "4.2.24"
+errorprone = "2.24.1"
+errorprone-gradle-plugin = "3.1.0"
+eureka = "2.0.1"
 fastutil = "8.5.12"
-finagle = "22.12.0"
+finagle = "23.11.0"
 findbugs = "3.0.2"
-futures-completable = "0.3.5"
-futures-extra = "4.3.1"
-gax-grpc = "2.20.1"
-graphql-java = "20.0"
-graphql-kotlin = "6.4.0"
-groovy = "3.0.16"
-grpc-java = "1.54.0"
-grpc-kotlin = "1.3.0"
-guava = "31.1-jre"
+futures-completable = "0.3.6"
+futures-extra = "4.3.3"
+gax-grpc = "2.40.0"
+# Don"t upgrade graphql-java to 21.0 that requires Java 11
+graphql-java = "20.4"
+graphql-kotlin = "7.0.2"
+grpc-java = "1.61.0"
+grpc-kotlin = "1.4.1"
+guava = "33.0.0-jre"
 hamcrest = "2.2"
 hbase = "1.2.6"
 hibernate-validator6 = "6.2.5.Final"
-hibernate-validator8 = "8.0.0.Final"
+hibernate-validator8 = "8.0.1.Final"
 j2objc = "2.8"
-jackson = "2.14.2"
+jackson = "2.16.1"
 jakarta-inject = "2.0.1"
 jakarta-validation = "3.0.2"
-jakarta-websocket= "2.1.0"
-java-websocket = "1.5.3"
+jakarta-websocket = "2.1.1"
+java-websocket = "1.5.5"
 javax-annotation = "1.3.2"
 javax-inject = "1"
 javax-jsr311 = "1.1.1"
 javax-validation = "2.0.1.Final"
-jctools = "4.0.1"
+jctools = "4.0.2"
 # Find the latest version of the major 10 https://central.sonatype.com/artifact/org.eclipse.jetty/jetty-server/
-jetty10 = "10.0.15"
+jetty10 = "10.0.19"
 # Find the latest version of the major 10 https://central.sonatype.com/artifact/org.eclipse.jetty/apache-jstl/
-jetty10-jstl = "10.0.15"
-jetty11 = "11.0.15"
+jetty10-jstl = "10.0.19"
+jetty11 = "11.0.19"
 jetty11-jstl = "11.0.0"
+jetty12 = "12.0.5"
 jetty93 = "9.3.30.v20211001"
-jetty94 = "9.4.51.v20230217"
+jetty94 = "9.4.52.v20230823"
 jetty-alpn-api = "1.1.3.v20160715"
-jetty-alpn-agent = "2.0.10"
-jmh-core = "1.36"
-jmh-extras = "0.3.7"
-jmh-gradle-plugin = "0.7.0"
-joor = "0.9.14"
-json-unit = "2.37.0"
-jsoup = "1.15.3"
+jkube = "1.15.0"
+jmh-core = "1.37"
+jmh-gradle-plugin = "0.7.2"
+joor = "0.9.15"
+# Don't upgrade json-unit to 3.0.0 that requires Java 17
+json-unit = "2.38.0"
+jsoup = "1.17.2"
 junit4 = "4.13.2"
-junit5 = "5.9.2"
+junit5 = "5.10.1"
+# Don't upgrade junit-pioneer to 2.x.x that requires Java 11
 junit-pioneer = "1.9.1"
-jwt = "4.3.0"
-kafka = "3.4.0"
-kotlin = "1.8.10"
-kotlin-coroutine = "1.6.4"
-ktlint-gradle-plugin = "11.3.2"
-logback = "1.2.11"
-logback14 = "1.4.7"
-micrometer = "1.10.5"
+jwt = "4.4.0"
+kafka = "3.6.1"
+kotlin = "1.9.22"
+kotlin-coroutine = "1.7.3"
+krotodc = "1.0.6"
+ktlint-gradle-plugin = "12.1.0"
+kubernetes-client = "6.10.0"
+logback12 = "1.2.13"
+logback13 = "1.3.14"
+logback14 = "1.4.14"
+micrometer = "1.12.2"
+micrometer-tracing = "1.2.2"
+micrometer-docs-generator = "1.0.2"
 micrometer13 = "1.3.20"
+# Don't uprade mockito to 5.x.x that requires Java 11
 mockito = "4.11.0"
 monix = "3.4.1"
 munit = "0.7.29"
-netty = "4.1.92.Final"
-netty-incubator-transport-native-io_uring = "0.0.20.Final"
+netty = "4.1.106.Final"
+netty-incubator-transport-native-io_uring = "0.0.24.Final"
 nexus-publish = "1.3.0"
-node-gradle-plugin = "3.5.1"
-okhttp2 = "2.7.5"
-okhttp3 = { strictly = "3.14.9" }
-okhttp4 = "4.10.0"
+node-gradle-plugin = "7.0.1"
+okhttp2 = "2.7.5" # For testing
+okhttp3 = { strictly = "3.14.9" } # Not just for testing. Used in the Retrofit mudule.
+okhttp4 = "4.12.0" # For testing
+# Don"t upgrade OpenSAML to 4.x that requires Java 11.
 opensaml = "3.4.6"
 osdetector = "1.7.3"
+# Used for kubernetes-chaos-tests
+picocli = "4.7.5"
 proguard = "7.3.1"
 prometheus = "0.16.0"
-protobuf = "3.22.3"
+# Ensure that we use the same Protobuf version as what gRPC depends on.
+# See: https://github.com/grpc/grpc-java/blob/master/build.gradle
+#      (Switch to the right tag and look for "protobuf".)
+#      e.g. https://github.com/grpc/grpc-java/blob/v1.48.0/gradle/libs.versions.toml
+protobuf = "3.25.1"
 protobuf-gradle-plugin = "0.8.19"
-protobuf-jackson = "2.0.0"
-reactive-grpc = "1.2.3"
+protobuf-jackson = "2.2.0"
+reactive-grpc = "1.2.4"
 reactive-streams = "1.0.4"
-reactor = "3.5.1"
+reactor = "3.6.2"
 reactor-kotlin = "1.2.2"
+# Upgrade once https://github.com/ronmamo/reflections/issues/279 is fixed.
 reflections = "0.9.11"
-resilience4j = "2.0.2"
-resteasy = "5.0.5.Final"
+resilience4j = "2.2.0"
+resteasy = "5.0.7.Final"
 resteasy-jboss-logging = "3.4.3.Final"
 resteasy-jboss-logging-annotations = "2.2.1.Final"
 retrofit2 = "2.9.0"
 rxjava2 = "2.2.21"
-rxjava3 = "3.1.6"
-sangria = "3.5.3"
-sangria-slowlog = "2.0.5"
-scala-collection-compat = "2.9.0"
+rxjava3 = "3.1.8"
+sangria = "4.0.2"
+sangria-slowlog = "3.0.0"
+scala-collection-compat = "2.11.0"
 scala-java8-compat = "1.0.2"
-scala212 = "2.12.17"
-scala213 = "2.13.10"
-scala3 = "3.2.2"
+scala212 = "2.12.18"
+scala213 = "2.13.12"
+scala3 = "3.3.0"
 scalafmt-gradle-plugin = "1.16.2"
-scalapb = "0.11.13"
+scalapb = "0.11.15"
 scalapb-json = "0.12.1"
 shadow-gradle-plugin = "7.1.2"
 shibboleth-utilities = "7.5.2"
-snappy = "1.1.9.1"
+snappy = "1.1.10.5"
 slf4j = "1.7.36"
-slf4j2 = "2.0.7"
-spring6 = "6.0.6"
-spring-boot2 = "2.7.10"
-spring-boot3 = "3.0.5"
-testng = "7.5"
+slf4j2 = "2.0.11"
+spring6 = "6.1.3"
+spring-boot2 = "2.7.18"
+spring-boot3 = "3.2.2"
+testcontainers = "1.19.3"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
 thrift013 = { strictly = "0.13.0" }
@@ -137,15 +155,17 @@ thrift015 = { strictly = "0.15.0" }
 thrift016 = { strictly = "0.16.0" }
 thrift017 = { strictly = "0.17.0" }
 thrift018 = { strictly = "0.18.1" }
-tomcat8 = "8.5.85"
-tomcat9 = "9.0.71"
-tomcat10 = "10.1.4"
+tomcat8 = "8.5.98"
+tomcat9 = "9.0.85"
+tomcat10 = "10.1.18"
 xml-apis = "1.4.01"
-zookeeper = "3.7.1"
+# Ensure that we use the same ZooKeeper version as what Curator depends on.
+# See: https://github.com/apache/curator/blob/master/pom.xml
+#      (Switch to the right tag to find out the right version.)
+zookeeper = "3.9.1"
 zookeeper-junit = "1.2"
 
 [boms]
-brave = { module = "io.zipkin.brave:brave-bom", version.ref = "brave" }
 dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version.ref = "dropwizard-metrics" }
 # Ensure that we use the same Protobuf version as what gRPC depends on.
 # See: https://github.com/grpc/grpc-java/blob/master/gradle/libs.versions.toml
@@ -154,6 +174,7 @@ grpc-java = { module = "io.grpc:grpc-bom", version.ref = "grpc-java" }
 jackson = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
 junit5 = { module = "org.junit:junit-bom", version.ref = "junit5" }
 netty = { module = "io.netty:netty-bom", version.ref = "netty" }
+testcontainers = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers" }
 
 # Akka is used only for testing in it:grpcweb module.
 [libraries.akka-http-cors_v213]
@@ -198,11 +219,11 @@ module = "org.awaitility:awaitility"
 version.ref = "awaitility"
 
 [libraries.blockhound-junit-platform]
-module="io.projectreactor.tools:blockhound-junit-platform"
+module = "io.projectreactor.tools:blockhound-junit-platform"
 version.ref = "blockhound"
 
 [libraries.blockhound]
-module="io.projectreactor.tools:blockhound"
+module = "io.projectreactor.tools:blockhound"
 version.ref = "blockhound"
 
 [libraries.bouncycastle-bcpkix]
@@ -218,18 +239,34 @@ module = "org.bouncycastle:bcutil-jdk15on"
 version.ref = "bouncycastle"
 relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
 
-[libraries.brave]
+[libraries.brave5]
 module = "io.zipkin.brave:brave"
-# ":site:javadoc" fails when we use a newer version of Javadoc.
-javadocs = [
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave/5.6.3/",
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/5.6.3/"]
-[libraries.brave-context-slf4j]
+version.ref = "brave5"
+[libraries.brave5-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
-[libraries.brave-instrumentation-http]
+version.ref = "brave5"
+[libraries.brave5-instrumentation-http]
 module = "io.zipkin.brave:brave-instrumentation-http"
-[libraries.brave-instrumentation-http-tests]
+version.ref = "brave5"
+[libraries.brave5-instrumentation-http-tests]
 module = "io.zipkin.brave:brave-instrumentation-http-tests"
+version.ref = "brave5"
+
+[libraries.brave6]
+module = "io.zipkin.brave:brave"
+version.ref = "brave6"
+javadocs = [
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave/6.0.0/",
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/6.0.0/"]
+[libraries.brave6-context-slf4j]
+module = 'io.zipkin.brave:brave-context-slf4j'
+version.ref = "brave6"
+[libraries.brave6-instrumentation-http]
+module = "io.zipkin.brave:brave-instrumentation-http"
+version.ref = "brave6"
+[libraries.brave6-instrumentation-http-tests]
+module = "io.zipkin.brave:brave-instrumentation-http-tests"
+version.ref = "brave6"
 
 [libraries.brotli4j]
 module = "com.aayushatharva.brotli4j:brotli4j"
@@ -255,7 +292,6 @@ module = "com.github.vladimir-bukhtoyarov:bucket4j-core"
 version.ref = "bucket4j"
 javadocs = "https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/7.6.0/"
 
-# Don"t upgrade Caffeine to 3.x that requires Java 11.
 [libraries.caffeine]
 module = "com.github.ben-manes.caffeine:caffeine"
 version.ref = "caffeine"
@@ -275,9 +311,15 @@ version.ref = "checkerframework"
 module = "com.puppycrawl.tools:checkstyle"
 version.ref = "checkstyle"
 
-[libraries.consul]
-module = "com.pszymczyk.consul:embedded-consul"
-version.ref = "consul"
+[libraries.controlplane-api]
+module = "io.envoyproxy.controlplane:api"
+version.ref = "controlplane"
+[libraries.controlplane-cache]
+module = "io.envoyproxy.controlplane:cache"
+version.ref = "controlplane"
+[libraries.controlplane-server]
+module = "io.envoyproxy.controlplane:server"
+version.ref = "controlplane"
 
 # Ensure that we use the same ZooKeeper version as what Curator depends on.
 # See: https://github.com/apache/curator/blob/master/pom.xml
@@ -286,13 +328,13 @@ version.ref = "consul"
 module = "org.apache.curator:curator-recipes"
 version.ref = "curator"
 javadocs = [
-    "https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.4.0/",
-    "https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.4.0/"]
+    "https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.5.0/",
+    "https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.5.0/"]
 exclusions = "org.apache.zookeeper:zookeeper"
 [libraries.curator-discovery]
 module = "org.apache.curator:curator-x-discovery"
 version.ref = "curator"
-javadocs = "https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/5.4.0/"
+javadocs = "https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/5.5.0/"
 
 # This is only used for examples/context-propagation/dagger
 [libraries.dagger]
@@ -306,7 +348,6 @@ module = "com.google.dagger:dagger-producers"
 version.ref = "dagger"
 
 # DGS is used only for testing in it:dgs module.
-# A minimum of java 17 is required for 6.x.x
 [libraries.dgs]
 module = "com.netflix.graphql.dgs:graphql-dgs-client"
 version.ref = "dgs"
@@ -338,7 +379,7 @@ version.ref = "dropwizard1"
 [libraries.dropwizard2-core]
 module = "io.dropwizard:dropwizard-core"
 version.ref = "dropwizard2"
-javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.1.5/"
+javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.1.6/"
 [libraries.dropwizard2-jackson]
 module = "io.dropwizard:dropwizard-jackson"
 version.ref = "dropwizard2"
@@ -425,11 +466,6 @@ version.ref = "graphql-kotlin"
 module = "com.expediagroup:graphql-kotlin-schema-generator"
 version.ref = "graphql-kotlin"
 
-# Groovy is only used for testing consul
-[libraries.groovy-xml]
-module = "org.codehaus.groovy:groovy-xml"
-version.ref = "groovy"
-
 [libraries.grpc-core]
 module = "io.grpc:grpc-core"
 javadocs = [
@@ -473,13 +509,18 @@ version.ref = "grpc-kotlin"
 module = "io.grpc:protoc-gen-grpc-kotlin"
 version.ref = "grpc-kotlin"
 
+[libraries.grpc-krotodc-core]
+module = "io.github.mscheong01:krotoDC-core"
+version.ref = "krotodc"
+
+[libraries.grpc-krotodc-protoc]
+module = "io.github.mscheong01:protoc-gen-krotoDC"
+version.ref = "krotodc"
+
 [libraries.guava]
 module = "com.google.guava:guava"
 version.ref = "guava"
-exclusions = [
-    "com.google.errorprone:error_prone_annotations",
-    "com.google.j2objc:j2objc-annotations",
-    "org.codehaus.mojo:animal-sniffer-annotations"]
+exclusions = "org.codehaus.mojo:animal-sniffer-annotations"
 relocations = [
     { from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" },
     { from = "com.google.thirdparty.publicsuffix", to = "com.linecorp.armeria.internal.shaded.publicsuffix" }]
@@ -542,19 +583,19 @@ version.ref = "jakarta-websocket"
 
 [libraries.jackson-annotations]
 module = "com.fasterxml.jackson.core:jackson-annotations"
-javadocs = "https://fasterxml.github.io/jackson-annotations/javadoc/2.13/"
+javadocs = "https://www.javadoc.io/doc/com.fasterxml.jackson.core/jackson-annotations/latest/"
 [libraries.jackson-core]
 module = "com.fasterxml.jackson.core:jackson-core"
-javadocs = "https://fasterxml.github.io/jackson-core/javadoc/2.13/"
+javadocs = "https://www.javadoc.io/doc/com.fasterxml.jackson.core/jackson-core/latest/"
 [libraries.jackson-databind]
 module = "com.fasterxml.jackson.core:jackson-databind"
-javadocs = "https://fasterxml.github.io/jackson-databind/javadoc/2.13/"
+javadocs = "https://www.javadoc.io/doc/com.fasterxml.jackson.core/jackson-databind/latest/"
 [libraries.jackson-datatype-jdk8]
 module = "com.fasterxml.jackson.datatype:jackson-datatype-jdk8"
-javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datatypes/2.13/"
+javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datatypes/2.14/"
 [libraries.jackson-datatype-jsr310]
 module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
-javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datetime/2.13/"
+javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datetime/2.14/"
 [libraries.jackson-kotlin]
 module = "com.fasterxml.jackson.module:jackson-module-kotlin"
 [libraries.jackson-scala_v212]
@@ -610,6 +651,9 @@ version.ref = "jetty11"
 [libraries.jetty11-apache-jstl]
 module = "org.eclipse.jetty:apache-jstl"
 version.ref = "jetty11-jstl"
+[libraries.jetty11-http2-server]
+module = "org.eclipse.jetty.http2:http2-server"
+version.ref = "jetty11"
 [libraries.jetty11-server]
 module = "org.eclipse.jetty:jetty-server"
 version.ref = "jetty11"
@@ -617,6 +661,31 @@ version.ref = "jetty11"
 [libraries.jetty11-webapp]
 module = "org.eclipse.jetty:jetty-webapp"
 version.ref = "jetty11"
+# jetty-websocket for testing WebSocket interoperability.
+[libraries.jetty11-websocket]
+module = "org.eclipse.jetty.websocket:websocket-jakarta-server"
+version.ref = "jetty11"
+
+[libraries.jetty12-server]
+module = "org.eclipse.jetty:jetty-server"
+javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/12.0.5/"
+version.ref = "jetty12"
+[libraries.jetty12-ee10-apache-jsp]
+module = "org.eclipse.jetty.ee10:jetty-ee10-apache-jsp"
+version.ref = "jetty12"
+[libraries.jetty12-ee10-glassfish-jstl]
+module = "org.eclipse.jetty.ee10:jetty-ee10-glassfish-jstl"
+version.ref = "jetty12"
+# jetty-ee10-webapp for testing interoperability with other servers.
+[libraries.jetty12-ee10-annotations]
+module = "org.eclipse.jetty.ee10:jetty-ee10-annotations"
+version.ref = "jetty12"
+[libraries.jetty12-ee10-webapp]
+module = "org.eclipse.jetty.ee10:jetty-ee10-webapp"
+version.ref = "jetty12"
+[libraries.jetty12-ee10-servlet]
+module = "org.eclipse.jetty.ee10:jetty-ee10-servlet"
+version.ref = "jetty12"
 
 [libraries.jetty93-annotations]
 module = "org.eclipse.jetty:jetty-annotations"
@@ -662,14 +731,8 @@ version.ref = "jetty94"
 [libraries.jetty-alpn-api]
 module = "org.eclipse.jetty.alpn:alpn-api"
 version.ref = "jetty-alpn-api"
-[libraries.jetty-alpn-agent]
-module = "org.mortbay.jetty.alpn:jetty-alpn-agent"
-version.ref = "jetty-alpn-agent"
 
-[libraries.jmh-extras]
-module = "pl.project13.scala:sbt-jmh-extras"
-version.ref = "jmh-extras"
-
+# joor is only used for annotation processor testing.
 [libraries.joor]
 module = "org.jooq:joor"
 version.ref = "joor"
@@ -706,10 +769,13 @@ module = "org.junit.platform:junit-platform-commons"
 [libraries.junit5-platform-launcher]
 module = "org.junit.platform:junit-platform-launcher"
 
-# requires a minimum of java 11 for 2.x.x
 [libraries.junit-pioneer]
 module = "org.junit-pioneer:junit-pioneer"
 version.ref = "junit-pioneer"
+
+[libraries.junit-testng-engine]
+module = "org.junit.support:testng-engine"
+version = "1.0.5"
 
 [libraries.jwt]
 module = "com.auth0:java-jwt"
@@ -751,12 +817,33 @@ version.ref = "kotlin-coroutine"
 module = "org.jetbrains.kotlinx:kotlinx-coroutines-debug"
 version.ref = "kotlin-coroutine"
 
-# Don't upgrade Logback 1.4.0 which requires Java 11
+[libraries.kubernetes-client-api]
+module = "io.fabric8:kubernetes-client-api"
+version.ref = "kubernetes-client"
+exclusions = ["org.slf4j:slf4j-api"]
+[libraries.kubernetes-client-impl]
+module = "io.fabric8:kubernetes-client"
+version.ref = "kubernetes-client"
+exclusions = ["io.fabric8:kubernetes-httpclient-okhttp", "org.slf4j:slf4j-api"]
+[libraries.kubernetes-server-mock]
+module = "io.fabric8:kubernetes-server-mock"
+version.ref = "kubernetes-client"
+exclusions = ["org.slf4j:slf4j-api"]
+[libraries.kubernetes-junit-jupiter]
+module = "io.fabric8:kubernetes-junit-jupiter"
+version.ref = "kubernetes-client"
+exclusions = ["io.fabric8:kubernetes-httpclient-okhttp", "org.slf4j:slf4j-api"]
+
 # TODO(ikhoon): Upgrade Logback to 1.3.0 when Spring Boot 2 supports it.
-[libraries.logback]
+[libraries.logback12]
 module = "ch.qos.logback:logback-classic"
-version.ref = "logback"
+version.ref = "logback12"
 javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.12/"
+
+[libraries.logback13]
+module = "ch.qos.logback:logback-classic"
+version.ref = "logback13"
+javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.3.8/"
 
 [libraries.logback14]
 module = "ch.qos.logback:logback-classic"
@@ -766,16 +853,33 @@ javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.4.7/"
 [libraries.micrometer-core]
 module = "io.micrometer:micrometer-core"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.10.6/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.10.8/"
+[libraries.micrometer-observation]
+module = "io.micrometer:micrometer-observation"
+version.ref = "micrometer"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-observation/1.10.8/"
+[libraries.micrometer-observation-test]
+module = "io.micrometer:micrometer-observation-test"
+version.ref = "micrometer"
 [libraries.micrometer-prometheus]
 module = "io.micrometer:micrometer-registry-prometheus"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.10.6/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.10.8/"
 [libraries.micrometer-spring-legacy]
 module = "io.micrometer:micrometer-spring-legacy"
 version.ref = "micrometer"
 javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.20/"
 exclusions = ["org.springframework:spring-web", "org.springframework:spring-webmvc"]
+
+[libraries.micrometer-tracing-integration-test]
+module = "io.micrometer:micrometer-tracing-integration-test"
+version.ref = "micrometer-tracing"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-tracing-integration-test/1.1.3/"
+
+[libraries.micrometer-docs-generator]
+module = "io.micrometer:micrometer-docs-generator"
+version.ref = "micrometer-docs-generator"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-docs-generator/1.0.2/"
 
 [libraries.micrometer13-core]
 module = "io.micrometer:micrometer-core"
@@ -788,7 +892,6 @@ module = "io.micrometer:micrometer-spring-legacy"
 version.ref = "micrometer13"
 exclusions = ["org.springframework:spring-web", "org.springframework:spring-webmvc"]
 
-# mockito 5.x.x requires java 11
 [libraries.mockito]
 module = "org.mockito:mockito-core"
 version.ref = "mockito"
@@ -843,15 +946,15 @@ module = 'io.netty:netty-tcnative-boringssl-static'
 module = "io.netty.incubator:netty-incubator-transport-native-io_uring"
 version.ref = "netty-incubator-transport-native-io_uring"
 
+[libraries.picocli]
+module = "info.picocli:picocli"
+version.ref = "picocli"
+
 [libraries.prometheus]
 module = "io.prometheus:simpleclient_common"
 version.ref = "prometheus"
 javadocs = "https://prometheus.github.io/client_java/"
 
-# Ensure that we use the same Protobuf version as what gRPC depends on.
-# See: https://github.com/grpc/grpc-java/blob/master/build.gradle
-#      (Switch to the right tag and look for "protobuf".)
-#      e.g. https://github.com/grpc/grpc-java/blob/v1.48.0/gradle/libs.versions.toml
 [libraries.protobuf-java]
 module = "com.google.protobuf:protobuf-java"
 version.ref = "protobuf"
@@ -872,7 +975,6 @@ version.ref = "protobuf-jackson"
 exclusions = "javax.annotation:javax.annotation-api"
 javadocs = "https://developers.curioswitch.org/apidocs/java/"
 
-# Reactor 3.5 should be updated with Spring Boot 3
 [libraries.reactor-core]
 module = "io.projectreactor:reactor-core"
 version.ref = "reactor"
@@ -933,7 +1035,6 @@ version.ref = "shibboleth-utilities"
 module = "org.xerial.snappy:snappy-java"
 version.ref = "snappy"
 
-# Don"t upgrade OpenSAML to 4.x that requires Java 11.
 [libraries.opensaml-core]
 module = "org.opensaml:opensaml-core"
 version.ref = "opensaml"
@@ -989,7 +1090,6 @@ module = "org.reactivestreams:reactive-streams-tck"
 version.ref = "reactive-streams"
 exclusions = "org.yaml:snakeyaml"
 
-# Upgrade once https://github.com/ronmamo/reflections/issues/279 is fixed.
 [libraries.reflections]
 module = "org.reflections:reflections"
 version.ref = "reflections"
@@ -1158,10 +1258,10 @@ exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
 module = "org.springframework.boot:spring-boot-configuration-processor"
 version.ref = "spring-boot3"
 
-# jdk 11 is required from testng version 7.6
-[libraries.testng]
-module = "org.testng:testng"
-version.ref = "testng"
+[libraries.testcontainers-consul]
+module = "org.testcontainers:consul"
+[libraries.testcontainers-junit-jupiter]
+module = "org.testcontainers:junit-jupiter"
 
 [libraries.thrift09]
 module = "org.apache.thrift:libthrift"
@@ -1264,9 +1364,6 @@ version.ref = "java-websocket"
 module = "xml-apis:xml-apis"
 version.ref = "xml-apis"
 
-# Ensure that we use the same ZooKeeper version as what Curator depends on.
-# See: https://github.com/apache/curator/blob/master/pom.xml
-#      (Switch to the right tag to find out the right version.)
 [libraries.zookeeper]
 module = "org.apache.zookeeper:zookeeper"
 version.ref = "zookeeper"
@@ -1292,6 +1389,7 @@ module = "io.github.resilience4j:resilience4j-micrometer"
 version.ref = "resilience4j"
 
 [plugins]
+jkube = { id = "org.eclipse.jkube.kubernetes", version.ref = "jkube" }
 jmh = { id = "me.champeau.jmh", version.ref = "jmh-gradle-plugin" }
 osdetector = { id = "com.google.osdetector", version.ref = "osdetector" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

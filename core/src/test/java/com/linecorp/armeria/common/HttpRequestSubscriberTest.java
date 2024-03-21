@@ -62,7 +62,7 @@ public class HttpRequestSubscriberTest {
                            final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
                            executor.schedule(() -> f.complete(HttpResponse.of(HttpStatus.OK)),
                                              100, TimeUnit.MILLISECONDS);
-                           return HttpResponse.from(f);
+                           return HttpResponse.of(f);
                        }
             );
         }

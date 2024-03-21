@@ -22,14 +22,12 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -42,11 +40,10 @@ import com.linecorp.armeria.spring.LocalArmeriaPortsTest.TestConfiguration;
 /**
  * Tests for {@link LocalArmeriaPorts}.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-public class LocalArmeriaPortsTest {
+class LocalArmeriaPortsTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
@@ -69,7 +66,7 @@ public class LocalArmeriaPortsTest {
     }
 
     @Test
-    public void testPortConfigurationFromFieldInjection() throws Exception {
+    void testPortConfigurationFromFieldInjection() throws Exception {
         final Collection<ServerPort> serverPorts = server.activePorts().values();
         serverPorts.stream()
                    .map(sp -> sp.localAddress().getPort())
@@ -77,7 +74,7 @@ public class LocalArmeriaPortsTest {
     }
 
     @Test
-    public void testPortConfigurationFromMethodInjection() throws Exception {
+    void testPortConfigurationFromMethodInjection() throws Exception {
         final Collection<ServerPort> serverPorts = server.activePorts().values();
         serverPorts.stream()
                    .map(sp -> sp.localAddress().getPort())
@@ -85,7 +82,7 @@ public class LocalArmeriaPortsTest {
     }
 
     @Test
-    public void testHttpServiceRegistrationBean() throws Exception {
+    void testHttpServiceRegistrationBean() throws Exception {
         for (Integer port : portsField) {
             final WebClient client = WebClient.of(newUrl("h1c", port));
             final HttpResponse response = client.get("/ok");

@@ -79,7 +79,7 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
         final BlogPost oldBlogPost = blogPosts.get(request.getId());
         if (oldBlogPost == null) {
             resultHandler.onError(
-                    new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+                    new IllegalArgumentException("The blog post does not exist. ID: " + request.getId()));
         } else {
             final BlogPost newBlogPost = oldBlogPost.deepCopy()
                                                     .setTitle(request.getTitle())

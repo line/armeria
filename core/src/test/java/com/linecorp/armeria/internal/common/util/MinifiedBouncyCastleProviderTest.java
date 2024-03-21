@@ -65,15 +65,15 @@ class MinifiedBouncyCastleProviderTest {
     }
 
     private void loadPkcs5() {
-        loadKey("/pkcs5.pem");
+        loadKey("/testing/core/ServerBuilderTest/pkcs5.pem");
     }
 
     private void loadPkcs8() {
-        loadKey("/pkcs8.pem");
+        loadKey("/testing/core/ServerBuilderTest/pkcs8.pem");
     }
 
     private void loadKey(String privateKeyPath) {
-        SslContextBuilder.forServer(getClass().getResourceAsStream("/cert.pem"),
+        SslContextBuilder.forServer(getClass().getResourceAsStream("/testing/core/ServerBuilderTest/cert.pem"),
                                     getClass().getResourceAsStream(privateKeyPath),
                                     null);
     }

@@ -222,7 +222,8 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     /**
-     * Sets the ID of this instance. {@link #hostname(String)} is set if not specified.
+     * Sets the ID of this instance. Derived from {@link #hostname(String)},
+     * {@link #appName(String)} and {@link #port(int)}, if not specified.
      */
     public EurekaUpdatingListenerBuilder instanceId(String instanceId) {
         instanceInfoBuilder.instanceId(instanceId);
@@ -286,6 +287,14 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     /**
+     * Sets the home page URL path used to automatically create {@link #homePageUrl(String)}.
+     */
+    public EurekaUpdatingListenerBuilder homePageUrlPath(String homePageUrlPath) {
+        instanceInfoBuilder.homePageUrlPath(homePageUrlPath);
+        return this;
+    }
+
+    /**
      * Sets the home page URL.
      */
     public EurekaUpdatingListenerBuilder homePageUrl(String homePageUrl) {
@@ -294,10 +303,27 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     /**
+     * Sets the status page URL path used to automatically create {@link #statusPageUrl(String)}.
+     */
+    public EurekaUpdatingListenerBuilder statusPageUrlPath(String statusPageUrlPath) {
+        instanceInfoBuilder.statusPageUrlPath(statusPageUrlPath);
+        return this;
+    }
+
+    /**
      * Sets the status page URL.
      */
     public EurekaUpdatingListenerBuilder statusPageUrl(String statusPageUrl) {
         instanceInfoBuilder.statusPageUrl(statusPageUrl);
+        return this;
+    }
+
+    /**
+     * Sets the health check path used to automatically create {@link #healthCheckUrl(String)} and
+     * {@link #secureHealthCheckUrl(String)}.
+     */
+    public EurekaUpdatingListenerBuilder healthCheckUrlPath(String healthCheckUrlPath) {
+        instanceInfoBuilder.healthCheckUrlPath(healthCheckUrlPath);
         return this;
     }
 

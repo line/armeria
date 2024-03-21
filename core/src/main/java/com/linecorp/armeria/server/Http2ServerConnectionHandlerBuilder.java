@@ -22,6 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.util.AsciiString;
 
 final class Http2ServerConnectionHandlerBuilder
         extends AbstractHttp2ConnectionHandlerBuilder<Http2ServerConnectionHandler,
@@ -30,10 +31,10 @@ final class Http2ServerConnectionHandlerBuilder
     private final ServerConfig config;
     private final Timer keepAliveTimer;
     private final GracefulShutdownSupport gracefulShutdownSupport;
-    private final String scheme;
+    private final AsciiString scheme;
 
     Http2ServerConnectionHandlerBuilder(Channel ch, ServerConfig config, Timer keepAliveTimer,
-                                        GracefulShutdownSupport gracefulShutdownSupport, String scheme) {
+                                        GracefulShutdownSupport gracefulShutdownSupport, AsciiString scheme) {
         super(ch);
         this.config = config;
         this.keepAliveTimer = keepAliveTimer;
@@ -42,6 +43,8 @@ final class Http2ServerConnectionHandlerBuilder
         // Disable graceful shutdown timeout in a super class. Server-side HTTP/2 graceful shutdown is
         // handled by Armeria's HTTP/2 server handler.
         gracefulShutdownTimeoutMillis(-1);
+        decoderEnforceMaxRstFramesPerWindow(config.http2MaxResetFramesPerWindow(),
+                                            config.http2MaxResetFramesWindowSeconds());
     }
 
     @Override

@@ -66,7 +66,7 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
         return HttpStatus.valueOf(status.code());
     }
 
-    @Override
+    // This method exists only for Spring 5 compatibility.
     public int getRawStatusCode() {
         // Return the status code even if it is unknown.
         return status.code();

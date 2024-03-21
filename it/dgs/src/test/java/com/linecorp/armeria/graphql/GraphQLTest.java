@@ -49,7 +49,8 @@ class GraphQLTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final File graphqlSchemaFile = new File(ClassLoader.getSystemResource("test.graphqls").toURI());
+            final File graphqlSchemaFile = new File(
+                    ClassLoader.getSystemResource("testing/dgs/test.graphqls").toURI());
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)

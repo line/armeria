@@ -1,0 +1,48 @@
+plugins {
+    alias libs.plugins.jkube
+}
+
+dependencies {
+    implementation(project(':kubernetes'))
+    implementation(libs.logback13)
+    implementation(libs.picocli)
+    testImplementation(libs.kubernetes.junit.jupiter)
+}
+
+task copyDependencies(type: Copy) {
+    from tasks.jar
+    from configurations.runtimeClasspath
+    into "${project.buildDir}/dependencies"
+}
+
+def imageNameAndMainClasses= [
+    'chaos-test-checker:latest': 'com.linecorp.armeria.kubernetes.it.CheckerCommand',
+    'chaos-test-control:latest': 'com.linecorp.armeria.kubernetes.it.ControlCommand'
+]
+kubernetes {
+    images {
+        imageNameAndMainClasses.each { imageName, mainClass ->
+            image {
+                name = imageName
+                build {
+                    from = 'quay.io/jkube/jkube-java:0.0.19'
+                    assembly {
+                        targetDir = '/deployments'
+                        layers = [{
+                            fileSets = [{
+                                directory = file("${project.buildDir}/dependencies")
+                                outputDirectory = '.'
+                            }]
+                        }]
+                    }
+                    env {
+                        JAVA_LIB_DIR = '/deployments/*'
+                        JAVA_MAIN_CLASS = mainClass
+                    }
+                }
+            }
+        }
+    }
+}
+
+tasks.k8sBuild.dependsOn(tasks.copyDependencies)

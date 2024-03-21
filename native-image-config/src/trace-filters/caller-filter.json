@@ -1,0 +1,49 @@
+{
+  "rules": [
+    {
+      "excludeClasses": "com.google.protobuf.Android"
+    },
+    {
+      "excludeClasses": "com.sun.beans.**"
+    },
+    {
+      "excludeClasses": "com.sun.jna.**"
+    },
+    {
+      "excludeClasses": "groovy.**"
+    },
+    {
+      "excludeClasses": "groovyx.**"
+    },
+    {
+      "excludeClasses": "munit.**"
+    },
+    {
+      "excludeClasses": "net.javacrumbs.jsonunit.**"
+    },
+    {
+      "excludeClasses": "org.assertj.**"
+    },
+    {
+      "excludeClasses": "org.codehaus.groovy.**"
+    },
+    {
+      "excludeClasses": "org.gradle.**"
+    },
+    {
+      "excludeClasses": "org.hibernate.validator.**"
+    },
+    {
+      "excludeClasses": "org.junit.**"
+    },
+    {
+      "excludeClasses": "org.mockito.**"
+    },
+    {
+      "excludeClasses": "org.testcontainers.**"
+    },
+    {
+      "excludeClasses": "worker.org.gradle.**"
+    }
+  ]
+}

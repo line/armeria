@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package com.linecorp.armeria.spring.test.grpc.main;
-option java_package = "com.linecorp.armeria.spring.test.grpc.main";
+package testing.spring.grpc;
+option java_package = "testing.spring.grpc";
 
-service HelloService {
+service TestService {
     rpc Hello (HelloRequest) returns (HelloReply) {
     }
 }

@@ -156,6 +156,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public boolean keepAliveOnPing() {
+        return delegate.keepAliveOnPing();
+    }
+
+    @Override
     public long pingIntervalMillis() {
         return delegate.pingIntervalMillis();
     }
@@ -213,6 +218,16 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public long http2MaxHeaderListSize() {
         return delegate.http2MaxHeaderListSize();
+    }
+
+    @Override
+    public int http2MaxResetFramesPerWindow() {
+        return delegate.http2MaxResetFramesPerWindow();
+    }
+
+    @Override
+    public int http2MaxResetFramesWindowSeconds() {
+        return delegate.http2MaxResetFramesWindowSeconds();
     }
 
     @Override

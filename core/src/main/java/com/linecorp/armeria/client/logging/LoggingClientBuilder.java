@@ -28,8 +28,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -48,14 +48,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
      * this builder.
      */
     public LoggingClient build(HttpClient delegate) {
-        return new LoggingClient(delegate,
-                                 logger(),
-                                 requestLogLevelMapper(),
-                                 responseLogLevelMapper(),
-                                 responseCauseFilter(),
-                                 successSampler(),
-                                 failureSampler(),
-                                 logFormatter());
+        return new LoggingClient(delegate, logWriter(), successSampler(), failureSampler());
     }
 
     /**
@@ -66,6 +59,11 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     }
 
     // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    protected LoggingClientBuilder defaultLogger(Logger logger) {
+        return (LoggingClientBuilder) super.defaultLogger(logger);
+    }
 
     @Override
     public LoggingClientBuilder samplingRate(float samplingRate) {
@@ -246,7 +244,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     }
 
     @Override
-    public LoggingClientBuilder logFormatter(LogFormatter logFormatter) {
-        return (LoggingClientBuilder) super.logFormatter(logFormatter);
+    public LoggingClientBuilder logWriter(LogWriter logWriter) {
+        return (LoggingClientBuilder) super.logWriter(logWriter);
     }
 }

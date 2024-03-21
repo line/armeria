@@ -31,9 +31,9 @@ abstract class AbstractEventLoopState {
                                      DefaultEventLoopScheduler scheduler) {
         if (maxNumEventLoops == 1) {
             return new OneEventLoopState(eventLoops, scheduler);
+        } else if (maxNumEventLoops <= 128) {
+            return new ArrayBasedEventLoopState(eventLoops, maxNumEventLoops, scheduler);
         }
-        // TODO(minwoox) Introduce array based state which is used when the maxNumEventLoops is greater than 1
-        //               and less than N for the performance.
         return new HeapBasedEventLoopState(eventLoops, maxNumEventLoops, scheduler);
     }
 
@@ -80,7 +80,7 @@ abstract class AbstractEventLoopState {
     abstract void release(AbstractEventLoopEntry e);
 
     @VisibleForTesting
-    abstract List<AbstractEventLoopEntry> entries();
+    abstract AbstractEventLoopEntry[] entries();
 
     abstract int allActiveRequests();
 }

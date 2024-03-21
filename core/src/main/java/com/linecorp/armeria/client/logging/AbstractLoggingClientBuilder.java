@@ -38,8 +38,8 @@ abstract class AbstractLoggingClientBuilder extends LoggingDecoratorBuilder {
      */
     public AbstractLoggingClientBuilder sampler(Sampler<? super ClientRequestContext> sampler) {
         requireNonNull(sampler, "sampler");
-        this.successSampler = sampler;
-        this.failureSampler = sampler;
+        successSampler = sampler;
+        failureSampler = sampler;
         return this;
     }
 

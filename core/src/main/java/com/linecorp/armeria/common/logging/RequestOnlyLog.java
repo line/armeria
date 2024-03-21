@@ -349,6 +349,7 @@ public interface RequestOnlyLog extends RequestLogAccess {
                                }
                                return sanitized.toString();
                            })
+                           .includeContext(false)
                            .build()
                            .formatRequest(this);
     }

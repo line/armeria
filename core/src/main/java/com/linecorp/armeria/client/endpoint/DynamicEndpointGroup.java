@@ -30,9 +30,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
+import java.util.function.Consumer;
 
-import com.google.common.base.MoreObjects;
-import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -224,8 +223,8 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
             endpointsLock.unlock();
         }
 
+        maybeCompleteInitialEndpointsFuture(newEndpoints);
         notifyListeners(newEndpoints);
-        completeInitialEndpointsFuture(newEndpoints);
     }
 
     /**
@@ -254,22 +253,21 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         if (!allowEmptyEndpoints && Iterables.isEmpty(endpoints)) {
             return;
         }
-        final List<Endpoint> oldEndpoints = this.endpoints;
-        final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
-
-        if (!hasChanges(oldEndpoints, newEndpoints)) {
-            return;
-        }
-
+        final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
+            final List<Endpoint> oldEndpoints = this.endpoints;
+            newEndpoints = ImmutableList.sortedCopyOf(endpoints);
+            if (!hasChanges(oldEndpoints, newEndpoints)) {
+                return;
+            }
             this.endpoints = newEndpoints;
         } finally {
             endpointsLock.unlock();
         }
 
+        maybeCompleteInitialEndpointsFuture(newEndpoints);
         notifyListeners(newEndpoints);
-        completeInitialEndpointsFuture(newEndpoints);
     }
 
     private static boolean hasChanges(List<Endpoint> oldEndpoints, List<Endpoint> newEndpoints) {
@@ -292,7 +290,17 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         return false;
     }
 
-    private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
+    @Override
+    protected List<Endpoint> latestValue() {
+        final List<Endpoint> endpoints = this.endpoints;
+        if (endpoints == UNINITIALIZED_ENDPOINTS) {
+            return null;
+        } else {
+            return endpoints;
+        }
+    }
+
+    private void maybeCompleteInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
             initialEndpointsFuture.complete(endpoints);
         }
@@ -340,20 +348,36 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     @Override
     public String toString() {
-        return toStringHelper().toString();
+        return toString(unused -> {});
     }
 
     /**
-     * Returns {@link ToStringHelper} that contains fields information.
+     * Returns the string representation of this {@link DynamicEndpointGroup}. Specify a {@link Consumer}
+     * to add more fields to the returned string, e.g.
+     * <pre>{@code
+     * > @Override
+     * > public String toString() {
+     * >     return toString(buf -> {
+     * >         buf.append(", foo=").append(foo);
+     * >         buf.append(", bar=").append(bar);
+     * >     });
+     * > }
+     * }</pre>
+     *
+     * @param builderMutator the {@link Consumer} that appends the additional fields into the given
+     *                       {@link StringBuilder}.
      */
-    protected ToStringHelper toStringHelper() {
-        return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
-                          .add("selectionStrategy", selectionStrategy.getClass())
-                          .add("allowsEmptyEndpoints", allowEmptyEndpoints)
-                          .add("endpoints", truncate(endpoints, 10))
-                          .add("numEndpoints", endpoints.size())
-                          .add("initialized", initialEndpointsFuture.isDone());
+    @UnstableApi
+    protected final String toString(Consumer<? super StringBuilder> builderMutator) {
+        final StringBuilder buf = new StringBuilder();
+        buf.append(getClass().getSimpleName());
+        buf.append("{selectionStrategy=").append(selectionStrategy.getClass());
+        buf.append(", allowsEmptyEndpoints=").append(allowEmptyEndpoints);
+        buf.append(", initialized=").append(initialEndpointsFuture.isDone());
+        buf.append(", numEndpoints=").append(endpoints.size());
+        buf.append(", endpoints=").append(truncate(endpoints, 10));
+        builderMutator.accept(buf);
+        return buf.append('}').toString();
     }
 
     private class InitialEndpointsFuture extends EventLoopCheckingFuture<List<Endpoint>> {

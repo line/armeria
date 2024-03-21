@@ -32,11 +32,11 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcClientRequestContextInitFailureTest {
     @Test

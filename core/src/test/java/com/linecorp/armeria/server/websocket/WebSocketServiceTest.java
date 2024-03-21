@@ -66,8 +66,12 @@ class WebSocketServiceTest {
 
     private static RequestHeaders webSocketUpgradeHeaders() {
         return RequestHeaders.builder(HttpMethod.GET, "/chat")
-                             .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString())
-                             .add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString())
+                             .add(HttpHeaderNames.CONNECTION,
+                                  HttpHeaderValues.UPGRADE.toString() + ',' +
+                                  // It works even if the header contains multiple values
+                                  HttpHeaderValues.KEEP_ALIVE)
+                             .add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET +
+                                                           ", additional_value")
                              .add(HttpHeaderNames.HOST, "foo.com")
                              .add(HttpHeaderNames.ORIGIN, "http://foo.com")
                              .addInt(HttpHeaderNames.SEC_WEBSOCKET_VERSION, 13)
@@ -128,7 +132,7 @@ class WebSocketServiceTest {
         return HttpData.wrap(encoder.encode(ctx, frame));
     }
 
-    static class AbstractWebSocketHandler implements WebSocketHandler {
+    static class AbstractWebSocketHandler implements WebSocketServiceHandler {
 
         @Override
         public WebSocket handle(ServiceRequestContext ctx, WebSocket in) {
@@ -151,7 +155,7 @@ class WebSocketServiceTest {
                                 onBinary(writer, frame.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
                                 break;
                             case CLOSE:
-                                assert frame instanceof CloseWebSocketFrame;
+                                assertThat(frame).isInstanceOf(CloseWebSocketFrame.class);
                                 final CloseWebSocketFrame closeFrame = (CloseWebSocketFrame) frame;
                                 onClose(writer, closeFrame.status(), closeFrame.reasonPhrase());
                                 break;

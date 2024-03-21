@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.server.annotation.AnnotationUtil.getAnnotatedInstances;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
@@ -50,7 +51,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -257,16 +257,16 @@ public final class AnnotatedServiceFactory {
         final List<Route> routes = routes(method, clazz, pathPrefix);
 
         final List<RequestConverterFunction> req =
-                getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class,
-                                      dependencyInjector)
+                getAnnotatedInstances(method, clazz, RequestConverter.class,
+                                      RequestConverterFunction.class, dependencyInjector)
                         .addAll(baseRequestConverters).build();
         final List<ResponseConverterFunction> res =
-                getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class,
-                                      dependencyInjector)
+                getAnnotatedInstances(method, clazz, ResponseConverter.class,
+                                      ResponseConverterFunction.class, dependencyInjector)
                         .addAll(baseResponseConverters).build();
         final List<ExceptionHandlerFunction> eh =
-                getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class,
-                                      dependencyInjector)
+                getAnnotatedInstances(method, clazz, ExceptionHandler.class,
+                                      ExceptionHandlerFunction.class, dependencyInjector)
                         .addAll(baseExceptionHandlers).build();
 
         final String classAlias = clazz.getName();
@@ -584,22 +584,6 @@ public final class AnnotatedServiceFactory {
             decorator = decorator.andThen(d.decorator(dependencyInjector));
         }
         return decorator;
-    }
-
-    /**
-     * Returns a {@link Builder} which has the instances specified by the annotations of the
-     * {@code annotationType}. The annotations of the specified {@code method} and {@code clazz} will be
-     * collected respectively.
-     */
-    private static <T extends Annotation, R> Builder<R> getAnnotatedInstances(
-            AnnotatedElement method, AnnotatedElement clazz, Class<T> annotationType, Class<R> resultType,
-            DependencyInjector dependencyInjector) {
-        final Builder<R> builder = new Builder<>();
-        Stream.concat(AnnotationUtil.findAll(method, annotationType).stream(),
-                      AnnotationUtil.findAll(clazz, annotationType).stream())
-              .forEach(annotation -> builder.add(
-                      AnnotatedObjectFactory.getInstance(annotation, resultType, dependencyInjector)));
-        return builder;
     }
 
     /**

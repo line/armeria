@@ -77,7 +77,7 @@ final class AggregatedResponseConverterFunction implements ResponseConverterFunc
             return ResponseConverterFunction.fallthrough();
         }
 
-        return HttpResponse.from(f.thenApply(aggregated -> {
+        return HttpResponse.of(f.thenApply(aggregated -> {
             try {
                 return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
             } catch (Exception ex) {

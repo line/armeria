@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -110,6 +111,7 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
             req.abortResponse(new IllegalArgumentException(
                     "published an HttpObject that's neither HttpHeaders nor HttpData: " + o +
                     " (service: " + service() + ')'), true);
+            PooledObjects.close(o);
             return;
         }
 
@@ -293,7 +295,7 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
 
         final State oldState = setDone(false);
         if (oldState == State.NEEDS_HEADERS) {
-            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR)
+            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR, false)
                            .addListener(future -> {
                                try (SafeCloseable ignored = RequestContextUtil.pop()) {
                                    fail(EmptyHttpResponseException.get());
@@ -331,8 +333,9 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
     private void succeed() {
         if (tryComplete(null)) {
             Throwable cause = null;
-            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
-                cause = reqCtx.log().ensureAvailable(RequestLogProperty.RESPONSE_CAUSE).responseCause();
+            final RequestLog requestLog = reqCtx.log().getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+            if (requestLog != null) {
+                cause = requestLog.responseCause();
             }
             endLogRequestAndResponse(cause);
             maybeWriteAccessLog();
@@ -360,7 +363,7 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
             isReset = false;
         } else {
             // Wrote something already; we have to reset/cancel the stream.
-            future = responseEncoder.writeReset(id, streamId, error);
+            future = responseEncoder.writeReset(id, streamId, error, false);
             isReset = true;
         }
 
@@ -370,7 +373,7 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
     private void failAndReset(Throwable cause) {
         final State oldState = setDone(false);
         final ChannelFuture future =
-                responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL);
+                responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL, false);
 
         addCallbackAndFlush(cause, oldState, future, true);
     }
@@ -381,6 +384,9 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
                 try (SafeCloseable ignored = RequestContextUtil.pop()) {
                     if (f.isSuccess() && !isReset) {
                         maybeLogFirstResponseBytesTransferred();
+                        if (req.shouldResetOnlyIfRemoteIsOpen()) {
+                            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL, true);
+                        }
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
                     fail(cause);

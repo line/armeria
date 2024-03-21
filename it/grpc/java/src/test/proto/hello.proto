@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package com.linecorp.armeria.grpc.java;
+package testing.grpc;
 
-service HelloService {
+service TestService {
   rpc Hello (HelloRequest) returns (HelloReply) {}
   rpc LazyHello (HelloRequest) returns (HelloReply) {}
   rpc BlockingHello (HelloRequest) returns (HelloReply) {}

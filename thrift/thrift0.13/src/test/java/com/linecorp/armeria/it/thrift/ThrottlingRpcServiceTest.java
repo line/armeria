@@ -38,8 +38,9 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.server.thrift.ThriftCallService;
 import com.linecorp.armeria.server.throttling.ThrottlingRpcService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+
+import testing.thrift.main.HelloService;
 
 public class ThrottlingRpcServiceTest {
 
@@ -86,7 +87,7 @@ public class ThrottlingRpcServiceTest {
 
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOf(TTransportException.class)
-                .getCause()
+                .cause()
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
                 });

@@ -15,6 +15,12 @@ dependencies {
     testImplementation libs.dropwizard.metrics.core
     testImplementation libs.micrometer.prometheus
     testImplementation libs.prometheus
+
+    // micrometer tracing
+    testImplementation (libs.micrometer.tracing.integration.test) {
+        exclude group: "org.mockito"
+    }
+    testImplementation libs.brave6.instrumentation.http.tests
 }
 
 // Use the old compiler.

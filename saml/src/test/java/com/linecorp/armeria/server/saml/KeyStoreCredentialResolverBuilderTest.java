@@ -23,18 +23,21 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.security.KeyStore;
 
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
+import com.linecorp.armeria.internal.testing.TemporaryFolderExtension;
+
+@GenerateNativeImageTrace
 public class KeyStoreCredentialResolverBuilderTest {
 
-    @ClassRule
-    public static TemporaryFolder folder = new TemporaryFolder();
+    @RegisterExtension
+    static final TemporaryFolderExtension folder = new TemporaryFolderExtension();
 
     @Test
-    public void expectSuccessWithFile() throws Exception {
-        final File file = folder.newFile();
+    void expectSuccessWithFile() throws Exception {
+        final File file = folder.newFile().toFile();
 
         assertThat(file.length()).isZero();
 
@@ -50,17 +53,18 @@ public class KeyStoreCredentialResolverBuilderTest {
     }
 
     @Test
-    public void expectSuccessWithResource() throws Exception {
-        new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(), "keystore/test.jks").build();
+    void expectSuccessWithResource() throws Exception {
+        new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(), "testing/saml/test.jks").build();
     }
 
     @Test
-    public void expectNotFound() throws Exception {
+    void expectNotFound() throws Exception {
         assertThatThrownBy(
-                () -> new KeyStoreCredentialResolverBuilder(new File("/not_exist")).build())
+                () -> new KeyStoreCredentialResolverBuilder(new File("/testing/saml/not_exist")).build())
                 .isInstanceOf(FileNotFoundException.class);
         assertThatThrownBy(
-                () -> new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(), "not_exist").build())
+                () -> new KeyStoreCredentialResolverBuilder(getClass().getClassLoader(),
+                                                            "testing/saml/not_exist").build())
                 .isInstanceOf(FileNotFoundException.class)
                 .hasMessageContaining("Resource not found");
     }

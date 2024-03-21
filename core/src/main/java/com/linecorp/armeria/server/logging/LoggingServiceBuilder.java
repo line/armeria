@@ -30,8 +30,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
@@ -60,8 +60,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
      */
     public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
         requireNonNull(sampler, "sampler");
-        this.successSampler = sampler;
-        this.failureSampler = sampler;
+        successSampler = sampler;
+        failureSampler = sampler;
         return this;
     }
 
@@ -123,14 +123,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
      * of this builder.
      */
     public LoggingService build(HttpService delegate) {
-        return new LoggingService(delegate,
-                                  logger(),
-                                  requestLogLevelMapper(),
-                                  responseLogLevelMapper(),
-                                  responseCauseFilter(),
-                                  successSampler,
-                                  failureSampler,
-                                  logFormatter());
+        return new LoggingService(delegate, logWriter(), successSampler, failureSampler);
     }
 
     /**
@@ -141,6 +134,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    protected LoggingServiceBuilder defaultLogger(Logger logger) {
+        return (LoggingServiceBuilder) super.defaultLogger(logger);
+    }
 
     @Override
     public LoggingServiceBuilder logger(Logger logger) {
@@ -289,7 +287,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     @Override
-    public LoggingServiceBuilder logFormatter(LogFormatter logFormatter) {
-        return (LoggingServiceBuilder) super.logFormatter(logFormatter);
+    public LoggingServiceBuilder logWriter(LogWriter logWriter) {
+        return (LoggingServiceBuilder) super.logWriter(logWriter);
     }
 }

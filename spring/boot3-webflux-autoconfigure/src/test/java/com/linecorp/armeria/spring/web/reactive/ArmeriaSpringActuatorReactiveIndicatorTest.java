@@ -29,7 +29,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -55,7 +54,6 @@ class ArmeriaSpringActuatorReactiveIndicatorTest {
     private static final AtomicBoolean healthy = new AtomicBoolean(true);
 
     @SpringBootApplication
-    @Configuration
     static class TestConfiguration {
 
         @Component

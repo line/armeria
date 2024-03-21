@@ -19,13 +19,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import javax.inject.Inject;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -35,11 +33,10 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaAutoConfigurationInternalServiceTest.TestConfiguration;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "internalServiceTest" })
 @DirtiesContext
-public class ArmeriaAutoConfigurationInternalServiceTest {
+class ArmeriaAutoConfigurationInternalServiceTest {
 
     @SpringBootApplication
     public static class TestConfiguration {}
@@ -52,7 +49,7 @@ public class ArmeriaAutoConfigurationInternalServiceTest {
     InternalServices internalServices;
 
     @Test
-    public void exposeInternalServicesToInternalPort() throws Exception {
+    void exposeInternalServicesToInternalPort() throws Exception {
         final Port internalServicePort = internalServices.internalServicePort();
         assertThat(internalServicePort).isNotNull();
         assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);

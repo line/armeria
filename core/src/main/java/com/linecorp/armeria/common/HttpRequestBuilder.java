@@ -128,6 +128,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     }
 
     @Override
+    public HttpRequestBuilder content(Publisher<? extends HttpData> publisher) {
+        return (HttpRequestBuilder) super.content(publisher);
+    }
+
+    @Override
     public HttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         return (HttpRequestBuilder) super.content(contentType, publisher);
     }
@@ -146,6 +151,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     public HttpRequestBuilder headers(
             Iterable<? extends Map.Entry<? extends CharSequence, String>> headers) {
         return (HttpRequestBuilder) super.headers(headers);
+    }
+
+    @Override
+    public HttpRequestBuilder trailer(CharSequence name, Object value) {
+        return (HttpRequestBuilder) super.trailer(name, value);
     }
 
     @Override

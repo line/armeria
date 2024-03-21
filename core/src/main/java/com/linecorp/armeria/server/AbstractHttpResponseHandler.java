@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
@@ -113,8 +114,9 @@ abstract class AbstractHttpResponseHandler {
         //    the subscriber attempts to write the next data to the stream closed at 2).
         if (!isWritable()) {
             Throwable cause = null;
-            if (reqCtx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
-                cause = reqCtx.log().ensureAvailable(RequestLogProperty.RESPONSE_CAUSE).responseCause();
+            final RequestLog requestLog = reqCtx.log().getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+            if (requestLog != null) {
+                cause = requestLog.responseCause();
             }
             if (cause == null) {
                 if (reqCtx.sessionProtocol().isMultiplex()) {
@@ -178,15 +180,17 @@ abstract class AbstractHttpResponseHandler {
                              .build();
         }
 
+        final HttpMethod method = reqCtx.method();
         if (!res.informationals().isEmpty()) {
             for (ResponseHeaders informational : res.informationals()) {
                 responseEncoder.writeHeaders(id, streamId, informational,
-                                             false, trailersEmpty);
+                                             false, trailersEmpty, method);
             }
         }
         logBuilder().responseHeaders(headers);
-        ChannelFuture future = responseEncoder.writeHeaders(id, streamId, headers,
-                                                            contentEmpty && trailersEmpty, trailersEmpty);
+        ChannelFuture future =
+                responseEncoder.writeHeaders(id, streamId, headers, contentEmpty && trailersEmpty,
+                                             trailersEmpty, method);
         if (!contentEmpty) {
             logBuilder().increaseResponseLength(content);
             future = responseEncoder.writeData(id, streamId, content, trailersEmpty);
@@ -239,8 +243,7 @@ abstract class AbstractHttpResponseHandler {
      */
     final void scheduleTimeout() {
         // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
-        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(),
-                                                   0, /* server */ true);
+        reqCtx.requestCancellationScheduler().start(newCancellationTask());
     }
 
     /**

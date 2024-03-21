@@ -71,7 +71,7 @@ class WebSocketServiceHandshakeTest {
                 if (!threadRescheduling.get()) {
                     return delegate.serve(ctx, req);
                 }
-                return HttpResponse.from(() -> {
+                return HttpResponse.of(() -> {
                     try {
                         return delegate.serve(ctx, req);
                     } catch (Exception e) {
@@ -175,7 +175,7 @@ class WebSocketServiceHandshakeTest {
 
     private static Channel channel(ClientRequestContext ctx) {
         final Channel channel = ctx.log().whenAvailable(RequestLogProperty.SESSION).join().channel();
-        assert channel != null;
+        assertThat(channel).isNotNull();
         return channel;
     }
 

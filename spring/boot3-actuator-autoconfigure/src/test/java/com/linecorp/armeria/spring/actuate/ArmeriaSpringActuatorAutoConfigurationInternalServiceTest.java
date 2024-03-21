@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.test.annotation.DirtiesContext;
@@ -51,10 +50,10 @@ import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguratio
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "internalServiceTest" })
 @DirtiesContext
-@AutoConfigureMetrics
+@EnableTestMetrics
 @EnableAutoConfiguration
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-@Timeout(10)
+@Timeout(30)
 class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
 
     // We use this logger to test the /loggers endpoint, so set the name manually instead of using class name.
@@ -107,10 +106,10 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "actuatorTest" })
     @DirtiesContext
-    @AutoConfigureMetrics
+    @EnableTestMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class ActuatorTest {
         @LocalManagementPort
         private Integer actuatorPort;
@@ -153,10 +152,10 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "basePathTest" })
     @DirtiesContext
-    @AutoConfigureMetrics
+    @EnableTestMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class BasePathTest {
         @LocalManagementPort
         private Integer actuatorPort;
@@ -187,10 +186,10 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "basePathSamePortTest" })
     @DirtiesContext
-    @AutoConfigureMetrics
+    @EnableTestMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     @FlakyTest
     static class BasePathSamePortTest {
         @LocalManagementPort
@@ -230,10 +229,10 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "basePathWithoutPortTest" })
     @DirtiesContext
-    @AutoConfigureMetrics
+    @EnableTestMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class BasePathWithoutPortTest {
         @Inject
         private Server server;
@@ -273,10 +272,10 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "allInternalServices" })
     @DirtiesContext
-    @AutoConfigureMetrics
+    @EnableTestMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class AllInternalServicesTest {
         @Inject
         private Server server;
@@ -314,10 +313,10 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "defaultInternalServices" })
     @DirtiesContext
-    @AutoConfigureMetrics
+    @EnableTestMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class DefaultInternalServicesTest {
         @Inject
         private Server server;
@@ -358,10 +357,10 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     @SpringBootTest(classes = TestConfiguration.class)
     @ActiveProfiles({ "local", "managementLocalhostTest" })
     @DirtiesContext
-    @AutoConfigureMetrics
+    @EnableTestMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
+    @Timeout(30)
     static class ManagementLocalhostTest {
         @LocalManagementPort
         private Integer actuatorPort;

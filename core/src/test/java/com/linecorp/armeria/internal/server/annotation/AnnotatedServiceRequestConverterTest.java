@@ -342,7 +342,7 @@ class AnnotatedServiceRequestConverterTest {
 
                 if (expectedResultType == Alice.class) {
                     final String age = ctx.pathParam("age");
-                    assert age != null;
+                    assertThat(age).isNotNull();
                     return new Alice(Integer.parseInt(age));
                 }
                 return RequestConverterFunction.fallthrough();
@@ -358,7 +358,7 @@ class AnnotatedServiceRequestConverterTest {
 
                 if (expectedResultType == Bob.class) {
                     final String age = ctx.pathParam("age");
-                    assert age != null;
+                    assertThat(age).isNotNull();
                     return new Bob(Integer.parseInt(age) * 2);
                 }
                 return RequestConverterFunction.fallthrough();

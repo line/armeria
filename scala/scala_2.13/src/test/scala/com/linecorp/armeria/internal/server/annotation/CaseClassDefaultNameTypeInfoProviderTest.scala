@@ -17,19 +17,21 @@
 package com.linecorp.armeria.internal.server.annotation
 
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.server.annotation.Description
 import com.linecorp.armeria.server.docs.{DescriptionInfo, FieldInfo, FieldRequirement, StructInfo}
 import munit.FunSuite
 
+@GenerateNativeImageTrace
 class CaseClassDefaultNameTypeInfoProviderTest extends FunSuite {
 
   test(s"should support @Description for case class") {
     List(true, false).foreach { request =>
       val provider = new DefaultDescriptiveTypeInfoProvider(request)
-      val struct: StructInfo = provider.newDescriptiveTypeInfo(classOf[DescriptionResult]).asInstanceOf[StructInfo]
+      val struct: StructInfo = provider.newDescriptiveTypeInfo(classOf[TestDescriptionResult]).asInstanceOf[StructInfo]
 
-      assertEquals(struct.name(), classOf[DescriptionResult].getName())
+      assertEquals(struct.name(), classOf[TestDescriptionResult].getName())
       assertEquals(struct.descriptionInfo(), DescriptionInfo.of("Class description"))
 
       assertEquals(
@@ -57,7 +59,7 @@ class CaseClassDefaultNameTypeInfoProviderTest extends FunSuite {
 }
 
 @Description("Class description")
-case class DescriptionResult(
+case class TestDescriptionResult(
     @Description(value = "required description")
     required: String,
     @Description(value = "optional description")

@@ -32,7 +32,8 @@ sensible defaults. By applying them, you can:
 - [Building shaded JARs with `shade` flag](#building-shaded-jars-with-shade-flag)
     - [Trimming a shaded JAR with `trim` flag](#trimming-a-shaded-jar-with-trim-flag)
     - [Shading a multi-module project with `relocate` flag](#shading-a-multi-module-project-with-relocate-flag)
-- [Setting a target version with the `java(\\d+)` flag](#setting-a-target-version-with-the-javad-flag)
+- [Setting a Java target version with the `java(\\d+)` flag](#setting-a-java-target-version-with-the-javad-flag)
+- [Setting a Kotlin target version with the `kotlin(\\d+\\.\\d+)` flag](#setting-a-koltin-target-version-with-the-kotlindd-flag)
 - [Tagging conveniently with `release` task](#tagging-conveniently-with-release-task)
 
 <!-- /MarkdownTOC -->
@@ -319,7 +320,7 @@ automatically:
 - `publish` - Makes a project publish its artifact to a Maven repository
 - `bom` - Makes a project publish Maven BOM based on `dependencies.toml`
 - `shade`, `relocate` and `trim` - Makes a Java project produce an additional 'shaded' JAR
-- `reactor-grpc`, `rxgrpc` or `kotlin-grpc` - Enables [`reactor-grpc`](https://github.com/salesforce/reactive-grpc/tree/master/reactor), [`rxgrpc`](https://github.com/salesforce/reactive-grpc/tree/master/rx-java) or [`kotlin-grpc`](https://github.com/grpc/grpc-kotlin) support to the project
+- `reactor-grpc`, `rxgrpc`, `kotlin-grpc` or `krotodc-grpc` - Enables [`reactor-grpc`](https://github.com/salesforce/reactive-grpc/tree/master/reactor), [`rxgrpc`](https://github.com/salesforce/reactive-grpc/tree/master/rx-java), [`kotlin-grpc`](https://github.com/grpc/grpc-kotlin) or [`krotodc-grpc`](https://github.com/mscheong01/krotoDC) support to the project
 
 We will learn what these flags exactly do in the following sections.
 
@@ -373,15 +374,6 @@ When a project has a `java` flag:
         }
     }
     ```
-
-- [Jetty ALPN agent](https://github.com/jetty-project/jetty-alpn-agent) is
-  loaded automatically when launching a Java process if you specified it in
-  `dependencies.toml`:
-
-  ```toml
-  [libraries] 
-  jetty-alpn = { module = "org.mortbay.jetty.alpn:jetty-alpn-agent", version = "2.0.10" }
-  ```
 
 - The `package-list` files of the Javadocs specified in `dependencies.toml` will
   be downloaded and cached. The downloaded `package-list` files will be used
@@ -640,7 +632,7 @@ for more information.
    }
    ```
 
-## Setting a target version with the `java(\\d+)` flag.
+## Setting a Java target version with the `java(\\d+)` flag.
 
 By default, setting the `java` flag compiles a module targeting minimum compatibility with the Java version
 specified by `javaTargetCompatibility`. `javaTargetCompatibility` is Java 8 by default if unspecified.
@@ -670,6 +662,15 @@ an `UnsupportedClassVersionError` may be raised.
 Plus, you can use `-PminimumJavaVersion` property to override the minimum version of `javaTargetCompatibility`
 set by `java` flag. For example, if you set `-PminimumJavaVersion=11`, `javaTargetCompatibility` lower than 
 Java 11 will be upgraded to Java 11.
+
+## Setting a Kotlin target version with the `kotlin(\\d+\\.\\d+)` flag.
+
+By default, `kotlin` flag compiles a Kotlin module with the [language and API version](https://kotlinlang.org/docs/compatibility-modes.html)
+specified by [Kotlin Gradle plugin](https://plugins.gradle.org/plugin/org.jetbrains.kotlin.jvm).
+However, if you want to compile a Kotlin module with a different language version and API version, you can use
+`kotlin(\\d+\\.\\d)` flag.
+
+For example, `kotlin1.6` flag makes your Kotlin module compatible with language version 1.6 and API version 1.6.
 
 ## Tagging conveniently with `release` task
 

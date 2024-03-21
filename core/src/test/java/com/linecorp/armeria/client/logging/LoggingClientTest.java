@@ -17,9 +17,8 @@ package com.linecorp.armeria.client.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.times;
@@ -46,12 +45,13 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RegexBasedSanitizer;
 import com.linecorp.armeria.internal.common.logging.LoggingTestUtil;
-import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 class LoggingClientTest {
-    private static final HttpClient delegate = (ctx, req) -> {
+    static final HttpClient delegate = (ctx, req) -> {
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
         return HttpResponse.of(HttpStatus.NO_CONTENT);
@@ -64,10 +64,16 @@ class LoggingClientTest {
         LoggingTestUtil.throwIfCaptured(capturedCause);
     }
 
+    static ClientRequestContext clientRequestContext(HttpRequest req) {
+        return ClientRequestContext.builder(req)
+                                   .eventLoop(ImmediateEventLoop.INSTANCE)
+                                   .build();
+    }
+
     @Test
     void logger() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
@@ -75,9 +81,11 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .logWriter(LogWriter.builder()
+                                                 .logger(logger)
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .build())
                              .build(delegate);
 
         customLoggerClient.execute(ctx, req);
@@ -85,12 +93,12 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+        verify(logger).info(argThat((String actLog) -> actLog.contains("Request:") &&
+                                                       actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")));
+        verify(logger).info(argThat((String actLog) -> actLog.contains("Response:") &&
+                                                       actLog.endsWith("headers=[:status=0]}")));
 
         verifyNoMoreInteractions(logger);
         clearInvocations(logger);
@@ -98,8 +106,10 @@ class LoggingClientTest {
         // use default logger
         final LoggingClient defaultLoggerClient =
                 LoggingClient.builder()
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
+                             .logWriter(LogWriter.builder()
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .build())
                              .build(delegate);
 
         defaultLoggerClient.execute(ctx, req);
@@ -112,23 +122,31 @@ class LoggingClientTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
 
         // Before sanitization
-        assertThat(ctx.logBuilder().toString()).contains("trustin");
-        assertThat(ctx.logBuilder().toString()).contains("test.com");
+        assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
+        assertThat(ctx.logBuilder().toString()).contains(":authority=test.com");
 
+        final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                      .requestHeadersSanitizer(RegexBasedSanitizer.of(
+                                                              Pattern.compile("trustin"),
+                                                              Pattern.compile("com")))
+                                                      .build();
+
+        // use custom logger
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .logFormatter(logFormatter)
+                                             .build();
         final LoggingClient client =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
-                             .requestHeadersSanitizer(RegexBasedSanitizer.of(
-                                     Pattern.compile("trustin"),
-                                     Pattern.compile("com")))
+                             .logWriter(logWriter)
                              .build(delegate);
 
         client.execute(ctx, req);
@@ -137,13 +155,11 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
-
+        verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                     !(text.contains(":path=/hello/trustin") ||
+                                                       text.contains(":authority=test.com"))));
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
-
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
     }
 
@@ -153,25 +169,28 @@ class LoggingClientTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
         when(logger.isInfoEnabled()).thenReturn(true);
 
         // Before sanitization
-        assertThat(ctx.logBuilder().toString()).contains("trustin");
-        assertThat(ctx.logBuilder().toString()).contains("test.com");
+        assertThat(ctx.logBuilder().toString()).contains(":path=/hello/trustin");
+        assertThat(ctx.logBuilder().toString()).contains(":authority=test.com");
 
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestHeadersSanitizer(RegexBasedSanitizer.of(Pattern.compile("trustin"),
+                                                                            Pattern.compile("com")))
+                            .build();
         final LoggingClient client =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
-                             .logFormatter(LogFormatter.builderForText()
-                                                       .requestHeadersSanitizer(RegexBasedSanitizer.of(
-                                                               Pattern.compile("trustin"),
-                                                               Pattern.compile("com")))
-                                                       .build())
+                             .logWriter(LogWriter.builder()
+                                                 .logger(logger)
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .logFormatter(logFormatter)
+                                                 .build())
                              .build(delegate);
 
         client.execute(ctx, req);
@@ -180,13 +199,11 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
-
+        verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                     !(text.contains(":path=/hello/trustin") ||
+                                                       text.contains(":authority=test.com"))));
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
-
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
     }
 
@@ -196,7 +213,7 @@ class LoggingClientTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -205,13 +222,19 @@ class LoggingClientTest {
         // Before sanitization
         assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
 
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestContentSanitizer(RegexBasedSanitizer.of(
+                                    Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                            .build();
         final LoggingClient client =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
-                             .requestContentSanitizer(RegexBasedSanitizer.of(
-                                     Pattern.compile("\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                             .logWriter(LogWriter.builder()
+                                                 .logger(logger)
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .logFormatter(logFormatter)
+                                                 .build())
                              .build(delegate);
 
         client.execute(ctx, req);
@@ -220,13 +243,10 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                     !text.contains("333-490-4499")));
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
     }
 
@@ -236,7 +256,7 @@ class LoggingClientTest {
                                                                  HttpHeaderNames.SCHEME, "http",
                                                                  HttpHeaderNames.AUTHORITY, "test.com"));
 
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         ctx.logBuilder().requestContent("Virginia 333-490-4499", "Virginia 333-490-4499");
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -245,16 +265,20 @@ class LoggingClientTest {
         // Before sanitization
         assertThat(ctx.logBuilder().toString()).contains("333-490-4499");
 
+        final LogFormatter logFormatter =
+                LogFormatter.builderForText()
+                            .requestContentSanitizer(RegexBasedSanitizer.of(
+                                    Pattern.compile(
+                                            "\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
+                            .build();
         final LoggingClient client =
                 LoggingClient.builder()
-                             .logger(logger)
-                             .requestLogLevel(LogLevel.INFO)
-                             .successfulResponseLogLevel(LogLevel.INFO)
-                             .logFormatter(LogFormatter.builderForText()
-                                                       .requestContentSanitizer(RegexBasedSanitizer.of(
-                                                               Pattern.compile(
-                                                                       "\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
-                                                       .build())
+                             .logWriter(LogWriter.builder()
+                                                 .logger(logger)
+                                                 .requestLogLevel(LogLevel.INFO)
+                                                 .successfulResponseLogLevel(LogLevel.INFO)
+                                                 .logFormatter(logFormatter)
+                                                 .build())
                              .build(delegate);
 
         client.execute(ctx, req);
@@ -263,45 +287,17 @@ class LoggingClientTest {
         verify(logger, times(2)).isInfoEnabled();
 
         // verify request log
-        verify(logger).info(eq("{} Request: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        verify(logger).info(argThat((String text) -> text.contains("Request:") &&
+                                                     !text.contains("333-490-4499")));
         // verify response log
-        verify(logger).info(eq("{} Response: {}"), eq(ctx),
-                            argThat((String text) -> !text.contains("333-490-4499")));
-
+        verify(logger).info(matches(".*Response:.*"));
         verifyNoMoreInteractions(logger);
-    }
-
-    @Test
-    void exceptionWhileLogging() throws Exception {
-        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/hello/trustin",
-                                                                 HttpHeaderNames.SCHEME, "http",
-                                                                 HttpHeaderNames.AUTHORITY, "test.com"));
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
-        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
-        final LoggingClient loggingClient = LoggingClient.builder()
-                                                         .logger(logger)
-                                                         .requestLogLevelMapper(log -> {
-                                                             throw new AnticipatedException();
-                                                         })
-                                                         .responseLogLevelMapper(log -> {
-                                                             throw new AnticipatedException();
-                                                         })
-                                                         .build(delegate);
-        loggingClient.execute(ctx, req);
-        verify(logger).warn(eq("{} Unexpected exception while logging {}: "), eq(ctx), eq("request"),
-                            any(AnticipatedException.class));
-        verify(logger).warn(eq("{} Unexpected exception while logging {}: "), eq(ctx), eq("response"),
-                            any(AnticipatedException.class));
-        verifyNoMoreInteractions(logger);
-        clearInvocations(logger);
     }
 
     @Test
     void internalServerError() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR));
 
         final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
@@ -310,7 +306,7 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
+                             .logWriter(LogWriter.of(logger))
                              .build(delegate);
 
         customLoggerClient.execute(ctx, req);
@@ -318,18 +314,18 @@ class LoggingClientTest {
         verify(logger, times(2)).isDebugEnabled();
 
         // verify request log
-        verify(logger).debug(eq("{} Request: {}"), eq(ctx),
-                             argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+        verify(logger).debug(argThat((String actLog) -> actLog.contains("Request:") &&
+                                                        actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).debug(eq("{} Response: {}"), eq(ctx),
-                             argThat((String actLog) -> actLog.endsWith("headers=[:status=500]}")));
+        verify(logger).debug(argThat((String actLog) -> actLog.contains("Response:") &&
+                                                        actLog.endsWith("headers=[:status=500]}")));
     }
 
     @Test
     void defaultsError() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
 
@@ -340,7 +336,7 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
+                             .logWriter(LogWriter.of(logger))
                              .build(delegate);
 
         customLoggerClient.execute(ctx, req);
@@ -349,19 +345,19 @@ class LoggingClientTest {
         verify(logger, times(1)).isWarnEnabled();
 
         // verify request log
-        verify(logger).debug(eq("{} Request: {}"), eq(ctx),
-                             argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+        verify(logger).debug(argThat((String actLog) -> actLog.contains("Request:") &&
+                                                        actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")),
+        verify(logger).warn(argThat((String actLog) -> actLog.contains("Response:") &&
+                                                       actLog.endsWith("headers=[:status=0]}")),
                             same(cause));
     }
 
     @Test
     void shouldLogFailedResponseWhenFailureSamplingRateIsAlways() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
 
@@ -372,7 +368,7 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
+                             .logWriter(LogWriter.of(logger))
                              .successSamplingRate(0.0f)
                              .build(delegate);
 
@@ -381,19 +377,19 @@ class LoggingClientTest {
         verify(logger, times(1)).isWarnEnabled();
 
         // verify request log
-        verify(logger).warn(eq("{} Request: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:method=GET, :path=/]}")));
+        verify(logger).warn(argThat((String actLog) -> actLog.contains("Request:") &&
+                                                        actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
-        verify(logger).warn(eq("{} Response: {}"), eq(ctx),
-                            argThat((String actLog) -> actLog.endsWith("headers=[:status=0]}")),
+        verify(logger).warn(argThat((String actLog) -> actLog.contains("Response:") &&
+                                                       actLog.endsWith("headers=[:status=0]}")),
                             same(cause));
     }
 
     @Test
     void shouldNotLogFailedResponseWhenSamplingRateIsZero() throws Exception {
         final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
-        final ClientRequestContext ctx = ClientRequestContext.of(req);
+        final ClientRequestContext ctx = clientRequestContext(req);
         final IllegalStateException cause = new IllegalStateException("Failed");
         ctx.logBuilder().endResponse(cause);
 
@@ -402,7 +398,7 @@ class LoggingClientTest {
         // use custom logger
         final LoggingClient customLoggerClient =
                 LoggingClient.builder()
-                             .logger(logger)
+                             .logWriter(LogWriter.of(logger))
                              .samplingRate(0.0f)
                              .build(delegate);
 
@@ -412,21 +408,16 @@ class LoggingClientTest {
     }
 
     @Test
-    void sanitizerAndLogFormatterCanNotSetTogether() {
+    void sanitizerAndLogWriterCanNotSetTogether() {
         assertThatThrownBy(() -> LoggingClient
                 .builder()
                 .requestHeadersSanitizer(RegexBasedSanitizer.of(
                         Pattern.compile("trustin"),
                         Pattern.compile("com")))
-                .logFormatter(
-                        LogFormatter.builderForText()
-                                    .requestHeadersSanitizer(RegexBasedSanitizer.of(
-                                            Pattern.compile("trustin"),
-                                            Pattern.compile("com")))
-                                    .build())
+                .logWriter(LogWriter.of())
                 .build(delegate))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
-                        "The log sanitizers and the LogFormatter cannot be used at the same time");
+                        "The logWriter and the log properties cannot be set together.");
     }
 }

@@ -23,11 +23,11 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -38,12 +38,12 @@ import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.common.EventLoopGroupExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.EventLoopGroup;
 
-public class HttpClientPipeliningTest {
+class HttpClientPipeliningTest {
 
     // Server-side configuration
     private static final Semaphore semaphore = new Semaphore(0);
@@ -51,8 +51,8 @@ public class HttpClientPipeliningTest {
     private static final Condition condition = lock.newCondition();
     private static volatile boolean connectionReturnedToPool;
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             // Bind a service that returns the remote address of the connection to determine
@@ -61,7 +61,7 @@ public class HttpClientPipeliningTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     // Consume the request completely so that the connection can be returned to the pool.
-                    return HttpResponse.from(req.aggregate().handle((unused1, unused2) -> {
+                    return HttpResponse.of(req.aggregate().handle((unused1, unused2) -> {
                         // Signal the main thread that the connection has been returned to the pool.
                         // Note that this is true only when pipelining is enabled. The connection is returned
                         // after response is fully sent if pipelining is disabled.
@@ -87,15 +87,15 @@ public class HttpClientPipeliningTest {
     };
 
     // Client-side configuration
-    @ClassRule
-    public static final EventLoopRule eventLoopGroup = new EventLoopRule();
+    @RegisterExtension
+    static final EventLoopGroupExtension eventLoopGroup = new EventLoopGroupExtension(1);
     private static ClientFactory factoryWithPipelining;
     private static ClientFactory factoryWithoutPipelining;
 
     private final EventLoopGroup aggregateExecutors = EventLoopGroups.newEventLoopGroup(2);
 
-    @BeforeClass
-    public static void initClientFactory() {
+    @BeforeAll
+    static void initClientFactory() {
         // Ensure only a single event loop is used so that there's only one connection pool.
         // Note: Each event loop has its own connection pool.
         factoryWithPipelining = ClientFactory.builder()
@@ -109,20 +109,20 @@ public class HttpClientPipeliningTest {
                                                 .build();
     }
 
-    @AfterClass
-    public static void destroyClientFactory() {
+    @AfterAll
+    static void destroyClientFactory() {
         factoryWithPipelining.closeAsync();
         factoryWithoutPipelining.closeAsync();
     }
 
-    @Before
-    public void resetState() {
+    @BeforeEach
+    void resetState() {
         semaphore.drainPermits();
         connectionReturnedToPool = false;
     }
 
     @Test
-    public void withoutPipelining() throws Exception {
+    void withoutPipelining() throws Exception {
         final WebClient client = WebClient.builder("h1c://127.0.0.1:" + server.httpPort())
                                           .factory(factoryWithoutPipelining)
                                           .build();
@@ -144,7 +144,7 @@ public class HttpClientPipeliningTest {
     }
 
     @Test
-    public void withPipelining() throws Exception {
+    void withPipelining() throws Exception {
         final WebClient client = WebClient.builder("h1c://127.0.0.1:" + server.httpPort())
                                           .factory(factoryWithPipelining)
                                           .build();

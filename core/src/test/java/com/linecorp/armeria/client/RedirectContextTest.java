@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.net.ssl.SSLSession;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.quality.Strictness;
 
 import com.linecorp.armeria.client.RedirectingClient.RedirectContext;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -40,7 +41,7 @@ class RedirectContextTest {
     @Test
     void buildOriginalUri() {
         final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        final HttpResponse response = HttpResponse.from(future);
+        final HttpResponse response = HttpResponse.of(future);
 
         HttpRequest request = request(HttpHeaders.of(HttpHeaderNames.AUTHORITY, "foo"));
         RedirectContext redirectCtx = new RedirectContext(ClientRequestContext.of(request), request,
@@ -88,7 +89,7 @@ class RedirectContextTest {
     }
 
     private static SSLSession newSslSession() {
-        final SSLSession sslSession = mock(SSLSession.class, withSettings().lenient());
+        final SSLSession sslSession = mock(SSLSession.class, withSettings().strictness(Strictness.LENIENT));
         when(sslSession.getId()).thenReturn(new byte[] { 1, 1, 2, 3, 5, 8, 13, 21 });
         when(sslSession.getProtocol()).thenReturn("TLSv1.2");
         when(sslSession.getCipherSuite()).thenReturn("some-cipher");

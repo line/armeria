@@ -87,7 +87,7 @@ class AggregatedHttpResponseHandlerTest {
                     assertThat(req).isInstanceOf(AggregatingDecodedHttpRequest.class);
                     // Make sure that the stream was closed already.
                     assertThat(req.isOpen()).isFalse();
-                    return HttpResponse.from(req.aggregate().thenApply(agg -> {
+                    return HttpResponse.of(req.aggregate().thenApply(agg -> {
                         return HttpResponse.of(agg.contentUtf8());
                     }));
                 }

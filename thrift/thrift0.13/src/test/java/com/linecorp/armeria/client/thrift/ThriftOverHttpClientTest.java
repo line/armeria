@@ -86,17 +86,17 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.BinaryService;
-import com.linecorp.armeria.service.test.thrift.main.DevNullService;
-import com.linecorp.armeria.service.test.thrift.main.FileService;
-import com.linecorp.armeria.service.test.thrift.main.FileServiceException;
-import com.linecorp.armeria.service.test.thrift.main.HeaderService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
-import com.linecorp.armeria.service.test.thrift.main.TimeService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.AsciiString;
+import testing.thrift.main.BinaryService;
+import testing.thrift.main.DevNullService;
+import testing.thrift.main.FileService;
+import testing.thrift.main.FileServiceException;
+import testing.thrift.main.HeaderService;
+import testing.thrift.main.HelloService;
+import testing.thrift.main.OnewayHelloService;
+import testing.thrift.main.TimeService;
 
 @SuppressWarnings("unchecked")
 public class ThriftOverHttpClientTest {
@@ -736,7 +736,7 @@ public class ThriftOverHttpClientTest {
                                                        .build(Handlers.HELLO.iface());
         assertThatThrownBy(() -> client.hello(""))
                 .isInstanceOf(TTransportException.class)
-                .getCause()
+                .cause()
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
                 })

@@ -16,9 +16,9 @@
 package com.linecorp.armeria.client.logging;
 
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
@@ -26,11 +26,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
-import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -38,6 +35,8 @@ import com.linecorp.armeria.common.util.Sampler;
  */
 public final class LoggingClient extends AbstractLoggingClient<HttpRequest, HttpResponse>
         implements HttpClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(LoggingClient.class);
 
     /**
      * Returns a new {@link HttpClient} decorator that logs {@link Request}s and {@link Response}s at
@@ -52,25 +51,12 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
      * Returns a newly created {@link LoggingClientBuilder}.
      */
     public static LoggingClientBuilder builder() {
-        return new LoggingClientBuilder();
+        return new LoggingClientBuilder().defaultLogger(logger);
     }
 
-    /**
-     * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}s with the {@link LogFormatter}.
-     * If the logger is null, it means that the default logger is used.
-     */
-    LoggingClient(
-            HttpClient delegate,
-            @Nullable Logger logger,
-            RequestLogLevelMapper requestLogLevelMapper,
-            ResponseLogLevelMapper responseLogLevelMapper,
-            Predicate<Throwable> responseCauseFilter,
-            Sampler<? super ClientRequestContext> successSampler,
-            Sampler<? super ClientRequestContext> failureSampler,
-            LogFormatter logFormatter) {
-
-        super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
-              responseCauseFilter, successSampler, failureSampler, logFormatter);
+    LoggingClient(HttpClient delegate, LogWriter logWriter,
+                  Sampler<? super ClientRequestContext> successSampler,
+                  Sampler<? super ClientRequestContext> failureSampler) {
+        super(delegate, logWriter, successSampler, failureSampler);
     }
 }

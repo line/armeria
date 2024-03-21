@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -42,11 +44,13 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@GenerateNativeImageTrace
 class EurekaUpdatingListenerTest {
 
     private static final String INSTANCE_ID = "i-00000000";
@@ -79,7 +83,7 @@ class EurekaUpdatingListenerTest {
                     future.complete(HttpResponse.of(HttpStatus.NO_CONTENT));
                     return null;
                 });
-                return HttpResponse.from(future);
+                return HttpResponse.of(future);
             });
             sb.service("/apps/" + APP_NAME + '/' + INSTANCE_ID, (ctx, req) -> {
                 req.aggregate();
@@ -142,21 +146,21 @@ class EurekaUpdatingListenerTest {
     @Test
     void reRegisterIfInstanceNoLongerRegistered() throws IOException {
         final EurekaUpdatingListener listener =
-            EurekaUpdatingListener.builder(eurekaServer.httpUri())
-                .instanceId(INSTANCE_ID)
-                .renewalIntervalMillis(2000)
-                .leaseDurationMillis(10000)
-                .appName(APP_NAME)
-                .build();
+                EurekaUpdatingListener.builder(eurekaServer.httpUri())
+                                      .instanceId(INSTANCE_ID)
+                                      .renewalIntervalMillis(2000)
+                                      .leaseDurationMillis(10000)
+                                      .appName(APP_NAME)
+                                      .build();
         final int previousRegisterCount = registerCounter.get();
         final Server application = Server.builder()
-            .http(0)
-            .https(0)
-            .tlsSelfSigned()
-            .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-            .service("/health", HealthCheckService.of())
-            .serverListener(listener)
-            .build();
+                                         .http(0)
+                                         .https(0)
+                                         .tlsSelfSigned()
+                                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                         .service("/health", HealthCheckService.of())
+                                         .serverListener(listener)
+                                         .build();
         application.start().join();
         await().until(() -> registerContentCaptor.get() != null);
         assertThat(registerCounter.get()).isEqualTo(previousRegisterCount + 1);
@@ -191,8 +195,8 @@ class EurekaUpdatingListenerTest {
         }
         final int port = application.activePort(SessionProtocol.HTTP).localAddress().getPort();
         final int securePort = application.activePort(SessionProtocol.HTTPS).localAddress().getPort();
-        builder.vipAddress(application.defaultHostname() + ':' + port)
-               .secureVipAddress(application.defaultHostname() + ':' + securePort)
+        builder.vipAddress(application.defaultHostname())
+               .secureVipAddress(application.defaultHostname())
                .port(port)
                .securePort(securePort)
                .healthCheckUrl("http://" + hostnameOrIpAddr + ':' + port + "/health")
@@ -248,6 +252,48 @@ class EurekaUpdatingListenerTest {
         final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
                                                            InstanceInfo.class);
         assertThat(instanceInfo.getInstanceId()).isEqualTo("myhost:" + APP_NAME + ":1");
+        application.stop().join();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "'',/,'',/,'',/",
+            "custom-health,/custom-health,home-page,/home-page,status-page,/status-page",
+            "/custom-health,/custom-health,/home-page,/home-page,/status-page,/status-page",
+    })
+    void customPaths(String healthCheckUrlPath, String expectedHealthCheckUrlPath,
+                     String homePageUrlPath, String expectedHomePageUrlPath,
+                     String statusPageUrlPath, String expectedStatusPageUrlPath)
+            throws IOException {
+        final EurekaUpdatingListener listener =
+                EurekaUpdatingListener.builder(eurekaServer.httpUri())
+                                      .renewalInterval(Duration.ofSeconds(2))
+                                      .leaseDuration(Duration.ofSeconds(10))
+                                      .hostname("myhost")
+                                      .homePageUrlPath(homePageUrlPath)
+                                      .statusPageUrlPath(statusPageUrlPath)
+                                      .healthCheckUrlPath(healthCheckUrlPath)
+                                      .port(88)
+                                      .securePort(8888)
+                                      .appName(APP_NAME)
+                                      .build();
+
+        final Server application = Server.builder()
+                                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                         .service("/custom-health",
+                                                  (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                         .service("/health", HealthCheckService.of())
+                                         .serverListener(listener)
+                                         .build();
+        application.start().join();
+        await().until(() -> registerContentCaptor.get() != null);
+        final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
+                                                           InstanceInfo.class);
+        assertThat(instanceInfo.getHomePageUrl()).isEqualTo("http://myhost:88" + expectedHomePageUrlPath);
+        assertThat(instanceInfo.getStatusPageUrl()).isEqualTo("http://myhost:88" + expectedStatusPageUrlPath);
+        assertThat(instanceInfo.getHealthCheckUrl()).isEqualTo("http://myhost:88" + expectedHealthCheckUrlPath);
+        assertThat(instanceInfo.getSecureHealthCheckUrl())
+                .isEqualTo("https://myhost:8888" + expectedHealthCheckUrlPath);
         application.stop().join();
     }
 }

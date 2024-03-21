@@ -536,6 +536,11 @@ public final class MediaType {
     public static final MediaType JSON = createConstant(APPLICATION_TYPE, "json");
 
     /**
+     * For <a href="https://tools.ietf.org/html/7519">JWT objects using the compact Serialization</a>.
+     */
+    public static final MediaType JWT = createConstant(APPLICATION_TYPE, "jwt");
+
+    /**
      * As described in <a href="https://datatracker.ietf.org/doc/rfc6902/">RFC 6902</a>, this constant
      * ({@code application/json-patch+json}) is used for expressing a sequence of operations to apply
      * to a JavaScript Object Notation(JSON) document.

@@ -54,6 +54,7 @@ import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
+import com.linecorp.armeria.internal.common.util.CertificateUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.Counter;
@@ -109,9 +110,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerPipelineConfigurator.class);
 
     private static final int SSL_RECORD_HEADER_LENGTH = 5;
+    private static final int MAX_CLIENT_HELLO_LENGTH = 4096; // 4KiB should be more than enough.
 
-    private static final AsciiString SCHEME_HTTP = AsciiString.cached("http");
-    private static final AsciiString SCHEME_HTTPS = AsciiString.cached("https");
+    static final AsciiString SCHEME_HTTP = AsciiString.cached("http");
+    static final AsciiString SCHEME_HTTPS = AsciiString.cached("https");
 
     private static final byte[] PROXY_V1_MAGIC_BYTES = {
             (byte) 'P', (byte) 'R', (byte) 'O', (byte) 'X', (byte) 'Y'
@@ -231,7 +233,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         final Mapping<String, SslContext> sslContexts =
                 requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
-        p.addLast(new SniHandler(sslContexts));
+        p.addLast(new SniHandler(sslContexts, MAX_CLIENT_HELLO_LENGTH, config.idleTimeoutMillis()));
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2OrHttpHandler(proxiedAddresses));
     }
@@ -243,7 +245,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final Http2ConnectionEncoder encoder = encoder(connection);
         final Http2ConnectionDecoder decoder = decoder(connection, encoder);
         return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config, keepAliveTimer,
-                                                       gracefulShutdownSupport, scheme.toString())
+                                                       gracefulShutdownSupport, scheme)
                 .codec(decoder, encoder)
                 .initialSettings(http2Settings())
                 .build();

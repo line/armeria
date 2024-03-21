@@ -1,0 +1,12 @@
+dependencies {
+    implementation project(':spring:boot3-starter')
+    implementation project(':spring:boot3-actuator-starter')
+    implementation project(':jetty12')
+    implementation libs.slf4j2.api
+    implementation libs.spring.boot3.starter.jetty
+    implementation(libs.spring.boot3.starter.web) {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
+    }
+    implementation libs.spring6.web
+    testImplementation libs.spring.boot3.starter.test
+}
