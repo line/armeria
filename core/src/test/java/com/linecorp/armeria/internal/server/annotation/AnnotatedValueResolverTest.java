@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -87,6 +88,11 @@ class AnnotatedValueResolverTest {
                                                                       "enum1",
                                                                       "sensitive");
 
+    // These parameters will be present without the values. e.g. ?emptyParam1=&emptyParam2=&...
+    static final Set<String> existingWithoutValueParameters = ImmutableSet.of("emptyParam1",
+                                                                              "emptyParam2",
+                                                                              "param2");
+
     // 'headerValues' will be returned.
     static final Set<AsciiString> existingHttpHeaders = ImmutableSet.of(HttpHeaderNames.of("header1"),
                                                                         HttpHeaderNames.of("header2"));
@@ -101,8 +107,9 @@ class AnnotatedValueResolverTest {
 
     static {
         final String path = "/";
-        final String query = existingHttpParameters.stream().map(p -> p + '=' + p)
-                                                   .collect(Collectors.joining("&"));
+        final String query = Stream.concat(existingHttpParameters.stream().map(p -> p + '=' + p),
+                                           existingWithoutValueParameters.stream().map(p -> p + '='))
+                                   .collect(Collectors.joining("&"));
 
         final RequestHeadersBuilder headers = RequestHeaders.builder(HttpMethod.GET, path + '?' + query);
         headers.set(HttpHeaderNames.COOKIE, "a=1;b=2;c=3;a=4");
@@ -139,6 +146,10 @@ class AnnotatedValueResolverTest {
 
     static boolean shouldPathVariableExist(AnnotatedValueResolver element) {
         return pathParams.contains(element.httpElementName());
+    }
+
+    static boolean httpParameterExistButNoValuePresent(AnnotatedValueResolver element) {
+        return existingWithoutValueParameters.contains(element.httpElementName());
     }
 
     @Test
@@ -300,6 +311,13 @@ class AnnotatedValueResolverTest {
                 } else {
                     assertThat(value).isEqualTo(resolver.httpElementName());
                 }
+            } else if (httpParameterExistButNoValuePresent(resolver)) {
+                assertThat(resolver.defaultValue()).isNull();
+                if (String.class.isAssignableFrom(resolver.elementType())) {
+                    assertThat(value).isEqualTo("");
+                } else {
+                    assertThat(value).isNull();
+                }
             } else {
                 assertThat(resolver.defaultValue()).isNotNull();
                 if (resolver.containerType() != null &&
@@ -380,6 +398,8 @@ class AnnotatedValueResolverTest {
                      @Param String param1,
                      @Param @Default("1") int param2,
                      @Param @Default("1") List<Integer> param3,
+                     @Param @Default String emptyParam1,
+                     @Param @Default Integer emptyParam2,
                      @Header List<String> header1,
                      @Header("header1") Optional<List<ValueEnum>> optionalHeader1,
                      @Header String header2,
@@ -426,6 +446,10 @@ class AnnotatedValueResolverTest {
         int param2();
 
         List<Integer> param3();
+
+        String emptyParam1();
+
+        Integer emptyParam2();
 
         List<String> header1();
 
@@ -490,6 +514,14 @@ class AnnotatedValueResolverTest {
         @Param
         @Default("1")
         List<Integer> param3;
+
+        @Param
+        @Default
+        String emptyParam1;
+
+        @Param
+        @Default
+        Integer emptyParam2;
 
         @Header
         List<String> header1;
@@ -595,6 +627,16 @@ class AnnotatedValueResolverTest {
         @Override
         public List<Integer> param3() {
             return param3;
+        }
+
+        @Override
+        public String emptyParam1() {
+            return emptyParam1;
+        }
+
+        @Override
+        public Integer emptyParam2() {
+            return emptyParam2;
         }
 
         @Override
@@ -723,6 +765,8 @@ class AnnotatedValueResolverTest {
         final String param1;
         final int param2;
         final List<Integer> param3;
+        final String emptyParam1;
+        final Integer emptyParam2;
         final List<String> header1;
         final Optional<List<ValueEnum>> optionalHeader1;
         final String header2;
@@ -752,6 +796,8 @@ class AnnotatedValueResolverTest {
                         @Param String param1,
                         @Param @Default("1") int param2,
                         @Param @Default("1") List<Integer> param3,
+                        @Param @Default String emptyParam1,
+                        @Param @Default Integer emptyParam2,
                         @Header List<String> header1,
                         @Header("header1") Optional<List<ValueEnum>> optionalHeader1,
                         @Header String header2,
@@ -780,6 +826,8 @@ class AnnotatedValueResolverTest {
             this.param1 = param1;
             this.param2 = param2;
             this.param3 = param3;
+            this.emptyParam1 = emptyParam1;
+            this.emptyParam2 = emptyParam2;
             this.header1 = header1;
             this.optionalHeader1 = optionalHeader1;
             this.header2 = header2;
@@ -824,6 +872,16 @@ class AnnotatedValueResolverTest {
         @Override
         public List<Integer> param3() {
             return param3;
+        }
+
+        @Override
+        public String emptyParam1() {
+            return emptyParam1;
+        }
+
+        @Override
+        public Integer emptyParam2() {
+            return emptyParam2;
         }
 
         @Override
@@ -952,6 +1010,8 @@ class AnnotatedValueResolverTest {
         String param1;
         int param2;
         List<Integer> param3;
+        String emptyParam1;
+        Integer emptyParam2;
         List<String> header1;
         Optional<List<ValueEnum>> optionalHeader1;
         String header2;
@@ -996,6 +1056,18 @@ class AnnotatedValueResolverTest {
         @Default("1")
         void setParam3(List<Integer> param3) {
             this.param3 = param3;
+        }
+
+        @Param
+        @Default
+        void setEmptyParam1(String emptyParam1) {
+            this.emptyParam1 = emptyParam1;
+        }
+
+        @Param
+        @Default
+        void setEmptyParam2(Integer emptyParam2) {
+            this.emptyParam2 = emptyParam2;
         }
 
         void setHeader1(@Header List<String> header1) {
@@ -1114,6 +1186,16 @@ class AnnotatedValueResolverTest {
         @Override
         public List<Integer> param3() {
             return param3;
+        }
+
+        @Override
+        public String emptyParam1() {
+            return emptyParam1;
+        }
+
+        @Override
+        public Integer emptyParam2() {
+            return emptyParam2;
         }
 
         @Override
@@ -1242,6 +1324,8 @@ class AnnotatedValueResolverTest {
         final String param1;
         int param2;
         List<Integer> param3;
+        String emptyParam1;
+        Integer emptyParam2;
         final List<String> header1;
         final Optional<List<ValueEnum>> optionalHeader1;
         String header2;
@@ -1269,6 +1353,7 @@ class AnnotatedValueResolverTest {
 
         MixedBean(@Param String var1,
                   @Param String param1,
+                  @Param @Default String emptyParam1,
                   @Header List<String> header1,
                   @Header("header1") Optional<List<ValueEnum>> optionalHeader1,
                   @Header @Default("defaultValue") List<String> header3,
@@ -1290,6 +1375,7 @@ class AnnotatedValueResolverTest {
                   @Param @Default("+01:00:00") ZoneOffset zoneOffset) {
             this.var1 = var1;
             this.param1 = param1;
+            this.emptyParam1 = emptyParam1;
             this.header1 = header1;
             this.optionalHeader1 = optionalHeader1;
             this.header3 = header3;
@@ -1317,6 +1403,10 @@ class AnnotatedValueResolverTest {
 
         void setParam3(@Param @Default("1") List<Integer> param3) {
             this.param3 = param3;
+        }
+
+        void setEmptyParam2(@Param @Default Integer emptyParam2) {
+            this.emptyParam2 = emptyParam2;
         }
 
         void setHeader2(@Header String header2) {
@@ -1357,6 +1447,16 @@ class AnnotatedValueResolverTest {
         @Override
         public List<Integer> param3() {
             return param3;
+        }
+
+        @Override
+        public String emptyParam1() {
+            return emptyParam1;
+        }
+
+        @Override
+        public Integer emptyParam2() {
+            return emptyParam2;
         }
 
         @Override

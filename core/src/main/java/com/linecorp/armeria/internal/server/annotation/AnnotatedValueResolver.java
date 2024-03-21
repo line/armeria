@@ -1026,6 +1026,10 @@ final class AnnotatedValueResolver {
         if (value == null) {
             return defaultOrException();
         }
+        if (value.isEmpty()) {
+            logger.warn("Parameter is present but the value is missing: " + httpElementName);
+            return String.class.isAssignableFrom(elementType) ? value : null;
+        }
         return convert(value, elementType, enumConverter);
     }
 

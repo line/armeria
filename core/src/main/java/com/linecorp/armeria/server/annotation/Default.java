@@ -35,7 +35,11 @@ public @interface Default {
      * When {@link Default} annotation exists but {@link Default#value()} is not specified, {@code null}
      * value would be set if the parameter is not present in the request.
      *
-     * {@link Default} annotation is not allowed for a path variable. If a user uses {@link Default}
+     * <p>If the parameter is present in the request without the value e.g. {@code /foo?bar=}, then empty
+     * string represented as {@code ""} would be set if the type of the parameter is {@link String}.
+     * Otherwise {@code null} would be set. In this case, the logger would warn.
+     *
+     * <p>{@link Default} annotation is not allowed for a path variable. If a user uses {@link Default}
      * annotation on a path variable, {@link IllegalArgumentException} would be raised.
      */
     String value() default UNSPECIFIED;
