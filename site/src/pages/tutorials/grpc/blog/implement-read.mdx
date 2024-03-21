@@ -104,11 +104,10 @@ Let's test if we can retrieve a blog post we created.
 
     assertThat(blogPost.getTitle()).isEqualTo("My first blog");
     assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
-    System.out.println(blogPost);
   }
   ```
 2. Add annotations to configure the order our test methods will be executed.
-  The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve in the `getBlogPost()` method.
+  The annotations guarantee that the first blog post will be created in the `createBlogPost()` method before we try to retrieve it in the `getBlogPost()` method.
   ```java filename=BlogServiceTest.java
   import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
   import org.junit.jupiter.api.Order;
@@ -185,7 +184,6 @@ void listBlogPosts() throws JsonProcessingException {
   final BlogPost secondBlog = blogs.get(1);
   assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
   assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
-  System.out.println(blogs);
 }
 ```
 

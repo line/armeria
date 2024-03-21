@@ -71,7 +71,6 @@ class BlogServiceTest {
         final BlogPost response = client.createBlogPost(request);
         assertThat(response.getTitle()).isEqualTo(request.getTitle());
         assertThat(response.getContent()).isEqualTo(request.getContent());
-        System.out.println(response);
     }
 
     @Test
@@ -81,7 +80,6 @@ class BlogServiceTest {
 
         assertThat(blogPost.getTitle()).isEqualTo("My first blog");
         assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
-        System.out.println(blogPost);
     }
 
     @Test
@@ -118,7 +116,6 @@ class BlogServiceTest {
         final BlogPost secondBlog = blogs.get(1);
         assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
         assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
-        System.out.println(blogs);
     }
 
     @Test

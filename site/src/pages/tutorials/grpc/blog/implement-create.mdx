@@ -139,7 +139,6 @@ Let's test if we can create a blog post.
     final BlogPost response = client.createBlogPost(request);
     assertThat(response.getTitle()).isEqualTo(request.getTitle());
     assertThat(response.getContent()).isEqualTo(request.getContent());
-    System.out.println(response);
   }
   ```
 2. Run the test case on your IDE or using Gradle.
