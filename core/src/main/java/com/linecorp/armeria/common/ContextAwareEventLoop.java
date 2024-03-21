@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.RequestContextUtil.ensureSameCtx;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.ensureSameCtx;
 import static java.util.Objects.requireNonNull;
 
 import io.netty.channel.EventLoop;
@@ -40,16 +40,16 @@ public interface ContextAwareEventLoop extends EventLoop, ContextAwareScheduledE
     }
 
     /**
-     * Returns the {@link EventLoop} that is executing submitted tasks without setting
-     * the {@link RequestContext}.
-     */
-    @Override
-    EventLoop withoutContext();
-
-    /**
-     * Returns the {@link RequestContext} that is specified when creating
+     * Returns the {@link RequestContext} that was specified when creating
      * this {@link ContextAwareEventLoop}.
      */
     @Override
     RequestContext context();
+
+    /**
+     * Returns the {@link EventLoop} that executes the submitted tasks without setting
+     * the {@link RequestContext}.
+     */
+    @Override
+    EventLoop withoutContext();
 }

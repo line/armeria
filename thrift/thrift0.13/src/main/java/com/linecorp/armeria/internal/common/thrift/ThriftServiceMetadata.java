@@ -248,6 +248,14 @@ public final class ThriftServiceMetadata {
     }
 
     /**
+     * Returns a map whose key is a method name and whose value is {@link AsyncProcessFunction} or
+     * {@link ProcessFunction}.
+     */
+    public Map<String, ThriftFunction> functions() {
+        return functions;
+    }
+
+    /**
      * Returns the {@link ThriftFunction} that provides the metadata of the specified Thrift function.
      *
      * @return the {@link ThriftFunction}, or {@code null} if there's no such function.

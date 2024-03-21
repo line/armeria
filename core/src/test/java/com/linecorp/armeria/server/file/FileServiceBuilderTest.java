@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.file;
 
+import static com.linecorp.armeria.server.file.FileServiceTest.baseResourceDir;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -30,16 +31,13 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class FileServiceBuilderTest {
 
-    private static final String BASE_RESOURCE_DIR =
-            FileServiceBuilderTest.class.getPackage().getName().replace('.', '/') + '/';
-
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.serviceUnder(
                     "/mediaTypeResolver",
-                    FileService.builder(getClass().getClassLoader(), BASE_RESOURCE_DIR + "bar")
+                    FileService.builder(getClass().getClassLoader(), baseResourceDir + "bar")
                                .mediaTypeResolver((path, contentEncoding) -> {
                                    if (path.endsWith(".custom-json-extension")) {
                                        return MediaType.JSON_UTF_8;

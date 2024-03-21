@@ -262,6 +262,16 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ThriftClientBuilder requestAutoAbortDelay(Duration delay) {
+        return (ThriftClientBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public ThriftClientBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (ThriftClientBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public ThriftClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (ThriftClientBuilder) super.requestIdGenerator(requestIdGenerator);
     }
@@ -275,6 +285,11 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     public ThriftClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (ThriftClientBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public ThriftClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (ThriftClientBuilder) super.contextHook(contextHook);
     }
 
     @Override

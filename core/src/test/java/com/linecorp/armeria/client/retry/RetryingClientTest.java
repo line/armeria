@@ -269,7 +269,7 @@ class RetryingClientTest {
                 @Override
                 protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req)
                         throws Exception {
-                    return HttpResponse.from(req.aggregate().handle((aggregatedRequest, thrown) -> {
+                    return HttpResponse.of(req.aggregate().handle((aggregatedRequest, thrown) -> {
                         if (reqPostCount.getAndIncrement() < 1) {
                             return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
                         } else {
@@ -359,6 +359,16 @@ class RetryingClientTest {
                                 })
                                 .thenBackoff());
         final AggregatedHttpResponse res = client.get("/trailers-then-success").aggregate().join();
+        assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
+    }
+
+    @Test
+    void retryWhenTotalDurationIsHigh() {
+        final WebClient client =
+                client(RetryRule.builder()
+                                .onTotalDuration((unused, duration) -> duration.toNanos() > 100)
+                                .thenBackoff());
+        final AggregatedHttpResponse res = client.get("/1sleep-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
 
@@ -493,6 +503,7 @@ class RetryingClientTest {
                     }
                 }
         );
+
         final WebClient client = client(mapping);
 
         Stopwatch stopwatch = Stopwatch.createStarted();
@@ -509,6 +520,36 @@ class RetryingClientTest {
         assertThat(client.get("/502-always").aggregate().join().status())
                 .isEqualTo(HttpStatus.valueOf(502));
         assertThat(stopwatch.elapsed()).isBetween(Duration.ofSeconds(0), Duration.ofSeconds(2));
+    }
+
+    @Test
+    void evaluatesMappingOnce() {
+        final AtomicInteger evaluations = new AtomicInteger(0);
+        final RetryConfigMapping<HttpResponse> mapping =
+            (ctx, req) -> {
+                evaluations.incrementAndGet();
+                return RetryConfig
+                        .<HttpResponse>builder0(RetryRule.builder()
+                                                         .onStatus(HttpStatus.valueOf(500))
+                                                         .thenBackoff())
+                        .maxTotalAttempts(2)
+                        .build();
+            };
+
+        final WebClient client = client(mapping);
+
+        assertThat(client.get("/500-then-success").aggregate().join().status())
+                .isEqualTo(HttpStatus.valueOf(200));
+
+        // 1 logical request; 2 retries
+        assertThat(evaluations.get()).isEqualTo(1);
+
+        reqCount.set(0);
+        assertThat(client.get("/500-then-success").aggregate().join().status())
+                .isEqualTo(HttpStatus.valueOf(200));
+
+        // 2 logical requests; 4 retries
+        assertThat(evaluations.get()).isEqualTo(2);
     }
 
     @Test

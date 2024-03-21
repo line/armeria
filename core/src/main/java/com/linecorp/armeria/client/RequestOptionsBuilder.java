@@ -39,6 +39,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     private long responseTimeoutMillis = -1;
     private long writeTimeoutMillis = -1;
     private long maxResponseLength = -1;
+    @Nullable
+    private Long requestAutoAbortDelayMillis;
 
     @Nullable
     private Map<AttributeKey<?>, Object> attributes;
@@ -50,6 +52,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             responseTimeoutMillis = options.responseTimeoutMillis();
             writeTimeoutMillis = options.writeTimeoutMillis();
             maxResponseLength = options.maxResponseLength();
+            requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
             final Map<AttributeKey<?>, Object> attrs = options.attrs();
             if (!attrs.isEmpty()) {
                 attributes = new HashMap<>(attrs);
@@ -94,6 +97,17 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     }
 
     @Override
+    public RequestOptionsBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    @Override
+    public RequestOptionsBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        requestAutoAbortDelayMillis = delayMillis;
+        return this;
+    }
+
+    @Override
     public <V> RequestOptionsBuilder attr(AttributeKey<V> key, @Nullable V value) {
         requireNonNull(key, "key");
 
@@ -126,7 +140,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
      */
     public RequestOptions build() {
         if (responseTimeoutMillis < 0 && writeTimeoutMillis < 0 &&
-            maxResponseLength < 0 && attributes == null && exchangeType == null) {
+            maxResponseLength < 0 && requestAutoAbortDelayMillis == null && attributes == null &&
+            exchangeType == null) {
             return EMPTY;
         } else {
             final Map<AttributeKey<?>, Object> attributes;
@@ -136,7 +151,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
                 attributes = ImmutableMap.copyOf(this.attributes);
             }
             return new DefaultRequestOptions(responseTimeoutMillis, writeTimeoutMillis,
-                                             maxResponseLength, attributes, exchangeType);
+                                             maxResponseLength, requestAutoAbortDelayMillis,
+                                             attributes, exchangeType);
         }
     }
 }

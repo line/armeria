@@ -23,7 +23,7 @@
 # Interface definition for Cassandra Service
 #
 
-namespace java com.linecorp.armeria.service.test.thrift.cassandra
+namespace java testing.thrift.cassandra
 
 # The API version (NOT the product version), composed as a dot delimited
 # string with major, minor, and patch level components.

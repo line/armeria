@@ -207,7 +207,7 @@ public final class FileService extends AbstractHttpService {
             if (acceptEncoding != null) {
                 for (String encoding : COMMA_SPLITTER.split(acceptEncoding)) {
                     for (ContentEncoding possibleEncoding : ContentEncoding.values()) {
-                        if (encoding.contains(possibleEncoding.headerValue)) {
+                        if (encoding.contains(possibleEncoding.decoderFactory.encodingHeaderValue())) {
                             encodings.add(possibleEncoding);
                         }
                     }
@@ -275,8 +275,8 @@ public final class FileService extends AbstractHttpService {
                     if (canList) {
                         try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
                             final StringBuilder locationBuilder = ttl.stringBuilder()
-                                    .append(ctx.path())
-                                    .append('/');
+                                                                     .append(ctx.path())
+                                                                     .append('/');
                             if (ctx.query() != null) {
                                 locationBuilder.append('?')
                                                .append(ctx.query());
@@ -331,7 +331,7 @@ public final class FileService extends AbstractHttpService {
 
         final ScheduledExecutorService readExecutor = ctx.blockingTaskExecutor();
         @Nullable
-        final String contentEncoding = encoding != null ? encoding.headerValue : null;
+        final String contentEncoding = encoding != null ? encoding.decoderFactory.encodingHeaderValue() : null;
         final HttpFile uncachedFile = config.vfs().get(readExecutor, path, config.clock(),
                                                        contentEncoding, config.headers(),
                                                        config.mediaTypeResolver());
@@ -341,9 +341,10 @@ public final class FileService extends AbstractHttpService {
                 if (uncachedAttrs != null) {
                     if (decompress && encoding != null) {
                         // The compressed data will be decompressed while being served.
-                        return new DecompressingHttpFile(uncachedFile, encoding,
-                                                         config.mediaTypeResolver()
-                                                               .guessFromPath(path, encoding.headerValue));
+                        final MediaType contentType =
+                                config.mediaTypeResolver()
+                                      .guessFromPath(path, contentEncoding);
+                        return new DecompressingHttpFile(uncachedFile, encoding, contentType);
                     } else {
                         return uncachedFile;
                     }
@@ -485,7 +486,7 @@ public final class FileService extends AbstractHttpService {
 
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(
+            return HttpResponse.of(
                     first.findFile(ctx, req)
                          .readAttributes(ctx.blockingTaskExecutor())
                          .thenApply(firstAttrs -> {
@@ -518,26 +519,25 @@ public final class FileService extends AbstractHttpService {
     enum ContentEncoding {
         // Order matters, we use the enum ordinal as the priority to pick an encoding in. Encodings should
         // be ordered by priority.
-        BROTLI(".br", "br", StreamDecoderFactory.brotli()),
-        GZIP(".gz", "gzip", StreamDecoderFactory.gzip());
+        BROTLI(".br", StreamDecoderFactory.brotli()),
+        GZIP(".gz", StreamDecoderFactory.gzip()),
+        SNAPPY(".sz", StreamDecoderFactory.snappy());
 
         static final Set<ContentEncoding> availableEncodings;
 
         static {
             if (Brotli.isAvailable()) {
-                availableEncodings = Sets.immutableEnumSet(BROTLI, GZIP);
+                availableEncodings = Sets.immutableEnumSet(BROTLI, GZIP, SNAPPY);
             } else {
-                availableEncodings = Sets.immutableEnumSet(GZIP);
+                availableEncodings = Sets.immutableEnumSet(GZIP, SNAPPY);
             }
         }
 
         private final String extension;
-        final String headerValue;
         final StreamDecoderFactory decoderFactory;
 
-        ContentEncoding(String extension, String headerValue, StreamDecoderFactory decoderFactory) {
+        ContentEncoding(String extension, StreamDecoderFactory decoderFactory) {
             this.extension = extension;
-            this.headerValue = headerValue;
             this.decoderFactory = decoderFactory;
         }
     }

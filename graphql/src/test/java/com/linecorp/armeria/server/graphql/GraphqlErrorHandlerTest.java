@@ -44,7 +44,7 @@ class GraphqlErrorHandlerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile =
-                    new File(getClass().getResource("/test.graphqls").toURI());
+                    new File(getClass().getResource("/testing/graphql/test.graphqls").toURI());
 
             final GraphqlErrorHandler errorHandler
                     = (ctx, input, result, cause) -> {

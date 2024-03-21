@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 /**
  * Default {@link HttpResponse} instance.
  */
+@SuppressWarnings("deprecation")
 public class DefaultHttpResponse extends DefaultStreamMessage<HttpObject> implements HttpResponseWriter {
     @Override
     public String toString() {

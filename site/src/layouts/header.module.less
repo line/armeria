@@ -80,24 +80,35 @@
   }
 }
 
-.topMenu {
+.topMenuWrapper {
   @media (max-width: @layout-width-0-max) {
     display: none;
   }
 
   @media (min-width: @layout-width-1-min) {
     flex-grow: 1;
+    height: @layout-header-height;
     line-height: @layout-header-height;
-    text-align: right;
+    padding-left: @margin-sm;
     overflow: hidden;
     background-color: @armeria-darkgray;
+
+    .topMenu {
+      line-height: @layout-header-height * 15 / 14;
+    }
   }
 }
 
 .topMenuIcons {
   .menuIcons;
   .responsiveRightMargin;
-  padding-top: @padding-xss;
+  padding-top: @layout-header-height / 14;
+
+  :global(.anticon-twitter),
+  :global(.discord-icon) {
+    position: relative;
+    top: 1px;
+  }
 }
 
 .sidebarWrapper {

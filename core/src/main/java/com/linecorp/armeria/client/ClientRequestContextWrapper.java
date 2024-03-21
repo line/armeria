@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.client;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ExchangeType;
@@ -63,6 +65,16 @@ public class ClientRequestContextWrapper
     @Override
     public String fragment() {
         return unwrap().fragment();
+    }
+
+    @Override
+    public String authority() {
+        return unwrap().authority();
+    }
+
+    @Override
+    public URI uri() {
+        return unwrap().uri();
     }
 
     @Override
@@ -143,6 +155,16 @@ public class ClientRequestContextWrapper
     @Override
     public ExchangeType exchangeType() {
         return unwrap().exchangeType();
+    }
+
+    @Override
+    public void hook(Supplier<? extends AutoCloseable> contextHook) {
+        unwrap().hook(contextHook);
+    }
+
+    @Override
+    public Supplier<AutoCloseable> hook() {
+        return unwrap().hook();
     }
 
     @Override

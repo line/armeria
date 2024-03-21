@@ -40,14 +40,8 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
 import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -56,6 +50,12 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages.StreamingInputCallRequest;
+import testing.grpc.Messages.StreamingInputCallResponse;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.grpc.TestServiceGrpc.TestServiceStub;
 
 class GrpcServiceLogTest {
 

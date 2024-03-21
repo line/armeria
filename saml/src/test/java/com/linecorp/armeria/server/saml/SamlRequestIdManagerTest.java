@@ -20,17 +20,21 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.io.UnsupportedEncodingException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.awaitility.Durations;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class SamlRequestIdManagerTest {
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
+
+@GenerateNativeImageTrace
+class SamlRequestIdManagerTest {
 
     @Test
-    public void shouldBeDifferentToEachOther() throws UnsupportedEncodingException {
+    void shouldBeDifferentToEachOther() throws UnsupportedEncodingException {
         final SamlRequestIdManager manager =
                 SamlRequestIdManager.ofJwt("me", "test", 60, 5);
 
@@ -43,7 +47,7 @@ public class SamlRequestIdManagerTest {
     }
 
     @Test
-    public void shouldMatchJWTPattern() throws UnsupportedEncodingException {
+    void shouldMatchJWTPattern() throws UnsupportedEncodingException {
         final Pattern p = Pattern.compile("[a-zA-Z0-9-_]+\\.[a-zA-Z0-9-_]+\\.[a-zA-Z0-9-_]+");
         final SamlRequestIdManager manager =
                 SamlRequestIdManager.ofJwt("me", "test", 60, 5);
@@ -53,9 +57,9 @@ public class SamlRequestIdManagerTest {
     }
 
     @Test
-    public void shouldBeExpired() throws InterruptedException, UnsupportedEncodingException {
+    void shouldBeExpired() throws Exception {
         final SamlRequestIdManager manager =
-                SamlRequestIdManager.ofJwt("me", "test", 1, 0);
+                SamlRequestIdManager.ofJwt("me", "test", 2, 0);
 
         final Instant started = Instant.now();
         final String id = manager.newId();
@@ -65,14 +69,16 @@ public class SamlRequestIdManagerTest {
                .atMost(Durations.FIVE_SECONDS)
                .untilAsserted(() -> assertThat(manager.validateId(id)).isFalse());
 
-        assertThat(java.time.Duration.between(started, Instant.now()).toMillis())
+        // JWTVerifier truncates the current time in seconds,
+        // so we can just check if it's greater than 1 second.
+        assertThat(Duration.between(started, Instant.now()).toMillis())
                 .isGreaterThan(TimeUnit.SECONDS.toMillis(1));
     }
 
     @Test
-    public void shouldBeAcceptedBecauseOfLeeway() throws InterruptedException, UnsupportedEncodingException {
+    void shouldBeAcceptedBecauseOfLeeway() throws Exception {
         final SamlRequestIdManager manager =
-                SamlRequestIdManager.ofJwt("me", "test", 1, 1);
+                SamlRequestIdManager.ofJwt("me", "test", 1, 2);
 
         final Instant started = Instant.now();
         final String id = manager.newId();
@@ -82,12 +88,14 @@ public class SamlRequestIdManagerTest {
                .atMost(Durations.FIVE_SECONDS)
                .untilAsserted(() -> assertThat(manager.validateId(id)).isFalse());
 
-        assertThat(java.time.Duration.between(started, Instant.now()).toMillis())
+        // JWTVerifier truncates the current time in seconds,
+        // so we can just check if it's greater than 2 seconds.
+        assertThat(Duration.between(started, Instant.now()).toMillis())
                 .isGreaterThan(TimeUnit.SECONDS.toMillis(2));
     }
 
     @Test
-    public void shouldFail() {
+    void shouldFail() {
         assertThatThrownBy(() -> SamlRequestIdManager.ofJwt("me", "test", 0, 0))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> SamlRequestIdManager.ofJwt("me", "test", -1, 0))

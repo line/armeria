@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -56,7 +57,15 @@ class HttpServerParamPredicatesMatchingTest {
               .route().get("/custom").matchesParams("my-param", value -> Integer.parseInt(value) > 100)
               .build((ctx, req) -> HttpResponse.of("custom"))
               .route().get("/custom")
-              .build((ctx, req) -> HttpResponse.of("fallback"));
+              .build((ctx, req) -> HttpResponse.of("fallback"))
+              .route().get("/fallthroughParam").matchesParams("my-param=my-value")
+              .build((ctx, req) -> HttpResponse.of("my-param=my-value"))
+              .route().get("/fallthroughHeader").matchesHeaders("my-header=my-value")
+              .build((ctx, req) -> HttpResponse.of("my-header=my-value"))
+              .route().get("/fallthroughExclude").exclude(Route.builder().path("/fallthroughExclude")
+                                                               .matchesParams("my-param=my-value")
+                                                               .build())
+              .build((ctx, req) -> HttpResponse.of("fallthroughExclude"));
         }
     };
 
@@ -115,5 +124,39 @@ class HttpServerParamPredicatesMatchingTest {
                          .aggregate().join().contentUtf8()).isEqualTo("custom");
         assertThat(client.execute(HttpRequest.of(HttpMethod.GET, "/custom?my-param=2"))
                          .aggregate().join().contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void queryMatchFallthrough() {
+        final AggregatedHttpResponse res1 = extension.blockingWebClient()
+                                                     .get("/fallthroughParam?my-param=my-value");
+        assertThat(res1.status().code()).isEqualTo(200);
+        assertThat(res1.contentUtf8()).isEqualTo("my-param=my-value");
+        final AggregatedHttpResponse res2 = extension.blockingWebClient().get("/fallthroughParam");
+        assertThat(res2.status().code()).isEqualTo(404);
+    }
+
+    @Test
+    void headerMatchFallthrough() {
+        final AggregatedHttpResponse res1 = extension.blockingWebClient().prepare()
+                                                     .header("my-header", "my-value")
+                                                     .get("/fallthroughHeader")
+                                                     .execute();
+        assertThat(res1.status().code()).isEqualTo(200);
+        assertThat(res1.contentUtf8()).isEqualTo("my-header=my-value");
+        final AggregatedHttpResponse res2 = extension.blockingWebClient().get("/fallthroughHeader");
+        assertThat(res2.status().code()).isEqualTo(404);
+    }
+
+    @Test
+    void excludeRouteFallthrough() {
+        final AggregatedHttpResponse res1 = extension.blockingWebClient().prepare()
+                                                     .get("/fallthroughExclude")
+                                                     .execute();
+        assertThat(res1.status().code()).isEqualTo(200);
+        assertThat(res1.contentUtf8()).isEqualTo("fallthroughExclude");
+        final AggregatedHttpResponse res2 =
+                extension.blockingWebClient().get("/fallthroughExclude?my-param=my-value");
+        assertThat(res2.status().code()).isEqualTo(404);
     }
 }

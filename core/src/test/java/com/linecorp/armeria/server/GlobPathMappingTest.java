@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.server.RoutingContextTest.create;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
 import org.junit.jupiter.api.Test;
@@ -73,13 +72,6 @@ class GlobPathMappingTest {
 
         mustPass("bar/baz", "/bar/baz", "/foo/bar/baz");
         mustFail("bar/baz", "/bar/baz/", "/foo/bar/baz/", "/foo/bar/baz/quo");
-    }
-
-    @Test
-    void testPathValidation() {
-        final Route route = glob("**");
-        assertThatThrownBy(() -> route.apply(create("not/an/absolute/path"), false))
-                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

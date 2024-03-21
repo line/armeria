@@ -270,7 +270,7 @@ class HAProxyClientIntegrationTest {
         final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.2", 82);
         final Endpoint destEndpoint = Endpoint.of(destAddr.getHostString(), destAddr.getPort());
         final Endpoint proxyEndpoint = http1Server.endpoint();
-        assert proxyEndpoint.ipAddr() != null;
+        assertThat(proxyEndpoint.ipAddr()).isNotNull();
         final InetSocketAddress proxyAddr = new InetSocketAddress(proxyEndpoint.ipAddr(), proxyEndpoint.port());
 
         final AtomicReference<HAProxyMessage> msgRef = new AtomicReference<>();
@@ -328,7 +328,7 @@ class HAProxyClientIntegrationTest {
         final InetSocketAddress destAddr = new InetSocketAddress("127.0.0.2", 82);
         final Endpoint destEndpoint = Endpoint.of(destAddr.getHostString(), destAddr.getPort());
         final Endpoint proxyEndpoint = http1Server.endpoint();
-        assert proxyEndpoint.ipAddr() != null;
+        assertThat(proxyEndpoint.ipAddr()).isNotNull();
         final InetSocketAddress proxyAddr = new InetSocketAddress(proxyEndpoint.ipAddr(), proxyEndpoint.port());
 
         final AtomicReference<HAProxyMessage> msgRef = new AtomicReference<>();

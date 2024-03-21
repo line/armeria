@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URI;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hamcrest.Matchers;
@@ -39,7 +40,10 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -67,9 +71,24 @@ class ServerMaxConnectionAgeTest {
             meterRegistry = new SimpleMeterRegistry();
             sb.meterRegistry(meterRegistry);
             sb.service("/", (ctx, req) -> HttpResponse.of(OK));
-            sb.service("/slow", (ctx, req) ->
-                    HttpResponse.delayed(HttpResponse.of("Disconnect"),
-                                         Duration.ofMillis(MAX_CONNECTION_AGE + 100)));
+            sb.service("/slow", (ctx, req) -> {
+                final HttpResponseWriter response = HttpResponse.streaming();
+                final String body = "Disconnect";
+                ctx.eventLoop().schedule(() -> {
+                    // Write a response headers after max connection age expires.
+                    response.write(ResponseHeaders.builder(200)
+                                                  .contentLength(body.length())
+                                                  .build());
+
+                    ctx.eventLoop().schedule(() -> {
+                        // Defer writing the response so that the session can receive new requests.
+                        // This ensures that the session is disconnected after completing all pending requests.
+                        response.write(HttpData.ofUtf8(body));
+                        response.close();
+                    }, 1000, TimeUnit.MILLISECONDS);
+                }, MAX_CONNECTION_AGE + 200, TimeUnit.MILLISECONDS);
+                return response;
+            });
         }
 
         @Override
@@ -198,12 +217,25 @@ class ServerMaxConnectionAgeTest {
             assertThat(closedConnection).isTrue();
 
             // Send a second request before fully receiving the previous request.
-            writer.print("GET / HTTP/1.1\r\n\r\n");
+            closedConnection = false;
+            writer.print("GET /slow HTTP/1.1\r\n\r\n");
             writer.flush();
 
+            assertThat(in.readLine()).isEqualTo("DisconnectHTTP/1.1 200 OK");
+            while (true) {
+                final String line = in.readLine();
+                if (line.isEmpty()) {
+                    break;
+                }
+                if ("connection: close".equals(line)) {
+                    closedConnection = true;
+                }
+            }
+
+            assertThat(closedConnection).isTrue();
             assertThat(in.readLine()).isEqualTo("Disconnect");
 
-            // The second request is closed before receiving any response.
+            // Make sure that the connection is closed after the second request is handled.
             assertThat(in.readLine()).isNull();
         }
     }
@@ -221,8 +253,12 @@ class ServerMaxConnectionAgeTest {
                 // Schedule another request to avoid idling the connection.
                 assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
                 // Eventually connection should be closed due to max-age, a new connection will be opened.
-                assertThat(opened).hasValue(2);
-                assertThat(closed).hasValue(1);
+                assertThat(opened)
+                        .as("should have opened 2 connections. opened: %d", opened.get())
+                        .hasValue(2);
+                assertThat(closed)
+                        .as("should have closed 1 connection. closed: %d", closed.get())
+                        .hasValue(1);
             });
         }
     }

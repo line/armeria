@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
@@ -54,7 +56,7 @@ final class DefaultHealthCheckerContext
     private final Endpoint endpoint;
     private final SessionProtocol protocol;
     private final ClientOptions clientOptions;
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
 
     /**
      * Keeps the {@link Future}s which were scheduled via this {@link ScheduledExecutorService}.
@@ -77,7 +79,7 @@ final class DefaultHealthCheckerContext
         originalEndpoint = endpoint;
 
         if (port == 0) {
-            this.endpoint = endpoint.withoutDefaultPort(protocol.defaultPort());
+            this.endpoint = endpoint.withoutDefaultPort(protocol);
         } else if (port == protocol.defaultPort()) {
             this.endpoint = endpoint.withoutPort();
         } else {
@@ -298,6 +300,7 @@ final class DefaultHealthCheckerContext
         return future;
     }
 
+    @VisibleForTesting
     int refCnt() {
         return refCnt;
     }

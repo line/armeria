@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.common.stream.StreamMessageUtil.createStreamMessageFrom;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
@@ -29,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -51,9 +53,11 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.EmptyFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil;
 import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.internal.common.stream.ThreeElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -184,11 +188,62 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletableFuture}. If the specified {@link CompletableFuture} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param future the {@link CompletableFuture} which will produce the actual {@link StreamMessage}
+     */
+    @UnstableApi
+    static <T> StreamMessage<T> of(CompletableFuture<? extends Publisher<? extends T>> future) {
+        requireNonNull(future, "stage");
+        return createStreamMessageFrom(future);
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     */
+    @UnstableApi
+    static <T> StreamMessage<T> of(CompletionStage<? extends Publisher<? extends T>> stage) {
+        requireNonNull(stage, "stage");
+
+        final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>();
+        //noinspection unchecked
+        deferred.delegateOnCompletion((CompletionStage<? extends Publisher<T>>) stage);
+        return deferred;
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that delegates to the {@link StreamMessage} produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned
+     * {@link StreamMessage} will be closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual {@link StreamMessage}
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link StreamMessage} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    static <T> StreamMessage<T> of(CompletionStage<? extends StreamMessage<? extends T>> stage,
+                                   EventExecutor subscriberExecutor) {
+        requireNonNull(stage, "stage");
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        // Have to use DeferredStreamMessage to use the subscriberExecutor.
+        final DeferredStreamMessage<T> deferred = new DeferredStreamMessage<>(subscriberExecutor);
+        //noinspection unchecked
+        deferred.delegateOnCompletion((CompletionStage<? extends Publisher<T>>) stage);
+        return deferred;
+    }
+
+    /**
      * Creates a new {@link StreamMessage} that streams the specified {@link File}.
-     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
      * create a buffer used to read data from the {@link File}.
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
-     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
+     * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
     static ByteStreamMessage of(File file) {
         requireNonNull(file, "file");
@@ -197,10 +252,10 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
-     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
      * create a buffer used to read data from the {@link Path}.
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
-     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
+     * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
     static ByteStreamMessage of(Path path) {
         requireNonNull(path, "path");
@@ -279,6 +334,28 @@ public interface StreamMessage<T> extends Publisher<T> {
             builder.executor(executor);
         }
         return builder.alloc(alloc).bufferSize(bufferSize).build();
+    }
+
+    /**
+     * Creates a new {@link StreamMessage} that streams bytes from the specified {@link InputStream}.
+     * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * create a buffer that is used to read data from the {@link InputStream}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
+     */
+    @UnstableApi
+    static ByteStreamMessage of(InputStream inputStream) {
+        requireNonNull(inputStream, "inputStream");
+        return builder(inputStream).build();
+    }
+
+    /**
+     * Returns a new {@link InputStreamStreamMessageBuilder} with the specified {@link InputStream}.
+     */
+    @UnstableApi
+    static InputStreamStreamMessageBuilder builder(InputStream inputStream) {
+        requireNonNull(inputStream, "inputStream");
+        return new InputStreamStreamMessageBuilder(inputStream);
     }
 
     /**
@@ -395,6 +472,15 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamWriter} that publishes the objects written via
+     * {@link StreamWriter#write(Object)}.
+     */
+    @UnstableApi
+    static <T> StreamWriter<T> streaming() {
+        return new DefaultStreamMessage<>();
+    }
+
+    /**
      * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
      * {@linkplain #whenComplete() complete} even if it's closed; a stream is complete when it's fully
      * consumed by a {@link Subscriber}.
@@ -457,7 +543,27 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     default CompletableFuture<Void> subscribe() {
-        subscribe(NoopSubscriber.get());
+        return subscribe(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Drains and discards all objects in this {@link StreamMessage}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
+     * List<Integer> collected = new ArrayList<>();
+     * CompletableFuture<Void> future = source.peek(collected::add).subscribe();
+     * future.join();
+     * assert collected.equals(List.of(1, 2, 3));
+     * assert future.isDone();
+     * }</pre>
+     *
+     * @param executor the executor to subscribe
+     */
+    @UnstableApi
+    default CompletableFuture<Void> subscribe(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        subscribe(NoopSubscriber.get(), executor);
         return whenComplete();
     }
 
@@ -903,7 +1009,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * {@link StreamMessage} when any error occurs.
      *
      * <p>Example:<pre>{@code
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(new IllegalStateException("Oops..."));
@@ -924,7 +1030,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * specified {@code causeClass}.
      *
      * <p>Example:<pre>{@code
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(new IllegalStateException("Oops..."));
@@ -933,7 +1039,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
      *
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.write(3);
@@ -950,7 +1056,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * recoverChain.collect().join();
      *
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(ClosedStreamException.get());
@@ -963,8 +1069,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     @UnstableApi
-    default <E extends Throwable> StreamMessage<T> recoverAndResume(Class<E> causeClass,
-            Function<? super E, ? extends StreamMessage<T>> function) {
+    default <E extends Throwable> StreamMessage<T> recoverAndResume(
+            Class<E> causeClass, Function<? super E, ? extends StreamMessage<T>> function) {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         return recoverAndResume(cause -> {
@@ -1045,5 +1151,56 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(httpDataConverter, "httpDataConverter");
         requireNonNull(executor, "executor");
         return new StreamMessageInputStream<>(this, httpDataConverter, executor);
+    }
+
+    /**
+     * Dynamically emits the last value depending on whether this {@link StreamMessage} completes successfully
+     * or exceptionally.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+     * StreamMessage<Integer> aborted = source
+     *     .peek(i -> {
+     *         if (i > 5) {
+     *             source.abort();
+     *         }
+     *     });
+     * StreamMessage<Integer> endWith = aborted
+     *     .endWith(th -> {
+     *          if (th instanceof AbortedStreamException) {
+     *              return 100;
+     *          }
+     *          return -1;
+     *     });
+     * List<Integer> collected = endWith.collect().join();
+     *
+     * assert collected.equals(List.of(1, 2, 3, 4, 5, 100));
+     * }</pre>
+     *
+     * <p>Note that if {@code null} is returned by the {@link Function}, the {@link StreamMessage} will complete
+     * successfully without emitting an additional value when this stream is complete successfully,
+     * or complete exceptionally when this stream is complete exceptionally.
+     */
+    @UnstableApi
+    default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
+        return new SurroundingPublisher<>(null, this, finalizer);
+    }
+
+    /**
+     * Calls {@link #subscribe(Subscriber, EventExecutor)} to the upstream
+     * {@link StreamMessage} using the specified {@link EventExecutor} and relays the stream
+     * transparently downstream. This may be useful if one would like to hide an
+     * {@link EventExecutor} from an upstream {@link Publisher}.
+     *
+     * <p>For example:<pre>{@code
+     * Subscriber<Integer> mySubscriber = null;
+     * StreamMessage<Integer> upstream = ...; // publisher callbacks are invoked by eventLoop1
+     * upstream.subscribeOn(eventLoop1)
+     *         .subscribe(mySubscriber, eventLoop2); // mySubscriber callbacks are invoked with eventLoop2
+     * }</pre>
+     */
+    default StreamMessage<T> subscribeOn(EventExecutor eventExecutor) {
+        requireNonNull(eventExecutor, "eventExecutor");
+        return new SubscribeOnStreamMessage<>(this, eventExecutor);
     }
 }

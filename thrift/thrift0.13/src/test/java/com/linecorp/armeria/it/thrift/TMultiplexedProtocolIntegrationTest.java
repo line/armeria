@@ -25,27 +25,30 @@ import java.util.Queue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.thrift.TApplicationException;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.thrift.main.HelloService.Iface;
 
 /**
  * Ensures TMultiplexedProtocol works.
  */
-public class TMultiplexedProtocolIntegrationTest {
+@GenerateNativeImageTrace
+class TMultiplexedProtocolIntegrationTest {
 
     private static final Queue<String> methodNames = new LinkedBlockingQueue<>();
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(
@@ -68,13 +71,13 @@ public class TMultiplexedProtocolIntegrationTest {
         }
     };
 
-    @Before
-    public void clearMethodNames() {
+    @BeforeEach
+    void clearMethodNames() {
         methodNames.clear();
     }
 
     @Test
-    public void test() throws Exception {
+    void test() throws Exception {
         assertThat(client("").hello("a")).isEqualTo("none:a");
         assertThat(client("foo").hello("b")).isEqualTo("foo:b");
         assertThat(client("bar").hello("c")).isEqualTo("bar:c");

@@ -38,6 +38,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.endpoint.FileWatcherRunnable.FileWatchEvent;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * A registry which wraps a {@link WatchService} and allows paths to be registered.
@@ -133,7 +134,7 @@ final class FileWatcherRegistry implements AutoCloseable {
 
     private final Map<FileSystem, FileSystemWatchContext> fileSystemWatchServiceMap =
             new HashMap<>();
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
 
     /**
      * Registers a {@code filePath} and {@code callback} to the {@link WatchService}. When the

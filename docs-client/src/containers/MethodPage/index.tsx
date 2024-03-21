@@ -15,18 +15,24 @@
  */
 
 import Typography from '@material-ui/core/Typography';
-import React from 'react';
+import React, { SetStateAction } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
+import Button from '@material-ui/core/Button';
+import { Launch } from '@material-ui/icons';
+import Grid from '@material-ui/core/Grid';
 import {
   Method,
   Service,
+  ServiceType,
   simpleName,
   Specification,
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { ANNOTATED_HTTP_MIME_TYPE } from '../../lib/transports/annotated-http';
 import { GRAPHQL_HTTP_MIME_TYPE } from '../../lib/transports/grahpql-http';
+import { TTEXT_MIME_TYPE } from '../../lib/transports/thrift';
+import { GRPC_UNFRAMED_MIME_TYPE } from '../../lib/transports/grpc-unframed';
 import { SelectOption } from '../../lib/types';
 
 import Section from '../../components/Section';
@@ -39,6 +45,7 @@ import ReturnType from './ReturnType';
 
 interface OwnProps {
   specification: Specification;
+  jsonSchemas: any[];
 }
 
 function getExampleHeaders(
@@ -129,6 +136,37 @@ type Props = OwnProps &
   }>;
 
 const MethodPage: React.FunctionComponent<Props> = (props) => {
+  const [debugFormIsOpen, setDebugFormIsOpenState] = React.useState(false);
+
+  const { location, history } = props;
+  const setDebugFormIsOpen: React.Dispatch<SetStateAction<boolean>> =
+    React.useCallback(
+      (value) => {
+        const valueToSet =
+          value instanceof Function ? value(debugFormIsOpen) : value;
+        const urlParams = new URLSearchParams(location.search);
+        if (valueToSet === true) {
+          urlParams.set('debug_form_is_open', `${valueToSet}`);
+        } else {
+          urlParams.delete('debug_form_is_open');
+        }
+
+        const serializedParams = `?${urlParams.toString()}`;
+        if (serializedParams !== location.search) {
+          history.push(`${location.pathname}${serializedParams}`);
+        }
+
+        return setDebugFormIsOpenState(valueToSet);
+      },
+      [
+        debugFormIsOpen,
+        setDebugFormIsOpenState,
+        history,
+        location.search,
+        location.pathname,
+      ],
+    );
+
   const params = props.match.params;
   const service = props.specification.getServiceByName(params.serviceName);
   if (!service) {
@@ -140,12 +178,24 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
     return <>Not found.</>;
   }
   const debugTransport = TRANSPORTS.getDebugTransport(method);
-  const isAnnotatedService =
-    debugTransport !== undefined &&
-    debugTransport.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
-  const isGraphqlService =
-    debugTransport !== undefined &&
-    debugTransport.supportsMimeType(GRAPHQL_HTTP_MIME_TYPE);
+
+  let serviceType: ServiceType = ServiceType.UNKNOWN;
+
+  if (debugTransport?.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE)) {
+    serviceType = ServiceType.HTTP;
+  }
+
+  if (debugTransport?.supportsMimeType(GRAPHQL_HTTP_MIME_TYPE)) {
+    serviceType = ServiceType.GRAPHQL;
+  }
+
+  if (debugTransport?.supportsMimeType(GRPC_UNFRAMED_MIME_TYPE)) {
+    serviceType = ServiceType.GRPC;
+  }
+
+  if (debugTransport?.supportsMimeType(TTEXT_MIME_TYPE)) {
+    serviceType = ServiceType.THRIFT;
+  }
 
   const parameterVariables = method.parameters.map((param) => {
     const childFieldInfos = props.specification.getStructByName(
@@ -159,10 +209,23 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
 
   return (
     <>
-      <Typography variant="h5" paragraph>
-        <code>{`${simpleName(service.name)}.${method.name}()`}</code>
-      </Typography>
-      {method.descriptionInfo && (
+      <Grid item container justifyContent="space-between">
+        <Typography variant="h5" paragraph>
+          <code>{`${simpleName(service.name)}.${method.name}()`}</code>
+        </Typography>
+        {debugTransport && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setDebugFormIsOpen(true)}
+            endIcon={<Launch />}
+            style={{ maxHeight: '3em' }}
+          >
+            Debug
+          </Button>
+        )}
+      </Grid>
+      {method.descriptionInfo?.docString && (
         <Section>
           <Description descriptionInfo={method.descriptionInfo} />
         </Section>
@@ -176,7 +239,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
         />
       </Section>
       <ReturnType method={method} specification={props.specification} />
-      {!isAnnotatedService && (
+      {serviceType !== ServiceType.HTTP && (
         <Exceptions method={method} specification={props.specification} />
       )}
       <Endpoints method={method} />
@@ -184,8 +247,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
         <DebugPage
           {...props}
           method={method}
-          isAnnotatedService={isAnnotatedService}
-          isGraphqlService={isGraphqlService}
+          serviceType={serviceType}
           exampleHeaders={getExampleHeaders(
             props.specification,
             service,
@@ -198,11 +260,15 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
             method,
           )}
           exactPathMapping={
-            isAnnotatedService || isGraphqlService
+            serviceType === ServiceType.HTTP ||
+            serviceType === ServiceType.GRAPHQL
               ? isSingleExactPathMapping(method)
               : false
           }
           useRequestBody={needsToUseRequestBody(props.match.params.httpMethod)}
+          debugFormIsOpen={debugFormIsOpen}
+          setDebugFormIsOpen={setDebugFormIsOpen}
+          docServiceRoute={props.specification.getDocServiceRoute()}
         />
       )}
     </>

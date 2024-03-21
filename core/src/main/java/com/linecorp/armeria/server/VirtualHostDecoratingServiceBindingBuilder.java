@@ -23,6 +23,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 
 /**
  * A builder class for binding a {@code decorator} to a {@link Route} fluently.
@@ -52,6 +53,7 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     private final VirtualHostBuilder virtualHostBuilder;
 
     VirtualHostDecoratingServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
     }
 
@@ -196,7 +198,7 @@ public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBi
     public VirtualHostBuilder build(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         buildRouteList().forEach(route -> virtualHostBuilder.addRouteDecoratingService(
-                new RouteDecoratingService(route, decorator)));
+                new RouteDecoratingService(route, "/", decorator)));
         return virtualHostBuilder;
     }
 

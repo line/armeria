@@ -26,11 +26,12 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
+import com.linecorp.armeria.common.stream.StreamDecoderInput;
 import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
@@ -44,22 +45,25 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
     @Nullable
-    private final GrpcStatusFunction statusFunction;
+    private final GrpcExceptionHandlerFunction exceptionHandler;
 
     @Nullable
     private StreamMessage<DeframedMessage> deframedStreamMessage;
+    private boolean server;
+    private boolean trailersReceived;
 
     public HttpStreamDeframer(
             DecompressorRegistry decompressorRegistry,
             RequestContext ctx,
             TransportStatusListener transportStatusListener,
-            @Nullable GrpcStatusFunction statusFunction,
-            int maxMessageLength, boolean grpcWebText) {
+            @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+            int maxMessageLength, boolean grpcWebText, boolean server) {
         super(maxMessageLength, ctx.alloc(), grpcWebText);
         this.ctx = requireNonNull(ctx, "ctx");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
-        this.statusFunction = statusFunction;
+        this.exceptionHandler = exceptionHandler;
+        this.server = server;
     }
 
     /**
@@ -89,6 +93,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
         final HttpStatus status = HttpStatus.valueOf(statusText);
         if (!status.equals(HttpStatus.OK)) {
+            // Just mark trailers as received since a non-OK response may not have trailers.
+            trailersReceived = true;
             transportStatusListener.transportReportStatus(
                     GrpcStatus.httpStatusToGrpcStatus(status.code()));
             return;
@@ -97,6 +103,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
+            trailersReceived = true;
             GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
         }
 
@@ -115,7 +122,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             } catch (Throwable t) {
                 final Metadata metadata = new Metadata();
                 transportStatusListener.transportReportStatus(
-                        GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata),
+                        GrpcStatus.fromThrowable(exceptionHandler, ctx, t, metadata),
                         metadata);
                 return;
             }
@@ -135,6 +142,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         final String grpcStatus = headers.get(GrpcHeaderNames.GRPC_STATUS);
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
+            trailersReceived = true;
             GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
         }
     }
@@ -143,7 +151,19 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     public void processOnError(Throwable cause) {
         final Metadata metadata = new Metadata();
         transportStatusListener.transportReportStatus(
-                GrpcStatus.fromThrowable(statusFunction, ctx, cause, metadata), metadata);
+                GrpcStatus.fromThrowable(exceptionHandler, ctx, cause, metadata), metadata);
+    }
+
+    @Override
+    public void processOnComplete(StreamDecoderInput in, StreamDecoderOutput<DeframedMessage> out)
+            throws Exception {
+        if (!server && !trailersReceived) {
+            // A gRPC response should contain grpc-status in trailers if HTTP status is OK.
+            final Status status = Status.INTERNAL.withDescription("Missing gRPC status code");
+            transportStatusListener.transportReportStatus(status);
+            // Raise an exception to clean up `in` and `out`.
+            throw status.asRuntimeException();
+        }
     }
 
     @Override

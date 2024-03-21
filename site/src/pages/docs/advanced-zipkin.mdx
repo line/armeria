@@ -22,13 +22,13 @@ Then, you need to create the `HttpTracing`:
 
     import brave.Tracing;
     import brave.http.HttpTracing;
-    import zipkin2.reporter.Reporter;
+    import zipkin2.reporter.brave.AsyncZipkinSpanHandler;
 
-    Reporter<Span> myReporter = ...
+    AsyncZipkinSpanHandler spanHandler = ...
     Tracing tracing = Tracing.newBuilder()
                              .localServiceName("myService")
                              .currentTraceContext(RequestContextCurrentTraceContext.ofDefault())
-                             .spanReporter(myReporter)
+                             .addSpanHandler(spanHandler)
                              .build();
     HttpTracing httpTracing = HttpTracing.create(tracing);
 ```
@@ -36,10 +36,10 @@ Then, you need to create the `HttpTracing`:
 Please note that we specified <type://RequestContextCurrentTraceContext>. It stores the trace context into a
 <type://RequestContext> and loads the trace context from the <type://RequestContext> automatically. Because of that,
 we don't need to use a thread local variable which can lead to unpredictable behavior in asynchronous
-programming. If you want to send timing data to the span collecting server, you should specify `spanReporter`.
-For more information about the `spanReporter`, please refer to
-[Zipkin reporter](https://github.com/openzipkin/zipkin-reporter-java) or
-[the fully working example](https://github.com/openzipkin-contrib/zipkin-armeria-example).
+programming. If you want to send timing data to the span collecting server, you should specify `spanHandler`.
+For more information about the `spanHandler`, please refer to
+[Zipkin Reporter Brave](https://github.com/openzipkin/zipkin-reporter-java/tree/master/brave) or
+[the fully working example](https://github.com/openzipkin/brave-example/tree/master/armeria).
 
 Now, you can specify <type://BraveService> using [Decorating a service](/docs/server-decorator) with the
 `HttpTracing` you just built:
@@ -116,10 +116,11 @@ For example, you can use it with [Kafka](https://kafka.apache.org/) producer:
 ```
 
 This will trace all the requests sent from the client to the above example server to
-[Kafka](https://kafka.apache.org/), and report timing data using the `spanReporter` you specified.
+[Kafka](https://kafka.apache.org/), and report timing data using the `spanHandler` you specified.
 The following screenshot shows a trace of a request:
 
 ![](../../images/zipkin_1.png)
 
 ## See also
-- [Armeria Zipkin example](https://github.com/openzipkin-contrib/zipkin-armeria-example)
+- [Brave example Armeria](https://github.com/openzipkin/brave-example/tree/master/armeria)
+- [Brave example Armeria with Kafka](https://github.com/openzipkin/brave-example/tree/master/armeria-kafka)

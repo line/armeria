@@ -108,6 +108,16 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientOptionsBuilder requestAutoAbortDelay(Duration delay) {
+        return (ClientOptionsBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public ClientOptionsBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (ClientOptionsBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public ClientOptionsBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (ClientOptionsBuilder) super.requestIdGenerator(requestIdGenerator);
     }
@@ -206,5 +216,10 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     public ClientOptionsBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (ClientOptionsBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public ClientOptionsBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (ClientOptionsBuilder) super.contextHook(contextHook);
     }
 }

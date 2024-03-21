@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.RequestContextUtil.ensureSameCtx;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.ensureSameCtx;
 import static java.util.Objects.requireNonNull;
 
 import org.slf4j.Logger;

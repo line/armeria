@@ -28,7 +28,8 @@ import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
+
+import testing.thrift.main.HelloService;
 
 class THttpClientUnwrapTest {
 

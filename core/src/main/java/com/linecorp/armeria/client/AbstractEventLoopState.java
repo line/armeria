@@ -21,6 +21,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+
 import io.netty.channel.EventLoop;
 
 abstract class AbstractEventLoopState {
@@ -29,13 +31,13 @@ abstract class AbstractEventLoopState {
                                      DefaultEventLoopScheduler scheduler) {
         if (maxNumEventLoops == 1) {
             return new OneEventLoopState(eventLoops, scheduler);
+        } else if (maxNumEventLoops <= 128) {
+            return new ArrayBasedEventLoopState(eventLoops, maxNumEventLoops, scheduler);
         }
-        // TODO(minwoox) Introduce array based state which is used when the maxNumEventLoops is greater than 1
-        //               and less than N for the performance.
         return new HeapBasedEventLoopState(eventLoops, maxNumEventLoops, scheduler);
     }
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
     private final List<EventLoop> eventLoops;
     private final DefaultEventLoopScheduler scheduler;
 
@@ -78,7 +80,7 @@ abstract class AbstractEventLoopState {
     abstract void release(AbstractEventLoopEntry e);
 
     @VisibleForTesting
-    abstract List<AbstractEventLoopEntry> entries();
+    abstract AbstractEventLoopEntry[] entries();
 
     abstract int allActiveRequests();
 }

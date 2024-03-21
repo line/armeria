@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -30,11 +29,13 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import reactor.test.StepVerifier;
 
 class HttpResponseWrapperTest {
@@ -44,9 +45,9 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(
+        assertThat(wrapper.tryWriteResponseHeaders(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
-        assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
+        assertThat(wrapper.tryWriteData(HttpData.ofUtf8("foo"))).isTrue();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -61,8 +62,8 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(wrapper.tryWriteResponseHeaders(ResponseHeaders.of(200))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -77,10 +78,10 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
-        assertThat(wrapper.tryWrite(
+        assertThat(wrapper.tryWriteResponseHeaders(ResponseHeaders.of(200))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(
                 HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue(); // Second header is trailers.
-        assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isFalse();
+        assertThat(wrapper.tryWriteData(HttpData.ofUtf8("foo"))).isFalse();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -95,9 +96,9 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(ResponseHeaders.of(200))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
+        assertThat(wrapper.tryWriteResponseHeaders(ResponseHeaders.of(200))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -112,11 +113,11 @@ class HttpResponseWrapperTest {
         final DecodedHttpResponse res = new DecodedHttpResponse(CommonPools.workerGroup().next());
         final HttpResponseWrapper wrapper = httpResponseWrapper(res);
 
-        assertThat(wrapper.tryWrite(
+        assertThat(wrapper.tryWriteResponseHeaders(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
-        assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
+        assertThat(wrapper.tryWriteData(HttpData.ofUtf8("foo"))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("qux"), "quux"))).isFalse();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -134,10 +135,10 @@ class HttpResponseWrapperTest {
 
         assertThat(wrapper.tryWrite(ResponseHeaders.of(100))).isTrue();
         assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("a"), "b"))).isTrue();
-        assertThat(wrapper.tryWrite(
+        assertThat(wrapper.tryWriteResponseHeaders(
                 ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_LENGTH, "foo".length()))).isTrue();
-        assertThat(wrapper.tryWrite(HttpData.ofUtf8("foo"))).isTrue();
-        assertThat(wrapper.tryWrite(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
+        assertThat(wrapper.tryWriteData(HttpData.ofUtf8("foo"))).isTrue();
+        assertThat(wrapper.tryWriteTrailers(HttpHeaders.of(HttpHeaderNames.of("bar"), "baz"))).isTrue();
         wrapper.close();
 
         StepVerifier.create(res)
@@ -159,18 +160,22 @@ class HttpResponseWrapperTest {
         final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 
         res.init(controller);
-        return decoder.addResponse(1, res, cctx, cctx.eventLoop(), cctx.responseTimeoutMillis(),
-                                   cctx.maxResponseLength());
+        return decoder.addResponse(1, res, cctx, cctx.eventLoop());
     }
 
-    private static class TestHttpResponseDecoder extends HttpResponseDecoder {
+    private static class TestHttpResponseDecoder extends AbstractHttpResponseDecoder {
+        private final KeepAliveHandler keepAliveHandler = new NoopKeepAliveHandler();
+
         TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
             super(channel, inboundTrafficController);
         }
 
         @Override
-        KeepAliveHandler keepAliveHandler() {
-            return NoopKeepAliveHandler.INSTANCE;
+        void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {}
+
+        @Override
+        public KeepAliveHandler keepAliveHandler() {
+            return keepAliveHandler;
         }
     }
 }

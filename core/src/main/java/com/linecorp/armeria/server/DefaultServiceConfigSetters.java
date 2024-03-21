@@ -17,6 +17,8 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static com.linecorp.armeria.server.VirtualHostBuilder.ensureNoPseudoHeader;
@@ -29,21 +31,26 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A default implementation of {@link ServiceConfigSetters} that stores service related settings
- * and provides a method {@link DefaultServiceConfigSetters#toServiceConfigBuilder(Route, HttpService)} to build
- * {@link ServiceConfigBuilder}.
+ * and provides a method {@link DefaultServiceConfigSetters#toServiceConfigBuilder(Route, String, HttpService)}
+ * to build {@link ServiceConfigBuilder}.
  */
 final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
@@ -64,13 +71,22 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private AccessLogWriter accessLogWriter;
     @Nullable
-    private ScheduledExecutorService blockingTaskExecutor;
+    private BlockingTaskExecutor blockingTaskExecutor;
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
+    private Long requestAutoAbortDelayMillis;
+    @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private EventLoopGroup serviceWorkerGroup;
+    @Nullable
+    private ServiceErrorHandler serviceErrorHandler;
+    private Supplier<? extends AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
+    @Nullable
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -175,6 +191,13 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                      boolean shutdownOnStop) {
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        return blockingTaskExecutor(BlockingTaskExecutor.of(blockingTaskExecutor), shutdownOnStop);
+    }
+
+    @Override
+    public ServiceConfigSetters blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                                     boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         if (shutdownOnStop) {
             shutdownSupports.add(ShutdownSupport.of(blockingTaskExecutor));
@@ -198,8 +221,42 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigSetters requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    @Override
+    public ServiceConfigSetters requestAutoAbortDelayMillis(long delayMillis) {
+        requestAutoAbortDelayMillis = delayMillis;
+        return this;
+    }
+
+    @Override
     public ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation) {
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                   boolean shutdownOnStop) {
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(serviceWorkerGroup));
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters serviceWorkerGroup(int numThreads) {
+        final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
+        return serviceWorkerGroup(workerGroup, true);
+    }
+
+    @Override
+    public ServiceConfigSetters requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         return this;
     }
 
@@ -239,14 +296,33 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
+    @Override
+    public ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        requireNonNull(serviceErrorHandler, "serviceErrorHandler");
+        if (this.serviceErrorHandler == null) {
+            this.serviceErrorHandler = serviceErrorHandler;
+        } else {
+            this.serviceErrorHandler = this.serviceErrorHandler.orElse(serviceErrorHandler);
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        this.contextHook = mergeHooks(this.contextHook, contextHook);
+        return this;
+    }
+
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
      * {@link AnnotatedServiceBindingBuilder} needs exception handling decorators to be the last to handle
      * any exceptions thrown by the service and other decorators.
      */
-    ServiceConfigBuilder toServiceConfigBuilder(Route route, HttpService service) {
-        final ServiceConfigBuilder serviceConfigBuilder = new ServiceConfigBuilder(route, service);
+    ServiceConfigBuilder toServiceConfigBuilder(Route route, String contextPath, HttpService service) {
+        final ServiceConfigBuilder serviceConfigBuilder =
+                new ServiceConfigBuilder(route, contextPath, service);
 
         final AnnotatedService annotatedService;
         if (defaultServiceNaming == null || defaultLogName == null) {
@@ -295,13 +371,27 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         if (successFunction != null) {
             serviceConfigBuilder.successFunction(successFunction);
         }
+        if (requestAutoAbortDelayMillis != null) {
+            serviceConfigBuilder.requestAutoAbortDelayMillis(requestAutoAbortDelayMillis);
+        }
         if (multipartUploadsLocation != null) {
             serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
+        }
+        if (serviceWorkerGroup != null) {
+            serviceConfigBuilder.serviceWorkerGroup(serviceWorkerGroup, false);
+            // Set the serviceWorkerGroup as false because it's shut down in ShutdownSupport.
+        }
+        if (requestIdGenerator != null) {
+            serviceConfigBuilder.requestIdGenerator(requestIdGenerator);
         }
         serviceConfigBuilder.shutdownSupports(shutdownSupports);
         if (!defaultHeaders.isEmpty()) {
             serviceConfigBuilder.defaultHeaders(defaultHeaders.build());
         }
+        if (serviceErrorHandler != null) {
+            serviceConfigBuilder.errorHandler(serviceErrorHandler);
+        }
+        serviceConfigBuilder.contextHook(contextHook);
         return serviceConfigBuilder;
     }
 }

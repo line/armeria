@@ -18,15 +18,18 @@ package com.linecorp.armeria.internal.common;
 
 import io.netty.channel.ChannelHandlerContext;
 
-public enum NoopKeepAliveHandler implements KeepAliveHandler {
+public class NoopKeepAliveHandler implements KeepAliveHandler {
 
-    INSTANCE;
+    private boolean closed;
+    private boolean disconnectWhenFinished;
 
     @Override
     public void initialize(ChannelHandlerContext ctx) {}
 
     @Override
-    public void destroy() {}
+    public void destroy() {
+        closed = true;
+    }
 
     @Override
     public boolean isHttp2() {
@@ -46,12 +49,17 @@ public enum NoopKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public boolean isClosing() {
-        return false;
+        return closed;
     }
 
     @Override
-    public boolean needToCloseConnection() {
-        return false;
+    public void disconnectWhenFinished() {
+        disconnectWhenFinished = true;
+    }
+
+    @Override
+    public boolean needsDisconnection() {
+        return disconnectWhenFinished || closed;
     }
 
     @Override

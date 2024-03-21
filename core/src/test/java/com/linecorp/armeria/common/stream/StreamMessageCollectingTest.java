@@ -57,16 +57,16 @@ class StreamMessageCollectingTest {
         // An empty stream isn't aborted.
         assertThat(stream1.collect().join()).isEqualTo(ImmutableList.of());
 
-        final DefaultStreamMessage<Object> stream3 = new DefaultStreamMessage<>();
+        final StreamWriter<Object> stream3 = StreamMessage.streaming();
         stream3.close();
         assertThat(stream3.collect().join()).isEqualTo(ImmutableList.of());
 
-        final DefaultStreamMessage<Object> stream4 = new DefaultStreamMessage<>();
+        final StreamWriter<Object> stream4 = StreamMessage.streaming();
         final CompletableFuture<List<Object>> collectingFuture = stream4.collect();
         stream4.close();
         assertThat(collectingFuture.join()).isEqualTo(ImmutableList.of());
 
-        final DefaultStreamMessage<Object> stream5 = new DefaultStreamMessage<>();
+        final StreamWriter<Object> stream5 = StreamMessage.streaming();
         final Throwable cause = new IllegalStateException("oops");
         stream5.abort(cause);
         assertThatThrownBy(() -> stream5.collect().join())
@@ -109,7 +109,7 @@ class StreamMessageCollectingTest {
     void collectAndClose() {
         final int size = 5;
         final Map<HttpData, ByteBuf> data = newHttpData(size);
-        final DefaultStreamMessage<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> stream = StreamMessage.streaming();
         data.forEach((httpData, buf) -> stream.write(httpData));
         final CompletableFuture<List<HttpData>> collectingFuture = stream.collect();
         assertThat(collectingFuture).isNotDone();
@@ -122,7 +122,7 @@ class StreamMessageCollectingTest {
     void collectAndAbort() {
         final int size = 5;
         final Map<HttpData, ByteBuf> data = newHttpData(size);
-        final DefaultStreamMessage<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> stream = StreamMessage.streaming();
         data.forEach((httpData, buf) -> stream.write(httpData));
         final CompletableFuture<List<HttpData>> collectingFuture = stream.collect();
         assertThat(collectingFuture).isNotDone();
@@ -359,7 +359,7 @@ class StreamMessageCollectingTest {
         if (fixedStream) {
             return StreamMessage.of(httpData);
         } else {
-            final DefaultStreamMessage<HttpData> stream = new DefaultStreamMessage<>();
+            final StreamWriter<HttpData> stream = StreamMessage.streaming();
             for (HttpData data : httpData) {
                 stream.write(data);
             }

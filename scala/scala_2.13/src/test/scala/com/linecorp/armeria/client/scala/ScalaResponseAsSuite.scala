@@ -30,21 +30,21 @@ import munit.FunSuite
 
 class ScalaResponseAsSuite extends FunSuite with ServerSuite {
   override protected def configureServer: ServerBuilder => Unit = { sb =>
-    sb.service("/json", (_, _) => HttpResponse.ofJson(MyClass("hello")))
+    sb.service("/json", (_, _) => HttpResponse.ofJson(TestValueHolder("hello")))
     sb.service("/string", (_, _) => HttpResponse.of("hello"))
   }
 
   test("should be able to convert a JSON response into a case class") {
     val client = WebClient.of(server.httpUri())
-    val response: Future[MyClass] =
+    val response: Future[TestValueHolder] =
       client
         .prepare()
         .get("/json")
-        .as(json[MyClass])
+        .as(json[TestValueHolder])
         .execute()
         .map(_.content())
 
-    assertEquals(Await.result(response, Duration.Inf), MyClass("hello"))
+    assertEquals(Await.result(response, Duration.Inf), TestValueHolder("hello"))
   }
 
   test("should be able to convert a response into a string") {
@@ -107,4 +107,4 @@ class ScalaResponseAsSuite extends FunSuite with ServerSuite {
   }
 }
 
-case class MyClass(id: String)
+case class TestValueHolder(id: String)

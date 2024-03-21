@@ -8,13 +8,6 @@ configure(projectsWithFlags('publish', 'java')) {
                 suppressPomMetadataWarningsFor('optionalApiElements')
                 suppressPomMetadataWarningsFor('optionalRuntimeElements')
 
-                // Publish resolved versions
-                versionMapping {
-                    allVariants {
-                        fromResolutionResult()
-                    }
-                }
-
                 // Replace published jar with shaded when available. We manually create shading tasks instead of
                 // applying the shadow plugin itself so need to do it ourselves.
                 def jarOverrideFile = null
@@ -40,33 +33,10 @@ configure(projectsWithFlags('publish', 'java')) {
                     withXml {
                         def rootNode = asNode()
 
-                        // Do not import 'com.linecorp.armeria:dependencyManagement'.
-                        if (rootNode.get('dependencyManagement')) {
-                            def dependencyManagement = rootNode.get('dependencyManagement')[0]
-                            if (dependencyManagement.get('dependencies')) {
-                                def dependencies = dependencyManagement.get('dependencies')[0]
-                                dependencies.findAll {
-                                    def groupId = it.get('groupId')[0]
-                                    def artifactId = it.get('artifactId')[0]
-                                    groupId == rootProject.group && artifactId == 'dependencyManagement'
-                                }.each {
-                                    dependencies.remove(it)
-                                }
-
-                                // Clean up empty tags.
-                                if (dependencies.directChildren.isEmpty()) {
-                                    dependencyManagement.remove(dependencies)
-                                    if (dependencyManagement.directChildren.isEmpty()) {
-                                        rootNode.remove(dependencyManagement)
-                                    }
-                                }
-                            }
-                        }
-
-                        // Strip out shaded dependencies. We manually create shading tasks instead of applying
-                        // the shadow plugin itself so need to do it ourselves.
                         if (rootNode.get('dependencies')) {
                             def dependencies = rootNode.get('dependencies')[0]
+                            // Strip out shaded dependencies. We manually create shading tasks instead of applying
+                            // the shadow plugin itself so need to do it ourselves.
                             def shaded = dependencies.findAll {
                                 def groupId = it.get('groupId')[0]
                                 def artifactId = it.get('artifactId')[0]
@@ -75,6 +45,33 @@ configure(projectsWithFlags('publish', 'java')) {
                                 }
                             }
                             shaded.each { dependencies.remove(it) }
+
+                            def resolvedArtifacts = configurations.compileClasspath.resolvedConfiguration.resolvedArtifacts
+                            // Update unresolved dependencies constrained by the platform dependencies.
+                            dependencies.findAll { it.get('version')[0] == null }.each { dep ->
+                                def groupId = dep.get('groupId')[0].text()
+                                def artifactId = dep.get('artifactId')[0].text()
+
+                                def resolved = resolvedArtifacts.find { artifact ->
+                                    return groupId == artifact.moduleVersion.id.group && artifactId == artifact.moduleVersion.id.name
+                                }
+                                if (resolved == null) {
+                                    throw new IllegalStateException("Failed to resolve dependency: ${groupId}:${artifactId}")
+                                }
+                                def version = resolved.moduleVersion.id.version
+                                // Create a new node and add it to the dependencies node.
+                                dep.appendNode('version', version)
+
+                                // Adjust the classifier and scope to be located at the end of the dependency.
+                                def classifier = dep.get('classifier')[0]
+                                if (classifier != null) {
+                                    dep.remove(classifier)
+                                    dep.appendNode('classifier', classifier.text())
+                                }
+                                def scope = dep.get('scope')[0]
+                                dep.remove(scope)
+                                dep.appendNode('scope', scope.text())
+                            }
                         }
                     }
                 }

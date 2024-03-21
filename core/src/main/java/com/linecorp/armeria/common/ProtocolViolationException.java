@@ -20,7 +20,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * A {@link RuntimeException} raised when a remote peer violated the current {@link SessionProtocol}.
  */
-public final class ProtocolViolationException extends RuntimeException {
+public class ProtocolViolationException extends RuntimeException {
 
     private static final long serialVersionUID = 4674394621849790490L;
 

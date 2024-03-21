@@ -66,7 +66,7 @@ final class DefaultRequestHeadersBuilder extends AbstractHttpHeadersBuilder<Requ
     @Override
     public URI uri() {
         final HttpHeadersBase getters = getters();
-        checkState(getters != null, "must set ':scheme', ':authority' and ':path' headers");
+        checkState(getters != null, "must set ':scheme' and ':path' headers");
         return getters.uri();
     }
 

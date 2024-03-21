@@ -32,9 +32,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -44,10 +47,10 @@ class TransientHttpServiceTest {
     private static final AtomicBoolean sanitizerCalled = new AtomicBoolean();
     private static final AtomicBoolean serviceCalled = new AtomicBoolean();
 
-    private static final BiFunction<RequestContext, Throwable, Object> sanitizer =
-            (requestContext, cause) -> {
+    private static final BiFunction<RequestContext, HttpHeaders, String> sanitizer =
+            (ctx, header) -> {
                 sanitizerCalled.set(true);
-                return cause;
+                return header.toString();
             };
 
     @RegisterExtension
@@ -59,9 +62,14 @@ class TransientHttpServiceTest {
                 return HttpResponse.streaming();
             };
             sb.service("/", noResponseService.decorate(TransientHttpService.newDecorator()));
+            final LogFormatter logFormatter = LogFormatter.builderForText()
+                                                          .responseHeadersSanitizer(sanitizer)
+                                                          .build();
             sb.decorator(LoggingService.builder()
-                                       .failureResponseLogLevel(LogLevel.DEBUG)
-                                       .responseCauseSanitizer(sanitizer)
+                                       .logWriter(LogWriter.builder()
+                                                           .failureResponseLogLevel(LogLevel.DEBUG)
+                                                           .logFormatter(logFormatter)
+                                                           .build())
                                        .newDecorator());
         }
     };

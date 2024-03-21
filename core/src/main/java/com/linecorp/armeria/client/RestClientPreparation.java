@@ -199,6 +199,12 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     }
 
     @Override
+    public RestClientPreparation content(Publisher<? extends HttpData> content) {
+        delegate.content(content);
+        return this;
+    }
+
+    @Override
     public RestClientPreparation content(MediaType contentType, Publisher<? extends HttpData> content) {
         delegate.content(contentType, content);
         return this;
@@ -273,6 +279,18 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     @Override
     public RestClientPreparation maxResponseLength(long maxResponseLength) {
         delegate.maxResponseLength(maxResponseLength);
+        return this;
+    }
+
+    @Override
+    public RestClientPreparation requestAutoAbortDelay(Duration delay) {
+        delegate.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public RestClientPreparation requestAutoAbortDelayMillis(long delayMillis) {
+        delegate.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 

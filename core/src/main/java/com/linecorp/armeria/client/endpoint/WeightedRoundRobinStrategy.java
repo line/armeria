@@ -47,7 +47,7 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
      * <ul>
      *   <li>if endpoint weights are 1,1,1 (or 2,2,2), then select result is abc abc ...</li>
      *   <li>if endpoint weights are 1,2,3 (or 2,4,6), then select result is abcbcc(or abcabcbcbccc) ...</li>
-     *   <li>if endpoint weights are 3,5,7, then select result is abcabcabcbcbcbb abcabcabcbcbcbb ...</li>
+     *   <li>if endpoint weights are 3,5,7, then select result is abcabcabcbcbccc abcabcabcbcbccc ...</li>
      * </ul>
      */
     private static final class WeightedRoundRobinSelector extends AbstractEndpointSelector {
@@ -58,8 +58,15 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
         WeightedRoundRobinSelector(EndpointGroup endpointGroup) {
             super(endpointGroup);
-            endpointGroup.addListener(endpoints -> endpointsAndWeights = new EndpointsAndWeights(endpoints),
-                                      true);
+            initialize();
+        }
+
+        @Override
+        protected void updateNewEndpoints(List<Endpoint> endpoints) {
+            final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
+            if (endpointsAndWeights == null || endpointsAndWeights.endpoints != endpoints) {
+                this.endpointsAndWeights = new EndpointsAndWeights(endpoints);
+            }
         }
 
         @Override

@@ -20,15 +20,22 @@ import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
 final class HttpRequestUtil {
 
     static RequestHeaders maybeModifyContentLength(RequestHeaders headers, HttpData content) {
+        if (headers.isContentLengthUnknown()) {
+            // A streaming content.
+            return headers;
+        }
+
+        if (headers.contentLength() == content.length()) {
+            return headers;
+        }
+
         if (content.isEmpty()) {
             if (headers.contentLength() <= 0) {
                 return headers;
             }
             return headers.toBuilder().removeAndThen(CONTENT_LENGTH).build();
         }
-        if (headers.contentLength() == content.length()) {
-            return headers;
-        }
+
         return headers.toBuilder().contentLength(content.length()).build();
     }
 

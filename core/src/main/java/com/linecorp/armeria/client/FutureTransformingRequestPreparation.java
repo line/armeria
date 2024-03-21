@@ -275,6 +275,12 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     @Override
+    public FutureTransformingRequestPreparation<T> content(Publisher<? extends HttpData> content) {
+        delegate.content(content);
+        return this;
+    }
+
+    @Override
     public FutureTransformingRequestPreparation<T> content(MediaType contentType,
                                                            Publisher<? extends HttpData> content) {
         delegate.content(contentType, content);
@@ -383,6 +389,18 @@ public final class FutureTransformingRequestPreparation<T>
     @Override
     public FutureTransformingRequestPreparation<T> maxResponseLength(long maxResponseLength) {
         delegate.maxResponseLength(maxResponseLength);
+        return this;
+    }
+
+    @Override
+    public FutureTransformingRequestPreparation<T> requestAutoAbortDelay(Duration delay) {
+        delegate.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public FutureTransformingRequestPreparation<T> requestAutoAbortDelayMillis(long delayMillis) {
+        delegate.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 

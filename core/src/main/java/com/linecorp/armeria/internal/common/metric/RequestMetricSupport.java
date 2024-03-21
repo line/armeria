@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSumma
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -94,12 +93,13 @@ public final class RequestMetricSupport {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
+        final boolean isSuccess = successFunction.isSuccess(ctx, log);
 
         if (server) {
             final ServiceRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                           ServiceRequestMetrics.class,
                                                                           DefaultServiceRequestMetrics::new);
-            updateMetrics(ctx, log, metrics, successFunction);
+            updateMetrics(log, metrics, isSuccess);
             if (log.responseCause() instanceof RequestTimeoutException) {
                 metrics.requestTimeouts().increment();
             }
@@ -109,7 +109,7 @@ public final class RequestMetricSupport {
         final ClientRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
                                                                      ClientRequestMetrics.class,
                                                                      DefaultClientRequestMetrics::new);
-        updateMetrics(ctx, log, metrics, successFunction);
+        updateMetrics(log, metrics, isSuccess);
         final ClientConnectionTimings timings = log.connectionTimings();
         if (timings != null) {
             metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
@@ -132,7 +132,6 @@ public final class RequestMetricSupport {
             if (log.requestCause() instanceof WriteTimeoutException) {
                 metrics.writeTimeouts().increment();
             }
-            return;
         }
 
         if (log.responseCause() instanceof ResponseTimeoutException) {
@@ -141,23 +140,35 @@ public final class RequestMetricSupport {
 
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
-            metrics.actualRequests().increment(childrenSize);
+            updateRetryingClientMetrics(metrics, childrenSize, isSuccess);
         }
     }
 
     private static void updateMetrics(
-            RequestContext ctx, RequestLog log, RequestMetrics metrics,
-            SuccessFunction successFunction) {
+            RequestLog log, RequestMetrics metrics,
+            boolean isSuccess) {
         metrics.requestDuration().record(log.requestDurationNanos(), TimeUnit.NANOSECONDS);
         metrics.requestLength().record(log.requestLength());
         metrics.responseDuration().record(log.responseDurationNanos(), TimeUnit.NANOSECONDS);
         metrics.responseLength().record(log.responseLength());
         metrics.totalDuration().record(log.totalDurationNanos(), TimeUnit.NANOSECONDS);
 
-        if (successFunction.isSuccess(ctx, log)) {
+        if (isSuccess) {
             metrics.success().increment();
         } else {
             metrics.failure().increment();
+        }
+    }
+
+    private static void updateRetryingClientMetrics(
+            ClientRequestMetrics metrics, int childrenSize, boolean isSuccess) {
+
+        metrics.actualRequests().increment(childrenSize);
+
+        if (isSuccess) {
+            metrics.successAttempts().record(childrenSize);
+        } else {
+            metrics.failureAttempts().record(childrenSize);
         }
     }
 
@@ -194,6 +205,10 @@ public final class RequestMetricSupport {
         Counter writeTimeouts();
 
         Counter responseTimeouts();
+
+        DistributionSummary successAttempts();
+
+        DistributionSummary failureAttempts();
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -262,11 +277,6 @@ public final class RequestMetricSupport {
 
     private static class DefaultClientRequestMetrics
             extends AbstractRequestMetrics implements ClientRequestMetrics {
-
-        private static final AtomicReferenceFieldUpdater<DefaultClientRequestMetrics, Counter>
-                actualRequestsUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                DefaultClientRequestMetrics.class, Counter.class, "actualRequests");
-
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
 
@@ -279,7 +289,13 @@ public final class RequestMetricSupport {
         private final Counter responseTimeouts;
 
         @Nullable
-        private volatile Counter actualRequests;
+        private Counter actualRequests;
+
+        @Nullable
+        private DistributionSummary successAttempts;
+
+        @Nullable
+        private DistributionSummary failureAttempts;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
@@ -302,16 +318,10 @@ public final class RequestMetricSupport {
 
         @Override
         public Counter actualRequests() {
-            final Counter actualRequests = this.actualRequests;
             if (actualRequests != null) {
                 return actualRequests;
             }
-
-            final Counter counter = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
-            if (actualRequestsUpdater.compareAndSet(this, null, counter)) {
-                return counter;
-            }
-            return this.actualRequests;
+            return actualRequests = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
         }
 
         @Override
@@ -342,6 +352,26 @@ public final class RequestMetricSupport {
         @Override
         public Counter responseTimeouts() {
             return responseTimeouts;
+        }
+
+        @Override
+        public DistributionSummary successAttempts() {
+            if (successAttempts != null) {
+                return successAttempts;
+            }
+            return successAttempts = newDistributionSummary(parent,
+                                                            idPrefix.name("actual.requests.attempts"),
+                                                            idPrefix.tags("result", "success"));
+        }
+
+        @Override
+        public DistributionSummary failureAttempts() {
+            if (failureAttempts != null) {
+                return failureAttempts;
+            }
+            return failureAttempts = newDistributionSummary(parent,
+                                                            idPrefix.name("actual.requests.attempts"),
+                                                            idPrefix.tags("result", "failure"));
         }
     }
 

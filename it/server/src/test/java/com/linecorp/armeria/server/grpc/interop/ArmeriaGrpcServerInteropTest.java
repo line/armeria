@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc.interop;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -23,9 +25,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.junit.After;
-import org.junit.Assert;
 import org.junit.ClassRule;
+import org.junit.jupiter.api.AfterEach;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import com.squareup.okhttp.ConnectionSpec;
@@ -92,8 +93,8 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         }
     };
 
-    @After
-    public void clearCtxCapture() {
+    @AfterEach
+    void clearCtxCapture() {
         ctxCapture.set(null);
     }
 
@@ -131,11 +132,10 @@ public class ArmeriaGrpcServerInteropTest extends AbstractInteropTest {
         stub.emptyCall(EMPTY);
         final long transferredTimeoutMinutes = TimeUnit.MILLISECONDS.toMinutes(
                 ctxCapture.get().requestTimeoutMillis());
-        Assert.assertTrue(
-                "configuredTimeoutMinutes=" + configuredTimeoutMinutes +
-                ", transferredTimeoutMinutes=" + transferredTimeoutMinutes,
-                configuredTimeoutMinutes - transferredTimeoutMinutes >= 0 &&
-                configuredTimeoutMinutes - transferredTimeoutMinutes <= 1);
+        assertThat(configuredTimeoutMinutes - transferredTimeoutMinutes)
+                .withFailMessage("configuredTimeoutMinutes=%d, transferredTimeoutMinutes=%d",
+                                 configuredTimeoutMinutes, transferredTimeoutMinutes)
+                .isBetween(0L, 1L);
     }
 
     @Override

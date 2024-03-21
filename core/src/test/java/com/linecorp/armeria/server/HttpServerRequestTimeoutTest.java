@@ -98,7 +98,7 @@ class HttpServerRequestTimeoutTest {
                       Uninterruptibles.sleepUninterruptibly(Duration.ofSeconds(20));
                       future.complete(HttpResponse.of(200));
                   });
-                  return HttpResponse.from(future);
+                  return HttpResponse.of(future);
               })
               .serviceUnder("/timeout-by-decorator", (ctx, req) ->
                       HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1)))

@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
@@ -22,7 +24,17 @@ import com.google.common.base.MoreObjects;
 
 final class PropagatingContextAwareExecutorService
         extends AbstractContextAwareExecutorService<ExecutorService> {
-    PropagatingContextAwareExecutorService(ExecutorService executor) {
+
+    static PropagatingContextAwareExecutorService of(ExecutorService executor) {
+        requireNonNull(executor, "executor");
+        if (executor instanceof PropagatingContextAwareExecutorService) {
+            return (PropagatingContextAwareExecutorService) executor;
+        } else {
+            return new PropagatingContextAwareExecutorService(executor);
+        }
+    }
+
+    private PropagatingContextAwareExecutorService(ExecutorService executor) {
         super(executor);
     }
 
@@ -34,7 +46,7 @@ final class PropagatingContextAwareExecutorService
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("executor", executor)
+                          .add("executor", withoutContext())
                           .toString();
     }
 }

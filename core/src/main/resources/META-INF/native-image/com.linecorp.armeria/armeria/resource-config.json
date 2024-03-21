@@ -1,0 +1,75 @@
+{
+  "resources" : {
+    "includes" : [ {
+      "pattern" : "^META-INF/[^/]+\\.versions\\.properties$"
+    }, {
+      "pattern" : "^META-INF/armeria/grpc/.*$"
+    }, {
+      "pattern" : "^META-INF/native/(lib)?netty_[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/com\\.aayushatharva\\.brotli4j\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/com\\.fasterxml\\.jackson\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/com\\.linecorp\\.armeria\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/io\\.grpc\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/io\\.micrometer\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/javax?\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/kotlinx?\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/org\\.jboss\\.logging?\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/org\\.jboss\\.resteasy?\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/org\\.opensaml\\.[^/]+$"
+    }, {
+      "pattern" : "^META-INF/services/reactor\\.blockhound\\.[^/]+$"
+    }, {
+      "pattern" : "^[^/]+-config\\.xml$"
+    }, {
+      "pattern" : "^[^/]+-registry\\.properties$"
+    }, {
+      "pattern" : "^com/linecorp/armeria/public_suffixes[^/]+$$"
+    }, {
+      "pattern" : "^com\\.linecorp\\.armeria\\.docstrings\\.annotated\\.[^/]+\\.properties$"
+    }, {
+      "pattern" : "^kotlin/.*\\.kotlin_builtins$"
+    }, {
+      "pattern" : "^lib/[^/]+/(lib)?brotli[^/]+$"
+    }, {
+      "pattern" : "^org/joda/time/tz/data/.*$"
+    }, {
+      "pattern" : "^org/slf4j/impl/StaticLoggerBinder\\.class$"
+    }, {
+      "pattern" : "^schema/[^/]+\\.(dtd|xsd)$"
+    }, {
+      "pattern" : "^templates/[^/]+\\.vm$"
+    }, {
+      "pattern" : "java.base:^jdk/internal/icu/impl/data/.*$"
+    }, {
+      "pattern" : "java.base:^sun/net/idn/uidna\\.spp$"
+    }, {
+      "pattern" : "java.xml:^com/sun/org/apache/xml/internal/serializer/Encodings\\.properties$"
+    } ]
+  },
+  "bundles" : [ {
+    "name" : "com.sun.org.apache.xerces.internal.impl.xpath.regex.message",
+    "locales" : [ "und" ]
+  }, {
+    "name" : "com.sun.org.apache.xml.internal.serializer.XMLEntities",
+    "locales" : [ "und" ]
+  }, {
+    "name" : "i18n.Parsing",
+    "locales" : [ "und" ]
+  }, {
+    "name" : "i18n.Validation",
+    "locales" : [ "und" ]
+  }, {
+    "name" : "org/apache/xml/security/resource/xmlsecurity",
+    "locales" : [ "en" ]
+  } ]
+}

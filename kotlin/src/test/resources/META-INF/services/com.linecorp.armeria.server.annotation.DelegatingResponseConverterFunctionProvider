@@ -1,1 +1,1 @@
-com.linecorp.armeria.server.kotlin.BarResponseConverterFunctionProvider
+com.linecorp.armeria.server.kotlin.SuspendingAnnotatedServiceTest$BarResponseConverterFunctionProvider

@@ -74,7 +74,8 @@ class AnnotatedServiceMultipartTest {
                 BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo"),
                 BodyPart.of(ContentDisposition.of("form-data", "path1", "bar.txt"), "bar"),
                 BodyPart.of(ContentDisposition.of("form-data", "multipartFile1", "qux.txt"), "qux"),
-                BodyPart.of(ContentDisposition.of("form-data", "multipartFile2", "quz.txt"), "quz"),
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile2", "quz.txt"),
+                            MediaType.PLAIN_TEXT, "quz"),
                 BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
 
         );
@@ -83,8 +84,8 @@ class AnnotatedServiceMultipartTest {
         assertThatJson(response.contentUtf8())
                 .isEqualTo("{\"file1\":\"foo\"," +
                            "\"path1\":\"bar\"," +
-                           "\"multipartFile1\":\"qux.txt_qux\"," +
-                           "\"multipartFile2\":\"quz.txt_quz\"," +
+                           "\"multipartFile1\":\"qux.txt_qux (application/octet-stream)\"," +
+                           "\"multipartFile2\":\"quz.txt_quz (text/plain)\"," +
                            "\"param1\":\"armeria\"}");
     }
 
@@ -145,9 +146,11 @@ class AnnotatedServiceMultipartTest {
             final String file1Content = Files.asCharSource(file1, StandardCharsets.UTF_8).read();
             final String path1Content = Files.asCharSource(path1.toFile(), StandardCharsets.UTF_8)
                                              .read();
+            final MediaType multipartFile1ContentType = multipartFile1.headers().contentType();
             final String multipartFile1Content =
                     Files.asCharSource(multipartFile1.file(), StandardCharsets.UTF_8)
                          .read();
+            final MediaType multipartFile2ContentType = multipartFile2.headers().contentType();
             final String multipartFile2Content =
                     Files.asCharSource(multipartFile2.file(), StandardCharsets.UTF_8)
                          .read();
@@ -155,9 +158,11 @@ class AnnotatedServiceMultipartTest {
                     ImmutableMap.of("file1", file1Content,
                                     "path1", path1Content,
                                     "multipartFile1",
-                                    multipartFile1.filename() + '_' + multipartFile1Content,
+                                    multipartFile1.filename() + '_' + multipartFile1Content +
+                                    " (" + multipartFile1ContentType + ')',
                                     "multipartFile2",
-                                    multipartFile2.filename() + '_' + multipartFile2Content,
+                                    multipartFile2.filename() + '_' + multipartFile2Content +
+                                    " (" + multipartFile2ContentType + ')',
                                     "param1", param1);
             return HttpResponse.ofJson(content);
         }
@@ -165,7 +170,7 @@ class AnnotatedServiceMultipartTest {
         @Post
         @Path("/uploadWithMultipartObject")
         public HttpResponse uploadWithMultipartObject(Multipart multipart) {
-            return HttpResponse.from(multipart.aggregate().handle((aggregated, cause) -> {
+            return HttpResponse.of(multipart.aggregate().handle((aggregated, cause) -> {
                 if (cause != null) {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
                                            cause.getMessage());
@@ -177,7 +182,8 @@ class AnnotatedServiceMultipartTest {
                                     aggregated.field(e);
                             String content = bodyPart.contentUtf8();
                             if (e.startsWith("multipartFile")) {
-                                content = bodyPart.filename() + '_' + content;
+                                content = bodyPart.filename() + '_' + content +
+                                          " (" + bodyPart.headers().contentType() + ')';
                             }
                             return content;
                         }));

@@ -36,7 +36,9 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Determines whether a failed request should be retried.
@@ -238,7 +240,7 @@ public interface RetryRule {
     /**
      * Returns a newly created {@link RetryRule} that retries with
      * {@linkplain Backoff#ofDefault() default backoff} on any {@link Exception}.
-     * Note that this rule should be used carefully because it reties regardless of
+     * Note that this rule should be used carefully because it retries regardless of
      * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
      */
     static RetryRule onException() {
@@ -248,11 +250,33 @@ public interface RetryRule {
     /**
      * Returns a newly created {@link RetryRule} that retries with the specified {@link Backoff} on any
      * {@link Exception}.
-     * Note that this rule should be used carefully because it reties regardless of
+     * Note that this rule should be used carefully because it retries regardless of
      * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
      */
     static RetryRule onException(Backoff backoff) {
         return builder().onException().thenBackoff(backoff);
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that retries with
+     * {@linkplain Backoff#ofDefault() default backoff} on a {@link TimeoutException}.
+     * Note that this rule should be used carefully because it retries regardless of
+     * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
+     */
+    @UnstableApi
+    static RetryRule onTimeoutException() {
+        return onTimeoutException(Backoff.ofDefault());
+    }
+
+    /**
+     * Returns a newly created {@link RetryRule} that retries with the specified {@link Backoff} on
+     * a {@link TimeoutException}.
+     * Note that this rule should be used carefully because it retries regardless of
+     * <a href="https://developer.mozilla.org/en-US/docs/Glossary/Idempotent">idempotency</a>.
+     */
+    @UnstableApi
+    static RetryRule onTimeoutException(Backoff backoff) {
+        return builder().onTimeoutException().thenBackoff(backoff);
     }
 
     /**

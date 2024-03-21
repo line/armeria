@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -33,6 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -51,6 +53,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
@@ -65,7 +68,22 @@ import reactor.core.scheduler.Schedulers;
 
 class ServerBuilderTest {
 
+    private static final String RESOURCE_PATH_PREFIX =
+            "/testing/core/" + ServerBuilderTest.class.getSimpleName() + '/';
+
     private static ClientFactory clientFactory;
+
+    private static final AtomicInteger poppedRouterCnt = new AtomicInteger();
+    private static final Supplier<? extends AutoCloseable> contextHookRouter = () ->
+            (AutoCloseable) poppedRouterCnt::getAndIncrement;
+
+    private static final AtomicInteger poppedRouterCnt2 = new AtomicInteger();
+    private static final Supplier<? extends AutoCloseable> contextHookRouter2 = () ->
+            (AutoCloseable) poppedRouterCnt2::getAndIncrement;
+
+    private static final AtomicInteger poppedCnt = new AtomicInteger();
+    private static final Supplier<? extends AutoCloseable> contextHook = () ->
+            (AutoCloseable) poppedCnt::getAndIncrement;
 
     @RegisterExtension
     static final SelfSignedCertificateExtension selfSignedCertificate = new SelfSignedCertificateExtension();
@@ -88,6 +106,19 @@ class ServerBuilderTest {
                           mutator -> mutator.add("virtualhost_decorator", "true"));
                   return delegate.serve(ctx, req);
               });
+            sb.route()
+              .path("/hook_route")
+              .contextHook(contextHookRouter)
+              .contextHook(contextHookRouter2)
+              .build((ctx, req) -> HttpResponse.of("hook_route"));
+        }
+    };
+
+    @RegisterExtension
+    static final ServerExtension server1 = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.contextHook(contextHook).service("/hook", (ctx, req) -> HttpResponse.of("hook"));
         }
     };
 
@@ -499,26 +530,26 @@ class ServerBuilderTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
-    void tlsPkcsPrivateKeys(String privateKeyPath) {
+    @CsvSource({ "pkcs5.pem", "pkcs8.pem" })
+    void tlsPkcsPrivateKeys(String privateKeyFileName) {
         final String resourceRoot =
                 '/' + MinifiedBouncyCastleProvider.class.getPackage().getName().replace('.', '/') + '/';
         Server.builder()
-              .tls(getClass().getResourceAsStream("/cert.pem"),
-                   getClass().getResourceAsStream(privateKeyPath))
+              .tls(getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "cert.pem"),
+                   getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + privateKeyFileName))
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
     }
 
     @ParameterizedTest
-    @CsvSource({ "/pkcs5.pem", "/pkcs8.pem" })
-    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyPath) {
+    @CsvSource({ "pkcs5.pem", "pkcs8.pem" })
+    void tlsPkcsPrivateKeysWithCustomizer(String privateKeyFileName) {
         Server.builder()
               .tlsSelfSigned()
               .tlsCustomizer(sslCtxBuilder -> {
                   sslCtxBuilder.keyManager(
-                          getClass().getResourceAsStream("/cert.pem"),
-                          getClass().getResourceAsStream(privateKeyPath));
+                          getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "cert.pem"),
+                          getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + privateKeyFileName));
               })
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .build();
@@ -640,5 +671,110 @@ class ServerBuilderTest {
         assertThat(childChannelOptions)
                 .containsExactly(entry(TCP_USER_TIMEOUT, userDefinedValue),
                                  entry(SO_LINGER, lingerMillis));
+    }
+
+    @Test
+    void exceptionReportInterval() {
+        final Server server1 = Server.builder()
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .unhandledExceptionsReportInterval(Duration.ofMillis(1000))
+                                     .build();
+        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+
+        final Server server2 = Server.builder()
+                                     .unhandledExceptionsReportInterval(Duration.ofMillis(0))
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
+        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+
+        assertThrows(IllegalArgumentException.class, () ->
+                Server.builder()
+                      .unhandledExceptionsReportInterval(Duration.ofMillis(-1000))
+                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .build());
+    }
+
+    @Test
+    void exceptionReportIntervalMilliSeconds() {
+        final Server server1 = Server.builder()
+                                     .unhandledExceptionsReportIntervalMillis(1000)
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
+        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+
+        final Server server2 = Server.builder()
+                                     .unhandledExceptionsReportIntervalMillis(0)
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
+        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+
+        assertThrows(IllegalArgumentException.class, () ->
+                Server.builder()
+                      .unhandledExceptionsReportIntervalMillis(-1000)
+                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .build());
+    }
+
+    @Test
+    void multipleDomainSocketAddresses() {
+        final Server server = Server.builder()
+                                    .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                    .http(DomainSocketAddress.of("/tmp/foo"))
+                                    .http(DomainSocketAddress.of("/tmp/bar"))
+                                    .https(DomainSocketAddress.of("/tmp/foo"))
+                                    .https(DomainSocketAddress.of("/tmp/bar"))
+                                    .tlsSelfSigned()
+                                    .build();
+        assertThat(server.config().ports()).containsExactly(
+                new ServerPort(DomainSocketAddress.of("/tmp/foo"),
+                               SessionProtocol.HTTP, SessionProtocol.HTTPS),
+                new ServerPort(DomainSocketAddress.of("/tmp/bar"),
+                               SessionProtocol.HTTP, SessionProtocol.HTTPS));
+    }
+
+    @Test
+    void contextHook() {
+        assertThat(poppedCnt.get()).isEqualTo(0);
+
+        final WebClient client = WebClient.builder(server1.httpUri()).build();
+        final AggregatedHttpResponse response = client.get("/hook").aggregate().join();
+
+        assertThat(response.contentUtf8()).isEqualTo("hook");
+        assertThat(poppedCnt.get()).isEqualTo(1);
+    }
+
+    @Test
+    void contextHook_route() {
+        assertThat(poppedRouterCnt.get()).isEqualTo(0);
+        assertThat(poppedRouterCnt2.get()).isEqualTo(0);
+
+        final WebClient client = WebClient.builder(server.httpUri()).build();
+        final AggregatedHttpResponse response = client.get("/hook_route").aggregate().join();
+
+        assertThat(response.contentUtf8()).isEqualTo("hook_route");
+        assertThat(poppedRouterCnt.get()).isEqualTo(1);
+        assertThat(poppedRouterCnt2.get()).isEqualTo(1);
+    }
+
+    @Test
+    void contextHook_otherRoute() {
+        assertThat(poppedRouterCnt.get()).isEqualTo(0);
+
+        final WebClient client = WebClient.builder(server.httpUri()).build();
+        final AggregatedHttpResponse response = client.get("/").aggregate().join();
+
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(poppedRouterCnt.get()).isEqualTo(0);
+    }
+
+    @Test
+    void httpMaxResetFramesPerMinute() {
+        final ServerConfig config = Server.builder()
+                                          .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                          .http2MaxResetFramesPerWindow(99, 2)
+                                          .build()
+                                          .config();
+        assertThat(config.http2MaxResetFramesPerWindow()).isEqualTo(99);
+        assertThat(config.http2MaxResetFramesWindowSeconds()).isEqualTo(2);
     }
 }

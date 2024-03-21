@@ -42,7 +42,6 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
@@ -51,7 +50,6 @@ import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -153,7 +151,6 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             final HttpRequest httpReq = HttpRequest.of(
                     RequestHeaders.builder(HttpMethod.POST, ctx.path())
                                   .scheme(ctx.sessionProtocol())
-                                  .authority(getAuthority(ctx))
                                   .contentType(mediaType)
                                   .build(),
                     HttpData.wrap(buf).withEndOfStream());
@@ -199,26 +196,6 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         }
 
         return reply;
-    }
-
-    private static String getAuthority(ClientRequestContext ctx) {
-        String authority = ctx.additionalRequestHeaders().get(HttpHeaderNames.AUTHORITY);
-        if (authority == null) {
-            authority = ctx.additionalRequestHeaders().get(HttpHeaderNames.HOST);
-        }
-
-        if (authority == null) {
-            authority = ctx.defaultRequestHeaders().get(HttpHeaderNames.AUTHORITY);
-        }
-        if (authority == null) {
-            authority = ctx.defaultRequestHeaders().get(HttpHeaderNames.HOST);
-        }
-
-        if (authority == null) {
-            final Endpoint endpoint = ctx.endpoint();
-            authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
-        }
-        return authority;
     }
 
     private static String fullMethod(ClientRequestContext ctx, String method) {

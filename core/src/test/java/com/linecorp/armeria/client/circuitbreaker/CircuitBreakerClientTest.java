@@ -300,6 +300,56 @@ class CircuitBreakerClientTest {
     }
 
     @Test
+    void testRecover() {
+        final CircuitBreakerRule rule = CircuitBreakerRule.builder().onServerErrorStatus().thenFailure();
+        final CircuitBreakerClientBuilder builder = CircuitBreakerClient
+                .builder(rule)
+                .recover((ctx, cause) -> HttpResponse.of(HttpStatus.OK));
+
+        final AtomicLong ticker = new AtomicLong();
+        final int minimumRequestThreshold = 2;
+        final Duration circuitOpenWindow = Duration.ofSeconds(60);
+        final Duration counterSlidingWindow = Duration.ofSeconds(180);
+        final Duration counterUpdateInterval = Duration.ofMillis(1);
+
+        final CircuitBreaker circuitBreaker =
+                CircuitBreaker.builder(remoteServiceName)
+                              .minimumRequestThreshold(minimumRequestThreshold)
+                              .circuitOpenWindow(circuitOpenWindow)
+                              .counterSlidingWindow(counterSlidingWindow)
+                              .counterUpdateInterval(counterUpdateInterval)
+                              .ticker(ticker::get)
+                              .listener(new CircuitBreakerListenerAdapter() {
+                                  @Override
+                                  public void onEventCountUpdated(String circuitBreakerName,
+                                                                  EventCount eventCount) throws Exception {
+                                      ticker.addAndGet(Duration.ofMillis(1).toNanos());
+                                  }
+                              })
+                              .build();
+
+        final CircuitBreakerMapping mapping = (ctx, req) -> circuitBreaker;
+        final BlockingWebClient client = WebClient.builder(server.httpUri())
+                                                  .decorator(builder.mapping(mapping).newDecorator())
+                                                  .build()
+                                                  .blocking();
+
+        ticker.addAndGet(Duration.ofMillis(1).toNanos());
+        // CLOSED
+        for (int i = 0; i < minimumRequestThreshold + 1; i++) {
+            // Need to call execute() one more to change the state of the circuit breaker.
+            final long currentTime = ticker.get();
+            assertThat(client.get("/unavailable").status())
+                    .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+            await().until(() -> currentTime != ticker.get());
+        }
+
+        await().untilAsserted(() -> assertThat(circuitBreaker.tryRequest()).isFalse());
+        // OPEN
+        assertThat(client.get("/unavailable").status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     void shouldReceiveStreamDataBeforeEos() {
         final CircuitBreakerRule rule =
                 CircuitBreakerRule.builder()

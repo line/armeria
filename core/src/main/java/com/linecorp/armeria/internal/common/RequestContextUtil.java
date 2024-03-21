@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.MustBeClosed;
 
+import com.linecorp.armeria.common.ContextHolder;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
@@ -52,6 +53,8 @@ public final class RequestContextUtil {
     private static final Logger logger = LoggerFactory.getLogger(RequestContextUtil.class);
 
     private static final SafeCloseable noopSafeCloseable = () -> { /* no-op */ };
+
+    public static final Supplier<AutoCloseable> NOOP_CONTEXT_HOOK = () -> () -> {};
 
     /**
      * Keeps track of the {@link Thread}s reported by
@@ -84,7 +87,7 @@ public final class RequestContextUtil {
     /**
      * Returns the {@link SafeCloseable} which doesn't do anything.
      */
-    @MustBeClosed
+    @SuppressWarnings("MustBeClosedChecker")
     public static SafeCloseable noopSafeCloseable() {
         return noopSafeCloseable;
     }
@@ -186,16 +189,12 @@ public final class RequestContextUtil {
     public static SafeCloseable invokeHookAndPop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
 
-        final AutoCloseable closeable = invokeHook(current);
+        final SafeCloseable closeable = invokeHook(current);
         if (closeable == null) {
             return () -> requestContextStorage.pop(current, toRestore);
         } else {
             return () -> {
-                try {
-                    closeable.close();
-                } catch (Throwable t) {
-                    logger.warn("{} Unexpected exception while closing RequestContext.hook().", current, t);
-                }
+                closeable.close();
                 requestContextStorage.pop(current, toRestore);
             };
         }
@@ -209,16 +208,10 @@ public final class RequestContextUtil {
     }
 
     @Nullable
-    private static AutoCloseable invokeHook(RequestContext ctx) {
-        final Supplier<? extends AutoCloseable> hook;
-        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
-        if (ctxExtension != null) {
-            hook = ctxExtension.hook();
-        } else {
-            hook = null;
-        }
+    public static SafeCloseable invokeHook(RequestContext ctx) {
+        final Supplier<AutoCloseable> hook = ctx.hook();
 
-        if (hook == null) {
+        if (hook == NOOP_CONTEXT_HOOK) {
             return null;
         }
 
@@ -235,7 +228,43 @@ public final class RequestContextUtil {
             return null;
         }
 
-        return closeable;
+        return () -> {
+            try {
+                closeable.close();
+            } catch (Throwable t) {
+                logger.warn("{} Unexpected exception while closing RequestContext.hook().", ctx, t);
+            }
+        };
+    }
+
+    public static Supplier<AutoCloseable> mergeHooks(Supplier<? extends AutoCloseable> hook1,
+                                                     Supplier<? extends AutoCloseable> hook2) {
+        if (hook1 == NOOP_CONTEXT_HOOK) {
+            //noinspection unchecked
+            return (Supplier<AutoCloseable>) hook2;
+        } else if (hook2 == NOOP_CONTEXT_HOOK) {
+            //noinspection unchecked
+            return (Supplier<AutoCloseable>) hook1;
+        } else {
+            return () -> {
+                final AutoCloseable closeable1 = hook1.get();
+                final AutoCloseable closeable2 = hook2.get();
+                return () -> {
+                    try {
+                        closeable2.close();
+                    } finally {
+                        closeable1.close();
+                    }
+                };
+            };
+        }
+    }
+
+    public static void ensureSameCtx(RequestContext ctx, ContextHolder contextHolder, Class<?> type) {
+        if (ctx != contextHolder.context()) {
+            throw new IllegalArgumentException(
+                    "cannot create a " + type.getSimpleName() + " using another " + contextHolder);
+        }
     }
 
     private RequestContextUtil() {}

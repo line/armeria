@@ -7,4 +7,5 @@ dependencies {
     testImplementation libs.akka.actor.typed.v213
     testImplementation libs.akka.discovery.v213
     testImplementation libs.akka.stream.v213
+    testImplementation libs.javax.annotation
 }

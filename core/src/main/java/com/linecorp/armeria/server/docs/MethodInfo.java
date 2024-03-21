@@ -33,9 +33,9 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.Service;
 
 /**
@@ -147,9 +147,9 @@ public final class MethodInfo {
         final ImmutableList.Builder<String> examplePathsBuilder =
                 ImmutableList.builderWithExpectedSize(Iterables.size(examplePaths));
         for (String path : examplePaths) {
-            final PathAndQuery pathAndQuery = PathAndQuery.parse(path);
-            checkArgument(pathAndQuery != null, "examplePaths contains an invalid path: %s", path);
-            examplePathsBuilder.add(pathAndQuery.path());
+            final RequestTarget reqTarget = RequestTarget.forServer(path);
+            checkArgument(reqTarget != null, "examplePaths contains an invalid path: %s", path);
+            examplePathsBuilder.add(reqTarget.path());
         }
         this.examplePaths = examplePathsBuilder.build();
 
@@ -157,9 +157,9 @@ public final class MethodInfo {
         final ImmutableList.Builder<String> exampleQueriesBuilder =
                 ImmutableList.builderWithExpectedSize(Iterables.size(exampleQueries));
         for (String query : exampleQueries) {
-            final PathAndQuery pathAndQuery = PathAndQuery.parse('?' + query);
-            checkArgument(pathAndQuery != null, "exampleQueries contains an invalid query string: %s", query);
-            exampleQueriesBuilder.add(pathAndQuery.query());
+            final RequestTarget reqTarget = RequestTarget.forServer("/?" + query);
+            checkArgument(reqTarget != null, "exampleQueries contains an invalid query string: %s", query);
+            exampleQueriesBuilder.add(reqTarget.query());
         }
         this.exampleQueries = exampleQueriesBuilder.build();
 

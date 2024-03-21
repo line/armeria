@@ -1,0 +1,304 @@
+---
+date: 2023-04-07
+---
+
+## 🌸 Highlights
+
+- <type://DocService> now supports auto-completion for gRPC and Thrift services. #4516
+  - Check out this awesome demo video by @Dogacel to learn more.
+  <AspectRatio width={18} height={9} maxWidth="21rem">
+    <video controls>
+      <source src="https://user-images.githubusercontent.com/7023385/201191726-1cc4d893-0394-4392-b6be-8e981583b20e.mov" />
+    </video>
+  </AspectRatio>
+
+## 🌟 New features
+
+- You can now write a circuit breaker or retry rule that makes a decision based on gRPC trailers. #4496 #4535
+```java
+final RetryRule rule =
+  RetryRule.builder()
+           .onGrpcTrailers((ctx, trailers) -> trailers.containsInt(
+              "grpc-status", 13)) // Retry for internal error.
+           .thenBackoff(backoff);
+  ```
+- Unhandled exceptions are logged periodically out of the box. #4324 #4687
+  - You can change the interval of the periodic logging
+    using <type://ServerBuilder#unhandledExceptionsReportIntervalMillis(long)>.
+  ```java
+  ServerBuilder sb = ...
+  // Log every 10 seconds.
+  sb.unhandledExceptionsReportIntervalMillis(10000L);
+  ```
+- You can now use Spring Boot 3 with Armeria. #4574
+  - Use `com.linecorp.armeria:armeria-spring-boot3-autoconfigure:1.23.0` dependency for the integration.
+- You can now disconnect connections gracefully
+  using <type://ClientRequestContext#initiateConnectionShutdown()>. #4555 #4708
+  ```java
+  ClientRequestContext ctx = ...
+  // The connection will be gracefully shut down after a request is finished.
+  ctx.initiateConnectionShutdown();
+  ```
+- You can now use <type://ServiceErrorHandler> to configure the per-service or per-virtual host
+  error handlers. #3421 #4716
+  ```java
+  ServiceErrorHandler handler = (ctx, cause) -> {
+    if (cause instanceof IllegalArgumentException) {
+      return HttpResponse.of(HttpStatus.BAD_REQUEST);
+    }
+    // Return null to let the default error handler handle the exception.
+    return null;
+  };
+
+  ServerBuilder sb = ...
+  sb.route()
+    .get("/foo")
+    .errorHandler(handler)
+    ...
+    .build();
+  ```
+- You can now handle an HTTP/1 request with an absolute URI
+  using <type://ServerBuilder#absoluteUriTransformer(Function)>. #4681 #4726
+  ```java
+  ServerBuilder sb = ...
+  sb.absoluteUriTransformer(absoluteUri -> {
+    // https://foo.com/bar -> /bar
+    return absoluteUri.replaceFirst("^https://\\.foo\\.com/", "/");
+    // Or store the original URI in a query and use it in the proxy service.
+    // return "/proxy?uri=" + URLEncoder.encode(absoluteUri);
+  });
+  ```
+- You can now listen to the result of DNS queries using <type://DnsQueryListener>. #4690 #4715
+  ```java
+  DnsAddressEndpointGroup
+    .builder("foo.com")
+    .addDnsQueryListeners(new DnsQueryListener() {
+      @Override
+      void onSuccess(...) {...}
+
+      @Override
+      public void onFailure(...) {
+        logger.warn("DNS query failed");
+      }
+    })
+    .build();
+  ```
+- You can now create a <type://BlockingTaskExecutor> by wrapping a `ScheduledExecutorService`. #4760
+  - Additionally, you can create context-aware or context-propagating `Executor` and
+    <type://BlockingTaskExecutor>.
+  ```java
+  ScheduledExecutorService executorService = ...
+  // Wrap a ScheduledExecutorService.
+  BlockingTaskExecutor blockingTaskExecutor =
+    BlockingTaskExecutor.of(executorService);
+
+  RequestContext ctx = ...
+  BlockingTaskExecutor blockingTaskExecutor = ...
+  // context-aware
+  ContextAwareBlockingTaskExecutor.of(context, executor);
+  // context-propagating
+  RequestContext.makeContextPropagating(blockingTaskExecutor);
+  ```
+- You can now use <type://StreamMessage#of(InputStream)> to convert an `InputStream`
+  to <type://StreamMessage>. #3937 #4703
+  ```java
+  InputStream in = ...
+  // The input stream is divided into chunks of 8192 bytes by default.
+  ByteStreamMessage stream = StreamMessage.of(in);
+  ```
+- You can now use <type://StreamMessage#streaming()> to create <type://StreamWriter> for writing
+  streaming messages. #4253 #4696
+  ```java
+  StreamWriter<String> writer = StreamMessage.streaming();
+  writer.write("foo");
+  writer.write("bar");
+  writer.close();
+
+  // Subscribe to the writer.
+  writer.subscribe(...);
+  ```
+- You can now generate a <type://RequestId> using the information of <type://RoutingContext>. #4362 #4691
+  - Additionally, the request ID generator can be configured per-service or per-virtual host. #4730 #4752
+  ```java
+  ServerBuilder sb = ...
+  sb.requestIdGenerator((routingCtx, req) -> {
+    // Create a request ID from the trace ID of an OpenTelemetry headers.
+    return RequestId.of(
+      requestId(routingCtx.headers().get("traceparent")));
+  });
+  ```
+- You can now collect metrics of open and closed client connections
+  using <type://ConnectionPoolListener#metricCollecting(MeterRegistry)>. #4685 #4686
+  ```java
+  MeterRegistry registry = ...
+  ConnectionPoolListener listener = ConnectionPoolListener.metricCollecting(registry);
+  ClientFactory factory = ClientFactory.builder()
+                                       .connectionPoolListener(listener)
+                                       .build();
+  ```
+- <type://ClientRequestContext#authority()> can now be used to get the authority that will be sent to
+  the server. #4697
+  ```java
+  ClientRequestContext ctx = ...
+  String authority = ctx.authority();
+  ```
+- You can now use `ManagementServerProperties` to configure the management server when using
+  Spring integration. #4560 #4574
+  ```yaml
+  armeria:
+    ports:
+      - port: 8080
+  # Use a different port with a custom base path:
+  management:
+    server:
+      port: 8443
+      base-path: /foo
+    endpoints:
+      web:
+        exposure:
+          include: health, loggers, prometheus
+  ```
+- You can now execute gRPC `ServerInterceptor` asynchronously in Kotlin
+  using <type://CoroutineServerInterceptor>. #4669 #4724
+  ```kotlin
+  class AuthInterceptor : CoroutineServerInterceptor {
+    private val authorizer = ...
+
+    override suspend fun <ReqT, RespT> suspendedInterceptCall(
+      call: ServerCall<ReqT, RespT>,
+      headers: Metadata,
+      next: ServerCallHandler<ReqT, RespT>
+    ): ServerCall.Listener<ReqT> {
+      val result = authorizer.authorize(ServiceRequestContext.current(), headers).await()
+      if (result) {
+        return next.startCall(call, headers)
+      } else {
+        throw AnticipatedException("Invalid access")
+      }
+    }
+  }
+  ```
+
+## 📈 Improvements
+
+- The debug page of <type://DocService> is now a pop-up for easier access. #4599
+- You can now use `Connection: close` header to close a connection after sending or receiving a response.
+  #4131 #4454 #4471 #4531
+- Armeria now exports the gauge metrics of <type://CommonPools#workerGroup()>. #4675 #4750
+  - The metric names:
+    - `armeria.netty.common.event.loop.workers`
+    - `armeria.netty.common.event.loop.pending.tasks`
+- If the mapping for a HEAD request is not found, the request is rerouted to the service bound to the
+  GET method on the same path. #4038 #4706
+
+## 🛠️ Bug fixes
+
+- Armeria client now handles the fragment part of URI consistently. #4789
+- The <type://RetryConfig> from <type://RetryConfigMapping> is retrieved only once for a retry session
+  and reused. #4753 #4778
+- Fixed a memory leak of the response body for HEAD requests. #4771
+- A `#` character in a request path is now always percent-encoded on the server side. #4751 #4765
+- `Self-suppression` exception is not raised anymore in HTTP/1.1 encoder. #4749 #4758
+- `ConcurrentModificationException` is not raised anymore when using <type://AsyncServerInterceptor>. #4729
+- <type://RequestHeaders#path()> now returns percent-encoded value like
+  <type://RequestContext#path()> does when used in an Armeria server. #4694 #4721
+- <type://ByteStreamMessage#range(long,long)> of a path stream message now handles
+  the overflow of the range correctly. #4705
+- The authority header is now correctly set for retried requests. #4697
+- You no longer see <type://DnsTimeoutException> when an IPv6 network interface is enabled. #4695
+- No more deadlocks occur in Thrift 0.14 or older when loading <type://DocService>. #4688
+- <type://HttpStatusException> is not raised anymore when there is no matching route for a request. #4548 #4552
+  - Normal 404 Not Found response is sent instead.
+- A gRPC call is now correctly terminated with `Status.INTERLAL` when an invalid response is received. #4808
+- A server-side <type://RequestLog> is completed correctly when an empty response is sent. #4807
+
+## 🏚️ Deprecations
+
+- <type://ClientFactory#setMeterRegistry(MeterRegistry)> is now deprecated in favor of
+  <type://FlagsProvider#meterRegistry()>. #4785
+
+## ☢️ Breaking changes
+
+- Spring Boot 1 integration is no longer supported. #4651 #4787
+- The type of `blockingTaskExecutor` property such as <type://ServiceConfig#blockingTaskExecutor()> is
+  changed from `ScheduledExecutorService` to <type://BlockingTaskExecutor>. #4760
+  - Simply recompiling your code should be enough in most cases because <type://BlockingTaskExecutor>
+    is a `ScheduledExecutorService`.
+- The return types of `makeContextAware` methods on <type://RequestContext> are changed to the
+  context-aware types. #4760
+  - `makeContextAware(Executor)` returns <type://ContextAwareExecutor> instead of `Executor`.
+  - `makeContextAware(ScheduledExecutorService)` returns <type://ContextAwareScheduledExecutorService>
+    instead of `ScheduledExecutorService`.
+- The signatures of `UserClient.execute()` have been changed. #4789
+  - It now contains the newly added <type://RequestTarget> as a parameter instead of the `path`, `query`,
+    and `fragment`.
+- The names of path cache meters have been changed. #4789
+  - The old meter name: `armeria.server.parsed.path.cache`
+  - New meter names:
+    - `armeria.path.cache{type=client}`
+    - `armeria.path.cache{type=server}`
+- Armeria client doesn't normalize consecutive slashes (e.g. `foo//bar`) in a client request path anymore. #4789
+
+  <Tip>
+
+    Please make sure your server or service is capable of handling consecutive slashes (`//`) in request paths
+    correctly prior to upgrading. In some instances, consecutive slashes may cause unexpected behavior or
+    routing issues if not handled properly.
+
+    Fortunately, Armeria server automatically cleans up and normalizes request paths containing
+    consecutive slashes for you.
+
+  </Tip>
+
+## ⛓ Dependencies
+
+- Brotli4j 1.9.0 → 1.11.0
+- Dropwizard 2.1.4 → 2.1.5
+- Dropwizard Metrics 4.2.15 → 4.2.18
+- fastutil 8.5.11 → 8.5.12
+- GraphQL Kotlin 6.3.5 → 6.4.0
+- java-jwt 4.2.2 → 4.3.0
+- Micrometer 1.10.3 → 1.10.5
+- Netty 4.1.87.Final → 4.1.91.Final
+- Reactor Kotlin 1.2.1 → 1.2.2
+- Sangria 3.5.0 → 3.5.3
+- Spring 5.3.25 → 6.0.6
+- Spring Boot
+  - 3.0.5
+  - 2.7.8 → 2.7.10
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Bue-von-hon',
+  'chanho0912',
+  'chris-ryan-square',
+  'cj848',
+  'di-seo',
+  'Dogacel',
+  'doljae',
+  'echo304',
+  'ghkim3221',
+  'heowc',
+  'hllee1021',
+  'ikhoon',
+  'injae-kim',
+  'jrhee17',
+  'kojilin',
+  'ks-yim',
+  'mauhiz',
+  'minwoox',
+  'mitrofmep',
+  'mscheong01',
+  'nao0811ta',
+  'opus53',
+  'SeanWhoCodes',
+  'seonwoo960000',
+  'ta7uw',
+  'taodo2291',
+  'tobias-',
+  'trustin',
+  'vkostyukov',
+  'wu-sheng',
+  'yamamichid'
+]} />

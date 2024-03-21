@@ -40,10 +40,11 @@ import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
-import com.linecorp.armeria.service.test.thrift.main.FooEnum;
-import com.linecorp.armeria.service.test.thrift.main.FooServiceException;
-import com.linecorp.armeria.service.test.thrift.main.FooStruct;
-import com.linecorp.armeria.service.test.thrift.main.FooUnion;
+
+import testing.thrift.main.FooEnum;
+import testing.thrift.main.FooServiceException;
+import testing.thrift.main.FooStruct;
+import testing.thrift.main.FooUnion;
 
 class ThriftDescriptiveTypeInfoProviderTest {
 

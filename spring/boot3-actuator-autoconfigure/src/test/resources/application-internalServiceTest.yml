@@ -1,0 +1,15 @@
+armeria:
+  ports:
+    - port: 0
+  internal-services:
+    include: metrics, health
+    port: 0
+    protocols: http
+
+management:
+  server:
+    port: 0
+  endpoints:
+    web:
+      exposure:
+        include: health, loggers, prometheus

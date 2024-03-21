@@ -30,22 +30,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.Metrics.GaugeRequest;
-import com.linecorp.armeria.grpc.testing.Metrics.GaugeResponse;
-import com.linecorp.armeria.grpc.testing.MetricsServiceGrpc.MetricsServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.MetricsServiceGrpc.MetricsServiceImplBase;
-import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.UnitTestBarServiceGrpc.UnitTestBarServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.UnitTestBarServiceGrpc.UnitTestBarServiceImplBase;
-import com.linecorp.armeria.grpc.testing.UnitTestFooServiceGrpc.UnitTestFooServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.UnitTestFooServiceGrpc.UnitTestFooServiceImplBase;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -55,6 +39,22 @@ import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.Metrics.GaugeRequest;
+import testing.grpc.Metrics.GaugeResponse;
+import testing.grpc.MetricsServiceGrpc.MetricsServiceBlockingStub;
+import testing.grpc.MetricsServiceGrpc.MetricsServiceImplBase;
+import testing.grpc.ReconnectServiceGrpc.ReconnectServiceBlockingStub;
+import testing.grpc.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
+import testing.grpc.UnitTestBarServiceGrpc.UnitTestBarServiceBlockingStub;
+import testing.grpc.UnitTestBarServiceGrpc.UnitTestBarServiceImplBase;
+import testing.grpc.UnitTestFooServiceGrpc.UnitTestFooServiceBlockingStub;
+import testing.grpc.UnitTestFooServiceGrpc.UnitTestFooServiceImplBase;
 
 class GrpcDecoratingServiceTest {
 

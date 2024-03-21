@@ -44,7 +44,8 @@ task generateSources(type: Copy) {
     into "${project.ext.genSrcDir}/test"
 }
 
-tasks.compileTestJava.dependsOn(generateSources)
+tasks.compileTestJava.dependsOn(tasks.generateSources)
+tasks.generateSources.dependsOn(tasks.processTestResources)
 
 // Disable checkstyle because it's checked by ':thrift0.13'
 tasks.withType(Checkstyle) {

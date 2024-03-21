@@ -98,4 +98,14 @@ public interface CircuitBreakerClientHandler {
      */
     @Nullable
     CircuitBreakerCallback tryRequest(ClientRequestContext ctx, Request req);
+
+    /**
+     * Determines if the given {@link Exception} is related to a circuit breaker.
+     * This method is invoked by the {@link CircuitBreakerClient} to determine if a
+     * fallback logic should be executed.
+     */
+    @UnstableApi
+    default boolean isCircuitBreakerException(Exception ex) {
+        return ex instanceof FailFastException;
+    }
 }

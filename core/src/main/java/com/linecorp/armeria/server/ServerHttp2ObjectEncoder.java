@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -38,35 +39,22 @@ import io.netty.handler.codec.http2.Http2Stream;
 
 final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements ServerHttpObjectEncoder {
 
-    private final boolean enableServerHeader;
-    private final boolean enableDateHeader;
-    private boolean hasCalledChannelClose;
-
     ServerHttp2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
-                             AbstractHttp2ConnectionHandler connectionHandler,
-                             boolean enableDateHeader, boolean enableServerHeader) {
+                             AbstractHttp2ConnectionHandler connectionHandler) {
         super(connectionHandlerCtx, connectionHandler);
         assert keepAliveHandler() instanceof Http2ServerKeepAliveHandler ||
                keepAliveHandler() instanceof NoopKeepAliveHandler;
-        this.enableServerHeader = enableServerHeader;
-        this.enableDateHeader = enableDateHeader;
     }
 
     @Override
     public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
-                                        boolean isTrailersEmpty) {
-        if (!isStreamPresentAndWritable(streamId)) {
+                                        boolean isTrailersEmpty, HttpMethod method) {
+        if (!isStreamPresentAndWritable(streamId) || isResponseHeadersSent(id, streamId)) {
             // One of the following cases:
             // - Stream has been closed already.
             // - (bug) Server tried to send a response HEADERS frame before receiving a request HEADERS frame.
+            // - Server tried to send a response HEADERS frame twice.
             return newFailedFuture(ClosedStreamException.get());
-        }
-
-        // TODO(alexc-db): decouple this from headers write and do it from inside the KeepAliveHandler.
-        if (!hasCalledChannelClose && keepAliveHandler().needToCloseConnection()) {
-            // Initiates channel close, connection will be closed after all streams are closed.
-            ctx().channel().close();
-            hasCalledChannelClose = true;
         }
 
         final Http2Headers converted = convertHeaders(headers, isTrailersEmpty);
@@ -140,7 +128,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
             }
 
             // Send RST_STREAM if the peer may still send something.
-            if (stream.state().localSideOpen()) {
+            if (stream.state().remoteSideOpen()) {
                 future = encoder().writeRstStream(ctx(), streamId, Http2Error.CANCEL.code(),
                                                   ctx().voidPromise());
                 ctx().flush();

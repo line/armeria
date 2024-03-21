@@ -26,11 +26,16 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A builder class for binding an {@link HttpService} fluently.
@@ -41,6 +46,10 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder implements ServiceConfigSetters {
 
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
+
+    AbstractServiceBindingBuilder(Set<String> contextPaths) {
+        super(contextPaths);
+    }
 
     @Override
     public AbstractServiceBindingBuilder requestTimeout(Duration requestTimeout) {
@@ -132,6 +141,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
+    public AbstractServiceBindingBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                                              boolean shutdownOnStop) {
+        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+        return this;
+    }
+
+    @Override
     public AbstractServiceBindingBuilder blockingTaskExecutor(int numThreads) {
         defaultServiceConfigSetters.blockingTaskExecutor(numThreads);
         return this;
@@ -144,8 +160,40 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
+    public AbstractServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+        defaultServiceConfigSetters.requestAutoAbortDelay(delay);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        defaultServiceConfigSetters.requestAutoAbortDelayMillis(delayMillis);
+        return this;
+    }
+
+    @Override
     public AbstractServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                            boolean shutdownOnStop) {
+        defaultServiceConfigSetters.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        defaultServiceConfigSetters.serviceWorkerGroup(numThreads);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
+        defaultServiceConfigSetters.requestIdGenerator(requestIdGenerator);
         return this;
     }
 
@@ -175,6 +223,18 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
+    @Override
+    public AbstractServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        defaultServiceConfigSetters.contextHook(contextHook);
+        return this;
+    }
+
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
@@ -185,10 +245,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
 
         final List<Route> routes = buildRouteList(fallbackRoutes);
         final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
-        for (Route route : routes) {
-            final ServiceConfigBuilder serviceConfigBuilder =
-                    defaultServiceConfigSetters.toServiceConfigBuilder(route, decoratedService);
-            serviceConfigBuilder(serviceConfigBuilder);
+        for (String contextPath: contextPaths()) {
+            for (Route route : routes) {
+                final ServiceConfigBuilder serviceConfigBuilder =
+                        defaultServiceConfigSetters.toServiceConfigBuilder(
+                                route, contextPath, decoratedService);
+                serviceConfigBuilder(serviceConfigBuilder);
+            }
         }
     }
 
@@ -197,7 +260,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         assert routes.size() == 1; // Only one route is set via addRoute().
         final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
         final ServiceConfigBuilder serviceConfigBuilder =
-                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), decoratedService);
+                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), "/", decoratedService);
         serviceConfigBuilder.addMappedRoute(mappedRoute);
         serviceConfigBuilder(serviceConfigBuilder);
     }

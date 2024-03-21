@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.tomcat;
 import java.io.IOException;
 
 import org.apache.coyote.AbstractProcessor;
-import org.apache.coyote.ActionHook;
 import org.apache.coyote.Adapter;
 import org.apache.coyote.ContinueResponseTiming;
 import org.apache.juli.logging.Log;
@@ -28,7 +27,7 @@ import org.apache.tomcat.util.net.AbstractEndpoint;
 import org.apache.tomcat.util.net.SocketWrapperBase;
 
 /**
- * Provides a fake Processor to provide {@link ActionHook} to request/response.
+ * Provides a fake Processor to provide {@code ActionHook} to request/response.
  */
 final class ArmeriaProcessor extends AbstractProcessor {
 

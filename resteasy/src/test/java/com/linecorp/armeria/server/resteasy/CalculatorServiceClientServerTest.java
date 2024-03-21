@@ -41,16 +41,21 @@ import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.resteasy.ArmeriaResteasyClientBuilder;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.jaxrs.samples.JaxRsApp;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class CalculatorServiceClientServerTest {
+import testing.resteasy.CustomRequestContext;
+import testing.resteasy.jaxrs.samples.JaxRsApp;
+
+@GenerateNativeImageTrace
+class CalculatorServiceClientServerTest {
 
     private static final Logger logger = LoggerFactory.getLogger(CalculatorServiceClientServerTest.class);
 
     @RegisterExtension
-    static ServerExtension restServer = new ServerExtension() {
+    static final ServerExtension restServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder serverBuilder) throws Exception {
             logger.info("Configuring HTTP Server with RESTEasy Service");
@@ -106,13 +111,16 @@ public class CalculatorServiceClientServerTest {
     }
 
     private static WebTarget newWebTarget() {
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .failureResponseLogLevel(LogLevel.WARN)
+                                             .build();
         final WebClientBuilder webClientBuilder = WebClient.builder()
                                                            .decorator(LoggingClient.builder()
-                                                                      .logger(logger)
-                                                                      .requestLogLevel(LogLevel.INFO)
-                                                                      .successfulResponseLogLevel(LogLevel.INFO)
-                                                                      .failureResponseLogLevel(LogLevel.WARN)
-                                                                      .newDecorator());
+                                                                                   .logWriter(logWriter)
+                                                                                   .newDecorator());
         final Client restClient = ArmeriaResteasyClientBuilder.newBuilder(webClientBuilder).build();
         return restClient.target(restServer.httpUri());
     }

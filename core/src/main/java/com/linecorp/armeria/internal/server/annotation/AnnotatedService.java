@@ -41,7 +41,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -249,9 +248,29 @@ public final class AnnotatedService implements HttpService {
         return route;
     }
 
+    // TODO: Expose through `AnnotatedServiceConfig`, see #5382.
+    HttpStatus defaultStatus() {
+        return defaultStatus;
+    }
+
+    HttpService withExceptionHandler(HttpService service) {
+        if (exceptionHandler == null) {
+            return service;
+        }
+        return new ExceptionHandlingHttpService(service, exceptionHandler);
+    }
+
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final HttpResponse response = HttpResponse.from(serve0(ctx, req));
+        if (!defaultHttpHeaders.isEmpty()) {
+            ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
+        }
+        if (!defaultHttpTrailers.isEmpty()) {
+            ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(defaultHttpTrailers));
+        }
+
+        final HttpResponse response = serve0(ctx, req);
+
         if (exceptionHandler == null) {
             // If an error occurs, the default ExceptionHandler will handle the error.
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
@@ -262,14 +281,25 @@ public final class AnnotatedService implements HttpService {
                 });
             }
         }
+
         return response;
     }
 
-    HttpService withExceptionHandler(HttpService service) {
-        if (exceptionHandler == null) {
-            return service;
+    private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req) {
+        final AggregationType aggregationType =
+                AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers());
+
+        if (aggregationType == AggregationType.NONE && !useBlockingTaskExecutor) {
+            // Fast-path: No aggregation required and blocking task executor is not used.
+            switch (responseType) {
+                case HTTP_RESPONSE:
+                    return (HttpResponse) invoke(ctx, req, AggregatedResult.EMPTY);
+                case OTHER_OBJECTS:
+                    return convertResponse(ctx, invoke(ctx, req, AggregatedResult.EMPTY));
+            }
         }
-        return new ExceptionHandlingHttpService(service, exceptionHandler);
+
+        return HttpResponse.of(serve1(ctx, req, aggregationType));
     }
 
     /**
@@ -277,9 +307,10 @@ public final class AnnotatedService implements HttpService {
      * required to be aggregated. If the return type of the method is not a {@link CompletionStage} or
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
-    private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
+    private CompletionStage<HttpResponse> serve1(ServiceRequestContext ctx, HttpRequest req,
+                                                 AggregationType aggregationType) {
         final CompletableFuture<AggregatedResult> f;
-        switch (AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers())) {
+        switch (aggregationType) {
             case MULTIPART:
                 f = FileAggregatedMultipart.aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
                 break;
@@ -294,9 +325,6 @@ public final class AnnotatedService implements HttpService {
                 throw new Error();
         }
 
-        ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
-        ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(defaultHttpTrailers));
-
         switch (responseType) {
             case HTTP_RESPONSE:
                 if (useBlockingTaskExecutor) {
@@ -305,7 +333,6 @@ public final class AnnotatedService implements HttpService {
                 } else {
                     return f.thenApply(aReq -> (HttpResponse) invoke(ctx, req, aReq));
                 }
-
             case COMPLETION_STAGE:
             case KOTLIN_COROUTINES:
             case SCALA_FUTURE:
@@ -375,7 +402,7 @@ public final class AnnotatedService implements HttpService {
 
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
-            headers = buildResponseHeaders(ctx, httpResult.headers());
+            headers = HttpResultUtil.buildResponseHeaders(ctx, httpResult);
             result = httpResult.content();
             trailers = httpResult.trailers();
         } else {
@@ -392,7 +419,7 @@ public final class AnnotatedService implements HttpService {
                                                  HttpHeaders trailers) {
         if (result instanceof CompletionStage) {
             final CompletionStage<?> future = (CompletionStage<?>) result;
-            return HttpResponse.from(
+            return HttpResponse.of(
                     future.thenApply(object -> convertResponseInternal(ctx, headers, object, trailers)));
         }
 
@@ -403,39 +430,17 @@ public final class AnnotatedService implements HttpService {
         }
     }
 
-    private ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx, HttpHeaders customHeaders) {
-        final ResponseHeadersBuilder builder;
-
-        // Prefer ResponseHeaders#toBuilder because builder#add(Iterable) is an expensive operation.
-        if (customHeaders instanceof ResponseHeaders) {
-            builder = ((ResponseHeaders) customHeaders).toBuilder();
-        } else {
-            builder = ResponseHeaders.builder();
-            builder.add(customHeaders);
-            if (!builder.contains(HttpHeaderNames.STATUS)) {
-                builder.status(defaultStatus);
-            }
-        }
-        return maybeAddContentType(ctx, builder).build();
-    }
-
     private ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx) {
-        return maybeAddContentType(ctx, ResponseHeaders.builder(defaultStatus)).build();
-    }
-
-    private static ResponseHeadersBuilder maybeAddContentType(ServiceRequestContext ctx,
-                                                              ResponseHeadersBuilder builder) {
+        final ResponseHeadersBuilder builder = ResponseHeaders.builder(defaultStatus);
         if (builder.status().isContentAlwaysEmpty()) {
-            return builder;
+            return builder.build();
         }
-        if (builder.contentType() != null) {
-            return builder;
-        }
+
         final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
         if (negotiatedResponseMediaType != null) {
             builder.contentType(negotiatedResponseMediaType);
         }
-        return builder;
+        return builder.build();
     }
 
     /**

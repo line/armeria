@@ -27,13 +27,15 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
+import com.linecorp.armeria.common.EmptyHttpResponseException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
-import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -55,7 +57,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     @Override
     public Void apply(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
-        final EventLoop eventLoop = reqCtx.eventLoop();
+        final EventLoop eventLoop = ctx.channel().eventLoop();
         if (eventLoop.inEventLoop()) {
             apply0(response, cause);
         } else {
@@ -66,6 +68,14 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     private void apply0(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
         clearTimeout();
+        // Close early to avoid sending data unnecessarily on a closed stream.
+        if (failIfStreamOrSessionClosed()) {
+            if (response != null) {
+                response.content().close();
+            }
+            return;
+        }
+
         if (cause != null) {
             cause = Exceptions.peel(cause);
             recoverAndWrite(cause);
@@ -73,11 +83,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         }
 
         assert response != null;
-        if (failIfStreamOrSessionClosed()) {
-            PooledObjects.close(response.content());
-            return;
-        }
-
         logBuilder().startResponse();
         write(response, null);
     }
@@ -102,7 +107,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         } else if (cause instanceof HttpStatusException) {
             final Throwable cause0 = firstNonNull(cause.getCause(), cause);
             write(toAggregatedHttpResponse((HttpStatusException) cause), cause0);
-        } else if (Exceptions.isStreamCancelling(cause)) {
+        } else if (Exceptions.isStreamCancelling(cause) || cause instanceof EmptyHttpResponseException) {
             resetAndFail(cause);
         } else {
             if (!(cause instanceof CancellationException)) {
@@ -125,7 +130,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
     }
 
     private void resetAndFail(Throwable cause) {
-        responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL).addListener(f -> {
+        responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.CANCEL, false).addListener(f -> {
             try (SafeCloseable ignored = RequestContextUtil.pop()) {
                 fail(cause);
             }
@@ -173,14 +178,13 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
             logBuilder().responseFirstBytesTransferred();
             if (tryComplete(cause)) {
                 if (cause == null) {
-                    cause = CapturedServiceException.get(reqCtx);
+                    final RequestLog requestLog = reqCtx.log()
+                            .getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+                    if (requestLog != null) {
+                        cause = requestLog.responseCause();
+                    }
                 }
-
-                if (cause == null) {
-                    endLogRequestAndResponse();
-                } else {
-                    endLogRequestAndResponse(cause);
-                }
+                endLogRequestAndResponse(cause);
                 maybeWriteAccessLog();
             }
             return;

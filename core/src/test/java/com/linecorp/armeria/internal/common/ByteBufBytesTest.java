@@ -21,6 +21,8 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.testing.EqualsTester;
+
 import com.linecorp.armeria.common.ByteBufAccessMode;
 
 import io.netty.buffer.ByteBuf;
@@ -185,12 +187,13 @@ class ByteBufBytesTest {
         final ByteBufBytes d = new ByteBufBytes(Unpooled.directBuffer().writeInt(0x04050607), true);
         final ByteArrayBytes arrayData = new ByteArrayBytes(new byte[] { 1, 2, 3, 4 });
 
-        assertThat(a).isEqualTo(a);
-        assertThat(a).isEqualTo(b);
+        new EqualsTester()
+                .addEqualityGroup(a, b)
+                .addEqualityGroup(c)
+                .addEqualityGroup(d)
+                .addEqualityGroup(new Object())
+                .testEquals();
         assertThat(a.array()).isEqualTo(arrayData.array());
-        assertThat(a).isNotEqualTo(c);
-        assertThat(a).isNotEqualTo(d);
-        assertThat(a).isNotEqualTo(new Object());
 
         a.close();
         b.close();

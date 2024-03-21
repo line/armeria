@@ -31,7 +31,7 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.DefaultRequestTarget;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContextBuilder;
 
@@ -71,18 +71,16 @@ public abstract class AbstractRequestContextBuilder {
     private RequestId id;
     private HttpMethod method;
     private final String authority;
-    private final String path;
-    @Nullable
-    private final String query;
+    private final RequestTarget reqTarget;
 
     private MeterRegistry meterRegistry = NoopMeterRegistry.get();
     @Nullable
     private EventLoop eventLoop;
     private ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
     @Nullable
-    private SocketAddress remoteAddress;
+    private InetSocketAddress remoteAddress;
     @Nullable
-    private SocketAddress localAddress;
+    private InetSocketAddress localAddress;
     @Nullable
     private SSLSession sslSession;
     private boolean requestStartTimeSet;
@@ -99,19 +97,31 @@ public abstract class AbstractRequestContextBuilder {
      * @param req the {@link HttpRequest}.
      */
     protected AbstractRequestContextBuilder(boolean server, HttpRequest req) {
+        requireNonNull(req, "req");
         this.server = server;
-        this.req = requireNonNull(req, "req");
         rpcReq = null;
         sessionProtocol = SessionProtocol.H2C;
 
         method = req.headers().method();
         authority = firstNonNull(req.headers().authority(), FALLBACK_AUTHORITY);
 
-        final String pathAndQueryStr = req.headers().path();
-        final PathAndQuery pathAndQuery = PathAndQuery.parse(pathAndQueryStr);
-        checkArgument(pathAndQuery != null, "request.path is not valid: %s", req);
-        path = pathAndQuery.path();
-        query = pathAndQuery.query();
+        final String rawPath = req.headers().path();
+        final RequestTarget reqTarget = server ? RequestTarget.forServer(rawPath)
+                                               : RequestTarget.forClient(rawPath);
+        checkArgument(reqTarget != null, "request.path is not valid: %s", rawPath);
+        checkArgument(reqTarget.form() != RequestTargetForm.ABSOLUTE,
+                      "request.path must not contain scheme or authority: %s", rawPath);
+
+        final String newRawPath = reqTarget.pathAndQuery();
+        if (newRawPath.equals(rawPath)) {
+            this.req = req;
+        } else {
+            this.req = req.withHeaders(req.headers()
+                                          .toBuilder()
+                                          .path(newRawPath));
+        }
+
+        this.reqTarget = reqTarget;
     }
 
     /**
@@ -131,15 +141,22 @@ public abstract class AbstractRequestContextBuilder {
         authority = firstNonNull(uri.getRawAuthority(), FALLBACK_AUTHORITY);
         sessionProtocol = getSessionProtocol(uri);
 
-        final PathAndQuery pathAndQuery;
-        if (uri.getRawQuery() != null) {
-            pathAndQuery = PathAndQuery.parse(uri.getRawPath() + '?' + uri.getRawQuery());
+        if (server) {
+            String path = uri.getRawPath();
+            final String query = uri.getRawQuery();
+            if (query != null) {
+                path += '?' + query;
+            }
+            final RequestTarget reqTarget = RequestTarget.forServer(path);
+            if (reqTarget == null) {
+                throw new IllegalArgumentException("invalid uri: " + uri);
+            }
+            this.reqTarget = reqTarget;
         } else {
-            pathAndQuery = PathAndQuery.parse(uri.getRawPath());
+            reqTarget = DefaultRequestTarget.createWithoutValidation(
+                    RequestTargetForm.ORIGIN, null, null,
+                    uri.getRawPath(), uri.getRawPath(), uri.getRawQuery(), uri.getRawFragment());
         }
-        checkArgument(pathAndQuery != null, "uri.path or uri.query is not valid: %s", uri);
-        path = pathAndQuery.path();
-        query = pathAndQuery.query();
     }
 
     private static SessionProtocol getSessionProtocol(URI uri) {
@@ -258,7 +275,7 @@ public abstract class AbstractRequestContextBuilder {
     /**
      * Returns the remote socket address of the connection.
      */
-    protected final SocketAddress remoteAddress() {
+    protected final InetSocketAddress remoteAddress() {
         if (remoteAddress == null) {
             if (server) {
                 remoteAddress = new InetSocketAddress(NetUtil.LOCALHOST, randomClientPort());
@@ -274,7 +291,7 @@ public abstract class AbstractRequestContextBuilder {
      * Sets the remote socket address of the connection. If not set, it is auto-generated with the localhost
      * IP address (e.g. {@code "127.0.0.1"} or {@code "::1"}).
      */
-    public AbstractRequestContextBuilder remoteAddress(SocketAddress remoteAddress) {
+    public AbstractRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
         this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
         return this;
     }
@@ -282,7 +299,7 @@ public abstract class AbstractRequestContextBuilder {
     /**
      * Returns the local socket address of the connection.
      */
-    protected final SocketAddress localAddress() {
+    protected final InetSocketAddress localAddress() {
         if (localAddress == null) {
             if (server) {
                 localAddress = new InetSocketAddress(NetUtil.LOCALHOST,
@@ -298,7 +315,7 @@ public abstract class AbstractRequestContextBuilder {
      * Sets the local socket address of the connection. If not set, it is auto-generated with the localhost
      * IP address (e.g. {@code "127.0.0.1"} or {@code "::1"}).
      */
-    public AbstractRequestContextBuilder localAddress(SocketAddress localAddress) {
+    public AbstractRequestContextBuilder localAddress(InetSocketAddress localAddress) {
         this.localAddress = requireNonNull(localAddress, "localAddress");
         return this;
     }
@@ -443,10 +460,10 @@ public abstract class AbstractRequestContextBuilder {
     }
 
     /**
-     * Returns the path of the request, excluding the query part.
+     * Returns the {@link RequestTarget}.
      */
-    protected final String path() {
-        return path;
+    protected final RequestTarget requestTarget() {
+        return reqTarget;
     }
 
     /**
@@ -466,16 +483,6 @@ public abstract class AbstractRequestContextBuilder {
             id = RequestId.random();
         }
         return id;
-    }
-
-    /**
-     * Returns the query part of the request, excluding the leading question mark ({@code '?'}).
-     *
-     * @return the query string, or {@code null} if there is no query.
-     */
-    @Nullable
-    protected final String query() {
-        return query;
     }
 
     /**

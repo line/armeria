@@ -36,11 +36,6 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -58,6 +53,11 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.netty.util.AttributeKey;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcStatusMappingTest {
 
@@ -96,13 +96,13 @@ class GrpcStatusMappingTest {
     };
 
     @RegisterExtension
-    static ServerExtension serverWithGrpcStatusFunction = new ServerExtension() {
+    static ServerExtension serverWithGrpcExceptionHandlerFunction = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(
                     GrpcService.builder()
                                .addService(new TestServiceImpl())
-                               .exceptionMapping((ctx, cause, metadata) -> {
+                               .exceptionHandler((ctx, cause, metadata) -> {
                                    final String attr = ctx.attr(METHOD_ATTR);
                                    if (attr != null) {
                                        metadata.put(METHOD_KEY, attr);
@@ -153,10 +153,12 @@ class GrpcStatusMappingTest {
 
     @ArgumentsSource(ExceptionMappingsProvider.class)
     @ParameterizedTest
-    void serverExceptionWithGrpcStatusFunction(RuntimeException exception, Status status, String description,
-                                               Map<Metadata.Key<?>, String> meta) {
+    void serverExceptionWithGrpcExceptionHandlerFunction(RuntimeException exception, Status status,
+                                                         String description,
+                                                         Map<Metadata.Key<?>, String> meta) {
         exceptionRef.set(exception);
-        final TestServiceBlockingStub client = GrpcClients.newClient(serverWithGrpcStatusFunction.httpUri(),
+        final TestServiceBlockingStub client = GrpcClients.newClient(serverWithGrpcExceptionHandlerFunction
+                                                                             .httpUri(),
                                                                      TestServiceBlockingStub.class);
         assertThatThrownBy(() -> client.emptyCall(Empty.getDefaultInstance()))
                 .satisfies(throwable -> assertStatus(throwable, status, description))

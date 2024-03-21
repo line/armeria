@@ -136,7 +136,7 @@ final class DeferredHttpFile implements HttpFile {
             return delegate.asService();
         }
 
-        return (ctx, req) -> HttpResponse.from(stage.thenApply(file -> {
+        return (ctx, req) -> HttpResponse.of(stage.thenApply(file -> {
             setDelegate(file);
             try {
                 return file.asService().serve(ctx, req);

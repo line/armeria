@@ -36,12 +36,7 @@ public enum RoutingStatus {
     /**
      * An {@code "OPTIONS * HTTP/1.1"} request.
      */
-    OPTIONS(false),
-
-    /**
-     * The request specified an invalid path.
-     */
-    INVALID_PATH(false);
+    OPTIONS(false);
 
     private final boolean routeMustExist;
 

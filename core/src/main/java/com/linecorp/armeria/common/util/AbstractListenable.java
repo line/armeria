@@ -25,6 +25,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
 
@@ -40,7 +41,7 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
     private final Set<Consumer<? super T>> updateListeners =
             new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
 
-    private final ReentrantLock reentrantLock = new ReentrantLock();
+    private final ReentrantLock reentrantLock = new ReentrantShortLock();
 
     /**
      * Notify the new value changes to the listeners added via {@link #addListener(Consumer)}.
@@ -68,7 +69,7 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
     @Nullable
     protected T latestValue() {
         // TODO(ikhoon): Make this method abstract in Armeria 2.0 to avoid the mistake of not defining
-        //               the lastest value in subclasses.
+        //               the latest value in subclasses.
         return null;
     }
 
@@ -86,15 +87,15 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
         requireNonNull(listener, "listener");
         reentrantLock.lock();
         try {
-            if (notifyLatestValue) {
-                final T latest = latestValue();
-                if (latest != null) {
-                    listener.accept(latest);
-                }
-            }
             updateListeners.add(listener);
         } finally {
             reentrantLock.unlock();
+        }
+        if (notifyLatestValue) {
+            final T latest = latestValue();
+            if (latest != null) {
+                listener.accept(latest);
+            }
         }
     }
 

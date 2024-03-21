@@ -20,6 +20,8 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
@@ -57,4 +59,18 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
      * Completes the {@link #whenInitialized()} with the specified value.
      */
     void finishInitialization(boolean success);
+
+    /**
+     * A set of internal headers which are set by armeria internally.
+     * These headers are merged with the lowest priority before getting sent over the wire.
+     * <ol>
+     *     <li>additional headers</li>
+     *     <li>request headers</li>
+     *     <li>default headers</li>
+     *     <li>internal headers</li>
+     * </ol>
+     * Most notably, {@link HttpHeaderNames#AUTHORITY} and {@link HttpHeaderNames#USER_AGENT} are set
+     * with default values on every request.
+     */
+    HttpHeaders internalRequestHeaders();
 }

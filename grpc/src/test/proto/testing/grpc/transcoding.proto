@@ -1,0 +1,384 @@
+// Copyright 2021 LINE Corporation
+//
+// LINE Corporation licenses this file to you under the Apache License,
+// version 2.0 (the "License"); you may not use this file except in compliance
+// with the License. You may obtain a copy of the License at:
+//
+//   https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+// WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+// License for the specific language governing permissions and limitations
+// under the License.
+
+// Tests for HTTP/JSON to gRPC transcoding service.
+
+syntax = "proto3";
+
+package armeria.grpc.testing;
+
+option java_package = "testing.grpc";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
+import "google/protobuf/field_mask.proto";
+
+service HttpJsonTranscodingTestService {
+  rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
+    option (google.api.http) = {
+      get: "/v1/{name=messages/*}"
+    };
+  }
+  rpc GetMessageV2(GetMessageRequestV2) returns (Message) {
+    option (google.api.http) = {
+      get:"/v2/messages/{message_id}"
+    };
+  }
+  rpc GetMessageV3(GetMessageRequestV3) returns (Message) {
+    option (google.api.http) = {
+      get:"/v3/messages/{message_id}"
+    };
+  }
+  rpc GetMessageV4(GetMessageRequestV4) returns (Message) {
+    option (google.api.http) = {
+      get:"/v4/messages/{message_id}"
+    };
+  }
+  rpc GetMessageV5(GetMessageRequestV5) returns (Message) {
+    option (google.api.http) = {
+      get:"/v5/messages/{messageType}"
+    };
+  }
+  rpc UpdateMessageV1(UpdateMessageRequestV1) returns (Message) {
+    option (google.api.http) = {
+      patch: "/v1/messages/{message_id}"
+      body: "message"
+    };
+  }
+  rpc UpdateMessageV2(Message) returns (Message) {
+    option (google.api.http) = {
+      patch: "/v2/messages/{message_id}"
+      body: "*"
+    };
+  }
+
+  rpc EchoTimestampAndDuration(EchoTimestampAndDurationRequest) returns (EchoTimestampAndDurationResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/{timestamp}/{duration}"
+    };
+  }
+
+  rpc EchoFieldMask(EchoFieldMaskRequest) returns (EchoFieldMaskResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/field_mask"
+    };
+  }
+
+  rpc EchoWrappers(EchoWrappersRequest) returns (EchoWrappersResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/wrappers"
+    };
+  }
+
+  rpc EchoStruct(EchoStructRequest) returns (EchoStructResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/struct"
+
+      additional_bindings {
+        post: "/v1/echo/struct"
+        body: "value"
+      }
+    };
+  }
+
+  rpc EchoValue(EchoValueRequest) returns (EchoValueResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/value"
+
+      additional_bindings {
+        post: "/v1/echo/value"
+        body: "value"
+      }
+    };
+  }
+
+  rpc EchoListValue(EchoListValueRequest) returns (EchoListValueResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/list_value"
+
+      additional_bindings {
+        post: "/v1/echo/list_value"
+        body: "value"
+      }
+    };
+  }
+
+  rpc EchoAny(EchoAnyRequest) returns (EchoAnyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/any"
+
+      additional_bindings {
+        post: "/v1/echo/any"
+        body: "value"
+      }
+    };
+  }
+
+  rpc EchoRecursive(EchoRecursiveRequest) returns (EchoRecursiveResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/recursive"
+
+      additional_bindings {
+        post: "/v1/echo/recursive"
+        body: "value"
+      }
+    };
+  }
+
+  // When the request message is recursive.
+  rpc EchoRecursive2(Recursive) returns (Recursive) {
+    option (google.api.http) = {
+      get: "/v1/echo/recursive2"
+
+      additional_bindings {
+        post: "/v1/echo/recursive2"
+        body: "*"
+      }
+    };
+  }
+
+  rpc EchoResponseBodyValue(EchoResponseBodyRequest) returns (EchoResponseBodyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/response_body/value"
+      response_body: "value"
+    };
+  }
+
+  rpc EchoResponseBodyRepeated(EchoResponseBodyRequest) returns (EchoResponseBodyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/response_body/repeated"
+      response_body: "array_field"
+
+      additional_bindings {
+        post: "/v1/echo/response_body/repeated"
+        response_body: "array_field"
+        body: "*"
+      }
+    };
+  }
+
+  rpc EchoResponseBodyStruct(EchoResponseBodyRequest) returns (EchoResponseBodyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/response_body/struct"
+      response_body: "struct_body"
+
+      additional_bindings {
+        post: "/v1/echo/response_body/struct"
+        response_body: "struct_body"
+        body: "*"
+      }
+    };
+  }
+
+  rpc EchoResponseBodyNoMatching(EchoResponseBodyRequest) returns (EchoResponseBodyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/response_body/nomatch"
+      response_body: "anonymous"
+
+      additional_bindings {
+        post: "/v1/echo/response_body/nomatch"
+        response_body: "anonymous"
+        body: "*"
+      }
+    };
+  }
+
+  rpc EchoNestedMessageField(EchoNestedMessageRequest) returns (EchoNestedMessageResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/nested_message"
+      additional_bindings {
+        post: "/v1/echo/nested_message"
+        body: "*"
+      }
+    };
+  }
+}
+
+message GetMessageRequestV1 {
+  string name = 1; // Mapped to URL path.
+}
+
+message GetMessageRequestV2 {
+  message SubMessage {
+    string subfield = 1;
+  }
+  string message_id = 1; // Mapped to URL path.
+  int64 revision = 2;    // Mapped to URL query parameter `revision`.
+  SubMessage sub = 3;    // Mapped to URL query parameter `sub.subfield`.
+  MessageType type = 4;  // Mapped to URL query parameter `type`.
+}
+
+message GetMessageRequestV3 {
+  string message_id = 1;          // Mapped to URL path.
+  repeated int64 revision = 2;    // Mapped to URL query parameter `revision`.
+}
+
+message GetMessageRequestV4 {
+  string message_id = 1;
+  string query_parameter = 2;
+  ParentMessage parent_field = 3;
+  message ParentMessage {
+     string child_field = 1;
+     string child_field_2 = 2;
+  }
+}
+
+message GetMessageRequestV5 {
+  string message_id = 1 [json_name = "messageType"];
+  string query_parameter = 2;
+  string query_field_1 = 3 [json_name = "second_query"];
+  ParentMessage parent_field = 4 [json_name = "parent"];
+  message ParentMessage {
+    string child_field = 1;
+    string child_field_2 = 2 [json_name = "second_field"];
+  }
+}
+
+message UpdateMessageRequestV1 {
+  string message_id = 1; // mapped to the URL
+  Message message = 2;   // mapped to the body
+}
+
+message Message {
+  string text = 1; // The resource content.
+}
+
+enum MessageType {
+  SIMPLE = 0;
+  DETAIL = 1;
+}
+
+message EchoTimestampAndDurationRequest {
+  google.protobuf.Timestamp timestamp = 1;
+  google.protobuf.Duration duration = 2;
+}
+
+message EchoTimestampAndDurationResponse {
+  google.protobuf.Timestamp timestamp = 1;
+  google.protobuf.Duration duration = 2;
+}
+
+message EchoFieldMaskRequest {
+  google.protobuf.FieldMask field_mask = 1;
+}
+
+message EchoFieldMaskResponse {
+  google.protobuf.FieldMask field_mask = 1;
+  int32 path_count = 2;
+}
+
+message EchoWrappersRequest {
+  google.protobuf.DoubleValue doubleVal = 1;
+  google.protobuf.FloatValue floatVal = 2;
+  google.protobuf.Int64Value int64Val = 3;
+  google.protobuf.UInt64Value uint64Val = 4;
+  google.protobuf.Int32Value int32Val = 5;
+  google.protobuf.UInt32Value uint32Val = 6;
+  google.protobuf.BoolValue boolVal = 7;
+  google.protobuf.StringValue stringVal = 8;
+  google.protobuf.BytesValue bytesVal = 9;
+}
+
+message EchoWrappersResponse {
+  google.protobuf.DoubleValue doubleVal = 1;
+  google.protobuf.FloatValue floatVal = 2;
+  google.protobuf.Int64Value int64Val = 3;
+  google.protobuf.UInt64Value uint64Val = 4;
+  google.protobuf.Int32Value int32Val = 5;
+  google.protobuf.UInt32Value uint32Val = 6;
+  google.protobuf.BoolValue boolVal = 7;
+  google.protobuf.StringValue stringVal = 8;
+  google.protobuf.BytesValue bytesVal = 9;
+}
+
+message EchoStructRequest {
+  google.protobuf.Struct value = 1;
+}
+
+message EchoStructResponse {
+  google.protobuf.Struct value = 1;
+}
+
+message EchoValueRequest {
+  google.protobuf.Value value = 1;
+}
+
+message EchoValueResponse {
+  google.protobuf.Value value = 1;
+}
+
+message EchoListValueRequest {
+  google.protobuf.ListValue value = 1;
+}
+
+message EchoListValueResponse {
+  google.protobuf.ListValue value = 1;
+}
+
+message EchoAnyRequest {
+  google.protobuf.Any value = 1;
+}
+
+message EchoAnyResponse {
+  google.protobuf.Any value = 1;
+}
+
+message EchoRecursiveRequest {
+  Recursive value = 1;
+}
+
+message EchoRecursiveResponse {
+  Recursive value = 1;
+}
+
+message Recursive {
+  string value = 1;
+  Recursive nested = 2;
+}
+
+message StructBody {
+  string struct_body = 1;
+}
+
+message EchoResponseBodyRequest {
+  string value = 1;
+  StructBody struct_body = 2;
+  repeated string array_field = 3;
+}
+
+message EchoResponseBodyResponse {
+  string value = 1;
+  StructBody struct_body = 2;
+  repeated string array_field = 3;
+}
+
+message TopLevelMessage {
+  string name = 1;
+  NestedMessage nested = 2;
+  message NestedMessage {
+    string name = 1;
+  }
+}
+
+message EchoNestedMessageRequest {
+  TopLevelMessage.NestedMessage nested = 1;
+}
+
+message EchoNestedMessageResponse {
+  TopLevelMessage.NestedMessage nested = 1;
+}

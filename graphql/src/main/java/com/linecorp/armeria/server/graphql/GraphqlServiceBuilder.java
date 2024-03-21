@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.graphql;
 
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static graphql.com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -30,6 +31,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
 import org.slf4j.Logger;
@@ -41,6 +43,8 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.ResourceUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.websocket.WebSocketServiceBuilder;
 
 import graphql.GraphQL;
 import graphql.execution.instrumentation.ChainedInstrumentation;
@@ -67,20 +71,30 @@ public final class GraphqlServiceBuilder {
 
     private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators =
             ImmutableList.builder();
-    private final ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers =
-            ImmutableList.builder();
     private final ImmutableList.Builder<GraphQLTypeVisitor> typeVisitors = ImmutableList.builder();
     private final ImmutableList.Builder<Instrumentation> instrumentations = ImmutableList.builder();
     private final ImmutableList.Builder<GraphqlConfigurator> graphqlBuilderConsumers =
             ImmutableList.builder();
 
+    @Nullable
+    private ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers;
     private boolean useBlockingTaskExecutor;
+
+    @Nullable
+    private Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory;
 
     @Nullable
     private GraphQLSchema schema;
 
     @Nullable
     private GraphqlErrorHandler errorHandler;
+
+    private ExecutionIdGenerator executionIdGenerator = ExecutionIdGenerator.of();
+
+    private boolean enableWebSocket;
+
+    @Nullable
+    private Consumer<WebSocketServiceBuilder> webSocketServiceCustomizer;
 
     GraphqlServiceBuilder() {}
 
@@ -146,8 +160,23 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Adds the {@link DataLoaderRegistry} consumers.
+     * Sets {@link DataLoaderRegistry} creation function.
      */
+    public GraphqlServiceBuilder dataLoaderRegistry(
+            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory) {
+        checkState(dataLoaderRegistryConsumers == null,
+                   "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+        this.dataLoaderRegistryFactory =
+                requireNonNull(dataLoaderRegistryFactory, "dataLoaderRegistryFactory");
+        return this;
+    }
+
+    /**
+     * Adds the {@link DataLoaderRegistry} consumers.
+     *
+     * @deprecated Use {@link #dataLoaderRegistry(Function)} instead.
+     */
+    @Deprecated
     public GraphqlServiceBuilder configureDataLoaderRegistry(Consumer<DataLoaderRegistry>... configurers) {
         requireNonNull(configurers, "configurers");
         return configureDataLoaderRegistry(ImmutableList.copyOf(configurers));
@@ -155,9 +184,17 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link DataLoaderRegistry} consumers.
+     *
+     * @deprecated Use {@link #dataLoaderRegistry(Function)} instead.
      */
+    @Deprecated
     public GraphqlServiceBuilder configureDataLoaderRegistry(
             Iterable<? extends Consumer<? super DataLoaderRegistry>> configurers) {
+        checkState(dataLoaderRegistryFactory == null,
+                   "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+        if (dataLoaderRegistryConsumers == null) {
+            dataLoaderRegistryConsumers = ImmutableList.builder();
+        }
         dataLoaderRegistryConsumers.addAll(requireNonNull(configurers, "configurers"));
         return this;
     }
@@ -234,11 +271,45 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Sets the {@link GraphqlErrorHandler}.
-     * If not specified, {@link GraphqlErrorHandler#of()} is used by default.
+     * Enables <a href="https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md">GraphQL over WebSocket Protocol</a>.
+     */
+    public GraphqlServiceBuilder enableWebSocket(boolean enableWebSocket) {
+        this.enableWebSocket = enableWebSocket;
+        return this;
+    }
+
+    /**
+     * Sets an optional {@link WebSocketServiceBuilder} customizer.
+     */
+    public GraphqlServiceBuilder webSocketServiceCustomizer(
+            Consumer<WebSocketServiceBuilder> webSocketServiceCustomizer) {
+        requireNonNull(webSocketServiceCustomizer, "webSocketServiceCustomizer");
+        this.webSocketServiceCustomizer = webSocketServiceCustomizer;
+        return this;
+    }
+
+    /**
+     * Adds the {@link GraphqlErrorHandler}. If multiple handlers are added, the latter is composed with the
+     * former one using {@link GraphqlErrorHandler#orElse(GraphqlErrorHandler)}.
+     *
+     * <p>If not specified, {@link GraphqlErrorHandler#of()} is used by default.
      */
     public GraphqlServiceBuilder errorHandler(GraphqlErrorHandler errorHandler) {
-        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        requireNonNull(errorHandler, "errorHandler");
+        if (this.errorHandler == null) {
+            this.errorHandler = errorHandler;
+        } else {
+            this.errorHandler = this.errorHandler.orElse(errorHandler);
+        }
+        return this;
+    }
+
+    /**
+     * Sets the {@link ExecutionIdGenerator}.
+     * If not specified, {@link ExecutionIdGenerator#of()} is used by default.
+     */
+    public GraphqlServiceBuilder executionIdGenerator(ExecutionIdGenerator executionIdGenerator) {
+        this.executionIdGenerator = requireNonNull(executionIdGenerator, "executionIdGenerator");
         return this;
     }
 
@@ -246,8 +317,12 @@ public final class GraphqlServiceBuilder {
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
+        checkArgument(enableWebSocket || webSocketServiceCustomizer == null,
+                      "enableWebSocket must be true to customize WebSocketServiceBuilder");
+
         final GraphQLSchema schema = buildSchema();
-        GraphQL.Builder builder = GraphQL.newGraphQL(schema);
+        GraphQL.Builder builder = GraphQL.newGraphQL(schema)
+                                         .executionIdProvider(executionIdGenerator.asExecutionProvider());
         final List<Instrumentation> instrumentations = this.instrumentations.build();
         if (!instrumentations.isEmpty()) {
             builder = builder.instrumentation(new ChainedInstrumentation(instrumentations));
@@ -258,11 +333,18 @@ public final class GraphqlServiceBuilder {
             configurer.configure(builder);
         }
 
-        final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
-        final List<Consumer<? super DataLoaderRegistry>> dataLoaderRegistries =
-                dataLoaderRegistryConsumers.build();
-        for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistries) {
-            configurer.accept(dataLoaderRegistry);
+        Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory = null;
+        if (this.dataLoaderRegistryFactory != null) {
+            dataLoaderRegistryFactory = this.dataLoaderRegistryFactory;
+        } else if (dataLoaderRegistryConsumers != null) {
+            final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
+            for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistryConsumers.build()) {
+                configurer.accept(dataLoaderRegistry);
+            }
+            dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
+        } else {
+            assert dataLoaderRegistryFactory == null && dataLoaderRegistryConsumers == null;
+            dataLoaderRegistryFactory = ctx -> new DataLoaderRegistry();
         }
 
         final GraphqlErrorHandler errorHandler;
@@ -271,10 +353,17 @@ public final class GraphqlServiceBuilder {
         } else {
             errorHandler = this.errorHandler.orElse(GraphqlErrorHandler.of());
         }
-        return new DefaultGraphqlService(builder.build(),
-                                         dataLoaderRegistry,
-                                         useBlockingTaskExecutor,
-                                         errorHandler);
+
+        final DefaultGraphqlService graphqlService = new DefaultGraphqlService(builder.build(),
+                                                                               dataLoaderRegistryFactory,
+                                                                               useBlockingTaskExecutor,
+                                                                               errorHandler);
+        if (enableWebSocket) {
+            return new GraphqlWebSocketService(graphqlService, dataLoaderRegistryFactory,
+                                               webSocketServiceCustomizer);
+        } else {
+            return graphqlService;
+        }
     }
 
     private GraphQLSchema buildSchema() {

@@ -27,6 +27,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
  * This selector selects an {@link Endpoint} using random and the weight of the {@link Endpoint}. If there are
@@ -37,7 +38,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class WeightedRandomDistributionEndpointSelector {
 
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantShortLock();
     private final List<Entry> allEntries;
     @GuardedBy("lock")
     private final List<Entry> currentEntries;

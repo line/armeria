@@ -21,18 +21,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.auth.AuthToken;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -46,14 +44,19 @@ import io.grpc.ServerCallHandler;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class AsyncServerInterceptorTest {
-
+    private static final AtomicInteger exceptionCounter = new AtomicInteger(0);
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final GrpcStatusFunction statusFunction = (ctx, throwable, metadata) -> {
+            final GrpcExceptionHandlerFunction exceptionHandler = (ctx, throwable, metadata) -> {
+                exceptionCounter.getAndIncrement();
                 if (throwable instanceof AnticipatedException &&
                     "Invalid access".equals(throwable.getMessage())) {
                     return Status.UNAUTHENTICATED;
@@ -63,18 +66,23 @@ class AsyncServerInterceptorTest {
             };
             final AuthInterceptor authInterceptor = new AuthInterceptor();
             sb.serviceUnder("/non-blocking", GrpcService.builder()
-                                                        .exceptionMapping(statusFunction)
+                                                        .exceptionHandler(exceptionHandler)
                                                         .intercept(authInterceptor)
                                                         .addService(new TestService())
                                                         .build());
             sb.serviceUnder("/blocking", GrpcService.builder()
                                                     .addService(new TestService())
-                                                    .exceptionMapping(statusFunction)
+                                                    .exceptionHandler(exceptionHandler)
                                                     .intercept(authInterceptor)
                                                     .useBlockingTaskExecutor(true)
                                                     .build());
         }
     };
+
+    @BeforeEach
+    void beforeEach() {
+        exceptionCounter.set(0);
+    }
 
     @ValueSource(strings = { "/non-blocking", "/blocking" })
     @ParameterizedTest
@@ -87,6 +95,7 @@ class AsyncServerInterceptorTest {
                                                                       .setFillUsername(true)
                                                                       .build());
         assertThat(response.getUsername()).isEqualTo("Armeria");
+        assertThat(exceptionCounter.get()).isEqualTo(0);
     }
 
     @ValueSource(strings = { "/non-blocking", "/blocking" })

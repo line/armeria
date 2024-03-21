@@ -307,10 +307,15 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         desc.getFields().forEach(field -> {
             final JavaType type = field.getJavaType();
             final String fieldName;
-            if (useCamelCaseKeys) {
-                fieldName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, field.getName());
+
+            if (field.toProto().hasJsonName()) {
+                fieldName = field.toProto().getJsonName();
             } else {
-                fieldName = field.getName();
+                if (useCamelCaseKeys) {
+                    fieldName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, field.getName());
+                } else {
+                    fieldName = field.getName();
+                }
             }
             final String key = namePrefix + fieldName;
             switch (type) {
@@ -585,7 +590,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             }
             return null;
         });
-        return HttpResponse.from(responseFuture);
+        return HttpResponse.of(responseFuture);
     }
 
     /**
@@ -610,8 +615,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         final ObjectNode root;
                         if (body instanceof ObjectNode) {
                             root = (ObjectNode) body;
-                        } else {
+                        } else if (body == null) {
                             root = mapper.createObjectNode();
+                        } else {
+                            throw new IllegalArgumentException("Unexpected JSON: " +
+                                    body + ", (expected: ObjectNode or null).");
                         }
                         return setParametersAndWriteJson(root, ctx, spec);
                     }
@@ -646,12 +654,15 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         @Nullable
         final MediaType contentType = request.contentType();
         if (contentType == null || !contentType.isJson()) {
-            return null;
+            if (request.content().isEmpty()) {
+                return null;
+            }
+            throw new IllegalArgumentException("Missing or invalid content-type in JSON request.");
         }
         try {
             return mapper.readTree(request.contentUtf8());
         } catch (JsonProcessingException e) {
-            return null;
+            throw new IllegalArgumentException("Failed to parse JSON request.", e);
         }
     }
 

@@ -15,14 +15,14 @@ dependencies {
     runtimeOnly libs.slf4j.jcl.over.slf4j
 }
 
-// Use the sources from ':tomcat9' as well as ours.
+// Use the sources from ':tomcat10' as well as ours.
 // NB: We should never add these directories using the 'sourceSets' directive because that will make
 //     them added to more than one project and having a source directory with more than one output directory
 //     will confuse IDEs such as IntelliJ IDEA.
-def tomcat9ProjectDir = "${rootProject.projectDir}/tomcat9"
+def tomcat10ProjectDir = "${rootProject.projectDir}/tomcat10"
 // Copy common files from tomcat9 module to gen-src directory in order to use them as a source set.
 task generateSources(type: Copy) {
-    from "${tomcat9ProjectDir}/src/main/java"
+    from "${tomcat10ProjectDir}/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
     exclude '**/ArmeriaProcessor*'
     exclude '**/ConfigFileLoaderInitializer*'
@@ -30,7 +30,7 @@ task generateSources(type: Copy) {
 }
 
 tasks.compileJava.dependsOn(generateSources)
-tasks.compileTestJava.source "${tomcat9ProjectDir}/src/test/java"
-tasks.processResources.from "${tomcat9ProjectDir}/src/main/resources"
-tasks.processTestResources.from "${tomcat9ProjectDir}/src/test/resources"
-tasks.sourcesJar.from "${tomcat9ProjectDir}/src/main/resources"
+tasks.compileTestJava.source "${tomcat10ProjectDir}/src/test/java"
+tasks.processResources.from "${tomcat10ProjectDir}/src/main/resources"
+tasks.processTestResources.from "${tomcat10ProjectDir}/src/test/resources"
+tasks.sourcesJar.from "${tomcat10ProjectDir}/src/main/resources"

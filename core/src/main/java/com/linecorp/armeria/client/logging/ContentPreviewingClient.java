@@ -151,6 +151,7 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
             final ContentPreviewer requestContentPreviewer =
                     contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
             req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestPreviewSanitizer);
+            ctx.updateRequest(req);
         } else {
             // Set empty String.
             ctx.logBuilder().requestContentPreview("");

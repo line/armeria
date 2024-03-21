@@ -1,0 +1,9 @@
+armeria:
+  ports:
+    - port: 0
+      protocols: HTTP
+  compression:
+    enabled: true
+    mime-types: text/*, application/json
+    excluded-user-agents: some-user-agent, another-user-agent
+    minResponseSize: 1KB

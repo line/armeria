@@ -72,6 +72,7 @@ public interface AccessLogWriter {
      * Returns a new {@link AccessLogWriter} which combines two {@link AccessLogWriter}s.
      */
     default AccessLogWriter andThen(AccessLogWriter after) {
+        requireNonNull(after, "after");
         return new AccessLogWriter() {
             @Override
             public void log(RequestLog log) {

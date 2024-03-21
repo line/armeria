@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
@@ -41,22 +42,26 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 
-final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService {
+final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService, GraphqlExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultGraphqlService.class);
 
     private final GraphQL graphQL;
 
-    private final DataLoaderRegistry dataLoaderRegistry;
+    private final Function<? super ServiceRequestContext,
+                           ? extends DataLoaderRegistry> dataLoaderRegistryFunction;
 
     private final boolean useBlockingTaskExecutor;
 
     private final GraphqlErrorHandler errorHandler;
 
-    DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
-                          boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
+    DefaultGraphqlService(
+            GraphQL graphQL,
+            Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFunction,
+            boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
-        this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
+        this.dataLoaderRegistryFunction = requireNonNull(dataLoaderRegistryFunction,
+                                                         "dataLoaderRegistryFunction");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.errorHandler = errorHandler;
     }
@@ -89,20 +94,25 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         final ExecutionInput executionInput =
                 builder.context(ctx)
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
-                       .dataLoaderRegistry(dataLoaderRegistry)
+                       .dataLoaderRegistry(dataLoaderRegistryFunction.apply(ctx))
                        .build();
         return execute(ctx, executionInput, produceType);
     }
 
+    @Override
+    public CompletableFuture<ExecutionResult> executeGraphql(ServiceRequestContext ctx, ExecutionInput input) {
+        if (useBlockingTaskExecutor) {
+            return CompletableFuture.supplyAsync(() -> graphQL.execute(input),
+                                                 ctx.blockingTaskExecutor());
+        } else {
+            return graphQL.executeAsync(input);
+        }
+    }
+
     private HttpResponse execute(
             ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
-        final CompletableFuture<ExecutionResult> future;
-        if (useBlockingTaskExecutor) {
-            future = CompletableFuture.supplyAsync(() -> graphQL.execute(input), ctx.blockingTaskExecutor());
-        } else {
-            future = graphQL.executeAsync(input);
-        }
-        return HttpResponse.from(
+        final CompletableFuture<ExecutionResult> future = executeGraphql(ctx, input);
+        return HttpResponse.of(
                 future.handle((executionResult, cause) -> {
                     if (executionResult.getData() instanceof Publisher) {
                         logger.warn("executionResult.getData() returns a {} that is not supported yet.",
@@ -110,7 +120,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
                         return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
                                                    produceType,
-                                                   toSpecification("WebSocket is not implemented"));
+                                                   toSpecification(
+                                                           "Use GraphQL over WebSocket for subscription"));
                     }
 
                     if (executionResult.getErrors().isEmpty() && cause == null) {

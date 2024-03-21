@@ -18,19 +18,23 @@ package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
+import static com.linecorp.armeria.internal.common.stream.SubscriberUtil.abortedOrLate;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
 import com.linecorp.armeria.unsafe.PooledObjects;
@@ -76,6 +80,8 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     private static final CompletableFuture<List<?>> NO_COLLECTING_FUTURE =
             UnmodifiableFuture.completedFuture(null);
     private static final SubscriptionImpl NOOP_SUBSCRIPTION = noopSubscription();
+    @Nullable
+    private final EventExecutor defaultSubscriberExecutor;
 
     @Nullable
     @SuppressWarnings("unused") // Updated only via upstreamUpdater
@@ -106,6 +112,45 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
     @Nullable
     private volatile Throwable abortCause;
+
+    /**
+     * Creates a new instance.
+     */
+    public DeferredStreamMessage() {
+        defaultSubscriberExecutor = null;
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public DeferredStreamMessage(EventExecutor defaultSubscriberExecutor) {
+        this.defaultSubscriberExecutor = requireNonNull(defaultSubscriberExecutor, "defaultSubscriberExecutor");
+    }
+
+    @Override
+    public EventExecutor defaultSubscriberExecutor() {
+        if (defaultSubscriberExecutor != null) {
+            return defaultSubscriberExecutor;
+        }
+        return super.defaultSubscriberExecutor();
+    }
+
+    /**
+     * Delegates when the specified {@link CompletionStage} is complete.
+     */
+    protected final void delegateOnCompletion(CompletionStage<? extends Publisher<T>> stage) {
+        requireNonNull(stage, "stage");
+        stage.handle((upstream, thrown) -> {
+            if (thrown != null) {
+                close(Exceptions.peel(thrown));
+            } else if (upstream == null) {
+                close(new NullPointerException("upstream stage produced a null stream message: " + stage));
+            } else {
+                delegate(StreamMessage.of(upstream));
+            }
+            return null;
+        });
+    }
 
     /**
      * Sets the upstream {@link StreamMessage} which will actually publish the stream.
@@ -355,9 +400,10 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         requireNonNull(options, "options");
 
         if (!downstreamSubscriptionUpdater.compareAndSet(this, null, NOOP_SUBSCRIPTION)) {
+            final Subscriber<Object> subscriber = downstreamSubscription.subscriber();
+            final Throwable cause = abortedOrLate(subscriber);
             final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
-            collectingFuture.completeExceptionally(
-                    new IllegalStateException("subscribed by other subscriber already"));
+            collectingFuture.completeExceptionally(cause);
             return collectingFuture;
         }
 

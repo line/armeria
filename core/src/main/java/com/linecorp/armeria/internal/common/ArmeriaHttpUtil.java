@@ -30,6 +30,8 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
@@ -37,6 +39,7 @@ import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -66,6 +69,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -74,8 +78,11 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServerConfig;
 
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DefaultHeaders;
 import io.netty.handler.codec.UnsupportedValueConverter;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
@@ -231,12 +238,6 @@ public final class ArmeriaHttpUtil {
                                         HttpHeaderNames.HOST);
     }
 
-    /**
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a>
-     * states the path must not be empty, and instead should be {@code /}.
-     */
-    private static final String EMPTY_REQUEST_PATH = "/";
-
     private static final Splitter COOKIE_SPLITTER = Splitter.on(';').trimResults().omitEmptyStrings();
     private static final String COOKIE_SEPARATOR = "; ";
     private static final Joiner COOKIE_JOINER = Joiner.on(COOKIE_SEPARATOR);
@@ -252,51 +253,72 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Concatenates two path strings.
+     * Concatenates the specified {@code prefix} and {@code path} into an absolute path.
+     *
+     * @throws IllegalArgumentException if {@code prefix} is not an absolute path prefix
      */
-    public static String concatPaths(@Nullable String path1, @Nullable String path2) {
-        path2 = path2 == null ? "" : path2;
+    public static String concatPaths(String prefix, @Nullable String path) {
+        requireNonNull(prefix, "prefix");
+        checkArgument(!prefix.isEmpty() && prefix.charAt(0) == '/',
+                      "prefix: %s (expected: an absolute path starting with '/')", prefix);
 
-        if (path1 == null || path1.isEmpty() || EMPTY_REQUEST_PATH.equals(path1)) {
-            if (path2.isEmpty()) {
-                return EMPTY_REQUEST_PATH;
-            }
-
-            if (path2.charAt(0) == '/') {
-                return path2; // Most requests will land here.
-            }
-
-            return '/' + path2;
+        path = firstNonNull(path, "");
+        if (path.isEmpty()) {
+            return prefix;
         }
 
-        // At this point, we are sure path1 is neither empty nor null.
-        if (path2.isEmpty()) {
-            // Only path1 is non-empty. No need to concatenate.
-            return path1;
+        if (prefix.length() == 1) { // means "/".equals(prefix)
+            if (path.charAt(0) == '/') {
+                return path; // Most requests will land here.
+            }
+            return simpleConcat("/", path);
         }
 
-        if (path1.charAt(path1.length() - 1) == '/') {
-            if (path2.charAt(0) == '/') {
-                // path1 ends with '/' and path2 starts with '/'.
-                // Avoid double-slash by stripping the first slash of path2.
-                return new StringBuilder(path1.length() + path2.length() - 1)
-                        .append(path1).append(path2, 1, path2.length()).toString();
+        return slowConcatPaths(prefix, path);
+    }
+
+    private static String slowConcatPaths(String prefix, String path) {
+        if (prefix.charAt(prefix.length() - 1) == '/') {
+            if (path.charAt(0) == '/') {
+                // `prefix` ends with '/' and `path` starts with '/'.
+                // Avoid double-slash by stripping the first slash of `path`.
+                try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+                    return tmp.stringBuilder()
+                              .append(prefix)
+                              .append(path, 1, path.length())
+                              .toString();
+                }
             }
 
-            // path1 ends with '/' and path2 does not start with '/'.
+            // `prefix` ends with '/' and `path` does not start with '/'.
             // Simple concatenation would suffice.
-            return path1 + path2;
+            return simpleConcat(prefix, path);
         }
 
-        if (path2.charAt(0) == '/' || path2.charAt(0) == '?') {
-            // path1 does not end with '/' and path2 starts with '/' or '?'
+        if (path.charAt(0) == '/' || path.charAt(0) == '?') {
+            // `prefix` does not end with '/' and `path` starts with '/' or '?'
             // Simple concatenation would suffice.
-            return path1 + path2;
+            return simpleConcat(prefix, path);
         }
 
-        // path1 does not end with '/' and path2 does not start with '/' or '?'.
-        // Need to insert '/' between path1 and path2.
-        return path1 + '/' + path2;
+        // `prefix` does not end with '/' and `path` does not start with '/' or '?'.
+        // Need to insert '/' in-between.
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            return tmp.stringBuilder()
+                      .append(prefix)
+                      .append('/')
+                      .append(path)
+                      .toString();
+        }
+    }
+
+    private static String simpleConcat(String prefix, String path) {
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            return tmp.stringBuilder()
+                      .append(prefix)
+                      .append(path)
+                      .toString();
+        }
     }
 
     /**
@@ -551,20 +573,24 @@ public final class ArmeriaHttpUtil {
      */
     public static RequestHeaders toArmeriaRequestHeaders(ChannelHandlerContext ctx, Http2Headers headers,
                                                          boolean endOfStream, String scheme,
-                                                         ServerConfig cfg) {
+                                                         ServerConfig cfg,
+                                                         RequestTarget reqTarget) {
         assert headers instanceof ArmeriaHttp2Headers;
         final HttpHeadersBuilder builder = ((ArmeriaHttp2Headers) headers).delegate();
         builder.endOfStream(endOfStream);
+        if (!builder.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+            // `isContentLengthUnknown` is set to true so as not to automatically fill the content-length when
+            // the HTTP objects are aggregated.
+            builder.contentLengthUnknown();
+        }
         // A CONNECT request might not have ":scheme". See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
         }
-
         if (builder.get(HttpHeaderNames.AUTHORITY) == null && builder.get(HttpHeaderNames.HOST) == null) {
-            final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
-            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-            builder.add(HttpHeaderNames.AUTHORITY, defaultHostname + ':' + port);
+            builder.add(HttpHeaderNames.AUTHORITY, defaultAuthority(ctx, cfg));
         }
+        builder.set(HttpHeaderNames.PATH, reqTarget.toString());
         final List<String> cookies = builder.getAll(HttpHeaderNames.COOKIE);
         if (cookies.size() > 1) {
             // Cookies must be concatenated into a single octet string.
@@ -574,6 +600,20 @@ public final class ArmeriaHttpUtil {
         return RequestHeaders.of(builder.build());
     }
 
+    private static String defaultAuthority(ChannelHandlerContext ctx, ServerConfig cfg) {
+        // The client violates the spec that the request headers must contain a Host header.
+        // But we just add Host header to allow the request.
+        // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
+        final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
+        final SocketAddress localAddr = ctx.channel().localAddress();
+        if (localAddr instanceof InetSocketAddress) {
+            return defaultHostname + ':' + ((InetSocketAddress) localAddr).getPort();
+        } else {
+            assert localAddr instanceof DomainSocketAddress : localAddr;
+            return defaultHostname;
+        }
+    }
+
     /**
      * Converts the specified Netty HTTP/2 into Armeria HTTP/2 headers.
      */
@@ -581,6 +621,9 @@ public final class ArmeriaHttpUtil {
         assert http2Headers instanceof ArmeriaHttp2Headers;
         final HttpHeadersBuilder delegate = ((ArmeriaHttp2Headers) http2Headers).delegate();
         delegate.endOfStream(endOfStream);
+
+        maybeSetContentLengthUnknown(delegate.contains(HttpHeaderNames.CONTENT_LENGTH), delegate);
+
         HttpHeaders headers = delegate.build();
 
         if (request) {
@@ -605,31 +648,21 @@ public final class ArmeriaHttpUtil {
      * </ul>
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
-    public static RequestHeaders toArmeria(ChannelHandlerContext ctx, HttpRequest in,
-                                           ServerConfig cfg, String scheme) throws URISyntaxException {
-
-        final String path = in.uri();
-        if (path.charAt(0) != '/' && !"*".equals(path)) {
-            // We support only origin form and asterisk form.
-            throw new URISyntaxException(path, "neither origin form nor asterisk form");
-        }
+    public static RequestHeaders toArmeria(
+            ChannelHandlerContext ctx, HttpRequest in,
+            ServerConfig cfg, String scheme, RequestTarget reqTarget) throws URISyntaxException {
 
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
         final RequestHeadersBuilder out = RequestHeaders.builder();
         out.sizeHint(inHeaders.size());
-        out.method(HttpMethod.valueOf(in.method().name()))
-           .path(path)
-           .scheme(scheme);
+        out.method(firstNonNull(HttpMethod.tryParse(in.method().name()), HttpMethod.UNKNOWN))
+           .scheme(scheme)
+           .path(reqTarget.toString());
 
         // Add the HTTP headers which have not been consumed above
         toArmeria(inHeaders, out);
         if (!out.contains(HttpHeaderNames.HOST)) {
-            // The client violates the spec that the request headers must contain a Host header.
-            // But we just add Host header to allow the request.
-            // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
-            final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
-            final int port = ((InetSocketAddress) ctx.channel().localAddress()).getPort();
-            out.add(HttpHeaderNames.HOST, defaultHostname + ':' + port);
+            out.add(HttpHeaderNames.HOST, defaultAuthority(ctx, cfg));
         }
         return out.build();
     }
@@ -676,7 +709,10 @@ public final class ArmeriaHttpUtil {
             final AsciiString aName = HttpHeaderNames.of(entry.getKey()).toLowerCase();
             if (HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.contains(aName) ||
                 connectionDisallowedList.contains(aName)) {
-                continue;
+                final CharSequence value = entry.getValue();
+                if (!maybeWebSocketUpgrade(aName, value)) {
+                    continue;
+                }
             }
 
             // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2 makes a special exception for TE
@@ -701,6 +737,54 @@ public final class ArmeriaHttpUtil {
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
+
+        maybeSetContentLengthUnknown(inHeaders.contains(HttpHeaderNames.CONTENT_LENGTH), out);
+    }
+
+    private static void maybeSetContentLengthUnknown(boolean hasContentLength, HttpHeadersBuilder out) {
+        if (hasContentLength) {
+            return;
+        }
+
+        HttpMethod method = null;
+        if (out instanceof RequestHeadersBuilder) {
+            method = ((RequestHeadersBuilder) out).method();
+        }
+
+        final boolean isContentAlwaysEmpty;
+        if (method != null) {
+            isContentAlwaysEmpty = isContentAlwaysEmpty(method);
+        } else {
+            isContentAlwaysEmpty = false;
+        }
+
+        if (!isContentAlwaysEmpty) {
+            // Set isContentLengthUnknown to true not to override the content-length when the HTTP objects are
+            // aggregated.
+            out.contentLengthUnknown();
+        }
+    }
+
+    private static boolean isContentAlwaysEmpty(HttpMethod method) {
+        switch (method) {
+            case CONNECT:
+            case GET:
+            case HEAD:
+            case OPTIONS:
+            case TRACE:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private static boolean maybeWebSocketUpgrade(AsciiString header, CharSequence value) {
+        if (HttpHeaderNames.CONNECTION.contentEqualsIgnoreCase(header) &&
+            HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(value)) {
+            return true;
+        }
+        return HttpHeaderNames.UPGRADE.contentEqualsIgnoreCase(header) &&
+               HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(value);
     }
 
     private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
@@ -855,10 +939,10 @@ public final class ArmeriaHttpUtil {
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ServerHeaders(
-            HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
-            Http1HeaderNaming http1HeaderNaming) {
+            ResponseHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
+            Http1HeaderNaming http1HeaderNaming, boolean keepAlive) {
         toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, false);
-        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
+        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, keepAlive);
     }
 
     /**
@@ -873,7 +957,7 @@ public final class ArmeriaHttpUtil {
         toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, true);
     }
 
-    private static void toNettyHttp1Server(
+    public static void toNettyHttp1Server(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming, boolean isTrailer) {
         for (Entry<AsciiString, String> entry : inputHeaders) {
@@ -894,13 +978,27 @@ public final class ArmeriaHttpUtil {
      * Translates and adds HTTP/2 request headers to HTTP/1.1 headers.
      *
      * @param inputHeaders the HTTP/2 request headers to convert.
+     */
+    public static io.netty.handler.codec.http.HttpHeaders toNettyHttp1ClientHeaders(HttpHeaders inputHeaders) {
+        if (inputHeaders.isEmpty()) {
+            return EmptyHttpHeaders.INSTANCE;
+        }
+
+        final io.netty.handler.codec.http.HttpHeaders outputHeaders = new DefaultHttpHeaders(false);
+        toNettyHttp1Client(inputHeaders, outputHeaders, Http1HeaderNaming.ofDefault(), false);
+        return outputHeaders;
+    }
+
+    /**
+     * Translates and adds HTTP/2 request headers to HTTP/1.1 headers.
+     *
+     * @param inputHeaders the HTTP/2 request headers to convert.
      * @param outputHeaders the object which will contain the resulting HTTP/1.1 headers.
      */
     public static void toNettyHttp1ClientHeaders(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming) {
         toNettyHttp1Client(inputHeaders, outputHeaders, http1HeaderNaming, false);
-        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
     }
 
     /**
@@ -967,12 +1065,17 @@ public final class ArmeriaHttpUtil {
      * does not meet the conditions above and {@link HttpHeaderNames#CONTENT_LENGTH} is not present
      * regardless of the fact that the content is empty or not.
      *
+     * <p>{@link ResponseHeaders#isEndOfStream()} is set to {@code true} if both {@link HttpData} and trailers
+     * are empty.
+     *
      * @throws IllegalArgumentException if the specified {@code content} is not empty when the specified
      *                                  {@link HttpStatus} is one of {@link HttpStatus#NO_CONTENT},
      *                                  {@link HttpStatus#RESET_CONTENT} and {@link HttpStatus#NOT_MODIFIED}.
      */
-    public static ResponseHeaders setOrRemoveContentLength(ResponseHeaders headers, HttpData content,
-                                                           HttpHeaders trailers) {
+    public static ResponseHeaders maybeUpdateContentLengthAndEndOfStream(ResponseHeaders headers,
+                                                                         HttpData content,
+                                                                         HttpHeaders trailers,
+                                                                         boolean isAggregatedResponse) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
@@ -982,16 +1085,17 @@ public final class ArmeriaHttpUtil {
         if (isContentAlwaysEmptyWithValidation(status, content)) {
             if (status != HttpStatus.NOT_MODIFIED) {
                 if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                    final ResponseHeadersBuilder builder = headers.toBuilder();
-                    builder.remove(HttpHeaderNames.CONTENT_LENGTH);
-                    return builder.build();
+                    return headers.toBuilder()
+                                  .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
+                                  .endOfStream(true)
+                                  .build();
                 }
             } else {
                 // 304 response can have the "content-length" header when it is a response to a conditional
                 // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
             }
 
-            return headers;
+            return maybeSetEndOfStream(headers, 0, isAggregatedResponse);
         }
 
         if (!trailers.isEmpty()) {
@@ -1009,17 +1113,50 @@ public final class ArmeriaHttpUtil {
             return headers;
         }
 
-        if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
+        final long contentLength;
+        if (headers.isContentLengthUnknown()) {
+            // Do not set a content-length for a streaming response.
+            contentLength = -1;
+        } else {
+            if (headers.contentLength() > 0 && content.isEmpty()) {
+                // If HEAD method is used, a content-length can exist with an empty content.
+                contentLength = headers.contentLength();
+            } else {
+                contentLength = content.length();
+            }
+        }
+
+        if (contentLength >= 0) {
             return headers.toBuilder()
-                          .contentLength(content.length())
+                          .contentLength(contentLength)
                           .removeAndThen(HttpHeaderNames.TRANSFER_ENCODING)
                           .build();
         }
 
-        // The header contains "content-length" header and the content is empty.
+        // A streaming content or a content length is set and the content is empty.
         // Do not overwrite the header because a response to a HEAD request
-        // will have no content even if it has non-zero content-length header.
-        return headers;
+        // will have no content even if it has non-zero content-length header
+        // or a null content-length header for chunked-transfer encoding.
+        return maybeSetEndOfStream(headers, content.length(), isAggregatedResponse);
+    }
+
+    private static ResponseHeaders maybeSetEndOfStream(ResponseHeaders headers, int contentLength,
+                                                       boolean isAggregatedResponse) {
+        if (contentLength > 0) {
+            return headers;
+        }
+        if (isAggregatedResponse) {
+            // It is unnecessary to store endOfStream to headers for AggregatedHttpResponse since the length
+            // can be computed when the headers and data are aggregated.
+            return headers;
+        }
+        if (headers.isEndOfStream()) {
+            return headers;
+        }
+
+        return headers.toBuilder()
+                      .endOfStream(true)
+                      .build();
     }
 
     public static String convertHeaderValue(AsciiString name, CharSequence value) {
@@ -1052,6 +1189,15 @@ public final class ArmeriaHttpUtil {
         CaseInsensitiveMap(int size) {
             super(HTTP2_HEADER_NAME_HASHER, UnsupportedValueConverter.instance(), NameValidator.NOT_NULL, size);
         }
+
+        // This override is merely to add `@Nullable` to it, because `DefaultHeaders.get(..)` is not annotated
+        // with `@Nullable` but it can return `null`.
+        @Nullable
+        @Override
+        @SuppressWarnings("DataFlowIssue")
+        public AsciiString get(AsciiString name) {
+            return super.get(name);
+        }
     }
 
     /**
@@ -1071,7 +1217,7 @@ public final class ArmeriaHttpUtil {
 
     /**
      * A 408 Request Timeout response can be received even without a request.
-     * More details can be found at https://github.com/line/armeria/issues/3055.
+     * More details can be found at <a href="https://github.com/line/armeria/issues/3055">#3055</a>.
      */
     public static boolean isRequestTimeoutResponse(HttpResponse httpResponse) {
         return httpResponse.status().code() == HttpResponseStatus.REQUEST_TIMEOUT.code() &&

@@ -1,3 +1,15 @@
+import java.nio.charset.StandardCharsets
+
+/**
+ * Writes {@link Properties} without the date format for better caching.
+ */
+static def writeProps(Properties props, OutputStream os) {
+    props.entrySet().forEach {e ->
+        os.write("${e.key}=${e.value}\n".getBytes(StandardCharsets.UTF_8))
+    }
+    os.flush()
+}
+
 configure(projectsWithFlags('java', 'publish')) {
     def generatedResourcesDir = project.file("${project.projectDir}/gen-src/main/resources")
     sourceSets.main.resources.srcDir generatedResourcesDir
@@ -9,6 +21,7 @@ configure(projectsWithFlags('java', 'publish')) {
     task versionProperties {
         def propsFile = project.file("${generatedResourcesDir}/META-INF/${project.group}.versions.properties")
         outputs.file propsFile
+        inputs.property("project.ext.repoStatus", project.ext.repoStatus)
         doLast {
             def artifactId = project.ext.artifactId
 
@@ -32,7 +45,7 @@ configure(projectsWithFlags('java', 'publish')) {
             if (!upToDate) {
                 project.mkdir(propsFile.parentFile)
                 logger.info("Writing ${propsFile} ..")
-                propsFile.withOutputStream { props.store(it, null) }
+                propsFile.withOutputStream { writeProps(props, it) }
             } else {
                 logger.info("${propsFile} is up-to-date.")
             }
