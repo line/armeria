@@ -243,7 +243,9 @@ internal class FlowAnnotatedServiceTest {
                                 fun runsWithinEventLoop() =
                                     flow {
                                         ServiceRequestContext.current()
-                                        assertThat(Thread.currentThread().name).contains("armeria-common-worker")
+                                        assertThat(
+                                            Thread.currentThread().name,
+                                        ).contains("armeria-common-worker")
                                         emit("OK")
                                     }
                             },

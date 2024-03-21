@@ -16,6 +16,8 @@
       }, {
         "pattern": "^META-INF/services/io\\.grpc\\.[^/]+$"
       }, {
+        "pattern": "^META-INF/services/io\\.micrometer\\.[^/]+$"
+      }, {
         "pattern": "^META-INF/services/javax?\\.[^/]+$"
       }, {
         "pattern": "^META-INF/services/reactor\\.blockhound\\.[^/]+$"
