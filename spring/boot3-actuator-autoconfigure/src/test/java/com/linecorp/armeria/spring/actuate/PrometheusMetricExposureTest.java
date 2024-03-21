@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.test.annotation.DirtiesContext;
@@ -44,7 +43,7 @@ import io.prometheus.client.exporter.common.TextFormat;
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "managedMetricPath" })
 @DirtiesContext
-@AutoConfigureMetrics
+@EnableTestMetrics
 @EnableAutoConfiguration
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
 class PrometheusMetricExposureTest {

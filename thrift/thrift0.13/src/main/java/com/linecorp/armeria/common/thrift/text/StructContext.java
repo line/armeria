@@ -58,6 +58,7 @@ import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.thrift.ThriftMetadataAccess;
 
 /**
  * A struct parsing context. Builds a map from field name to TField.
@@ -170,7 +171,7 @@ final class StructContext extends PairContext {
             // Get the metaDataMap for this Thrift class
             @SuppressWarnings("unchecked")
             final Map<? extends TFieldIdEnum, FieldMetaData> metaDataMap =
-                    FieldMetaData.getStructMetaDataMap((Class<T>) clazz);
+                    ThriftMetadataAccess.getStructMetaDataMap((Class<T>) clazz);
 
             for (Entry<? extends TFieldIdEnum, FieldMetaData> e : metaDataMap.entrySet()) {
                 final String fieldName = e.getKey().getFieldName();

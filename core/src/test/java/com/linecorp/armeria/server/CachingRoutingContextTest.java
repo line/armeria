@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.RouteCache.CachingRoutingContext;
 
 class CachingRoutingContextTest {
@@ -46,7 +47,7 @@ class CachingRoutingContextTest {
                         virtualHost, virtualHost.defaultHostname(),
                         reqTarget,
                         RequestHeaders.of(HttpMethod.GET, reqTarget.pathAndQuery()),
-                        RoutingStatus.OK)) {
+                        RoutingStatus.OK, SessionProtocol.H2C)) {
                     @Override
                     public boolean requiresMatchingParamsPredicates() {
                         return true;
@@ -78,7 +79,7 @@ class CachingRoutingContextTest {
                         reqTarget,
                         RequestHeaders.of(HttpMethod.GET, reqTarget.pathAndQuery(),
                                           "foo", "qux"),
-                        RoutingStatus.OK)) {
+                        RoutingStatus.OK, SessionProtocol.H2C)) {
                     @Override
                     public boolean requiresMatchingHeadersPredicates() {
                         return true;

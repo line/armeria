@@ -49,20 +49,22 @@ internal fun callKotlinSuspendingMethod(
     obj: Any,
     args: Array<Any>,
     executorService: ExecutorService,
-    ctx: ServiceRequestContext
+    ctx: ServiceRequestContext,
 ): CompletableFuture<Any?> {
     val kFunction = checkNotNull(method.kotlinFunction) { "method is not a kotlin function" }
-    val future = GlobalScope.future(newCoroutineCtx(executorService, ctx)) {
-        val response = kFunction
-            .callSuspend(obj, *args)
-            .let { if (it == Unit) null else it }
+    val future =
+        GlobalScope.future(newCoroutineCtx(executorService, ctx)) {
+            val response =
+                kFunction
+                    .callSuspend(obj, *args)
+                    .let { if (it == Unit) null else it }
 
-        if (response != null && ctx.isCancelled) {
-            // A request has been canceled. Release the response resources to prevent leaks.
-            StreamMessageUtil.closeOrAbort(response)
+            if (response != null && ctx.isCancelled) {
+                // A request has been canceled. Release the response resources to prevent leaks.
+                StreamMessageUtil.closeOrAbort(response)
+            }
+            response
         }
-        response
-    }
 
     // Propagate cancellation to upstream.
     ctx.whenRequestCancelled().thenAccept { cause ->
@@ -80,10 +82,13 @@ internal fun callKotlinSuspendingMethod(
  */
 internal fun <T : Any> Flow<T>.asPublisher(
     executor: EventExecutor,
-    ctx: ServiceRequestContext
+    ctx: ServiceRequestContext,
 ): Publisher<T> = FlowCollectingPublisher(this, executor, newCoroutineCtx(executor, ctx))
 
-private fun newCoroutineCtx(executorService: ExecutorService, ctx: ServiceRequestContext): CoroutineContext {
+private fun newCoroutineCtx(
+    executorService: ExecutorService,
+    ctx: ServiceRequestContext,
+): CoroutineContext {
     val userContext = CoroutineContexts.get(ctx) ?: EmptyCoroutineContext
     if (executorService is ContextAwareExecutor) {
         return (executorService as ContextAwareExecutor).asCoroutineDispatcher() + userContext

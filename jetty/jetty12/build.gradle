@@ -1,0 +1,30 @@
+dependencies {
+    api libs.jetty12.server
+
+    // Can't exclude slf4j 1.x because the core module uses it as an api configuration.
+    // If this becomes problem, we will refactor the core more and exclude the slf4j 1.x dependency.
+    implementation libs.slf4j2.api
+
+    testImplementation libs.asm
+    testImplementation libs.jetty12.ee10.annotations
+    testImplementation libs.jetty12.ee10.apache.jsp
+    testImplementation libs.jetty12.ee10.glassfish.jstl
+    testImplementation libs.jetty12.ee10.webapp
+    testImplementation libs.jetty12.ee10.servlet
+    testImplementation libs.logback14
+}
+
+// Use the some sources from ':jetty11'.
+def jetty11ProjectDir = project(':jetty11').projectDir
+
+tasks.register('generateSources', Copy.class) {
+    from "${jetty11ProjectDir}/src/main/java"
+    into "${project.ext.genSrcDir}/main/java"
+    include '**/AbstractArmeriaEndPoint.java'
+    include '**/AbstractJettyServiceBuilder.java'
+    include '**/ArmeriaConnector.java'
+    include '**/ArmeriaEndPoint.java'
+    include '**/ArmeriaThreadPool.java'
+}
+
+tasks.compileJava.dependsOn(generateSources)

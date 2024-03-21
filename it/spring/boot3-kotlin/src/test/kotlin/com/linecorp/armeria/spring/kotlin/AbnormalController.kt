@@ -26,7 +26,6 @@ import org.springframework.web.bind.annotation.ResponseBody
  */
 @Controller
 class AbnormalController(private val objectMapper: ObjectMapper) {
-
     @GetMapping(value = ["/abnormal"], produces = ["text/plain;charset=utf-8"])
     @ResponseBody
     fun abnormal(): ResponseEntity<String> {
