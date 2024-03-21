@@ -219,9 +219,51 @@ class KubernetesEndpointGroupMockServerTest {
         client.close();
     }
 
-    private static Node newNode(String ip) {
+    @Test
+    void createEndpointsWithNodeExternalIpAndPort() throws InterruptedException {
+        final List<Node> nodes = ImmutableList.of(newNode("1.1.1.1"),
+                                                  newNode("2.2.2.2", "ExternalIP"),
+                                                  newNode("3.3.3.3", "ExternalIP"));
+        final Deployment deployment = newDeployment();
+        final int nodePort = 30000;
+        final Service service = newService(nodePort);
+        final List<Pod> pods = nodes.stream()
+                                    .map(node -> node.getMetadata().getName())
+                                    .map(nodeName -> newPod(deployment.getSpec().getTemplate(), nodeName))
+                                    .collect(toImmutableList());
+
+        // Create Kubernetes resources
+        for (Node node : nodes) {
+            client.nodes().resource(node).create();
+        }
+        client.pods().resource(pods.get(0)).create();
+        client.pods().resource(pods.get(1)).create();
+        client.pods().resource(pods.get(2)).create();
+        client.apps().deployments().resource(deployment).create();
+        client.services().resource(service).create();
+
+        final KubernetesEndpointGroup endpointGroup =
+                KubernetesEndpointGroup.builder(client)
+                                       .namespace("test")
+                                       .serviceName("nginx-service")
+                                       .nodeAddressFilter(
+                                               nodeAddress -> "ExternalIP".equals(nodeAddress.getType()))
+                                       .build();
+        endpointGroup.whenReady().join();
+
+        await().untilAsserted(() -> {
+            final List<Endpoint> endpoints = endpointGroup.endpoints();
+            assertThat(endpoints).containsExactlyInAnyOrder(
+                    Endpoint.of("2.2.2.2", nodePort),
+                    Endpoint.of("3.3.3.3", nodePort)
+            );
+        });
+        endpointGroup.close();
+    }
+
+    private static Node newNode(String ip, String type) {
         final NodeAddress nodeAddress = new NodeAddressBuilder()
-                .withType("InternalIP")
+                .withType(type)
                 .withAddress(ip)
                 .build();
         final NodeStatus nodeStatus = new NodeStatusBuilder()
@@ -234,6 +276,10 @@ class KubernetesEndpointGroupMockServerTest {
                 .withMetadata(metadata)
                 .withStatus(nodeStatus)
                 .build();
+    }
+
+    private static Node newNode(String ip) {
+        return newNode(ip, "InternalIP");
     }
 
     static Service newService(@Nullable Integer nodePort) {

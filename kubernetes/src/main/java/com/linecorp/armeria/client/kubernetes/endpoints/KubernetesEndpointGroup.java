@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 import org.jctools.maps.NonBlockingHashMap;
 import org.slf4j.Logger;
@@ -192,6 +193,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private final String serviceName;
     @Nullable
     private final String portName;
+    private final Predicate<? super NodeAddress> nodeAddressFilter;
 
     private final Watch nodeWatch;
     private final Watch serviceWatch;
@@ -208,14 +210,15 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
     private volatile boolean closed;
 
     KubernetesEndpointGroup(KubernetesClient client, @Nullable String namespace, String serviceName,
-                            @Nullable String portName, boolean autoClose,
-                            EndpointSelectionStrategy selectionStrategy,
+                            @Nullable String portName, Predicate<? super NodeAddress> nodeAddressFilter,
+                            boolean autoClose, EndpointSelectionStrategy selectionStrategy,
                             boolean allowEmptyEndpoints, long selectionTimeoutMillis) {
         super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
         this.client = client;
         this.namespace = namespace;
         this.serviceName = serviceName;
         this.portName = portName;
+        this.nodeAddressFilter = nodeAddressFilter;
         this.autoClose = autoClose;
         nodeWatch = watchNodes();
         serviceWatch = watchService();
@@ -363,11 +366,12 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                     case ADDED:
                     case MODIFIED:
                         final String nodeIp = node.getStatus().getAddresses().stream()
-                                                  .filter(address -> "InternalIP".equals(address.getType()))
+                                                  .filter(nodeAddressFilter)
                                                   .map(NodeAddress::getAddress)
                                                   .findFirst().orElse(null);
                         if (nodeIp == null) {
                             logger.debug("No 'InternalIP' is found in {}. node: {}", nodeName, node);
+                            nodeToIp.remove(nodeName);
                             return;
                         }
                         nodeToIp.put(nodeName, nodeIp);

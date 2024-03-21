@@ -20,6 +20,9 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
+import java.util.function.Predicate;
+
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
@@ -27,6 +30,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.client.KubernetesClient;
 
 /**
@@ -45,8 +49,12 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
     @Nullable
     private String portName;
 
+    private Predicate<? super NodeAddress> nodeAddressFilter = nodeAddress ->
+            "InternalIP".equals(nodeAddress.getType()) && !Strings.isNullOrEmpty(nodeAddress.getAddress());
+
     KubernetesEndpointGroupBuilder(KubernetesClient kubernetesClient, boolean autoClose) {
         super(Flags.defaultResponseTimeoutMillis());
+        allowEmptyEndpoints(false);
         this.kubernetesClient = requireNonNull(kubernetesClient, "kubernetesClient");
         this.autoClose = autoClose;
     }
@@ -80,6 +88,18 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
     }
 
     /**
+     * Sets the {@link Predicate} to filter the <a href="https://kubernetes.io/docs/reference/node/node-status/#addresses">addresses</a>
+     * of a Kubernetes node.
+     * The first selected {@link NodeAddress} of a node will be used to create the {@link Endpoint}.
+     * If unspecified, the default is to select an {@code InternalIP} address that is not empty.
+     */
+    public KubernetesEndpointGroupBuilder nodeAddressFilter(Predicate<? super NodeAddress> nodeAddressFilter) {
+        requireNonNull(nodeAddressFilter, "nodeAddressFilter");
+        this.nodeAddressFilter = nodeAddressFilter;
+        return this;
+    }
+
+    /**
      * Sets the {@link EndpointSelectionStrategy} of the {@link KubernetesEndpointGroupBuilder}.
      */
     public KubernetesEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
@@ -87,6 +107,10 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
         return this;
     }
 
+    /**
+     * Sets whether to allow an empty {@link Endpoint} list.
+     * If unspecified, the default is {@code false} that disallows an empty {@link Endpoint} list.
+     */
     @Override
     public KubernetesEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         return (KubernetesEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
@@ -107,7 +131,8 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
      */
     public KubernetesEndpointGroup build() {
         checkState(serviceName != null, "serviceName not set");
-        return new KubernetesEndpointGroup(kubernetesClient, namespace, serviceName, portName, autoClose,
+        return new KubernetesEndpointGroup(kubernetesClient, namespace, serviceName, portName,
+                                           nodeAddressFilter, autoClose,
                                            selectionStrategy, shouldAllowEmptyEndpoints(),
                                            selectionTimeoutMillis());
     }
