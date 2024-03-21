@@ -19,12 +19,18 @@ package com.linecorp.armeria.it.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
@@ -32,8 +38,12 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.DecoratorFactory;
+import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.auth.AuthService;
 import com.linecorp.armeria.server.auth.Authorizer;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -56,21 +66,18 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final GrpcService grpcService = GrpcService.builder()
-                                                 .addService(new AuthenticatedHttpJsonTranscodingTestService())
-                                                 .enableHttpJsonTranscoding(true)
-                                                 .build();
-
+                                                       .addService(new AuthenticatedHttpJsonTranscodingTestService())
+                                                       .enableHttpJsonTranscoding(true)
+                                                       .build();
             sb.requestTimeoutMillis(5000);
             sb.decorator(LoggingService.newDecorator());
-            sb.serviceUnder("/",
-                            grpcService.decorate(
-                                    AuthService.builder()
-                                               .add(new TestAuthorizer())
-                                               .newDecorator()));
+            sb.service(grpcService);
         }
     };
 
     private static final String TEST_CREDENTIAL_KEY = "credential";
+
+    private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final BlockingWebClient webClient = server.webClient().blocking();
 
@@ -79,9 +86,8 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
 
     @Test
     void testAuthenticatedRpcMethod() throws Exception {
-        final Transcoding.GetMessageRequestV1 requestMessage = Transcoding.GetMessageRequestV1
-                .newBuilder()
-                .setName("messages/1").build();
+        final Transcoding.GetMessageRequestV1 requestMessage = Transcoding.GetMessageRequestV1.newBuilder()
+                                                                                              .setName("messages/1").build();
         final Throwable exception = assertThrows(Throwable.class,
                                                  () -> grpcClient.getMessageV1(requestMessage).getText());
         assertThat(exception).isInstanceOf(StatusRuntimeException.class);
@@ -115,10 +121,24 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     private static class AuthenticatedHttpJsonTranscodingTestService
             extends HttpJsonTranscodingTestServiceImplBase {
         @Override
+        @Authenticate
         public void getMessageV1(Transcoding.GetMessageRequestV1 request,
                                  StreamObserver<Transcoding.Message> responseObserver) {
             responseObserver.onNext(Transcoding.Message.newBuilder().setText(request.getName()).build());
             responseObserver.onCompleted();
+        }
+    }
+
+    @DecoratorFactory(AuthServiceDecoratorFactoryFunction.class)
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    private @interface Authenticate {}
+
+    private static class AuthServiceDecoratorFactoryFunction implements DecoratorFactoryFunction<Authenticate> {
+        @Override
+        public Function<? super HttpService, ? extends HttpService>
+        newDecorator(Authenticate parameter) {
+            return AuthService.newDecorator(new TestAuthorizer());
         }
     }
 

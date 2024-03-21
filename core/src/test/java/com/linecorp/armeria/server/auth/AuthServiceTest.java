@@ -19,8 +19,8 @@ package com.linecorp.armeria.server.auth;
 import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
 import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
-import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Base64.Encoder;
@@ -43,6 +43,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -63,8 +64,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.util.AsciiString;
 
@@ -80,13 +79,14 @@ class AuthServiceTest {
 
     private static final Function<HttpHeaders, InsecureToken> INSECURE_TOKEN_EXTRACTOR =
             headers -> new InsecureToken();
-
+    private static final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private static final AsciiString CUSTOM_TOKEN_HEADER = HttpHeaderNames.of("X-Custom-Authorization");
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.meterRegistry(meterRegistry);
             final HttpService ok = new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
@@ -100,7 +100,7 @@ class AuthServiceTest {
                             () -> "unit test".equals(req.headers().get(AUTHORIZATION)));
             sb.service(
                     "/",
-                    ok.decorate(AuthService.builder().add(authorizer).newDecorator())
+                    ok.decorate(AuthService.newDecorator(authorizer))
                       .decorate(LoggingService.newDecorator()));
 
             // Auth with HTTP basic
@@ -175,8 +175,8 @@ class AuthServiceTest {
             sb.service(
                     "/authorizer_exception",
                     ok.decorate(AuthService.builder().add((ctx, data) -> {
-                        throw new AnticipatedException("bug!");
-                    }).newDecorator())
+                          throw new AnticipatedException("bug!");
+                      }).newDecorator())
                       .decorate(LoggingService.newDecorator()));
 
             // Authorizer returns a future that resolves to null.
@@ -298,9 +298,9 @@ class AuthServiceTest {
     @Test
     void testOAuth2() throws Exception {
         final BlockingWebClient webClient = WebClient.builder(server.httpUri())
-                                             .auth(AuthToken.ofOAuth2("dummy_oauth2_token"))
-                                             .build()
-                                             .blocking();
+                                                     .auth(AuthToken.ofOAuth2("dummy_oauth2_token"))
+                                                     .build()
+                                                     .blocking();
         assertThat(webClient.get("/oauth2").status()).isEqualTo(HttpStatus.OK);
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(
@@ -434,24 +434,27 @@ class AuthServiceTest {
                            .onFailure((delegate, ctx, req, cause) -> {
                                causeRef.set(cause);
                                return HttpResponse.of(HttpStatus.FORBIDDEN);
-                           })
-                           .build((ctx, req) -> HttpResponse.of("OK"));
-
-        // Create a meter registry and set a timer to the service.
-        final MeterRegistry meterRegistry = new SimpleMeterRegistry();
-        final Field timerField = AuthService.class.getDeclaredField("timer");
-        timerField.setAccessible(true);
-        final Timer timer = Timer.builder("armeria.server.auth").register(meterRegistry);
-        timerField.set(service, timer);
-        assertThat(MoreMeters.measureAll(meterRegistry)).containsEntry("armeria.server.auth#count", 0.0);
-
+                           }).build((ctx, req) -> HttpResponse.of("OK"));
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse response = service.serve(ctx, ctx.request());
-
         assertThat(response.aggregate().join().status()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(causeRef.get()).isInstanceOf(AnticipatedException.class);
-        assertThat(MoreMeters.measureAll(meterRegistry)).containsEntry("armeria.server.auth#count", 1.0);
     }
+
+
+
+    @Test
+    void shouldRecordMetrics() {
+        final double before = MoreMeters.measureAll(meterRegistry)
+                                        .getOrDefault("armeria.server.auth#count", 0.0);
+        final AggregatedHttpResponse res = server.blockingWebClient(cb -> cb.auth(AuthToken.ofBasic("brown",
+                                                                                                    "cony")))
+                                                 .get("/basic");
+        assertThat(res.status().code()).isEqualTo(200);
+        await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
+                .containsEntry("armeria.server.auth#count{result=success}", before + 1));
+    }
+}
 
     private static HttpUriRequestBase getRequest(String path, String authorization) {
         final HttpGet request = new HttpGet(server.httpUri().resolve(path));

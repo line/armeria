@@ -29,6 +29,8 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -80,22 +82,30 @@ public final class AuthService extends SimpleDecoratingHttpService {
     private final Authorizer<HttpRequest> authorizer;
     private final AuthSuccessHandler defaultSuccessHandler;
     private final AuthFailureHandler defaultFailureHandler;
-    private Timer timer;
+    @Nullable
+    private Timer successTimer;
+    @Nullable
+    private Timer failureTimer;
+    private final MeterIdPrefix meterIdPrefix;
 
     AuthService(HttpService delegate, Authorizer<HttpRequest> authorizer,
-                AuthSuccessHandler defaultSuccessHandler, AuthFailureHandler defaultFailureHandler) {
+                AuthSuccessHandler defaultSuccessHandler, AuthFailureHandler defaultFailureHandler,
+                MeterIdPrefix meterIdPrefix) {
         super(delegate);
         this.authorizer = authorizer;
         this.defaultSuccessHandler = defaultSuccessHandler;
         this.defaultFailureHandler = defaultFailureHandler;
+        this.meterIdPrefix = meterIdPrefix;
     }
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         super.serviceAdded(cfg);
         final MeterRegistry meterRegistry = cfg.server().meterRegistry();
-        timer = Timer.builder("armeria.server.auth")
-                     .register(meterRegistry);
+        successTimer = MoreMeters.newTimer(meterRegistry, meterIdPrefix.name(),
+                                           meterIdPrefix.tags("result", "success"));
+        failureTimer = MoreMeters.newTimer(meterRegistry, meterIdPrefix.name(),
+                                           meterIdPrefix.tags("result", "failure"));
     }
 
     @Override
@@ -109,43 +119,56 @@ public final class AuthService extends SimpleDecoratingHttpService {
                 if (cause == null) {
                     if (result != null) {
                         if (!result.isAuthorized()) {
-                            return handleFailure(delegate, result.failureHandler(), ctx, req, null);
+                            return handleFailure(delegate, result.failureHandler(), ctx, req, null, startNanos);
                         }
-                        return handleSuccess(delegate, result.successHandler(), ctx, req);
+                        return handleSuccess(delegate, result.successHandler(), ctx, req, startNanos);
                     }
                     cause = AuthorizerUtil.newNullResultException(authorizer);
                 }
 
                 return handleFailure(delegate, result != null ? result.failureHandler() : null,
-                                     ctx, req, cause);
+                                     ctx, req, cause, startNanos);
             } catch (Exception e) {
                 return Exceptions.throwUnsafely(e);
-            } finally {
-                // Record the time taken to authorize the request
-                final long endNanos = System.nanoTime();
-                timer.record(endNanos - startNanos, TimeUnit.NANOSECONDS);
             }
         }, ctx.eventLoop()));
     }
 
     private HttpResponse handleSuccess(HttpService delegate,
                                        @Nullable AuthSuccessHandler authorizerSuccessHandler,
-                                       ServiceRequestContext ctx, HttpRequest req)
+                                       ServiceRequestContext ctx, HttpRequest req,
+                                       long startNanos)
             throws Exception {
         final AuthSuccessHandler handler = authorizerSuccessHandler == null ? defaultSuccessHandler
                                                                             : authorizerSuccessHandler;
-        return handler.authSucceeded(delegate, ctx, req);
+        try {
+            return handler.authSucceeded(delegate, ctx, req);
+        } finally {
+            maybeRecordTimer(successTimer, startNanos);
+        }
     }
 
     private HttpResponse handleFailure(HttpService delegate,
                                        @Nullable AuthFailureHandler authorizerFailureHandler,
                                        ServiceRequestContext ctx, HttpRequest req,
-                                       @Nullable Throwable cause) throws Exception {
+                                       @Nullable Throwable cause,
+                                       long startNanos) throws Exception {
         final AuthFailureHandler handler = authorizerFailureHandler == null ? defaultFailureHandler
                                                                             : authorizerFailureHandler;
         if (cause != null) {
             cause = Exceptions.peel(cause);
         }
-        return handler.authFailed(delegate, ctx, req, cause);
+        try {
+            return handler.authFailed(delegate, ctx, req, cause);
+        } finally {
+            maybeRecordTimer(failureTimer, startNanos);
+        }
+    }
+
+    private static void maybeRecordTimer(@Nullable Timer timer, long startNanos) {
+        if (timer == null) {
+            return;
+        }
+        timer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
     }
 }
