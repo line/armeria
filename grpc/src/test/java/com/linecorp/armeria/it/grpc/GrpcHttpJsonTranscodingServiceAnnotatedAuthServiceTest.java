@@ -65,10 +65,11 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final GrpcService grpcService = GrpcService.builder()
-                                                       .addService(new AuthenticatedHttpJsonTranscodingTestService())
-                                                       .enableHttpJsonTranscoding(true)
-                                                       .build();
+            final GrpcService grpcService = GrpcService
+                    .builder()
+                    .addService(new AuthenticatedHttpJsonTranscodingTestService())
+                    .enableHttpJsonTranscoding(true)
+                    .build();
             sb.requestTimeoutMillis(5000);
             sb.decorator(LoggingService.newDecorator());
             sb.service(grpcService);
@@ -86,8 +87,8 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
 
     @Test
     void testAuthenticatedRpcMethod() throws Exception {
-        final Transcoding.GetMessageRequestV1 requestMessage = Transcoding.GetMessageRequestV1.newBuilder()
-                                                                                              .setName("messages/1").build();
+        final Transcoding.GetMessageRequestV1 requestMessage =
+                Transcoding.GetMessageRequestV1.newBuilder().setName("messages/1").build();
         final Throwable exception = assertThrows(Throwable.class,
                                                  () -> grpcClient.getMessageV1(requestMessage).getText());
         assertThat(exception).isInstanceOf(StatusRuntimeException.class);
