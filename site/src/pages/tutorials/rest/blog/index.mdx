@@ -106,13 +106,16 @@ Below is a part of the `build.gradle` file for the sample service.
   apply plugin: 'idea'
   apply plugin: 'eclipse'\n
   repositories {
-      mavenCentral()
+    mavenCentral()
   }\n
   dependencies {
-      implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
-      // Logging
-      runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
-      runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
+    implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
+    // Logging
+    runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'\n
+    runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'\n
+    testImplementation "org.junit.jupiter:junit-jupiter:${versions['org.junit:junit-bom']}"\n
+    testImplementation "com.linecorp.armeria:armeria-junit5:${versions['com.linecorp.armeria:armeria-bom']}"\n
+    testImplementation "org.assertj:assertj-core:${versions['org.assertj:assertj-core']}"
   }
 `}</CodeBlock>
 
