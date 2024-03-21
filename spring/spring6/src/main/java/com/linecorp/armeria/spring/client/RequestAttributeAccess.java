@@ -58,6 +58,7 @@ public final class RequestAttributeAccess {
 
     private static final AttributeKey<Map<String, Object>> KEY =
             AttributeKey.valueOf(RequestAttributeAccess.class, "ATTRIBUTES_KEY");
+
     /**
      * Returns the {@link RequestAttribute} value associated with the name.
      */
