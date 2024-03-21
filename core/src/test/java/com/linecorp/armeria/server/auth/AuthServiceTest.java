@@ -454,7 +454,6 @@ class AuthServiceTest {
         await().untilAsserted(() -> assertThat(MoreMeters.measureAll(meterRegistry))
                 .containsEntry("armeria.server.auth#count{result=success}", before + 1));
     }
-}
 
     private static HttpUriRequestBase getRequest(String path, String authorization) {
         final HttpGet request = new HttpGet(server.httpUri().resolve(path));
