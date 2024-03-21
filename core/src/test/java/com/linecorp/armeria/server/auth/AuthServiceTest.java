@@ -441,8 +441,6 @@ class AuthServiceTest {
         assertThat(causeRef.get()).isInstanceOf(AnticipatedException.class);
     }
 
-
-
     @Test
     void shouldRecordMetrics() {
         final double before = MoreMeters.measureAll(meterRegistry)
