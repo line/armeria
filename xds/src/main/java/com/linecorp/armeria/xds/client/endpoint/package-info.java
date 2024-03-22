@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,12 +15,11 @@
  */
 
 /**
- * Provides integrations with the
- * <a href="https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol">v3 gRPC-xDS protocol</a>.
+ * Provides client related integrations with xDS.
  */
 @NonNullByDefault
 @UnstableApi
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.client.endpoint;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
 import com.linecorp.armeria.common.annotation.UnstableApi;

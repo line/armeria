@@ -14,12 +14,16 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.client.endpoint;
 
-final class XdsConstants {
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 
-    // https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/subsets
-    static final String SUBSET_LOAD_BALANCING_FILTER_NAME = "envoy.lb";
+interface LoadBalancer {
 
-    private XdsConstants() {}
+    @Nullable
+    Endpoint selectNow(ClientRequestContext ctx);
+
+    void prioritySetUpdated(PrioritySet prioritySet);
 }

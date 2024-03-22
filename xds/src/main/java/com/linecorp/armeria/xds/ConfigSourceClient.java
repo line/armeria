@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.xds.client.endpoint.XdsEndpointGroup;
 
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
@@ -65,7 +66,7 @@ final class ConfigSourceClient implements SafeCloseable {
         final ClusterSnapshot clusterSnapshot = bootstrapClusters.clusterSnapshot(clusterName);
         checkArgument(clusterSnapshot != null, "Unable to find static cluster '%s'", clusterName);
 
-        endpointGroup = new XdsEndpointGroup(clusterSnapshot);
+        endpointGroup = XdsEndpointGroup.of(clusterSnapshot);
         final boolean ads = apiConfigSource.getApiType() == ApiType.AGGREGATED_GRPC;
         final UpstreamTlsContext tlsContext = clusterSnapshot.xdsResource().upstreamTlsContext();
         final SessionProtocol sessionProtocol =
@@ -107,7 +108,7 @@ final class ConfigSourceClient implements SafeCloseable {
     @Override
     public void close() {
         stream.close();
-        endpointGroup.close();
+        endpointGroup.closeAsync();
         subscriberStorage.close();
     }
 

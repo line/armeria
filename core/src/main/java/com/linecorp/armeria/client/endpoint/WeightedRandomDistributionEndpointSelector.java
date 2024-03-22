@@ -15,19 +15,15 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+import com.linecorp.armeria.internal.client.endpoint.WeightedRandomDistributionSelector;
 
 /**
  * This selector selects an {@link Endpoint} using random and the weight of the {@link Endpoint}. If there are
@@ -36,82 +32,30 @@ import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
  * selected as much as their weight, then A is removed temporarily and the chances that B and C are selected
  * are 4/10 and 6/10.
  */
-final class WeightedRandomDistributionEndpointSelector {
-
-    private final ReentrantLock lock = new ReentrantShortLock();
-    private final List<Entry> allEntries;
-    @GuardedBy("lock")
-    private final List<Entry> currentEntries;
-    private final long total;
-    private long remaining;
+final class WeightedRandomDistributionEndpointSelector
+        extends WeightedRandomDistributionSelector<Entry> {
 
     WeightedRandomDistributionEndpointSelector(List<Endpoint> endpoints) {
-        final ImmutableList.Builder<Entry> builder = ImmutableList.builderWithExpectedSize(endpoints.size());
-
-        long total = 0;
-        for (Endpoint endpoint : endpoints) {
-            if (endpoint.weight() <= 0) {
-                continue;
-            }
-            builder.add(new Entry(endpoint));
-            total += endpoint.weight();
-        }
-        this.total = total;
-        remaining = total;
-        allEntries = builder.build();
-        currentEntries = new ArrayList<>(allEntries);
+        super(mapEndpoints(endpoints));
     }
 
-    @VisibleForTesting
-    List<Entry> entries() {
-        return allEntries;
+    private static List<Entry> mapEndpoints(List<Endpoint> endpoints) {
+        return endpoints.stream().map(Entry::new).collect(ImmutableList.toImmutableList());
     }
 
     @Nullable
     Endpoint selectEndpoint() {
-        if (allEntries.isEmpty()) {
+        final Entry entry = select();
+        if (entry == null) {
             return null;
         }
-
-        final ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
-        lock.lock();
-        try {
-            long target = threadLocalRandom.nextLong(remaining);
-            final Iterator<Entry> it = currentEntries.iterator();
-            while (it.hasNext()) {
-                final Entry entry = it.next();
-                final int weight = entry.weight();
-                target -= weight;
-                if (target < 0) {
-                    entry.increment();
-                    if (entry.isFull()) {
-                        it.remove();
-                        entry.reset();
-                        remaining -= weight;
-                        if (remaining == 0) {
-                            // As all entries are full, reset `currentEntries` and `remaining`.
-                            currentEntries.addAll(allEntries);
-                            remaining = total;
-                        } else {
-                            assert remaining > 0 : remaining;
-                        }
-                    }
-                    return entry.endpoint();
-                }
-            }
-        } finally {
-            lock.unlock();
-        }
-
-        // Since `allEntries` is not empty, should select one Endpoint from `allEntries`.
-        throw new Error("Should never reach here");
+        return entry.endpoint();
     }
 
     @VisibleForTesting
-    static final class Entry {
+    static final class Entry extends AbstractEntry {
 
         private final Endpoint endpoint;
-        private int counter;
 
         Entry(Endpoint endpoint) {
             this.endpoint = endpoint;
@@ -121,26 +65,9 @@ final class WeightedRandomDistributionEndpointSelector {
             return endpoint;
         }
 
-        void increment() {
-            assert counter < endpoint().weight();
-            counter++;
-        }
-
-        int weight() {
+        @Override
+        public int weight() {
             return endpoint().weight();
-        }
-
-        void reset() {
-            counter = 0;
-        }
-
-        @VisibleForTesting
-        int counter() {
-            return counter;
-        }
-
-        boolean isFull() {
-            return counter >= endpoint.weight();
         }
     }
 }

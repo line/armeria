@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 
 import io.grpc.Status;
 
-class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
+public final class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
     private static final Logger logger = LoggerFactory.getLogger(TestResourceWatcher.class);
 
     private final LinkedBlockingDeque<List<Object>> events = new LinkedBlockingDeque<>();
@@ -51,12 +51,12 @@ class TestResourceWatcher implements SnapshotWatcher<Snapshot<?>> {
         events.add(ImmutableList.of("snapshotUpdated", newSnapshot));
     }
 
-    List<Object> blockingMissing() {
+    public List<Object> blockingMissing() {
         //noinspection unchecked
         return blockingFirst("onMissing", List.class);
     }
 
-    <T> T blockingChanged(Class<T> clazz) {
+    public <T> T blockingChanged(Class<T> clazz) {
         return blockingFirst("snapshotUpdated", clazz);
     }
 
