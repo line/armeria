@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -49,6 +50,24 @@ public final class ListenerSnapshot implements Snapshot<ListenerXdsResource> {
     @Nullable
     public RouteSnapshot routeSnapshot() {
         return routeSnapshot;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final ListenerSnapshot that = (ListenerSnapshot) object;
+        return Objects.equal(listenerXdsResource, that.listenerXdsResource) &&
+               Objects.equal(routeSnapshot, that.routeSnapshot);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(listenerXdsResource, routeSnapshot);
     }
 
     @Override

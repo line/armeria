@@ -63,7 +63,7 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 
 public final class XdsTestResources {
 
-    static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
+    public static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
 
     private XdsTestResources() {}
 
@@ -296,5 +296,41 @@ public final class XdsTestResources {
 
     public static Value stringValue(String value) {
         return Value.newBuilder().setStringValue(value).build();
+    }
+
+    public static Listener staticResourceListener() {
+        return staticResourceListener(Metadata.getDefaultInstance());
+    }
+
+    public static Listener staticResourceListener(Metadata metadata) {
+        final RouteAction.Builder routeActionBuilder = RouteAction.newBuilder().setCluster("cluster");
+        if (metadata != Metadata.getDefaultInstance()) {
+            routeActionBuilder.setMetadataMatch(metadata);
+        }
+        final VirtualHost virtualHost =
+                VirtualHost.newBuilder()
+                           .setName("route")
+                           .addDomains("*")
+                           .addRoutes(Route.newBuilder()
+                                           .setMatch(RouteMatch.newBuilder().setPrefix("/"))
+                                           .setRoute(routeActionBuilder))
+                           .build();
+        final HttpConnectionManager manager =
+                HttpConnectionManager
+                        .newBuilder()
+                        .setCodecType(CodecType.AUTO)
+                        .setStatPrefix("ingress_http")
+                        .setRouteConfig(RouteConfiguration.newBuilder()
+                                                          .setName("route")
+                                                          .addVirtualHosts(virtualHost)
+                                                          .build())
+                        .addHttpFilters(HttpFilter.newBuilder()
+                                                  .setName("envoy.filters.http.router")
+                                                  .setTypedConfig(Any.pack(Router.getDefaultInstance())))
+                        .build();
+        return Listener.newBuilder()
+                       .setName("listener")
+                       .setApiListener(ApiListener.newBuilder().setApiListener(Any.pack(manager)))
+                       .build();
     }
 }

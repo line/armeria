@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,11 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.xds.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
-import static com.linecorp.armeria.xds.XdsConverterUtil.convertEndpoints;
+import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
+import static com.linecorp.armeria.xds.client.endpoint.XdsEndpointUtil.convertEndpoints;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -37,11 +37,19 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.EndpointSnapshot;
+import com.linecorp.armeria.xds.ListenerRoot;
+import com.linecorp.armeria.xds.ListenerSnapshot;
+import com.linecorp.armeria.xds.RouteSnapshot;
+import com.linecorp.armeria.xds.SnapshotWatcher;
+import com.linecorp.armeria.xds.XdsBootstrap;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetFallbackPolicy;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetSelector;
+import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.route.v3.Route;
@@ -74,6 +82,17 @@ public final class XdsEndpointGroup extends DynamicEndpointGroup {
     public static EndpointGroup of(ListenerRoot listenerRoot) {
         requireNonNull(listenerRoot, "listenerRoot");
         return new XdsEndpointGroup(listenerRoot);
+    }
+
+    /**
+     * Creates a {@link XdsEndpointGroup} based on the specified {@link ClusterSnapshot}.
+     * This may be useful if one would like to create an {@link EndpointGroup} based on
+     * a {@link GrpcService}.
+     */
+    @UnstableApi
+    public static EndpointGroup of(ClusterSnapshot clusterSnapshot) {
+        requireNonNull(clusterSnapshot, "clusterSnapshot");
+        return new XdsEndpointGroup(clusterSnapshot);
     }
 
     XdsEndpointGroup(ListenerRoot listenerRoot) {
