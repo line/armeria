@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -103,7 +103,7 @@ class FlatMapStreamMessageTest {
                     .expectNextCount(6)
                     .verifyComplete();
 
-        assertTrue(mappedStream.whenComplete().isDone());
+        await().untilAsserted(() -> assertThat(mappedStream.whenComplete()).isDone());
     }
 
     @Test
@@ -116,8 +116,7 @@ class FlatMapStreamMessageTest {
                     .thenRequest(100L)
                     .expectNextCount(3)
                     .verifyComplete();
-
-        assertTrue(mappedStream.whenComplete().isDone());
+        await().untilAsserted(() -> assertThat(mappedStream.whenComplete()).isDone());
     }
 
     @Test
@@ -142,8 +141,7 @@ class FlatMapStreamMessageTest {
                     .thenRequest(1)
                     .expectNext(1)
                     .verifyTimeout(Duration.ofMillis(20));
-
-        assertFalse(mappedStream.isComplete());
+        await().untilAsserted(() -> assertThat(mappedStream.isComplete()).isTrue());
     }
 
     @Test

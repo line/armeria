@@ -32,6 +32,7 @@ import java.util.function.Function;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -46,6 +47,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
     private final int maxConcurrency;
 
     private final CompletableFuture<Void> completionFuture;
+    @Nullable
     private FlatMapAggregatingSubscriber<T, U> innerSubscriber;
 
     @SuppressWarnings("unchecked")
@@ -68,15 +70,14 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public boolean isEmpty() {
-        if (isOpen()) {
-            return false;
-        }
-
-        return innerSubscriber.publishedAny;
+        return !isOpen() && innerSubscriber != null && !innerSubscriber.publishedAny;
     }
 
     @Override
     public long demand() {
+        if (innerSubscriber == null) {
+            return 0;
+        }
         return innerSubscriber.requestedByDownstream;
     }
 
@@ -126,7 +127,6 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         private volatile Subscription upstream;
 
         private long requestedByDownstream;
-        private int pendingSubscriptions;
         private boolean closed;
         private boolean completing;
         private boolean initialized;
@@ -173,9 +173,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            pendingSubscriptions++;
             final StreamMessage<U> newStreamMessage = function.apply(item);
-            newStreamMessage.subscribe(new FlatMapSubscriber<>(this), executor, options);
+            final FlatMapSubscriber<T, U> childSubscriber = new FlatMapSubscriber<>(this);
+            childSubscribers.add(childSubscriber);
+            newStreamMessage.subscribe(childSubscriber, executor, options);
         }
 
         @Override
@@ -198,10 +199,9 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
+            completing = true;
             if (canComplete()) {
                 complete();
-            } else {
-                completing = true;
             }
         }
 
@@ -237,6 +237,8 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
             if (!initialized) {
                 initialized = true;
+                final Subscription upstream = this.upstream;
+                assert upstream != null;
                 upstream.request(maxConcurrency);
             }
 
@@ -248,7 +250,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             if (executor.inEventLoop()) {
                 cancel0();
             } else {
-                executor.execute(() -> cancel0());
+                executor.execute(this::cancel0);
             }
         }
 
@@ -258,9 +260,11 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             }
 
             closed = true;
+            final Subscription upstream = this.upstream;
+            assert upstream != null;
             upstream.cancel();
-            completionFuture.completeExceptionally(CancelledSubscriptionException.get());
             cancelChildSubscribersAndBuffer();
+            completionFuture.completeExceptionally(CancelledSubscriptionException.get());
 
             if (notifyCancellation) {
                 downstream.onError(CancelledSubscriptionException.get());
@@ -270,14 +274,9 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         private void cancelChildSubscribersAndBuffer() {
             buffer.forEach(StreamMessageUtil::closeOrAbort);
             buffer.clear();
-            childSubscribers.forEach(FlatMapSubscriber::cancel);
-        }
-
-        void childSubscribed(FlatMapSubscriber<T, U> child) {
-            pendingSubscriptions--;
-            childSubscribers.add(child);
-
-            requestAllAvailable();
+            // use a copy of the subscribers to avoid a ConcurrentModificationException from
+            // removing a child subscriber at #completeChild
+            ImmutableSet.copyOf(childSubscribers).forEach(FlatMapSubscriber::cancel);
         }
 
         private long getAvailableBufferSpace() {
@@ -299,12 +298,21 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             final long available = getAvailableBufferSpace();
 
             if (available == Long.MAX_VALUE) {
-                childSubscribers.forEach(sub -> sub.request(Long.MAX_VALUE));
+                // use a copy of the subscribers to avoid a ConcurrentModificationException from
+                // removing a child subscriber at #completeChild
+                childSubscribers.stream()
+                                .filter(FlatMapSubscriber::subscribed)
+                                .collect(toImmutableList())
+                                .forEach(sub -> sub.request(Long.MAX_VALUE));
                 return;
             }
 
+            // use a copy of the subscribers to avoid a ConcurrentModificationException from
+            // removing a child subscriber at #completeChild
             final List<FlatMapSubscriber<T, U>> toRequest =
-                    childSubscribers.stream().filter(sub -> sub.getRequested() == 0)
+                    childSubscribers.stream()
+                                    .filter(FlatMapSubscriber::subscribed)
+                                    .filter(sub -> sub.getRequested() == 0)
                                     .limit(available)
                                     .collect(toImmutableList());
             toRequest.forEach(sub -> sub.request(1));
@@ -317,7 +325,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 publishDownstream(value);
             }
 
-            if (completing && canComplete()) {
+            if (canComplete()) {
                 complete();
             }
         }
@@ -325,17 +333,19 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         void completeChild(FlatMapSubscriber<T, U> child) {
             childSubscribers.remove(child);
 
-            if (completing && canComplete()) {
+            if (canComplete()) {
                 complete();
             }
 
             if (!closed && !completing) {
+                final Subscription upstream = this.upstream;
+                assert upstream != null;
                 upstream.request(1);
             }
         }
 
         private boolean canComplete() {
-            return childSubscribers.isEmpty() && pendingSubscriptions == 0 && buffer.isEmpty();
+            return completing && childSubscribers.isEmpty() && buffer.isEmpty();
         }
 
         void onNextChild(U value) {
@@ -385,9 +395,13 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
+            if (canceled) {
+                subscription.cancel();
+                return;
+            }
 
             this.subscription = subscription;
-            parent.childSubscribed(this);
+            parent.requestAllAvailable();
         }
 
         @Override
@@ -422,6 +436,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         public void request(long n) {
+            assert subscription != null;
             requested = LongMath.saturatedAdd(requested, n);
             subscription.request(n);
         }
@@ -431,12 +446,17 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
             canceled = true;
-
-            subscription.cancel();
+            if (subscription != null) {
+                subscription.cancel();
+            }
         }
 
         public long getRequested() {
             return requested;
+        }
+
+        boolean subscribed() {
+            return subscription != null;
         }
     }
 }
