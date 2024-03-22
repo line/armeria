@@ -274,6 +274,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Long defaultClientConnectionDrainDurationMicros() {
+        return getLong("defaultClientConnectionDrainDurationMicros");
+    }
+
+    @Override
     public Integer defaultHttp2InitialConnectionWindowSize() {
         return getInt("defaultHttp2InitialConnectionWindowSize");
     }

@@ -565,6 +565,23 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the graceful connection shutdown drain duration. When the client factory is closed, it waits for
+     * the specified {@code duration} to allow pre-existing connections to be closed gracefully.
+     *
+     * <p></p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#clientConnectionDrainDurationMicros(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_CONNECTION_DRAIN_DURATION_MICROS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientConnectionDrainDurationMicros=<long>} JVM option
+     * to override the default value. {@code 0} disables the drain duration.
+     */
+    @Nullable
+    default Long defaultClientConnectionDrainDurationMicros() {
+        return null;
+    }
+
+    /**
      * Returns the default server-side max age of a connection for keep-alive in milliseconds.
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.
