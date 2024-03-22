@@ -160,7 +160,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
         /**
          * Send GOAWAY frame with stream ID 2^31-1 to signal clients that shutdown is imminent,
-         * but still accept in flight streams
+         * but still accept in flight streams.
          */
         @Override
         protected void onDrainStart(ChannelHandlerContext ctx) {
@@ -169,7 +169,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         }
 
         /**
-         * Start channel shutdown. Will send final GOAWAY with the latest created stream ID
+         * Start channel shutdown. Will send final GOAWAY with the latest created stream ID.
          */
         @Override
         protected void onDrainEnd(ChannelHandlerContext ctx) throws Exception {
