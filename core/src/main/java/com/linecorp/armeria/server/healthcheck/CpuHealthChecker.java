@@ -160,8 +160,8 @@ final class CpuHealthChecker implements HealthChecker {
         return null;
     }
 
-    static CpuHealthChecker of(double targetCpuUsage, double targetProcessCpuLoad) {
-        return new CpuHealthChecker(targetCpuUsage, targetProcessCpuLoad);
+    static CpuHealthChecker of(double targetSystemCpuUsage, double targetProcessCpuUsage) {
+        return new CpuHealthChecker(targetSystemCpuUsage, targetProcessCpuUsage);
     }
 
     /**
