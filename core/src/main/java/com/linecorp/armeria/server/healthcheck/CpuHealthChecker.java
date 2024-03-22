@@ -96,7 +96,7 @@ final class CpuHealthChecker implements HealthChecker {
      * @param cpuUsageThreshold the target cpu usage
      * @param processCpuLoadThreshold the target process cpu usage
      */
-    private CpuHealthChecker(double cpuUsageThreshold, double processCpuLoadThreshold) {
+    private CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuUsage) {
         this(cpuUsageThreshold, processCpuLoadThreshold,
                 currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
     }
