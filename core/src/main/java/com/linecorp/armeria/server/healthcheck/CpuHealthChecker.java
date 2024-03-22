@@ -70,7 +70,7 @@ final class CpuHealthChecker implements HealthChecker {
     private static final MethodHandle processCpuLoad;
 
     static {
-        operatingSystemBeanClass = requireNonNull(getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES));
+        operatingSystemBeanClass = getFirstClassFound(OPERATING_SYSTEM_BEAN_CLASS_NAMES);
         operatingSystemBean = ManagementFactory.getOperatingSystemMXBean();
         final MethodHandle getCpuLoad = detectMethod("getCpuLoad");
         systemCpuLoad = getCpuLoad != null ? getCpuLoad : detectMethod("getSystemCpuLoad");
