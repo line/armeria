@@ -137,38 +137,25 @@ public final class AuthService extends SimpleDecoratingHttpService {
     private HttpResponse handleSuccess(HttpService delegate,
                                        @Nullable AuthSuccessHandler authorizerSuccessHandler,
                                        ServiceRequestContext ctx, HttpRequest req,
-                                       long startNanos)
-            throws Exception {
+                                       long startNanos) throws Exception {
+        assert successTimer != null;
+        successTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
         final AuthSuccessHandler handler = authorizerSuccessHandler == null ? defaultSuccessHandler
                                                                             : authorizerSuccessHandler;
-        try {
-            return handler.authSucceeded(delegate, ctx, req);
-        } finally {
-            maybeRecordTimer(successTimer, startNanos);
-        }
+        return handler.authSucceeded(delegate, ctx, req);
     }
 
     private HttpResponse handleFailure(HttpService delegate,
                                        @Nullable AuthFailureHandler authorizerFailureHandler,
                                        ServiceRequestContext ctx, HttpRequest req,
-                                       @Nullable Throwable cause,
-                                       long startNanos) throws Exception {
+                                       @Nullable Throwable cause, long startNanos) throws Exception {
+        assert failureTimer != null;
+        failureTimer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
         final AuthFailureHandler handler = authorizerFailureHandler == null ? defaultFailureHandler
                                                                             : authorizerFailureHandler;
         if (cause != null) {
             cause = Exceptions.peel(cause);
         }
-        try {
-            return handler.authFailed(delegate, ctx, req, cause);
-        } finally {
-            maybeRecordTimer(failureTimer, startNanos);
-        }
-    }
-
-    private static void maybeRecordTimer(@Nullable Timer timer, long startNanos) {
-        if (timer == null) {
-            return;
-        }
-        timer.record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+        return handler.authFailed(delegate, ctx, req, cause);
     }
 }

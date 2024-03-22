@@ -46,7 +46,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -81,6 +80,8 @@ class AuthServiceTest {
             headers -> new InsecureToken();
     private static final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
     private static final AsciiString CUSTOM_TOKEN_HEADER = HttpHeaderNames.of("X-Custom-Authorization");
+
+    private static final AtomicReference<Throwable> peeledException = new AtomicReference<>();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -212,6 +213,17 @@ class AuthServiceTest {
                                            })
                                            .newDecorator())
                       .decorate(LoggingService.newDecorator()));
+
+            sb.service("/peeled_exception", AuthService.builder()
+                                      .add((ctx, data) -> {
+                                          return UnmodifiableFuture.exceptionallyCompletedFuture(
+                                                  new AnticipatedException());
+                                      })
+                                      .onFailure((delegate, ctx, req, cause) -> {
+                                          peeledException.set(cause);
+                                          return HttpResponse.of(HttpStatus.FORBIDDEN);
+                                      }).build((ctx, req) -> HttpResponse.of("OK"))
+            );
         }
     };
 
@@ -424,21 +436,9 @@ class AuthServiceTest {
 
     @Test
     void shouldPeelRedundantAuthorizerExceptions() throws Exception {
-        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
-        final AuthService service =
-                AuthService.builder()
-                           .add((ctx, data) -> {
-                               return UnmodifiableFuture.exceptionallyCompletedFuture(
-                                       new AnticipatedException());
-                           })
-                           .onFailure((delegate, ctx, req, cause) -> {
-                               causeRef.set(cause);
-                               return HttpResponse.of(HttpStatus.FORBIDDEN);
-                           }).build((ctx, req) -> HttpResponse.of("OK"));
-        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final HttpResponse response = service.serve(ctx, ctx.request());
-        assertThat(response.aggregate().join().status()).isEqualTo(HttpStatus.FORBIDDEN);
-        assertThat(causeRef.get()).isInstanceOf(AnticipatedException.class);
+        assertThat(server.blockingWebClient().get("/peeled_exception").status())
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(peeledException.get()).isInstanceOf(AnticipatedException.class);
     }
 
     @Test
