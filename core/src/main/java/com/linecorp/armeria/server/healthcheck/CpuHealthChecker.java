@@ -17,7 +17,6 @@ package com.linecorp.armeria.server.healthcheck;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -39,7 +38,10 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * A {@link HealthChecker} that reports as unhealthy when the current
  * CPU usage or CPU load exceeds threshold. For example:
  * <pre>{@code
- * final CpuHealthChecker cpuHealthChecker = HealthChecker.of(10, 10);<br>
+ * final CpuHealthChecker cpuHealthChecker = HealthChecker.of(0.1, 0.1);
+ *
+ * // Returns false if either is greater than 10%,
+ * // or true if both are less than or equal to 10%.
  * final boolean healthy = cpuHealthChecker.isHealthy();
  * }</pre>
  */
@@ -93,11 +95,11 @@ final class CpuHealthChecker implements HealthChecker {
     /**
      * Instantiates a new Default cpu health checker.
      *
-     * @param cpuUsageThreshold the target cpu usage
-     * @param processCpuLoadThreshold the target process cpu usage
+     * @param targetSystemCpuUsage the target cpu usage
+     * @param targetProcessCpuUsage the target process cpu usage
      */
-    private CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuUsage) {
-        this(cpuUsageThreshold, processCpuLoadThreshold,
+    CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuUsage) {
+        this(targetSystemCpuUsage, targetProcessCpuUsage,
                 currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
     }
 
@@ -108,7 +110,7 @@ final class CpuHealthChecker implements HealthChecker {
         checkArgument(targetProcessCpuLoad >= 0 && targetProcessCpuLoad <= 1.0,
                       "processCpuLoad: %s (expected: 0 <= processCpuLoad <= 1)", targetProcessCpuLoad);
         this.targetSystemCpuUsage = targetSystemCpuUsage;
-        this.targetProcessCpuUsage = targetProcessCpuUsage;
+        this.targetProcessCpuLoad = targetProcessCpuLoad;
         this.systemCpuUsageSupplier = systemCpuUsageSupplier;
         this.processCpuUsageSupplier = processCpuUsageSupplier;
         checkState(operatingSystemBeanClass != null, "Unable to find an 'OperatingSystemMXBean' class");
@@ -158,10 +160,6 @@ final class CpuHealthChecker implements HealthChecker {
             }
         }
         return null;
-    }
-
-    static CpuHealthChecker of(double targetSystemCpuUsage, double targetProcessCpuUsage) {
-        return new CpuHealthChecker(targetSystemCpuUsage, targetProcessCpuUsage);
     }
 
     /**

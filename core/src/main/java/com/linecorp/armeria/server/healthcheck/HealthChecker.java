@@ -89,6 +89,17 @@ public interface HealthChecker {
     }
 
     /**
+     * Creates a new instance of {@link CpuHealthChecker} based on the target system and process CPU usage.
+     *
+     * @param targetSystemCpuUsage  Target system CPU usage as a percentage (0 - 1).
+     * @param targetProcessCpuUsage Target process CPU usage as a percentage (0 - 1).
+     * @return an instance of {@code CpuHealthChecker} configured with the provided CPU usage targets.
+     */
+    static CpuHealthChecker ofCpu(double targetSystemCpuUsage, double targetProcessCpuUsage) {
+        return new CpuHealthChecker(targetSystemCpuUsage, targetProcessCpuUsage);
+    }
+
+    /**
      * Returns {@code true} if and only if the {@link Server} is healthy.
      */
     boolean isHealthy();

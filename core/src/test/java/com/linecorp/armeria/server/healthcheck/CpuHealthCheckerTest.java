@@ -22,8 +22,8 @@ import org.junit.jupiter.api.Test;
 class CpuHealthCheckerTest {
 
     @Test
-    void shouldGatherCpuUsageInformationAndCheckHealth() {
-        final CpuHealthChecker healthChecker = CpuHealthChecker.of(0.1, 0.3);
+    void shouldGatherCpuUsageInformation() {
+        final CpuHealthChecker healthChecker = HealthChecker.ofCpu(0.1, 0.3);
         assertNotEquals(Double.NaN, healthChecker.targetSystemCpuUsage);
         assertNotEquals(Double.NaN, healthChecker.targetProcessCpuLoad);
     }
