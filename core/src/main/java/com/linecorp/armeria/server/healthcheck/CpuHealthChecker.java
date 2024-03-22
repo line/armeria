@@ -56,6 +56,7 @@ final class CpuHealthChecker implements HealthChecker {
     @Nullable
     private static final OperatingSystemMXBean operatingSystemBean;
 
+    @Nullable
     private static final Class<?> operatingSystemBeanClass;
 
     private static final List<String> OPERATING_SYSTEM_BEAN_CLASS_NAMES = ImmutableList.of(
