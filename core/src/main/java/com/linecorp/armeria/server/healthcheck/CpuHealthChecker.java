@@ -108,7 +108,7 @@ final class CpuHealthChecker implements HealthChecker {
         checkArgument(targetProcessCpuLoad >= 0 && targetProcessCpuLoad <= 1.0,
                       "processCpuLoad: %s (expected: 0 <= processCpuLoad <= 1)", targetProcessCpuLoad);
         this.targetSystemCpuUsage = targetSystemCpuUsage;
-        this.targetProcessCpuLoad = targetProcessCpuLoad;
+        this.targetProcessCpuUsage = targetProcessCpuUsage;
         this.systemCpuUsageSupplier = systemCpuUsageSupplier;
         this.processCpuUsageSupplier = processCpuUsageSupplier;
         checkState(operatingSystemBeanClass != null, "Unable to find an 'OperatingSystemMXBean' class");
