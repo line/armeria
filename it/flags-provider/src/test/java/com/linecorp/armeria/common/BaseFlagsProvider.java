@@ -73,7 +73,7 @@ public final class BaseFlagsProvider implements FlagsProvider {
 
     @Override
     public Long defaultClientConnectionDrainDurationMicros() {
-        return 500L;
+        return 0L;
     }
 
     @Override

@@ -481,6 +481,10 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {
+        if (isClosing()) {
+            throw new IllegalStateException("ClientFactory is closing or closed.");
+        }
+
         final HttpChannelPool pool = pools.get(eventLoop);
         if (pool != null) {
             return pool;
