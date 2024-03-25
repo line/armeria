@@ -155,8 +155,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
         if (GRACEFUL_SHUTDOWN.equalsIgnoreCase(shutdown)) {
             return sb -> sb.gracefulShutdownTimeout(duration, duration);
         } else {
-            return sb -> {
-            };
+            return sb -> {};
         }
     }
 }

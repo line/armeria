@@ -577,8 +577,8 @@ class ArmeriaReactiveWebServerFactoryTest {
         registerInternalServices(beanFactory);
 
         // Add ServerErrorHandler @Bean which handles all exceptions and returns 200 with empty string content.
-        ServerErrorHandler handler = (ctx, req) -> HttpResponse.of("");
-        BeanDefinition rbd2 = new RootBeanDefinition(ServerErrorHandler.class, () -> handler);
+        final ServerErrorHandler handler = (ctx, req) -> HttpResponse.of("");
+        final BeanDefinition rbd2 = new RootBeanDefinition(ServerErrorHandler.class, () -> handler);
         beanFactory.registerBeanDefinition("serverErrorHandler", rbd2);
 
         final ArmeriaReactiveWebServerFactory factory = factory();
@@ -589,6 +589,5 @@ class ArmeriaReactiveWebServerFactoryTest {
             final AggregatedHttpResponse res1 = client.post("/hello", "hello").aggregate().join();
             assertThat(res1.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
         });
-
     }
 }
