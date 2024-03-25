@@ -1,6 +1,7 @@
 package example.armeria.server.annotated.kotlin
 
 import com.linecorp.armeria.common.logging.LogLevel
+import com.linecorp.armeria.common.logging.LogWriter
 import com.linecorp.armeria.server.AnnotatedServiceBindingBuilder
 import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.ServerBuilder
@@ -33,7 +34,7 @@ fun configureServices(sb: ServerBuilder) {
         .decorator(
             CoroutineContextService.newDecorator { ctx ->
                 CoroutineName(ctx.config().defaultServiceNaming().serviceName(ctx) ?: "name")
-            }
+            },
         )
         .applyCommonDecorator()
         .build(ContextAwareService())
@@ -44,15 +45,23 @@ fun configureServices(sb: ServerBuilder) {
         .build(DecoratingService())
         // DocService
         .serviceUnder("/docs", DocService())
+        // MarkdownDescriptionService
+        .annotatedService(MarkdownDescriptionService())
+        // MermaidDescriptionService
+        .annotatedService(MermaidDescriptionService())
 }
 
 private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServiceBindingBuilder {
     return this
         .decorator(
             LoggingService.builder()
-                .requestLogLevel(LogLevel.INFO)
-                .successfulResponseLogLevel(LogLevel.INFO)
-                .newDecorator()
+                .logWriter(
+                    LogWriter.builder()
+                        .requestLogLevel(LogLevel.INFO)
+                        .successfulResponseLogLevel(LogLevel.INFO)
+                        .build(),
+                )
+                .newDecorator(),
         )
 }
 

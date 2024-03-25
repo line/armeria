@@ -24,8 +24,15 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_B
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_INITIAL_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOError;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +53,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.proxy.ProxyConfig;
@@ -54,7 +62,10 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -86,7 +97,7 @@ import io.netty.resolver.dns.DnsNameResolverBuilder;
  *                      .build();
  * }</pre>
  */
-public final class ClientFactoryBuilder {
+public final class ClientFactoryBuilder implements TlsSetters {
 
     private static final ClientFactoryOptionValue<Long> ZERO_PING_INTERVAL =
             ClientFactoryOptions.PING_INTERVAL_MILLIS.newValue(0L);
@@ -291,11 +302,120 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile}
+     * and cleartext {@code keyFile}.
+     */
+    @Override
+    public ClientFactoryBuilder tls(File keyCertChainFile, File keyFile) {
+        return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile},
+     * {@code keyFile} and {@code keyPassword}.
+     */
+    @Override
+    public ClientFactoryBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
+        requireNonNull(keyCertChainFile, "keyCertChainFile");
+        requireNonNull(keyFile, "keyFile");
+        return tlsCustomizer(customizer -> customizer.keyManager(keyCertChainFile, keyFile, keyPassword));
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified
+     * {@code keyCertChainInputStream} and cleartext {@code keyInputStream}.
+     */
+    @Override
+    public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
+        return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified
+     * {@code keyCertChainInputStream} and {@code keyInputStream} and {@code keyPassword}.
+     */
+    @Override
+    public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
+                                    @Nullable String keyPassword) {
+        requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
+        requireNonNull(keyInputStream, "keyInputStream");
+
+        // Retrieve the content of the given streams so that they can be consumed more than once.
+        final byte[] keyCertChain;
+        final byte[] key;
+        try {
+            keyCertChain = ByteStreams.toByteArray(keyCertChainInputStream);
+            key = ByteStreams.toByteArray(keyInputStream);
+        } catch (IOException e) {
+            throw new IOError(e);
+        }
+
+        return tlsCustomizer(customizer -> customizer.keyManager(new ByteArrayInputStream(keyCertChain),
+                                                                 new ByteArrayInputStream(key),
+                                                                 keyPassword));
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified cleartext
+     * {@link PrivateKey} and {@link X509Certificate} chain.
+     */
+    @Override
+    public ClientFactoryBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
+        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified cleartext
+     * {@link PrivateKey} and {@link X509Certificate} chain.
+     */
+    @Override
+    public ClientFactoryBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
+        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
+     * {@code keyPassword} and {@link X509Certificate} chain.
+     */
+    @Override
+    public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
+                                    X509Certificate... keyCertChain) {
+        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
+     * {@code keyPassword} and {@link X509Certificate} chain.
+     */
+    @Override
+    public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
+                                    Iterable<? extends X509Certificate> keyCertChain) {
+        requireNonNull(key, "key");
+        requireNonNull(keyCertChain, "keyCertChain");
+
+        for (X509Certificate keyCert : keyCertChain) {
+            requireNonNull(keyCert, "keyCertChain contains null.");
+        }
+
+        return tlsCustomizer(customizer -> customizer.keyManager(key, keyPassword, keyCertChain));
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@link KeyManagerFactory}.
+     */
+    @Override
+    public ClientFactoryBuilder tls(KeyManagerFactory keyManagerFactory) {
+        requireNonNull(keyManagerFactory, "keyManagerFactory");
+        return tlsCustomizer(customizer -> customizer.keyManager(keyManagerFactory));
+    }
+
+    /**
      * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
      * applied to the SSL session. For example, use {@link SslContextBuilder#trustManager(TrustManagerFactory)}
      * to configure a custom server CA or {@link SslContextBuilder#keyManager(KeyManagerFactory)} to configure
      * a client certificate for SSL authorization.
      */
+    @Override
     public ClientFactoryBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
         @SuppressWarnings("unchecked")
@@ -493,21 +613,43 @@ public final class ClientFactoryBuilder {
 
     /**
      * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
-     * progress for this amount of time.
+     * progress for the given amount of time. By default, HTTP/2 PING frames do not prevent connection from
+     * closing. Use the method {@link ClientFactoryBuilder#idleTimeout(Duration, boolean)} to set whether to
+     * prevent connection from closing when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"}
+     * is received.
      */
     public ClientFactoryBuilder idleTimeout(Duration idleTimeout) {
-        requireNonNull(idleTimeout, "idleTimeout");
-        checkArgument(!idleTimeout.isNegative(), "idleTimeout: %s (expected: >= 0)", idleTimeout);
-        return idleTimeoutMillis(idleTimeout.toMillis());
+        return idleTimeoutMillis(requireNonNull(idleTimeout, "idleTimeout").toMillis());
+    }
+
+    /**
+     * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
+     * progress for the given amount of time. If {@code keepAliveOnPing} is true, the idle timeout is reset
+     * when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"} is received.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
+        return idleTimeoutMillis(requireNonNull(idleTimeout, "idleTimeout").toMillis(), keepAliveOnPing);
     }
 
     /**
      * Sets the idle timeout of a socket connection in milliseconds. The connection is closed if there is no
-     * request in progress for this amount of time.
+     * request in progress for the given amount of time.
      */
     public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis) {
+        return idleTimeoutMillis(idleTimeoutMillis, Flags.defaultClientKeepAliveOnPing());
+    }
+
+    /**
+     * Sets the idle timeout of a socket connection. The connection is closed if there is no request in
+     * progress for the given amount of time. If {@code keepAliveOnPing} is true, the idle timeout is reset
+     * when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"} is received.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder idleTimeoutMillis(long idleTimeoutMillis, boolean keepAliveOnPing) {
         checkArgument(idleTimeoutMillis >= 0, "idleTimeoutMillis: %s (expected: >= 0)", idleTimeoutMillis);
         option(ClientFactoryOptions.IDLE_TIMEOUT_MILLIS, idleTimeoutMillis);
+        option(ClientFactoryOptions.KEEP_ALIVE_ON_PING, keepAliveOnPing);
         return this;
     }
 
@@ -610,6 +752,28 @@ public final class ClientFactoryBuilder {
     }
 
     /**
+     * Sets whether to use HTTP/1.1 instead of HTTP/2. If enabled, the client will not attempt to upgrade to
+     * HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}. However, the client will use
+     * HTTP/2 if {@link SessionProtocol#H2} or {@link SessionProtocol#H2C} is used.
+     * This option is disabled by default.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder preferHttp1(boolean preferHttp1) {
+        option(ClientFactoryOptions.PREFER_HTTP1, preferHttp1);
+        return this;
+    }
+
+    /**
+     * Sets whether to use HTTP/2 without ALPN. This is useful if you want to communicate with an HTTP/2
+     * server over TLS but the server does not support ALPN.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder useHttp2WithoutAlpn(boolean useHttp2WithoutAlpn) {
+        option(ClientFactoryOptions.USE_HTTP2_WITHOUT_ALPN, useHttp2WithoutAlpn);
+        return this;
+    }
+
+    /**
      * Sets whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
      * HTTP/1 connections. This does not affect HTTP/2 connections. This option is disabled by default.
      */
@@ -669,7 +833,7 @@ public final class ClientFactoryBuilder {
     /**
      * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
-     * case sensitive HTTP/1 headers.
+     * case-sensitive HTTP/1 headers.
      */
     public ClientFactoryBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
         requireNonNull(http1HeaderNaming, "http1HeaderNaming");

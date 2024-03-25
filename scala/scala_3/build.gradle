@@ -1,8 +1,8 @@
 dependencies {
-    implementation 'org.scala-lang.modules:scala-java8-compat_3'
+    implementation libs.scala.java8.compat.v3
 
     // Added for supporting Scala types in Jackson{Request,Response}ConverterFunction
-    implementation 'com.fasterxml.jackson.module:jackson-module-scala_3'
+    implementation libs.jackson.scala.v3
 }
 
 // Use the sources from ':scala_2.13'.

@@ -23,6 +23,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
+import TableContainer from '@material-ui/core/TableContainer';
 import * as React from 'react';
 import { Endpoint, Method } from '../../lib/specification';
 
@@ -35,42 +36,46 @@ interface Props {
 const Endpoints: React.FunctionComponent<Props> = (props) => (
   <Section>
     <Typography variant="h6">Endpoints</Typography>
-    <Table>
-      <TableHead>
-        <TableRow>
-          <TableCell>Hostname</TableCell>
-          <TableCell>Path</TableCell>
-          <TableCell>MIME types</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {props.method.endpoints.map((endpoint) => (
-          <TableRow key={`${endpoint.hostnamePattern}/${endpoint.pathMapping}`}>
-            <TableCell>{endpoint.hostnamePattern}</TableCell>
-            <TableCell>{endpointPathString(endpoint)}</TableCell>
-            <TableCell>
-              <List dense>
-                {endpoint.availableMimeTypes.map((mimeType) => (
-                  <ListItem key={mimeType}>
-                    <ListItemText
-                      primary={mimeType}
-                      primaryTypographyProps={{
-                        style: {
-                          fontWeight:
-                            mimeType === endpoint.defaultMimeType
-                              ? 'bold'
-                              : 'normal',
-                        },
-                      }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </TableCell>
+    <TableContainer>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Hostname</TableCell>
+            <TableCell>Path</TableCell>
+            <TableCell>MIME types</TableCell>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHead>
+        <TableBody>
+          {props.method.endpoints.map((endpoint) => (
+            <TableRow
+              key={`${endpoint.hostnamePattern}/${endpoint.pathMapping}`}
+            >
+              <TableCell>{endpoint.hostnamePattern}</TableCell>
+              <TableCell>{endpointPathString(endpoint)}</TableCell>
+              <TableCell>
+                <List dense>
+                  {endpoint.availableMimeTypes.map((mimeType) => (
+                    <ListItem key={mimeType}>
+                      <ListItemText
+                        primary={mimeType}
+                        primaryTypographyProps={{
+                          style: {
+                            fontWeight:
+                              mimeType === endpoint.defaultMimeType
+                                ? 'bold'
+                                : 'normal',
+                          },
+                        }}
+                      />
+                    </ListItem>
+                  ))}
+                </List>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   </Section>
 );
 

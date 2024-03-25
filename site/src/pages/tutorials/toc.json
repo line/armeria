@@ -15,10 +15,24 @@
     "rest/blog/implement-update",
     "rest/blog/implement-delete"
   ],
-  "gRPC service":{
-    "Coming soon": null
-  },
-  "Thrift service":{
-    "Coming soon": null
-  }
+  "gRPC service":[
+    "grpc/blog",
+    "grpc/blog/define-service",
+    "grpc/blog/run-service",
+    "grpc/blog/implement-create",
+    "grpc/blog/implement-read",
+    "grpc/blog/implement-update",
+    "grpc/blog/implement-delete",
+    "grpc/blog/add-docservice"
+  ],
+  "Thrift service":[
+    "thrift/blog",
+    "thrift/blog/create-service",
+    "thrift/blog/run-server",
+    "thrift/blog/define-service-methods",
+    "thrift/blog/implement-create",
+    "thrift/blog/implement-read",
+    "thrift/blog/implement-update",
+    "thrift/blog/implement-delete"
+  ]
 }

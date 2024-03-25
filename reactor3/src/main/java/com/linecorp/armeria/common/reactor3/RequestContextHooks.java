@@ -40,6 +40,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.ParallelFlux;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.context.Context;
 
 /**
@@ -55,6 +56,9 @@ public final class RequestContextHooks {
 
     private static final String ON_LAST_OPERATOR_HOOK_KEY =
             RequestContextHooks.class.getName() + "#ON_LAST_OPERATOR_HOOK_KEY";
+
+    private static final String ON_SCHEDULER_HOOK_KEY =
+            RequestContextHooks.class.getName() + "#ON_SCHEDULER_HOOK_KEY";
 
     private static boolean warnedParallelFluxUnsupported;
 
@@ -108,6 +112,11 @@ public final class RequestContextHooks {
             return source;
         });
 
+        Schedulers.onScheduleHook(ON_SCHEDULER_HOOK_KEY, task -> {
+            return RequestContext.mapCurrent(requestContext -> requestContext.makeContextAware(task),
+                                             () -> task);
+        });
+
         enabled = true;
     }
 
@@ -120,6 +129,7 @@ public final class RequestContextHooks {
         }
         Hooks.resetOnEachOperator(ON_EACH_OPERATOR_HOOK_KEY);
         Hooks.resetOnLastOperator(ON_LAST_OPERATOR_HOOK_KEY);
+        Schedulers.resetOnScheduleHook(ON_SCHEDULER_HOOK_KEY);
         enabled = false;
     }
 

@@ -4,12 +4,12 @@ plugins {
 
 dependencies {
     implementation project(':core')
-    runtimeOnly 'org.slf4j:slf4j-simple'
+    runtimeOnly libs.slf4j.simple
 
-    implementation 'com.google.dagger:dagger'
-    implementation 'com.google.dagger:dagger-producers'
-    annotationProcessor 'com.google.dagger:dagger-compiler'
-    implementation 'com.spotify:futures-extra'
+    implementation libs.dagger
+    implementation libs.dagger.producers
+    annotationProcessor libs.dagger.compiler
+    implementation libs.futures.extra
 }
 
 application {

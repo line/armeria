@@ -1,0 +1,53 @@
+// A testing module that ensures compatibility between thrift0.9 module and libthrift0.9.1.
+// TODO(ikhoon): Remove this module when Armeria drops support for Thrift 0.9.1
+
+dependencies {
+    testImplementation(project(':thrift0.9')) {
+        exclude group: 'org.apache.thrift', module: 'libthrift'
+    }
+
+    testImplementation 'org.apache.thrift:libthrift:0.9.1'
+
+    // Jetty, for testing TServlet interoperability.
+    testImplementation libs.jetty94.webapp
+    testImplementation libs.jetty94.http2.server
+
+    // Dropwizard and Prometheus, for testing metrics integration
+    testImplementation libs.dropwizard.metrics.core
+    testImplementation libs.micrometer.prometheus
+    testImplementation libs.prometheus
+}
+
+def suffix = rootProject.osdetector.classifier
+if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+   suffix += '.exe'
+}
+
+ext {
+    thriftPath = "${projectDir}/compiler/thrift.${suffix}"
+}
+
+task generateSources(type: Copy) {
+    from("${rootProject.projectDir}/thrift0.13/src/test") {
+        exclude '**/TTextProtocolTest.java'
+        exclude '**/ThriftTreeStructureTest.java'
+        exclude '**/AbstractThriftOverHttpTest.java'
+        exclude '**/ThriftOverHttp1Test.java'
+        exclude '**/ThriftOverHttp2Test.java'
+        exclude '**/ThriftClientLengthLimitTest.java'
+        exclude '**/ThriftServiceLengthLimitTest.java'
+        exclude '**/ThriftDescriptiveTypeInfoProviderTest.java'
+        exclude '**/ThriftOverHttpClientTest.java'
+        exclude '**/META-INF/services/'
+        exclude '**/*.thrift'
+    }
+    into "${project.ext.genSrcDir}/test"
+}
+
+tasks.compileTestJava.dependsOn(tasks.generateSources)
+tasks.generateSources.dependsOn(tasks.processTestResources)
+
+// Disable checkstyle because it's checked by ':thrift0.13'
+tasks.withType(Checkstyle) {
+    onlyIf { false }
+}

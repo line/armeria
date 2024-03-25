@@ -16,20 +16,26 @@
 
 package com.linecorp.armeria.common.encoding;
 
+import java.util.List;
+
+import com.google.common.collect.ImmutableList;
+
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliDecoder;
+import io.netty.handler.codec.compression.SnappyFrameDecoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
 
 enum StreamDecoderFactories implements StreamDecoderFactory {
-    DEFLATE {
+    BROTLI {
         @Override
         public String encodingHeaderValue() {
-            return "deflate";
+            return "br";
         }
 
         @Override
-        public StreamDecoder newDecoder(ByteBufAllocator alloc) {
-            return new ZlibStreamDecoder(ZlibWrapper.ZLIB, alloc);
+        public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+            return new BrotliStreamDecoder(new BrotliDecoder(), alloc, maxLength);
         }
     },
     GZIP {
@@ -39,19 +45,40 @@ enum StreamDecoderFactories implements StreamDecoderFactory {
         }
 
         @Override
-        public StreamDecoder newDecoder(ByteBufAllocator alloc) {
-            return new ZlibStreamDecoder(ZlibWrapper.GZIP, alloc);
+        public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+            return new ZlibStreamDecoder(ZlibWrapper.GZIP, alloc, maxLength);
         }
     },
-    BROTLI {
+    DEFLATE {
         @Override
         public String encodingHeaderValue() {
-            return "br";
+            return "deflate";
         }
 
         @Override
-        public StreamDecoder newDecoder(ByteBufAllocator alloc) {
-            return new BrotliStreamDecoder(new BrotliDecoder(), alloc);
+        public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+            return new ZlibStreamDecoder(ZlibWrapper.ZLIB, alloc, maxLength);
+        }
+    },
+    SNAPPY {
+        @Override
+        public String encodingHeaderValue() {
+            return "x-snappy-framed";
+        }
+
+        @Override
+        public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+            return new SnappyStreamDecoder(new SnappyFrameDecoder(), alloc, maxLength);
+        }
+    };
+
+    static final List<StreamDecoderFactory> ALL;
+
+    static {
+        if (Brotli.isAvailable()) {
+            ALL = ImmutableList.copyOf(values());
+        } else {
+            ALL = ImmutableList.of(GZIP, DEFLATE, SNAPPY);
         }
     }
 }

@@ -19,17 +19,22 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
+
 final class DefaultDependencyInjector implements DependencyInjector {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultDependencyInjector.class);
 
     private final Map<Class<?>, Object> singletons = new HashMap<>();
+
+    private final Lock lock = new ReentrantShortLock();
     private boolean isShutdown;
 
     DefaultDependencyInjector(Iterable<Object> singletons) {
@@ -41,30 +46,40 @@ final class DefaultDependencyInjector implements DependencyInjector {
     }
 
     @Override
-    public synchronized <T> T getInstance(Class<T> type) {
-        if (isShutdown) {
-            throw new IllegalStateException("Already shut down");
+    public <T> T getInstance(Class<T> type) {
+        lock.lock();
+        try {
+            if (isShutdown) {
+                throw new IllegalStateException("Already shut down");
+            }
+            final Object instance = singletons.get(type);
+            if (instance != null) {
+                //noinspection unchecked
+                return (T) instance;
+            }
+            return null;
+        } finally {
+            lock.unlock();
         }
-        final Object instance = singletons.get(type);
-        if (instance != null) {
-            //noinspection unchecked
-            return (T) instance;
-        }
-        return null;
     }
 
     @Override
-    public synchronized void close() {
-        if (isShutdown) {
-            return;
-        }
-        isShutdown = true;
-        for (Object instance : singletons.values()) {
-            if (instance instanceof AutoCloseable) {
-                close((AutoCloseable) instance);
+    public void close() {
+        lock.lock();
+        try {
+            if (isShutdown) {
+                return;
             }
+            isShutdown = true;
+            for (Object instance : singletons.values()) {
+                if (instance instanceof AutoCloseable) {
+                    close((AutoCloseable) instance);
+                }
+            }
+            singletons.clear();
+        } finally {
+            lock.unlock();
         }
-        singletons.clear();
     }
 
     private static void close(AutoCloseable closeable) {

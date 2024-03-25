@@ -1,0 +1,85 @@
+{
+  "services" : [ {
+    "name" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamService",
+    "methods" : [ {
+      "name" : "param",
+      "id" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamService/param/GET",
+      "returnTypeSignature" : "CompletableFuture<string>",
+      "parameters" : [ {
+        "name" : "id",
+        "location" : "PATH",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamId",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "query",
+        "location" : "QUERY",
+        "requirement" : "OPTIONAL",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamQuery",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      } ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "pathMapping" : "/param/:id",
+        "availableMimeTypes" : [ "application/json; charset=utf-8" ]
+      } ],
+      "exampleHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "examplePaths" : [ ],
+      "exampleQueries" : [ ],
+      "httpMethod" : "GET",
+      "descriptionInfo" : {
+        "docString" : "",
+        "markup" : "NONE"
+      }
+    } ],
+    "exampleHeaders" : [ ],
+    "descriptionInfo" : {
+      "docString" : "",
+      "markup" : "NONE"
+    }
+  } ],
+  "enums" : [ ],
+  "structs" : [ {
+    "name" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamId",
+    "fields" : [ {
+      "name" : "id",
+      "location" : "UNSPECIFIED",
+      "requirement" : "REQUIRED",
+      "typeSignature" : "int",
+      "descriptionInfo" : {
+        "docString" : "param id",
+        "markup" : "NONE"
+      }
+    } ],
+    "descriptionInfo" : {
+      "docString" : "ParamId class",
+      "markup" : "NONE"
+    }
+  }, {
+    "name" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamQuery",
+    "fields" : [ {
+      "name" : "query",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string",
+      "descriptionInfo" : {
+        "docString" : "param query",
+        "markup" : "NONE"
+      }
+    } ],
+    "descriptionInfo" : {
+      "docString" : "ParamQuery class",
+      "markup" : "NONE"
+    }
+  } ],
+  "exceptions" : [ ],
+  "exampleHeaders" : [ ]
+}

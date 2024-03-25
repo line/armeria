@@ -18,15 +18,48 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ServerErrorHandlerTest {
+    private static final String TEST_HOST = "foo.com";
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.route()
+              .get("/foo")
+              .errorHandler((ctx, cause) -> null)
+              .build((ctx, req) -> {
+                  throw new RuntimeException();
+              });
+            sb.errorHandler((ctx, cause) -> HttpResponse.of(HttpStatus.BAD_REQUEST));
+        }
+    };
+
+    @ParameterizedTest
+    @CsvSource({ "H1C", "H2C" })
+    void shouldFallbackIfServiceErrorHandlerReturnsNull(SessionProtocol protocol) {
+        final Endpoint endpoint = Endpoint.of(TEST_HOST, server.httpPort()).withIpAddr("127.0.0.1");
+        final WebClient webClientTest = WebClient.of(protocol, endpoint);
+        final AggregatedHttpResponse response = webClientTest.get("/foo").aggregate().join();
+
+        assertThat(response.status()).isSameAs(HttpStatus.BAD_REQUEST);
+    }
+
     @Test
     void testOrElse() {
         final ServerErrorHandler handler = new ServerErrorHandler() {

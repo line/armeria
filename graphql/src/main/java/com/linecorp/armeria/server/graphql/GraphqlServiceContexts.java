@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.GraphQLContext;
+import graphql.VisibleForTesting;
 import graphql.com.google.common.collect.ImmutableMap;
 import graphql.schema.DataFetchingEnvironment;
 
@@ -34,7 +35,8 @@ import graphql.schema.DataFetchingEnvironment;
 @UnstableApi
 public final class GraphqlServiceContexts {
 
-    private static final String GRAPHQL_CONTEXT_KEY = "com.linecorp.armeria.graphql.context.key";
+    @VisibleForTesting
+    static final String GRAPHQL_CONTEXT_KEY = "com.linecorp.armeria.graphql.context.key";
 
     /**
      * Returns a {@link Map} containing the {@link ServiceRequestContext}.

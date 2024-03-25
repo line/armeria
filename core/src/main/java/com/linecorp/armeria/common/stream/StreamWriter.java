@@ -51,7 +51,7 @@ import com.linecorp.armeria.common.HttpData;
  *
  * @param <T> the type of the stream element
  */
-public interface StreamWriter<T> {
+public interface StreamWriter<T> extends StreamMessage<T> {
 
     /**
      * Returns {@code true} if the {@link StreamMessage} is open.

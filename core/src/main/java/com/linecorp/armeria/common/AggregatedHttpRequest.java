@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
+import static com.linecorp.armeria.common.HttpRequestUtil.maybeModifyContentLength;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -195,14 +195,7 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
 
-        final RequestHeadersBuilder builder = headers.toBuilder();
-        if (content.isEmpty()) {
-            builder.remove(CONTENT_LENGTH);
-        } else {
-            builder.contentLength(content.length());
-        }
-        headers = builder.build();
-        return new DefaultAggregatedHttpRequest(headers, content, trailers);
+        return new DefaultAggregatedHttpRequest(maybeModifyContentLength(headers, content), content, trailers);
     }
 
     /**
@@ -297,5 +290,16 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      */
     default HttpRequest toHttpRequest() {
         return HttpRequest.of(headers(), content(), trailers());
+    }
+
+    /**
+     * Converts this request into a new complete {@link HttpRequest} replacing the {@link #headers()}
+     * with the specified {@link RequestHeaders}.
+     *
+     * @return the new {@link HttpRequest} converted from this request.
+     */
+    default HttpRequest toHttpRequest(RequestHeaders headers) {
+        requireNonNull(headers, "headers");
+        return HttpRequest.of(headers, content(), trailers());
     }
 }

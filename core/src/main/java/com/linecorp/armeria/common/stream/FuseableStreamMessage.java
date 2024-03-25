@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
 
@@ -67,7 +68,8 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                                   @Nullable MapperFunction<T, U> function,
                                   @Nullable Function<? super Throwable, ? extends Throwable> errorFunction) {
         requireNonNull(source, "source");
-        assert function != null || errorFunction != null;
+        assert (function != null && errorFunction == null) || (function == null && errorFunction != null)
+                : "function and errorFunction should be mutually exclusive";
 
         source = peel(source);
         if (source instanceof FuseableStreamMessage) {
@@ -106,7 +108,6 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         do {
-            //noinspection unchecked
             source = ((NonOverridableStreamMessageWrapper<? extends T, ?>) source).delegate();
         } while (source instanceof NonOverridableStreamMessageWrapper);
 
@@ -159,7 +160,15 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
                 }
 
                 try {
-                    U result = function.apply(obj);
+                    U result;
+                    if (function == null) {
+                        // no transformation function is set. Use the object as is.
+                        //noinspection unchecked
+                        result = (U) obj;
+                    } else {
+                        result = function.apply(obj);
+                    }
+
                     if (result != null) {
                         result = StreamMessageUtil.touchOrCopyAndClose(result, withPooledObjects);
                         builder.add(result);
@@ -206,7 +215,9 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(options, "options");
 
         source.subscribe(new FuseableSubscriber<>(subscriber, function, errorFunction,
-                                                  containsWithPooledObjects(options)), executor, options);
+                                                  containsWithPooledObjects(options),
+                                                  containsNotifyCancellation(options)),
+                         executor, options);
     }
 
     @Override
@@ -228,18 +239,21 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         @Nullable
         private final Function<Throwable, Throwable> errorFunction;
         private final boolean withPooledObjects;
+        private final boolean notifyCancellation;
 
         @Nullable
         private volatile Subscription upstream;
         private volatile boolean canceled;
 
         FuseableSubscriber(Subscriber<? super U> downstream, @Nullable MapperFunction<Object, U> function,
-                           @Nullable Function<Throwable, Throwable> errorFunction, boolean withPooledObjects) {
+                           @Nullable Function<Throwable, Throwable> errorFunction, boolean withPooledObjects,
+                           boolean notifyCancellation) {
             requireNonNull(downstream, "downstream");
             this.downstream = downstream;
             this.function = function;
             this.errorFunction = errorFunction;
             this.withPooledObjects = withPooledObjects;
+            this.notifyCancellation = notifyCancellation;
         }
 
         @Override
@@ -287,6 +301,9 @@ final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
         public void onError(Throwable cause) {
             requireNonNull(cause, "cause");
             if (canceled) {
+                if (notifyCancellation && cause instanceof CancelledSubscriptionException) {
+                    downstream.onError(cause);
+                }
                 return;
             }
             canceled = true;

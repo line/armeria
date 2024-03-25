@@ -1,0 +1,13 @@
+armeria:
+  ports:
+    - port: 0
+    - port: 0
+
+management:
+  server:
+    port: 0
+  endpoints:
+    web:
+      exposure:
+        include: health, loggers, prometheus
+        exclude: health # exclude has a higher priority than include

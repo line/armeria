@@ -32,6 +32,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -43,7 +44,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import reactor.test.StepVerifier;
 
@@ -112,14 +112,16 @@ class DefaultHttpResponseTest {
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
             if (withPooledObjects) {
-                future = res.aggregateWithPooledObjects(
-                        CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
+                future = res.aggregate(AggregationOptions.builder()
+                                                         .usePooledObjects()
+                                                         .executor(CommonPools.workerGroup().next())
+                                                         .build());
             } else {
                 future = res.aggregate(CommonPools.workerGroup().next());
             }
         } else {
             if (withPooledObjects) {
-                future = res.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
+                future = res.aggregate(AggregationOptions.builder().usePooledObjects().build());
             } else {
                 future = res.aggregate();
             }

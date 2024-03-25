@@ -1,22 +1,22 @@
 package example.springframework.boot.minimal.kotlin
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
+import jakarta.validation.ValidationException
 import java.time.Instant
-import javax.validation.ValidationException
 
 /**
  * A sample exception handler which handles a [ValidationException].
  */
 class ValidationExceptionHandler : ExceptionHandlerFunction {
-
-    private val mapper = jacksonObjectMapper()
-
-    override fun handleException(ctx: ServiceRequestContext, req: HttpRequest, cause: Throwable): HttpResponse {
+    override fun handleException(
+        ctx: ServiceRequestContext,
+        req: HttpRequest,
+        cause: Throwable,
+    ): HttpResponse {
         return if (cause is ValidationException) {
             val status = HttpStatus.BAD_REQUEST
             HttpResponse.ofJson(
@@ -26,10 +26,12 @@ class ValidationExceptionHandler : ExceptionHandlerFunction {
                     cause.message ?: "empty message",
                     req.path(),
                     status.code(),
-                    Instant.now().toString()
-                )
+                    Instant.now().toString(),
+                ),
             )
-        } else ExceptionHandlerFunction.fallthrough()
+        } else {
+            ExceptionHandlerFunction.fallthrough()
+        }
     }
 }
 
@@ -41,5 +43,5 @@ data class ErrorResponse(
     val message: String,
     val path: String,
     val status: Int,
-    val timestamp: String
+    val timestamp: String,
 )

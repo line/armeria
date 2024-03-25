@@ -1,0 +1,24 @@
+---
+date: 2023-10-30
+---
+
+## 🛠️ Bug fixes
+
+- HTTP/2 clients do not limit the maximum number of RST frames per minute before the connection is closed. 
+  - Only 1.26.0 is affected. #5277
+
+## ☢️ Breaking changes
+
+- `Flags.defaultHttp2MaxResetFramesPerMinute()` has been renamed to 
+  <type://Flags#defaultServerHttp2MaxResetFramesPerMinute()>. #5277
+  - `-Dcom.linecorp.armeria.defaultHttp2MaxResetFramesPerMinute=<integer>` property has also been changed to
+    `-Dcom.linecorp.armeria.defaultServerHttp2MaxResetFramesPerMinute=<integer>`.
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'trustin'
+]} />

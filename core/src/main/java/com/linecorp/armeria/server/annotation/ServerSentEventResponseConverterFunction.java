@@ -16,7 +16,7 @@
 package com.linecorp.armeria.server.annotation;
 
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
 import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromEvent;
 import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromPublisher;
 import static com.linecorp.armeria.server.streaming.ServerSentEvents.fromStream;
@@ -44,7 +44,7 @@ public final class ServerSentEventResponseConverterFunction implements ResponseC
 
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
-        final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+        final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
         if (clazz == null) {
             return null;
         }

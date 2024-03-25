@@ -17,9 +17,7 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
+import static com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtil.newResponseConverter;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -29,25 +27,20 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.List;
-import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
-import java.util.stream.Stream;
 
-import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -59,6 +52,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregatedResult;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationType;
@@ -68,18 +62,13 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
-import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
-import com.linecorp.armeria.server.annotation.HttpFileResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.HttpResult;
-import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.ServiceName;
-import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
@@ -89,38 +78,14 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 public final class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
-    /**
-     * The CGLIB class separator: {@code "$$"}.
-     */
-    private static final String CGLIB_CLASS_SEPARATOR = "$$";
-
-    /**
-     * A default {@link ResponseConverterFunction}s.
-     */
-    private static final List<ResponseConverterFunction> defaultResponseConverters =
-            ImmutableList.of(new JacksonResponseConverterFunction(),
-                             new StringResponseConverterFunction(),
-                             new ByteArrayResponseConverterFunction(),
-                             new HttpFileResponseConverterFunction());
-
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
     private static final CompletableFuture<AggregatedResult>
             NO_AGGREGATION_FUTURE = UnmodifiableFuture.completedFuture(AggregatedResult.EMPTY);
 
-    static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
-            ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
-                                                    AnnotatedService.class.getClassLoader()));
-
-    static {
-        if (!responseConverterFunctionProviders.isEmpty()) {
-            logger.debug("Available {}s: {}", ResponseConverterFunctionProvider.class.getSimpleName(),
-                         responseConverterFunctionProviders);
-        }
-    }
-
     private final Object object;
     private final Method method;
+    private final int overloadId;
     private final MethodHandle methodHandle;
     @Nullable
     private final MethodHandle callKotlinSuspendingMethod;
@@ -144,7 +109,7 @@ public final class AnnotatedService implements HttpService {
     private final boolean serviceNameSetByAnnotation;
 
     AnnotatedService(Object object, Method method,
-                     List<AnnotatedValueResolver> resolvers,
+                     int overloadId, List<AnnotatedValueResolver> resolvers,
                      List<ExceptionHandlerFunction> exceptionHandlers,
                      List<ResponseConverterFunction> responseConverters,
                      Route route,
@@ -154,6 +119,9 @@ public final class AnnotatedService implements HttpService {
                      boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
+        checkArgument(overloadId >= 0, "overloadId: %s (expected: >= 0)", overloadId);
+        this.overloadId = overloadId;
+
         checkArgument(!method.isVarArgs(), "%s#%s declared to take a variable number of arguments",
                       method.getDeclaringClass().getSimpleName(), method.getName());
         isKotlinSuspendingMethod = KotlinUtil.isSuspendingFunction(method);
@@ -168,7 +136,7 @@ public final class AnnotatedService implements HttpService {
         }
 
         actualReturnType = getActualReturnType(method);
-        responseConverter = responseConverter(
+        responseConverter = newResponseConverter(
                 actualReturnType, requireNonNull(responseConverters, "responseConverters"));
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.route = requireNonNull(route, "route");
@@ -199,43 +167,13 @@ public final class AnnotatedService implements HttpService {
             this.serviceName = serviceName.value();
             serviceNameSetByAnnotation = true;
         } else {
-            this.serviceName = getUserClass(object.getClass()).getName();
+            this.serviceName = ClassUtil.getUserClass(object.getClass()).getName();
             serviceNameSetByAnnotation = false;
         }
 
         this.method.setAccessible(true);
         // following must be called only after method.setAccessible(true)
         methodHandle = asMethodHandle(method, object);
-    }
-
-    private static ResponseConverterFunction responseConverter(
-            Type returnType, List<ResponseConverterFunction> responseConverters) {
-
-        final ImmutableList<ResponseConverterFunction> backingConverters =
-                ImmutableList
-                        .<ResponseConverterFunction>builder()
-                        .addAll(responseConverters)
-                        .addAll(defaultResponseConverters)
-                        .build();
-        final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
-                ImmutableList
-                        .<ResponseConverterFunction>builder()
-                        .addAll(backingConverters)
-                        // It is the last converter to try to convert the result object into an HttpResponse
-                        // after aggregating the published object from a Publisher or Stream.
-                        .add(new AggregatedResponseConverterFunction(
-                                new CompositeResponseConverterFunction(backingConverters)))
-                        .build());
-
-        for (final ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
-            final ResponseConverterFunction func =
-                    provider.createResponseConverterFunction(returnType, responseConverter);
-            if (func != null) {
-                return func;
-            }
-        }
-
-        return responseConverter;
     }
 
     private static Type getActualReturnType(Method method) {
@@ -298,6 +236,10 @@ public final class AnnotatedService implements HttpService {
         return method;
     }
 
+    int overloadId() {
+        return overloadId;
+    }
+
     List<AnnotatedValueResolver> annotatedValueResolvers() {
         return resolvers;
     }
@@ -306,9 +248,29 @@ public final class AnnotatedService implements HttpService {
         return route;
     }
 
+    // TODO: Expose through `AnnotatedServiceConfig`, see #5382.
+    HttpStatus defaultStatus() {
+        return defaultStatus;
+    }
+
+    HttpService withExceptionHandler(HttpService service) {
+        if (exceptionHandler == null) {
+            return service;
+        }
+        return new ExceptionHandlingHttpService(service, exceptionHandler);
+    }
+
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final HttpResponse response = HttpResponse.from(serve0(ctx, req));
+        if (!defaultHttpHeaders.isEmpty()) {
+            ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
+        }
+        if (!defaultHttpTrailers.isEmpty()) {
+            ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(defaultHttpTrailers));
+        }
+
+        final HttpResponse response = serve0(ctx, req);
+
         if (exceptionHandler == null) {
             // If an error occurs, the default ExceptionHandler will handle the error.
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
@@ -319,14 +281,25 @@ public final class AnnotatedService implements HttpService {
                 });
             }
         }
+
         return response;
     }
 
-    HttpService withExceptionHandler(HttpService service) {
-        if (exceptionHandler == null) {
-            return service;
+    private HttpResponse serve0(ServiceRequestContext ctx, HttpRequest req) {
+        final AggregationType aggregationType =
+                AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers());
+
+        if (aggregationType == AggregationType.NONE && !useBlockingTaskExecutor) {
+            // Fast-path: No aggregation required and blocking task executor is not used.
+            switch (responseType) {
+                case HTTP_RESPONSE:
+                    return (HttpResponse) invoke(ctx, req, AggregatedResult.EMPTY);
+                case OTHER_OBJECTS:
+                    return convertResponse(ctx, invoke(ctx, req, AggregatedResult.EMPTY));
+            }
         }
-        return new ExceptionHandlingHttpService(service, exceptionHandler);
+
+        return HttpResponse.of(serve1(ctx, req, aggregationType));
     }
 
     /**
@@ -334,9 +307,10 @@ public final class AnnotatedService implements HttpService {
      * required to be aggregated. If the return type of the method is not a {@link CompletionStage} or
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
-    private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
+    private CompletionStage<HttpResponse> serve1(ServiceRequestContext ctx, HttpRequest req,
+                                                 AggregationType aggregationType) {
         final CompletableFuture<AggregatedResult> f;
-        switch (AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers())) {
+        switch (aggregationType) {
             case MULTIPART:
                 f = FileAggregatedMultipart.aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
                 break;
@@ -351,9 +325,6 @@ public final class AnnotatedService implements HttpService {
                 throw new Error();
         }
 
-        ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
-        ctx.mutateAdditionalResponseTrailers(mutator -> mutator.add(defaultHttpTrailers));
-
         switch (responseType) {
             case HTTP_RESPONSE:
                 if (useBlockingTaskExecutor) {
@@ -362,7 +333,6 @@ public final class AnnotatedService implements HttpService {
                 } else {
                     return f.thenApply(aReq -> (HttpResponse) invoke(ctx, req, aReq));
                 }
-
             case COMPLETION_STAGE:
             case KOTLIN_COROUTINES:
             case SCALA_FUTURE:
@@ -375,11 +345,10 @@ public final class AnnotatedService implements HttpService {
                     composedFuture = f.thenCompose(
                             aReq -> toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()));
                 }
-                return composedFuture
-                        .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
+                return composedFuture.thenApply(result -> convertResponse(ctx, result));
             default:
                 final Function<AggregatedResult, HttpResponse> defaultApplyFunction =
-                        aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
+                        aReq -> convertResponse(ctx, invoke(ctx, req, aReq));
                 if (useBlockingTaskExecutor) {
                     return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
                 } else {
@@ -420,63 +389,58 @@ public final class AnnotatedService implements HttpService {
     /**
      * Converts the specified {@code result} to an {@link HttpResponse}.
      */
-    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable HttpHeaders headers,
-                                         @Nullable Object result, HttpHeaders trailers) {
-        final ResponseHeaders newHeaders;
-        final HttpHeaders newTrailers;
-        if (result instanceof HttpResult) {
-            final HttpResult<?> httpResult = (HttpResult<?>) result;
-            newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
-            result = httpResult.content();
-            newTrailers = httpResult.trailers();
-        } else {
-            newHeaders = setHttpStatus(
-                    headers == null ? addNegotiatedResponseMediaType(ctx, HttpHeaders.of())
-                                    : ResponseHeaders.builder().add(headers));
-            newTrailers = trailers;
-        }
-
+    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
         if (result instanceof HttpResponse) {
             return (HttpResponse) result;
         }
         if (result instanceof AggregatedHttpResponse) {
             return ((AggregatedHttpResponse) result).toHttpResponse();
         }
+
+        final ResponseHeaders headers;
+        final HttpHeaders trailers;
+
+        if (result instanceof HttpResult) {
+            final HttpResult<?> httpResult = (HttpResult<?>) result;
+            headers = HttpResultUtil.buildResponseHeaders(ctx, httpResult);
+            result = httpResult.content();
+            trailers = httpResult.trailers();
+        } else {
+            headers = buildResponseHeaders(ctx);
+            trailers = HttpHeaders.of();
+        }
+
+        return convertResponseInternal(ctx, headers, result, trailers);
+    }
+
+    private HttpResponse convertResponseInternal(ServiceRequestContext ctx,
+                                                 ResponseHeaders headers,
+                                                 @Nullable Object result,
+                                                 HttpHeaders trailers) {
         if (result instanceof CompletionStage) {
             final CompletionStage<?> future = (CompletionStage<?>) result;
-            return HttpResponse.from(future.thenApply(object -> convertResponse(ctx, newHeaders, object,
-                                                                                newTrailers)));
+            return HttpResponse.of(
+                    future.thenApply(object -> convertResponseInternal(ctx, headers, object, trailers)));
         }
 
         try (SafeCloseable ignored = ctx.push()) {
-            return responseConverter.convertResponse(ctx, newHeaders, result, newTrailers);
+            return responseConverter.convertResponse(ctx, headers, result, trailers);
         } catch (Exception cause) {
             return HttpResponse.ofFailure(cause);
         }
     }
 
-    private static ResponseHeadersBuilder addNegotiatedResponseMediaType(ServiceRequestContext ctx,
-                                                                         HttpHeaders headers) {
+    private ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx) {
+        final ResponseHeadersBuilder builder = ResponseHeaders.builder(defaultStatus);
+        if (builder.status().isContentAlwaysEmpty()) {
+            return builder.build();
+        }
 
         final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
-        if (negotiatedResponseMediaType == null || headers.contentType() != null) {
-            // Do not overwrite 'content-type'.
-            return ResponseHeaders.builder()
-                                  .add(headers);
+        if (negotiatedResponseMediaType != null) {
+            builder.contentType(negotiatedResponseMediaType);
         }
-
-        return ResponseHeaders.builder()
-                              .add(headers)
-                              .contentType(negotiatedResponseMediaType);
-    }
-
-    private ResponseHeaders setHttpStatus(ResponseHeadersBuilder headers) {
-        if (headers.contains(HttpHeaderNames.STATUS)) {
-            // Do not overwrite HTTP status.
-            return headers.build();
-        }
-
-        return headers.status(defaultStatus).build();
+        return builder.build();
     }
 
     /**
@@ -579,77 +543,6 @@ public final class AnnotatedService implements HttpService {
                 return exceptionHandler.handleException(ctx, req, ex);
             }
         }
-    }
-
-    /**
-     * A response converter implementation which creates an {@link HttpResponse} with
-     * the objects published from a {@link Publisher} or {@link Stream}.
-     */
-    @VisibleForTesting
-    static final class AggregatedResponseConverterFunction implements ResponseConverterFunction {
-
-        private final ResponseConverterFunction responseConverter;
-
-        AggregatedResponseConverterFunction(ResponseConverterFunction responseConverter) {
-            this.responseConverter = responseConverter;
-        }
-
-        @Override
-        public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
-            final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
-            if (clazz == null) {
-                return null;
-            }
-
-            if (HttpResponse.class.isAssignableFrom(clazz)) {
-                return true;
-            }
-            if (Publisher.class.isAssignableFrom(clazz) || Stream.class.isAssignableFrom(clazz)) {
-                return false;
-            }
-
-            return null;
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            ResponseHeaders headers,
-                                            @Nullable Object result,
-                                            HttpHeaders trailers) throws Exception {
-            final CompletableFuture<?> f;
-            if (result instanceof Publisher) {
-                f = collectFrom((Publisher<Object>) result, ctx);
-            } else if (result instanceof Stream) {
-                f = collectFrom((Stream<Object>) result, ctx.blockingTaskExecutor());
-            } else {
-                return ResponseConverterFunction.fallthrough();
-            }
-
-            assert f != null;
-            return HttpResponse.from(f.thenApply(aggregated -> {
-                try {
-                    return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
-                } catch (Exception ex) {
-                    return Exceptions.throwUnsafely(ex);
-                }
-            }));
-        }
-    }
-
-    /**
-     * Returns the user-defined class for the given class: usually simply the given class,
-     * but the original class in case of a CGLIB-generated subclass.
-     */
-    private static Class<?> getUserClass(Class<?> clazz) {
-        // Forked from https://github.com/spring-projects/spring-framework/blob/1565f4b83e7c48eeec9dc74f7eb042dce4dbb49a/spring-core/src/main/java/org/springframework/util/ClassUtils.java#L896-L904
-        if (clazz.getName().contains(CGLIB_CLASS_SEPARATOR)) {
-            final Class<?> superclass = clazz.getSuperclass();
-            if (superclass != null && superclass != Object.class) {
-                return superclass;
-            }
-        }
-        return clazz;
     }
 
     /**

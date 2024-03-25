@@ -50,15 +50,6 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAliveHandler());
         connection().addListener(responseDecoder);
         decoder().frameListener(responseDecoder);
-
-        // Setup post build options
-        final long timeout = clientFactory.idleTimeoutMillis();
-        if (timeout > 0) {
-            gracefulShutdownTimeoutMillis(timeout);
-        } else {
-            // Timeout disabled
-            gracefulShutdownTimeoutMillis(-1);
-        }
     }
 
     private static KeepAliveHandler newKeepAliveHandler(
@@ -66,6 +57,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
             HttpClientFactory clientFactory, SessionProtocol protocol) {
 
         final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
+        final boolean keepAliveOnPing = clientFactory.keepAliveOnPing();
         final long pingIntervalMillis = clientFactory.pingIntervalMillis();
         final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
@@ -73,7 +65,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
         if (!needsKeepAliveHandler) {
-            return NoopKeepAliveHandler.INSTANCE;
+            return new NoopKeepAliveHandler();
         }
 
         final Timer keepAliveTimer =
@@ -81,7 +73,8 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
                                     ImmutableList.of(Tag.of("protocol", protocol.uriText())));
         return new Http2ClientKeepAliveHandler(
                 channel, encoder.frameWriter(), keepAliveTimer,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                keepAliveOnPing);
     }
 
     Http2ResponseDecoder responseDecoder() {

@@ -35,6 +35,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -45,6 +46,9 @@ import com.linecorp.armeria.internal.common.encoding.DefaultHttpDecodedResponse;
 /**
  * A {@link DecoratingClient} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
  * content of an {@link HttpResponse}.
+ *
+ * <p>Note that if a decoded content exceeds {@link ClientRequestContext#maxResponseLength()},
+ * a {@link ContentTooLargeException} will be raised.
  */
 public final class DecodingClient extends SimpleDecoratingHttpClient {
 
@@ -158,7 +162,7 @@ public final class DecodingClient extends SimpleDecoratingHttpClient {
             ClientRequestContext ctx, HttpRequest req,
             Map<String, StreamDecoderFactory> decoderFactories) throws Exception {
         final HttpResponse res = unwrap().execute(ctx, req);
-        return new DefaultHttpDecodedResponse(res, decoderFactories, ctx.alloc(), strictContentEncoding);
+        return new DefaultHttpDecodedResponse(res, decoderFactories, ctx, strictContentEncoding);
     }
 
     private static HttpRequest updateAcceptEncoding(ClientRequestContext ctx, HttpRequest req,

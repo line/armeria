@@ -18,8 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Base64;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -36,14 +34,14 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.protobuf.StatusProto;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 public class GrpcStatusDetailsBinHeaderTest {
 
@@ -92,12 +90,6 @@ public class GrpcStatusDetailsBinHeaderTest {
                               .build());
     }
 
-    private static Status decodeGrpcStatusDetailsBin(String grpcStatusDetailsBin)
-            throws InvalidProtocolBufferException {
-        final byte[] result = Base64.getDecoder().decode(grpcStatusDetailsBin);
-        return Status.parseFrom(result);
-    }
-
     @Test
     void googleRpcErrorDetail() throws InvalidProtocolBufferException {
         final BlockingWebClient client = testServer.webClient().blocking();
@@ -106,7 +98,7 @@ public class GrpcStatusDetailsBinHeaderTest {
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
                       .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
                       .execute();
-        final Status status = decodeGrpcStatusDetailsBin(
+        final Status status = UnframedGrpcErrorHandlers.decodeGrpcStatusDetailsBin(
                 response.headers().get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN));
         assertThat(status).isEqualTo(googleRpcStatus);
         assertThat(response.trailers()).isEmpty();

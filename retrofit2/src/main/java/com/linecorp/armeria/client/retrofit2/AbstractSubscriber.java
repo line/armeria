@@ -176,10 +176,9 @@ abstract class AbstractSubscriber implements Subscriber<HttpObject> {
         callbackExecutor.execute(() -> {
             try {
                 callback.onResponse(armeriaCall, responseBuilder
-                        .body(ResponseBody.create(content,
-                                                  Strings.isNullOrEmpty(contentType) ?
+                        .body(ResponseBody.create(Strings.isNullOrEmpty(contentType) ?
                                                   null : MediaType.parse(contentType),
-                                                  contentLength))
+                                                  contentLength, content))
                         .build());
             } catch (IOException e) {
                 callback.onFailure(armeriaCall, e);

@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.server.graphql.protocol;
 import java.util.List;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -33,7 +32,8 @@ public final class GraphqlUtil {
     /**
      * Returns the negotiated {@link MediaType}. {@link MediaType#JSON} and {@link MediaType#GRAPHQL_JSON}
      * are commonly used for the Content-Type of a GraphQL response.
-     * If {@link HttpHeaderNames#ACCEPT} is not specified, {@link MediaType#GRAPHQL_JSON} is used by default.
+     * {@link MediaType#GRAPHQL_JSON} is used by default when {@link HttpHeaderNames#ACCEPT} is not specified or
+     * the {@link RequestHeaders} contains {@link MediaType#MULTIPART_FORM_DATA}.
      *
      * <p>Note that the negotiated {@link MediaType} could not be used by the implementation of
      * {@link AbstractGraphqlService} which may choose to respond in one of several ways
@@ -43,30 +43,33 @@ public final class GraphqlUtil {
      */
     @Nullable
     public static MediaType produceType(RequestHeaders headers) {
-        final MediaType contentType = headers.contentType();
-        if (HttpMethod.POST == headers.method() &&
-                contentType != null && contentType.is(MediaType.GRAPHQL)) {
-            return MediaType.GRAPHQL_JSON;
-        }
-
         final List<MediaType> acceptTypes = headers.accept();
-        if (acceptTypes.isEmpty()) {
-            // If there is no Accept header in the request, the response MUST include
-            // a Content-Type: application/graphql+json header
-            return MediaType.GRAPHQL_JSON;
+        // Check the accept header first.
+        if (!acceptTypes.isEmpty()) {
+            for (MediaType accept : acceptTypes) {
+                if (MediaType.ANY_TYPE.is(accept) || MediaType.ANY_APPLICATION_TYPE.is(accept)) {
+                    // This will be changed to return MediaType.GRAPHQL_RESPONSE_JSON after 2025.
+                    // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#legacy-watershed-1
+                    return MediaType.JSON;
+                }
+                if (accept.is(MediaType.GRAPHQL_RESPONSE_JSON) ||
+                    accept.is(MediaType.GRAPHQL_JSON) ||
+                    accept.is(MediaType.JSON)) {
+                    return accept;
+                }
+            }
+
+            // When the accept header is invalid, we have 2 options:
+            // - Disregard the Accept header and respond with the default media type.
+            // - Respond with a 406 Not Acceptable.
+            // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#body
+            // We just return null to send 406 response, but we might revisit later to use different option.
+            return null;
         }
 
-        for (MediaType accept : acceptTypes) {
-            if (MediaType.ANY_TYPE.is(accept) || MediaType.ANY_APPLICATION_TYPE.is(accept)) {
-                return MediaType.GRAPHQL_JSON;
-            }
-            if (accept.is(MediaType.GRAPHQL_JSON) || accept.is(MediaType.JSON)) {
-                return accept;
-            }
-        }
-
-        // Not acceptable
-        return null;
+        // This will be changed to return MediaType.GRAPHQL_RESPONSE_JSON after 2025.
+        // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#legacy-watershed-1
+        return MediaType.JSON;
     }
 
     private GraphqlUtil() {}

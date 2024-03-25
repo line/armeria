@@ -1,0 +1,121 @@
+---
+menuTitle: "Define service"
+order: 1
+type: step
+targetLang: java
+---
+
+# Defining a blog service and messages
+
+Let's begin by defining our gRPC blog service in a proto file.
+
+<TutorialSteps current={1} />
+
+## 1. Create a proto file
+
+Create a file, `blog.proto` inside the directory, `{project_root}/src/main/proto`. This tutorial uses [Protocol Buffers version 3](https://developers.google.com/protocol-buffers/docs/proto3).
+
+```protobuf filename=blog.proto
+syntax = "proto3";
+
+package example.armeria.blog.grpc;
+option java_package = "example.armeria.blog.grpc";
+option java_multiple_files = true;
+```
+
+## 2. Define a blog post
+
+In the proto file, define the `BlogPost` message type with minimal data.
+
+```protobuf filename=blog.proto
+message BlogPost {
+  int32 id = 1;
+  string title = 2;
+  string content = 3;
+  int64 createdAt = 4;
+  int64 modifiedAt = 5;
+}
+```
+
+## 3. Add service methods
+
+Add service methods to the blog service. We have two methods for retrieving blog posts; one is for retrieving a single post and another for multiple posts.
+
+<Tip>
+
+  The APIs are designed based on the [Google's API design decisions](https://google.aip.dev/general).
+
+</Tip>
+
+```protobuf filename=blog.proto
+import "google/protobuf/empty.proto";
+
+service BlogService {
+  rpc CreateBlogPost (CreateBlogPostRequest) returns (BlogPost) {}
+  rpc GetBlogPost (GetBlogPostRequest) returns (BlogPost) {}
+  rpc ListBlogPosts (ListBlogPostsRequest) returns (ListBlogPostsResponse) {}
+  rpc UpdateBlogPost (UpdateBlogPostRequest) returns (BlogPost) {}
+  rpc DeleteBlogPost (DeleteBlogPostRequest) returns (google.protobuf.Empty) {}
+}
+```
+
+## 4. Add request types
+
+Add request types for create, retrieve, update, and delete operations.
+
+```protobuf filename=blog.proto
+message CreateBlogPostRequest {
+  string title = 1;
+  string content = 2;
+}
+
+message GetBlogPostRequest {    // For retrieving a single post
+  int32 id = 1;
+}
+
+message ListBlogPostsRequest {  // For retrieving multiple posts
+  bool descending = 1;
+}
+
+message UpdateBlogPostRequest {
+  int32 id = 1;
+  string title = 2;
+  string content = 3;
+}
+
+message DeleteBlogPostRequest {
+  int32 id = 1;
+}
+```
+
+## 5. Add response type
+
+Add a response type to return multiple blog posts.
+
+```protobuf filename=blog.proto
+message ListBlogPostsResponse {
+    repeated BlogPost blogs = 1;
+}
+```
+
+## 6. Compile proto file
+
+Compile the `blog.proto` file to generate Java code.
+
+```bash
+./gradlew generateProto
+```
+
+<Tip>
+
+  Please refer to [build.gradle](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/build.gradle) for generating code with [Protobuf Plugin for Gradle](https://github.com/google/protobuf-gradle-plugin).
+
+</Tip>
+
+Find the Java code output in the directory, `{project_root}/build/generated/source/proto/main`.
+
+## Next step
+
+In this step, we've defined a proto file for our service and generated Java code. Next, we'll implement a minimal blog service and a client to [test run](/tutorials/grpc/blog/run-service).
+
+<TutorialSteps current={1} />

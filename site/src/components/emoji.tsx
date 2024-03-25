@@ -10,7 +10,9 @@ const Emoji: React.FC<EmojiProps> = (props) => svgEmoji(props.text);
 function svgEmoji(input: string) {
   try {
     return emoji(input, {
-      baseUrl: 'https://twemoji.maxcdn.com/2/svg/',
+      // baseUrl shouldn't end with '/'.
+      // https://github.com/appfigures/react-easy-emoji/issues/25
+      baseUrl: 'https://twemoji.maxcdn.com/2/svg',
       ext: '.svg',
       size: '',
     });

@@ -128,7 +128,7 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         final CircuitBreakerRpcClient stub =
-                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, rule());
+                new CircuitBreakerRpcClient(delegate, CircuitBreakerClientHandler.of(circuitBreaker), rule());
 
         stub.execute(ctxA, reqA);
 
@@ -143,7 +143,8 @@ class CircuitBreakerRpcClientTest {
         final CircuitBreakerMapping mapping = (ctx, req) -> {
             throw Exceptions.clearTrace(new AnticipatedException("bug!"));
         };
-        final CircuitBreakerRpcClient stub = new CircuitBreakerRpcClient(delegate, mapping, rule());
+        final CircuitBreakerRpcClient stub = new CircuitBreakerRpcClient(
+                delegate, CircuitBreakerClientHandler.of(mapping), rule());
 
         stub.execute(ctxA, reqA);
 
@@ -161,7 +162,7 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
 
         final CircuitBreakerRpcClient stub =
-                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, rule());
+                new CircuitBreakerRpcClient(delegate, CircuitBreakerClientHandler.of(circuitBreaker), rule());
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -196,7 +197,7 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
 
         final CircuitBreakerRpcClient stub =
-                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, rule());
+                new CircuitBreakerRpcClient(delegate, CircuitBreakerClientHandler.of(circuitBreaker), rule());
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -245,6 +246,34 @@ class CircuitBreakerRpcClientTest {
 
         // CLOSED (methodB)
         assertThat(stub.execute(ctxB, reqB).join()).isNull();
+    }
+
+    @Test
+    void testRecover() throws Exception {
+        final AtomicLong ticker = new AtomicLong();
+        final Function<String, CircuitBreaker> factory = method -> buildCircuitBreaker(ticker::get);
+
+        final RpcClient delegate = mock(RpcClient.class);
+        // Always return failed future for methodA
+        when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
+
+        final CircuitBreakerRpcClientBuilder builder =
+                CircuitBreakerRpcClient.builder(rule())
+                        .mapping(CircuitBreakerMapping.perMethod(factory))
+                        .recover((ctx, cause) -> RpcResponse.of("recover"));
+        final CircuitBreakerRpcClient stub = builder.build(delegate);
+
+        // CLOSED (methodA)
+        for (int i = 0; i < minimumRequestThreshold + 1; i++) {
+            // Need to call execute() one more to change the state of the circuit breaker.
+
+            assertThatThrownBy(() -> stub.execute(ctxA, reqA).join())
+                    .hasCauseInstanceOf(AnticipatedException.class);
+            ticker.addAndGet(Duration.ofMillis(1).toNanos());
+        }
+
+        // OPEN (methodA)
+        assertThat(stub.execute(ctxA, reqA).join()).isEqualTo("recover");
     }
 
     private static CircuitBreaker buildCircuitBreaker(Ticker ticker) {

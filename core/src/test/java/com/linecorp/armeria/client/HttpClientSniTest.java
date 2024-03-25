@@ -35,12 +35,15 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@GenerateNativeImageTrace
 class HttpClientSniTest {
 
     private static int httpsPort;
@@ -50,6 +53,7 @@ class HttpClientSniTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            sb.decorator(LoggingService.newDecorator());
             sb.virtualHost("a.com")
               .service("/", new SniTestService("a.com"))
               .tlsSelfSigned()
@@ -110,28 +114,30 @@ class HttpClientSniTest {
     }
 
     @Test
-    void disallowCustomAuthorityWithAdditionalHeadersInBaseURI() throws Exception {
-        final WebClient client = WebClient.builder("https://127.0.0.1:" + httpsPort)
+    void customAuthorityWithAdditionalHeadersInBaseURI() throws Exception {
+        final WebClient client = WebClient.builder("https://b.com:" + httpsPort)
                                           .factory(clientFactory)
                                           .build();
         try (SafeCloseable unused = Clients.withHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
             final AggregatedHttpResponse response = client.get("/").aggregate().get();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("b.com: CN=b.com");
+            // TLS handshake has been processed with b.com
+            assertThat(response.contentUtf8()).isEqualTo("a.com: CN=b.com");
         }
     }
 
     @Test
-    void allowCustomAuthorityWithAdditionalHeadersInNonBaseURI() throws Exception {
+    void customAuthorityWithAdditionalHeadersInNonBaseURI() throws Exception {
         final WebClient client = WebClient.builder()
                                           .factory(clientFactory)
                                           .decorator(LoggingClient.newDecorator())
                                           .build();
         try (SafeCloseable unused = Clients.withHeader(HttpHeaderNames.AUTHORITY, "a.com:" + httpsPort)) {
             final AggregatedHttpResponse response =
-                    client.get("https://127.0.0.1:" + httpsPort).aggregate().get();
+                    client.get("https://b.com:" + httpsPort).aggregate().get();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(response.contentUtf8()).isEqualTo("a.com: CN=a.com");
+            // TLS handshake has been processed with b.com
+            assertThat(response.contentUtf8()).isEqualTo("a.com: CN=b.com");
         }
     }
 

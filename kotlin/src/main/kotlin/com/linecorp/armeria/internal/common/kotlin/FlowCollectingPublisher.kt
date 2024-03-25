@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.common.kotlin
 
-import com.linecorp.armeria.common.stream.DefaultStreamMessage
+import com.linecorp.armeria.common.stream.StreamMessage
 import io.netty.util.concurrent.EventExecutor
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -35,27 +35,24 @@ import kotlin.coroutines.EmptyCoroutineContext
 internal class FlowCollectingPublisher<T>(
     private val flow: Flow<T>,
     private val executor: EventExecutor,
-    private val context: CoroutineContext = EmptyCoroutineContext
+    private val context: CoroutineContext = EmptyCoroutineContext,
 ) : Publisher<T> {
     @OptIn(DelicateCoroutinesApi::class)
     override fun subscribe(s: Subscriber<in T>) {
-        val delegate = DefaultStreamMessage<T>()
-        val job = GlobalScope.launch(context) {
-            try {
-                flow.collect {
-                    delegate.write(it!!)
-                    delegate.whenConsumed().await()
+        val delegate = StreamMessage.streaming<T>()
+        val job =
+            GlobalScope.launch(context) {
+                try {
+                    flow.collect {
+                        delegate.write(it!!)
+                        delegate.whenConsumed().await()
+                    }
+                } catch (e: Throwable) {
+                    delegate.close(e)
+                    return@launch
                 }
-            } catch (e: Throwable) {
-                if (!delegate.tryClose(e)) {
-                    // Delegate to coroutine's exception handling mechanism,
-                    // which ignores CancellationException.
-                    throw e
-                }
-                return@launch
+                delegate.close()
             }
-            delegate.close()
-        }
         delegate.whenComplete().handle { _, _ ->
             if (job.isActive) {
                 job.cancel()

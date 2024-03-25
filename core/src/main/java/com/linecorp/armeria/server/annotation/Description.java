@@ -22,6 +22,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.linecorp.armeria.internal.server.annotation.DefaultValues;
+import com.linecorp.armeria.server.docs.DocService;
+import com.linecorp.armeria.server.docs.Markup;
 
 /**
  * An annotation used in annotated HTTP service. This describes:
@@ -32,11 +34,16 @@ import com.linecorp.armeria.internal.server.annotation.DefaultValues;
  * </ul>
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD, ElementType.PARAMETER })
+@Target({ ElementType.TYPE, ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD })
 public @interface Description {
 
     /**
      * The description of a type, a field, a method or a parameter.
      */
     String value() default DefaultValues.UNSPECIFIED;
+
+    /**
+     * The supported markup type in {@link DocService}.
+     */
+    Markup markup() default Markup.NONE;
 }

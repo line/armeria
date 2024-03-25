@@ -49,11 +49,15 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 class PathStreamMessageTest {
 
+    private static final Path testFilePath = Paths.get(
+            "src/test/resources/testing/core",
+            PathStreamMessageTest.class.getSimpleName(),
+            "test.txt");
+
     @ArgumentsSource(SubscriptionOptionsProvider.class)
     @ParameterizedTest
     void readFile(SubscriptionOption[] options) {
-        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final ByteStreamMessage publisher = StreamMessage.builder(path)
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath)
                                                          .bufferSize(12)
                                                          .build();
         final AtomicBoolean completed = new AtomicBoolean();
@@ -91,8 +95,7 @@ class PathStreamMessageTest {
     @CsvSource({ "1", "12", "128" })
     @ParameterizedTest
     void differentBufferSize(int bufferSize) {
-        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(bufferSize).build();
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(bufferSize).build();
 
         final StringBuilder stringBuilder = new StringBuilder();
         final AtomicBoolean completed = new AtomicBoolean();
@@ -136,8 +139,7 @@ class PathStreamMessageTest {
     @ParameterizedTest
     void differentPosition(int start, int end, String expected, int bufferSize) {
         expected = expected.replaceAll("\\\\n", "\n");
-        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(bufferSize).build();
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(bufferSize).build();
         final int length = end - start;
         publisher.range(start, length);
 
@@ -172,16 +174,15 @@ class PathStreamMessageTest {
 
     @Test
     void nonPositiveNumber() {
-        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
 
-        assertThatThrownBy(() -> StreamMessage.builder(path).build().range(-1, 0))
+        assertThatThrownBy(() -> StreamMessage.builder(testFilePath).build().range(-1, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("offset: -1 (expected: >= 0)");
-        assertThatThrownBy(() -> StreamMessage.builder(path).build().range(0, 0))
+        assertThatThrownBy(() -> StreamMessage.builder(testFilePath).build().range(0, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("length: 0 (expected: > 0)");
 
-        assertThatThrownBy(() -> StreamMessage.builder(path).bufferSize(0))
+        assertThatThrownBy(() -> StreamMessage.builder(testFilePath).bufferSize(0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("bufferSize: 0 (expected: > 0)");
     }
@@ -189,8 +190,7 @@ class PathStreamMessageTest {
     @Test
     void defaultBlockingTaskExecutor_withServiceRequestContext() {
         final ServiceRequestContext sctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(1).build();
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(1).build();
         final StringAggregator stringAggregator = new StringAggregator();
         try (SafeCloseable ignored = sctx.push()) {
             publisher.subscribe(stringAggregator);
@@ -202,14 +202,97 @@ class PathStreamMessageTest {
     @Test
     void nullBlockingTaskExecutor_withClientRequestContext() {
         final ClientRequestContext cctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final ByteStreamMessage publisher = StreamMessage.builder(path).bufferSize(1).build();
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(1).build();
         final StringAggregator stringAggregator = new StringAggregator();
         try (SafeCloseable ignored = cctx.push()) {
             publisher.subscribe(stringAggregator);
         }
         final String result = stringAggregator.future.join();
         assertThat(result).isEqualTo("A1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
+    }
+
+    @Test
+    void skip0() {
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(1).build()
+                                                         .range(0, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("A1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
+    }
+
+    @Test
+    void skip0_take13() {
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(1).build()
+                                                         .range(0, 13);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("A1234567890\nB");
+    }
+
+    @Test
+    void skip12() {
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(1).build()
+                                                         .range(12, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("B1234567890\nC1234567890\nD1234567890\nE1234567890\n");
+    }
+
+    @Test
+    void skip12_take13() {
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(1).build()
+                                                         .range(12, 13);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("B1234567890\nC");
+    }
+
+    @Test
+    void skipAll() {
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(1).build()
+                                                         .range(999, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void skipMost() {
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(1).build()
+                                                         .range(48, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("E1234567890\n");
+    }
+
+    @Test
+    void skip1() {
+        final ByteStreamMessage publisher = StreamMessage.builder(testFilePath).bufferSize(1).build()
+                                                         .range(1, Long.MAX_VALUE);
+        final StringAggregator stringAggregator = new StringAggregator();
+
+        publisher.subscribe(stringAggregator);
+        final String result = stringAggregator.future.join();
+
+        assertThat(result).isEqualTo("1234567890\nB1234567890\nC1234567890\nD1234567890\nE1234567890\n");
     }
 
     private static class StringAggregator implements Subscriber<HttpData> {

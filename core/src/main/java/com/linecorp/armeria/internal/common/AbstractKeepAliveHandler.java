@@ -63,6 +63,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private ScheduledFuture<?> connectionIdleTimeout;
     private final long connectionIdleTimeNanos;
     private long lastConnectionIdleTime;
+    private final boolean keepAliveOnPing;
 
     @Nullable
     private ScheduledFuture<?> pingIdleTimeout;
@@ -76,6 +77,8 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private boolean isMaxConnectionAgeExceeded;
 
     private boolean isInitialized;
+    private boolean closed;
+    private boolean disconnectWhenFinished;
     private PingState pingState = PingState.IDLE;
 
     @Nullable
@@ -85,12 +88,14 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
                                        long idleTimeoutMillis, long pingIntervalMillis,
-                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection) {
+                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
+                                       boolean keepAliveOnPing) {
         this.channel = channel;
         this.name = name;
         isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
+        this.keepAliveOnPing = keepAliveOnPing;
 
         if (idleTimeoutMillis <= 0) {
             connectionIdleTimeNanos = 0;
@@ -123,6 +128,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         final long connectionStartTimeNanos = System.nanoTime();
         ctx.channel().closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
+            destroy();
         });
 
         lastConnectionIdleTime = lastPingIdleTime = connectionStartTimeNanos;
@@ -142,6 +148,11 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public final void destroy() {
+        if (closed) {
+            return;
+        }
+
+        closed = true;
         isInitialized = true;
         if (connectionIdleTimeout != null) {
             connectionIdleTimeout.cancel(false);
@@ -186,6 +197,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             return;
         }
 
+        if (connectionIdleTimeNanos > 0 && keepAliveOnPing) {
+            lastConnectionIdleTime = System.nanoTime();
+        }
+
         if (pingIdleTimeNanos > 0) {
             firstPingIdleEvent = true;
             lastPingIdleTime = System.nanoTime();
@@ -200,9 +215,14 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     }
 
     @Override
-    public final boolean needToCloseConnection() {
-        return isMaxConnectionAgeExceeded || (currentNumRequests > 0 && currentNumRequests >=
-                                                                        maxNumRequestsPerConnection);
+    public void disconnectWhenFinished() {
+        disconnectWhenFinished = true;
+    }
+
+    @Override
+    public final boolean needsDisconnection() {
+        return disconnectWhenFinished || pingState == PingState.SHUTDOWN || isMaxConnectionAgeExceeded ||
+               (currentNumRequests > 0 && currentNumRequests >= maxNumRequestsPerConnection);
     }
 
     @Override
@@ -442,12 +462,5 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 logger.warn("Unexpected error occurred while closing a connection exceeding the max age", e);
             }
         }
-    }
-
-    enum KeepAliveType {
-        HTTP2_SERVER,
-        HTTP1_SERVER,
-        HTTP2_CLIENT,
-        HTTP1_CLIENT
     }
 }

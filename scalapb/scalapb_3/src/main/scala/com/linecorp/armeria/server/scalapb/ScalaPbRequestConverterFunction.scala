@@ -233,7 +233,7 @@ object ScalaPbRequestConverterFunction {
   /**
    * Returns a default instance from the specified [[scalapb.GeneratedMessage]]'s class.
    */
-  private def getDefaultInstance(clazz: Class[_]): GeneratedMessage = {
+  private[scalapb] def getDefaultInstance(clazz: Class[_]): GeneratedMessage = {
     val defaultInstance = defaultInstanceCache.computeIfAbsent(
       clazz,
       key =>

@@ -1,0 +1,59 @@
+[ {
+  "interfaces" : [ "javax.ws.rs.core.HttpHeaders" ]
+}, {
+  "interfaces" : [ "javax.ws.rs.core.Request" ]
+}, {
+  "interfaces" : [ "javax.ws.rs.core.SecurityContext" ]
+}, {
+  "interfaces" : [ "javax.ws.rs.core.UriInfo" ]
+}, {
+  "interfaces" : [ "javax.ws.rs.ext.Providers" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.method.MethodDescription$InDefinedShape$AbstractBase$Executable" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.method.ParameterDescription$ForLoadedParameter$Parameter" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.method.ParameterList$ForLoadedExecutable$Executable" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDefinition$Sort$AnnotatedType" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$ForLoadedType$Dispatcher" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$Delegator$ForLoadedExecutableExceptionType$Dispatcher" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$Delegator$ForLoadedExecutableParameterType$Dispatcher" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$Delegator$ForLoadedMethodReturnType$Dispatcher" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$ForComponentType$AnnotatedParameterizedType" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$ForTypeArgument$AnnotatedParameterizedType" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$ForTypeVariableBoundType$AnnotatedTypeVariable" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$ForTypeVariableBoundType$OfFormalTypeVariable$FormalTypeVariable" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$ForWildcardLowerBoundType$AnnotatedWildcardType" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.description.type.TypeDescription$Generic$AnnotationReader$ForWildcardUpperBoundType$AnnotatedWildcardType" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.dynamic.loading.ClassInjector$UsingLookup$MethodHandles" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.dynamic.loading.ClassInjector$UsingLookup$MethodHandles$Lookup" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.dynamic.loading.ClassInjector$UsingReflection$System" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.dynamic.loading.ClassInjector$UsingUnsafe$System" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.utility.JavaModule$Module" ]
+}, {
+  "interfaces" : [ "net.bytebuddy.utility.JavaModule$Resolver" ]
+}, {
+  "interfaces" : [ "org.jboss.resteasy.spi.HttpRequest" ]
+}, {
+  "interfaces" : [ "org.jboss.resteasy.spi.ResteasyConfiguration" ]
+} ]

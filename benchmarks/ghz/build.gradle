@@ -5,7 +5,7 @@ plugins {
 dependencies {
     implementation project(':core')
     implementation project(':grpc')
-    implementation 'javax.annotation:javax.annotation-api'
+    implementation libs.javax.annotation
 }
 
 application {

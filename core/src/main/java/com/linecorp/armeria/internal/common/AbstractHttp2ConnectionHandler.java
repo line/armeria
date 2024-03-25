@@ -45,6 +45,7 @@ import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
 import io.netty.handler.codec.http2.Http2Exception;
+import io.netty.handler.codec.http2.Http2Exception.StreamException;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.codec.http2.Http2StreamVisitor;
@@ -111,11 +112,18 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
 
         handlingConnectionError = true;
         if (Exceptions.isExpected(cause) || isGoAwaySentException(cause, connection())) {
-            // Ignore silently.
+            logger.trace("{} HTTP/2 connection error:", ctx.channel(), cause);
         } else {
             logger.warn("{} HTTP/2 connection error:", ctx.channel(), cause);
         }
         super.onConnectionError(ctx, outbound, cause, filterHttp2Exception(cause, http2Ex));
+    }
+
+    @Override
+    protected void onStreamError(ChannelHandlerContext ctx, boolean outbound, Throwable cause,
+                                 StreamException http2Ex) {
+        logger.debug("{} HTTP/2 stream error:", ctx.channel(), cause);
+        super.onStreamError(ctx, outbound, cause, http2Ex);
     }
 
     private static Http2Exception filterHttp2Exception(Throwable cause, @Nullable Http2Exception http2Ex) {

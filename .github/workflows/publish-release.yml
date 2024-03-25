@@ -7,36 +7,31 @@ on:
 
 env:
   LC_ALL: "en_US.UTF-8"
+  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
 
 jobs:
   publish:
     name: Publish final artifacts
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted
+    runs-on: self-hosted-safe
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - id: setup-jdk-17
-        name: Set up JDK 17
-        uses: actions/setup-java@v2
+      - id: setup-jdk-19
+        name: Set up JDK 19
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '19'
 
-      - name: Restore the cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
-          restore-keys: |
-            build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
-            build-${{ matrix.java }}-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v3
 
       - name: Build with Gradle
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PflakyTests=false build
+          ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PflakyTests=false \
+          -Pretry=true -PfailOnPassedAfterRetry=false \
+          build
         shell: bash
 
       - name: Publish and close repository
@@ -52,8 +47,15 @@ jobs:
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
         shell: bash
 
-      - name: Clean up Gradle cache
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Perform post-release process
+        working-directory: .github/actions
         run: |
-          rm -f ~/.gradle/caches/modules-2/modules-2.lock
-          rm -f ~/.gradle/caches/modules-2/gc.properties
-        shell: bash
+          npm ci
+          npm run post-release ${{ github.ref_name }}
+        env:
+          GITHUB_ACCESS_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}

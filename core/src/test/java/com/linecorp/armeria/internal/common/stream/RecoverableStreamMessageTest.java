@@ -43,12 +43,13 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompositeException;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import reactor.test.StepVerifier;
 
 class RecoverableStreamMessageTest {
     @Test
@@ -68,7 +69,7 @@ class RecoverableStreamMessageTest {
 
     @Test
     void resumeOnError() {
-        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Integer> stream = StreamMessage.streaming();
         final StreamMessage<Integer> recoverable = stream.recoverAndResume(cause -> StreamMessage.of(4, 5, 6));
         stream.write(1);
         stream.write(2);
@@ -79,9 +80,9 @@ class RecoverableStreamMessageTest {
 
     @Test
     void recoverStreamMessageShortcut() {
-        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Integer> stream = StreamMessage.streaming();
         final StreamMessage<Integer> recoverable =
-            stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(5, 6, 7));
+                stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(5, 6, 7));
         stream.write(1);
         stream.write(2);
         stream.write(3);
@@ -92,7 +93,7 @@ class RecoverableStreamMessageTest {
 
     @Test
     void recoverStreamMessagesShortcutHandleSubClassExceptions() {
-        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Integer> stream = StreamMessage.streaming();
         final StreamMessage<Integer> recoverable =
                 stream.recoverAndResume(RuntimeException.class, cause -> StreamMessage.of(5, 6, 7));
         stream.write(1);
@@ -105,26 +106,26 @@ class RecoverableStreamMessageTest {
 
     @Test
     void thrownTypeMismatchRecoverStreamMessageShortcut() {
-        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Integer> stream = StreamMessage.streaming();
         final StreamMessage<Integer> recoverable =
-            stream.recoverAndResume(IllegalStateException.class, cause -> null);
+                stream.recoverAndResume(IllegalStateException.class, cause -> null);
         stream.write(1);
         stream.write(2);
         stream.write(3);
         stream.close(ClosedStreamException.get());
         assertThatThrownBy(() -> recoverable.collect().join())
-            .isInstanceOf(CompletionException.class)
-            .hasCauseInstanceOf(CompositeException.class)
-            .getCause()
-            .extracting("exceptions", ITERABLE)
-            .element(0)
-            .isInstanceOf(ClosedStreamException.class);
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(CompositeException.class)
+                .cause()
+                .extracting("exceptions", ITERABLE)
+                .element(0)
+                .isInstanceOf(ClosedStreamException.class);
     }
 
     @CsvSource({ "true", "false" })
     @ParameterizedTest
     void shouldNotResumeOnAbortion(boolean abort) {
-        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Integer> stream = StreamMessage.streaming();
         final StreamMessage<Integer> aborted = stream.recoverAndResume(cause -> StreamMessage.of(4, 5, 6));
         stream.write(1);
         stream.write(2);
@@ -177,7 +178,7 @@ class RecoverableStreamMessageTest {
 
     @Test
     void backPressure() {
-        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Integer> stream = StreamMessage.streaming();
         final StreamMessage<Integer> recoverable = stream.recoverAndResume(cause -> StreamMessage.of(4, 5, 6));
         stream.write(1);
         stream.write(2);
@@ -233,7 +234,7 @@ class RecoverableStreamMessageTest {
     void disallowResuming_nonEmtpyStream() {
         // Resume is disabled.
         // The fallback function should be not invoked if some items are written before an error occurs.
-        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Integer> stream = StreamMessage.streaming();
         stream.write(1);
         stream.write(2);
         stream.write(3);
@@ -305,41 +306,64 @@ class RecoverableStreamMessageTest {
                     throw ClosedStreamException.get();
                 });
         final HttpResponse recovered2 = transformed.recover(cause -> HttpResponse.of("fallback"));
-        final AggregatedHttpResponse response2 = recovered2.aggregate().join();
-        assertThat(response2.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response2.contentUtf8()).isEqualTo("fallback");
+        StepVerifier.create(recovered2, 1)
+                    .expectNextMatches(headers -> ((ResponseHeaders) headers).status() == HttpStatus.OK)
+                    .thenRequest(1)
+                    .expectNext(HttpData.ofUtf8("fallback"))
+                    .verifyComplete();
     }
 
     @Test
     void nonRecoverableHttpResponse() {
+        final HttpResponseWriter failedResponse = HttpResponse.streaming();
+        final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.OK);
+        final HttpData data = HttpData.ofUtf8("hello");
+        failedResponse.write(headers);
+        failedResponse.write(data);
+        final ClosedStreamException cause1 = ClosedStreamException.get();
+        failedResponse.close(cause1);
+        final HttpResponse recovered = failedResponse.recover(unused -> HttpResponse.of("fallback"));
+        StepVerifier.create(recovered)
+                    .expectNext(headers)
+                    .expectNext(data)
+                    .expectErrorSatisfies(cause -> {
+                        assertThat(cause).isInstanceOf(ClosedStreamException.class);
+                    })
+                    .verify();
+    }
+
+    @Test
+    void recoverableHttpResponseWithAggregation() {
         final HttpResponseWriter failedResponse = HttpResponse.streaming();
         failedResponse.write(ResponseHeaders.of(HttpStatus.OK));
         failedResponse.write(HttpData.ofUtf8("hello"));
         final ClosedStreamException cause1 = ClosedStreamException.get();
         failedResponse.close(cause1);
         final HttpResponse recovered = failedResponse.recover(unused -> HttpResponse.of("fallback"));
-        assertThatThrownBy(() -> recovered.aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(ClosedStreamException.class);
+        final AggregatedHttpResponse httpResponse = recovered.aggregate().join();
+        assertThat(httpResponse.headers().status()).isEqualTo(HttpStatus.OK);
+        // As `failedResponse` is collected at once, it is recoverable with `aggregate()`.
+        assertThat(httpResponse.contentUtf8()).isEqualTo("fallback");
     }
 
     @Test
     void shortcutRecoverableHttpResponse() {
         final HttpResponse failedResponse = HttpResponse.ofFailure(new IllegalStateException("test exception"));
         final HttpResponse recovered =
-            failedResponse.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback"));
+                failedResponse.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback"));
         final AggregatedHttpResponse response = recovered.aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("fallback");
 
         final HttpResponseWriter failedResponse2 = HttpResponse.streaming();
         failedResponse2.write(ResponseHeaders.of(HttpStatus.NOT_ACCEPTABLE));
+        failedResponse2.close();
         final HttpResponse transformed =
-            failedResponse2.mapHeaders(headers -> {
-                throw new IllegalStateException("test exception");
-            });
+                failedResponse2.mapHeaders(headers -> {
+                    throw new IllegalStateException("test exception");
+                });
         final HttpResponse recovered2 =
-            transformed.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback2"));
+                transformed.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback2"));
         final AggregatedHttpResponse response2 = recovered2.aggregate().join();
         assertThat(response2.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response2.contentUtf8()).isEqualTo("fallback2");
@@ -349,19 +373,20 @@ class RecoverableStreamMessageTest {
     void recoverHttpResponseShortcutHandleSubClassExceptions() {
         final HttpResponse failedResponse = HttpResponse.ofFailure(new IllegalStateException("test exception"));
         final HttpResponse recovered =
-            failedResponse.recover(RuntimeException.class, cause -> HttpResponse.of("fallback"));
+                failedResponse.recover(RuntimeException.class, cause -> HttpResponse.of("fallback"));
         final AggregatedHttpResponse response = recovered.aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("fallback");
 
         final HttpResponseWriter failedResponse2 = HttpResponse.streaming();
         failedResponse2.write(ResponseHeaders.of(HttpStatus.NOT_MODIFIED));
+        failedResponse2.close();
         final HttpResponse transformed =
-        failedResponse2.mapHeaders(headers -> {
-            throw new IllegalStateException("test exception");
-        });
+                failedResponse2.mapHeaders(headers -> {
+                    throw new IllegalStateException("test exception");
+                });
         final HttpResponse recovered2 =
-        transformed.recover(Throwable.class, cause -> HttpResponse.of("fallback2"));
+                transformed.recover(Throwable.class, cause -> HttpResponse.of("fallback2"));
         final AggregatedHttpResponse response2 = recovered2.aggregate().join();
         assertThat(response2.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response2.contentUtf8()).isEqualTo("fallback2");
@@ -370,28 +395,25 @@ class RecoverableStreamMessageTest {
     @Test
     void shortcutRecoverableHttpResponseHandleException() {
         final HttpResponse failedResponse =
-            HttpResponse.ofFailure(new IllegalStateException("test exception"));
+                HttpResponse.ofFailure(new IllegalStateException("test exception"));
         final HttpResponse incorrectRecover =
-            failedResponse.recover(IllegalStateException.class, cause -> null);
+                failedResponse.recover(IllegalStateException.class, cause -> null);
         assertThatThrownBy(() -> incorrectRecover.aggregate().join())
-            .isInstanceOf(CompletionException.class)
-            .hasCauseInstanceOf(CompositeException.class)
-            .getCause()
-            .extracting("exceptions", ITERABLE)
-            .element(0)
-            .isInstanceOf(NullPointerException.class);
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(NullPointerException.class);
 
         final HttpResponse failedResponse2 =
-            HttpResponse.ofFailure(new IllegalStateException("test exception"));
+                HttpResponse.ofFailure(new IllegalStateException("test exception"));
         final HttpResponse incorrectRecover2 =
-            failedResponse2.recover(IllegalArgumentException.class, cause -> HttpResponse.of("fallback"));
-        assertThatThrownBy(() -> incorrectRecover2.aggregate().join())
-            .isInstanceOf(CompletionException.class)
-            .hasCauseInstanceOf(CompositeException.class)
-            .getCause()
-            .extracting("exceptions", ITERABLE)
-            .element(0)
-            .isInstanceOf(IllegalStateException.class);
+                failedResponse2.recover(IllegalArgumentException.class, cause -> HttpResponse.of("fallback"));
+        StepVerifier.create(incorrectRecover2)
+                    .expectErrorSatisfies(cause -> {
+                        assertThat(cause)
+                                .isInstanceOf(CompositeException.class)
+                                .extracting("exceptions", ITERABLE)
+                                .element(0)
+                                .isInstanceOf(IllegalStateException.class);
+                    }).verify();
     }
 
     @Test
@@ -402,13 +424,13 @@ class RecoverableStreamMessageTest {
                 HttpResponse.ofFailure(ex1);
         final HttpResponse recoverChain =
                 failedResponse.recover(RuntimeException.class, cause -> {
-                    assertThat(cause).isSameAs(ex1);
-                    return HttpResponse.ofFailure(ex2);
-                })
-               .recover(IllegalStateException.class, cause -> {
-                   assertThat(cause).isSameAs(ex2);
-                   return HttpResponse.of("fallback");
-               });
+                                  assertThat(cause).isSameAs(ex1);
+                                  return HttpResponse.ofFailure(ex2);
+                              })
+                              .recover(IllegalStateException.class, cause -> {
+                                  assertThat(cause).isSameAs(ex2);
+                                  return HttpResponse.of("fallback");
+                              });
 
         final AggregatedHttpResponse response = recoverChain.aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
@@ -417,23 +439,23 @@ class RecoverableStreamMessageTest {
 
     @Test
     void shortcutRecoverableChainStreamMessage() {
-        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Integer> stream = StreamMessage.streaming();
         final IllegalStateException ex1 = new IllegalStateException("oops1");
         final IllegalStateException ex2 = new IllegalStateException("oops2");
         final IllegalArgumentException ex3 = new IllegalArgumentException("oops3");
         final StreamMessage<Integer> recoverable =
                 stream.recoverAndResume(RuntimeException.class, cause -> {
-                    assertThat(cause).isEqualTo(ex1);
-                    return StreamMessage.aborted(ex2);
-                })
-               .recoverAndResume(IllegalStateException.class, cause -> {
-                   assertThat(cause).isEqualTo(ex2);
-                   return StreamMessage.aborted(ex3);
-               })
-               .recoverAndResume(IllegalArgumentException.class, cause -> {
-                   assertThat(cause).isEqualTo(ex3);
-                   return StreamMessage.of(4, 5, 6);
-               });
+                          assertThat(cause).isEqualTo(ex1);
+                          return StreamMessage.aborted(ex2);
+                      })
+                      .recoverAndResume(IllegalStateException.class, cause -> {
+                          assertThat(cause).isEqualTo(ex2);
+                          return StreamMessage.aborted(ex3);
+                      })
+                      .recoverAndResume(IllegalArgumentException.class, cause -> {
+                          assertThat(cause).isEqualTo(ex3);
+                          return StreamMessage.of(4, 5, 6);
+                      });
 
         stream.write(1);
         stream.write(2);

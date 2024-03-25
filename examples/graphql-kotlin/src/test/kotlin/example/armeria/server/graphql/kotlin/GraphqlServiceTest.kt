@@ -12,32 +12,35 @@ import org.junit.jupiter.params.provider.CsvSource
 import kotlin.reflect.KClass
 
 class GraphqlServiceTest {
-
     companion object {
-
         @JvmField
         @RegisterExtension
-        val server: ServerExtension = object : ServerExtension() {
-            @Throws(Exception::class)
-            override fun configure(sb: ServerBuilder) {
-                configureService(sb)
+        val server: ServerExtension =
+            object : ServerExtension() {
+                @Throws(Exception::class)
+                override fun configure(sb: ServerBuilder) {
+                    configureService(sb)
+                }
             }
-        }
 
         private fun client(): GraphqlArmeriaClient {
             return GraphqlArmeriaClient(
-                    uri = server.httpUri().resolve("/graphql"),
-                    serializer = GraphQLClientJacksonSerializer())
+                uri = server.httpUri().resolve("/graphql"),
+                serializer = GraphQLClientJacksonSerializer(),
+            )
         }
     }
 
     @ParameterizedTest
     @CsvSource(
-            "1,hero",
-            "2,human",
-            "3,droid"
+        "1,hero",
+        "2,human",
+        "3,droid",
     )
-    fun testUserDataFetch(id: String, expected: String) {
+    fun testUserDataFetch(
+        id: String,
+        expected: String,
+    ) {
         runBlocking {
             val response = client().execute(UserNameQuery(id))
             assertThat(response.data?.userById?.name).isEqualTo(expected)
@@ -49,6 +52,7 @@ class GraphqlServiceTest {
     class UserNameQuery(id: String) : GraphQLClientRequest<UserNameResult> {
         override val query: String = "query {userById(id: $id) {name}}"
         override val operationName: String? = null
+
         override fun responseType(): KClass<UserNameResult> = UserNameResult::class
     }
 }

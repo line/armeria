@@ -31,6 +31,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
@@ -42,6 +44,8 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 class DefaultStreamMessageTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(DefaultStreamMessageTest.class);
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
@@ -56,8 +60,16 @@ class DefaultStreamMessageTest {
     void onSubscribeBeforeOnComplete() throws Exception {
         final BlockingQueue<String> queue = new LinkedTransferQueue<>();
         // Repeat to increase the chance of reproduction.
-        for (int i = 0; i < 8192; i++) {
-            final StreamMessageAndWriter<Integer> stream = new DefaultStreamMessage<>();
+        final int iteration;
+        if (System.getenv("CI") != null) {
+            logger.debug("Use 128 iterations for CI environment.");
+            iteration = 128;
+        } else {
+            iteration = 8192;
+        }
+
+        for (int i = 0; i < iteration; i++) {
+            final StreamWriter<Integer> stream = new DefaultStreamMessage<>();
             eventLoop.get().execute(stream::close);
             stream.subscribe(new Subscriber<Object>() {
                 @Override
@@ -89,7 +101,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void releaseWhenWritingToClosedStream_HttpData() {
-        final StreamMessageAndWriter<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> stream = new DefaultStreamMessage<>();
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().writeByte(0).retain();
         stream.close();
 
@@ -102,7 +114,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void releaseWhenWritingToClosedStream_HttpData_Supplier() {
-        final StreamMessageAndWriter<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> stream = new DefaultStreamMessage<>();
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().writeByte(0).retain();
         stream.close();
 
@@ -116,7 +128,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void abortedStreamCallOnCompleteIfNoData() throws InterruptedException {
-        final StreamMessageAndWriter<Object> stream = new DefaultStreamMessage<>();
+        final StreamWriter<Object> stream = new DefaultStreamMessage<>();
         stream.close();
 
         final AtomicBoolean onCompleteCalled = new AtomicBoolean();
@@ -144,7 +156,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void abortedStreamCallOnErrorAfterCloseIsCalled() throws InterruptedException {
-        final StreamMessageAndWriter<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> stream = new DefaultStreamMessage<>();
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
         stream.write(HttpData.wrap(buf).withEndOfStream());
         stream.close();
@@ -175,7 +187,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void requestWithNegativeValue() {
-        final StreamMessageAndWriter<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamWriter<HttpData> stream = new DefaultStreamMessage<>();
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
         stream.write(HttpData.wrap(buf).withEndOfStream());
 

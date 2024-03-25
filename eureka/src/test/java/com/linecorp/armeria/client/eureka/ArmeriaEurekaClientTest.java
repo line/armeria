@@ -25,8 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.ws.rs.core.MediaType;
-
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -57,6 +55,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
 import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
+
+import jakarta.ws.rs.core.MediaType;
 
 public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibilityTestSuite {
 

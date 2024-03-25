@@ -21,10 +21,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -41,9 +44,9 @@ class ClientRequestContextTest {
         final ClientRequestContext ctx = clientRequestContext();
         assertThat(ctx.id()).isNotNull();
         try (SafeCloseable unused = ctx.push()) {
-            assertThat(ClientRequestContext.current()).isSameAs(ctx);
+            assertThat(ClientRequestContext.current().unwrapAll()).isSameAs(ctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
 
         try (SafeCloseable unused = serviceRequestContext().push()) {
             assertThatThrownBy(ClientRequestContext::current)
@@ -58,9 +61,9 @@ class ClientRequestContextTest {
 
         final ClientRequestContext ctx = clientRequestContext();
         try (SafeCloseable unused = ctx.push()) {
-            assertThat(ClientRequestContext.currentOrNull()).isSameAs(ctx);
+            assertThat(ClientRequestContext.currentOrNull().unwrapAll()).isSameAs(ctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
 
         try (SafeCloseable unused = serviceRequestContext().push()) {
             assertThat(ClientRequestContext.currentOrNull()).isNull();
@@ -75,9 +78,10 @@ class ClientRequestContextTest {
         final ClientRequestContext ctx = clientRequestContext();
         try (SafeCloseable unused = ctx.push()) {
             assertThat(ClientRequestContext.mapCurrent(c -> "foo", () -> "bar")).isEqualTo("foo");
-            assertThat(ClientRequestContext.mapCurrent(Function.identity(), null)).isSameAs(ctx);
+            assertThat(ClientRequestContext.mapCurrent(Function.identity(), null).unwrapAll())
+                    .isSameAs(ctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
 
         try (SafeCloseable unused = serviceRequestContext().push()) {
             assertThatThrownBy(() -> ClientRequestContext.mapCurrent(c -> "foo", () -> "bar"))
@@ -90,32 +94,32 @@ class ClientRequestContextTest {
     void pushReentrance() {
         final ClientRequestContext ctx = clientRequestContext();
         try (SafeCloseable ignored = ctx.push()) {
-            assertCurrentCtx(ctx);
+            assertUnwrapAllCurrentCtx(ctx);
             try (SafeCloseable ignored2 = ctx.push()) {
-                assertCurrentCtx(ctx);
+                assertUnwrapAllCurrentCtx(ctx);
             }
-            assertCurrentCtx(ctx);
+            assertUnwrapAllCurrentCtx(ctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
     void pushWithOldServiceCtx() {
         final ServiceRequestContext sctx = serviceRequestContext();
         try (SafeCloseable ignored = sctx.push()) {
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
             // The root of ClientRequestContext is sctx.
             final ClientRequestContext cctx = clientRequestContext();
             try (SafeCloseable ignored1 = cctx.push()) {
-                assertCurrentCtx(cctx);
+                assertUnwrapAllCurrentCtx(cctx);
                 try (SafeCloseable ignored2 = sctx.push()) {
-                    assertCurrentCtx(sctx);
+                    assertUnwrapAllCurrentCtx(sctx);
                 }
-                assertCurrentCtx(cctx);
+                assertUnwrapAllCurrentCtx(cctx);
             }
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
@@ -135,65 +139,65 @@ class ClientRequestContextTest {
     void pushWithOldClientCtxWhoseRootIsSameServiceCtx_ctx2IsCreatedSameLayer() {
         final ServiceRequestContext sctx = serviceRequestContext();
         try (SafeCloseable ignored = sctx.push()) {
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
             final ClientRequestContext cctx1 = clientRequestContext();
             final ClientRequestContext cctx2 = clientRequestContext();
             assertThat(cctx1.root()).isSameAs(cctx2.root());
 
             try (SafeCloseable ignored1 = cctx1.push()) {
-                assertCurrentCtx(cctx1);
+                assertUnwrapAllCurrentCtx(cctx1);
                 try (SafeCloseable ignored2 = cctx2.push()) {
-                    assertCurrentCtx(cctx2);
+                    assertUnwrapAllCurrentCtx(cctx2);
                 }
-                assertCurrentCtx(cctx1);
+                assertUnwrapAllCurrentCtx(cctx1);
             }
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
-    void pushWithOldClientCtxWhoseRootIsSameServiceCtx__ctx2IsCreatedUnderCtx1() {
+    void pushWithOldClientCtxWhoseRootIsSameServiceCtx_ctx2IsCreatedUnderCtx1() {
         final ServiceRequestContext sctx = serviceRequestContext();
         try (SafeCloseable ignored = sctx.push()) {
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
             final ClientRequestContext cctx1 = clientRequestContext();
             try (SafeCloseable ignored1 = cctx1.push()) {
-                assertCurrentCtx(cctx1);
+                assertUnwrapAllCurrentCtx(cctx1);
                 final ClientRequestContext cctx2 = clientRequestContext();
                 assertThat(cctx1.root()).isSameAs(cctx2.root());
 
                 try (SafeCloseable ignored2 = cctx2.push()) {
-                    assertCurrentCtx(cctx2);
+                    assertUnwrapAllCurrentCtx(cctx2);
                 }
-                assertCurrentCtx(cctx1);
+                assertUnwrapAllCurrentCtx(cctx1);
             }
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
     void pushWithOldClientCtxWhoseRootIsSameServiceCtx_derivedCtx() {
         final ServiceRequestContext sctx = serviceRequestContext();
         try (SafeCloseable ignored = sctx.push()) {
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
             final ClientRequestContext cctx1 = clientRequestContext();
             final ClientRequestContext derived = cctx1.newDerivedContext(cctx1.id(), cctx1.request(),
                                                                          cctx1.rpcRequest(), cctx1.endpoint());
             try (SafeCloseable ignored1 = derived.push()) {
-                assertCurrentCtx(derived);
+                assertUnwrapAllCurrentCtx(derived);
                 final ClientRequestContext cctx2 = clientRequestContext();
                 assertThat(derived.root()).isSameAs(cctx2.root());
 
                 try (SafeCloseable ignored2 = cctx2.push()) {
-                    assertCurrentCtx(cctx2);
+                    assertUnwrapAllCurrentCtx(cctx2);
                 }
-                assertCurrentCtx(derived);
+                assertUnwrapAllCurrentCtx(derived);
             }
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
@@ -217,16 +221,16 @@ class ClientRequestContextTest {
     void pushWithOldClientCtxWhoseRootIsNull() {
         final ClientRequestContext cctx1 = clientRequestContext();
         try (SafeCloseable ignored1 = cctx1.push()) {
-            assertCurrentCtx(cctx1);
+            assertUnwrapAllCurrentCtx(cctx1);
             final ClientRequestContext cctx2 = clientRequestContext();
             assertThat(cctx1.root()).isNull();
             assertThat(cctx2.root()).isNull();
             try (SafeCloseable ignored2 = cctx2.push()) {
-                assertCurrentCtx(cctx2);
+                assertUnwrapAllCurrentCtx(cctx2);
             }
-            assertCurrentCtx(cctx1);
+            assertUnwrapAllCurrentCtx(cctx1);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
@@ -259,9 +263,26 @@ class ClientRequestContextTest {
         }
     }
 
-    private static void assertCurrentCtx(@Nullable RequestContext ctx) {
+    @ParameterizedTest
+    @ValueSource(strings = {"%", "http:///", "http://foo.com/bar"})
+    void updateRequestWithInvalidPath(String path) {
+        final ClientRequestContext clientRequestContext = clientRequestContext();
+        assertThat(clientRequestContext.path()).isEqualTo("/");
+        final HttpRequest request =
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, path));
+
+        assertThatThrownBy(() -> clientRequestContext.updateRequest(request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("invalid path");
+    }
+
+    private static void assertUnwrapAllCurrentCtx(@Nullable RequestContext ctx) {
         final RequestContext current = RequestContext.currentOrNull();
-        assertThat(current).isSameAs(ctx);
+        if (current == null) {
+            assertThat(ctx).isNull();
+        } else {
+            assertThat(current.unwrapAll()).isSameAs(ctx);
+        }
     }
 
     private static ServiceRequestContext serviceRequestContext() {

@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.common.stream;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Function;
@@ -35,6 +36,8 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -139,6 +142,44 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
         } else {
             executor.execute(() -> abort0(cause));
         }
+    }
+
+    @Override
+    public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        if (allowResuming) {
+            // `upstream.collect()` either completes all elements into a list or exceptionally completes an
+            // exception. So the downstream can't see the elements written before an error with the `upstream
+            // .collect()`.
+            // However, `StreamMessage.collect()`, which uses Subscriber to collect the upstream's elements
+            // one by one, can deliver successfully published objects to the downstream before an error and
+            // resume the error with a fallback stream.
+            return StreamMessage.super.collect(executor, options);
+        }
+
+        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
+            return UnmodifiableFuture.exceptionallyCompletedFuture(
+                    new IllegalStateException("subscribed by other subscriber already"));
+        }
+
+        return upstream.collect(executor, options).handle((objects, cause) -> {
+            if (cause != null) {
+                cause = Exceptions.peel(cause);
+                // Switch the upstream to a fallback stream and resume subscribing.
+                final StreamMessage<T> fallback = errorFunction.apply(cause);
+                requireNonNull(fallback, "errorFunction.apply() returned null");
+                return fallback.collect(executor, options).handle((res, fallbackCause) -> {
+                    if (fallbackCause != null) {
+                        fallbackCause = Exceptions.peel(fallbackCause);
+                        completionFuture.completeExceptionally(fallbackCause);
+                        return Exceptions.throwUnsafely(fallbackCause);
+                    }
+                    completionFuture.complete(null);
+                    return res;
+                });
+            }
+            completionFuture.complete(null);
+            return UnmodifiableFuture.completedFuture(objects);
+        }).thenCompose(Function.identity());
     }
 
     private void abort0(Throwable cause) {

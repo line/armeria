@@ -1,12 +1,12 @@
 dependencies {
-    api 'com.auth0:java-jwt'
-    implementation 'net.shibboleth.utilities:java-support'
-    api 'org.opensaml:opensaml-core'
-    api 'org.opensaml:opensaml-saml-api'
-    implementation 'org.opensaml:opensaml-saml-impl'
-    api 'org.opensaml:opensaml-messaging-api'
-    implementation 'org.opensaml:opensaml-messaging-impl'
-    api 'org.opensaml:opensaml-soap-api'
-    implementation 'org.opensaml:opensaml-soap-impl'
-    testImplementation 'org.jsoup:jsoup'
+    api libs.jwt
+    implementation libs.shibboleth.utilities
+    api libs.opensaml.core
+    api libs.opensaml.saml.api
+    implementation libs.opensaml.saml.impl
+    api libs.opensaml.messaging.api
+    implementation libs.opensaml.messaging.impl
+    api libs.opensaml.soap.api
+    implementation libs.opensaml.soap.impl
+    testImplementation libs.jsoup
 }

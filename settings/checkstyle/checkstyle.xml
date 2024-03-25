@@ -10,7 +10,7 @@
 
   <module name="SuppressWarningsFilter" />
   <module name="SuppressionFilter">
-    <property name="file" value="${checkstyleConfigDir}/checkstyle-suppressions.xml"/>
+    <property name="file" value="${config_loc}/checkstyle-suppressions.xml"/>
   </module>
 
   <module name="Header">
@@ -118,6 +118,18 @@
     <property name="id" value="PreferUnmodifiableFuture"/>
     <property name="format" value="CompletableFuture.completedFuture"/>
     <property name="message" value="Use UnmodifiableFuture.completedFuture() instead."/>
+  </module>
+  <!--  Prefer Flags.meterRegistry -->
+  <module name="RegexpSingleline">
+    <property name="id" value="PreferFlagsMeterRegistry"/>
+    <property name="format" value="Metrics.globalRegistry"/>
+    <property name="message" value="Use Flags.meterRegistry() instead."/>
+  </module>
+  <!--  Prefer ReentrantShortLock -->
+  <module name="RegexpSingleline">
+    <property name="id" value="PreferReentrantShortLock"/>
+    <property name="format" value="new ReentrantLock"/>
+    <property name="message" value="Use ReentrantShortLock instead."/>
   </module>
 
   <module name="JavadocPackage"/>
@@ -352,6 +364,9 @@
   </module>
   <module name="BeforeExecutionExclusionFileFilter">
     <property name="fileNamePattern" value="[\\/]reactive[\\/]DefaultSslInfo.java" />
+  </module>
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value="[\\/]armeria[\\/]kubernetes[\\/]it[\\/].*.java" />
   </module>
 
 </module>

@@ -13,6 +13,7 @@ import Footer from './footer';
 import * as styles from './base.module.less';
 import flashAtHash from './flash-at-hash';
 import jumpToHash from './jump-to-hash';
+import StarBegging from './star-begging';
 
 const { Content } = Layout;
 
@@ -116,6 +117,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
         )}
         <Footer />
       </Layout>
+      <StarBegging />
       <CookieConsent
         declineButtonText="Opt out"
         containerClasses={styles.cookieConsentContainer}

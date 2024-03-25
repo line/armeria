@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -25,6 +24,7 @@ import com.google.common.base.Joiner;
 import io.netty.channel.EventLoop;
 
 final class HeapBasedEventLoopState extends AbstractEventLoopState {
+
     /**
      * A binary heap of Entry. Ordered by:
      * <ul>
@@ -32,7 +32,8 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
      *   <li>{@link AbstractEventLoopEntry#id()} (lower is better)</li>
      * </ul>
      */
-    private final List<AbstractEventLoopEntry> entries = new ArrayList<>();
+    private final AbstractEventLoopEntry[] entries;
+    private int entriesSize;
     private final int maxNumEventLoops;
 
     private int acquisitionStartIndex = -1;
@@ -43,6 +44,7 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
                             DefaultEventLoopScheduler scheduler) {
         super(eventLoops, scheduler);
         this.maxNumEventLoops = maxNumEventLoops;
+        entries = new AbstractEventLoopEntry[maxNumEventLoops];
         if (eventLoops.size() == maxNumEventLoops) {
             // We use all event loops so initialize early.
             init(0);
@@ -56,10 +58,10 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     }
 
     private boolean addUnusedEventLoop() {
-        if (entries.size() < maxNumEventLoops) {
+        if (entriesSize < maxNumEventLoops) {
             final int nextIndex = (acquisitionStartIndex + nextUnusedEventLoopOffset) %
                                   eventLoops().size();
-            push(new Entry(this, eventLoops().get(nextIndex), entries.size()));
+            push(new Entry(this, eventLoops().get(nextIndex), entriesSize));
             nextUnusedEventLoopOffset = (nextUnusedEventLoopOffset + 1) % maxNumEventLoops;
             return true;
         }
@@ -67,7 +69,7 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     }
 
     @Override
-    List<AbstractEventLoopEntry> entries() {
+    AbstractEventLoopEntry[] entries() {
         return entries;
     }
 
@@ -77,39 +79,49 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     }
 
     @Override
-    synchronized AbstractEventLoopEntry acquire() {
-        if (acquisitionStartIndex == -1) {
-            init(scheduler().acquisitionStartIndex(maxNumEventLoops));
-        }
-        AbstractEventLoopEntry e = entries.get(0);
-        if (e.activeRequests() > 0) {
-            // All event loops are handling connections; try to add an unused event loop.
-            if (addUnusedEventLoop()) {
-                e = entries.get(0);
-                assert e.activeRequests() == 0;
+    AbstractEventLoopEntry acquire() {
+        lock();
+        try {
+            if (acquisitionStartIndex == -1) {
+                init(scheduler().acquisitionStartIndex(maxNumEventLoops));
             }
-        }
+            AbstractEventLoopEntry e = entries[0];
+            if (e.activeRequests() > 0) {
+                // All event loops are handling connections; try to add an unused event loop.
+                if (addUnusedEventLoop()) {
+                    e = entries[0];
+                    assert e.activeRequests() == 0;
+                }
+            }
 
-        assert e.index() == 0;
-        e.incrementActiveRequests();
-        allActiveRequests++;
-        bubbleDown();
-        return e;
+            assert e.index() == 0;
+            e.incrementActiveRequests();
+            allActiveRequests++;
+            bubbleDown();
+            return e;
+        } finally {
+            unlock();
+        }
     }
 
     @Override
-    synchronized void release(AbstractEventLoopEntry e) {
-        e.decrementActiveRequests();
-        bubbleUp(e.index());
-        if (--allActiveRequests == 0) {
-            setLastActivityTimeNanos();
+    void release(AbstractEventLoopEntry e) {
+        lock();
+        try {
+            e.decrementActiveRequests();
+            bubbleUp(e.index());
+            if (--allActiveRequests == 0) {
+                setLastActivityTimeNanos();
+            }
+        } finally {
+            unlock();
         }
     }
 
     // Heap implementation, modified from the public domain code at https://stackoverflow.com/a/714873
     private void push(Entry e) {
-        entries.add(e);
-        bubbleUp(entries.size() - 1);
+        entries[entriesSize++] = e;
+        bubbleUp(entriesSize - 1);
     }
 
     private void bubbleDown() {
@@ -118,10 +130,10 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
             final int oldBest = best;
             final int left = left(best);
 
-            if (left < entries.size()) {
+            if (left < entriesSize) {
                 final int right = right(best);
                 if (isBetter(left, best)) {
-                    if (right < entries.size()) {
+                    if (right < entriesSize) {
                         if (isBetter(right, left)) {
                             // Left leaf is better but right leaf is even better.
                             best = right;
@@ -133,7 +145,7 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
                         // Left leaf is better and there's no right leaf.
                         best = left;
                     }
-                } else if (right < entries.size()) {
+                } else if (right < entriesSize) {
                     if (isBetter(right, best)) {
                         // Left leaf is not better but right leaf is better.
                         best = right;
@@ -170,8 +182,8 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
      * Returns {@code true} if the entry at {@code a} is a better choice than the entry at {@code b}.
      */
     private boolean isBetter(int a, int b) {
-        final AbstractEventLoopEntry entryA = entries.get(a);
-        final AbstractEventLoopEntry entryB = entries.get(b);
+        final AbstractEventLoopEntry entryA = entries[a];
+        final AbstractEventLoopEntry entryB = entries[b];
         if (entryA.activeRequests() < entryB.activeRequests()) {
             return true;
         }
@@ -195,10 +207,10 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     }
 
     private void swap(int i, int j) {
-        final AbstractEventLoopEntry entryI = entries.get(i);
-        final AbstractEventLoopEntry entryJ = entries.get(j);
-        entries.set(i, entryJ);
-        entries.set(j, entryI);
+        final AbstractEventLoopEntry entryI = entries[i];
+        final AbstractEventLoopEntry entryJ = entries[j];
+        entries[i] = entryJ;
+        entries[j] = entryI;
 
         // Swap the index as well.
         entryJ.setIndex(i);

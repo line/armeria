@@ -19,7 +19,7 @@ package com.linecorp.armeria.server.protobuf;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isJson;
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isProtobuf;
 import static java.util.Objects.requireNonNull;
@@ -147,7 +147,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
 
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
-        final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+        final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
         if (clazz == null) {
             return null;
         }

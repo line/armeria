@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.internal.common.kotlin
 
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider
 import kotlinx.coroutines.flow.Flow
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -26,13 +26,13 @@ import java.lang.reflect.Type
  * Provides [FlowResponseConverterFunction] to annotated services.
  * @see FlowResponseConverterFunction
  */
-class FlowResponseConverterFunctionProvider : ResponseConverterFunctionProvider {
+class FlowResponseConverterFunctionProvider : DelegatingResponseConverterFunctionProvider {
     override fun createResponseConverterFunction(
         returnType: Type,
-        responseConverter: ResponseConverterFunction
+        responseConverter: ResponseConverterFunction,
     ): ResponseConverterFunction? =
         returnType
-            .toClass()
+            .toClassOrNull()
             ?.let {
                 if (Flow::class.java.isAssignableFrom(it)) {
                     FlowResponseConverterFunction(responseConverter)
@@ -41,7 +41,7 @@ class FlowResponseConverterFunctionProvider : ResponseConverterFunctionProvider 
                 }
             }
 
-    private fun Type.toClass(): Class<*>? =
+    private fun Type.toClassOrNull(): Class<*>? =
         when (this) {
             is ParameterizedType -> this.rawType as Class<*>
             is Class<*> -> this

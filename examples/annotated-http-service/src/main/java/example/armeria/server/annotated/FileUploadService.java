@@ -29,7 +29,7 @@ import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 public class FileUploadService {
     @Post("/upload")
     public HttpResponse upload(@Param String text, @Param File file) throws IOException {
-        return HttpResponse.from(() -> {
+        return HttpResponse.of(() -> {
             try {
                 final String content = Files.readString(file.toPath());
                 return HttpResponse.ofJson(Arrays.asList(text, content));
@@ -43,7 +43,7 @@ public class FileUploadService {
 
     @Post("/multipartObject")
     public HttpResponse multipartObject(Multipart multipart) throws IOException {
-        return HttpResponse.from(
+        return HttpResponse.of(
                 multipart.aggregate()
                          .thenApply(AggregatedMultipart::bodyParts)
                          .thenApply(aggregatedBodyParts ->

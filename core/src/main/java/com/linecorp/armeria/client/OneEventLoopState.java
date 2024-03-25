@@ -16,40 +16,47 @@
 
 package com.linecorp.armeria.client;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import io.netty.channel.EventLoop;
 
 final class OneEventLoopState extends AbstractEventLoopState {
 
-    private final List<AbstractEventLoopEntry> entry = new ArrayList<>();
+    private final AbstractEventLoopEntry[] entry = new AbstractEventLoopEntry[1];
 
     private int allActiveRequests;
 
     OneEventLoopState(List<EventLoop> eventLoops, DefaultEventLoopScheduler scheduler) {
         super(eventLoops, scheduler);
+        entry[0] = new Entry(this, eventLoops().get(scheduler().acquisitionStartIndex(1)));
     }
 
     @Override
-    synchronized AbstractEventLoopEntry acquire() {
-        if (entry.isEmpty()) {
-            entry.add(new Entry(this, eventLoops().get(scheduler().acquisitionStartIndex(1))));
-        }
-        final AbstractEventLoopEntry e = entry.get(0);
-        allActiveRequests++;
-        return e;
-    }
-
-    @Override
-    synchronized void release(AbstractEventLoopEntry e) {
-        if (--allActiveRequests == 0) {
-            setLastActivityTimeNanos();
+    AbstractEventLoopEntry acquire() {
+        lock();
+        try {
+            final AbstractEventLoopEntry e = entry[0];
+            allActiveRequests++;
+            return e;
+        } finally {
+            unlock();
         }
     }
 
     @Override
-    List<AbstractEventLoopEntry> entries() {
+    void release(AbstractEventLoopEntry e) {
+        lock();
+        try {
+            if (--allActiveRequests == 0) {
+                setLastActivityTimeNanos();
+            }
+        } finally {
+            unlock();
+        }
+    }
+
+    @Override
+    AbstractEventLoopEntry[] entries() {
         return entry;
     }
 

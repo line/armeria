@@ -1,5 +1,5 @@
 dependencies {
-    api 'junit:junit'
+    api libs.junit4
 }
 
 // Copy common files from junit5 module to gen-src directory in order to use them as a source set.
@@ -16,3 +16,4 @@ task copyJunitSources(type: Copy) {
 
 tasks.compileJava.dependsOn(generateSources)
 tasks.compileJava.dependsOn(copyJunitSources)
+tasks.sourcesJar.dependsOn(copyJunitSources)

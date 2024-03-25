@@ -40,6 +40,10 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final long maxRequestLength;
     private final RoutingContext routingCtx;
     private final ExchangeType exchangeType;
+    private final long requestStartTimeNanos;
+    private final long requestStartTimeMicros;
+    private final boolean http1WebSocket;
+    private boolean shouldResetOnlyIfRemoteIsOpen;
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -47,11 +51,14 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     @Nullable
     private HttpResponse response;
-    private boolean isResponseAborted;
+    @Nullable
+    private Throwable abortResponseCause;
 
     StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
-                                long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType) {
+                                long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
+                                long requestStartTimeNanos, long requestStartTimeMicros,
+                                boolean http1WebSocket, boolean shouldResetOnlyIfRemoteIsOpen) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -63,11 +70,20 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         assert routingCtx.hasResult();
         this.routingCtx = routingCtx;
         this.exchangeType = exchangeType;
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
+        this.http1WebSocket = http1WebSocket;
+        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
     }
 
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return ctx != null;
     }
 
     @Override
@@ -156,10 +172,10 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     @Override
     public void setResponse(HttpResponse response) {
-        if (isResponseAborted) {
+        if (abortResponseCause != null) {
             // This means that we already tried to close the request, so abort the response immediately.
             if (!response.isComplete()) {
-                response.abort();
+                response.abort(abortResponseCause);
             }
         } else {
             this.response = response;
@@ -168,7 +184,10 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     @Override
     public void abortResponse(Throwable cause, boolean cancel) {
-        isResponseAborted = true;
+        if (abortResponseCause != null) {
+            return;
+        }
+        abortResponseCause = cause;
 
         // Make sure to invoke the ServiceRequestContext.whenRequestCancelling() and whenRequestCancelled()
         // by cancelling a request
@@ -176,20 +195,48 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
             ctx.cancel(cause);
         }
 
-        // Try to close the request first, then abort the response if it is already closed.
-        if (!tryClose(cause) &&
-            response != null && !response.isComplete()) {
+        if (response != null && !response.isComplete()) {
             response.abort(cause);
         }
     }
 
     @Override
-    public boolean isAggregated() {
+    public boolean isResponseAborted() {
+        return abortResponseCause != null;
+    }
+
+    @Override
+    public boolean needsAggregation() {
         return false;
     }
 
     @Override
     public ExchangeType exchangeType() {
         return exchangeType;
+    }
+
+    @Override
+    public long requestStartTimeNanos() {
+        return requestStartTimeNanos;
+    }
+
+    @Override
+    public long requestStartTimeMicros() {
+        return requestStartTimeMicros;
+    }
+
+    @Override
+    public boolean isHttp1WebSocket() {
+        return http1WebSocket;
+    }
+
+    @Override
+    public void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
+        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
+    }
+
+    @Override
+    public boolean shouldResetOnlyIfRemoteIsOpen() {
+        return shouldResetOnlyIfRemoteIsOpen;
     }
 }

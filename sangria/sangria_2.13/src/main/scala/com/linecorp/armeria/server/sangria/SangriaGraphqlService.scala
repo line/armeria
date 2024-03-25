@@ -64,7 +64,10 @@ final class SangriaGraphqlService[Ctx, Val] private[sangria] (
       return HttpResponse.of(
         HttpStatus.NOT_ACCEPTABLE,
         MediaType.PLAIN_TEXT,
-        "Only application/graphql+json and application/json compatible media types are acceptable")
+        "Only %s and %s compatible media types are acceptable",
+        MediaType.GRAPHQL_RESPONSE_JSON,
+        MediaType.JSON
+      )
     }
 
     QueryParser.parse(req.query()) match {

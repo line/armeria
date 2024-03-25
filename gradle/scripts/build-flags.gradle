@@ -17,23 +17,22 @@ if (!projectsWithFlags('java').isEmpty()) {
     apply from: "${libDir}/java.gradle"
     apply from: "${libDir}/java-javadoc.gradle"
     apply from: "${libDir}/java-coverage.gradle"
-    apply from: "${libDir}/java-alpn.gradle"
     apply from: "${libDir}/java-rpc-thrift.gradle"
 
     if (projectsWithFlags('java').find { it.ext.hasSourceDirectory('proto') }) {
         if (!managedVersions.containsKey('com.google.protobuf:protobuf-gradle-plugin')) {
             throw new IllegalStateException(
-                    "com.google.protobuf:protobuf-gradle-plugin must be specified in dependencies.yml " +
+                    "com.google.protobuf:protobuf-gradle-plugin must be specified in dependencies.(toml|yml) " +
                     "to compile .proto files.")
         }
         apply from: "${libDir}/java-rpc-proto.gradle"
     }
 
     if (!projectsWithFlags('java', 'relocate').isEmpty()) {
-        ['com.github.jengelman.gradle.plugins:shadow', 'com.guardsquare:proguard-gradle'].each {
+        ['gradle.plugin.com.github.johnrengelman:shadow', 'com.guardsquare:proguard-gradle'].each {
             if (!managedVersions.containsKey(it)) {
                 throw new IllegalStateException(
-                        "${it} must be specified in dependencies.yml to use the 'relocate' flag.")
+                        "${it} must be specified in dependencies.(toml|yml) to use the 'relocate' flag.")
             }
         }
         apply from: "${libDir}/java-shade.gradle"

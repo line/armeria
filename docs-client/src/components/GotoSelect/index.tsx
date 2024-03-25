@@ -62,7 +62,7 @@ function getOptions(specification: Specification): Option[] {
       options.push({
         group: 'Services',
         label: `${service.name}#${method.name}|${method.httpMethod}`,
-        value: `/methods/${service.name}/${method.name}/${method.httpMethod}`,
+        value: `/methods/${method.id}`,
       });
     }
   }

@@ -24,18 +24,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Function;
 
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestId;
 
 class VirtualHostServiceBindingBuilderTest {
 
     @Test
     void serviceBindingBuilder() {
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
+        final Function<? super RoutingContext, ? extends RequestId>
+                requestIdGenerator = (ctx) -> RequestId.of(100L);
         final ServerBuilder sb = Server.builder();
 
         sb.virtualHost("example.com")
@@ -47,6 +51,7 @@ class VirtualHostServiceBindingBuilderTest {
           .maxRequestLength(8192)
           .verboseResponses(true)
           .multipartUploadsLocation(multipartUploadsLocation)
+          .requestIdGenerator(requestIdGenerator)
           .build((ctx, req) -> HttpResponse.of(OK));
 
         final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
@@ -63,11 +68,14 @@ class VirtualHostServiceBindingBuilderTest {
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
+        assertThat(serviceConfig.requestIdGenerator()).isSameAs(requestIdGenerator);
     }
 
     @Test
     void withRoute() {
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
+        final Function<? super RoutingContext, ? extends RequestId>
+                requestIdGenerator = (ctx) -> RequestId.of(100L);
         final ServerBuilder sb = Server.builder();
 
         sb.virtualHost("example.com").withRoute(builder -> {
@@ -79,6 +87,7 @@ class VirtualHostServiceBindingBuilderTest {
                    .maxRequestLength(8192)
                    .verboseResponses(true)
                    .multipartUploadsLocation(multipartUploadsLocation)
+                   .requestIdGenerator(requestIdGenerator)
                    .build((ctx, req) -> HttpResponse.of(OK));
         });
 
@@ -96,5 +105,6 @@ class VirtualHostServiceBindingBuilderTest {
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
+        assertThat(serviceConfig.requestIdGenerator()).isSameAs(requestIdGenerator);
     }
 }

@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -32,25 +33,30 @@ interface DecodedHttpRequest extends HttpRequest {
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
                                  RoutingContext routingCtx) {
+        final long requestStartTimeNanos = System.nanoTime();
+        final long requestStartTimeMicros = SystemInfo.currentTimeMicros();
         if (!routingCtx.hasResult()) {
-            return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                      routingCtx, ExchangeType.RESPONSE_STREAMING);
+            return new EmptyContentDecodedHttpRequest(
+                    eventLoop, id, streamId, headers, keepAlive, routingCtx, ExchangeType.RESPONSE_STREAMING,
+                    requestStartTimeNanos, requestStartTimeMicros);
         } else {
             final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
             final ExchangeType exchangeType = service.exchangeType(routingCtx);
             if (endOfStream) {
-                return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                          routingCtx,  exchangeType);
+                return new EmptyContentDecodedHttpRequest(
+                        eventLoop, id, streamId, headers, keepAlive, routingCtx, exchangeType,
+                        requestStartTimeNanos, requestStartTimeMicros);
             } else {
                 if (exchangeType.isRequestStreaming()) {
-                    return new StreamingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                           inboundTrafficController, config.maxRequestLength(),
-                                                           routingCtx, exchangeType);
+                    return new StreamingDecodedHttpRequest(
+                            eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
+                            config.maxRequestLength(), routingCtx, exchangeType,
+                            requestStartTimeNanos, requestStartTimeMicros, false, false);
                 } else {
-                    return new AggregatingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                             config.maxRequestLength(), routingCtx,
-                                                             exchangeType);
+                    return new AggregatingDecodedHttpRequest(
+                            eventLoop, id, streamId, headers, keepAlive, config.maxRequestLength(), routingCtx,
+                            exchangeType, requestStartTimeNanos, requestStartTimeMicros);
                 }
             }
         }
@@ -66,6 +72,8 @@ interface DecodedHttpRequest extends HttpRequest {
     boolean isKeepAlive();
 
     void init(ServiceRequestContext ctx);
+
+    boolean isInitialized();
 
     RoutingContext routingContext();
 
@@ -95,13 +103,61 @@ interface DecodedHttpRequest extends HttpRequest {
     void abortResponse(Throwable cause, boolean cancel);
 
     /**
+     * Tells whether {@link #abortResponse(Throwable, boolean)} was called or not.
+     */
+    boolean isResponseAborted();
+
+    /**
      * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
      */
-    boolean isAggregated();
+    boolean needsAggregation();
 
     /**
      * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
      * {@link HttpResponse}.
      */
     ExchangeType exchangeType();
+
+    /**
+     * Returns the {@link System#nanoTime()} value when the request started.
+     */
+    long requestStartTimeNanos();
+
+    /**
+     * Returns the number of microseconds since the epoch, e.g. {@code System.currentTimeMillis() * 1000},
+     * when the request started.
+     */
+    long requestStartTimeMicros();
+
+    /**
+     * Returns whether the request is an HTTP/1.1 webSocket request.
+     */
+    default boolean isHttp1WebSocket() {
+        return false;
+    }
+
+    /**
+     * Returns a new {@link StreamingDecodedHttpRequest} whose corresponding response is aborted using the
+     * specified {@link Throwable}. This is called when an {@link AggregatingDecodedHttpRequest}
+     * needs to be passed to a service before it's closed.
+     */
+    default StreamingDecodedHttpRequest toAbortedStreaming(
+            InboundTrafficController inboundTrafficController,
+            Throwable cause, boolean shouldResetOnlyIfRemoteIsOpen) {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Sets whether to send an RST_STREAM after the response sending response when the peer is open state.
+     */
+    default void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
+        // no-op
+    }
+
+    /**
+     * Tells whether to send an RST_STREAM after the response sending response when the peer is open state.
+     */
+    default boolean shouldResetOnlyIfRemoteIsOpen() {
+        return false;
+    }
 }

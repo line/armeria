@@ -68,12 +68,12 @@ class RetryingClientLoadBalancingTest {
             }
 
             sb.service(TestMode.SUCCESS.path, (ctx, req) -> {
-                accessedPorts.add(((InetSocketAddress) ctx.localAddress()).getPort());
+                accessedPorts.add(ctx.localAddress().getPort());
                 return HttpResponse.of(HttpStatus.OK);
             });
 
             sb.service(TestMode.FAILURE.path, (ctx, req) -> {
-                accessedPorts.add(((InetSocketAddress) ctx.localAddress()).getPort());
+                accessedPorts.add(ctx.localAddress().getPort());
                 return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
             });
         }

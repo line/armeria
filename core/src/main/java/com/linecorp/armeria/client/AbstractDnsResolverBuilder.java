@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.HostsFileEntriesResolver;
@@ -48,6 +47,7 @@ import io.netty.resolver.dns.DnsServerAddressStream;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddressStreamProviders;
 import io.netty.resolver.dns.DnsServerAddresses;
+import io.netty.resolver.dns.LoggingDnsQueryLifeCycleObserverFactory;
 import io.netty.resolver.dns.NoopAuthoritativeDnsServerCache;
 import io.netty.resolver.dns.NoopDnsCache;
 import io.netty.resolver.dns.NoopDnsCnameCache;
@@ -95,7 +95,11 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets if this resolver should generate detailed trace information in exception messages so that
      * it is easier to understand the cause of resolution failure. This flag is enabled by default.
+     *
+     * @deprecated Use {@link #dnsQueryLifecycleObserverFactory(DnsQueryLifecycleObserverFactory)} with
+     *             {@link LoggingDnsQueryLifeCycleObserverFactory}.
      */
+    @Deprecated
     public AbstractDnsResolverBuilder traceEnabled(boolean traceEnabled) {
         this.traceEnabled = traceEnabled;
         return this;
@@ -462,7 +466,7 @@ public abstract class AbstractDnsResolverBuilder {
                     "Cannot set dnsCache() with cacheSpec(), ttl(), or negativeTtl().");
         }
 
-        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
+        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Flags.meterRegistry());
         if (needsToCreateDnsCache) {
             return DnsCache.builder()
                            .cacheSpec(cacheSpec)
@@ -488,7 +492,7 @@ public abstract class AbstractDnsResolverBuilder {
                        queryTimeoutMillis, queryTimeoutMillisForEachAttempt);
         }
 
-        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
+        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Flags.meterRegistry());
 
         final boolean traceEnabled = this.traceEnabled;
         final long queryTimeoutMillis = this.queryTimeoutMillis;
@@ -524,11 +528,11 @@ public abstract class AbstractDnsResolverBuilder {
                    .searchDomains(ImmutableList.of())
                    .decodeIdn(decodeIdn);
 
-            if (queryTimeoutMillisForEachAttempt > 0) {
+            if (queryTimeoutMillisForEachAttempt > 0 && queryTimeoutMillisForEachAttempt < Long.MAX_VALUE) {
                 builder.queryTimeoutMillis(queryTimeoutMillisForEachAttempt);
             } else {
-                if (queryTimeoutMillis == 0) {
-                    builder.queryTimeoutMillis(Long.MAX_VALUE);
+                if (queryTimeoutMillis == 0 || queryTimeoutMillis == Long.MAX_VALUE) {
+                    builder.queryTimeoutMillis(0);
                 } else {
                     builder.queryTimeoutMillis(queryTimeoutMillis);
                 }

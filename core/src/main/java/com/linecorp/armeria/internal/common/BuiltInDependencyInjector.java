@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;
+import com.linecorp.armeria.server.annotation.decorator.RequestTimeoutDecoratorFunction;
 
 public enum BuiltInDependencyInjector implements DependencyInjector {
 
@@ -36,7 +37,8 @@ public enum BuiltInDependencyInjector implements DependencyInjector {
     private static final Set<Class<?>> builtInClasses =
             ImmutableSet.of(LoggingDecoratorFactoryFunction.class,
                             RateLimitingDecoratorFactoryFunction.class,
-                            ServerSentEventResponseConverterFunction.class);
+                            ServerSentEventResponseConverterFunction.class,
+                            RequestTimeoutDecoratorFunction.class);
 
     private static final Map<Class<?>, Object> instances = new ConcurrentHashMap<>();
 

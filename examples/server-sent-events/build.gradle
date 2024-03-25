@@ -4,14 +4,14 @@ plugins {
 
 dependencies {
     implementation project(':core')
-    implementation 'io.projectreactor:reactor-core'
-    runtimeOnly 'org.slf4j:slf4j-simple'
+    implementation libs.reactor.core
+    runtimeOnly libs.slf4j.simple
 
     testImplementation project(':junit5')
-    testImplementation 'io.projectreactor:reactor-test'
-    testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
-    testImplementation 'org.assertj:assertj-core'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation libs.reactor.test
+    testImplementation libs.json.unit.fluent
+    testImplementation libs.assertj
+    testImplementation libs.junit5.jupiter.api
 }
 
 application {

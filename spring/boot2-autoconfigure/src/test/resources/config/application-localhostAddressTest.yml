@@ -1,0 +1,5 @@
+armeria:
+  ports:
+    - address: localhost
+      port: 0
+      protocols: HTTP

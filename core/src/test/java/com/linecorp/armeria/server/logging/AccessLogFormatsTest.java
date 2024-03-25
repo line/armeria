@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.AccessLogComponent.AttributeComponent;
@@ -194,8 +195,8 @@ class AccessLogFormatsTest {
                                      .id(id)
                                      .build();
         ctx.setAttr(Attr.ATTR_KEY, new Attr("line"));
-
         final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.authenticatedUser("foo");
         logBuilder.endRequest();
         ctx.log().ensureRequestComplete();
 
@@ -218,12 +219,13 @@ class AccessLogFormatsTest {
 
         message = AccessLogger.format(AccessLogFormats.COMMON, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024");
+                localhostAddress + " - foo " + timestamp + " \"GET /armeria/log#" + logName +
+                " h2c\" 200 1024");
 
         message = AccessLogger.format(AccessLogFormats.COMBINED, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024" +
-                " \"http://log.example.com\" \"armeria/x.y.z\" \"a=1;b=2\"");
+                localhostAddress + " - foo " + timestamp + " \"GET /armeria/log#" + logName +
+                " h2c\" 200 1024 \"http://log.example.com\" \"armeria/x.y.z\" \"a=1;b=2\"");
 
         // Check conditions with custom formats.
         format = AccessLogFormats.parseCustom(
@@ -232,16 +234,16 @@ class AccessLogFormatsTest {
 
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024" +
-                " \"http://log.example.com\" \"-\" some-text -");
+                localhostAddress + " - foo " + timestamp + " \"GET /armeria/log#" + logName +
+                " h2c\" 200 1024 \"http://log.example.com\" \"-\" some-text -");
 
         format = AccessLogFormats.parseCustom(
                 "%h %l %u %t \"%r\" %s %b \"%!200,302{Referer}i\" \"%200,304{User-Agent}i\"" +
                 " some-text %{Non-Existing-Header}i");
         message = AccessLogger.format(format, log);
         assertThat(message).isEqualTo(
-                localhostAddress + " - - " + timestamp + " \"GET /armeria/log#" + logName + " h2c\" 200 1024" +
-                " \"-\" \"armeria/x.y.z\" some-text -");
+                localhostAddress + " - foo " + timestamp + " \"GET /armeria/log#" + logName +
+                " h2c\" 200 1024 \"-\" \"armeria/x.y.z\" some-text -");
 
         format = AccessLogFormats.parseCustom(
                 "%{com.linecorp.armeria.server.logging.AccessLogFormatsTest$Attr#KEY" +
@@ -331,11 +333,15 @@ class AccessLogFormatsTest {
         final String fullName = AccessLogFormatsTest.class.getSimpleName() + "/rpcMethod";
         final String expectedLogMessage = "\"GET /armeria/log#" + fullName + " h2c\" 200 1024";
 
-        final ServiceRequestContext ctx = ServiceRequestContext.builder(
-                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/armeria/log",
-                                                 HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
-                                                 HttpHeaderNames.REFERER, "http://log.example.com",
-                                                 HttpHeaderNames.COOKIE, "a=1;b=2"))).build();
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/armeria/log",
+                                                                 HttpHeaderNames.USER_AGENT, "armeria/x.y.z",
+                                                                 HttpHeaderNames.REFERER,
+                                                                 "http://log.example.com",
+                                                                 HttpHeaderNames.COOKIE, "a=1;b=2"));
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.builder(req)
+                                     .eventLoop(ImmediateEventLoop.INSTANCE)
+                                     .build();
         final RequestLog log = ctx.log().partial();
         final RequestLogBuilder logBuilder = ctx.logBuilder();
 

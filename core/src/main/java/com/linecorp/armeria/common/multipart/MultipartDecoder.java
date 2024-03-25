@@ -82,12 +82,20 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, StreamDecoder<H
             parser = new MimeParser(in, out, boundary, this);
         }
         parser.parse();
+        // Do not catch the exception from parse() because processOnError is called eventually.
     }
 
     @Override
     public void processOnComplete(StreamDecoderInput in, StreamDecoderOutput<BodyPart> out) {
         if (parser != null) {
-            parser.close();
+            try {
+                parser.close();
+            } catch (MimeParsingException e) {
+                final MultipartSubscriber delegatedSubscriber = this.delegatedSubscriber;
+                assert delegatedSubscriber != null : "processOnComplete is called after subscription";
+                delegatedSubscriber.onError(e);
+                // decoded is already complete so we don't need to call decoded.abort(e);
+            }
         }
     }
 
@@ -96,11 +104,13 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, StreamDecoder<H
         if (parser != null) {
             try {
                 parser.close();
-            } catch (MimeParsingException ignore) {
-                // This exception has been passed to the subscriber already and will be handled there,
-                // so we shouldn't log it because otherwise it may mislead a user.
+            } catch (MimeParsingException ignored) {
             }
         }
+        final MultipartSubscriber delegatedSubscriber = this.delegatedSubscriber;
+        assert delegatedSubscriber != null : "processOnError is called after subscription";
+        delegatedSubscriber.onError(cause);
+        // decoded.abort(e) is called by the thread who calls this method;
     }
 
     @Override

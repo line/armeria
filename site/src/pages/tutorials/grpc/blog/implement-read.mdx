@@ -1,0 +1,260 @@
+---
+menuTitle: "Implement READ"
+order: 4
+type: step
+category: grpc
+tags:
+  - server
+level: basic
+---
+
+# Implementing READ operation
+
+In the earlier step, we tried to create a blog post. In this step, we'll implement a read operation and make a call to read blog posts. We'll write two service methods, one for reading a single post and another for multiple posts.
+
+<TutorialSteps current={4} />
+
+## What you need
+
+You need to have:
+- [Java code generated](/tutorials/grpc/blog/define-service#compile-proto-file)
+- Main.java
+- BlogService.java
+- BlogClient.java
+
+## 1. Implement server-side
+
+Let's write two methods for retrieving blog posts; one for a single post and
+another for multiple posts.
+
+<Tabs>
+<TabPane tab="Single post" key="1">
+
+Add a service method in `BlogService.java` to retrieve a single post.
+
+```java filename=BlogService.java
+import example.armeria.blog.grpc.Blog.GetBlogPostRequest;
+
+public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+
+  @Override
+  public void getBlogPost(GetBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+    final BlogPost blogPost = blogPosts.get(request.getId());
+    if (blogPost == null) {
+      responseObserver.onError(
+        Status.NOT_FOUND.withDescription("The blog post does not exist. ID: " + request.getId())
+                        .asRuntimeException());
+    } else {
+        responseObserver.onNext(blogPost);
+        responseObserver.onCompleted();
+    }
+  }
+}
+```
+
+</TabPane>
+<TabPane tab="Multiple posts" key="2">
+
+Add a service method in `BlogService.java` to retrieve multiple posts.
+
+```java filename=BlogService.java
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Map.Entry;
+
+import example.armeria.blog.grpc.Blog.ListBlogPostsRequest;
+import example.armeria.blog.grpc.Blog.ListBlogPostsResponse;
+
+final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+  @Override
+  public void listBlogPosts(ListBlogPostsRequest request,
+                            StreamObserver<ListBlogPostsResponse> responseObserver) {
+      final Collection<BlogPost> blogPosts;
+      if (request.getDescending()) {
+          blogPosts = this.blogPosts.entrySet()
+                                    .stream()
+                                    .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
+                                    .map(Entry::getValue).collect(Collectors.toList());
+      } else {
+          blogPosts = this.blogPosts.values();
+      }
+      responseObserver.onNext(ListBlogPostsResponse.newBuilder().addAllBlogs(blogPosts).build());
+      responseObserver.onCompleted();
+  }
+}
+```
+
+</TabPane>
+</Tabs>
+
+## 2. Implement client-side
+
+This time, we'll implement a client method for each corresponding server method.
+
+  <Tabs>
+  <TabPane tab="Single post" key="1">
+
+  Add a method in the `BlogClient.java` to retrieve a single post.
+
+  ```java filename=BlogClient.java
+  import example.armeria.blog.grpc.Blog.GetBlogPostRequest;
+  ...
+  static void getBlogPost(int id) {
+    final BlogPost blogPost = client.getBlogPost(GetBlogPostRequest.newBuilder().setId(id).build());
+  }
+  ```
+
+  </TabPane>
+  <TabPane tab="Multiple posts" key="2">
+
+  Add a method in the `BlogClient.java` to retrieve a list of posts.
+
+  ```java filename=BlogClient.java
+  import example.armeria.blog.grpc.Blog.ListBlogPostsRequest;
+  import example.armeria.blog.grpc.Blog.ListBlogPostsResponse;
+
+  ...
+  static void listBlogPosts() {
+    final ListBlogPostsResponse
+            response = client.listBlogPosts(ListBlogPostsRequest.newBuilder().setDescending(false).build());
+
+    final List<BlogPost> blogs = response.getBlogsList();
+  }
+  ```
+
+  </TabPane>
+  </Tabs>
+
+## 3. Test retrieving multiple posts
+
+Let's start off with retrieving all the blog posts there are:
+
+1. Add the `listBlogPosts()` method in the test call.
+  ```java filename=BlogClient.java
+  static void testRun() {
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+    listBlogPosts();
+  }
+  ```
+2. [Re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service). Your server is running if you see the following message.
+  ```bash
+  [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
+  ```
+3. Run the client.
+
+Since we haven't added any log messages, we can't tell if we've successfully retrieved blog posts or not. To check the result, we'll add in a decorator in the following step. Not only can we see the blog posts retrieved, we can obtain IDs to retrieve a post later on.
+
+## 4. Decorate the client
+
+Retrieving a single blog post requires a post ID. We haven't saved any post ID returned by the server. (Although we very much know that our tutorial service issues incremental ID.). To check IDs, we'll decorate the client with Armeria's <type://LoggingClient>. Likewise, you can decorate your service also. To decorate your service, use the [server decorator](https://armeria.dev/docs/server-decorator) or annotate your gRPC stub class with <type://@LoggingDecorator>.
+
+<Tip>
+
+  Another option available is interceptor. See <type://GrpcClientBuilder#intercept(Iterable)> for information.
+
+</Tip>
+
+1. Add a decorator to the client instance.
+  ```java filename=BlogClient.java
+  import com.linecorp.armeria.client.logging.LoggingClient;
+  import com.linecorp.armeria.client.logging.LoggingClient;
+
+  class BlogClient {
+    public static void main(String[] args) throws Exception {
+      ...
+      client = GrpcClients.builder("http://127.0.0.1:8080/")
+                          .decorator(LoggingClient.newDecorator())  // add this
+                          .build(BlogServiceBlockingStub.class);
+    }
+  }
+  ```
+2. Set up log messages:
+    - Add a dependency in the build.gradle file.
+      ```groovy filename=build.gradle
+      dependencies {
+        implementation 'ch.qos.logback:logback-classic:1.2.10'
+      }
+      ```
+    - Add the logback.xml file in the {project_root}/src/main/resources folder.
+      ```xml filename=logback.xml
+      <?xml version="1.0" encoding="UTF-8"?>
+      <configuration>
+
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+          <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+          </encoder>
+        </appender>
+
+        <root level="debug">
+          <appender-ref ref="STDOUT" />
+        </root>
+      </configuration>
+      ```
+3. Restart the server and run the client. If we succeed, we'll see an output like the following.
+  ```bash
+  [armeria-common-worker-nio-2-1] DEBUG c.l.a.client.logging.LoggingClient - [creqId=2f0fef66, chanId=0b350a6d, laddr=127.0.0.1:50824, raddr=127.0.0.1:8080][http://127.0.0.1:8080/example.armeria.blog.grpc.BlogService/ListBlogPosts#POST] Response: {startTime=2022-03-22T23:36:22.945Z(1645572982945000), length=99B, duration=516µs(516443ns), totalDuration=43986µs(43986061ns), headers=[:status=200, content-type=application/grpc+proto, grpc-encoding=identity, grpc-accept-encoding=gzip, server=Armeria/1.13.1-SNAPSHOT, date=Tue, 03 Feb 2022 23:36:22 GMT], content=CompletableRpcResponse{blogs {
+    title: "My first blog"
+    content: "Yay"
+    createdAt: 1645572982859
+    modifiedAt: 1645572982859
+  }
+  blogs {
+    id: 1
+    title: "Another blog post"
+    content: "Creating a post via createBlogPost()."
+    createdAt: 1645572982899
+    modifiedAt: 1645572982899
+  }
+  }, trailers=[EOS, grpc-status=0]}
+  ```
+Now that we have the ID information, we can now retrieve a single post.
+
+## 5. Test retrieving a single post
+
+Let's retrieve the second blog post. Apparently, the ID to use is `1`.
+
+1. Call the `getBlogPost()` method.
+  ```java filename=BlogClient.java
+  static void testRun() {
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+    listBlogPosts();  // feel free to comment this out or leave it
+    getBlogPost(1);   // add this
+  }
+  ```
+2. If you've stopped your server, run it again and then the client.
+  Because we haven't changed any code for creating blog posts, you'll be able to see the response for the `getBlogPost()` as below, whether you are re-running the server or not.
+  We have succeeded in reading a single blog post.
+  ```bash
+  [armeria-common-worker-nio-2-1] DEBUG c.l.a.client.logging.LoggingClient - [creqId=2f720d33, chanId=de1369e8, laddr=127.0.0.1:53868, raddr=127.0.0.1:8080][http://127.0.0.1:8080/example.armeria.blog.grpc.BlogService/GetBlogPost#POST] Response: {startTime=2022-02-23T02:22:50.689Z(1645582970689000), length=61B, duration=560µs(560871ns), totalDuration=6527µs(6527141ns), headers=[:status=200, content-type=application/grpc+proto, grpc-encoding=identity, grpc-accept-encoding=gzip, server=Armeria/1.13.1-SNAPSHOT, date=Wed, 23 Feb 2022 02:22:50 GMT], content=CompletableRpcResponse{id: 1
+  title: "Another blog post"
+  content: "Creating a post via createBlogPost()."
+  createdAt: 1645572982899
+  modifiedAt: 1645572982899
+  }, trailers=[EOS, grpc-status=0]}
+  ```
+3. Check what happens if you retrieve a post that does not exist. Change the argument to 100 and run the client again.
+  ```java filename=BlogClient.java
+  static void testRun() {
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+    getBlogPost(100); // Set the argument to 100
+  }
+  ```
+  We can see that our `getBlogPost()` method returns the `NOT_FOUND` error as a runtime exception.
+  ```bash
+  Exception in thread "main" io.grpc.StatusRuntimeException: NOT_FOUND: The blog post does not exist. ID: 100
+    at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:262)
+    at io.grpc.stub.ClientCalls.getUnchecked(ClientCalls.java:243)
+    at io.grpc.stub.ClientCalls.blockingUnaryCall(ClientCalls.java:156)
+    at example.armeria.blog.grpc.BlogServiceGrpc$BlogServiceBlockingStub.getBlogPost(BlogServiceGrpc.java:376)
+    at example.armeria.client.blog.grpc.BlogClient.getBlogPost(BlogClient.java:101)
+    at example.armeria.client.blog.grpc.BlogClient.testRun(BlogClient.java:52)
+    at example.armeria.client.blog.grpc.BlogClient.main(BlogClient.java:46)
+  ```
+
+## What's next
+
+Here, we've implemented service methods and client methods to retrieve blog posts. We have also added a decorator. See [Decorating a client](/docs/client-decorator/) for more information. Next, we'll implement a method for [updating a blog post](/tutorials/grpc/blog/implement-update) and add an exception handler.
+
+<TutorialSteps current={4} />

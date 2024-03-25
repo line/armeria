@@ -16,18 +16,56 @@
 
 package com.linecorp.armeria.internal.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
+import org.reactivestreams.Subscriber;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
+
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link FixedStreamMessage} that publishes no objects, just a close event.
  */
 @UnstableApi
 public class EmptyFixedStreamMessage<T> extends FixedStreamMessage<T> {
+
+    @Override
+    public boolean isComplete() {
+        return whenComplete().isDone();
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
+                          SubscriptionOption... options) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        if (executor.inEventLoop()) {
+            subscribe0(subscriber);
+        } else {
+            executor.execute(() -> subscribe0(subscriber));
+        }
+    }
+
+    private void subscribe0(Subscriber<? super T> subscriber) {
+        subscriber.onSubscribe(NoopSubscription.get());
+        subscriber.onComplete();
+        whenComplete().complete(null);
+    }
+
+    @Override
+    public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        whenComplete().complete(null);
+        return UnmodifiableFuture.completedFuture(ImmutableList.of());
+    }
 
     @Override
     public final boolean isEmpty() {
@@ -51,4 +89,19 @@ public class EmptyFixedStreamMessage<T> extends FixedStreamMessage<T> {
 
     @Override
     public void request(long n) {}
+
+    @Override
+    public void cancel() {
+        whenComplete().complete(null);
+    }
+
+    @Override
+    public void abort() {
+        whenComplete().complete(null);
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        whenComplete().complete(null);
+    }
 }

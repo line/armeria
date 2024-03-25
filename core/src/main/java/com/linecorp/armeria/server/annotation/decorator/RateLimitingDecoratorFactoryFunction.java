@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
 public final class RateLimitingDecoratorFactoryFunction
         implements DecoratorFactoryFunction<RateLimitingDecorator> {
     /**
-     * Creates a new decorator with the specified {@code parameter}.
+     * Creates a new decorator with the specified {@link RateLimitingDecorator}.
      */
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(RateLimitingDecorator parameter) {

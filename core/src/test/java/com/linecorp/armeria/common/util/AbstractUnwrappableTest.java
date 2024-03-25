@@ -35,11 +35,40 @@ class AbstractUnwrappableTest {
         assertThat(qux.unwrap().unwrap()).isSameAs(foo);
     }
 
+    @Test
+    void testUnwrapAll() {
+        final Foo foo = new Foo();
+        assertThat(foo.unwrapAll()).isSameAs(foo);
+
+        final Bar<Foo> bar = new Bar<>(foo);
+        assertThat(bar.unwrapAll()).isSameAs(foo);
+
+        final Qux<Bar<Foo>> qux = new Qux<>(bar);
+        assertThat(qux.unwrapAll()).isSameAs(foo);
+
+        final Baz baz = new Baz(qux);
+        assertThat(baz.unwrapAll()).isSameAs(foo);
+    }
+
     private static final class Foo implements Unwrappable {}
 
     private static final class Bar<T extends Unwrappable> extends AbstractUnwrappable<T> {
         Bar(T delegate) {
             super(delegate);
+        }
+    }
+
+    private static final class Baz implements Unwrappable {
+
+        private final Unwrappable delegate;
+
+        Baz(Unwrappable delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public Unwrappable unwrap() {
+            return delegate.unwrap();
         }
     }
 

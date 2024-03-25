@@ -1,0 +1,127 @@
+---
+date: 2022-08-08
+---
+
+## 🌟 New features
+
+- <type://DocService> can now render Markdown and [Mermaid](https://mermaid-js.github.io/mermaid/)
+  formatted documentation for annotated services. #4299 #4304
+
+  ```java
+  @Description(value = "### Markdown format", markup = Markup.MARKDOWN)
+  @Get("/markdown")
+  public HttpResponse markdown() {
+    return HttpResponse.of(200);
+  }
+  ```
+
+  ```java
+  @Description(value = "graph TD;\n" +
+                       " A-->B;\n" +
+                       " A-->C;\n" +
+                       " B-->D;\n" +
+                       " C-->D;",
+               markup = Markup.MERMAID)
+  @Get("/mermaid")
+  public HttpResponse mermaid() {
+    return HttpResponse.of(200);
+  }
+  ```
+
+- You can now bind decorators to each gRPC service using <type://GrpcServiceBuilder#addService(BindableService,Iterable)>. #4311 #4316
+
+  ```java
+  GrpcService.builder()
+    .addService(myGrpcService, List.of(decorator)) // 👈👈👈
+    .build();
+  ```
+
+- <type://UnframedGrpcErrorHandler#ofJson()> now conforms to
+  [Google's error model](https://cloud.google.com/apis/design/errors#error_model). #4231 #4384
+
+  ```java
+  GrpcService
+    .builder()
+    .addService(myGrpcServiceImpl)
+    .unframedGrpcErrorHandler(
+      UnframedGrpcErrorHandler.ofJson()) // 👈👈👈
+    .build();
+  ```
+
+  ```json
+  {
+    "code": 2,
+    "message": "A custom message!",
+    ...
+  }
+  ```
+
+- You can now extract the innermost element of <type://Unwrappable> type objects easily using <type://Unwrappable#unwrapAll()>. #4338
+
+  ```java
+  Foo foo = new Foo();
+  Bar<Foo> bar = new Bar<>(foo);
+  Qux<Bar<Foo>> qux = new Qux<>(bar);
+  assert qux.unwrapAll() == foo; // 👈👈👈
+  ```
+
+## 📈 Improvements
+
+- <type://RequestContext> now extends <type://Unwrappable>. #4308
+
+## 🛠️ Bug fixes
+
+- You no longer see an intermittent <type://IllegalStateException> for gRPC services
+  when <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> is enabled. #4367 #4374
+- Requests no longer hang when gRPC-JSON transcoding is enabled and gRPC decorators return an unframed response. #4337 #4348
+- You can now use <type://HttpFile> to serve files from the OSGI bundle. #4371 #4373
+- A request's start time on the server side is now correctly
+  recorded when a server receives the first header. #4365 #4372
+- You no longer see a false positive warning of unknown `MethodType` when using gRPC clients. #4363
+- You no longer see a `NoSuchElementException` while a <type://HealthCheckedEndpointGroup> is closed. #4349
+- <type://ClosedSessionException> and <type://ClosedStreamException> are raised correctly according to their usage. #4380
+- The timeout for client's endpoint selection isn't clamped by `responseTimeout` anymore. #4383
+
+## ⛓ Dependencies
+
+- Brave 5.13.9 → 5.13.10
+- Bucket4j 7.5.0 → 7.6.0
+- Curator 5.2.1 → 5.3.0
+- Dropwizard metrics 2.1.0 → 2.1.1
+- GraphQL-Java 18.2 → 19.0
+- GraphQL-Kotlin 5.3.2 → 6.1.0
+- gRPC-Java 1.47.0 → 1.48.0
+- java-jwt 3.19.1 → 4.0.0
+- Jetty 9.4.46.v20220331 → 9.4.48.v20220622
+- kafka-clients 3.2.0 → 3.2.1
+- Kotlin 1.7.0 → 1.7.10
+- Kotlin Coroutine 1.6.3 → 1.6.4
+- Micrometer 1.9.1 → 1.9.2
+- Netty 4.1.78.Final → 4.1.79.Final
+- Protobuf 3.19.2 → 3.21.1
+- Reactor 3.4.19 → 3.4.21
+- RESTEasy 5.0.2.Final → 5.0.4.Final
+- Sangria 3.0.0 → 3.0.1
+- Scala 2.12.15 → 2.12.16, 3.1.2 → 3.1.3
+- scala-collection-compat 2.7.0 → 2.8.1
+- Spring Boot 2.7.1 → 2.7.2
+- Spring Web 5.3.21 → 5.3.22
+- Tomcat8 8.5.78 → 8.5.81
+- Tomcat9 9.0.62 → 9.0.65
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'anuraaga',
+  'cnabro',
+  'ikhoon',
+  'jrhee17',
+  'mauhiz',
+  'minwoox',
+  'mscheong01',
+  'natsumehu',
+  'ngyukman',
+  'proceane',
+  'ta7uw',
+  'trustin'
+]} />

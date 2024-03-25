@@ -64,7 +64,7 @@ final class DefaultRestClient implements RestClient {
 
     @Override
     public Class<?> clientType() {
-        return delegate.clientType();
+        return RestClient.class;
     }
 
     @Override
@@ -75,5 +75,10 @@ final class DefaultRestClient implements RestClient {
     @Override
     public HttpClient unwrap() {
         return delegate.unwrap();
+    }
+
+    @Override
+    public Object unwrapAll() {
+        return delegate.unwrapAll();
     }
 }

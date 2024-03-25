@@ -52,7 +52,7 @@ class HttpServerHandlerTest {
             sb.route()
               .get("/httpResponseException")
               .build((ctx, req) -> {
-                  throw HttpResponseException.of(201);
+                  throw HttpResponseException.of(HttpResponse.of(201));
               });
         }
     };

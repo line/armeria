@@ -16,15 +16,20 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Builds a new {@link CircuitBreakerClient} or its decorator function.
  */
-public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerClientBuilder<HttpResponse> {
+public final class CircuitBreakerClientBuilder
+        extends AbstractCircuitBreakerClientBuilder<HttpRequest, HttpResponse> {
     static final int DEFAULT_MAX_CONTENT_LENGTH = Integer.MAX_VALUE;
 
     private final boolean needsContentInRule;
@@ -55,10 +60,10 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
      */
     public CircuitBreakerClient build(HttpClient delegate) {
         if (needsContentInRule) {
-            return new CircuitBreakerClient(delegate, mapping(), ruleWithContent(), maxContentLength);
+            return new CircuitBreakerClient(
+                    delegate, handler(), ruleWithContent(), maxContentLength, fallback());
         }
-
-        return new CircuitBreakerClient(delegate, mapping(), rule());
+        return new CircuitBreakerClient(delegate, handler(), rule(), fallback());
     }
 
     /**
@@ -74,5 +79,17 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
     @Override
     public CircuitBreakerClientBuilder mapping(CircuitBreakerMapping mapping) {
         return (CircuitBreakerClientBuilder) super.mapping(mapping);
+    }
+
+    @Override
+    @UnstableApi
+    public CircuitBreakerClientBuilder handler(CircuitBreakerClientHandler handler) {
+        return (CircuitBreakerClientBuilder) super.handler(handler);
+    }
+
+    @Override
+    public CircuitBreakerClientBuilder recover(BiFunction<? super ClientRequestContext, ? super HttpRequest,
+            ? extends HttpResponse> fallback) {
+        return (CircuitBreakerClientBuilder) super.recover(fallback);
     }
 }

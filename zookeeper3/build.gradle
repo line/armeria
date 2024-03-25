@@ -1,13 +1,13 @@
 dependencies {
     // Curator
-    api 'org.apache.curator:curator-recipes'
-    api 'org.apache.curator:curator-x-discovery'
+    api libs.curator.recipes
+    api libs.curator.discovery
 
     // ZooKeeper
-    api 'org.apache.zookeeper:zookeeper'
+    api libs.zookeeper
 
-    testImplementation 'com.twitter:finagle-serversets_2.13'
-    testImplementation 'io.dropwizard.metrics:metrics-core'
-    testImplementation 'org.dmonix.junit:zookeeper-junit'
-    testImplementation 'org.xerial.snappy:snappy-java'
+    testImplementation libs.finagle.serversets.v213
+    testImplementation libs.dropwizard.metrics.core
+    testImplementation libs.zookeeper.junit
+    testImplementation libs.snappy
 }

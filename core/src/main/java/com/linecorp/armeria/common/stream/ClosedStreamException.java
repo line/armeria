@@ -20,7 +20,8 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * A {@link RuntimeException} that is raised when a {@link StreamMessage} has been closed unexpectedly.
+ * A {@link RuntimeException} that is raised when a {@link StreamMessage} or an HTTP/2 stream
+ * has been closed unexpectedly.
  */
 public class ClosedStreamException extends RuntimeException {
 

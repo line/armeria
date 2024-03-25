@@ -1,5 +1,5 @@
 dependencies {
-    testImplementation 'javax.ws.rs:jsr311-api'
-    testImplementation 'com.netflix.eureka:eureka-client'
-    testImplementation 'com.netflix.eureka:eureka-test-utils'
+    testImplementation libs.javax.jsr311
+    testImplementation libs.eureka.client
+    testImplementation libs.eureka.test.utils
 }

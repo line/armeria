@@ -19,6 +19,7 @@ import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
+import TableContainer from '@material-ui/core/TableContainer';
 import * as React from 'react';
 import { Method, Specification } from '../../lib/specification';
 
@@ -32,25 +33,27 @@ interface Props {
 const Exceptions: React.FunctionComponent<Props> = (props) => (
   <Section>
     <Typography variant="h6">Exceptions</Typography>
-    <Table>
-      <TableBody>
-        {props.method.exceptionTypeSignatures.length > 0 ? (
-          props.method.exceptionTypeSignatures.map((exception) => (
-            <TableRow key={exception}>
-              <TableCell>
-                <code>
-                  {props.specification.getTypeSignatureHtml(exception)}
-                </code>
-              </TableCell>
+    <TableContainer>
+      <Table>
+        <TableBody>
+          {props.method.exceptionTypeSignatures.length > 0 ? (
+            props.method.exceptionTypeSignatures.map((exception) => (
+              <TableRow key={exception}>
+                <TableCell>
+                  <code>
+                    {props.specification.getTypeSignatureHtml(exception)}
+                  </code>
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow key="empty exception">
+              <TableCell>There are no exceptions</TableCell>
             </TableRow>
-          ))
-        ) : (
-          <TableRow key="empty exception">
-            <TableCell>There are no exceptions</TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
   </Section>
 );
 

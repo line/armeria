@@ -29,9 +29,10 @@ task release(
             throw new InvalidUserDataException(
                     "invalid release version: ${releaseVersion} (expected: ${rootProject.ext.versionPattern})")
         }
-        if (!(nextVersion =~ rootProject.ext.versionPattern)) {
+        if (!(nextVersion =~ rootProject.ext.versionPattern || nextVersion.equalsIgnoreCase('skip'))) {
             throw new InvalidUserDataException(
-                    "invalid next version: ${nextVersion} (expected: ${rootProject.ext.versionPattern})")
+                    "invalid next version: ${nextVersion}" +
+                            " (expected: ${rootProject.ext.versionPattern} or skip)")
         }
 
         // Ensure the repository is upstream.
@@ -88,16 +89,21 @@ task release(
         project.ext.executeGit('commit', '-m', "Release $tag")
         project.ext.executeGit('tag', tag)
 
-        // Update the version to the next version and commit.
-        def actualNextVersion = "${nextVersion}-SNAPSHOT"
-        project.ext.executeGit('reset', '--hard', 'HEAD^')
-        gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${actualNextVersion}\$1"),
-                'ISO-8859-1')
-        project.ext.executeGit('add', gradlePropsFile.toString())
-        project.ext.executeGit('commit', '-m', "Update the project version to ${actualNextVersion}")
+        if (!nextVersion.equalsIgnoreCase('skip')) {
+            // Update the version to the next version and commit.
+            def actualNextVersion = "${nextVersion}-SNAPSHOT"
+            project.ext.executeGit('reset', '--hard', 'HEAD^')
+            gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${actualNextVersion}\$1"),
+                    'ISO-8859-1')
+            project.ext.executeGit('add', gradlePropsFile.toString())
+            project.ext.executeGit('commit', '-m', "Update the project version to ${actualNextVersion}")
 
-        // Push the commits and tags.
-        project.ext.executeGit('push', 'origin')
+            // Push the commits.
+            project.ext.executeGit('push', 'origin')
+        } else {
+            println "Skipped pushing the commit for updating the next version."
+        }
+        // Push the tag.
         project.ext.executeGit('push', 'origin', tag)
 
         println()

@@ -16,8 +16,12 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.annotation.Nonnull;
 
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -25,6 +29,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.stream.AggregatingStreamMessage;
 
 import io.netty.channel.EventLoop;
@@ -40,6 +45,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private final RequestHeaders headers;
     private final RoutingContext routingCtx;
     private final ExchangeType exchangeType;
+    private final long requestStartTimeNanos;
+    private final long requestStartTimeMicros;
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -49,11 +56,13 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     @Nullable
     private HttpResponse response;
-    private boolean isResponseAborted;
+    @Nullable
+    private Throwable abortResponseCause;
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
-                                  RoutingContext routingCtx, ExchangeType exchangeType) {
+                                  RoutingContext routingCtx, ExchangeType exchangeType,
+                                  long requestStartTimeNanos, long requestStartTimeMicros) {
         super(4);
         this.headers = headers;
         this.eventLoop = eventLoop;
@@ -64,6 +73,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         assert routingCtx.hasResult();
         this.routingCtx = routingCtx;
         this.exchangeType = exchangeType;
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
     }
 
     @Override
@@ -73,6 +84,17 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         if (trailers != null) {
             ctx.logBuilder().requestTrailers(trailers);
         }
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return ctx != null;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 
     @Override
@@ -145,10 +167,10 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public void setResponse(HttpResponse response) {
         // TODO(ikhoon): Dedup
-        if (isResponseAborted) {
+        if (abortResponseCause != null) {
             // This means that we already tried to close the request, so abort the response immediately.
             if (!response.isComplete()) {
-                response.abort();
+                response.abort(abortResponseCause);
             }
         } else {
             this.response = response;
@@ -157,7 +179,10 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     @Override
     public void abortResponse(Throwable cause, boolean cancel) {
-        isResponseAborted = true;
+        if (abortResponseCause != null) {
+            return;
+        }
+        abortResponseCause = cause;
 
         // Make sure to invoke the ServiceRequestContext.whenRequestCancelling() and whenRequestCancelled()
         // by cancelling a request
@@ -171,7 +196,12 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
-    public boolean isAggregated() {
+    public boolean isResponseAborted() {
+        return abortResponseCause != null;
+    }
+
+    @Override
+    public boolean needsAggregation() {
         return true;
     }
 
@@ -181,7 +211,31 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
+    public long requestStartTimeNanos() {
+        return requestStartTimeNanos;
+    }
+
+    @Override
+    public long requestStartTimeMicros() {
+        return requestStartTimeMicros;
+    }
+
+    @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Override
+    public StreamingDecodedHttpRequest toAbortedStreaming(
+            InboundTrafficController inboundTrafficController,
+            Throwable cause, boolean shouldResetOnlyIfRemoteIsOpen) {
+        final StreamingDecodedHttpRequest streamingDecodedHttpRequest = new StreamingDecodedHttpRequest(
+                eventLoop, id, streamId, headers, keepAlive,
+                inboundTrafficController, maxRequestLength, routingCtx,
+                exchangeType, requestStartTimeNanos, requestStartTimeMicros,
+                false, shouldResetOnlyIfRemoteIsOpen);
+        abort(cause);
+        streamingDecodedHttpRequest.abortResponse(cause, true);
+        return streamingDecodedHttpRequest;
     }
 }

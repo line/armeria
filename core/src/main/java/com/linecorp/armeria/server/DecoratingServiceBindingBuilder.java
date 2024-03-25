@@ -23,6 +23,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 
 /**
  * A builder class for binding a {@code decorator} with {@link Route} fluently.
@@ -51,6 +52,7 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     private final ServerBuilder serverBuilder;
 
     DecoratingServiceBindingBuilder(ServerBuilder serverBuilder) {
+        super(EMPTY_CONTEXT_PATHS);
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
     }
 
@@ -195,7 +197,7 @@ public final class DecoratingServiceBindingBuilder extends AbstractBindingBuilde
     public ServerBuilder build(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         buildRouteList().forEach(
-                route -> serverBuilder.routingDecorator(new RouteDecoratingService(route, decorator)));
+                route -> serverBuilder.routingDecorator(new RouteDecoratingService(route, "/", decorator)));
         return serverBuilder;
     }
 

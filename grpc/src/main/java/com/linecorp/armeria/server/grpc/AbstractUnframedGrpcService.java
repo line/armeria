@@ -26,11 +26,14 @@ import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -60,11 +63,16 @@ import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.netty.util.AttributeKey;
 
 /**
  * Common part of the {@link UnframedGrpcService} and {@link HttpJsonTranscodingService}.
  */
 abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService implements GrpcService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractUnframedGrpcService.class);
+    static final AttributeKey<Boolean> IS_UNFRAMED_GRPC =
+            AttributeKey.valueOf(AbstractUnframedGrpcService.class, "IS_UNFRAMED_GRPC");
 
     private final GrpcService delegate;
     private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
@@ -134,8 +142,10 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             RequestHeaders grpcHeaders,
             HttpData content,
             CompletableFuture<HttpResponse> res,
-            @Nullable Function<HttpData, HttpData> responseBodyConverter) {
+            @Nullable Function<HttpData, HttpData> responseBodyConverter,
+            MediaType responseContentType) {
         final HttpRequest grpcRequest;
+        ctx.setAttr(IS_UNFRAMED_GRPC, true);
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
             final HttpData frame;
@@ -159,18 +169,19 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             return;
         }
 
-        grpcResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(
-                (framedResponse, t) -> {
-                    try (SafeCloseable ignore = ctx.push()) {
-                        if (t != null) {
-                            res.completeExceptionally(t);
-                        } else {
-                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
-                                              responseBodyConverter);
-                        }
-                    }
-                    return null;
-                });
+        grpcResponse.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+                    .handle(
+                            (framedResponse, t) -> {
+                                try (SafeCloseable ignore = ctx.push()) {
+                                    if (t != null) {
+                                        res.completeExceptionally(t);
+                                    } else {
+                                        deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
+                                                          responseBodyConverter, responseContentType);
+                                    }
+                                }
+                                return null;
+                            });
     }
 
     @VisibleForTesting
@@ -178,10 +189,18 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                                   AggregatedHttpResponse grpcResponse,
                                   CompletableFuture<HttpResponse> res,
                                   UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                                  @Nullable Function<HttpData, HttpData> responseBodyConverter) {
+                                  @Nullable Function<HttpData, HttpData> responseBodyConverter,
+                                  MediaType responseContentType) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
+        if (grpcStatusCode == null) {
+            PooledObjects.close(grpcResponse.content());
+            res.completeExceptionally(new NullPointerException("grpcStatusCode must not be null"));
+            logger.warn("{} A gRPC response must have the {} header. response: {}",
+                        ctx, GrpcHeaderNames.GRPC_STATUS, grpcResponse);
+            return;
+        }
         Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
         final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
         if (!Strings.isNullOrEmpty(grpcMessage)) {
@@ -199,15 +218,15 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         }
 
         final MediaType grpcMediaType = grpcResponse.contentType();
+        if (grpcMediaType == null) {
+            PooledObjects.close(grpcResponse.content());
+            res.completeExceptionally(new NullPointerException("MediaType is undefined"));
+            return;
+        }
+
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
-        if (grpcMediaType != null) {
-            if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
-                unframedHeaders.contentType(MediaType.PROTOBUF);
-            } else if (grpcMediaType.is(GrpcSerializationFormats.JSON.mediaType())) {
-                unframedHeaders.contentType(MediaType.JSON_UTF_8);
-            }
-        }
+        unframedHeaders.contentType(responseContentType);
 
         final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.

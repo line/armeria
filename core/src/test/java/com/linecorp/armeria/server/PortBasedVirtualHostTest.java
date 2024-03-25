@@ -21,6 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.net.ServerSocket;
 
+import javax.net.ssl.KeyManagerFactory;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -155,6 +157,20 @@ class PortBasedVirtualHostTest {
         assertThatThrownBy(() -> Server.builder().virtualHost(0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("port: 0 (expected: 1-65535)");
+    }
+
+    @Test
+    void cannotSetTls() {
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .http(18080)
+                  .virtualHost(18080)
+                  .tls(KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()))
+                  .service("/", (ctx, req) -> HttpResponse.of("OK"))
+                  .and()
+                  .build();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot configure TLS to a port-based virtual host");
     }
 
     @Test

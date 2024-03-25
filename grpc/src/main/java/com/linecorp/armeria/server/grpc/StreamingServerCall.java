@@ -31,9 +31,9 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -41,6 +41,8 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
+import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
+import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -81,11 +83,12 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                         HttpResponseWriter res, int maxRequestMessageLength, int maxResponseMessageLength,
                         ServiceRequestContext ctx, SerializationFormat serializationFormat,
                         @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
-                        ResponseHeaders defaultHeaders, @Nullable GrpcStatusFunction statusFunction,
+                        ResponseHeaders defaultHeaders,
+                        @Nullable GrpcExceptionHandlerFunction exceptionHandler,
                         @Nullable Executor blockingExecutor, boolean autoCompress) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              defaultHeaders, statusFunction, blockingExecutor, autoCompress);
+              defaultHeaders, exceptionHandler, blockingExecutor, autoCompress);
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");
@@ -95,8 +98,8 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         final RequestHeaders clientHeaders = req.headers();
         final ByteBufAllocator alloc = ctx.alloc();
         final HttpStreamDeframer requestDeframer =
-                new HttpStreamDeframer(decompressorRegistry, ctx, this, statusFunction,
-                                       maxRequestMessageLength, grpcWebText)
+                new HttpStreamDeframer(decompressorRegistry, ctx, this,
+                                       exceptionHandler, maxRequestMessageLength, grpcWebText, true)
                         .decompressor(clientDecompressor(clientHeaders, decompressorRegistry));
         deframedRequest = req.decode(requestDeframer, alloc);
         requestDeframer.setDeframedStreamMessage(deframedRequest);
@@ -121,7 +124,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    void startDeframing() {
+    public void startDeframing() {
         deframedRequest.subscribe(this, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
@@ -172,7 +175,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                 maybeCancel();
             }
         } catch (Throwable e) {
-            close(e);
+            close(e, true);
         }
     }
 
@@ -182,7 +185,9 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    void doClose(Status status, Metadata metadata, boolean completed) {
+    public void doClose(ServerStatusAndMetadata statusAndMetadata) {
+        final Status status = statusAndMetadata.status();
+        final Metadata metadata = statusAndMetadata.metadata();
         final boolean trailersOnly;
         if (firstResponse != null) {
             // ResponseHeaders was written successfully.
@@ -204,25 +209,28 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                     trailersOnly = false;
                 } else {
                     // A stream was closed already.
-                    closeListener(status, false, true);
+                    statusAndMetadata.shouldCancel();
+                    statusAndMetadata.setResponseContent(true);
+                    closeListener(statusAndMetadata);
                     return;
                 }
             }
         }
 
         // Set responseContent before closing stream to use responseCause in error handling
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
         try {
             if (res.tryWrite(responseTrailers(ctx, status, metadata, trailersOnly))) {
                 res.close();
             }
         } finally {
-            closeListener(status, completed, false);
+            statusAndMetadata.setResponseContent(false);
+            closeListener(statusAndMetadata);
         }
     }
 
     @Override
-    @Nullable O firstResponse() {
+    protected @Nullable O firstResponse() {
         return firstResponse;
     }
 
@@ -250,12 +258,12 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     @Override
     public void onError(Throwable t) {
         if (!isCloseCalled() && !(t instanceof AbortedStreamException)) {
-            close(t);
+            close(t, true);
         }
     }
 
     @Override
-    public void transportReportStatus(Status status, Metadata unused) {
+    public void transportReportStatus(Status status, Metadata metadata) {
         // A server doesn't see trailers from the client so will never have Metadata here.
 
         if (isCloseCalled()) {
@@ -265,6 +273,6 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        closeListener(status, false, true);
+        closeListener(new ServerStatusAndMetadata(status, metadata, true, true));
     }
 }

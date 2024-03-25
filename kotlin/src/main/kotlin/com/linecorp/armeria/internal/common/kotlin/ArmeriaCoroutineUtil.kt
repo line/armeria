@@ -19,7 +19,10 @@
 
 package com.linecorp.armeria.internal.common.kotlin
 
+import com.linecorp.armeria.common.ContextAwareExecutor
 import com.linecorp.armeria.common.kotlin.CoroutineContexts
+import com.linecorp.armeria.common.kotlin.asCoroutineContext
+import com.linecorp.armeria.common.kotlin.asCoroutineDispatcher
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil
 import com.linecorp.armeria.server.ServiceRequestContext
 import io.netty.util.concurrent.EventExecutor
@@ -46,20 +49,22 @@ internal fun callKotlinSuspendingMethod(
     obj: Any,
     args: Array<Any>,
     executorService: ExecutorService,
-    ctx: ServiceRequestContext
+    ctx: ServiceRequestContext,
 ): CompletableFuture<Any?> {
     val kFunction = checkNotNull(method.kotlinFunction) { "method is not a kotlin function" }
-    val future = GlobalScope.future(newCoroutineCtx(executorService, ctx)) {
-        val response = kFunction
-            .callSuspend(obj, *args)
-            .let { if (it == Unit) null else it }
+    val future =
+        GlobalScope.future(newCoroutineCtx(executorService, ctx)) {
+            val response =
+                kFunction
+                    .callSuspend(obj, *args)
+                    .let { if (it == Unit) null else it }
 
-        if (response != null && ctx.isCancelled) {
-            // A request has been canceled. Release the response resources to prevent leaks.
-            StreamMessageUtil.closeOrAbort(response)
+            if (response != null && ctx.isCancelled) {
+                // A request has been canceled. Release the response resources to prevent leaks.
+                StreamMessageUtil.closeOrAbort(response)
+            }
+            response
         }
-        response
-    }
 
     // Propagate cancellation to upstream.
     ctx.whenRequestCancelled().thenAccept { cause ->
@@ -77,11 +82,16 @@ internal fun callKotlinSuspendingMethod(
  */
 internal fun <T : Any> Flow<T>.asPublisher(
     executor: EventExecutor,
-    ctx: ServiceRequestContext
+    ctx: ServiceRequestContext,
 ): Publisher<T> = FlowCollectingPublisher(this, executor, newCoroutineCtx(executor, ctx))
 
-private fun newCoroutineCtx(executorService: ExecutorService, ctx: ServiceRequestContext): CoroutineContext {
+private fun newCoroutineCtx(
+    executorService: ExecutorService,
+    ctx: ServiceRequestContext,
+): CoroutineContext {
     val userContext = CoroutineContexts.get(ctx) ?: EmptyCoroutineContext
-    val requestContext = ArmeriaRequestCoroutineContext(ctx)
-    return executorService.asCoroutineDispatcher() + requestContext + userContext
+    if (executorService is ContextAwareExecutor) {
+        return (executorService as ContextAwareExecutor).asCoroutineDispatcher() + userContext
+    }
+    return executorService.asCoroutineDispatcher() + ctx.asCoroutineContext() + userContext
 }

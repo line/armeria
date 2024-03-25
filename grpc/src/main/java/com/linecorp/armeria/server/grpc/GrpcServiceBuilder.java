@@ -22,11 +22,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
@@ -37,9 +32,9 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -48,11 +43,13 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunctionBuilder;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
@@ -115,10 +112,10 @@ public final class GrpcServiceBuilder {
     private ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
 
     @Nullable
-    private LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings;
+    private GrpcExceptionHandlerFunctionBuilder exceptionMappingsBuilder;
 
     @Nullable
-    private GrpcStatusFunction statusFunction;
+    private GrpcExceptionHandlerFunction exceptionHandler;
 
     @Nullable
     private ImmutableList.Builder<ServerInterceptor> interceptors;
@@ -129,9 +126,11 @@ public final class GrpcServiceBuilder {
     @Nullable
     private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
 
+    private HttpJsonTranscodingOptions httpJsonTranscodingOptions = HttpJsonTranscodingOptions.of();
+
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
-    private int maxRequestMessageLength = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
+    private int maxRequestMessageLength = AbstractMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
 
     private int maxResponseMessageLength = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
@@ -162,7 +161,7 @@ public final class GrpcServiceBuilder {
      * what's returned by {@link BindableService#bindService()}.
      */
     public GrpcServiceBuilder addService(ServerServiceDefinition service) {
-        registryBuilder.addService(requireNonNull(service, "service"), null);
+        registryBuilder.addService(requireNonNull(service, "service"), null, ImmutableList.of());
         return this;
     }
 
@@ -185,7 +184,7 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
         registryBuilder.addService(requireNonNull(path, "path"), requireNonNull(service, "service"),
-                                   null, null);
+                                   null, null, ImmutableList.of());
         return this;
     }
 
@@ -212,7 +211,7 @@ public final class GrpcServiceBuilder {
         registryBuilder.addService(requireNonNull(path, "path"),
                                    requireNonNull(service, "service"),
                                    requireNonNull(methodDescriptor, "methodDescriptor"),
-                                   null);
+                                   null, ImmutableList.of());
         return this;
     }
 
@@ -221,13 +220,37 @@ public final class GrpcServiceBuilder {
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
+        return addService(bindableService, ImmutableList.of());
+    }
+
+    /**
+     * Decorates a gRPC {@link BindableService} with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
+     *
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder addService(
+            BindableService bindableService,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(bindableService, "bindableService");
+        requireNonNull(decorators, "decorators");
+
+        final boolean hasDecorators = !Iterables.isEmpty(decorators);
         if (bindableService instanceof ProtoReflectionService) {
+            if (hasDecorators) {
+                throw new IllegalArgumentException(
+                        "ProtoReflectionService should not be used with decorators.");
+            }
             return addService(ServerInterceptors.intercept(bindableService,
                                                            newProtoReflectionServiceInterceptor()));
         }
 
         if (bindableService instanceof GrpcHealthCheckService) {
+            if (hasDecorators) {
+                throw new IllegalArgumentException(
+                        "GrpcHealthCheckService should not be used with decorators.");
+            }
             if (enableHealthCheckService) {
                 throw new IllegalStateException("default gRPC health check service is enabled already.");
             }
@@ -235,7 +258,8 @@ public final class GrpcServiceBuilder {
             return this;
         }
 
-        registryBuilder.addService(bindableService.bindService(), bindableService.getClass());
+        registryBuilder.addService(bindableService.bindService(), bindableService.getClass(),
+                                   ImmutableList.copyOf(decorators));
         return this;
     }
 
@@ -257,11 +281,33 @@ public final class GrpcServiceBuilder {
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService) {
+        return addService(path, bindableService, ImmutableList.of());
+    }
+
+    /**
+     * Decorates a gRPC {@link BindableService} with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
+     *
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder addService(
+            String path, BindableService bindableService,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(path, "path");
+        requireNonNull(bindableService, "bindableService");
+        requireNonNull(decorators, "decorators");
         if (bindableService instanceof ProtoReflectionService) {
+            if (!Iterables.isEmpty(decorators)) {
+                throw new IllegalArgumentException(
+                        "ProtoReflectionService should not be used with decorators.");
+            }
+
             return addService(path, ServerInterceptors.intercept(bindableService,
                                                                  newProtoReflectionServiceInterceptor()));
         }
-        registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass());
+        registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass(),
+                                   ImmutableList.copyOf(decorators));
         return this;
     }
 
@@ -289,11 +335,48 @@ public final class GrpcServiceBuilder {
     public <T> GrpcServiceBuilder addService(
             T implementation,
             Function<? super T, ServerServiceDefinition> serviceDefinitionFactory) {
+        return addService(implementation, serviceDefinitionFactory, ImmutableList.of());
+    }
+
+    /**
+     * Decorates an implementation of gRPC service with the given decorators, in the order of iteration.
+     *
+     * <p>Most gRPC service implementations are {@link BindableService}s.
+     * This method is useful in cases like the followings.
+     *
+     * <p>Used for ScalaPB gRPC stubs
+     *
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new HelloServiceImpl,
+     *                        HelloServiceGrpc.bindService(_,
+     *                                                     ExecutionContext.global))}
+     * </pre>
+     *
+     * <p>Used for intercepted gRPC-Java stubs
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new TestServiceImpl,
+     *                        impl -> ServerInterceptors.intercept(impl, interceptors));
+     * }</pre>
+     *
+     * <p>For more details on decorator behavior, please refer to the following document.
+     *
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     */
+    @UnstableApi
+    public <T> GrpcServiceBuilder addService(
+            T implementation,
+            Function<? super T, ServerServiceDefinition> serviceDefinitionFactory,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(implementation, "implementation");
         requireNonNull(serviceDefinitionFactory, "serviceDefinitionFactory");
+        requireNonNull(decorators, "decorators");
+
         final ServerServiceDefinition serverServiceDefinition = serviceDefinitionFactory.apply(implementation);
         requireNonNull(serverServiceDefinition, "serviceDefinitionFactory.apply() returned null");
-        registryBuilder.addService(serverServiceDefinition, implementation.getClass());
+        registryBuilder.addService(serverServiceDefinition, implementation.getClass(),
+                                   ImmutableList.copyOf(decorators));
         return this;
     }
 
@@ -318,13 +401,37 @@ public final class GrpcServiceBuilder {
     public GrpcServiceBuilder addService(String path, BindableService bindableService,
                                          MethodDescriptor<?, ?> methodDescriptor) {
         // TODO(minwoox): consider renaming to addMethod(...)
+        return addService(path, bindableService, methodDescriptor, ImmutableList.of());
+    }
+
+    /**
+     * Decorates a {@linkplain MethodDescriptor method} of gRPC {@link BindableService}
+     * with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
+     *
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder addService(
+            String path, BindableService bindableService, MethodDescriptor<?, ?> methodDescriptor,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(path, "path");
+        requireNonNull(bindableService, "bindableService");
+        requireNonNull(methodDescriptor, "methodDescriptor");
+        requireNonNull(decorators, "decorators");
+
         if (bindableService instanceof ProtoReflectionService) {
+            if (!Iterables.isEmpty(decorators)) {
+                throw new IllegalArgumentException(
+                        "ProtoReflectionService should not be used with decorators.");
+            }
             final ServerServiceDefinition interceptor =
                     ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
             return addService(path, interceptor, methodDescriptor);
         }
+
         registryBuilder.addService(path, bindableService.bindService(), methodDescriptor,
-                                   bindableService.getClass());
+                                   bindableService.getClass(), ImmutableList.copyOf(decorators));
         return this;
     }
 
@@ -526,6 +633,50 @@ public final class GrpcServiceBuilder {
     /**
      * Sets whether the service handles HTTP/JSON requests using the gRPC wire protocol.
      *
+     * <p><b>Limitations:</b>
+     * <ul>
+     *     <li>Only unary methods (single request, single response) are supported.</li>
+     *     <li>
+     *         Message compression is not supported.
+     *         {@link EncodingService} should be used instead for
+     *         transport level encoding.
+     *     </li>
+     *     <li>
+     *         Transcoding will not work if the {@link GrpcService} is configured with
+     *         {@link ServerBuilder#serviceUnder(String, HttpService)}.
+     *     </li>
+     * </ul>
+     *
+     * <p>When custom {@link #supportedSerializationFormats(SerializationFormat...)} are used,
+     * {@link GrpcSerializationFormats#JSON} must be included to enable HTTP/JSON transcoding.
+     * Otherwise, service builder will throw {@link IllegalStateException} when building the service.
+     *
+     * @see <a href="https://cloud.google.com/endpoints/docs/grpc/transcoding">Transcoding HTTP/JSON to gRPC</a>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder enableHttpJsonTranscoding(boolean enableHttpJsonTranscoding) {
+        this.enableHttpJsonTranscoding = enableHttpJsonTranscoding;
+        return this;
+    }
+
+    /**
+     * Enables HTTP/JSON transcoding using the gRPC wire protocol.
+     * Provide {@link HttpJsonTranscodingOptions} to customize HttpJsonTranscoding.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * HttpJsonTranscodingOptions options =
+     *   HttpJsonTranscodingOptions.builder()
+     *                             .queryParamMatchRules(ORIGINAL_FIELD)
+     *                             ...
+     *                             .build();
+     *
+     * GrpcService.builder()
+     *            // Enable HttpJsonTranscoding and use the specified HttpJsonTranscodingOption
+     *            .enableHttpJsonTranscoding(options)
+     *            .build();
+     * }</pre>
+     *
      * <p>Limitations:
      * <ul>
      *     <li>Only unary methods (single request, single response) are supported.</li>
@@ -543,16 +694,21 @@ public final class GrpcServiceBuilder {
      * @see <a href="https://cloud.google.com/endpoints/docs/grpc/transcoding">Transcoding HTTP/JSON to gRPC</a>
      */
     @UnstableApi
-    public GrpcServiceBuilder enableHttpJsonTranscoding(boolean enableHttpJsonTranscoding) {
-        this.enableHttpJsonTranscoding = enableHttpJsonTranscoding;
+    public GrpcServiceBuilder enableHttpJsonTranscoding(HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
+        requireNonNull(httpJsonTranscodingOptions, "httpJsonTranscodingOptions");
+        enableHttpJsonTranscoding = true;
+        this.httpJsonTranscodingOptions = httpJsonTranscodingOptions;
         return this;
     }
 
     /**
      * Sets an error handler which handles an exception raised while serving a gRPC request transcoded from
      * an HTTP/JSON request. By default, {@link UnframedGrpcErrorHandler#ofJson()} would be set.
+     *
+     * @deprecated Use {@link HttpJsonTranscodingOptionsBuilder#errorHandler(UnframedGrpcErrorHandler)} instead.
      */
     @UnstableApi
+    @Deprecated
     public GrpcServiceBuilder httpJsonTranscodingErrorHandler(
             UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler) {
         requireNonNull(httpJsonTranscodingErrorHandler, "httpJsonTranscodingErrorHandler");
@@ -647,27 +803,14 @@ public final class GrpcServiceBuilder {
      * The gRPC health check service manages only the health checker that determines
      * the healthiness of the {@link Server}.
      *
-     * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
+     * @see
+     * <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
      */
     public GrpcServiceBuilder enableHealthCheckService(boolean enableHealthCheckService) {
         if (grpcHealthCheckService != null && enableHealthCheckService) {
             throw new IllegalStateException("gRPC health check service is set already.");
         }
         this.enableHealthCheckService = enableHealthCheckService;
-        return this;
-    }
-
-    /**
-     * Sets the specified {@link GrpcStatusFunction} that maps a {@link Throwable} to a gRPC {@link Status}.
-     *
-     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
-     */
-    public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction statusFunction) {
-        requireNonNull(statusFunction, "statusFunction");
-        checkState(exceptionMappings == null,
-                   "exceptionMapping() and addExceptionMapping() are mutually exclusive.");
-
-        this.statusFunction = statusFunction;
         return this;
     }
 
@@ -682,22 +825,68 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
-     * The mapping is used to handle a {@link Throwable} when it is raised.
+     * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
+     * to a gRPC {@link Status}.
      *
-     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
      */
-    public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
-        return addExceptionMapping(exceptionType, (ctx, throwable, meta) -> status);
+    @UnstableApi
+    public GrpcServiceBuilder exceptionHandler(GrpcExceptionHandlerFunction exceptionHandler) {
+        requireNonNull(exceptionHandler, "exceptionHandler");
+        checkState(exceptionMappingsBuilder == null,
+                   "addExceptionMapping() and exceptionHandler() are mutually exclusive.");
+
+        if (this.exceptionHandler == null) {
+            this.exceptionHandler = exceptionHandler;
+        } else {
+            this.exceptionHandler = this.exceptionHandler.orElse(exceptionHandler);
+        }
+        return this;
+    }
+
+    /**
+     * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
+     * to a gRPC {@link Status}.
+     *
+     * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
+     *
+     * @deprecated Use {@link #exceptionHandler(GrpcExceptionHandlerFunction)} instead.
+     */
+    @Deprecated
+    public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction statusFunction) {
+        requireNonNull(statusFunction, "statusFunction");
+        return exceptionHandler(statusFunction::apply);
     }
 
     /**
      * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
      * The mapping is used to handle a {@link Throwable} when it is raised.
      *
-     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     * <p>Note that this method and {@link #exceptionHandler(GrpcExceptionHandlerFunction)}
+     * are mutually exclusive.
      *
-     * @deprecated Use {@link #addExceptionMapping(Class, GrpcStatusFunction)} instead.
+     * @deprecated Use {@link GrpcExceptionHandlerFunctionBuilder#on(Class, Status)} instead.
+     */
+    @Deprecated
+    public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType, Status status) {
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(status, "status");
+        checkState(exceptionHandler == null,
+                   "addExceptionMapping() and exceptionHandler() are mutually exclusive.");
+
+        exceptionMappingsBuilder().on(exceptionType, status);
+        return this;
+    }
+
+    /**
+     * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
+     * The mapping is used to handle a {@link Throwable} when it is raised.
+     *
+     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are
+     * mutually exclusive.
+     *
+     * @deprecated Use {@link GrpcExceptionHandlerFunctionBuilder#on(Class, GrpcExceptionHandlerFunction)}
+     *             instead.
      */
     @Deprecated
     public <T extends Throwable> GrpcServiceBuilder addExceptionMapping(
@@ -705,16 +894,10 @@ public final class GrpcServiceBuilder {
         requireNonNull(exceptionType, "exceptionType");
         requireNonNull(statusFunction, "statusFunction");
 
-        checkState(this.statusFunction == null,
+        checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
-        if (exceptionMappings == null) {
-            exceptionMappings = new LinkedList<>();
-        }
-
-        //noinspection unchecked
-        addExceptionMapping(exceptionMappings, exceptionType,
-                            (ctx, throwable, metadata) -> statusFunction.apply((T) throwable, metadata));
+        exceptionMappingsBuilder().on(exceptionType, statusFunction);
         return this;
     }
 
@@ -722,70 +905,30 @@ public final class GrpcServiceBuilder {
      * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
      * The mapping is used to handle a {@link Throwable} when it is raised.
      *
-     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)} are mutually exclusive.
+     * <p>Note that this method and {@link #exceptionMapping(GrpcStatusFunction)}
+     * are mutually exclusive.
+     *
+     * @deprecated Use {@link GrpcExceptionHandlerFunctionBuilder#on(Class, GrpcExceptionHandlerFunction)}
+     *             instead.
      */
+    @Deprecated
     public GrpcServiceBuilder addExceptionMapping(Class<? extends Throwable> exceptionType,
                                                   GrpcStatusFunction statusFunction) {
         requireNonNull(exceptionType, "exceptionType");
         requireNonNull(statusFunction, "statusFunction");
 
-        checkState(this.statusFunction == null,
+        checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
-        if (exceptionMappings == null) {
-            exceptionMappings = new LinkedList<>();
-        }
-
-        addExceptionMapping(exceptionMappings, exceptionType, statusFunction);
+        exceptionMappingsBuilder().on(exceptionType, statusFunction::apply);
         return this;
     }
 
-    @VisibleForTesting
-    static <T extends Throwable> void addExceptionMapping(
-            LinkedList<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings,
-            Class<T> exceptionType, GrpcStatusFunction function) {
-        requireNonNull(exceptionMappings, "exceptionMappings");
-        requireNonNull(exceptionType, "exceptionType");
-        requireNonNull(function, "function");
-
-        final ListIterator<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> it =
-                exceptionMappings.listIterator();
-
-        while (it.hasNext()) {
-            final Map.Entry<Class<? extends Throwable>, GrpcStatusFunction> next = it.next();
-            final Class<? extends Throwable> oldExceptionType = next.getKey();
-            checkArgument(oldExceptionType != exceptionType, "%s is already added with %s",
-                          oldExceptionType, next.getValue());
-
-            if (oldExceptionType.isAssignableFrom(exceptionType)) {
-                // exceptionType is a subtype of oldExceptionType. exceptionType needs a higher priority.
-                it.previous();
-                it.add(new SimpleImmutableEntry<>(exceptionType, function));
-                return;
-            }
+    private GrpcExceptionHandlerFunctionBuilder exceptionMappingsBuilder() {
+        if (exceptionMappingsBuilder == null) {
+            exceptionMappingsBuilder = GrpcExceptionHandlerFunction.builder();
         }
-
-        exceptionMappings.add(new SimpleImmutableEntry<>(exceptionType, function));
-    }
-
-    /**
-     * Converts the specified exception mappings to {@link GrpcStatusFunction}.
-     */
-    @VisibleForTesting
-    static GrpcStatusFunction toGrpcStatusFunction(
-            List<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> exceptionMappings) {
-        final List<Map.Entry<Class<? extends Throwable>, GrpcStatusFunction>> mappings =
-                ImmutableList.copyOf(exceptionMappings);
-
-        return (ctx, throwable, metadata) -> {
-            for (Map.Entry<Class<? extends Throwable>, GrpcStatusFunction> mapping : mappings) {
-                if (mapping.getKey().isInstance(throwable)) {
-                    final Status status = mapping.getValue().apply(ctx, throwable, metadata);
-                    return status == null ? null : status.withCause(throwable);
-                }
-            }
-            return null;
-        };
+        return exceptionMappingsBuilder;
     }
 
     private ImmutableList.Builder<ServerInterceptor> interceptors() {
@@ -818,12 +961,30 @@ public final class GrpcServiceBuilder {
                     "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature " +
                     "is enabled");
         }
+        if (enableHttpJsonTranscoding && !supportedSerializationFormats.contains(
+                GrpcSerializationFormats.JSON)) {
+            throw new IllegalStateException(
+                    "'GrpcSerializationFormats.JSON' must be set if 'enableHttpJsonTranscoding' is set"
+            );
+        }
         if (enableHealthCheckService) {
             grpcHealthCheckService = GrpcHealthCheckService.builder().build();
         }
         if (grpcHealthCheckService != null) {
-            registryBuilder.addService(grpcHealthCheckService.bindService(), null);
+            registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
+
+        final GrpcExceptionHandlerFunction grpcExceptionHandler;
+        if (exceptionMappingsBuilder != null) {
+            grpcExceptionHandler = exceptionMappingsBuilder.build();
+        } else {
+            grpcExceptionHandler = exceptionHandler;
+        }
+
+        if (grpcExceptionHandler != null) {
+            registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
+        }
+
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
             final ImmutableList<ServerInterceptor> interceptors = this.interceptors.build();
@@ -831,18 +992,15 @@ public final class GrpcServiceBuilder {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
                         ServerInterceptors.intercept(entry.service(), interceptors);
-                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type());
+                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type(),
+                                              entry.additionalDecorators());
+            }
+            if (grpcExceptionHandler != null) {
+                newRegistryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
             }
             handlerRegistry = newRegistryBuilder.build();
         } else {
             handlerRegistry = registryBuilder.build();
-        }
-
-        final GrpcStatusFunction statusFunction;
-        if (exceptionMappings != null) {
-            statusFunction = toGrpcStatusFunction(exceptionMappings);
-        } else {
-            statusFunction = this.statusFunction;
         }
 
         GrpcService grpcService = new FramedGrpcService(
@@ -852,7 +1010,6 @@ public final class GrpcServiceBuilder {
                 supportedSerializationFormats,
                 jsonMarshallerFactory,
                 protoReflectionServiceInterceptor,
-                statusFunction,
                 maxRequestMessageLength, maxResponseMessageLength,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
@@ -866,15 +1023,23 @@ public final class GrpcServiceBuilder {
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
                                                      : UnframedGrpcErrorHandler.of());
         }
-
-        if (!handlerRegistry.decorators().isEmpty()) {
-            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
-        }
         if (enableHttpJsonTranscoding) {
-            grpcService = HttpJsonTranscodingService.of(
-                    grpcService,
-                    httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
-                                                            : UnframedGrpcErrorHandler.ofJson());
+            final HttpJsonTranscodingOptions httpJsonTranscodingOptions;
+            if (httpJsonTranscodingErrorHandler != null) {
+                httpJsonTranscodingOptions =
+                        HttpJsonTranscodingOptions
+                                .builder()
+                                .queryParamMatchRules(
+                                        this.httpJsonTranscodingOptions.queryParamMatchRules())
+                                .errorHandler(httpJsonTranscodingErrorHandler)
+                                .build();
+            } else {
+                httpJsonTranscodingOptions = this.httpJsonTranscodingOptions;
+            }
+            grpcService = HttpJsonTranscodingService.of(grpcService, httpJsonTranscodingOptions);
+        }
+        if (handlerRegistry.containsDecorators()) {
+            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
         }
         return grpcService;
     }

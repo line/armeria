@@ -64,8 +64,9 @@ public final class ContentTooLargeException extends RuntimeException {
         contentLength = -1;
     }
 
-    ContentTooLargeException(long maxContentLength, long contentLength, long transferred) {
-        super(toString(maxContentLength, contentLength, transferred));
+    ContentTooLargeException(long maxContentLength, long contentLength, long transferred,
+                             @Nullable Throwable cause) {
+        super(toString(maxContentLength, contentLength, transferred), cause);
 
         neverSample = false;
         this.transferred = transferred;

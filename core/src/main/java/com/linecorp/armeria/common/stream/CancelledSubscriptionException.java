@@ -40,6 +40,13 @@ public final class CancelledSubscriptionException extends RuntimeException {
                new CancelledSubscriptionException() : INSTANCE;
     }
 
+    /**
+     * Creates a new exception with the specified {@code message}.
+     */
+    public CancelledSubscriptionException(String message) {
+        super(message);
+    }
+
     private CancelledSubscriptionException() {}
 
     private CancelledSubscriptionException(@SuppressWarnings("unused") boolean dummy) {

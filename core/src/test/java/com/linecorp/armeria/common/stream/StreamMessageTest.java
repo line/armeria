@@ -213,7 +213,7 @@ class StreamMessageTest {
     @ArgumentsSource(PooledHttpDataStreamProvider.class)
     void releaseWithZeroDemand(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
         if (stream instanceof StreamWriter) {
-            ((StreamWriter<Object>) stream).write(data);
+            ((StreamWriter<HttpData>) stream).write(data);
         }
         stream.subscribe(new Subscriber<Object>() {
             @Override
@@ -247,8 +247,8 @@ class StreamMessageTest {
     @ArgumentsSource(PooledHttpDataStreamProvider.class)
     void releaseWithZeroDemandAndClosedStream(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
         if (stream instanceof StreamWriter) {
-            ((StreamWriter<Object>) stream).write(data);
-            ((StreamWriter<Object>) stream).close();
+            ((StreamWriter<HttpData>) stream).write(data);
+            ((StreamWriter<HttpData>) stream).close();
         }
 
         stream.subscribe(new Subscriber<Object>() {
@@ -333,7 +333,7 @@ class StreamMessageTest {
         final StreamMessage<HttpData> source = StreamMessage.of(httpData);
         final List<HttpData> collected = new ArrayList<>();
         final StreamMessage<HttpData> aborted = source.peek(x -> {
-            if (x.equals(HttpData.wrap(Unpooled.wrappedBuffer("6".getBytes())))) {
+            if (x.equals(HttpData.wrap("6".getBytes()))) {
                 source.abort();
             } else {
                 collected.add(x);
@@ -363,7 +363,7 @@ class StreamMessageTest {
         final StreamMessage<HttpData> source = StreamMessage.of(httpData);
         final List<HttpData> collected = new ArrayList<>();
         final StreamMessage<HttpData> aborted = source.peek(x -> {
-            if (x.equals(HttpData.wrap(Unpooled.wrappedBuffer("6".getBytes())))) {
+            if (x.equals(HttpData.wrap("6".getBytes()))) {
                 throw new RuntimeException();
             } else {
                 collected.add(x);
@@ -387,7 +387,7 @@ class StreamMessageTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return Stream.of(
-                    arguments(new DefaultStreamMessage<>(), TEN_INTEGERS),
+                    arguments(StreamMessage.streaming(), TEN_INTEGERS),
                     arguments(StreamMessage.of(), ImmutableList.of()),
                     arguments(StreamMessage.of(0), ImmutableList.of(0)),
                     arguments(StreamMessage.of(0, 1), ImmutableList.of(0, 1)),
@@ -400,7 +400,7 @@ class StreamMessageTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             final ByteBuf defaultBuf = newPooledBuffer();
             final HttpData defaultData = HttpData.wrap(defaultBuf).withEndOfStream();
-            final DefaultStreamMessage<HttpData> defaultStream = new DefaultStreamMessage<>();
+            final StreamWriter<HttpData> defaultStream = StreamMessage.streaming();
 
             final ByteBuf fixedBuf = newPooledBuffer();
             final HttpData fixedData = HttpData.wrap(fixedBuf).withEndOfStream();

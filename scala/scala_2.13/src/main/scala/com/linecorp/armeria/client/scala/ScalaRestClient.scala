@@ -21,6 +21,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup
 import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.common.util.Unwrappable
 import com.linecorp.armeria.common.{HttpMethod, Scheme}
+
 import java.net.URI
 import java.util.Objects.requireNonNull
 
@@ -179,9 +180,11 @@ private final class DefaultScalaRestClient(delegate: RestClient) extends ScalaRe
 
   override def uri(): URI = delegate.uri()
 
-  override def clientType(): Class[_] = delegate.clientType()
+  override def clientType(): Class[_] = classOf[ScalaRestClient]
 
   override def options(): ClientOptions = delegate.options()
 
   override def unwrap(): HttpClient = delegate.unwrap().asInstanceOf[HttpClient]
+
+  override def unwrapAll(): Object = delegate.unwrapAll();
 }

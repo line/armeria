@@ -29,7 +29,7 @@ import kotlinx.coroutines.future.await
  *
  * @see JacksonObjectMapperProvider
  */
-suspend inline fun <reified T> RestClientPreparation.execute(): ResponseEntity<T> {
+suspend inline fun <reified T : Any> RestClientPreparation.execute(): ResponseEntity<T> {
     return execute(object : TypeReference<T>() {}).await()!!
 }
 
@@ -37,6 +37,6 @@ suspend inline fun <reified T> RestClientPreparation.execute(): ResponseEntity<T
  * Sends the HTTP request and converts the JSON response body as the `T` object using the specified
  * [ObjectMapper].
  */
-suspend inline fun <reified T> RestClientPreparation.execute(mapper: ObjectMapper): ResponseEntity<T> {
+suspend inline fun <reified T : Any> RestClientPreparation.execute(mapper: ObjectMapper): ResponseEntity<T> {
     return execute(object : TypeReference<T>() {}, mapper).await()!!
 }

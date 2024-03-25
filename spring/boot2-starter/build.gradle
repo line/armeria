@@ -1,4 +1,4 @@
 dependencies {
     api project(':spring:boot2-autoconfigure')
-    api 'org.springframework.boot:spring-boot-starter'
+    api libs.spring.boot2.starter
 }

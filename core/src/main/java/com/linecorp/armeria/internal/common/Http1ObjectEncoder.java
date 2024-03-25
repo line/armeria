@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static java.util.Objects.requireNonNull;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
@@ -28,7 +29,6 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -139,18 +139,15 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                     final Throwable firstCause = first.cause();
                     final Throwable secondCause = second.cause();
 
-                    Throwable combinedCause = null;
-                    if (firstCause != null) {
+                    final Throwable combinedCause;
+                    if (firstCause == null) {
+                        combinedCause = secondCause;
+                    } else {
+                        if (secondCause != null && secondCause != firstCause) {
+                            firstCause.addSuppressed(secondCause);
+                        }
                         combinedCause = firstCause;
                     }
-                    if (secondCause != null) {
-                        if (combinedCause == null) {
-                            combinedCause = secondCause;
-                        } else {
-                            combinedCause.addSuppressed(secondCause);
-                        }
-                    }
-
                     if (combinedCause != null) {
                         promise.setFailure(combinedCause);
                     } else {
@@ -251,7 +248,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             // Attempted to write something on a finished request/response; discard.
             // e.g. the request already timed out.
             ReferenceCountUtil.release(obj);
-            promise.setFailure(ClosedStreamException.get());
+            promise.setFailure(ClosedSessionException.get());
             return promise;
         }
 
@@ -262,7 +259,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 flushPendingWrites(currentPendingWrites);
             }
 
-            final ChannelFuture future = ch.write(obj, promise);
+            final ChannelFuture future = write(obj, promise);
             if (!isPing(id)) {
                 keepAliveHandler().onReadOrWrite();
             }
@@ -308,6 +305,12 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         }
     }
 
+    protected abstract ChannelFuture write(HttpObject obj, ChannelPromise promise);
+
+    protected int currentId() {
+        return currentId;
+    }
+
     private void flushPendingWrites(PendingWrites pendingWrites) {
         for (;;) {
             final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
@@ -315,7 +318,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 break;
             }
 
-            ch.write(e.getKey(), e.getValue());
+            write(e.getKey(), e.getValue());
         }
     }
 
@@ -343,7 +346,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                                             io.netty.handler.codec.http.HttpHeaders outputHeaders);
 
     @Override
-    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error) {
+    public final ChannelFuture doWriteReset(int id, int streamId, Http2Error error, boolean unused) {
         // NB: this.minClosedId can be overwritten more than once when 3+ pipelined requests are received
         //     and they are handled by different threads simultaneously.
         //     e.g. when the 3rd request triggers a reset and then the 2nd one triggers another.
@@ -351,7 +354,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
         if (minClosedId <= maxIdWithPendingWrites) {
             final ClosedSessionException cause =
-                    new ClosedSessionException("An HTTP/1 stream has been reset: " + error);
+                    new ClosedSessionException("An HTTP/1 connection has been reset: " + error);
             for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
                 final PendingWrites pendingWrites = pendingWritesMap.remove(i);
                 for (;;) {
@@ -379,7 +382,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     }
 
     protected final boolean isWritable(int id) {
-        return id < minClosedId;
+        return id < minClosedId && !isClosed();
     }
 
     protected final void updateClosedId(int id) {
@@ -400,7 +403,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             return;
         }
 
-        final ClosedSessionException cause = ClosedSessionException.get();
+        final ClosedSessionException cause = newClosedSessionException(ch);
         for (Queue<Entry<HttpObject, ChannelPromise>> queue : pendingWritesMap.values()) {
             for (;;) {
                 final Entry<HttpObject, ChannelPromise> e = queue.poll();
@@ -417,7 +420,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     @Override
     public final boolean isClosed() {
-        return closed;
+        return closed || !channel().isActive();
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {

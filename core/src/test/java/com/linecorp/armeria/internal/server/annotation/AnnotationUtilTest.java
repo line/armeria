@@ -30,7 +30,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.EnumSet;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.FixedValue;
@@ -39,7 +41,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil.FindOption;
 
-public class AnnotationUtilTest {
+class AnnotationUtilTest {
 
     @Retention(RetentionPolicy.RUNTIME)
     @interface TestMetaOfMetaAnnotation {}
@@ -136,7 +138,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void declared() throws NoSuchMethodException {
+    void declared() throws NoSuchMethodException {
         List<TestAnnotation> list;
 
         list = findDeclared(TestClass.class.getMethod("directlyPresent"), TestAnnotation.class);
@@ -157,7 +159,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void declared_repeatable() throws NoSuchMethodException {
+    void declared_repeatable() throws NoSuchMethodException {
         List<TestRepeatable> list;
 
         list = findDeclared(TestClass.class.getMethod("directlyPresentRepeatableSingle"),
@@ -179,7 +181,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void declared_repeatable_multi() throws NoSuchMethodException {
+    void declared_repeatable_multi() throws NoSuchMethodException {
         List<TestRepeatable> list;
 
         list = findDeclared(TestClass.class.getMethod("directlyPresentRepeatableMulti"),
@@ -206,7 +208,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void lookupSuperClass() {
+    void lookupSuperClass() {
         List<TestAnnotation> list;
 
         list = findInherited(TestClass.class, TestAnnotation.class);
@@ -233,7 +235,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void lookupSuperClass_repeatable() {
+    void lookupSuperClass_repeatable() {
         List<TestRepeatable> list;
 
         list = findInherited(SingleRepeatableTestClass.class, TestRepeatable.class);
@@ -260,7 +262,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void lookupSuperClass_repeatable_multi() {
+    void lookupSuperClass_repeatable_multi() {
         List<TestRepeatable> list;
 
         list = findInherited(TestClass.class, TestRepeatable.class);
@@ -296,7 +298,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void lookupMetaAnnotations_declared() {
+    void lookupMetaAnnotations_declared() {
         List<TestMetaAnnotation> list;
 
         for (final Class<?> clazz : ImmutableList.of(TestClass.class,
@@ -318,7 +320,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void findAll_includingRepeatable() {
+    void findAll_includingRepeatable() {
         List<TestMetaAnnotation> list;
 
         list = findAll(SingleRepeatableTestClass.class, TestMetaAnnotation.class);
@@ -338,7 +340,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void findAll_includingRepeatable_multi() {
+    void findAll_includingRepeatable_multi() {
         List<TestMetaAnnotation> list;
 
         list = findAll(TestClass.class, TestMetaAnnotation.class);
@@ -364,7 +366,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void findAll_interfaces() {
+    void findAll_interfaces() {
         List<TestAnnotation> list;
 
         list = findAll(TestClassWithIface.class, TestAnnotation.class);
@@ -383,7 +385,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void findAll_metaAnnotationOfMetaAnnotation() {
+    void findAll_metaAnnotationOfMetaAnnotation() {
         List<TestMetaOfMetaAnnotation> list;
 
         list = findAll(TestClass.class, TestMetaOfMetaAnnotation.class);
@@ -397,7 +399,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void findAll_cyclic() throws Exception {
+    void findAll_cyclic() throws Exception {
         List<CyclicAnnotation> list = findAll(TestClassWithCyclicAnnotation.class, CyclicAnnotation.class);
         assertThat(list).hasSize(1);
         assertThat(list.get(0)).isInstanceOf(CyclicAnnotation.class);
@@ -408,7 +410,8 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void cglibProxy() {
+    @EnabledForJreRange(max = JRE.JAVA_15)
+    void cglibProxy() {
         final Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(TestGrandChildClass.class);
         enhancer.setCallback((FixedValue) () -> null);
@@ -437,7 +440,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void getAnnotations_declared() {
+    void getAnnotations_declared() {
         final List<Annotation> list = getAnnotations(TestGrandChildClass.class);
         assertThat(list).hasSize(2);
         assertThat(list.get(0)).isInstanceOf(TestRepeatables.class);
@@ -445,7 +448,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void getAnnotations_inherited() {
+    void getAnnotations_inherited() {
         final List<Annotation> list =
                 getAnnotations(TestGrandChildClass.class, FindOption.LOOKUP_SUPER_CLASSES);
         assertThat(list).hasSize(6);
@@ -458,7 +461,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void getAnnotations_all() {
+    void getAnnotations_all() {
         final List<Annotation> list = getAllAnnotations(TestGrandChildClass.class);
         assertThat(list).hasSize(18);
         for (int i = 0; i < 3 * 6;) {
@@ -474,7 +477,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
-    public void getAnnotations_all_cyclic() throws Exception {
+    void getAnnotations_all_cyclic() throws Exception {
         List<Annotation> list = getAllAnnotations(TestClassWithCyclicAnnotation.class);
         assertThat(list).hasSize(1);
         assertThat(list.get(0)).isInstanceOf(CyclicAnnotation.class);

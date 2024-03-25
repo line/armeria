@@ -1,0 +1,8 @@
+armeria:
+  ports:
+    - ip: 127.0.0.1
+      port: 0
+      protocols: HTTP
+    - ip: 0.0.0.0
+      port: 0
+      protocols: HTTP

@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.encoding;
 
 import static com.linecorp.armeria.common.util.Exceptions.throwIfFatal;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.function.Predicate;
@@ -26,6 +25,9 @@ import java.util.function.Predicate;
 import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -39,6 +41,11 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
+import com.linecorp.armeria.internal.common.encoding.StreamEncoderFactory;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufOutputStream;
 
 /**
  * A {@link FilteredStreamMessage} that applies HTTP encoding to {@link HttpObject}s as they are published.
@@ -47,12 +54,14 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpEncodedResponse.class);
 
-    private final HttpEncodingType encodingType;
+    private final StreamEncoderFactory encoderFactory;
     private final Predicate<MediaType> encodableContentTypePredicate;
     private final long minBytesToForceChunkedAndEncoding;
+    private final ByteBufAllocator alloc;
 
+    @VisibleForTesting
     @Nullable
-    private ByteArrayOutputStream encodedStream;
+    ByteBufOutputStream encodedStream;
 
     @Nullable
     private OutputStream encodingStream;
@@ -62,12 +71,14 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
     private boolean encoderClosed;
 
     HttpEncodedResponse(HttpResponse delegate,
-                        HttpEncodingType encodingType,
+                        StreamEncoderFactory encoderFactory,
                         Predicate<MediaType> encodableContentTypePredicate,
+                        ByteBufAllocator alloc,
                         long minBytesToForceChunkedAndEncoding) {
         super(delegate);
-        this.encodingType = encodingType;
+        this.encoderFactory = encoderFactory;
         this.encodableContentTypePredicate = encodableContentTypePredicate;
+        this.alloc = alloc;
         this.minBytesToForceChunkedAndEncoding = minBytesToForceChunkedAndEncoding;
     }
 
@@ -92,23 +103,22 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
                 return obj;
             }
 
-            encodedStream = new ByteArrayOutputStream();
-            encodingStream = HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
+            final ByteBuf buf;
+            final long contentLength = headers.contentLength();
+            if (contentLength > 0) {
+                // A compression ratio heavily depends on the content but the compression ratio is higher than
+                // 50% in common cases.
+                buf = alloc.buffer(Ints.saturatedCast(contentLength) / 2);
+            } else {
+                buf = alloc.buffer();
+            }
+            encodedStream = new ByteBufOutputStream(buf);
+            encodingStream = encoderFactory.newEncoder(encodedStream);
 
             final ResponseHeadersBuilder mutable = headers.toBuilder();
             // Always use chunked encoding when compressing.
             mutable.remove(HttpHeaderNames.CONTENT_LENGTH);
-            switch (encodingType) {
-                case GZIP:
-                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "gzip");
-                    break;
-                case DEFLATE:
-                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "deflate");
-                    break;
-                case BROTLI:
-                    mutable.set(HttpHeaderNames.CONTENT_ENCODING, "br");
-                    break;
-            }
+            mutable.set(HttpHeaderNames.CONTENT_ENCODING, encoderFactory.encodingHeaderValue());
             mutable.set(HttpHeaderNames.VARY, HttpHeaderNames.ACCEPT_ENCODING.toString());
             return mutable.build();
         }
@@ -128,43 +138,52 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         try {
             encodingStream.write(data.array());
             encodingStream.flush();
-            return HttpData.wrap(encodedStream.toByteArray());
+            final ByteBuf encodedBuf = encodedStream.buffer();
+            final HttpData httpData = HttpData.wrap(encodedBuf.retainedSlice());
+            encodedBuf.readerIndex(encodedBuf.writerIndex());
+            return httpData;
         } catch (IOException e) {
+            // An unreleased ByteBuf will be released by `beforeError()`
             throw new IllegalStateException(
                     "Error encoding HttpData, this should not happen with byte arrays.",
                     e);
-        } finally {
-            encodedStream.reset();
         }
     }
 
     @Override
     protected void beforeComplete(Subscriber<? super HttpObject> subscriber) {
-        closeEncoder();
-        if (encodedStream != null && encodedStream.size() > 0) {
+        closeEncoder(false);
+        if (encodedStream == null) {
+            return;
+        }
+
+        final ByteBuf buf = encodedStream.buffer();
+        if (buf.isReadable()) {
             try {
-                subscriber.onNext(HttpData.wrap(encodedStream.toByteArray()));
+                subscriber.onNext(HttpData.wrap(buf));
             } catch (Throwable t) {
                 subscriber.onError(t);
                 throwIfFatal(t);
                 logger.warn("Subscriber.onNext() should not raise an exception. subscriber: {}",
                             subscriber, t);
             }
+        } else {
+            buf.release();
         }
     }
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        closeEncoder();
+        closeEncoder(true);
         return cause;
     }
 
     @Override
     protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
-        closeEncoder();
+        closeEncoder(true);
     }
 
-    private void closeEncoder() {
+    private void closeEncoder(boolean releaseEncodedBuf) {
         if (encoderClosed) {
             return;
         }
@@ -174,6 +193,9 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
         }
         try {
             encodingStream.close();
+            if (encodedStream != null && releaseEncodedBuf) {
+                encodedStream.buffer().release();
+            }
         } catch (IOException e) {
             logger.warn("Unexpected exception is raised while closing the encoding stream.", e);
         }

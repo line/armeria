@@ -48,10 +48,12 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.resteasy.ArmeriaJaxrsClientEngine;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.jaxrs.samples.JaxRsApp;
-import com.linecorp.armeria.server.jaxrs.samples.books.Book;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.resteasy.jaxrs.samples.JaxRsApp;
+import testing.resteasy.jaxrs.samples.books.Book;
 
 public class BookServiceClientServerTest {
 
@@ -234,12 +236,15 @@ public class BookServiceClientServerTest {
     }
 
     private static WebTarget newWebTarget() {
+        final LogWriter logWriter = LogWriter.builder()
+                                             .logger(logger)
+                                             .requestLogLevel(LogLevel.INFO)
+                                             .successfulResponseLogLevel(LogLevel.INFO)
+                                             .failureResponseLogLevel(LogLevel.WARN)
+                                             .build();
         final WebClient httpClient = WebClient.builder()
                                               .decorator(LoggingClient.builder()
-                                                                      .logger(logger)
-                                                                      .requestLogLevel(LogLevel.INFO)
-                                                                      .successfulResponseLogLevel(LogLevel.INFO)
-                                                                      .failureResponseLogLevel(LogLevel.WARN)
+                                                                      .logWriter(logWriter)
                                                                       .newDecorator())
                                               .build();
         final Client restClient = ((ResteasyClientBuilder) ClientBuilder.newBuilder())

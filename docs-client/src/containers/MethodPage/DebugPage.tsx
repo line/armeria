@@ -14,8 +14,6 @@
  * under the License.
  */
 
-import Alert from '@material-ui/lab/Alert';
-import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
 import Snackbar from '@material-ui/core/Snackbar';
@@ -25,7 +23,7 @@ import CloseIcon from '@material-ui/icons/Close';
 import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import React, {
-  ChangeEvent,
+  Dispatch,
   useCallback,
   useEffect,
   useMemo,
@@ -38,29 +36,55 @@ import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
 
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+} from '@material-ui/core';
+import Button from '@material-ui/core/Button';
+import Alert from '@material-ui/lab/Alert';
+import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
-import { Method } from '../../lib/specification';
+import {
+  extractUrlPath,
+  Method,
+  Route,
+  RoutePathType,
+  ServiceType,
+} from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { SelectOption } from '../../lib/types';
-import EndpointPath from './EndpointPath';
-import HttpHeaders from './HttpHeaders';
-import HttpQueryString from './HttpQueryString';
-import RequestBody from './RequestBody';
-import GraphqlRequestBody from './GraphqlRequestBody';
+import DebugInputs from './DebugInputs';
+
+const useStyles = makeStyles((theme: Theme) =>
+  createStyles({
+    actionDialog: {
+      justifyContent: 'space-between',
+      margin: theme.spacing(1),
+    },
+    responseGrid: {
+      borderLeft: `2px solid ${theme.palette.divider}`,
+    },
+  }),
+);
 
 SyntaxHighlighter.registerLanguage('json', json);
 
 interface OwnProps {
   method: Method;
-  isAnnotatedService: boolean;
-  isGraphqlService: boolean;
+  serviceType: ServiceType;
   exampleHeaders: SelectOption[];
   examplePaths: SelectOption[];
   exampleQueries: SelectOption[];
   exactPathMapping: boolean;
   useRequestBody: boolean;
+  debugFormIsOpen: boolean;
+  setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
+  jsonSchemas: any[];
+  docServiceRoute?: Route;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -85,18 +109,32 @@ const copyTextToClipboard = (text: string) => {
   const textArea = document.createElement('textarea');
   textArea.style.opacity = '0.0';
   textArea.value = text;
-  document.body.appendChild(textArea);
+
+  const modal = document.getElementById('debug-form')!;
+  modal.appendChild(textArea);
+
   textArea.focus();
   textArea.select();
   document.execCommand('copy');
-  document.body.removeChild(textArea);
+  modal.removeChild(textArea);
 };
 
-const scrollToDebugForm = () => {
-  const scrollNode = document.getElementById('debug-form');
-  if (scrollNode) {
-    scrollNode.scrollIntoView({ behavior: 'smooth' });
+const parseServerRootPath = (docServiceRoute: Route | undefined): string => {
+  if (
+    docServiceRoute === undefined ||
+    docServiceRoute.pathType !== RoutePathType.PREFIX
+  ) {
+    return '';
   }
+
+  // Remove '/*' from the path
+  const docServicePath = docServiceRoute.patternString.slice(0, -2);
+  const index = window.location.pathname.indexOf(docServicePath);
+  if (index < 0) {
+    return '';
+  }
+
+  return window.location.pathname.substring(0, index);
 };
 
 const toggle = (prev: boolean, override: unknown) => {
@@ -108,38 +146,26 @@ const toggle = (prev: boolean, override: unknown) => {
 
 const escapeSingleQuote = (text: string) => text.replace(/'/g, "'\\''");
 
-const extractUrlPath = (method: Method) => {
-  const endpoints = method.endpoints;
-  return endpoints[0].pathMapping.substring('exact:'.length);
-};
-
 const DebugPage: React.FunctionComponent<Props> = ({
   exactPathMapping,
   exampleHeaders,
   examplePaths,
   exampleQueries,
-  isAnnotatedService,
-  isGraphqlService,
+  serviceType,
   history,
   location,
   match,
   method,
   useRequestBody,
+  debugFormIsOpen,
+  setDebugFormIsOpen,
+  jsonSchemas,
+  docServiceRoute,
 }) => {
-  const [requestBodyOpen, toggleRequestBodyOpen] = useReducer(toggle, true);
   const [requestBody, setRequestBody] = useState('');
   const [debugResponse, setDebugResponse] = useState('');
-  const [additionalQueriesOpen, toggleAdditionalQueriesOpen] = useReducer(
-    toggle,
-    true,
-  );
   const [additionalQueries, setAdditionalQueries] = useState('');
-  const [endpointPathOpen, toggleEndpointPathOpen] = useReducer(toggle, true);
   const [additionalPath, setAdditionalPath] = useState('');
-  const [additionalHeadersOpen, toggleAdditionalHeadersOpen] = useReducer(
-    toggle,
-    true,
-  );
   const [additionalHeaders, setAdditionalHeaders] = useState('');
   const [stickyHeaders, toggleStickyHeaders] = useReducer(toggle, false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -149,6 +175,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
     false,
   );
 
+  const classes = useStyles();
+
   const transport = TRANSPORTS.getDebugTransport(method);
   if (!transport) {
     throw new Error("This method doesn't have a debug transport.");
@@ -157,16 +185,21 @@ const DebugPage: React.FunctionComponent<Props> = ({
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
 
-    let urlRequestBody;
-    if (useRequestBody) {
-      if (urlParams.has('request_body')) {
-        urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-        scrollToDebugForm();
-      }
+    let urlRequestBody = '';
+    if (useRequestBody && urlParams.has('request_body')) {
+      urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
+    }
+
+    let urlDebugFormIsOpen = false;
+    if (urlParams.has('debug_form_is_open')) {
+      urlDebugFormIsOpen = urlParams.get('debug_form_is_open') === 'true';
     }
 
     let urlPath;
-    if (isAnnotatedService || isGraphqlService) {
+    if (
+      serviceType === ServiceType.HTTP ||
+      serviceType === ServiceType.GRAPHQL
+    ) {
       if (exactPathMapping) {
         urlPath = extractUrlPath(method);
       } else {
@@ -180,7 +213,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
         )?.pathMapping || '';
     }
 
-    const urlQueries = isAnnotatedService ? urlParams.get('queries') : '';
+    const urlQueries =
+      serviceType === ServiceType.HTTP ? urlParams.get('queries') ?? '' : '';
 
     if (!keepDebugResponse) {
       setDebugResponse('');
@@ -190,17 +224,22 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
+
+    if (urlDebugFormIsOpen) {
+      setDebugFormIsOpen(urlDebugFormIsOpen);
+    }
   }, [
     exactPathMapping,
     exampleQueries.length,
-    isAnnotatedService,
-    isGraphqlService,
+    serviceType,
     location.search,
     match.params,
     method,
     transport,
     useRequestBody,
     keepDebugResponse,
+    docServiceRoute,
+    setDebugFormIsOpen,
   ]);
 
   /* eslint-disable react-hooks/exhaustive-deps */
@@ -231,49 +270,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setSnackbarOpen(false);
   }, []);
 
-  const onSelectedQueriesChange = useCallback(
-    (e: ChangeEvent<{ value: unknown }>) => {
-      setAdditionalQueries(e.target.value as string);
-    },
-    [],
-  );
-
-  const onQueriesFormChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      setAdditionalQueries(e.target.value);
-    },
-    [],
-  );
-
-  const onSelectedPathChange = useCallback(
-    (e: ChangeEvent<{ value: unknown }>) => {
-      setAdditionalPath(e.target.value as string);
-    },
-    [],
-  );
-
-  const onPathFormChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setAdditionalPath(e.target.value);
-  }, []);
-
-  const onSelectedHeadersChange = useCallback(
-    (e: ChangeEvent<{ value: unknown }>) => {
-      setAdditionalHeaders(e.target.value as string);
-    },
-    [],
-  );
-
-  const onHeadersFormChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      setAdditionalHeaders(e.target.value);
-    },
-    [],
-  );
-
-  const onDebugFormChange = useCallback((value: string) => {
-    setRequestBody(value);
-  }, []);
-
   const onExport = useCallback(() => {
     try {
       if (useRequestBody) {
@@ -294,31 +290,36 @@ const DebugPage: React.FunctionComponent<Props> = ({
         `${window.location.port ? `:${window.location.port}` : ''}`;
 
       const httpMethod = method.httpMethod;
-      let uri;
+      let mappedPath;
       let endpoint;
 
-      if (isAnnotatedService || isGraphqlService) {
+      if (
+        serviceType === ServiceType.HTTP ||
+        serviceType === ServiceType.GRAPHQL
+      ) {
         const queries = additionalQueries;
         if (exactPathMapping) {
           endpoint = transport.getDebugMimeTypeEndpoint(method);
-          uri =
-            `'${host}${escapeSingleQuote(
+          mappedPath =
+            `'${escapeSingleQuote(
               endpoint.pathMapping.substring('exact:'.length),
             )}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         } else {
           endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-          uri =
-            `'${host}${escapeSingleQuote(additionalPath)}'` +
+          mappedPath =
+            `'${escapeSingleQuote(additionalPath)}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         }
       } else if (additionalPath.length > 0) {
         endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-        uri = `'${host}${escapeSingleQuote(additionalPath)}'`;
+        mappedPath = `'${escapeSingleQuote(additionalPath)}'`;
       } else {
         endpoint = transport.getDebugMimeTypeEndpoint(method);
-        uri = `'${host}${escapeSingleQuote(endpoint.pathMapping)}'`;
+        mappedPath = `'${escapeSingleQuote(endpoint.pathMapping)}'`;
       }
+
+      const uri = host + parseServerRootPath(docServiceRoute) + mappedPath;
 
       const body = transport.getCurlBody(
         endpoint,
@@ -330,7 +331,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
       if (process.env.WEBPACK_DEV === 'true') {
         headers[docServiceDebug] = 'true';
       }
-      if (isGraphqlService) {
+      if (serviceType === ServiceType.GRAPHQL) {
         headers.Accept = 'application/json';
       }
 
@@ -359,12 +360,12 @@ const DebugPage: React.FunctionComponent<Props> = ({
     method,
     transport,
     requestBody,
-    isAnnotatedService,
-    isGraphqlService,
+    serviceType,
     showSnackbar,
     additionalQueries,
     exactPathMapping,
     additionalPath,
+    docServiceRoute,
   ]);
 
   const onCopy = useCallback(() => {
@@ -391,7 +392,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
       let queries;
       let executedEndpointPath;
-      if (isAnnotatedService) {
+      if (serviceType === ServiceType.HTTP) {
         queries = params.get('queries') || '';
         if (!exactPathMapping) {
           executedEndpointPath = params.get('endpoint_path') || undefined;
@@ -408,6 +409,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         executedDebugResponse = await transport.send(
           method,
           headers,
+          parseServerRootPath(docServiceRoute),
           executedRequestBody,
           executedEndpointPath,
           queries,
@@ -421,7 +423,14 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
       setDebugResponse(executedDebugResponse);
     },
-    [useRequestBody, isAnnotatedService, exactPathMapping, method, transport],
+    [
+      useRequestBody,
+      serviceType,
+      exactPathMapping,
+      method,
+      transport,
+      docServiceRoute,
+    ],
   );
 
   const onSubmit = useCallback(async () => {
@@ -445,7 +454,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         params.set('request_body', jsonMinify(requestBody) || '{}');
       }
 
-      if (isAnnotatedService) {
+      if (serviceType === ServiceType.HTTP) {
         if (queries) {
           params.set('queries', queries);
         } else {
@@ -506,7 +515,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     stickyHeaders,
     executeRequest,
     useRequestBody,
-    isAnnotatedService,
+    serviceType,
     requestBody,
     exactPathMapping,
     additionalPath,
@@ -516,7 +525,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
   ]);
 
   const supportedExamplePaths = useMemo(() => {
-    if (isAnnotatedService || isGraphqlService) {
+    if (
+      serviceType === ServiceType.HTTP ||
+      serviceType === ServiceType.GRAPHQL
+    ) {
       return examplePaths;
     }
     return transport.listDebugMimeTypeEndpoint(method).map((endpoint) => {
@@ -525,132 +537,214 @@ const DebugPage: React.FunctionComponent<Props> = ({
         value: endpoint.pathMapping,
       };
     });
-  }, [isAnnotatedService, isGraphqlService, transport, method, examplePaths]);
+  }, [serviceType, transport, method, examplePaths]);
 
   return (
-    <Section>
-      <div id="debug-form">
-        <Typography variant="body2" paragraph />
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="h6" paragraph>
-              Debug
-            </Typography>
-            <Alert severity="info">
-              You can set the default values by{' '}
-              <a
-                href="https://armeria.dev/docs/server-docservice/#example-requests-and-headers"
-                rel="noreferrer"
-                target="_blank"
-              >
-                specifying example requests and headers
-              </a>
-              .
-            </Alert>
-            <EndpointPath
-              examplePaths={supportedExamplePaths}
-              editable={!exactPathMapping}
-              isAnnotatedService={isAnnotatedService}
-              isGraphqlService={isGraphqlService}
-              endpointPathOpen={endpointPathOpen}
-              additionalPath={additionalPath}
-              onEditEndpointPathClick={toggleEndpointPathOpen}
-              onPathFormChange={onPathFormChange}
-              onSelectedPathChange={onSelectedPathChange}
-            />
-            {isAnnotatedService && (
-              <HttpQueryString
+    <>
+      <Section>
+        <div id={debugFormIsOpen ? '' : 'debug-form'}>
+          <Typography variant="body2" paragraph />
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="h6" paragraph>
+                Debug
+              </Typography>
+              <Alert severity="info">
+                You can set the default values by{' '}
+                <a
+                  href="https://armeria.dev/docs/server-docservice/#example-requests-and-headers"
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  specifying example requests and headers
+                </a>
+                .
+              </Alert>
+              <DebugInputs
+                method={method}
+                serviceType={serviceType}
+                exampleHeaders={exampleHeaders}
                 exampleQueries={exampleQueries}
-                additionalQueriesOpen={additionalQueriesOpen}
+                supportedExamplePaths={supportedExamplePaths}
+                additionalPath={additionalPath}
+                setAdditionalPath={setAdditionalPath}
                 additionalQueries={additionalQueries}
-                onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
-                onQueriesFormChange={onQueriesFormChange}
-                onSelectedQueriesChange={onSelectedQueriesChange}
-              />
-            )}
-            <HttpHeaders
-              exampleHeaders={exampleHeaders}
-              additionalHeadersOpen={additionalHeadersOpen}
-              additionalHeaders={additionalHeaders}
-              stickyHeaders={stickyHeaders}
-              onEditHttpHeadersClick={toggleAdditionalHeadersOpen}
-              onSelectedHeadersChange={onSelectedHeadersChange}
-              onHeadersFormChange={onHeadersFormChange}
-              onStickyHeadersChange={toggleStickyHeaders}
-            />
-            {useRequestBody && isGraphqlService ? (
-              <GraphqlRequestBody
-                requestBodyOpen={requestBodyOpen}
+                setAdditionalQueries={setAdditionalQueries}
+                exactPathMapping={exactPathMapping}
+                useRequestBody={useRequestBody}
+                additionalHeaders={additionalHeaders}
+                setAdditionalHeaders={setAdditionalHeaders}
+                jsonSchemas={jsonSchemas}
+                stickyHeaders={stickyHeaders}
+                toggleStickyHeaders={toggleStickyHeaders}
                 requestBody={requestBody}
-                onEditRequestBodyClick={toggleRequestBodyOpen}
-                onDebugFormChange={onDebugFormChange}
-                schemaUrlPath={extractUrlPath(method)}
+                setRequestBody={setRequestBody}
               />
-            ) : (
-              <RequestBody
-                requestBodyOpen={requestBodyOpen}
-                requestBody={requestBody}
-                onEditRequestBodyClick={toggleRequestBodyOpen}
-                onDebugFormChange={onDebugFormChange}
-              />
-            )}
+              <Typography variant="body2" paragraph />
+              <Button variant="contained" color="primary" onClick={onSubmit}>
+                Submit
+              </Button>
+              <Button variant="text" color="secondary" onClick={onExport}>
+                Copy as a curl command
+              </Button>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Grid container spacing={1}>
+                <Grid item xs="auto">
+                  <Tooltip title="Copy response">
+                    <div>
+                      <IconButton
+                        onClick={onCopy}
+                        disabled={debugResponse.length === 0}
+                      >
+                        <FileCopyIcon />
+                      </IconButton>
+                    </div>
+                  </Tooltip>
+                </Grid>
+                <Grid item xs="auto">
+                  <Tooltip title="Clear response">
+                    <div>
+                      <IconButton
+                        onClick={onClear}
+                        disabled={debugResponse.length === 0}
+                      >
+                        <DeleteSweepIcon />
+                      </IconButton>
+                    </div>
+                  </Tooltip>
+                </Grid>
+              </Grid>
+              <SyntaxHighlighter
+                language="json"
+                style={githubGist}
+                wrapLines={false}
+              >
+                {debugResponse}
+              </SyntaxHighlighter>
+            </Grid>
+          </Grid>
+          <Snackbar
+            open={snackbarOpen}
+            message={snackbarMessage}
+            autoHideDuration={3000}
+            onClose={dismissSnackbar}
+            action={
+              <IconButton color="inherit" onClick={dismissSnackbar}>
+                <CloseIcon />
+              </IconButton>
+            }
+          />
+        </div>
+      </Section>
+      {/* Debug modal */}
+      <Dialog
+        onClose={() => setDebugFormIsOpen(false)}
+        open={debugFormIsOpen}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle id="customized-dialog-title">
+          <Typography variant="h6" paragraph>
+            Debug
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          <div id="debug-form">
             <Typography variant="body2" paragraph />
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <DebugInputs
+                  method={method}
+                  serviceType={serviceType}
+                  exampleHeaders={exampleHeaders}
+                  exampleQueries={exampleQueries}
+                  supportedExamplePaths={supportedExamplePaths}
+                  additionalPath={additionalPath}
+                  setAdditionalPath={setAdditionalPath}
+                  additionalQueries={additionalQueries}
+                  setAdditionalQueries={setAdditionalQueries}
+                  exactPathMapping={exactPathMapping}
+                  useRequestBody={useRequestBody}
+                  additionalHeaders={additionalHeaders}
+                  setAdditionalHeaders={setAdditionalHeaders}
+                  jsonSchemas={jsonSchemas}
+                  stickyHeaders={stickyHeaders}
+                  toggleStickyHeaders={toggleStickyHeaders}
+                  requestBody={requestBody}
+                  setRequestBody={setRequestBody}
+                />
+                <Typography variant="body2" paragraph />
+              </Grid>
+              <Grid item xs={12} sm={6} className={classes.responseGrid}>
+                <Grid container spacing={1}>
+                  <Grid item xs="auto">
+                    <Tooltip title="Copy response">
+                      <div>
+                        <IconButton
+                          onClick={onCopy}
+                          disabled={debugResponse.length === 0}
+                        >
+                          <FileCopyIcon />
+                        </IconButton>
+                      </div>
+                    </Tooltip>
+                  </Grid>
+                  <Grid item xs="auto">
+                    <Tooltip title="Clear response">
+                      <div>
+                        <IconButton
+                          onClick={onClear}
+                          disabled={debugResponse.length === 0}
+                        >
+                          <DeleteSweepIcon />
+                        </IconButton>
+                      </div>
+                    </Tooltip>
+                  </Grid>
+                </Grid>
+                <SyntaxHighlighter
+                  language="json"
+                  style={githubGist}
+                  wrapLines={false}
+                >
+                  {debugResponse}
+                </SyntaxHighlighter>
+              </Grid>
+            </Grid>
+            <Snackbar
+              open={snackbarOpen}
+              message={snackbarMessage}
+              autoHideDuration={3000}
+              onClose={dismissSnackbar}
+              action={
+                <IconButton color="inherit" onClick={dismissSnackbar}>
+                  <CloseIcon />
+                </IconButton>
+              }
+            />
+          </div>
+        </DialogContent>
+        <DialogActions className={classes.actionDialog}>
+          <div>
             <Button variant="contained" color="primary" onClick={onSubmit}>
               Submit
             </Button>
             <Button variant="text" color="secondary" onClick={onExport}>
               Copy as a curl command
             </Button>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Grid container spacing={1}>
-              <Grid item xs="auto">
-                <Tooltip title="Copy response">
-                  <div>
-                    <IconButton
-                      onClick={onCopy}
-                      disabled={debugResponse.length === 0}
-                    >
-                      <FileCopyIcon />
-                    </IconButton>
-                  </div>
-                </Tooltip>
-              </Grid>
-              <Grid item xs="auto">
-                <Tooltip title="Clear response">
-                  <div>
-                    <IconButton
-                      onClick={onClear}
-                      disabled={debugResponse.length === 0}
-                    >
-                      <DeleteSweepIcon />
-                    </IconButton>
-                  </div>
-                </Tooltip>
-              </Grid>
-            </Grid>
-            <SyntaxHighlighter
-              language="json"
-              style={githubGist}
-              wrapLines={false}
-            >
-              {debugResponse}
-            </SyntaxHighlighter>
-          </Grid>
-        </Grid>
-        <Snackbar
-          open={snackbarOpen}
-          message={snackbarMessage}
-          autoHideDuration={3000}
-          onClose={dismissSnackbar}
-          action={
-            <IconButton color="inherit" onClick={dismissSnackbar}>
-              <CloseIcon />
-            </IconButton>
-          }
-        />
-      </div>
-    </Section>
+          </div>
+          <Button
+            autoFocus
+            onClick={() => setDebugFormIsOpen(false)}
+            variant="contained"
+            color="primary"
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 

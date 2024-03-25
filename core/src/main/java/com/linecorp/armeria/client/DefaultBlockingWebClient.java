@@ -71,7 +71,7 @@ final class DefaultBlockingWebClient implements BlockingWebClient {
 
     @Override
     public Class<?> clientType() {
-        return delegate.clientType();
+        return BlockingWebClient.class;
     }
 
     @Override
@@ -82,5 +82,10 @@ final class DefaultBlockingWebClient implements BlockingWebClient {
     @Override
     public HttpClient unwrap() {
         return delegate.unwrap();
+    }
+
+    @Override
+    public Object unwrapAll() {
+        return delegate.unwrapAll();
     }
 }

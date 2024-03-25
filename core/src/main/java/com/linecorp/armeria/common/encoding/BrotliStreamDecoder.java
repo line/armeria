@@ -23,7 +23,11 @@ import io.netty.handler.codec.compression.BrotliDecoder;
  * A {@link StreamDecoder} that decompresses data encoded with the brotli format ('br').
  */
 final class BrotliStreamDecoder extends AbstractStreamDecoder {
-    BrotliStreamDecoder(BrotliDecoder brotliDecoder, ByteBufAllocator alloc) {
-        super(brotliDecoder, alloc);
+
+    BrotliStreamDecoder(BrotliDecoder brotliDecoder, ByteBufAllocator alloc, int maxLength) {
+        // BrotliDecoder does not limit the max output size. If the output buffer exceeds 4MiB, it is
+        // chunked into pieces of 4MiB. As a workaround, the max length is checked at the `StreamDecoder`
+        // level after decoding.
+        super(brotliDecoder, alloc, maxLength);
     }
 }

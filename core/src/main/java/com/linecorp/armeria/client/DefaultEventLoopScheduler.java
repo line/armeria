@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.ToIntFunction;
 
 import org.slf4j.Logger;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -56,6 +58,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
     private static final long CLEANUP_INTERVAL_NANOS = Duration.ofMinutes(1).toNanos();
 
     static final int DEFAULT_MAX_NUM_EVENT_LOOPS = 1;
+
+    private final ReentrantLock lock = new ReentrantShortLock();
 
     private final List<EventLoop> eventLoops;
 
@@ -126,9 +130,9 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
     }
 
     @VisibleForTesting
-    List<AbstractEventLoopEntry> entries(SessionProtocol sessionProtocol,
-                                         EndpointGroup endpointGroup,
-                                         @Nullable Endpoint endpoint) {
+    AbstractEventLoopEntry[] entries(SessionProtocol sessionProtocol,
+                                     EndpointGroup endpointGroup,
+                                     @Nullable Endpoint endpoint) {
         return state(sessionProtocol, endpointGroup, endpoint).entries();
     }
 
@@ -166,8 +170,8 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
             secondTryHost = null;
         }
 
-        final int port = endpoint.hasPort() ? endpoint.port() : sessionProtocol.defaultPort();
-        final Endpoint endpointWithPort = endpoint.withPort(port);
+        final Endpoint endpointWithPort = endpoint.withDefaultPort(sessionProtocol);
+        final int port = endpointWithPort.port();
         final boolean isHttp1 = isHttp1(sessionProtocol, endpointWithPort);
         final StateKey firstKey = new StateKey(firstTryHost, port, isHttp1);
         AbstractEventLoopState state = states.get(firstKey);
@@ -248,10 +252,12 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
         for (final Iterator<AbstractEventLoopState> i = states.values().iterator(); i.hasNext();) {
             final AbstractEventLoopState state = i.next();
             final boolean remove;
-
-            synchronized (state) {
+            lock.lock();
+            try {
                 remove = state.allActiveRequests() == 0 &&
                          currentTimeNanos - state.lastActivityTimeNanos() >= CLEANUP_INTERVAL_NANOS;
+            } finally {
+                lock.unlock();
             }
 
             if (remove) {

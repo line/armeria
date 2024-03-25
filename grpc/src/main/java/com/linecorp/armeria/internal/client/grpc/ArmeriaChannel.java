@@ -22,11 +22,11 @@ import java.net.URI;
 import java.util.EnumMap;
 import java.util.Map;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -37,14 +37,20 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcCallOptions;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
+import com.linecorp.armeria.internal.common.RequestTargetCache;
 
 import io.grpc.CallCredentials;
 import io.grpc.CallOptions;
@@ -69,6 +75,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     static {
         final EnumMap<MethodType, RequestOptions> requestOptionsMap = new EnumMap<>(MethodType.class);
         for (MethodType methodType : MethodType.values()) {
+            if (methodType == MethodType.UNKNOWN) {
+                continue;
+            }
             requestOptionsMap.put(methodType, newRequestOptions(toExchangeType(methodType)));
         }
         REQUEST_OPTIONS_MAP = Maps.immutableEnumMap(requestOptionsMap);
@@ -89,6 +98,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private final Compressor compressor;
     private final DecompressorRegistry decompressorRegistry;
     private final CallCredentials credentials0;
+    private final GrpcExceptionHandlerFunction exceptionHandler;
 
     ArmeriaChannel(ClientBuilderParams params,
                    HttpClient httpClient,
@@ -112,16 +122,24 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         compressor = options.get(GrpcClientOptions.COMPRESSOR);
         decompressorRegistry = options.get(GrpcClientOptions.DECOMPRESSOR_REGISTRY);
         credentials0 = options.get(GrpcClientOptions.CALL_CREDENTIALS);
+        exceptionHandler = options.get(GrpcClientOptions.EXCEPTION_HANDLER);
     }
 
     @Override
-    public <I, O> ClientCall<I, O> newCall(
-            MethodDescriptor<I, O> method, CallOptions callOptions) {
-        final HttpRequestWriter req = HttpRequest.streaming(
-                RequestHeaders.of(HttpMethod.POST, uri().getPath() + method.getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType(),
-                                  HttpHeaderNames.TE, HttpHeaderValues.TRAILERS));
+    public <I, O> ClientCall<I, O> newCall(MethodDescriptor<I, O> method, CallOptions callOptions) {
+        final RequestHeadersBuilder headersBuilder =
+                RequestHeaders.builder(HttpMethod.POST, uri().getPath() + method.getFullMethodName())
+                              .contentType(serializationFormat.mediaType())
+                              .set(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString());
+        final String callAuthority = callOptions.getAuthority();
+        if (!Strings.isNullOrEmpty(callAuthority)) {
+            headersBuilder.authority(callAuthority);
+        }
+
+        final HttpRequestWriter req = HttpRequest.streaming(headersBuilder.build());
         final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req, method);
+
+        GrpcCallOptions.set(ctx, callOptions);
 
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
@@ -139,7 +157,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
             }
         }
         if (credentials != null) {
-            client = new CallCredentialsDecoratingClient(httpClient, credentials, method, authority());
+            client = new CallCredentialsDecoratingClient(
+                    httpClient, credentials, method,
+                    !Strings.isNullOrEmpty(callAuthority) ? callAuthority : authority());
         } else {
             client = httpClient;
         }
@@ -159,7 +179,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 decompressorRegistry,
                 serializationFormat,
                 jsonMarshaller,
-                unsafeWrapResponseBuffers);
+                unsafeWrapResponseBuffers,
+                exceptionHandler);
     }
 
     @Override
@@ -209,21 +230,23 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
     private <I, O> DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req,
                                                           MethodDescriptor<I, O> methodDescriptor) {
+        final String path = req.path();
+        final RequestTarget reqTarget = RequestTarget.forClient(path);
+        assert reqTarget != null : path;
+        RequestTargetCache.putForClient(path, reqTarget);
+
         return new DefaultClientRequestContext(
                 meterRegistry,
                 sessionProtocol,
                 options().requestIdGenerator().get(),
                 method,
-                req.path(),
-                null,
-                null,
+                reqTarget,
                 options(),
                 req,
                 null,
                 REQUEST_OPTIONS_MAP.get(methodDescriptor.getType()),
                 System.nanoTime(),
-                SystemInfo.currentTimeMicros(),
-                /* hasBaseUri */ true);
+                SystemInfo.currentTimeMicros());
     }
 
     private static RequestOptions newRequestOptions(ExchangeType exchangeType) {

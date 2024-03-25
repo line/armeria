@@ -1,0 +1,32 @@
+dependencies {
+    // Use the classes compiled with the latest Jetty,
+    // but use an older version for test classes.
+    testImplementation(project(':jetty9')) {
+        exclude group: 'org.eclipse.jetty', module: 'jetty-server'
+    }
+
+    testImplementation libs.jetty93.server
+    testImplementation libs.jetty93.webapp
+    testImplementation libs.jetty93.annotations
+    testImplementation libs.jetty93.apache.jsp
+    testImplementation libs.jetty93.apache.jstl
+
+    testImplementation("org.eclipse.jdt:ecj") {
+        version {
+            // As a workaround for JSP compiler error on Java 17, forcibly specify the newer version
+            strictly "3.24.0"
+        }
+    }
+}
+
+// Use the test sources from ':jetty9'.
+// NB: We should never add these directories using the 'sourceSets' directive because that will make
+//     them added to more than one project and having a source directory with more than one output directory
+//     will confuse IDEs such as IntelliJ IDEA.
+tasks.compileTestJava.source "${rootProject.projectDir}/jetty9/src/test/java"
+tasks.processTestResources.from "${rootProject.projectDir}/jetty9/src/test/resources"
+
+// Disable checkstyle because it's checked by ':jetty9'.
+tasks.withType(Checkstyle) {
+    onlyIf { false }
+}

@@ -14,23 +14,25 @@
  * under the License.
  */
 
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
-import React from 'react';
+import React, { SetStateAction } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
+import Button from '@material-ui/core/Button';
+import { Launch } from '@material-ui/icons';
+import Grid from '@material-ui/core/Grid';
 import {
   Method,
   Service,
+  ServiceType,
   simpleName,
   Specification,
 } from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { ANNOTATED_HTTP_MIME_TYPE } from '../../lib/transports/annotated-http';
 import { GRAPHQL_HTTP_MIME_TYPE } from '../../lib/transports/grahpql-http';
+import { TTEXT_MIME_TYPE } from '../../lib/transports/thrift';
+import { GRPC_UNFRAMED_MIME_TYPE } from '../../lib/transports/grpc-unframed';
 import { SelectOption } from '../../lib/types';
 
 import Section from '../../components/Section';
@@ -38,9 +40,12 @@ import VariableList from '../../components/VariableList';
 import DebugPage from './DebugPage';
 import Endpoints from './Endpoints';
 import Exceptions from './Exceptions';
+import Description from '../../components/Description';
+import ReturnType from './ReturnType';
 
 interface OwnProps {
   specification: Specification;
+  jsonSchemas: any[];
 }
 
 function getExampleHeaders(
@@ -131,63 +136,110 @@ type Props = OwnProps &
   }>;
 
 const MethodPage: React.FunctionComponent<Props> = (props) => {
-  const service = props.specification.getServiceByName(
-    props.match.params.serviceName,
-  );
+  const [debugFormIsOpen, setDebugFormIsOpenState] = React.useState(false);
+
+  const { location, history } = props;
+  const setDebugFormIsOpen: React.Dispatch<SetStateAction<boolean>> =
+    React.useCallback(
+      (value) => {
+        const valueToSet =
+          value instanceof Function ? value(debugFormIsOpen) : value;
+        const urlParams = new URLSearchParams(location.search);
+        if (valueToSet === true) {
+          urlParams.set('debug_form_is_open', `${valueToSet}`);
+        } else {
+          urlParams.delete('debug_form_is_open');
+        }
+
+        const serializedParams = `?${urlParams.toString()}`;
+        if (serializedParams !== location.search) {
+          history.push(`${location.pathname}${serializedParams}`);
+        }
+
+        return setDebugFormIsOpenState(valueToSet);
+      },
+      [
+        debugFormIsOpen,
+        setDebugFormIsOpenState,
+        history,
+        location.search,
+        location.pathname,
+      ],
+    );
+
+  const params = props.match.params;
+  const service = props.specification.getServiceByName(params.serviceName);
   if (!service) {
     return <>Not found.</>;
   }
-
-  const method = service.methods.find(
-    (m) =>
-      m.name === props.match.params.methodName &&
-      m.httpMethod === props.match.params.httpMethod,
-  );
+  const id = `${params.serviceName}/${params.methodName}/${params.httpMethod}`;
+  const method = service.methods.find((m) => m.id === id);
   if (!method) {
     return <>Not found.</>;
   }
-
   const debugTransport = TRANSPORTS.getDebugTransport(method);
-  const isAnnotatedService =
-    debugTransport !== undefined &&
-    debugTransport.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE);
-  const isGraphqlService =
-    debugTransport !== undefined &&
-    debugTransport.supportsMimeType(GRAPHQL_HTTP_MIME_TYPE);
+
+  let serviceType: ServiceType = ServiceType.UNKNOWN;
+
+  if (debugTransport?.supportsMimeType(ANNOTATED_HTTP_MIME_TYPE)) {
+    serviceType = ServiceType.HTTP;
+  }
+
+  if (debugTransport?.supportsMimeType(GRAPHQL_HTTP_MIME_TYPE)) {
+    serviceType = ServiceType.GRAPHQL;
+  }
+
+  if (debugTransport?.supportsMimeType(GRPC_UNFRAMED_MIME_TYPE)) {
+    serviceType = ServiceType.GRPC;
+  }
+
+  if (debugTransport?.supportsMimeType(TTEXT_MIME_TYPE)) {
+    serviceType = ServiceType.THRIFT;
+  }
+
+  const parameterVariables = method.parameters.map((param) => {
+    const childFieldInfos = props.specification.getStructByName(
+      param.typeSignature,
+    )?.fields;
+    if (childFieldInfos) {
+      return { ...param, childFieldInfos };
+    }
+    return param;
+  });
 
   return (
     <>
-      <Typography variant="h5" paragraph>
-        <code>{`${simpleName(service.name)}.${method.name}()`}</code>
-      </Typography>
-      <Typography variant="body2" paragraph>
-        {method.docString}
-      </Typography>
+      <Grid item container justifyContent="space-between">
+        <Typography variant="h5" paragraph>
+          <code>{`${simpleName(service.name)}.${method.name}()`}</code>
+        </Typography>
+        {debugTransport && (
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setDebugFormIsOpen(true)}
+            endIcon={<Launch />}
+            style={{ maxHeight: '3em' }}
+          >
+            Debug
+          </Button>
+        )}
+      </Grid>
+      {method.descriptionInfo?.docString && (
+        <Section>
+          <Description descriptionInfo={method.descriptionInfo} />
+        </Section>
+      )}
       <Section>
         <VariableList
           key={method.name}
           title="Parameters"
-          variables={method.parameters}
+          variables={parameterVariables}
           specification={props.specification}
         />
       </Section>
-      <Section>
-        <Typography variant="h6">Return Type</Typography>
-        <Table>
-          <TableBody>
-            <TableRow>
-              <TableCell>
-                <code>
-                  {props.specification.getTypeSignatureHtml(
-                    method.returnTypeSignature,
-                  )}
-                </code>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </Section>
-      {!isAnnotatedService && (
+      <ReturnType method={method} specification={props.specification} />
+      {serviceType !== ServiceType.HTTP && (
         <Exceptions method={method} specification={props.specification} />
       )}
       <Endpoints method={method} />
@@ -195,8 +247,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
         <DebugPage
           {...props}
           method={method}
-          isAnnotatedService={isAnnotatedService}
-          isGraphqlService={isGraphqlService}
+          serviceType={serviceType}
           exampleHeaders={getExampleHeaders(
             props.specification,
             service,
@@ -209,11 +260,15 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
             method,
           )}
           exactPathMapping={
-            isAnnotatedService || isGraphqlService
+            serviceType === ServiceType.HTTP ||
+            serviceType === ServiceType.GRAPHQL
               ? isSingleExactPathMapping(method)
               : false
           }
           useRequestBody={needsToUseRequestBody(props.match.params.httpMethod)}
+          debugFormIsOpen={debugFormIsOpen}
+          setDebugFormIsOpen={setDebugFormIsOpen}
+          docServiceRoute={props.specification.getDocServiceRoute()}
         />
       )}
     </>

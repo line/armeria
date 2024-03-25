@@ -32,6 +32,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.util.AsciiString;
 
 final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler {
 
@@ -46,7 +47,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig cfg,
                                  Timer keepAliveTimer, GracefulShutdownSupport gracefulShutdownSupport,
-                                 String scheme) {
+                                 AsciiString scheme) {
 
         super(decoder, encoder, initialSettings, newKeepAliveHandler(encoder, channel, cfg, keepAliveTimer));
 
@@ -65,6 +66,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
             Http2ConnectionEncoder encoder, Channel channel, ServerConfig cfg, Timer keepAliveTimer) {
 
         final long idleTimeoutMillis = cfg.idleTimeoutMillis();
+        final boolean keepAliveOnPing = cfg.keepAliveOnPing();
         final long pingIntervalMillis = cfg.pingIntervalMillis();
         final long maxConnectionAgeMillis = cfg.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = cfg.maxNumRequestsPerConnection();
@@ -72,20 +74,18 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
         if (!needsKeepAliveHandler) {
-            return NoopKeepAliveHandler.INSTANCE;
+            return new NoopKeepAliveHandler();
         }
 
         return new Http2ServerKeepAliveHandler(
-                    channel, encoder.frameWriter(), keepAliveTimer, idleTimeoutMillis,
-                    pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                channel, encoder.frameWriter(), keepAliveTimer, idleTimeoutMillis,
+                pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
     }
 
     ServerHttp2ObjectEncoder getOrCreateResponseEncoder(ChannelHandlerContext connectionHandlerCtx) {
         if (responseEncoder == null) {
             assert connectionHandlerCtx.handler() == this;
-            responseEncoder = new ServerHttp2ObjectEncoder(connectionHandlerCtx, this,
-                                                           cfg.isDateHeaderEnabled(),
-                                                           cfg.isServerHeaderEnabled());
+            responseEncoder = new ServerHttp2ObjectEncoder(connectionHandlerCtx, this);
             requestDecoder.initEncoder(responseEncoder);
         }
         return responseEncoder;
@@ -129,7 +129,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (keepAliveHandler != NoopKeepAliveHandler.INSTANCE) {
+        if (!(keepAliveHandler instanceof NoopKeepAliveHandler)) {
             final Channel channel = ctx.channel();
             if (channel.isActive() && channel.isRegistered()) {
                 keepAliveHandler.initialize(ctx);
@@ -155,7 +155,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-        if (keepAliveHandler().needToCloseConnection()) {
+        if (keepAliveHandler().needsDisconnection()) {
             // Connection timed out or exceeded maximum number of requests.
             setGoAwayDebugMessage("max-age");
         }

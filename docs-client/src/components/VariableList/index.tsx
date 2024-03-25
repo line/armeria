@@ -19,17 +19,28 @@ import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
+import TableContainer from '@material-ui/core/TableContainer';
 import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
 import React, { useReducer } from 'react';
 
 import { makeStyles } from '@material-ui/core';
-import { Specification } from '../../lib/specification';
+import { DescriptionInfo, Specification } from '../../lib/specification';
+import Description from '../Description';
 
 const useStyles = makeStyles({
   hidden: {
     display: 'none',
+  },
+  description: {
+    margin: 0,
+  },
+  expand: {
+    textAlign: 'end',
+    '& svg': {
+      verticalAlign: 'middle',
+    },
   },
 });
 
@@ -39,7 +50,7 @@ interface Variable {
   childFieldInfos?: Variable[];
   requirement: string;
   typeSignature: string;
-  docString?: string | JSX.Element;
+  descriptionInfo: DescriptionInfo;
 }
 
 interface Props {
@@ -118,11 +129,17 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
             {specification.getTypeSignatureHtml(variable.typeSignature)}
           </code>
         </TableCell>
-        <TableCell>
-          <pre>{variable.docString}</pre>
+        <TableCell colSpan={hasChildren ? 1 : 2}>
+          {variable.descriptionInfo && (
+            <pre className={styles.description}>
+              <Description descriptionInfo={variable.descriptionInfo} />
+            </pre>
+          )}
         </TableCell>
         {hasChildren && (
-          <TableCell>{expanded ? <ExpandLess /> : <ExpandMore />}</TableCell>
+          <TableCell className={styles.expand}>
+            {expanded ? <ExpandLess /> : <ExpandMore />}
+          </TableCell>
         )}
       </TableRow>
       {hasChildren && (
@@ -203,28 +220,29 @@ export default ({ title, variables, specification }: Props) => {
   return (
     <>
       <Typography variant="h6">{title}</Typography>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Name</TableCell>
-            {hasLocation && <TableCell>Location</TableCell>}
-            <TableCell>Required</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Description</TableCell>
-            {hasBean && <TableCell />}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <FieldInfos
-            hasLocation={hasLocation}
-            indent={0}
-            title={title}
-            variables={variables}
-            specification={specification}
-          />
-        </TableBody>
-      </Table>
-      <Typography variant="body2" paragraph />
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              {hasLocation && <TableCell>Location</TableCell>}
+              <TableCell>Required</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Description</TableCell>
+              {hasBean && <TableCell />}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <FieldInfos
+              hasLocation={hasLocation}
+              indent={0}
+              title={title}
+              variables={variables}
+              specification={specification}
+            />
+          </TableBody>
+        </Table>
+      </TableContainer>
     </>
   );
 };

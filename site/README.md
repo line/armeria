@@ -3,9 +3,9 @@ web site for Armeria.
 
 ### Build requirements
 
-- The build requirements in [CONTRIBUTING.md](../CONTRIBUTING.md)
+- The build requirements in [CONTRIBUTING.md](https://armeria.dev/community/developer-guide/#build-requirements)
 - `svgbob_cli`
-  - `brew install rust && cargo install svgbob_cli` on Mac OS X
+  - `brew install svgbob` on Mac OS X
 
 ### Working with the project
 

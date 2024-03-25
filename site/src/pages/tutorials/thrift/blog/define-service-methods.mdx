@@ -1,0 +1,146 @@
+---
+menuTitle: Define service methods
+order: 3
+type: step
+level: basic
+---
+
+# Defining service methods
+
+Previously, we ran a service on a server and also confirmed that our client could make a call to the service.
+In this step, we'll define service methods and other components including objects and an exception type.
+We'll leave the service methods empty for now to implement one by one in later steps of this tutorial.
+
+<TutorialSteps current={3} />
+
+## What you need
+
+You need to have the files obtained from previous steps:
+
+- `blog.thrift`
+- `BlogServiceImpl.java`
+- `BlogClient.java`
+
+## 1. Write the thrift file
+
+Let's update the `blog.thrift` file we created earlier in [Step 1. Create a service](/tutorials/thrift/blog/create-service).
+We'll add structs, an exception, and service methods.
+You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/src/main/thrift/blog.thrift).
+
+1. Add the `BlogPost` struct.
+  ```cpp filename=blog.thrift
+  struct BlogPost {
+    1: i32 id;
+    2: string title;
+    3: string content;
+    4: i64 createdAt;
+    5: i64 modifiedAt;
+  }
+  ```
+2. Add structs for request and response objects as follows.
+  ```cpp filename=blog.thrift
+  struct CreateBlogPostRequest {
+    1: string title;
+    2: string content;
+  }
+
+  struct GetBlogPostRequest {
+    1: i32 id;
+  }
+
+  struct ListBlogPostsRequest {
+    1: bool descending;
+  }
+
+  struct ListBlogPostsResponse {
+    1: list<BlogPost> blogs;
+  }
+
+  struct UpdateBlogPostRequest {
+    1: i32 id;
+    2: string title;
+    3: string content;
+  }
+
+  struct DeleteBlogPostRequest {
+    1: i32 id;
+  }
+  ```
+3. Add the `BlogNotFoundException`.
+  ```cpp filename=blog.thrift
+  exception BlogNotFoundException {
+    1: string reason
+  }
+  ```
+4. Add service methods for create, read, update, and delete operations.
+  ```cpp filename=blog.thrift
+  service BlogService {
+    ...
+
+    BlogPost createBlogPost(1:CreateBlogPostRequest request),
+
+    BlogPost getBlogPost(1:GetBlogPostRequest request) throws (1:BlogNotFoundException e),
+
+    ListBlogPostsResponse listBlogPosts(1:ListBlogPostsRequest request),
+
+    BlogPost updateBlogPost(1:UpdateBlogPostRequest request) throws (1:BlogNotFoundException e),
+
+    void deleteBlogPost(1:DeleteBlogPostRequest request) throws (1:BlogNotFoundException e),
+  }
+  ```
+
+## 2. Compile the thrift file
+
+[Compile the thrift file](/tutorials/thrift/blog/create-service#2-compile-the-thrift-file) to generate Java code.
+
+After compiling, you may encounter a warning in your IDE, because we updated only the service interface in Thrift, but not yet the implementation in Java.
+The warning will be resolved soon in the step below.
+
+## 3. Override service methods
+
+Let's override the service methods by adding empty service methods as follows.
+We'll implement the service methods one by one in this tutorial.
+Let's leave them empty for now.
+
+```java filename=BlogServiceImpl.java
+import example.armeria.blog.thrift.BlogPost;
+import example.armeria.blog.thrift.CreateBlogPostRequest;
+import example.armeria.blog.thrift.GetBlogPostRequest;
+import example.armeria.blog.thrift.ListBlogPostsRequest;
+import example.armeria.blog.thrift.ListBlogPostsResponse;
+import example.armeria.blog.thrift.UpdateBlogPostRequest;
+import example.armeria.blog.thrift.DeleteBlogPostRequest;
+import org.apache.thrift.TException;
+
+public class BlogServiceImpl implements BlogService.AsyncIface {
+  ...
+
+  @Override
+  public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {}
+
+  @Override
+  public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {}
+
+  @Override
+  public void listBlogPosts(ListBlogPostsRequest request, AsyncMethodCallback<ListBlogPostsResponse> resultHandler)
+          throws TException {}
+
+  @Override
+  public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {}
+
+  @Override
+  public void deleteBlogPost(DeleteBlogPostRequest request, AsyncMethodCallback<Void> resultHandler)
+          throws TException {}
+}
+```
+
+## What's next
+
+In this step, we've defined empty service methods to implement from now on.
+
+Next at [Step 4. Implement CREATE](/tutorials/thrift/blog/implement-create), we'll implement a CREATE operation to create a blog post.
+
+<TutorialSteps current={3} />

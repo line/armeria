@@ -32,10 +32,11 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
+
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 // Tests error cases, success cases are checked in ArmeriaGrpcServiceInteropTest
 class FramedGrpcServiceTest {
@@ -102,6 +103,10 @@ class FramedGrpcServiceTest {
                 .containsExactlyInAnyOrder(
                         Route.builder().exact("/armeria.grpc.testing.TestService/EmptyCall").build(),
                         Route.builder().exact("/armeria.grpc.testing.TestService/UnaryCall").build(),
+                        Route.builder()
+                             .exact(
+                                     "/armeria.grpc.testing.TestService/UnaryCallWithAllDifferentParameterTypes"
+                             ).build(),
                         Route.builder().exact("/armeria.grpc.testing.TestService/UnaryCall2").build(),
                         Route.builder().exact("/armeria.grpc.testing.TestService/StreamingOutputCall").build(),
                         Route.builder().exact("/armeria.grpc.testing.TestService/StreamingInputCall").build(),

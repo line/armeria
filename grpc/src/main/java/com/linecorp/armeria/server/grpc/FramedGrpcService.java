@@ -52,9 +52,9 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -63,6 +63,8 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
+import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
+import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
@@ -127,8 +129,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final Map<String, GrpcJsonMarshaller> jsonMarshallers;
     @Nullable
     private final ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor;
-    @Nullable
-    private final GrpcStatusFunction statusFunction;
     private final int maxResponseMessageLength;
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
@@ -148,7 +148,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       Set<SerializationFormat> supportedSerializationFormats,
                       Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory,
                       @Nullable ProtoReflectionServiceInterceptor protoReflectionServiceInterceptor,
-                      @Nullable GrpcStatusFunction statusFunction,
                       int maxRequestMessageLength, int maxResponseMessageLength,
                       boolean useBlockingTaskExecutor,
                       boolean unsafeWrapRequestBuffers,
@@ -168,7 +167,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.useClientTimeoutHeader = useClientTimeoutHeader;
         jsonMarshallers = getJsonMarshallers(registry, supportedSerializationFormats, jsonMarshallerFactory);
         this.protoReflectionServiceInterceptor = protoReflectionServiceInterceptor;
-        this.statusFunction = statusFunction;
         this.maxRequestMessageLength = maxRequestMessageLength;
         this.maxResponseMessageLength = maxResponseMessageLength;
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -237,10 +235,21 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     }
                 } catch (IllegalArgumentException e) {
                     final Metadata metadata = new Metadata();
+                    final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(method);
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(statusFunction, ctx, e, metadata), metadata));
+                                    GrpcStatus.fromThrowable(exceptionHandler, ctx, e, metadata),
+                                    metadata));
+                }
+            } else {
+                if (Boolean.TRUE.equals(ctx.attr(AbstractUnframedGrpcService.IS_UNFRAMED_GRPC))) {
+                    // For unframed gRPC, we use the default timeout.
+                } else {
+                    // For framed gRPC, as per gRPC specification, if timeout is omitted a server should assume
+                    // an infinite timeout.
+                    // https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md#protocol
+                    ctx.clearRequestTimeout();
                 }
             }
         }
@@ -251,7 +260,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final HttpResponse res;
         if (method.getMethodDescriptor().getType() == MethodType.UNARY) {
             final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
-            res = HttpResponse.from(resFuture);
+            res = HttpResponse.of(resFuture);
             startCall(registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res,
                       resFuture, serializationFormat);
         } else {
@@ -272,7 +281,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             SerializationFormat serializationFormat) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
         final Executor blockingExecutor;
-        if (useBlockingTaskExecutor) {
+        if (useBlockingTaskExecutor || registry.needToUseBlockingTaskExecutor(methodDef)) {
             blockingExecutor = MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor());
         } else {
             blockingExecutor = null;
@@ -298,11 +307,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                 .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
         } catch (Throwable t) {
             call.setListener((Listener<I>) EMPTY_LISTENER);
-            final Metadata metadata = new Metadata();
-            call.close(GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata), metadata);
-            logger.warn(
-                    "Exception thrown from streaming request stub method before processing any request data" +
-                    " - this is likely a bug in the stub implementation.", t);
+            call.close(t);
             return;
         }
         if (listener == null) {
@@ -319,7 +324,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             if (cancellationCause instanceof RequestTimeoutException) {
                 status = status.withDescription("Request timed out");
             }
-            call.close(status, new Metadata());
+            call.close(new ServerStatusAndMetadata(status, new Metadata(), true, true));
             return null;
         });
     }
@@ -330,6 +335,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             HttpResponse res, @Nullable CompletableFuture<HttpResponse> resFuture,
             SerializationFormat serializationFormat, @Nullable Executor blockingExecutor) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
+        final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(
+                methodDef);
         if (methodDescriptor.getType() == MethodType.UNARY) {
             assert resFuture != null;
             return new UnaryServerCall<>(
@@ -347,7 +354,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     jsonMarshallers.get(methodDescriptor.getServiceName()),
                     unsafeWrapRequestBuffers,
                     defaultHeaders.get(serializationFormat),
-                    statusFunction,
+                    exceptionHandler,
                     blockingExecutor,
                     autoCompression);
         } else {
@@ -365,7 +372,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     jsonMarshallers.get(methodDescriptor.getServiceName()),
                     unsafeWrapRequestBuffers,
                     defaultHeaders.get(serializationFormat),
-                    statusFunction,
+                    exceptionHandler,
                     blockingExecutor,
                     autoCompression);
         }

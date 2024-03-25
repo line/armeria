@@ -17,9 +17,12 @@
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -170,6 +173,17 @@ class HealthCheckedEndpointGroupInitialFailureTest {
             assertThat(suppressed).hasSize(1);
             assertThat(suppressed[0]).isInstanceOf(InvalidResponseException.class)
                     .hasMessageContaining("Received an unhealthy check response.");
+        }
+    }
+
+    @Test
+    void timeoutExceptionContainsEndpointGroupInfo() throws Exception {
+        final EndpointGroup delegate =
+                EndpointGroup.of(Endpoint.of("slow.foo.com"), Endpoint.of("slow.bar.com"));
+        try (HealthCheckedEndpointGroup endpointGroup = newHealthCheckedEndpointGroup(delegate)) {
+            assertThatThrownBy(() -> endpointGroup.whenReady().get(1, TimeUnit.SECONDS))
+                    .isInstanceOf(TimeoutException.class)
+                    .hasMessageContaining("endpoint group: HealthCheckedEndpointGroup");
         }
     }
 
