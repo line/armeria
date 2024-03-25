@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.common.util;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 import io.netty.handler.ssl.SslProvider;
 
 /**
  * Tls engine types.
  */
+@UnstableApi
 public enum TlsEngineType {
     /**
      * JDK's default implementation.

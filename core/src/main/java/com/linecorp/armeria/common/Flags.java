@@ -427,9 +427,8 @@ public final class Flags {
      * stack trace of the exceptions that are thrown frequently by Armeria.
      *
      * @see #verboseExceptionSampler()
-     *
      * @deprecated Use {@link #verboseExceptionSampler()} and
-     *             {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>}.
+     * {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>}.
      */
     @Deprecated
     public static String verboseExceptionSamplerSpec() {
@@ -547,51 +546,52 @@ public final class Flags {
     /**
      * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
      *
-     * <p>The default value of this flag is "openssl", which means the {@link TlsEngineType#OPENSSL} will
-     * be used. Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
+     * <p>The default value of this flag is {@link TlsEngineType#OPENSSL}.
+     * Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
      * the default value.
      */
     public static TlsEngineType tlsEngineType() {
         if (tlsEngineType != null) {
             return tlsEngineType;
         }
-        setUseOpenSslAndDumpOpenSslInfo();
+        detectTlsEngineAndDumpOpenSslInfo();
         return tlsEngineType;
     }
 
-    private static void setUseOpenSslAndDumpOpenSslInfo() {
-        if (!OpenSsl.isAvailable()) {
-            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
-            logger.info("OpenSSL not available: {}", cause.toString());
-            tlsEngineType = TlsEngineType.JDK;
-            dumpOpenSslInfo = false;
-            return;
-        }
+    private static void detectTlsEngineAndDumpOpenSslInfo() {
 
         final Boolean useOpenSsl = getUserValue(FlagsProvider::useOpenSsl, "useOpenSsl",
                                                 ignored -> true);
         final TlsEngineType tlsEngineTypeValue = getUserValue(FlagsProvider::tlsEngineType,
                                                               "tlsEngineType", ignored -> true);
 
-        if (useOpenSsl == null) {
-            tlsEngineType = tlsEngineTypeValue != null ? tlsEngineTypeValue : TlsEngineType.OPENSSL;
-        } else if (tlsEngineTypeValue == null) {
-            tlsEngineType = useOpenSsl ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
-        } else {
-            if (useOpenSsl != (tlsEngineTypeValue == TlsEngineType.OPENSSL)) {
-                logger.warn("useOpenSsl({}) and tlsEngineType({}) are incompatible, tlsEngineType will be used",
-                            useOpenSsl, tlsEngineTypeValue);
-            }
-            tlsEngineType = tlsEngineTypeValue;
+        if (useOpenSsl != null && (useOpenSsl != (tlsEngineTypeValue == TlsEngineType.OPENSSL))) {
+            logger.warn("useOpenSsl({}) and tlsEngineType({}) are incompatible, tlsEngineType will be used",
+                        useOpenSsl, tlsEngineTypeValue);
         }
 
+        TlsEngineType preferredTlsEngineType;
+        if (tlsEngineTypeValue != null) {
+            preferredTlsEngineType = tlsEngineTypeValue;
+        } else if (useOpenSsl != null) {
+            preferredTlsEngineType = useOpenSsl ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
+        } else {
+            preferredTlsEngineType = TlsEngineType.OPENSSL;
+        }
+        if (preferredTlsEngineType == TlsEngineType.OPENSSL && !OpenSsl.isAvailable()) {
+            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
+            logger.info("OpenSSL not available: {}", cause.toString());
+            preferredTlsEngineType = TlsEngineType.JDK;
+        }
+        tlsEngineType = preferredTlsEngineType;
+
         if (tlsEngineType != TlsEngineType.OPENSSL) {
-            // OpenSSL explicitly disabled
             dumpOpenSslInfo = false;
+            logger.info("Using TLS engine: {}", tlsEngineType);
             return;
         }
 
-        logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
+        logger.info("Using Tls engine: OpenSSL {}, 0x{}", OpenSsl.versionString(),
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getValue(FlagsProvider::dumpOpenSslInfo, "dumpOpenSslInfo");
         if (dumpOpenSslInfo) {
@@ -623,7 +623,7 @@ public final class Flags {
         if (dumpOpenSslInfo != null) {
             return dumpOpenSslInfo;
         }
-        setUseOpenSslAndDumpOpenSslInfo();
+        detectTlsEngineAndDumpOpenSslInfo();
         return dumpOpenSslInfo;
     }
 
@@ -1262,9 +1262,8 @@ public final class Flags {
      * to override the default value.
      *
      * @see ExceptionVerbosity
-     *
      * @deprecated Use {@link LoggingService} or log exceptions using
-     *             {@link ServerBuilder#errorHandler(ServerErrorHandler)}.
+     * {@link ServerBuilder#errorHandler(ServerErrorHandler)}.
      */
     @Deprecated
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
