@@ -18,22 +18,32 @@ package com.linecorp.armeria.server.graphql;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
-import org.hamcrest.CustomTypeSafeMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.websocket.WebSocketClient;
+import com.linecorp.armeria.client.websocket.WebSocketSession;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketFrameType;
+import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -47,10 +57,11 @@ class GraphqlServiceSubscriptionTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile =
-                    new File(getClass().getResource("/subscription.graphqls").toURI());
+                    new File(getClass().getResource("/testing/graphql/subscription.graphqls").toURI());
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
+                                  .enableWebSocket(true)
                                   .runtimeWiring(c -> {
                                       final StaticDataFetcher bar = new StaticDataFetcher("bar");
                                       c.type("Query",
@@ -68,7 +79,7 @@ class GraphqlServiceSubscriptionTest {
     }
 
     @Test
-    void testSubscription() {
+    void testSubscriptionOverHttp() {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .content(MediaType.GRAPHQL, "subscription {hello}")
                                                .build();
@@ -78,14 +89,66 @@ class GraphqlServiceSubscriptionTest {
 
         assertThat(response.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
         assertThatJson(response.contentUtf8())
-                .withMatcher("errors",
-                             new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {
-                                 @Override
-                                 protected boolean matchesSafely(List<Map<String, String>> item) {
-                                     final Map<String, String> error = item.get(0);
-                                     final String message = "WebSocket is not implemented";
-                                     return message.equals(error.get("message"));
-                                 }
-                             });
+                .node("errors[0].message")
+                .isEqualTo("Use GraphQL over WebSocket for subscription");
+    }
+
+    @Test
+    void testSubscriptionOverWebSocketHttp1() {
+        testWebSocket(SessionProtocol.H1C);
+    }
+
+    @Test
+    void testSubscriptionOverWebSocketHttp2() {
+        testWebSocket(SessionProtocol.H2C);
+    }
+
+    private void testWebSocket(SessionProtocol sessionProtocol) {
+        final WebSocketClient webSocketClient =
+                WebSocketClient.builder(server.uri(sessionProtocol, SerializationFormat.WS))
+                               .subprotocols("graphql-transport-ws")
+                               .build();
+        final CompletableFuture<WebSocketSession> future = webSocketClient.connect("/graphql");
+
+        final WebSocketSession webSocketSession = future.join();
+
+        final WebSocketWriter outbound = webSocketSession.outbound();
+
+        final List<String> receivedEvents = new ArrayList<>();
+        //noinspection ReactiveStreamsSubscriberImplementation
+        webSocketSession.inbound().subscribe(new Subscriber<WebSocketFrame>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(WebSocketFrame webSocketFrame) {
+                if (webSocketFrame.type() == WebSocketFrameType.TEXT) {
+                    receivedEvents.add(webSocketFrame.text());
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
+
+        outbound.write("{\"type\":\"ping\"}");
+        outbound.write("{\"type\":\"connection_init\"}");
+        outbound.write(
+                "{\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription {hello}\"}}");
+
+        await().until(() -> receivedEvents.size() >= 3);
+        assertThatJson(receivedEvents.get(0)).node("type").isEqualTo("pong");
+        assertThatJson(receivedEvents.get(1)).node("type").isEqualTo("connection_ack");
+        assertThatJson(receivedEvents.get(2))
+                .node("type").isEqualTo("next")
+                .node("id").isEqualTo("\"1\"")
+                .node("payload.data.hello").isEqualTo("Armeria");
     }
 }

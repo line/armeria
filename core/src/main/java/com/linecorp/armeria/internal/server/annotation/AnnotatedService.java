@@ -41,7 +41,6 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -249,6 +248,11 @@ public final class AnnotatedService implements HttpService {
         return route;
     }
 
+    // TODO: Expose through `AnnotatedServiceConfig`, see #5382.
+    HttpStatus defaultStatus() {
+        return defaultStatus;
+    }
+
     HttpService withExceptionHandler(HttpService service) {
         if (exceptionHandler == null) {
             return service;
@@ -295,7 +299,7 @@ public final class AnnotatedService implements HttpService {
             }
         }
 
-        return HttpResponse.from(serve1(ctx, req, aggregationType));
+        return HttpResponse.of(serve1(ctx, req, aggregationType));
     }
 
     /**
@@ -398,7 +402,7 @@ public final class AnnotatedService implements HttpService {
 
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
-            headers = buildResponseHeaders(ctx, httpResult.headers());
+            headers = HttpResultUtil.buildResponseHeaders(ctx, httpResult);
             result = httpResult.content();
             trailers = httpResult.trailers();
         } else {
@@ -415,7 +419,7 @@ public final class AnnotatedService implements HttpService {
                                                  HttpHeaders trailers) {
         if (result instanceof CompletionStage) {
             final CompletionStage<?> future = (CompletionStage<?>) result;
-            return HttpResponse.from(
+            return HttpResponse.of(
                     future.thenApply(object -> convertResponseInternal(ctx, headers, object, trailers)));
         }
 
@@ -426,39 +430,17 @@ public final class AnnotatedService implements HttpService {
         }
     }
 
-    private ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx, HttpHeaders customHeaders) {
-        final ResponseHeadersBuilder builder;
-
-        // Prefer ResponseHeaders#toBuilder because builder#add(Iterable) is an expensive operation.
-        if (customHeaders instanceof ResponseHeaders) {
-            builder = ((ResponseHeaders) customHeaders).toBuilder();
-        } else {
-            builder = ResponseHeaders.builder();
-            builder.add(customHeaders);
-            if (!builder.contains(HttpHeaderNames.STATUS)) {
-                builder.status(defaultStatus);
-            }
-        }
-        return maybeAddContentType(ctx, builder).build();
-    }
-
     private ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx) {
-        return maybeAddContentType(ctx, ResponseHeaders.builder(defaultStatus)).build();
-    }
-
-    private static ResponseHeadersBuilder maybeAddContentType(ServiceRequestContext ctx,
-                                                              ResponseHeadersBuilder builder) {
+        final ResponseHeadersBuilder builder = ResponseHeaders.builder(defaultStatus);
         if (builder.status().isContentAlwaysEmpty()) {
-            return builder;
+            return builder.build();
         }
-        if (builder.contentType() != null) {
-            return builder;
-        }
+
         final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
         if (negotiatedResponseMediaType != null) {
             builder.contentType(negotiatedResponseMediaType);
         }
-        return builder;
+        return builder.build();
     }
 
     /**

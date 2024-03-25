@@ -56,10 +56,11 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
-import com.linecorp.armeria.service.test.thrift.main.OnewayHelloService;
-import com.linecorp.armeria.service.test.thrift.main.SleepService;
+
+import testing.thrift.main.HelloService;
+import testing.thrift.main.HelloService.AsyncIface;
+import testing.thrift.main.OnewayHelloService;
+import testing.thrift.main.SleepService;
 
 public abstract class AbstractThriftOverHttpTest {
 

@@ -10,7 +10,7 @@
 
   <module name="SuppressWarningsFilter" />
   <module name="SuppressionFilter">
-    <property name="file" value="${checkstyleConfigDir}/checkstyle-suppressions.xml"/>
+    <property name="file" value="${config_loc}/checkstyle-suppressions.xml"/>
   </module>
 
   <module name="Header">
@@ -364,6 +364,9 @@
   </module>
   <module name="BeforeExecutionExclusionFileFilter">
     <property name="fileNamePattern" value="[\\/]reactive[\\/]DefaultSslInfo.java" />
+  </module>
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value="[\\/]armeria[\\/]kubernetes[\\/]it[\\/].*.java" />
   </module>
 
 </module>

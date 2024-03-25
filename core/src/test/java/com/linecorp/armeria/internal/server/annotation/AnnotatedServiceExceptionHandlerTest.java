@@ -225,14 +225,14 @@ class AnnotatedServiceExceptionHandlerTest {
 
         @Get("/resp1")
         public HttpResponse httpResponse(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(raiseExceptionImmediately());
+            return HttpResponse.of(raiseExceptionImmediately());
         }
 
         @Get("/resp2")
         @ExceptionHandler(NoExceptionHandler.class)
         @ExceptionHandler(AnticipatedExceptionHandler2.class)
         public HttpResponse asyncHttpResponse(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(completeExceptionallyLater(ctx));
+            return HttpResponse.of(completeExceptionallyLater(ctx));
         }
     }
 
@@ -266,19 +266,19 @@ class AnnotatedServiceExceptionHandlerTest {
 
         @Get("/bad1")
         public HttpResponse bad1(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(completeExceptionallyLater(ctx));
+            return HttpResponse.of(completeExceptionallyLater(ctx));
         }
 
         @Get("/bad2")
         @ExceptionHandler(BadExceptionHandler2.class)
         public HttpResponse bad2(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(completeExceptionallyLater(ctx));
+            return HttpResponse.of(completeExceptionallyLater(ctx));
         }
 
         @Get("/bad3")
         @ExceptionHandler(BadExceptionHandler3.class)
         public HttpResponse bad3(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(completeExceptionallyLater(ctx));
+            return HttpResponse.of(completeExceptionallyLater(ctx));
         }
     }
 
@@ -286,7 +286,7 @@ class AnnotatedServiceExceptionHandlerTest {
     public static class MyService4 extends MyService1 {
         @Get("/handler3")
         public HttpResponse handler3(ServiceRequestContext ctx, HttpRequest req) {
-            return HttpResponse.from(completeExceptionallyLater(ctx));
+            return HttpResponse.of(completeExceptionallyLater(ctx));
         }
     }
 

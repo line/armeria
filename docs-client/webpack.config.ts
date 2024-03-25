@@ -30,6 +30,7 @@ const config: Configuration = {
     path: path.resolve(process.cwd(), './build/web'),
     // We don't mount to '/' for production build since we want the code to be relocatable.
     publicPath: isDev ? '/' : '',
+    filename: isDev ? '[name].js' : '[name].[contenthash].js'
   },
   module: {
     rules: [
@@ -54,7 +55,7 @@ const config: Configuration = {
                 ],
                 '@babel/react',
               ],
-              plugins: ['react-hot-loader/babel'],
+              plugins: isDev ? ['react-hot-loader/babel'] : [],
             },
           },
           {
@@ -117,7 +118,6 @@ const config: Configuration = {
 const plugins = config.plugins as any[];
 plugins.push(new HtmlWebpackPlugin({
   template: './src/index.html',
-  hash: true,
 }));
 plugins.push(new FaviconsWebpackPlugin({
   logo: './src/images/logo.png',

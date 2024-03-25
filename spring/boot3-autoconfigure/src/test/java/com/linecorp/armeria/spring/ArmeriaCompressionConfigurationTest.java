@@ -18,22 +18,16 @@ package com.linecorp.armeria.spring;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
 
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.google.common.base.Strings;
 
@@ -55,11 +49,11 @@ import com.linecorp.armeria.spring.ArmeriaSettings.Compression;
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * {@code application-compressionTest.yml} will be loaded with minimal settings to make it work.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "compressionTest" })
 @DirtiesContext
-public class ArmeriaCompressionConfigurationTest {
+@Timeout(10)
+class ArmeriaCompressionConfigurationTest {
 
     @SpringBootApplication
     public static class TestConfiguration {
@@ -73,9 +67,6 @@ public class ArmeriaCompressionConfigurationTest {
             });
         }
     }
-
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @Inject
     @Nullable
@@ -96,7 +87,7 @@ public class ArmeriaCompressionConfigurationTest {
     }
 
     @Test
-    public void compressionConfiguration() {
+    void compressionConfiguration() {
         assertThat(settings).isNotNull();
         final Compression compression = settings.getCompression();
         assertThat(compression).isNotNull();
@@ -108,7 +99,7 @@ public class ArmeriaCompressionConfigurationTest {
     }
 
     @Test
-    public void compressedResponse() {
+    void compressedResponse() {
         final AggregatedHttpResponse res =
                 WebClient.of(newUrl()).execute(request(2048)).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
@@ -116,7 +107,7 @@ public class ArmeriaCompressionConfigurationTest {
     }
 
     @Test
-    public void nonCompressedResponse() {
+    void nonCompressedResponse() {
         final AggregatedHttpResponse res =
                 WebClient.of(newUrl()).execute(request(1023)).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);

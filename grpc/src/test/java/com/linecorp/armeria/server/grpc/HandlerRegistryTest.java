@@ -21,7 +21,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
+import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class HandlerRegistryTest {
 

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.jetty;
 
+import static com.linecorp.armeria.internal.common.util.MappedPathUtil.mappedPath;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.ByteBuffer;
@@ -58,7 +59,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -211,6 +214,13 @@ public final class JettyService implements HttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+        final String mappedPath = mappedPath(ctx);
+        if (mappedPath == null) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                   "Invalid matrix variable: " +
+                                   ctx.routingContext().requestTarget().maybePathWithMatrixVariables());
+        }
+
         final ArmeriaConnector connector = this.connector;
         assert connector != null;
 
@@ -242,7 +252,7 @@ public final class JettyService implements HttpService {
                 });
 
                 final Request jReq = httpChannel.getRequest();
-                fillRequest(ctx, aReq, jReq);
+                fillRequest(ctx, aReq, jReq, mappedPath);
                 final SSLSession sslSession = ctx.sslSession();
                 final boolean needsReverseDnsLookup;
                 if (sslSession != null) {
@@ -284,11 +294,11 @@ public final class JettyService implements HttpService {
     }
 
     private static void fillRequest(
-            ServiceRequestContext ctx, AggregatedHttpRequest aReq, Request jReq) {
+            ServiceRequestContext ctx, AggregatedHttpRequest aReq, Request jReq, String mappedPath) {
         DispatcherTypeUtil.setRequestType(jReq);
         jReq.setAsyncSupported(true, null);
         jReq.setSecure(ctx.sessionProtocol().isTls());
-        jReq.setMetaData(toRequestMetadata(ctx, aReq));
+        jReq.setMetaData(toRequestMetadata(ctx, aReq, mappedPath));
         final HttpHeaders trailers = aReq.trailers();
         if (!trailers.isEmpty()) {
             final HttpField[] httpFields = trailers.stream()
@@ -298,7 +308,8 @@ public final class JettyService implements HttpService {
         }
     }
 
-    private static MetaData.Request toRequestMetadata(ServiceRequestContext ctx, AggregatedHttpRequest aReq) {
+    private static MetaData.Request toRequestMetadata(ServiceRequestContext ctx, AggregatedHttpRequest aReq,
+                                                      String mappedPath) {
         // Construct the HttpURI
         final StringBuilder uriBuf = new StringBuilder();
         final RequestHeaders aHeaders = aReq.headers();
@@ -306,9 +317,14 @@ public final class JettyService implements HttpService {
         uriBuf.append(ctx.sessionProtocol().isTls() ? "https" : "http");
         uriBuf.append("://");
         uriBuf.append(aHeaders.authority());
-        uriBuf.append(aHeaders.path());
 
-        final HttpURI uri = HttpURI.build(HttpURI.build(uriBuf.toString()).path(ctx.mappedPath()))
+        final RequestTarget requestTarget = ctx.routingContext().requestTarget();
+        if (requestTarget.query() != null) {
+            mappedPath = mappedPath + '?' + requestTarget.query();
+        }
+        uriBuf.append(mappedPath);
+
+        final HttpURI uri = HttpURI.build(HttpURI.build(uriBuf.toString()))
                                    .asImmutable();
         final HttpField[] fields = aHeaders.stream().map(header -> {
             final AsciiString k = header.getKey();

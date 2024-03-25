@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.grpc;
 
-import static com.linecorp.armeria.grpc.testing.Messages.PayloadType.COMPRESSABLE;
 import static com.linecorp.armeria.internal.common.grpc.GrpcTestUtil.REQUEST_MESSAGE;
 import static com.linecorp.armeria.internal.common.grpc.GrpcTestUtil.RESPONSE_MESSAGE;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static testing.grpc.Messages.PayloadType.COMPRESSABLE;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -82,23 +82,6 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
-import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
-import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.ResponseParameters;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
-import com.linecorp.armeria.grpc.testing.UnimplementedServiceGrpc;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
@@ -107,7 +90,6 @@ import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.common.util.EventLoopThread;
-import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -132,6 +114,24 @@ import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages.CompressionType;
+import testing.grpc.Messages.EchoStatus;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.ResponseParameters;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.Messages.StreamingInputCallRequest;
+import testing.grpc.Messages.StreamingInputCallResponse;
+import testing.grpc.Messages.StreamingOutputCallRequest;
+import testing.grpc.Messages.StreamingOutputCallResponse;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
+import testing.grpc.TestServiceGrpc.TestServiceStub;
+import testing.grpc.UnimplementedServiceGrpc;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceImplBase;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceStub;
 
 class GrpcClientTest {
 
@@ -1004,7 +1004,7 @@ class GrpcClientTest {
 
         final AtomicReference<Metadata> headers = new AtomicReference<>();
         final AtomicReference<Metadata> trailers = new AtomicReference<>();
-        stub = MetadataUtils.captureMetadata(stub, headers, trailers);
+        stub = stub.withInterceptors(MetadataUtils.newCaptureMetadataInterceptor(headers, trailers));
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 
@@ -1031,11 +1031,12 @@ class GrpcClientTest {
         final Metadata metadata = new Metadata();
         metadata.put(TestServiceImpl.EXTRA_HEADER_KEY, "dog");
 
-        TestServiceBlockingStub stub = MetadataUtils.attachHeaders(blockingStub, metadata);
+        TestServiceBlockingStub stub =
+                blockingStub.withInterceptors(MetadataUtils.newAttachHeadersInterceptor(metadata));
 
         final AtomicReference<Metadata> headers = new AtomicReference<>();
         final AtomicReference<Metadata> trailers = new AtomicReference<>();
-        stub = MetadataUtils.captureMetadata(stub, headers, trailers);
+        stub = stub.withInterceptors(MetadataUtils.newCaptureMetadataInterceptor(headers, trailers));
 
         assertThat(stub.emptyCall(EMPTY)).isNotNull();
 

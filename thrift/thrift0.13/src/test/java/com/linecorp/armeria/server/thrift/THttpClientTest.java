@@ -29,7 +29,8 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingRpcService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
+
+import testing.thrift.main.HelloService.AsyncIface;
 
 class THttpClientTest {
 

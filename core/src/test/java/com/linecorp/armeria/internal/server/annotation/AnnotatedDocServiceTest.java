@@ -42,6 +42,8 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -52,21 +54,26 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.CompositeBean;
 import com.linecorp.armeria.internal.testing.TestUtil;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.ConsumesBinary;
+import com.linecorp.armeria.server.annotation.ConsumesOctetStream;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Get;
@@ -78,6 +85,7 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProducesOctetStream;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
@@ -109,6 +117,8 @@ class AnnotatedDocServiceTest {
                 sb.http(8080);
             }
             sb.annotatedService("/service", new MyService());
+            sb.serviceUnder("/proxy", new ProxyService("/proxy"));
+            sb.serviceUnder("/proxy2/nested", new ProxyService("/proxy2/nested"));
             sb.serviceUnder("/docs",
                             DocService.builder()
                                       .exampleHeaders(EXAMPLE_HEADERS_ALL)
@@ -156,6 +166,8 @@ class AnnotatedDocServiceTest {
         addOverload2MethodInfo(methodInfos);
         addMarkdownDescriptionMethodInfo(methodInfos);
         addMermaidDescriptionMethodInfo(methodInfos);
+        addImplicitRequestObjectMethodInfo(methodInfos);
+
         final Map<Class<?>, DescriptionInfo> serviceDescription = ImmutableMap.of(
                 MyService.class, DescriptionInfo.of("My service class"));
 
@@ -169,7 +181,8 @@ class AnnotatedDocServiceTest {
         assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL))
                 .isEqualTo("no-cache, max-age=0, must-revalidate");
         assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER)
-                                         .whenIgnoringPaths("structs").isEqualTo(expectedJson);
+                                         .whenIgnoringPaths("structs", "docServiceRoute")
+                                         .isEqualTo(expectedJson);
     }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
@@ -397,6 +410,21 @@ class AnnotatedDocServiceTest {
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
+    private static void addImplicitRequestObjectMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/implicit/request/object")
+                                                  .availableMimeTypes(MediaType.OCTET_STREAM,
+                                                                      MediaType.JSON_UTF_8)
+                                                  .build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of(
+                FieldInfo.builder("body", toTypeSignature(byte[].class))
+                         .requirement(REQUIRED).build());
+        final MethodInfo methodInfo = new MethodInfo(
+                MyService.class.getName(), "implicitRequestObject", 0,
+                TypeSignature.ofStruct(HttpResponse.class), fieldInfos,
+                ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.POST, DescriptionInfo.empty());
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
     private static void addExamples(JsonNode json) {
         // Add the global example.
         ((ArrayNode) json.get("exampleHeaders")).add(mapper.valueToTree(EXAMPLE_HEADERS_ALL));
@@ -450,12 +478,45 @@ class AnnotatedDocServiceTest {
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
-        final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of(),
-                                                                                  ImmutableList.of()));
+        final Route docServiceRoute = Route.builder().pathPrefix("/excludeAll").build();
+        final ServiceSpecification emptySpecification = new ServiceSpecification(ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 ImmutableList.of(),
+                                                                                 docServiceRoute);
+        final JsonNode expectedJson = mapper.valueToTree(emptySpecification);
         assertThatJson(actualJson).isEqualTo(expectedJson);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "/proxy", "/proxy2/nested" })
+    void rightPathBehindProxy(String proxyPath) throws IOException {
+        final String specification = BlockingWebClient.of(server.httpUri())
+                                                      .get(proxyPath + "/docs/specification.json")
+                                                      .contentUtf8();
+        final JsonNode specificationJson = mapper.readTree(specification);
+        assertThatJson(specificationJson).node("docServiceRoute.pathType").isEqualTo("PREFIX");
+        assertThatJson(specificationJson).node("docServiceRoute.patternString").isEqualTo("/docs/*");
+    }
+
+    private static final class ProxyService implements HttpService {
+        private final String proxyPath;
+
+        private ProxyService(String proxyPath) {
+            this.proxyPath = proxyPath;
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+            final String origPath = req.path();
+            assertThat(origPath).startsWith(proxyPath);
+            final String newPath = req.path().substring(proxyPath.length());
+            final HttpRequest newReq = req.withHeaders(
+                    req.headers().toBuilder().path(newPath).build()
+            );
+            return server.webClient().execute(newReq);
+        }
     }
 
     @Description("My service class")
@@ -590,6 +651,13 @@ class AnnotatedDocServiceTest {
         @Get("/mermaid")
         public HttpResponse mermaid() {
             return HttpResponse.of(200);
+        }
+
+        @Post("/implicit/request/object")
+        @ConsumesOctetStream
+        @ProducesOctetStream
+        public HttpResponse implicitRequestObject(byte[] body) {
+            return HttpResponse.of(HttpStatus.OK, MediaType.OCTET_STREAM, body);
         }
     }
 

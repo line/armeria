@@ -17,22 +17,15 @@ package com.linecorp.armeria.spring;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.TimeUnit;
-
 import javax.inject.Inject;
 
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
@@ -48,11 +41,11 @@ import com.linecorp.armeria.spring.ArmeriaSslConfigurationTest.TestConfiguration
  * This uses {@link ArmeriaAutoConfiguration} for integration tests.
  * {@code application-sslTest.yml} will be loaded with minimal settings to make it work.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "sslTest" })
 @DirtiesContext
-public class ArmeriaSslConfigurationTest {
+@Timeout(10)
+class ArmeriaSslConfigurationTest {
 
     @SpringBootApplication
     static class TestConfiguration {}
@@ -62,9 +55,6 @@ public class ArmeriaSslConfigurationTest {
                          .tlsNoVerify()
                          .addressResolverGroupFactory(eventLoopGroup -> MockAddressResolverGroup.localhost())
                          .build();
-
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
 
     @Inject
     @Nullable
@@ -84,18 +74,18 @@ public class ArmeriaSslConfigurationTest {
         assertThat(res.contentUtf8()).isEqualTo("ok");
     }
 
-    @AfterClass
-    public static void closeClientFactory() {
+    @AfterAll
+    static void closeClientFactory() {
         clientFactory.closeAsync();
     }
 
     @Test
-    public void https() {
+    void https() {
         verify(SessionProtocol.HTTPS);
     }
 
     @Test
-    public void http() {
+    void http() {
         verify(SessionProtocol.HTTP);
     }
 }

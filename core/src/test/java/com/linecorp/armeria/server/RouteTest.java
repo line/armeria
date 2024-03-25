@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.common.MediaType.ANY_TYPE;
 import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
 import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -31,6 +32,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 
 class RouteTest {
 
@@ -174,6 +176,20 @@ class RouteTest {
     void invalidRoutePath() {
         assertThatThrownBy(() -> Route.builder().path("foo")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Route.builder().path("foo:/bar")).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void notAllowSemicolon() {
+        assertThatThrownBy(() -> Route.builder().path("/foo;")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo/{bar};")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/bar/:baz;")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("exact:/:foo/bar;")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("prefix:/bar/baz;")).isInstanceOf(
+                IllegalArgumentException.class);
     }
 
     @Test
@@ -408,23 +424,58 @@ class RouteTest {
         assertThat(ctx.deferredStatusException()).isNull();
     }
 
+    @Test
+    void testJsonSerialization() {
+        Route route = Route.builder().pathPrefix("/foo").build();
+
+        assertThatJson(route).node("pathType").isEqualTo("PREFIX");
+        assertThatJson(route).node("patternString").isEqualTo("/foo/*");
+
+        route = Route.builder().exact("/foo").build();
+
+        assertThatJson(route).node("pathType").isEqualTo("EXACT");
+        assertThatJson(route).node("patternString").isEqualTo("/foo");
+
+        route = Route.builder().glob("/foo/*").build();
+
+        assertThatJson(route).node("pathType").isEqualTo("REGEX");
+        assertThatJson(route).node("patternString").isEqualTo("/foo/*");
+
+        route = Route.builder().regex("/foo/.+").build();
+
+        assertThatJson(route).node("pathType").isEqualTo("REGEX");
+        assertThatJson(route).node("patternString").isEqualTo("/foo/.+");
+
+        route = Route.builder().path("/foo/:id").build();
+
+        assertThatJson(route).node("pathType").isEqualTo("PARAMETERIZED");
+        assertThatJson(route).node("patternString").isEqualTo("/foo/:id");
+    }
+
+    @Test
+    void prefixWithEmptySlash() {
+        final Route route = Route.builder().pathPrefix("/foo").build();
+        assertThat(route.withPrefix("/")).isSameAs(route);
+    }
+
     private static RoutingContext withMethod(HttpMethod method) {
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        REQ_TARGET, RequestHeaders.of(method, PATH), RoutingStatus.OK);
+                                        REQ_TARGET, RequestHeaders.of(method, PATH), RoutingStatus.OK,
+                                        SessionProtocol.H2C);
     }
 
     private static RoutingContext withConsumeType(HttpMethod method, MediaType contentType) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.CONTENT_TYPE, contentType);
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        REQ_TARGET, headers, RoutingStatus.OK);
+                                        REQ_TARGET, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     private static RoutingContext withAcceptHeader(HttpMethod method, String acceptHeader) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.ACCEPT, acceptHeader);
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        REQ_TARGET, headers, RoutingStatus.OK);
+                                        REQ_TARGET, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     private static RoutingContext withPath(String path) {
@@ -433,13 +484,13 @@ class RouteTest {
 
         return DefaultRoutingContext.of(virtualHost(), "example.com",
                                         reqTarget, RequestHeaders.of(HttpMethod.GET, path),
-                                        RoutingStatus.OK);
+                                        RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     private static RoutingContext withRequestHeaders(RequestHeaders headers) {
         final RequestTarget reqTarget = RequestTarget.forServer(headers.path());
         assertThat(reqTarget).isNotNull();
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        reqTarget, headers, RoutingStatus.OK);
+                                        reqTarget, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 }

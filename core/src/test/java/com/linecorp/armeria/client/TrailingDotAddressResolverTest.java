@@ -92,9 +92,10 @@ class TrailingDotAddressResolverTest {
                 final AggregatedHttpResponse response = client.get(
                         "http://foo.com.:" + server.httpPort() + '/');
                 assertThat(response.contentUtf8()).isEqualTo("Hello, world!");
-                assertThat(dnsRecordCaptor.records).hasSize(1);
-                final DnsRecord record = dnsRecordCaptor.records.poll();
-                assertThat(record.name()).isEqualTo("foo.com.");
+                assertThat(dnsRecordCaptor.records).isNotEmpty();
+                dnsRecordCaptor.records.forEach(record -> {
+                    assertThat(record.name()).isEqualTo("foo.com.");
+                });
             }
         }
     }

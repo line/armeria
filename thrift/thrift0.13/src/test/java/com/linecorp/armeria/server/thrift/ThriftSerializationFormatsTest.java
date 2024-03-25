@@ -25,25 +25,22 @@ import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.TEXT
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.nio.charset.StandardCharsets;
-
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.thrift.ThriftClients;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
+
+import testing.thrift.main.HelloService;
 
 /**
  * Test of serialization format validation / detection based on HTTP headers.
@@ -116,7 +113,7 @@ public class ThriftSerializationFormatsTest {
         final HelloService.Iface client =
                 ThriftClients.newClient(server.httpUri(TEXT) + "/hellobinaryonly", HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
-                                                         .getCause()
+                                                         .cause()
                                                          .isInstanceOf(InvalidResponseHeadersException.class)
                                                          .hasMessageContaining(":status=415");
     }
@@ -140,28 +137,25 @@ public class ThriftSerializationFormatsTest {
                              .setHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
                              .build(HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
-                                                         .getCause()
+                                                         .cause()
                                                          .isInstanceOf(InvalidResponseHeadersException.class)
                                                          .hasMessageContaining(":status=406");
     }
 
     @Test
     public void defaultSerializationFormat() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            // Send a TTEXT request with content type 'application/x-thrift' without 'protocol' parameter.
-            final HttpPost req = new HttpPost(server.httpUri() + "/hellotextonly");
-            req.setHeader("Content-type", "application/x-thrift");
-            req.setEntity(new StringEntity(
-                    '{' +
-                    "  \"method\": \"hello\"," +
-                    "  \"type\":\"CALL\"," +
-                    "  \"args\": { \"name\": \"trustin\"}" +
-                    '}', StandardCharsets.UTF_8));
-
-            try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
-            }
-        }
+        final BlockingWebClient client = server.blockingWebClient();
+        final AggregatedHttpResponse response =
+                client.prepare()
+                      .post("/hellotextonly")
+                      .content(parse("application/x-thrift"),
+                               "{" +
+                               "  \"method\": \"hello\"," +
+                               "  \"type\":\"CALL\"," +
+                               "  \"args\": { \"name\": \"trustin\"}" +
+                               '}')
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

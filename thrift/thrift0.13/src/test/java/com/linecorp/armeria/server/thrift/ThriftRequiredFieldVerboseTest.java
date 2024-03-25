@@ -29,8 +29,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.service.test.thrift.main.HelloRequiredNameService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.thrift.main.HelloRequiredNameService;
 
 class ThriftRequiredFieldVerboseTest {
 

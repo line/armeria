@@ -33,7 +33,10 @@ import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 
-class ServerTlsCertificateMetricsTest {
+public class ServerTlsCertificateMetricsTest {
+
+    private static final String RESOURCE_PATH_PREFIX =
+            "/testing/core/" + ServerTlsCertificateMetricsTest.class.getSimpleName() + '/';
 
     private static final String CERT_VALIDITY_GAUGE_NAME = "armeria.server.tls.certificate.validity";
     private static final String CERT_VALIDITY_DAYS_GAUGE_NAME = "armeria.server.tls.certificate.validity.days";
@@ -127,14 +130,15 @@ class ServerTlsCertificateMetricsTest {
 
     @Test
     void tlsMetricGivenCertificateChainNotExpired() {
-        final InputStream expiredCertificateChain = getClass().getResourceAsStream("certificate-chain.pem");
-        final InputStream pk = getClass().getResourceAsStream("pk.key");
+        final InputStream certificateChain = getClass().getResourceAsStream(
+                RESOURCE_PATH_PREFIX + "certificate-chain.pem");
+        final InputStream pk = getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "pk.key");
 
         final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .meterRegistry(meterRegistry)
-              .tls(expiredCertificateChain, pk)
+              .tls(certificateChain, pk)
               .build();
 
         assertThatGauge(meterRegistry, CERT_VALIDITY_GAUGE_NAME, "localhost").isOne();
@@ -166,8 +170,8 @@ class ServerTlsCertificateMetricsTest {
     @Test
     void tlsMetricGivenCertificateChainExpired() {
         final InputStream expiredCertificateChain = getClass()
-                .getResourceAsStream("expired-certificate-chain.pem");
-        final InputStream pk = getClass().getResourceAsStream("expire-pk.key");
+                .getResourceAsStream(RESOURCE_PATH_PREFIX + "expired-certificate-chain.pem");
+        final InputStream pk = getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "expire-pk.key");
 
         final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()

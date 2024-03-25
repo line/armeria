@@ -32,14 +32,13 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.testing.EqualsTester;
 
 import com.linecorp.armeria.client.Endpoint.Type;
 import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
-import com.linecorp.armeria.common.util.OsType;
-import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.DomainSocketUtil;
 
 import io.netty.util.AttributeKey;
@@ -456,9 +455,10 @@ class EndpointTest {
         final Endpoint a1 = Endpoint.of("a");
         final Endpoint a2 = Endpoint.of("a");
 
-        assertThat(a1).isNotEqualTo(new Object());
-        assertThat(a1).isEqualTo(a1);
-        assertThat(a1).isEqualTo(a2);
+        new EqualsTester()
+                .addEqualityGroup(a1, a2)
+                .addEqualityGroup(new Object())
+                .testEquals();
     }
 
     @Test
@@ -470,6 +470,7 @@ class EndpointTest {
         final Endpoint e = Endpoint.of("a", 80).withIpAddr("::1");
         final Endpoint f = Endpoint.of("a", 80).withWeight(500); // Weight not part of comparison
         final Endpoint g = Endpoint.of("g", 80);
+
         assertThat(a).isNotEqualTo(b);
         assertThat(b).isEqualTo(c);
         assertThat(b).isNotEqualTo(d);
@@ -592,12 +593,8 @@ class EndpointTest {
         });
 
         // DomainSocketAddress (Armeria)
-        assertThat(Endpoint.of(DomainSocketAddress.of(Paths.get("/foo.sock")))).satisfies(e -> {
-            if (SystemInfo.osType() == OsType.WINDOWS) {
-                assertThat(e.host()).isEqualTo("unix%3A%5Cfoo.sock");
-            } else {
-                assertThat(e.host()).isEqualTo("unix%3A%2Ffoo.sock");
-            }
+        assertThat(Endpoint.of(DomainSocketAddress.of("/foo.sock"))).satisfies(e -> {
+            assertThat(e.host()).isEqualTo("unix%3A%2Ffoo.sock");
             assertThat(e.isDomainSocket()).isTrue();
             assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
             assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);
@@ -605,11 +602,7 @@ class EndpointTest {
 
         // DomainSocketAddress (Netty)
         assertThat(Endpoint.of(new io.netty.channel.unix.DomainSocketAddress("/bar.sock"))).satisfies(e -> {
-            if (SystemInfo.osType() == OsType.WINDOWS) {
-                assertThat(e.host()).isEqualTo("unix%3A%5Cbar.sock");
-            } else {
-                assertThat(e.host()).isEqualTo("unix%3A%2Fbar.sock");
-            }
+            assertThat(e.host()).isEqualTo("unix%3A%2Fbar.sock");
             assertThat(e.isDomainSocket()).isTrue();
             assertThat(e.ipAddr()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_IP);
             assertThat(e.port()).isEqualTo(DomainSocketUtil.DOMAIN_SOCKET_PORT);

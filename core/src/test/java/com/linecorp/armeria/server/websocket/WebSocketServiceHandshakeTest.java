@@ -71,7 +71,7 @@ class WebSocketServiceHandshakeTest {
                 if (!threadRescheduling.get()) {
                     return delegate.serve(ctx, req);
                 }
-                return HttpResponse.from(() -> {
+                return HttpResponse.of(() -> {
                     try {
                         return delegate.serve(ctx, req);
                     } catch (Exception e) {

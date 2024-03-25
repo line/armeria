@@ -28,32 +28,37 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import testing.thrift.uuid.TestUuidService;
+import testing.thrift.uuid.UuidMessage;
+
+@GenerateNativeImageTrace
 class UuidMessageTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/", THttpService.of(new UuidServiceImpl()));
+            sb.service("/", THttpService.of(new TestUuidServiceImpl()));
         }
     };
 
     @Test
     void shouldMarshallUuidType() throws TException {
         for (SerializationFormat serializationFormat : ThriftSerializationFormats.values()) {
-            final UuidService.Iface client = ThriftClients.builder(server.httpUri())
-                                                          .serializationFormat(serializationFormat)
-                                                          .build(UuidService.Iface.class);
+            final TestUuidService.Iface client = ThriftClients.builder(server.httpUri())
+                                                              .serializationFormat(serializationFormat)
+                                                              .build(TestUuidService.Iface.class);
             final UuidMessage request = new UuidMessage(UUID.randomUUID(), "hello");
             final UuidMessage response = client.echo(request);
             assertThat(response).isEqualTo(request);
         }
     }
 
-    private static class UuidServiceImpl implements UuidService.AsyncIface {
+    private static class TestUuidServiceImpl implements TestUuidService.AsyncIface {
 
         @Override
         public void echo(UuidMessage request, AsyncMethodCallback<UuidMessage> resultHandler)

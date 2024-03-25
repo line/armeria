@@ -26,11 +26,26 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
+import com.linecorp.armeria.common.websocket.WebSocketFrameType;
+import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
+import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServiceConfig;
 
 /**
  * Builds a {@link WebSocketService}.
+ * This service has the different default configs from a normal {@link HttpService}. Here are the differences:
+ * <ul>
+ *   <li>{@link ServiceConfig#requestTimeoutMillis()} is
+ *       {@value WebSocketUtil#DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS}.</li>
+ *   <li>{@link ServiceConfig#maxRequestLength()} is
+ *       {@value WebSocketUtil#DEFAULT_MAX_REQUEST_RESPONSE_LENGTH}.</li>
+ *   <li>{@link ServiceConfig#requestAutoAbortDelayMillis()} is
+ *       {@value WebSocketUtil#DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS}.</li>
+ * </ul>
  */
 @UnstableApi
 public final class WebSocketServiceBuilder {
@@ -47,6 +62,9 @@ public final class WebSocketServiceBuilder {
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
+    private boolean aggregateContinuation;
+    @Nullable
+    private HttpService fallbackService;
 
     WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -95,6 +113,19 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
+     * Sets whether to aggregate the subsequent continuation frames of the incoming
+     * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame into a single
+     * {@link WebSocketFrameType#TEXT} or {@link WebSocketFrameType#BINARY} frame.
+     * If the length of the aggregated frames exceeds the {@link #maxFramePayloadLength(int)},
+     * a close frame with the status {@link WebSocketCloseStatus#MESSAGE_TOO_BIG} is sent to the peer.
+     * Note that enabling this feature may lead to increased memory usage, so use it with caution.
+     */
+    public WebSocketServiceBuilder aggregateContinuation(boolean aggregateContinuation) {
+        this.aggregateContinuation = aggregateContinuation;
+        return this;
+    }
+
+    /**
      * Sets the allowed origins. The same-origin is allowed by default.
      * Specify {@value ANY_ORIGIN} to allow any origins.
      *
@@ -131,10 +162,20 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
+     * Sets the fallback {@link HttpService} to use when the request is not a valid WebSocket upgrade request.
+     * This is useful when you want to serve both WebSocket and HTTP requests at the same path.
+     */
+    public WebSocketServiceBuilder fallbackService(HttpService fallbackService) {
+        this.fallbackService = requireNonNull(fallbackService, "fallbackService");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link WebSocketService} with the properties set so far.
      */
     public WebSocketService build() {
-        return new WebSocketService(handler, maxFramePayloadLength, allowMaskMismatch,
-                                    subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN));
+        return new DefaultWebSocketService(handler, fallbackService, maxFramePayloadLength, allowMaskMismatch,
+                                           subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN),
+                                           aggregateContinuation);
     }
 }

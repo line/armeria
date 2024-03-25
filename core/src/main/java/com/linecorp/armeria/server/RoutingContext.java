@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.DefaultRequestTarget.removeMatrixVariables;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -27,6 +28,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RequestTargetForm;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.DefaultRequestTarget;
@@ -122,6 +124,12 @@ public interface RoutingContext {
     RoutingStatus status();
 
     /**
+     * Returns the {@link SessionProtocol} of the request.
+     */
+    @UnstableApi
+    SessionProtocol sessionProtocol();
+
+    /**
      * Defers throwing an {@link HttpStatusException} until reaching the end of the service list.
      */
     void deferStatusException(HttpStatusException cause);
@@ -146,6 +154,7 @@ public interface RoutingContext {
                         oldReqTarget.form(),
                         oldReqTarget.scheme(),
                         oldReqTarget.authority(),
+                        removeMatrixVariables(path),
                         path,
                         oldReqTarget.query(),
                         oldReqTarget.fragment());

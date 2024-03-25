@@ -103,16 +103,20 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
      */
     public LogFormatter build() {
         return new TextLogFormatter(
-                firstNonNull(requestHeadersSanitizer(), defaultSanitizer()),
-                firstNonNull(responseHeadersSanitizer(), defaultSanitizer()),
-                firstNonNull(requestTrailersSanitizer(), defaultSanitizer()),
-                firstNonNull(responseTrailersSanitizer(), defaultSanitizer()),
+                firstNonNull(requestHeadersSanitizer(), HeadersSanitizer.ofText()),
+                firstNonNull(responseHeadersSanitizer(), HeadersSanitizer.ofText()),
+                firstNonNull(requestTrailersSanitizer(), defaultHeadersSanitizer()),
+                firstNonNull(responseTrailersSanitizer(), defaultHeadersSanitizer()),
                 firstNonNull(requestContentSanitizer(), defaultSanitizer()),
                 firstNonNull(responseContentSanitizer(), defaultSanitizer()),
                 includeContext);
     }
 
     private static <T> BiFunction<? super RequestContext, T, String> defaultSanitizer() {
+        return (requestContext, object) -> object.toString();
+    }
+
+    private static HeadersSanitizer<String> defaultHeadersSanitizer() {
         return (requestContext, object) -> object.toString();
     }
 }

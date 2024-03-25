@@ -108,13 +108,13 @@ public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<J
     public LogFormatter build() {
         final ObjectMapper objectMapper = this.objectMapper != null ?
                                           this.objectMapper : JacksonUtil.newDefaultObjectMapper();
-        final BiFunction<? super RequestContext, HttpHeaders, JsonNode> defaultHeadersSanitizer =
-                defaultSanitizer(objectMapper);
+        final HeadersSanitizer<JsonNode> defaultHeadersSanitizer =
+                defaultHeadersSanitizer(objectMapper);
         final BiFunction<? super RequestContext, Object, JsonNode> defaultContentSanitizer =
                 defaultSanitizer(objectMapper);
         return new JsonLogFormatter(
-                firstNonNull(requestHeadersSanitizer(), defaultHeadersSanitizer),
-                firstNonNull(responseHeadersSanitizer(), defaultHeadersSanitizer),
+                firstNonNull(requestHeadersSanitizer(), HeadersSanitizer.ofJson()),
+                firstNonNull(responseHeadersSanitizer(), HeadersSanitizer.ofJson()),
                 firstNonNull(requestTrailersSanitizer(), defaultHeadersSanitizer),
                 firstNonNull(responseTrailersSanitizer(), defaultHeadersSanitizer),
                 firstNonNull(requestContentSanitizer(), defaultContentSanitizer),
@@ -124,6 +124,11 @@ public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<J
 
     private static <T> BiFunction<? super RequestContext, T, JsonNode>
     defaultSanitizer(ObjectMapper objectMapper) {
+        return (requestContext, obj) -> objectMapper.valueToTree(obj);
+    }
+
+    private static HeadersSanitizer<JsonNode>
+    defaultHeadersSanitizer(ObjectMapper objectMapper) {
         return (requestContext, obj) -> objectMapper.valueToTree(obj);
     }
 }

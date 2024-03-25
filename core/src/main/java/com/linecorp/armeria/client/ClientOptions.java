@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -34,6 +35,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -81,6 +84,16 @@ public final class ClientOptions
     public static final ClientOption<Long> REQUEST_AUTO_ABORT_DELAY_MILLIS =
             ClientOption.define("REQUEST_AUTO_ABORT_DELAY_MILLIS",
                                 Flags.defaultRequestAutoAbortDelayMillis());
+
+    /**
+     * Whether to add an {@link HttpHeaderNames#ORIGIN} header automatically when sending
+     * an {@link HttpRequest} when the {@link HttpRequest#headers()} does not have it.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6454.html">The Web Origin Concept</a>
+     */
+    @UnstableApi
+    public static final ClientOption<Boolean> AUTO_FILL_ORIGIN_HEADER =
+            ClientOption.define("AUTO_FILL_ORIGIN_HEADER", false); // TODO(minwoox): Add to Flags
 
     /**
      * The redirect configuration.
@@ -138,6 +151,10 @@ public final class ClientOptions
      */
     public static final ClientOption<Function<? super Endpoint, ? extends EndpointGroup>> ENDPOINT_REMAPPER =
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
+
+    @UnstableApi
+    public static final ClientOption<Supplier<? extends AutoCloseable>> CONTEXT_HOOK =
+            ClientOption.define("CONTEXT_HOOK", NOOP_CONTEXT_HOOK);
 
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.HTTP2_SETTINGS,
@@ -307,6 +324,15 @@ public final class ClientOptions
     }
 
     /**
+     * Returns whether to add an {@link HttpHeaderNames#ORIGIN} header automatically when sending
+     * an {@link HttpRequest} when the {@link HttpRequest#headers()} does not have it.
+     */
+    @UnstableApi
+    public boolean autoFillOriginHeader() {
+        return get(AUTO_FILL_ORIGIN_HEADER);
+    }
+
+    /**
      * Returns the {@link RedirectConfig}.
      */
     @UnstableApi
@@ -357,6 +383,16 @@ public final class ClientOptions
      */
     public Consumer<ClientRequestContext> contextCustomizer() {
         return get(CONTEXT_CUSTOMIZER);
+    }
+
+    /**
+     * Returns the {@link Supplier} which provides an {@link AutoCloseable} and will be called whenever this
+     * {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     */
+    @UnstableApi
+    @SuppressWarnings("unchecked")
+    public Supplier<AutoCloseable> contextHook() {
+        return (Supplier<AutoCloseable>) get(CONTEXT_HOOK);
     }
 
     /**

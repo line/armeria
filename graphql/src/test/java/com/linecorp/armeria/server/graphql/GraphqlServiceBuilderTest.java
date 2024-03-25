@@ -36,7 +36,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 
-import graphql.execution.instrumentation.SimpleInstrumentation;
+import graphql.execution.instrumentation.SimplePerformantInstrumentation;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLTypeVisitor;
 import graphql.schema.GraphQLTypeVisitorStub;
@@ -56,22 +56,24 @@ class GraphqlServiceBuilderTest {
 
     @Test
     void specifySchemaFile() throws Exception {
-        final File graphqlSchemaFile = new File(getClass().getResource("/test.graphqls").toURI());
+        final File graphqlSchemaFile = new File(
+                getClass().getResource("/testing/graphql/test.graphqls").toURI());
         final GraphqlService service = new GraphqlServiceBuilder().schemaFile(graphqlSchemaFile).build();
         assertThat(service).isNotNull();
     }
 
     @Test
     void specifySchemaUrl() throws Exception {
-        final GraphqlService service = new GraphqlServiceBuilder().schemaUrls("classpath:test.graphqls")
-                                                                  .build();
+        final GraphqlService service =
+                new GraphqlServiceBuilder().schemaUrls("classpath:testing/graphql/test.graphqls")
+                                           .build();
         assertThat(service).isNotNull();
     }
 
     @Test
     void notFoundSpecifySchemaUrl() throws Exception {
         assertThatThrownBy(() -> {
-            new GraphqlServiceBuilder().schemaUrls("test.graphqls")
+            new GraphqlServiceBuilder().schemaUrls("testing/graphql/test.graphqls")
                                        .build();
         }).isInstanceOf(UncheckedIOException.class).hasMessageContaining("java.io.FileNotFoundException");
     }
@@ -103,7 +105,7 @@ class GraphqlServiceBuilderTest {
 
     private static Stream<Arguments> provideSpecifySchemaArguments() throws URISyntaxException {
         return Stream.of(
-                Arguments.of(ImmutableList.of("classpath:test.graphqls"), ImmutableList.of(),
+                Arguments.of(ImmutableList.of("classpath:testing/graphql/test.graphqls"), ImmutableList.of(),
                              ImmutableList.of()),
                 Arguments.of(ImmutableList.of(),
                              ImmutableList.of((RuntimeWiringConfigurator) builder -> {
@@ -117,7 +119,7 @@ class GraphqlServiceBuilderTest {
 
     private GraphQLSchema makeGraphQLSchema() throws URISyntaxException {
         final File graphqlSchemaFile =
-                new File(getClass().getResource("/test.graphqls").toURI());
+                new File(getClass().getResource("/testing/graphql/test.graphqls").toURI());
         final TypeDefinitionRegistry typeDefinitionRegistry = new TypeDefinitionRegistry();
         final SchemaParser parser = new SchemaParser();
         typeDefinitionRegistry.merge(parser.parse(graphqlSchemaFile));
@@ -129,10 +131,10 @@ class GraphqlServiceBuilderTest {
     @Test
     void successful() throws Exception {
         final File graphqlSchemaFile =
-                new File(getClass().getResource("/test.graphqls").toURI());
+                new File(getClass().getResource("/testing/graphql/test.graphqls").toURI());
         final GraphqlServiceBuilder builder = new GraphqlServiceBuilder();
         final GraphqlService service = builder.schemaFile(graphqlSchemaFile)
-                                              .instrumentation(SimpleInstrumentation.INSTANCE)
+                                              .instrumentation(SimplePerformantInstrumentation.INSTANCE)
                                               .runtimeWiring(it -> {
                                                   // noop
                                               })
@@ -153,15 +155,15 @@ class GraphqlServiceBuilderTest {
                     .dataLoaderRegistry(ctx -> new DataLoaderRegistry())
                     .configureDataLoaderRegistry(dlr -> dlr.register("dummy1", dataLoader));
         })
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
 
         assertThatThrownBy(() -> {
             new GraphqlServiceBuilder()
                     .configureDataLoaderRegistry(dlr -> dlr.register("dummy1", dataLoader))
                     .dataLoaderRegistry(ctx -> new DataLoaderRegistry());
         })
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
     }
 }

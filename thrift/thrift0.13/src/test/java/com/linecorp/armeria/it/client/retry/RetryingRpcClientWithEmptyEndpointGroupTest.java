@@ -41,8 +41,9 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.internal.testing.CountDownEmptyEndpointStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService.Iface;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.thrift.main.HelloService.Iface;
 
 class RetryingRpcClientWithEmptyEndpointGroupTest {
 

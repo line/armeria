@@ -53,12 +53,12 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
-import com.linecorp.armeria.service.test.thrift.main.Name;
-import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
+import testing.thrift.main.HelloService;
+import testing.thrift.main.Name;
+import testing.thrift.main.NameSortService;
 
 class ThriftServiceLengthLimitTest {
 

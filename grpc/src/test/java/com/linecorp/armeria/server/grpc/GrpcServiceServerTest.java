@@ -80,15 +80,6 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceStub;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
@@ -128,6 +119,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
+import testing.grpc.Messages.EchoStatus;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.Messages.StreamingOutputCallRequest;
+import testing.grpc.UnitTestServiceGrpc;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceBlockingStub;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceImplBase;
+import testing.grpc.UnitTestServiceGrpc.UnitTestServiceStub;
 
 class GrpcServiceServerTest {
 

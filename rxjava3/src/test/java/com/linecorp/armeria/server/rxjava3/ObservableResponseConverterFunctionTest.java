@@ -37,8 +37,10 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
 import com.linecorp.armeria.server.annotation.ProducesText;
@@ -50,6 +52,7 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.subscribers.DefaultSubscriber;
 
+@GenerateNativeImageTrace
 class ObservableResponseConverterFunctionTest {
 
     @RegisterExtension
@@ -82,6 +85,11 @@ class ObservableResponseConverterFunctionTest {
                 public Maybe<HttpResponse> httpResponse() {
                     return Maybe.just(HttpResponse.of("a"));
                 }
+
+                @Get("/http-result")
+                public Maybe<HttpResult<String>> httpResult() {
+                    return Maybe.just(HttpResult.of("a"));
+                }
             });
 
             sb.annotatedService("/single", new Object() {
@@ -104,6 +112,11 @@ class ObservableResponseConverterFunctionTest {
                 @Get("/http-response")
                 public Single<HttpResponse> httpResponse() {
                     return Single.just(HttpResponse.of("a"));
+                }
+
+                @Get("/http-result")
+                public Single<HttpResult<String>> httpResult() {
+                    return Single.just(HttpResult.of("a"));
                 }
             });
 
@@ -203,6 +216,10 @@ class ObservableResponseConverterFunctionTest {
         res = client.get("/http-response").aggregate().join();
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.get("/http-result").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
     }
 
     @Test
@@ -223,6 +240,10 @@ class ObservableResponseConverterFunctionTest {
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         res = client.get("/http-response").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.get("/http-result").aggregate().join();
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("a");
     }

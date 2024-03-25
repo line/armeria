@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,7 +34,6 @@ import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TBase;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
-import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
@@ -43,11 +43,13 @@ import org.apache.thrift.transport.TTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregationOptions;
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -71,7 +73,9 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
+import com.linecorp.armeria.internal.common.thrift.ThriftMetadataAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftProtocolUtil;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
@@ -83,6 +87,7 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.AttributeKey;
 
 /**
  * An {@link HttpService} that handles a Thrift call.
@@ -91,6 +96,9 @@ import io.netty.buffer.ByteBuf;
  */
 public final class THttpService extends DecoratingService<RpcRequest, RpcResponse, HttpRequest, HttpResponse>
         implements HttpService {
+
+    private static final AttributeKey<DecodedRequest> DECODED_REQUEST =
+            AttributeKey.valueOf(THttpService.class, "DECODED_REQUEST");
 
     private static final Logger logger = LoggerFactory.getLogger(THttpService.class);
 
@@ -280,6 +288,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private int maxRequestContainerLength;
     private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
+    private Map<ThriftFunction, HttpService> decoratedTHttpServices;
 
     THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> supportedSerializationFormats,
@@ -300,6 +309,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                         format -> ThriftSerializationFormats.protocolFactory(format, 0, 0)));
         // The actual requestProtocolFactories will be set when this service is added.
         requestProtocolFactories = responseProtocolFactories;
+        // The actual decoratedTHttpServices will be set when this service is added.
+        decoratedTHttpServices = ImmutableMap.of();
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
@@ -349,10 +360,35 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                                 format, maxRequestStringLength, maxRequestContainerLength)));
 
         super.serviceAdded(cfg);
+
+        final DependencyInjector dependencyInjector = cfg.server().config().dependencyInjector();
+        final Map<ThriftFunction, HttpService> decoratedTHttpServices = new IdentityHashMap<>();
+        for (ThriftServiceEntry thriftServiceEntry : entries().values()) {
+            for (ThriftFunction thriftFunction : thriftServiceEntry.metadata.functions().values()) {
+                if (!thriftFunction.declaredDecorators().isEmpty()) {
+                    final List<DecoratorAndOrder> decorators = thriftFunction.declaredDecorators();
+                    Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+                    for (int i = decorators.size() - 1; i >= 0; i--) {
+                        final DecoratorAndOrder d = decorators.get(i);
+                        decorator = decorator.andThen(d.decorator(dependencyInjector));
+                    }
+                    decoratedTHttpServices.put(thriftFunction, decorator.apply(this));
+                }
+            }
+        }
+        this.decoratedTHttpServices = decoratedTHttpServices;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+        final DecodedRequest decodedRequest = ctx.attr(DECODED_REQUEST);
+        if (decodedRequest != null) {
+            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+            invoke(ctx, decodedRequest.serializationFormat, decodedRequest.seqId,
+                   decodedRequest.thriftFunction, decodedRequest.decodedReq, responseFuture);
+            return HttpResponse.of(responseFuture);
+        }
+
         if (req.method() != HttpMethod.POST) {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
@@ -369,7 +405,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         }
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture);
+        final HttpResponse res = HttpResponse.of(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
         req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
@@ -546,6 +582,18 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             ctx.logBuilder().requestContent(null, null);
         }
 
+        if (!f.declaredDecorators().isEmpty()) {
+            ctx.setAttr(DECODED_REQUEST, new DecodedRequest(serializationFormat, seqId, f, decodedReq));
+            try {
+                final HttpService decoratedTHttpService = decoratedTHttpServices.get(f);
+                assert decoratedTHttpService != null;
+                httpRes.complete(decoratedTHttpService.serve(ctx, req.toHttpRequest()));
+            } catch (Exception e) {
+                handleException(ctx, httpRes, serializationFormat, seqId, f, e);
+            }
+            return;
+        }
+
         invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
     }
 
@@ -605,7 +653,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         // NB: The map returned by FieldMetaData.getStructMetaDataMap() is an EnumMap,
         //     so the parameter ordering is preserved correctly during iteration.
         final Set<? extends TFieldIdEnum> fields =
-                FieldMetaData.getStructMetaDataMap(thriftArgs.getClass()).keySet();
+                ThriftMetadataAccess.getStructMetaDataMap(thriftArgs.getClass()).keySet();
 
         // Handle the case where the number of arguments is 0 or 1.
         final int numFields = fields.size();
@@ -775,6 +823,22 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             if (!success) {
                 buf.release();
             }
+        }
+    }
+
+    private static final class DecodedRequest {
+
+        private final SerializationFormat serializationFormat;
+        private final int seqId;
+        private final ThriftFunction thriftFunction;
+        private final RpcRequest decodedReq;
+
+        private DecodedRequest(SerializationFormat serializationFormat, int seqId,
+                               ThriftFunction thriftFunction, RpcRequest decodedReq) {
+            this.serializationFormat = serializationFormat;
+            this.seqId = seqId;
+            this.thriftFunction = thriftFunction;
+            this.decodedReq = decodedReq;
         }
     }
 }

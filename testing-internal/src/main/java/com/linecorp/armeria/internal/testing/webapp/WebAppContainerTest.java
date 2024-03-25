@@ -26,22 +26,11 @@ import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.regex.Pattern;
 
 import javax.net.ssl.SSLSession;
 
-import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.io.entity.StringEntity;
-import org.apache.hc.core5.http.message.BasicNameValuePair;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -53,9 +42,11 @@ import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.Server;
@@ -67,7 +58,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
  */
 public abstract class WebAppContainerTest {
 
-    private static final Pattern CR_OR_LF = Pattern.compile("[\\r\\n]");
+    protected static final Pattern CR_OR_LF = Pattern.compile("[\\r\\n]");
 
     /**
      * Returns the doc-base directory of the test web application.
@@ -137,189 +128,148 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void japanesePath() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(
-                    server().httpUri() + "/jsp/" + URLEncoder.encode("日本語", "UTF-8") + "/index.jsp"))) {
-                assertThat(res.getCode()).isEqualTo(200);
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                        .startsWith("text/html");
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent).isEqualTo(
-                        "<html><body>" +
-                        "<p>Hello, Armerian World!</p>" +
-                        "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
-                        "<p>Context path: </p>" + // ROOT context path
-                        "<p>Request URI: /%E6%97%A5%E6%9C%AC%E8%AA%9E/index.jsp</p>" +
-                        "<p>Servlet Path: /日本語/index.jsp</p>" +
-                        "</body></html>");
-            }
-        }
+        final AggregatedHttpResponse response = server().blockingWebClient().get(
+                "/jsp/" + URLEncoder.encode("日本語", "UTF-8") + "/index.jsp");
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/html");
+        final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                             .replaceAll("");
+        assertThat(actualContent).isEqualTo(
+                "<html><body>" +
+                "<p>Hello, Armerian World!</p>" +
+                "<p>Have you heard about the class 'org.slf4j.Logger'?</p>" +
+                "<p>Context path: </p>" + // ROOT context path
+                "<p>Request URI: /%E6%97%A5%E6%9C%AC%E8%AA%9E/index.jsp</p>" +
+                "<p>Servlet Path: /日本語/index.jsp</p>" +
+                "</body></html>");
     }
 
     @Test
     public void getWithQueryString() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(server().httpUri() + "/jsp/query_string.jsp?foo=%31&bar=%32"))) {
-
-                assertThat(res.getCode()).isEqualTo(200);
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                        .startsWith("text/html");
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent).isEqualTo(
-                        "<html><body>" +
-                        "<p>foo is 1</p>" +
-                        "<p>bar is 2</p>" +
-                        "</body></html>");
-            }
-
-            // Send a query again with different values to make sure the query strings are not cached.
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(server().httpUri() + "/jsp/query_string.jsp?foo=%33&bar=%34"))) {
-
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent).isEqualTo(
-                        "<html><body>" +
-                        "<p>foo is 3</p>" +
-                        "<p>bar is 4</p>" +
-                        "</body></html>");
-            }
-        }
+        AggregatedHttpResponse response = server().blockingWebClient().get(
+                "/jsp/query_string.jsp?foo=%31&bar=%32");
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/html");
+        String actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                       .replaceAll("");
+        assertThat(actualContent).isEqualTo(
+                "<html><body>" +
+                "<p>foo is 1</p>" +
+                "<p>bar is 2</p>" +
+                "</body></html>");
+        response = server().blockingWebClient().get(
+                "/jsp/query_string.jsp?foo=%33&bar=%34");
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/html");
+        actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                             .replaceAll("");
+        assertThat(actualContent).isEqualTo(
+                "<html><body>" +
+                "<p>foo is 3</p>" +
+                "<p>bar is 4</p>" +
+                "</body></html>");
     }
 
     @Test
     public void postWithQueryString() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost post = new HttpPost(server().httpUri() + "/jsp/query_string.jsp?foo=3");
-            post.setEntity(new UrlEncodedFormEntity(
-                    Collections.singletonList(new BasicNameValuePair("bar", "4")), StandardCharsets.UTF_8));
-
-            try (CloseableHttpResponse res = hc.execute(post)) {
-                assertThat(res.getCode()).isEqualTo(200);
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                        .startsWith("text/html");
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent).isEqualTo(
-                        "<html><body>" +
-                        "<p>foo is 3</p>" +
-                        "<p>bar is 4</p>" +
-                        "</body></html>");
-            }
-
-            // Send a query again with different values to make sure the query strings are not cached.
-            final HttpPost post2 = new HttpPost(server().httpUri() + "/jsp/query_string.jsp?foo=5");
-            post2.setEntity(new UrlEncodedFormEntity(
-                    Collections.singletonList(new BasicNameValuePair("bar", "6")), StandardCharsets.UTF_8));
-
-            try (CloseableHttpResponse res = hc.execute(post2)) {
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent).isEqualTo(
-                        "<html><body>" +
-                        "<p>foo is 5</p>" +
-                        "<p>bar is 6</p>" +
-                        "</body></html>");
-            }
-        }
+        RequestHeaders headers = RequestHeaders.builder(
+                HttpMethod.POST, "jsp/query_string.jsp?foo=3").contentType(MediaType.FORM_DATA).build();
+        AggregatedHttpResponse response = server().blockingWebClient().execute(headers, "bar=4");
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/html");
+        String actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                       .replaceAll("");
+        assertThat(actualContent).isEqualTo(
+                "<html><body>" +
+                "<p>foo is 3</p>" +
+                "<p>bar is 4</p>" +
+                "</body></html>");
+        headers = RequestHeaders.builder(
+                HttpMethod.POST, "jsp/query_string.jsp?foo=5").contentType(MediaType.FORM_DATA).build();
+        response = server().blockingWebClient().execute(headers, "bar=6");
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/html");
+        actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                       .replaceAll("");
+        assertThat(actualContent).isEqualTo(
+                "<html><body>" +
+                "<p>foo is 5</p>" +
+                "<p>bar is 6</p>" +
+                "</body></html>");
     }
 
     @Test
     public void echoPost() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost post = new HttpPost(server().httpUri() + "/jsp/echo_post.jsp");
-            post.setEntity(new StringEntity("test"));
-
-            try (CloseableHttpResponse res = hc.execute(post)) {
-                assertThat(res.getCode()).isEqualTo(200);
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                        .startsWith("text/html");
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent).isEqualTo(
-                        "<html><body>" +
-                        "<p>Check request body</p>" +
-                        "<p>test</p>" +
-                        "</body></html>");
-            }
-        }
+        final AggregatedHttpResponse response =
+                server().blockingWebClient(cb -> cb.responseTimeoutMillis(0))
+                        .post("/jsp/echo_post.jsp", HttpData.ofUtf8("test"));
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/html");
+        final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                             .replaceAll("");
+        assertThat(actualContent).isEqualTo(
+                "<html><body>" +
+                "<p>Check request body</p>" +
+                "<p>test</p>" +
+                "</body></html>");
     }
 
     @Test
     public void echoPostWithEmptyBody() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost post = new HttpPost(server().httpUri() + "/jsp/echo_post.jsp");
-
-            try (CloseableHttpResponse res = hc.execute(post)) {
-                assertThat(res.getCode()).isEqualTo(200);
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                        .startsWith("text/html");
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-                assertThat(actualContent).isEqualTo(
-                        "<html><body>" +
-                        "<p>Check request body</p>" +
-                        "<p></p>" +
-                        "</body></html>");
-            }
-        }
+        final AggregatedHttpResponse response = server().blockingWebClient().post(
+                "/jsp/echo_post.jsp", HttpData.empty());
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/html");
+        final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                             .replaceAll("");
+        assertThat(actualContent).isEqualTo(
+                "<html><body>" +
+                "<p>Check request body</p>" +
+                "<p></p>" +
+                "</body></html>");
     }
 
     @Test
     public void addressesAndPorts_127001() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(
-                    new HttpGet(server().httpUri() + "/jsp/addrs_and_ports.jsp"))) {
-
-                assertThat(res.getCode()).isEqualTo(200);
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                        .startsWith("text/html");
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-
-                assertThat(actualContent).matches(
-                        "<html><body>" +
-                        "<p>RemoteAddr: 127\\.0\\.0\\.1</p>" +
-                        "<p>RemoteHost: 127\\.0\\.0\\.1</p>" +
-                        "<p>RemotePort: [1-9][0-9]+</p>" +
-                        "<p>LocalAddr: (?!null)[^<]+</p>" +
-                        "<p>LocalName: " + server().server().defaultHostname() + "</p>" +
-                        "<p>LocalPort: " + server().httpPort() + "</p>" +
-                        "<p>ServerName: 127\\.0\\.0\\.1</p>" +
-                        "<p>ServerPort: " + server().httpPort() + "</p>" +
-                        "</body></html>");
-            }
-        }
+        final AggregatedHttpResponse response = WebClient.of(server().httpUri()).blocking()
+                                                         .get("/jsp/addrs_and_ports.jsp");
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/html");
+        final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                             .replaceAll("");
+        assertThat(actualContent).matches(
+                "<html><body>" +
+                "<p>RemoteAddr: 127\\.0\\.0\\.1</p>" +
+                "<p>RemoteHost: 127\\.0\\.0\\.1</p>" +
+                "<p>RemotePort: [1-9][0-9]+</p>" +
+                "<p>LocalAddr: (?!null)[^<]+</p>" +
+                "<p>LocalName: " + server().server().defaultHostname() + "</p>" +
+                "<p>LocalPort: " + server().httpPort() + "</p>" +
+                "<p>ServerName: 127\\.0\\.0\\.1</p>" +
+                "<p>ServerPort: " + server().httpPort() + "</p>" +
+                "</body></html>");
     }
 
     @Test
     public void addressesAndPorts_localhost() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpGet request = new HttpGet(server().httpUri() + "/jsp/addrs_and_ports.jsp");
-            request.setHeader("Host", "localhost:1111");
-            try (CloseableHttpResponse res = hc.execute(request)) {
-                assertThat(res.getCode()).isEqualTo(200);
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                        .startsWith("text/html");
-                final String actualContent = CR_OR_LF.matcher(EntityUtils.toString(res.getEntity()))
-                                                     .replaceAll("");
-
-                assertThat(actualContent).matches(
-                        "<html><body>" +
-                        "<p>RemoteAddr: 127\\.0\\.0\\.1</p>" +
-                        "<p>RemoteHost: 127\\.0\\.0\\.1</p>" +
-                        "<p>RemotePort: [1-9][0-9]+</p>" +
-                        "<p>LocalAddr: (?!null)[^<]+</p>" +
-                        "<p>LocalName: " + server().server().defaultHostname() + "</p>" +
-                        "<p>LocalPort: " + server().httpPort() + "</p>" +
-                        "<p>ServerName: localhost</p>" +
-                        "<p>ServerPort: 1111</p>" +
-                        "</body></html>");
-            }
-        }
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/jsp/addrs_and_ports.jsp", "Host",
+                                                         "localhost:1111");
+        final AggregatedHttpResponse response = WebClient.of(server().httpUri()).blocking().execute(headers);
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/html");
+        final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
+                                             .replaceAll("");
+        assertThat(actualContent).matches(
+                "<html><body>" +
+                "<p>RemoteAddr: 127\\.0\\.0\\.1</p>" +
+                "<p>RemoteHost: 127\\.0\\.0\\.1</p>" +
+                "<p>RemotePort: [1-9][0-9]+</p>" +
+                "<p>LocalAddr: (?!null)[^<]+</p>" +
+                "<p>LocalName: " + server().server().defaultHostname() + "</p>" +
+                "<p>LocalPort: " + server().httpPort() + "</p>" +
+                "<p>ServerName: localhost</p>" +
+                "<p>ServerPort: 1111</p>" +
+                "</body></html>");
     }
 
     @Test
@@ -333,26 +283,19 @@ public abstract class WebAppContainerTest {
     }
 
     protected void testLarge(String path, boolean requiresContentLength) throws IOException {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(new HttpGet(server().httpUri().resolve(path)))) {
-                assertThat(res.getCode()).isEqualTo(200);
-                assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_TYPE.toString()).getValue())
-                        .startsWith("text/plain");
-
-                final byte[] content = EntityUtils.toByteArray(res.getEntity());
-                if (requiresContentLength) {
-                    // Check if the content-length header matches.
-                    assertThat(res.getFirstHeader(HttpHeaderNames.CONTENT_LENGTH.toString()).getValue())
-                            .isEqualTo(String.valueOf(content.length));
-                }
-
-                // Check if the content contains what's expected.
-                assertThat(Arrays.stream(CR_OR_LF.split(new String(content, StandardCharsets.UTF_8)))
-                                 .map(String::trim)
-                                 .filter(s -> !s.isEmpty())
-                                 .count()).isEqualTo(1024);
-            }
+        final AggregatedHttpResponse response = server().blockingWebClient().get(path);
+        assertThat(response.status()).isSameAs(HttpStatus.OK);
+        assertThat(response.contentType().toString()).startsWith("text/plain");
+        if (requiresContentLength) {
+            // Check if the content-length header matches.
+            assertThat(response.headers().contentLength()).isEqualTo(response.content().length());
         }
+
+        // Check if the content contains what's expected.
+        assertThat(Arrays.stream(CR_OR_LF.split(response.contentUtf8()))
+                         .map(String::trim)
+                         .filter(s -> !s.isEmpty())
+                         .count()).isEqualTo(1024);
     }
 
     @ParameterizedTest

@@ -288,6 +288,11 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ThriftClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (ThriftClientBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
     public ThriftClientBuilder decorator(Function<? super HttpClient, ? extends HttpClient> decorator) {
         return (ThriftClientBuilder) super.decorator(decorator);
     }

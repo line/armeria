@@ -25,6 +25,7 @@ import static org.reflections.ReflectionUtils.getAllMethods;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -142,7 +143,9 @@ class AnnotatedValueResolverTest {
 
     @Test
     void ofMethods() {
-        getAllMethods(Service.class).forEach(method -> {
+        getAllMethods(Service.class,
+                      // Jacoco agent injects `private $jacocoInit(..)` method.
+                      method -> !Modifier.isPrivate(method.getModifiers())).forEach(method -> {
             try {
                 final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofServiceMethod(
                         method, pathParams, objectResolvers, false, noopDependencyInjector, null);

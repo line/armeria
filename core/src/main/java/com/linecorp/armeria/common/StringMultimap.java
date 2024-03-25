@@ -46,6 +46,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -439,8 +440,12 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean contains(IN_NAME name, String value) {
+        return contains(name, actual -> AsciiString.contentEquals(actual, value));
+    }
+
+    private boolean contains(IN_NAME name, Predicate<String> containsValuePredicate) {
         requireNonNull(name, "name");
-        requireNonNull(value, "value");
+        requireNonNull(containsValuePredicate, "containsValuePredicate");
         final int h = hashName(name);
         final int i = index(h);
         Entry e = entries[i];
@@ -448,7 +453,7 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
             if (e.hash == h) {
                 final NAME currentName = e.key;
                 if (currentName != null && nameEquals(currentName, name) &&
-                    AsciiString.contentEquals(e.value, value)) {
+                    containsValuePredicate.test(e.value)) {
                     return true;
                 }
             }
@@ -465,8 +470,10 @@ abstract class StringMultimap<IN_NAME extends CharSequence, NAME extends IN_NAME
 
     @Override
     public final boolean containsBoolean(IN_NAME name, boolean value) {
-        final Boolean v = getBoolean(name);
-        return v != null && v == value;
+        return contains(name, actual -> {
+            final Boolean maybeBoolean = toBoolean(actual, false);
+            return maybeBoolean != null && maybeBoolean == value;
+        });
     }
 
     @Override

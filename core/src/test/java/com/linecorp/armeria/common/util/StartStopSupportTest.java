@@ -43,34 +43,27 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.util.concurrent.FutureListener;
 
-public class StartStopSupportTest {
+class StartStopSupportTest {
 
     private static final String THREAD_NAME_PREFIX = StartStopSupportTest.class.getSimpleName();
 
-    @ClassRule
-    public static final EventLoopRule rule = new EventLoopRule(
+    @RegisterExtension
+    static final EventLoopExtension eventLoop = new EventLoopExtension(
             ThreadFactories.newThreadFactory(THREAD_NAME_PREFIX, false));
 
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
-
     @Test
-    public void simpleStartStop() throws Throwable {
+    void simpleStartStop() throws Throwable {
         final StartTask startTask = SpiedStartTask.of("foo");
         final StopTask stopTask = mock(StopTask.class);
         final StartStop startStop = new StartStop(startTask, stopTask);
@@ -88,7 +81,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void startingWhileStarting() {
+    void startingWhileStarting() {
         final CountDownLatch startLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(arg -> {
             // Signal the main thread that it entered the STARTING state.
@@ -116,7 +109,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void startingWhileStarted() {
+    void startingWhileStarted() {
         final StartStop startStop = new StartStop(arg -> "foo", arg -> null);
 
         // Enter the STARTED state.
@@ -133,7 +126,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void startingWhileStopping() throws Throwable {
+    void startingWhileStopping() throws Throwable {
         final StartTask startTask = SpiedStartTask.of("bar");
         final CountDownLatch stopLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(startTask, arg -> {
@@ -167,7 +160,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void stoppingWhileStarting() throws Throwable {
+    void stoppingWhileStarting() throws Throwable {
         final StopTask stopTask = mock(StopTask.class);
         final CountDownLatch startLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(arg -> {
@@ -198,7 +191,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void stoppingWhileStopping() {
+    void stoppingWhileStopping() {
         final AtomicLong stopArg = new AtomicLong();
         final CountDownLatch stopLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(arg -> "bar", arg -> {
@@ -228,7 +221,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void stoppingWhileStopped() {
+    void stoppingWhileStopped() {
         final StartStop startStop = new StartStop(arg -> "foo", arg -> null);
 
         // Enter the STOPPED state.
@@ -241,7 +234,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void rollback() throws Throwable {
+    void rollback() throws Throwable {
         final StopTask stopTask = mock(StopTask.class);
         final Exception exception = new AnticipatedException();
         final StartStop startStop = new StartStop(arg -> {
@@ -255,7 +248,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void rollbackFailure() throws Throwable {
+    void rollbackFailure() throws Throwable {
         final Exception startException = new AnticipatedException();
         final Exception stopException = new AnticipatedException();
         final List<Throwable> rollbackFailed = new ArrayList<>();
@@ -278,7 +271,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void listenerNotifications() {
+    void listenerNotifications() {
         final CountDownLatch startLatch = new CountDownLatch(1);
         final CountDownLatch stopLatch = new CountDownLatch(1);
         final EventListener listener = new EventListener() {
@@ -349,7 +342,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void listenerNotifyStartingFailure() throws Exception {
+    void listenerNotifyStartingFailure() throws Exception {
         final EventListener listener = mock(EventListener.class);
         final AnticipatedException exception = new AnticipatedException();
         final List<String> recording = new ArrayList<>();
@@ -373,7 +366,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void listenerNotifyStartedFailure() throws Exception {
+    void listenerNotifyStartedFailure() throws Exception {
         final EventListener listener = mock(EventListener.class);
         final AnticipatedException exception = new AnticipatedException();
         final List<String> recording = new ArrayList<>();
@@ -396,7 +389,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void listenerRemoval() throws Exception {
+    void listenerRemoval() throws Exception {
         final EventListener listener = mock(EventListener.class);
         final AtomicInteger called = new AtomicInteger();
         final StartStop startStop = new StartStop(arg -> "bar", arg -> null) {
@@ -432,7 +425,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void close() {
+    void close() {
         final StartStop startStop = new StartStop(arg -> "foo", arg -> null);
         startStop.close();
         assertThat(startStop.isClosing()).isTrue();
@@ -440,7 +433,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void closeWhileStopped() throws Throwable {
+    void closeWhileStopped() throws Throwable {
         final StartTask startTask = SpiedStartTask.of("bar");
         final StopTask stopTask = mock(StopTask.class);
         final StartStop startStop = new StartStop(startTask, stopTask);
@@ -453,7 +446,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void closeWhileStarted() throws Throwable {
+    void closeWhileStarted() throws Throwable {
         final StartTask startTask = SpiedStartTask.of("foo");
         final StopTask stopTask = mock(StopTask.class);
         final StartStop startStop = new StartStop(startTask, stopTask);
@@ -467,7 +460,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void closeFailure() {
+    void closeFailure() {
         final Exception exception = new AnticipatedException();
         final List<Throwable> recording = new ArrayList<>();
         final StartStop startStop = new StartStop(arg -> "bar", arg -> {
@@ -488,7 +481,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void interruptedWhileClosing() throws Throwable {
+    void interruptedWhileClosing() throws Throwable {
         final AtomicBoolean interrupted = new AtomicBoolean();
         final CountDownLatch stopLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(arg -> "foo", arg -> {
@@ -525,7 +518,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void startAfterClose() throws Exception {
+    void startAfterClose() throws Exception {
         final StartStop startStop = new StartStop(arg -> "foo", arg -> null);
         startStop.close();
         assertThatThrownBy(() -> startStop.start(false).join()).isInstanceOf(CompletionException.class)
@@ -534,9 +527,9 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void doStartReturnsNull() throws Exception {
+    void doStartReturnsNull() throws Exception {
         final StartStopSupport<Void, Void, Void, Void> startStop =
-                new StartStopSupport<Void, Void, Void, Void>(rule.get()) {
+                new StartStopSupport<Void, Void, Void, Void>(eventLoop.get()) {
                     @Override
                     protected CompletionStage<Void> doStart(@Nullable Void arg) throws Exception {
                         return null;
@@ -557,9 +550,9 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void doStopReturnsNull() throws Exception {
+    void doStopReturnsNull() throws Exception {
         final StartStopSupport<Void, Void, String, Void> startStop =
-                new StartStopSupport<Void, Void, String, Void>(rule.get()) {
+                new StartStopSupport<Void, Void, String, Void>(eventLoop.get()) {
                     @Override
                     protected CompletionStage<String> doStart(@Nullable Void arg) throws Exception {
                         return UnmodifiableFuture.completedFuture("started");
@@ -581,7 +574,7 @@ public class StartStopSupportTest {
     }
 
     @Test
-    public void rejectingExecutor() throws Exception {
+    void rejectingExecutor() throws Exception {
         final Executor executor = mock(Executor.class);
         final StartStopSupport<Void, Void, String, Void> startStop =
                 new StartStopSupport<Void, Void, String, Void>(executor) {
@@ -604,7 +597,7 @@ public class StartStopSupportTest {
 
         // Run the first execution so that startup succeeds.
         doAnswer(invocation -> {
-            rule.get().execute(invocation.getArgument(0));
+            eventLoop.get().execute(invocation.getArgument(0));
             return null;
         }).when(executor).execute(any());
         assertThat(startStop.start(true).join()).isEqualTo("started");
@@ -622,7 +615,7 @@ public class StartStopSupportTest {
         private final StopTask stopTask;
 
         StartStop(StartTask startTask, StopTask stopTask) {
-            super(rule.get());
+            super(eventLoop.get());
             this.startTask = startTask;
             this.stopTask = stopTask;
         }
@@ -639,7 +632,7 @@ public class StartStopSupportTest {
 
         private static <T, U> CompletionStage<U> execute(ThrowingFunction<T, U> task, @Nullable T arg) {
             final CompletableFuture<U> future = new CompletableFuture<>();
-            rule.get().submit(() -> task.run(arg)).addListener((FutureListener<U>) f -> {
+            eventLoop.get().submit(() -> task.run(arg)).addListener((FutureListener<U>) f -> {
                 if (f.isSuccess()) {
                     future.complete(f.getNow());
                 } else {

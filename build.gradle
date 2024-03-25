@@ -2,7 +2,10 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
 
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 import static java.lang.Math.min
 
@@ -13,6 +16,7 @@ buildscript {
 }
 
 plugins {
+    id 'jvm-toolchains'
     alias libs.plugins.osdetector apply false
     alias libs.plugins.scalafmt apply false
     alias libs.plugins.nexus.publish
@@ -46,12 +50,13 @@ gradle.buildFinished({ result ->
     }
 })
 
+def isCi = System.getenv("CI") != null
 allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
         maxHeapSize = '768m'
 
-        if (project.ext.testJavaVersion >= 9) {
+        if (project.ext.testJavaVersion >= 9 || it.name == 'nativeImageTrace') {
             jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
         }
 
@@ -63,19 +68,22 @@ allprojects {
     }
 
     tasks.withType(Test) {
+        jvmArgumentProviders.add(new TestBuildDirArgumentsProvider(project.buildDir))
+
+        useJUnitPlatform()
+
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
 
         // Drop heap dump and exit on OOME.
         jvmArgs '-XX:+ExitOnOutOfMemoryError'
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
-        jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
 
         // `-Djava.security.manager` was added in Java 17 and the default value was changed to
         // `disallow` in Java 18.
         // - https://openjdk.org/jeps/411
         // - https://bugs.openjdk.org/browse/JDK-8270380
-        if (project.ext.testJavaVersion >= 17) {
+        if (project.ext.testJavaVersion >= 17 || it.name == 'nativeImageTrace') {
             systemProperty "java.security.manager", "allow"
         }
 
@@ -88,7 +96,10 @@ allprojects {
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
 
-        systemProperty 'com.linecorp.armeria.blockhound.reportFile', "${project.buildDir}/blockhound.log"
+        // Allow choosing the transport type by specifying `-PtransportType=<nio|epoll|io_uring|kqueue>`.
+        if (rootProject.hasProperty('transportType')) {
+            systemProperty('com.linecorp.armeria.transportType', "${rootProject.findProperty("transportType")}")
+        }
 
         // Pass special system property to tell our tests that we are measuring coverage.
         if (project.hasFlags('coverage')) {
@@ -109,6 +120,46 @@ allprojects {
                 }
             })
         }
+
+        retry {
+            if (rootProject.findProperty('retry') == 'true') {
+                maxRetries = 3
+                failOnPassedAfterRetry = rootProject.findProperty('failOnPassedAfterRetry') != 'false'
+            }
+        }
+
+        predictiveSelection {
+            enabled.set(!isCi)
+        }
+    }
+}
+
+/**
+ * An argument provider which avoids task input inconsistency when builds are run
+ * from different locations. By handling this, we can take advantage of build caches
+ * when run from different locations. (i.e. remote build caches)
+ */
+class TestBuildDirArgumentsProvider implements CommandLineArgumentProvider {
+
+    TestBuildDirArgumentsProvider(File buildDir) {
+        this.heapDumpPath = buildDir.toPath().resolve("dump")
+        this.blockhoundReportPath = buildDir.toPath().resolve("blockhound.log")
+        // create the heap dump path in advance
+        heapDumpPath.toFile().mkdirs()
+    }
+
+    @LocalState
+    def heapDumpPath
+
+    @LocalState
+    def blockhoundReportPath
+
+    @Override
+    Iterable<String> asArguments() {
+        [
+                "-Dcom.linecorp.armeria.blockhound.reportFile=${blockhoundReportPath}",
+                "-XX:HeapDumpPath=${heapDumpPath}",
+        ]
     }
 }
 
@@ -237,7 +288,7 @@ tasks.closeAndReleaseStagingRepository.doFirst {
     }
 }
 
-task reportFailedTests(type: TestsReportTask)
+tasks.register("reportFailedTests", TestsReportTask)
 
 /**
  * Summarizes the failed tests and reports as a file with the Markdown syntax.
@@ -311,6 +362,104 @@ class TestsReportTask extends DefaultTask {
                     lines.each { line -> writer.println("  $line") }
                     writer.println("  </pre></details>\n")
                 }
+            }
+        }
+    }
+}
+
+def graalLauncher = javaToolchains.launcherFor {
+    languageVersion.set(JavaLanguageVersion.of(17))
+    vendor.set(JvmVendorSpec.GRAAL_VM)
+}.get()
+rootProject.ext.graalLauncher = graalLauncher
+
+def graalHome = graalLauncher.executablePath.asFile.toPath().parent.parent
+rootProject.ext.graalHome = graalHome
+
+tasks.register("installGraalNativeImage", Exec) {
+    onlyIf {
+        !Files.exists(graalHome.resolve("lib/svm/bin/native-image")) ||
+        !Files.exists(graalHome.resolve("lib/svm/bin/native-image-configure")) ||
+        !Files.exists(graalHome.resolve("lib/svm/bin/rebuild-images"))
+    }
+    commandLine(graalHome.resolve("lib/installer/bin/gu"), "install", "native-image")
+}
+
+def relocatedProjects = projectsWithFlags('java', 'relocate')
+def projectsWithNativeImageSupport = projectsWithFlags('java', 'relocate', 'native')
+def numConfiguredRelocatedProjects = new AtomicInteger()
+configure(relocatedProjects) {
+    if (projectsWithNativeImageSupport.contains(project)) {
+        def shadedTestTask = tasks.getByName('shadedTest') as Test
+        def copyShadedTestClassesTask = tasks.getByName('copyShadedTestClasses') as Copy
+        def nativeImageTraceFile =
+                "$rootDir/native-image-config/gen-src/traces/${project.path.replace(':', '-').substring(1)}.json"
+        project.ext.nativeImageTraceFile = Paths.get(nativeImageTraceFile)
+
+        tasks.register("nativeImageTrace", Test).configure {
+            group = "Build"
+            description = "Generates native-image trace for ${project.name} by running shaded tests."
+
+            dependsOn(rootProject.tasks.named('installGraalNativeImage'))
+            dependsOn(copyShadedTestClassesTask)
+            outputs.file(nativeImageTraceFile)
+
+            useJUnitPlatform {
+                includeTags('NATIVE_IMAGE_TRACE')
+            }
+
+            javaLauncher.set(graalLauncher)
+            maxParallelForks = 1
+
+            // Remove 'jetty-alpn-agent' and add 'native-image-agent'.
+            jvmArgs = jvmArgs.stream().filter {
+                !(it.startsWith('-javaagent:') && it.endsWith('jetty-alpn-agent.jar'))
+            }.collect() + [
+                    "-agentlib:native-image-agent=trace-output=$nativeImageTraceFile"
+            ]
+
+            testClassesDirs = files(copyShadedTestClassesTask.destinationDir)
+            classpath = testClassesDirs
+            setExcludes(shadedTestTask.excludes)
+            exclude("META-INF/versions/**") // Seems unsupported by GraalVM
+        }
+    }
+
+    afterEvaluate {
+        if (numConfiguredRelocatedProjects.incrementAndGet() == relocatedProjects.size()) {
+            relocatedProjects.each { p ->
+                if (projectsWithNativeImageSupport.contains(p)) {
+                    p.tasks.getByName('nativeImageTrace').configure {
+                        classpath += p.files(p.configurations.getByName('shadedJarTestRuntime').resolve())
+                    }
+                }
+            }
+        }
+    }
+}
+
+// additional configuration that can't be done at settings.gradle
+gradleEnterprise {
+    buildScan {
+        // maintain a allowList so that sensitive information (credentials) aren't accidentally published.
+        Set<String> allowList = ['coverage', 'leak', 'blockhound', 'noLint', 'flakyTests', 'buildJdkVersion',
+                                 'testJavaVersion', 'minimumJavaVersion', 'retry', 'noWeb']
+        def self = owner
+        allowList.each { property ->
+            def provider = rootProject.providers.gradleProperty(property)
+            if (provider.isPresent()) {
+                self.value(property, provider.getOrElse(""))
+            }
+        }
+    }
+}
+
+allprojects {
+    normalization {
+        runtimeClasspath {
+            metaInf {
+                ignoreAttribute("Ant-Version")
+                ignoreAttribute("Created-By")
             }
         }
     }

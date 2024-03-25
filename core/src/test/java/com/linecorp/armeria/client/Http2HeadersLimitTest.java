@@ -21,7 +21,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.testng.util.Strings;
+
+import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.Flags;

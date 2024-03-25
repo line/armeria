@@ -41,9 +41,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
@@ -63,10 +63,8 @@ import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.StatusExceptionConverter;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
-import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -95,6 +93,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private static final Logger logger = LoggerFactory.getLogger(AbstractServerCall.class);
 
     private static final Splitter ACCEPT_ENCODING_SPLITTER = Splitter.on(',').trimResults();
+    private static final String GRPC_STATUS_CODE_INTERNAL =
+            String.valueOf(Status.Code.INTERNAL.value());
 
     private final MethodDescriptor<I, O> method;
     private final String simpleMethodName;
@@ -114,7 +114,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     @Nullable
     private final Executor blockingExecutor;
     @Nullable
-    private final GrpcStatusFunction statusFunction;
+    private final GrpcExceptionHandlerFunction exceptionHandler;
 
     // Only set once.
     @Nullable
@@ -149,7 +149,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                  @Nullable GrpcJsonMarshaller jsonMarshaller,
                                  boolean unsafeWrapRequestBuffers,
                                  ResponseHeaders defaultHeaders,
-                                 @Nullable GrpcStatusFunction statusFunction,
+                                 @Nullable GrpcExceptionHandlerFunction exceptionHandler,
                                  @Nullable Executor blockingExecutor,
                                  boolean autoCompression) {
         requireNonNull(req, "req");
@@ -174,7 +174,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.blockingExecutor = blockingExecutor;
         defaultResponseHeaders = defaultHeaders;
-        this.statusFunction = statusFunction;
+        this.exceptionHandler = exceptionHandler;
 
         res.whenComplete().handle((unused, t) -> {
             final EventLoop eventLoop = ctx.eventLoop();
@@ -201,71 +201,84 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         if (!closeCalled) {
             cancelled = true;
             try (SafeCloseable ignore = ctx.push()) {
-                close(Status.CANCELLED, new Metadata());
+                close(new ServerStatusAndMetadata(Status.CANCELLED, new Metadata(), true, true));
             }
         }
     }
 
     public final void close(Throwable exception) {
+        close(exception, false);
+    }
+
+    public final void close(Throwable exception, boolean cancelled) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        close(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata, exception);
+        final Status status = GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata);
+        close(new ServerStatusAndMetadata(status, metadata, false, cancelled), exception);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
-        close(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata, null);
+        final ServerStatusAndMetadata statusAndMetadata =
+                new ServerStatusAndMetadata(GrpcStatus.fromExceptionHandler(exceptionHandler, ctx,
+                                                                            status, metadata),
+                                            metadata, false);
+        close(statusAndMetadata);
     }
 
-    private void close(Status status, Metadata metadata, @Nullable Throwable exception) {
+    public final void close(ServerStatusAndMetadata statusAndMetadata) {
+        close(statusAndMetadata, null);
+    }
+
+    private void close(ServerStatusAndMetadata statusAndMetadata, @Nullable Throwable exception) {
         if (ctx.eventLoop().inEventLoop()) {
-            doClose(status, metadata, exception);
+            doClose(statusAndMetadata, exception);
         } else {
             ctx.eventLoop().execute(() -> {
-                doClose(status, metadata, exception);
+                doClose(statusAndMetadata, exception);
             });
         }
     }
 
-    private void doClose(Status status, Metadata metadata, @Nullable Throwable exception) {
+    private void doClose(ServerStatusAndMetadata statusAndMetadata, @Nullable Throwable exception) {
         maybeLogFailedRequestContent(exception);
+        Status status = statusAndMetadata.status();
+        final Metadata metadata = statusAndMetadata.metadata();
         if (isCancelled()) {
             // No need to write anything to client if cancelled already.
-            closeListener(status, metadata, false, true);
+            statusAndMetadata.shouldCancel();
+            statusAndMetadata.setResponseContent(true);
+            closeListener(statusAndMetadata);
             return;
         }
 
         if (status.getCode() == Code.CANCELLED && status.getCause() instanceof ClosedStreamException) {
-            closeListener(status, metadata, false, true);
+            statusAndMetadata.shouldCancel();
+            statusAndMetadata.setResponseContent(true);
+            closeListener(statusAndMetadata);
             return;
         }
 
-        checkState(!closeCalled, "call already closed");
+        checkState(!closeCalled, "call already closed. status: %s, exception: %s",
+                   status, exception);
         closeCalled = true;
 
-        boolean completed = true;
-        if (status.getCode() == Code.CANCELLED && status.getCause() instanceof RequestTimeoutException) {
-            // A call was finished by a timeout scheduler, not a user.
-            completed = false;
-        } else if (status.isOk() && method.getType().serverSendsOneMessage() && firstResponse() == null) {
+        if (status.isOk() && method.getType().serverSendsOneMessage() && firstResponse() == null) {
             // A call that should send a message incompletely finished.
             final String description = "Completed without a response";
             logger.warn("{} {} status: {}, metadata: {}", ctx, description, status, metadata);
             status = Status.CANCELLED.withDescription(description);
-            completed = false;
+            statusAndMetadata = statusAndMetadata.withStatus(status);
+            statusAndMetadata.shouldCancel();
         }
-        doClose(status, metadata, completed);
+        doClose(statusAndMetadata);
     }
 
-    protected abstract void doClose(Status status, Metadata metadata, boolean completed);
+    protected abstract void doClose(ServerStatusAndMetadata statusAndMetadata);
 
-    protected final void closeListener(Status newStatus, Metadata metadata, boolean completed,
-                                       boolean setResponseContent) {
-        closeListener(new StatusAndMetadata(newStatus, metadata), completed, setResponseContent);
-    }
-
-    protected final void closeListener(StatusAndMetadata statusAndMetadata, boolean completed,
-                                       boolean setResponseContent) {
+    protected final void closeListener(ServerStatusAndMetadata statusAndMetadata) {
+        final boolean setResponseContent = statusAndMetadata.setResponseContent();
+        final boolean cancelled = statusAndMetadata.isShouldCancel();
         if (!listenerClosed) {
             listenerClosed = true;
 
@@ -288,14 +301,14 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
             }
 
-            if (completed) {
+            if (!cancelled) {
                 if (blockingExecutor != null) {
                     blockingExecutor.execute(this::invokeOnComplete);
                 } else {
                     invokeOnComplete();
                 }
             } else {
-                cancelled = true;
+                this.cancelled = true;
                 if (blockingExecutor != null) {
                     blockingExecutor.execute(this::invokeOnCancel);
                 } else {
@@ -318,10 +331,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             try {
                 // Special case for unary calls.
                 if (messageReceived && method.getType() == MethodType.UNARY) {
-                    closeListener(Status.INTERNAL.withDescription(
-                                          "More than one request messages for unary call or server streaming " +
-                                          "call"),
-                                  new Metadata(), false, true);
+                    final Status status = Status.INTERNAL.withDescription(
+                            "More than one request messages for unary call or server streaming " +
+                            "call");
+                    closeListener(new ServerStatusAndMetadata(status, new Metadata(), true, true));
                     return;
                 }
                 messageReceived = true;
@@ -350,7 +363,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 invokeOnMessage(request, endOfStream);
             }
         } catch (Throwable cause) {
-            close(cause);
+            close(cause, true);
         }
     }
 
@@ -426,7 +439,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected void onError(Throwable t) {
         if (!closeCalled && !(t instanceof AbortedStreamException)) {
-            close(t);
+            close(t, true);
         }
     }
 
@@ -537,10 +550,19 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     public static HttpHeaders statusToTrailers(
             ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
+        try {
+            MetadataUtil.fillHeaders(metadata, trailersBuilder);
+        } catch (Exception e) {
+            // A buggy user-implemented custom metadata serializer may throw
+            // an exception. Leave a log message and set the INTERNAL status.
+            logger.warn("{} Failed to serialize metadata; overriding the original status ({}) with INTERNAL:",
+                        ctx, status, e);
+            return trailersBuilder
+                    .set(GrpcHeaderNames.GRPC_STATUS, GRPC_STATUS_CODE_INTERNAL)
+                    .build();
+        }
         GrpcTrailersUtil.addStatusMessageToTrailers(
                 trailersBuilder, status.getCode().value(), status.getDescription());
-
-        MetadataUtil.fillHeaders(metadata, trailersBuilder);
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());

@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 
 import io.netty.handler.ssl.SslContextBuilder;
@@ -166,7 +167,7 @@ class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("foo.com")
                 .hostnamePattern("foo.com")
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h.hostnamePattern()).isEqualTo("foo.com");
         assertThat(h.defaultHostname()).isEqualTo("foo.com");
     }
@@ -176,7 +177,7 @@ class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
         assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
     }
@@ -187,14 +188,14 @@ class VirtualHostBuilderTest {
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(host -> LoggerFactory.getLogger("customize.test"))
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h1.accessLogger().getName()).isEqualTo("customize.test");
 
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(LoggerFactory.getLogger("com.foo.test"))
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h2.accessLogger().getName()).isEqualTo("com.foo.test");
     }
 
@@ -256,12 +257,13 @@ class VirtualHostBuilderTest {
         switch (expectedOutcome) {
             case "success":
                 virtualHostBuilder.build(serverBuilder.virtualHostTemplate, noopDependencyInjector,
-                                         null);
+                                         null, ServerErrorHandler.ofDefault());
                 break;
             case "failure":
                 assertThatThrownBy(() -> virtualHostBuilder.build(serverBuilder.virtualHostTemplate,
                                                                   noopDependencyInjector,
-                                                                  null))
+                                                                  null,
+                                                                  ServerErrorHandler.ofDefault()))
                         .isInstanceOf(IllegalStateException.class)
                         .hasMessageContaining("TLS with a bad cipher suite");
                 break;
@@ -302,7 +304,7 @@ class VirtualHostBuilderTest {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("foo.com")
-                    .build(template, noopDependencyInjector, null);
+                    .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -312,28 +314,29 @@ class VirtualHostBuilderTest {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("*.foo.com")
-                    .build(template, noopDependencyInjector, null);
+                    .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void precedenceOfDuplicateRoute() {
+    void precedenceOfDuplicateRoute() throws Exception {
         final Route routeA = Route.builder().path("/").build();
         final Route routeB = Route.builder().path("/").build();
         final RequestTarget reqTarget = RequestTarget.forServer("/");
         assertThat(reqTarget).isNotNull();
 
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), true)
-                .service(routeA, (ctx, req) -> HttpResponse.of(OK))
-                .service(routeB, (ctx, req) -> HttpResponse.of(OK))
-                .build(template, noopDependencyInjector, null);
+                .service(routeA, (ctx, req) -> HttpResponse.of(200))
+                .service(routeB, (ctx, req) -> HttpResponse.of(201))
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
         final RoutingContext routingContext = new DefaultRoutingContext(virtualHost(), "example.com",
                                                                         RequestHeaders.of(HttpMethod.GET, "/"),
-                                                                        reqTarget, RoutingStatus.OK);
+                                                                        reqTarget, RoutingStatus.OK,
+                                                                        SessionProtocol.H2C);
         final Routed<ServiceConfig> serviceConfig = virtualHost.findServiceConfig(routingContext);
-        final Route route = serviceConfig.route();
-        assertThat(route).isSameAs(routeA);
+        final HttpResponse res = serviceConfig.value().service().serve(null, null);
+        assertThat(res.aggregate().join().status().code()).isEqualTo(200);
     }
 
     @Test
@@ -341,11 +344,11 @@ class VirtualHostBuilderTest {
         final Path multipartUploadsLocation = FileSystems.getDefault().getPath("logs", "access.log");
         final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
                 .multipartUploadsLocation(multipartUploadsLocation)
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h1.multipartUploadsLocation()).isEqualTo(multipartUploadsLocation);
 
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h2.multipartUploadsLocation()).isEqualTo(template.multipartUploadsLocation());
     }
 
@@ -354,11 +357,11 @@ class VirtualHostBuilderTest {
         final String defaultLogName = "test";
         final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
                 .defaultLogName(defaultLogName)
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h1.defaultLogName()).isEqualTo(defaultLogName);
 
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h2.defaultLogName()).isEqualTo(template.defaultLogName());
     }
 
@@ -367,11 +370,11 @@ class VirtualHostBuilderTest {
         final SuccessFunction successFunction = (ctx, log) -> false;
         final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
                 .successFunction(successFunction)
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h1.successFunction()).isEqualTo(successFunction);
 
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
-                .build(template, noopDependencyInjector, null);
+                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h2.successFunction()).isEqualTo(template.successFunction());
     }
 }

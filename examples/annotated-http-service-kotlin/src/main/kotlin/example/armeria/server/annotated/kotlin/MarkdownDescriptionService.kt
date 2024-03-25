@@ -52,7 +52,7 @@ class MarkdownDescriptionService {
           .start();
         ```
         """,
-        markup = Markup.MARKDOWN
+        markup = Markup.MARKDOWN,
     )
     @Get("/markdown")
     fun markdown(
@@ -62,12 +62,12 @@ class MarkdownDescriptionService {
         @Param param2: String,
         @Description("param3 description")
         @Param
-        param3: MarkdownEnumParam
+        param3: MarkdownEnumParam,
     ): MarkdownDescriptionResult {
         return MarkdownDescriptionResult(
             result1 = param1,
             result2 = param2,
-            result3 = param3.name
+            result3 = param3.name,
         )
     }
 
@@ -77,7 +77,7 @@ class MarkdownDescriptionService {
         ### Structs description subtitle
         > Support blockquotes
         """,
-        markup = Markup.MARKDOWN
+        markup = Markup.MARKDOWN,
     )
     data class MarkdownDescriptionResult(
         @Description(value = "result1 description (default)", markup = Markup.MARKDOWN)
@@ -85,7 +85,7 @@ class MarkdownDescriptionService {
         @Description(value = "`result2` **description** (use markdown)", markup = Markup.MARKDOWN)
         val result2: String,
         @Description(value = "`result3` see https://armeria.dev/ (add links)", markup = Markup.MARKDOWN)
-        val result3: String
+        val result3: String,
     )
 
     @Description("MarkdownEnumParam")
@@ -93,6 +93,6 @@ class MarkdownDescriptionService {
         @Description(value = "Description for `ENUM_1`", markup = Markup.MARKDOWN)
         ENUM_1,
         ENUM_2,
-        ENUM_3
+        ENUM_3,
     }
 }

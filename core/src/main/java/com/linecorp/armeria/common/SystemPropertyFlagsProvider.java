@@ -159,7 +159,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Integer numCommonWorkers() {
+    public Integer numCommonWorkers(TransportType transportType) {
         return getInt("numCommonWorkers");
     }
 
@@ -229,6 +229,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean defaultPreferHttp1() {
+        return getBoolean("preferHttp1");
+    }
+
+    @Override
     public Boolean defaultUseHttp2WithoutAlpn() {
         return getBoolean("defaultUseHttp2WithoutAlpn");
     }
@@ -291,6 +296,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultHttp2MaxHeaderListSize() {
         return getLong("defaultHttp2MaxHeaderListSize");
+    }
+
+    @Override
+    public Integer defaultServerHttp2MaxResetFramesPerMinute() {
+        return getInt("defaultServerHttp2MaxResetFramesPerMinute");
     }
 
     @Override
@@ -433,6 +443,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Boolean allowDoubleDotsInQueryString() {
         return getBoolean("allowDoubleDotsInQueryString");
+    }
+
+    @Override
+    public Boolean allowSemicolonInPathComponent() {
+        return getBoolean("allowSemicolonInPathComponent");
     }
 
     @Override

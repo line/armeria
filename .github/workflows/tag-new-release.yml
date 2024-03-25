@@ -1,0 +1,67 @@
+name: Release a new Armeria version
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release Version'
+        required: true
+        type: string
+      next_version:
+        description: 'Next Version'
+        required: true
+        type: string
+
+env:
+  LC_ALL: "en_US.UTF-8"
+
+jobs:
+  tag-new-version:
+    if: github.repository == 'line/armeria'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate inputs
+        run: |
+          if [[ ! "${{ inputs.release_version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: 'release_version' should be in SemVer format."
+            exit 1
+          fi
+          if [[ ! "${{ inputs.next_version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: 'next_version' should be in SemVer format."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+
+      - name: Set up Git remote
+        run: |
+          git remote set-url origin https://github.com/line/armeria.git
+        shell: bash
+
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSWORD }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - id: setup-jdk-19
+        name: Set up JDK 19
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '19'
+
+      - name: Set up Gradle
+        uses: gradle/gradle-build-action@v3
+
+      - name: Bump up version
+        run: |
+          ./gradlew --no-daemon --stacktrace --max-workers=1 release \
+          -PreleaseVersion=${{ inputs.release_version }} \
+          -PnextVersion=${{ inputs.next_version }}
+        shell: bash

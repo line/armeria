@@ -32,7 +32,8 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
+
+import testing.thrift.main.HelloService;
 
 public class THttpClientBadSeqIdTest {
 

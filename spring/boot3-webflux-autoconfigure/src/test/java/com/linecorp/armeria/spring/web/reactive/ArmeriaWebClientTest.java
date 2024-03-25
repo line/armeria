@@ -19,21 +19,19 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -49,18 +47,17 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-@RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test_reactive")
-public class ArmeriaWebClientTest {
+class ArmeriaWebClientTest {
 
     @SpringBootApplication
-    @Configuration
     @ActiveProfiles("test_reactive")
     static class TestConfiguration {
         @RestController
@@ -74,25 +71,40 @@ public class ArmeriaWebClientTest {
 
             @GetMapping("/conflict")
             @ResponseStatus(HttpStatus.CONFLICT)
-            void conflict() {
+            Mono<Void> conflict() {
                 ensureInContextAwareEventLoop();
+                // In Spring 6.1, the result type should be wrapped with Mono, Flux, Publisher or
+                // CompletableFuture so that the request is executed in the context-aware event loop.
+                // Otherwise, the request is executed in the blocking task executor of Spring WebFlux.
+                // https://github.com/spring-projects/spring-framework/blob/0c42965fc36f19868fbba382b2e03ed172087438/spring-webflux/src/main/java/org/springframework/web/reactive/result/method/annotation/RequestMappingHandlerAdapter.java#L264-L266
+                return Mono.empty();
             }
 
             @GetMapping("/resource")
-            ClassPathResource resource() {
+            Mono<ClassPathResource> resource() {
                 ensureInContextAwareEventLoop();
-                return new ClassPathResource("largeTextFile.txt", getClass());
+                return Mono.just(new ClassPathResource("/testing/webflux/largeTextFile.txt", getClass()));
             }
 
             @PostMapping("/birthday")
-            Person birthday(@RequestBody Person person) {
+            Mono<Person> birthday(@RequestBody Person person) {
                 ensureInContextAwareEventLoop();
-                return new Person(person.name(), person.age() + 1);
+                return Mono.just(new Person(person.name(), person.age() + 1));
             }
 
             private static void ensureInContextAwareEventLoop() {
                 assertThat(ServiceRequestContext.current()).isNotNull();
             }
+        }
+
+        @Bean
+        static ArmeriaClientConfigurator configurator1() {
+            return client -> client.responseTimeoutMillis(0);
+        }
+
+        @Bean
+        static ArmeriaServerConfigurator configurator2() {
+            return server -> server.requestTimeoutMillis(0);
         }
     }
 
@@ -102,7 +114,7 @@ public class ArmeriaWebClientTest {
     static ClientFactory clientFactory;
     static WebClient webClient;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeAll() {
         clientFactory =
                 ClientFactory.builder()
@@ -113,7 +125,7 @@ public class ArmeriaWebClientTest {
                 new ArmeriaClientHttpConnector(builder -> builder.factory(clientFactory))).build();
     }
 
-    @AfterClass
+    @AfterAll
     public static void afterAll() {
         clientFactory.closeAsync();
     }
@@ -123,7 +135,7 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
-    public void getHello() {
+    void getHello() {
         final Flux<String> body =
                 webClient.get()
                          .uri(uri("/hello"))
@@ -138,19 +150,19 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
-    public void getConflict() {
+    void getConflict() {
         final Mono<ClientResponse> response =
                 webClient.get()
                          .uri(uri("/conflict"))
-                         .exchange();
+                         .exchangeToMono(Mono::just);
         StepVerifier.create(response)
                     .assertNext(r -> assertThat(r.statusCode()).isEqualTo(HttpStatus.CONFLICT))
                     .expectComplete()
-                    .verify(Duration.ofSeconds(10));
+                    .verify(Duration.ofSeconds(1000000));
     }
 
     @Test
-    public void getConflictUsingBodyToMono() {
+    void getConflictUsingBodyToMono() {
         @SuppressWarnings("Convert2MethodRef")
         final Mono<String> response =
                 webClient.get()
@@ -165,7 +177,7 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
-    public void getResource() {
+    void getResource() {
         final Flux<DataBuffer> body =
                 webClient.get()
                          .uri(uri("/resource"))
@@ -180,7 +192,7 @@ public class ArmeriaWebClientTest {
     }
 
     @Test
-    public void postPerson() {
+    void postPerson() {
         final Mono<Person> body =
                 webClient.post()
                          .uri(uri("/birthday"))

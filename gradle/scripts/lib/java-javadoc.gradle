@@ -1,16 +1,41 @@
+import groovy.json.JsonBuilder
+import groovy.json.JsonSlurper
+
 import java.security.MessageDigest
 
 def offlineJavadoc = rootProject.hasProperty('offlineJavadoc')
-def javadocCacheDir = new File(gradle.gradleUserHomeDir, 'caches/package-lists')
-def visitedUrls = new HashSet<String>()
+def cacheDirName = 'caches/package-lists'
+def javadocCacheMapFileName = 'javadocCacheMapFile'
 
-task cleanJavadocCache(type: Delete, group: 'Build', description: 'Deletes the javadoc cache directory.') {
-    delete javadocCacheDir
+Map<String, String> javadocLinkMap = [:]
+if (JavaVersion.current() >= JavaVersion.VERSION_11) {
+    // Javadoc in Java 11+ has more strict checks related with module system,
+    // so we have to use Java 11+ API docs.
+    javadocLinkMap.put('java11', 'https://docs.oracle.com/en/java/javase/11/docs/api/')
+} else {
+    // Javadoc in pre-Java 11 generates a broken link for Java 11+ API docs,
+    // so we have to use Java 10 (or less) API docs.
+    javadocLinkMap.put('java10', 'https://docs.oracle.com/javase/10/docs/api/')
 }
+
+allprojects {
+    project.ext.javadocLinks.each {
+        javadocLinkMap.put(
+                "${it['groupId']}/${it['artifactId']}".toString(),
+                normalizeJavadocUrl(it['url'].toString())
+        )
+    }
+}
+
+def cacheDir = rootProject.layout.buildDirectory.dir(cacheDirName)
+def offlineDownloadTask =
+        rootProject.tasks.register("downloadJavadocPackageList", DownloadJavadocPackageListTask.class,
+                cacheDir, javadocLinkMap, offlineJavadoc, javadocCacheMapFileName)
 
 // Configure the Javadoc tasks of all projects.
 allprojects {
     tasks.withType(Javadoc) {
+        it.dependsOn(offlineDownloadTask)
         options {
             def title = "${project.ext.projectName} ${project.version} API reference"
             docTitle = title
@@ -281,10 +306,10 @@ allprojects {
             }
 
             bottom = project.ext.copyrightFooter +
-                     scriptParts.join('').readLines().stream()
-                                .map({ line -> line.trim() })
-                                .filter({ line -> !line.isEmpty() && !line.startsWith('//') })
-                                .collect().join('')
+                    scriptParts.join('').readLines().stream()
+                            .map({ line -> line.trim() })
+                            .filter({ line -> !line.isEmpty() && !line.startsWith('//') })
+                            .collect().join('')
 
             encoding = 'UTF-8'
             docEncoding = 'UTF-8'
@@ -316,126 +341,164 @@ allprojects {
                     }
                 }
             } catch (ignored) {}
+        }
 
-            // External Javadoc links, cached under '~/.gradle/caches/package-lists'
-            def downloadListFile = { File listFile, URL listUrl ->
-                // Do not attempt to download more than once.
-                if (!visitedUrls.add(listUrl.toString())) {
-                    return
-                }
-
-                def success = false
-                def tmpListFile = new File("${listFile}.tmp")
-
-                listFile.parentFile.mkdirs()
-                listFile.delete()
-
-                logger.lifecycle("Download ${listUrl}")
-
-                try {
-                    // Set some fake headers for the web sites who blocks a URLConnection.
-                    def conn = listUrl.openConnection() as HttpURLConnection
-                    conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                    conn.setRequestProperty('Accept-Encoding', 'identity')
-                    conn.setRequestProperty("Accept-Language", 'en-US,en;q=0.5')
-                    conn.setRequestProperty("Cache-Control", 'no-cache')
-                    conn.setRequestProperty('Pragma', 'no-cache')
-                    conn.setRequestProperty('User-Agent', "Gradle/${gradle.gradleVersion} (${project.group}:${project.ext.artifactId})")
-                    conn.setUseCaches(false)
-
-                    if (conn.responseCode == 200) {
-                        tmpListFile.withOutputStream { it << conn.inputStream }
-                        if (tmpListFile.length() == 0) {
-                            tmpListFile.delete()
-                        } else {
-                            success = tmpListFile.renameTo(listFile);
-                        }
-                    } else {
-                        logger.log(LogLevel.WARN, "Download failed: ${conn.responseCode} ${conn.responseMessage}")
-                    }
-
-                    conn.disconnect()
-                } catch (e) {
-                    tmpListFile.delete()
-                    logger.log(LogLevel.WARN, "Download failed: ${e}", e)
-                }
-
-                return success
-            }
-
-            def addOfflineLink = { name, url ->
-                if (offlineJavadoc) {
-                    return
-                }
-
-                def javadocUrl = "${url}"
-                if (!javadocUrl.endsWith('/')) {
-                    javadocUrl += '/'
-                }
-
-                def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
-                def listFileDir = new File(javadocCacheDir, "${name}/${javadocUrlSha1}")
-                def packageListFile = new File(listFileDir, 'package-list')
-                def elementListFile = new File(listFileDir, 'element-list')
-
-                if (packageListFile.exists() && packageListFile.length() == 0) {
-                    packageListFile.delete()
-                }
-                if (elementListFile.exists() && elementListFile.length() == 0) {
-                    elementListFile.delete()
-                }
-
-                def success = packageListFile.exists() ||
-                              JavaVersion.current() >= JavaVersion.VERSION_1_10 && elementListFile.exists()
-                if (!success) {
-                    if (downloadListFile(packageListFile, new URL("${javadocUrl}package-list"))) {
-                        // Succeeded to download package-list.
-                        success = true
-                    } else {
-                        // Failed to download package-list, try element-list.
-                        if (!downloadListFile(elementListFile, new URL("${javadocUrl}element-list"))) {
-                            // Failed to download both package-list and element-list.
-                            success = false
-                        } else {
-                            // package-list does not exist, but element-list exists.
-                            if (JavaVersion.current() >= JavaVersion.VERSION_1_10) {
-                                // Java 10+ supports element-list. Use it as-is.
-                                success = true
-                            } else {
-                                // Java older than 10 does not support element-list.
-                                // No problem. We can generate package-list from element-list.
-                                def tmpPackageListFile = new File("${packageListFile}.tmp")
-                                tmpPackageListFile.withWriter('utf-8') { out ->
-                                    // Find only the lines with a package name.
-                                    elementListFile.filterLine(out, 'utf-8') { line ->
-                                        def packageNamePattern = /^\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*(?:\.\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)*$/
-                                        return line.matches(packageNamePattern)
-                                    }
-                                }
-                                success = tmpPackageListFile.renameTo(packageListFile)
-                            }
-                        }
+        doFirst {
+            def javadocCacheMapFile = cacheDir.get().file(javadocCacheMapFileName).asFile
+            if (javadocCacheMapFile.exists()) {
+                def url2File = new JsonSlurper().parseText(javadocCacheMapFile.text)
+                url2File.entrySet().forEach { e ->
+                    options {
+                        linksOffline(e.key, "${projectDir.relativePath(rootProject.projectDir)}/${e.value}")
                     }
                 }
-
-                if (success) {
-                    linksOffline javadocUrl, "${listFileDir}"
-                }
-            }
-
-            if (JavaVersion.current() >= JavaVersion.VERSION_11) {
-                // Javadoc in Java 11+ has more strict checks related with module system,
-                // so we have to use Java 11+ API docs.
-                addOfflineLink('java11', 'https://docs.oracle.com/en/java/javase/11/docs/api/')
-            } else {
-                // Javadoc in pre-Java 11 generates a broken link for Java 11+ API docs,
-                // so we have to use Java 10 (or less) API docs.
-                addOfflineLink('java10', 'https://docs.oracle.com/javase/10/docs/api/')
-            }
-
-            project.ext.javadocLinks.each {
-                addOfflineLink("${it['groupId']}/${it['artifactId']}", it['url'])
             }
         }
+    }
+}
+
+static def normalizeJavadocUrl(String javadocUrl) {
+    if (!javadocUrl.endsWith('/')) {
+        javadocUrl += '/'
+    }
+    return javadocUrl
+}
+
+@CacheableTask
+class DownloadJavadocPackageListTask extends DefaultTask {
+
+    @Input
+    Map<String, String> links = [:]
+
+    @Input
+    JavaVersion javaVersion = JavaVersion.current()
+
+    @OutputDirectory
+    Provider<Directory> javadocCacheDir
+
+    @Internal
+    def visitedUrls = new HashSet<>()
+
+    @OutputFile
+    Provider<RegularFile> javadocCacheMapFile
+
+    @Input
+    boolean offlineJavadoc
+
+    @Inject
+    DownloadJavadocPackageListTask(Provider<Directory> javadocCacheDir, Map<String, String> links,
+                                   boolean offlineJavadoc, String javadocCacheMapFileName) {
+        this.links = links
+        this.javadocCacheDir = javadocCacheDir
+        this.offlineJavadoc = offlineJavadoc
+        this.javadocCacheMapFile = javadocCacheDir.map {it -> it.file(javadocCacheMapFileName)}
+    }
+
+    @TaskAction
+    def run() {
+        if (offlineJavadoc) {
+            return
+        }
+
+        def url2File = [:]
+        links.entrySet().forEach {
+            def (success, url, file) = addOfflineLink(it.key, it.value)
+            if (success) {
+                url2File[url] = project.getRootDir().relativePath(file).toString()
+            }
+        }
+
+        def file = javadocCacheMapFile.get().asFile
+        file.createNewFile()
+        file.withPrintWriter('UTF-8') { out ->
+            out.println(new JsonBuilder(url2File).toPrettyString())
+        }
+    }
+
+    def addOfflineLink(String name, String javadocUrl) {
+        def javadocUrlSha1 = MessageDigest.getInstance('SHA1').digest(javadocUrl.getBytes('UTF-8')).encodeHex()
+        def listFileDir = javadocCacheDir.get().dir("${name}/${javadocUrlSha1}")
+        def packageListFile = listFileDir.file('package-list').asFile
+        def elementListFile = listFileDir.file('element-list').asFile
+
+        def success = packageListFile.exists() ||
+                JavaVersion.current() >= JavaVersion.VERSION_1_10 && elementListFile.exists()
+        if (!success) {
+            if (downloadListFile(packageListFile, new URL("${javadocUrl}package-list"))) {
+                // Succeeded to download package-list.
+                success = true
+            } else {
+                // Failed to download package-list, try element-list.
+                if (!downloadListFile(elementListFile, new URL("${javadocUrl}element-list"))) {
+                    // Failed to download both package-list and element-list.
+                    success = false
+                } else {
+                    // package-list does not exist, but element-list exists.
+                    if (JavaVersion.current() >= JavaVersion.VERSION_1_10) {
+                        // Java 10+ supports element-list. Use it as-is.
+                        success = true
+                    } else {
+                        // Java older than 10 does not support element-list.
+                        // No problem. We can generate package-list from element-list.
+                        def tmpPackageListFile = new File("${packageListFile}.tmp")
+                        tmpPackageListFile.withWriter('utf-8') { out ->
+                            // Find only the lines with a package name.
+                            elementListFile.filterLine(out, 'utf-8') { line ->
+                                def packageNamePattern = /^\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*(?:\.\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*)*$/
+                                return line.matches(packageNamePattern)
+                            }
+                        }
+                        success = tmpPackageListFile.renameTo(packageListFile)
+                    }
+                }
+            }
+        }
+
+        return [success, javadocUrl, listFileDir.asFile]
+    }
+
+    private def downloadListFile(File listFile, URL listUrl) {
+        // Do not attempt to download more than once.
+        if (!visitedUrls.add(listUrl.toString())) {
+            return
+        }
+
+        def success = false
+        def tmpListFile = new File("${listFile}.tmp")
+
+        listFile.parentFile.mkdirs()
+        listFile.delete()
+
+        logger.lifecycle("Download ${listUrl}")
+
+        try {
+            // Set some fake headers for the web sites who blocks a URLConnection.
+            def conn = listUrl.openConnection() as HttpURLConnection
+            conn.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            conn.setRequestProperty('Accept-Encoding', 'identity')
+            conn.setRequestProperty("Accept-Language", 'en-US,en;q=0.5')
+            conn.setRequestProperty("Cache-Control", 'no-cache')
+            conn.setRequestProperty('Pragma', 'no-cache')
+            conn.setRequestProperty('User-Agent', "Gradle/${project.gradle.gradleVersion} (${project.group}:${project.ext.artifactId})")
+            conn.setUseCaches(false)
+
+            if (conn.responseCode == 200) {
+                tmpListFile.withOutputStream { it << conn.inputStream }
+                if (tmpListFile.length() == 0) {
+                    tmpListFile.delete()
+                } else {
+                    success = tmpListFile.renameTo(listFile);
+                }
+            } else {
+                logger.log(LogLevel.WARN, "Download failed: ${conn.responseCode} ${conn.responseMessage}")
+            }
+
+            conn.disconnect()
+        } catch (e) {
+            tmpListFile.delete()
+            logger.log(LogLevel.WARN, "Download failed: ${e}", e)
+        }
+
+        return success
     }
 }

@@ -22,11 +22,12 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.spring.test.thrift.main.HelloService.AsyncIface;
-import com.linecorp.armeria.spring.test.thrift.main.HelloService.Iface;
+
+import testing.spring.thrift.TestService.AsyncIface;
+import testing.spring.thrift.TestService.Iface;
 
 class ThriftServiceUtilsTest {
-    private static final String SERVICE_NAME = "com.linecorp.armeria.spring.test.thrift.main.HelloService";
+    private static final String SERVICE_NAME = "testing.spring.thrift.TestService";
 
     private final AsyncIface asyncService = (name, cb) -> cb.onComplete("hello");
     private final Iface syncService = name -> "hello";

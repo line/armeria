@@ -1,3 +1,5 @@
+import java.util.regex.Pattern
+
 configure(projectsWithFlags('kotlin')) {
 
     apply plugin: 'kotlin'
@@ -7,9 +9,9 @@ configure(projectsWithFlags('kotlin')) {
         def target = project.tasks.findByName('compileJava')?.targetCompatibility ?:
                 project.findProperty('javaTargetCompatibility') ?: '1.8'
         def compilerArgs = ['-java-parameters', '-Xjsr305=strict', '-Xskip-prerelease-check']
-        def copyAlpnAgentTask = tasks.findByName("copyAlpnAgent")
         // A workaround to find all Kotlin compilation tasks.
         // The standard way, `tasks.withType(KotlinCompile)`, does not work here.
+        def kotlinTargetVersion = extractKotlinTargetVersion(project)
         tasks.matching {
             def name = it.name
             // Expected task names: "compile<Name>Kotlin" or "kaptGenerateStubs<Name>Kotlin"
@@ -17,15 +19,18 @@ configure(projectsWithFlags('kotlin')) {
         }.each { task ->
             task.kotlinOptions.jvmTarget = target
             task.kotlinOptions.freeCompilerArgs = compilerArgs
-
-            if (copyAlpnAgentTask != null) {
-                task.dependsOn(copyAlpnAgentTask)
+            if (kotlinTargetVersion != null) {
+                task.kotlinOptions.languageVersion = kotlinTargetVersion
+                task.kotlinOptions.apiVersion = kotlinTargetVersion
             }
         }
 
-        def kotlinSourcesJar = tasks.findByName('kotlinSourcesJar')
-        if (kotlinSourcesJar != null && copyAlpnAgentTask != null) {
-            kotlinSourcesJar.dependsOn(copyAlpnAgentTask)
+        // Add the generated source directories to the source sets.
+        project.sourceSets.configureEach { sourceSet ->
+            def kotlinSrcDir = file("${project.ext.genSrcDir}/${sourceSet.name}/kotlin")
+            if (!sourceSet.kotlin.srcDirs.contains(kotlinSrcDir)) {
+                sourceSet.kotlin.srcDir kotlinSrcDir
+            }
         }
     }
 
@@ -51,21 +56,10 @@ configure(projectsWithFlags('kotlin')) {
             ['Main', 'Test', 'Jmh'].each { name ->
                 // A workaround for 'runKtlintCheckOverMainSourceSet' uses this output of task ':generateProto'
                 // without declaring an explicit or implicit dependency.
-                def copyAlpnAgentTask = tasks.findByName("copyAlpnAgent")
                 def ktlintTask = tasks.findByName("runKtlintCheckOver${name}SourceSet")
                 if (ktlintTask != null) {
                     ktlintTask.dependsOn(project.ext.getGenerateSourcesTask())
-                    if (copyAlpnAgentTask != null) {
-                        ktlintTask.dependsOn(copyAlpnAgentTask)
-                    }
                 }
-                def ktlintScriptTask = tasks.findByName("runKtlintCheckOverKotlinScripts")
-                if (ktlintScriptTask != null) {
-                    if (copyAlpnAgentTask != null) {
-                        ktlintScriptTask.dependsOn(copyAlpnAgentTask)
-                    }
-                }
-
                 // A workaround for 'compileJmhKotlin' uses this output of task 'compileJmhThrift' without
                 // declaring an explicit or implicit dependency.
                 def compileTask = tasks.findByName("compile${name}Kotlin")
@@ -88,4 +82,23 @@ configure(projectsWithFlags('kotlin')) {
             }
         }
     }
+}
+
+/**
+ * Checks each flag of the specified project for flags of format "kotlin(\\d+\.\\d+)".
+ * If such a flag exists, the Kotlin target version (X.Y) is extracted and returned.
+ * Otherwise, {@code null} is returned.
+ * https://kotlinlang.org/docs/compatibility-modes.html
+ */
+static def extractKotlinTargetVersion(Project project) {
+    def pattern = Pattern.compile('^kotlin(\\d+\\.\\d+)$')
+    def flags = project.ext.flags
+    for (def flag : flags) {
+        def matcher = pattern.matcher(flag)
+        if (!matcher.matches()) {
+            continue
+        }
+        return matcher.group(1)
+    }
+    return null
 }
