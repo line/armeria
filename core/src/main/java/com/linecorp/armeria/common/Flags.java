@@ -570,18 +570,21 @@ public final class Flags {
                         useOpenSsl, tlsEngineTypeValue);
         }
 
-        TlsEngineType preferredTlsEngineType;
+        TlsEngineType preferredTlsEngineType = null;
         if (tlsEngineTypeValue != null) {
             preferredTlsEngineType = tlsEngineTypeValue;
         } else if (useOpenSsl != null) {
             preferredTlsEngineType = useOpenSsl ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
-        } else {
-            preferredTlsEngineType = TlsEngineType.OPENSSL;
         }
-        if (preferredTlsEngineType == TlsEngineType.OPENSSL && !OpenSsl.isAvailable()) {
-            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
-            logger.info("OpenSSL not available: {}", cause.toString());
-            preferredTlsEngineType = TlsEngineType.JDK;
+        if (preferredTlsEngineType == TlsEngineType.OPENSSL) {
+            if (!OpenSsl.isAvailable()) {
+                final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
+                logger.info("OpenSSL not available: {}", cause.toString());
+                preferredTlsEngineType = TlsEngineType.JDK;
+            }
+        }
+        if (preferredTlsEngineType == null) {
+            preferredTlsEngineType = OpenSsl.isAvailable() ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
         }
         tlsEngineType = preferredTlsEngineType;
 
