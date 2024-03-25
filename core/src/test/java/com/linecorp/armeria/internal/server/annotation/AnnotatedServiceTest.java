@@ -86,6 +86,7 @@ import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Delimiter;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
+import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
@@ -198,6 +199,20 @@ class AnnotatedServiceTest {
         @Path("/int-async/:var")
         public CompletableFuture<Integer> returnIntAsync(@Param int var) {
             return UnmodifiableFuture.completedFuture(var).thenApply(n -> n + 1);
+        }
+
+        @Get
+        @Path("/string-response-async/:var")
+        public CompletableFuture<HttpResponse> returnStringResponseAsync(@Param String var) {
+            return CompletableFuture.supplyAsync(() -> HttpResponse.of(var));
+        }
+
+        // Wrapped content is handled by a custom String -> HttpResponse converter.
+        @Get
+        @Path("/string-result-async/:var")
+        @ResponseConverter(NaiveStringConverterFunction.class)
+        public CompletableFuture<HttpResult<String>> returnStringResultAsync(@Param String var) {
+            return CompletableFuture.supplyAsync(() -> HttpResult.of(var));
         }
 
         @Get
@@ -844,6 +859,10 @@ class AnnotatedServiceTest {
             testBody(hc, get("/1/string/blah"), "String: blah");
             testBody(hc, get("/1/string/%F0%90%8D%88"), "String: \uD800\uDF48", // 𐍈
                      StandardCharsets.UTF_8);
+
+            // Deferred HttpResponse and HttpResult.
+            testBody(hc, get("/1/string-response-async/blah"), "blah");
+            testBody(hc, get("/1/string-result-async/blah"), "String: blah");
 
             // Get a requested path as typed string from ServiceRequestContext or HttpRequest
             testBody(hc, get("/1/path/ctx/async/1"), "String[/1/path/ctx/async/1]");

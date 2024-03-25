@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.websocket;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -30,7 +29,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -98,7 +96,7 @@ class WebSocketClientTest {
         final WebSocketWriter outbound = webSocketSession.outbound();
         outbound.write(WebSocketFrame.ofText("hello"));
 
-        final WebSocketInboundHandler inboundHandler = new WebSocketInboundHandler(
+        final WebSocketInboundTestHandler inboundHandler = new WebSocketInboundTestHandler(
                 webSocketSession.inbound(), protocol);
 
         WebSocketFrame frame = inboundHandler.inboundQueue().take();
@@ -116,49 +114,6 @@ class WebSocketClientTest {
         assertThat(frame).isEqualTo(WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE));
         inboundHandler.completionFuture().join();
         await().until(outbound::isComplete);
-    }
-
-    static final class WebSocketInboundHandler {
-
-        private final ArrayBlockingQueue<WebSocketFrame> inboundQueue = new ArrayBlockingQueue<>(4);
-        private final CompletableFuture<Void> completionFuture = new CompletableFuture<>();
-
-        WebSocketInboundHandler(WebSocket inbound, SessionProtocol protocol) {
-            inbound.subscribe(new Subscriber<WebSocketFrame>() {
-                @Override
-                public void onSubscribe(Subscription s) {
-                    s.request(Long.MAX_VALUE);
-                }
-
-                @Override
-                public void onNext(WebSocketFrame webSocketFrame) {
-                    inboundQueue.add(webSocketFrame);
-                }
-
-                @Override
-                public void onError(Throwable t) {
-                    if (protocol.isExplicitHttp1()) {
-                        // After receiving a close frame, ClosedSessionException can be raised for HTTP/1.1
-                        // before onComplete is called.
-                        assertThat(t).isExactlyInstanceOf(ClosedSessionException.class);
-                    }
-                    completionFuture.complete(null);
-                }
-
-                @Override
-                public void onComplete() {
-                    completionFuture.complete(null);
-                }
-            });
-        }
-
-        ArrayBlockingQueue<WebSocketFrame> inboundQueue() {
-            return inboundQueue;
-        }
-
-        CompletableFuture<Void> completionFuture() {
-            return completionFuture;
-        }
     }
 
     static final class WebSocketServiceEchoHandler implements WebSocketServiceHandler {

@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 class RoutingContextWrapper implements RoutingContext {
@@ -91,6 +92,11 @@ class RoutingContextWrapper implements RoutingContext {
     @Override
     public RoutingStatus status() {
         return delegate.status();
+    }
+
+    @Override
+    public SessionProtocol sessionProtocol() {
+        return delegate.sessionProtocol();
     }
 
     @Override

@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RequestTargetForm;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.DefaultRequestTarget;
@@ -121,6 +122,12 @@ public interface RoutingContext {
      */
     @UnstableApi
     RoutingStatus status();
+
+    /**
+     * Returns the {@link SessionProtocol} of the request.
+     */
+    @UnstableApi
+    SessionProtocol sessionProtocol();
 
     /**
      * Defers throwing an {@link HttpStatusException} until reaching the end of the service list.

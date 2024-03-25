@@ -37,9 +37,11 @@ may help you to get a keystore.
 ```bash
 # Generate new key pairs as alias 'signing' and 'encryption'.
 keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa \
-  -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias signing
+  -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias signing \
+  -deststoretype pkcs12
 keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa \
-  -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias encryption
+  -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias encryption \
+  -deststoretype pkcs12
 
 # Import a certificate into the keystore as alias 'https://idp.ssocircle.com', which is the entity ID
 # of the SSOCircle. You can make 'ssocircle.crt' file with the certificate from

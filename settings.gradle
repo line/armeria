@@ -6,9 +6,9 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.enterprise' version '3.15.1'
+    id 'com.gradle.enterprise' version '3.16.2'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.12'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.12.1'
 }
 
 import com.gradle.scan.plugin.PublishedBuildScan
@@ -35,6 +35,7 @@ gradleEnterprise {
             def prNumber = System.getenv("PR_NUMBER")
             if (prNumber != null) {
                 link "GitHub PR", "${githubUrl}/pull/${prNumber}"
+                tag "PR"
                 def sha = System.getenv("COMMIT_SHA")
                 if (sha != null) {
                     link "GitHub commit", "${githubUrl}/pull/${prNumber}/commits/${sha}"
@@ -82,7 +83,10 @@ includeWithFlags ':version-catalog',                     'version-catalog'
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
-includeWithFlags ':brave',                               'java', 'publish', 'relocate', 'native'
+includeWithFlags ':brave5',                              'java', 'publish', 'relocate', 'no_aggregation'
+project(':brave5').projectDir = file('brave/brave5')
+includeWithFlags ':brave6',                              'java', 'publish', 'relocate', 'native'
+project(':brave6').projectDir = file('brave/brave6')
 includeWithFlags ':core',                                'java', 'publish', 'shade', 'trim', 'native'
 includeWithFlags ':eureka',                              'java', 'publish', 'relocate', 'native'
 includeWithFlags ':grpc',                                'java', 'publish', 'relocate', 'native'
@@ -96,10 +100,13 @@ includeWithFlags ':jetty10',                             'java11', 'publish', 'r
 project(':jetty10').projectDir = file('jetty/jetty10')
 includeWithFlags ':jetty11',                             'java11', 'publish', 'relocate'
 project(':jetty11').projectDir = file('jetty/jetty11')
+includeWithFlags ':jetty12',                             'java17', 'publish', 'relocate', 'no_aggregation'
+project(':jetty12').projectDir = file('jetty/jetty12')
 includeWithFlags ':junit4',                              'java', 'publish', 'relocate'
 includeWithFlags ':junit5',                              'java', 'publish', 'relocate'
 includeWithFlags ':kafka',                               'java', 'publish', 'relocate', 'native'
 includeWithFlags ':kotlin',                              'java', 'publish', 'relocate', 'kotlin', 'native'
+includeWithFlags ':kubernetes',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':logback',                             'java', 'publish', 'relocate', 'no_aggregation'
 project(':logback').projectDir = file('logback/logback')
 includeWithFlags ':logback12',                           'java', 'publish', 'relocate', 'native'
@@ -169,6 +176,7 @@ project(':thrift0.18').projectDir = file('thrift/thrift0.18')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
+includeWithFlags ':xds',                                 'java', 'publish', 'relocate'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate', 'native'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate', 'native'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate', 'native'
@@ -194,6 +202,7 @@ includeWithFlags ':it:grpc:reactor',                           'java', 'relocate
 includeWithFlags ':it:flags-provider',                         'java', 'relocate'
 includeWithFlags ':it:jackson-provider',                       'java', 'relocate'
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'
+includeWithFlags ':it:kubernetes-chaos-tests',                 'java', 'relocate'
 includeWithFlags ':it:logback1.4',                             'java11', 'relocate'
 includeWithFlags ':it:micrometer1.3',                          'java', 'relocate'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
@@ -201,7 +210,7 @@ includeWithFlags ':it:nio',                                    'java', 'relocate
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
-includeWithFlags ':it:spring:boot3-jetty11',                   'java17', 'relocate'
+includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-mixed-tomcat10',            'java17', 'relocate'
@@ -243,7 +252,7 @@ includeWithFlags ':examples:dropwizard-example',                   'java11'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
 includeWithFlags ':examples:graphql-example',                      'java11'
 project(':examples:graphql-example').projectDir = file('examples/graphql')
-includeWithFlags ':examples:graphql-kotlin-example',               'java11', 'kotlin'
+includeWithFlags ':examples:graphql-kotlin-example',               'java17', 'kotlin'
 project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
 includeWithFlags ':examples:graphql-sangria-example',              'java11', 'scala_2.13'
 project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')

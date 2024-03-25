@@ -191,7 +191,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
     private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
 
-    private EventLoopGroup workerGroup = CommonPools.workerGroup();
+    EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
     private Executor startStopExecutor = START_STOP_EXECUTOR;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
@@ -535,6 +535,34 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public ServerBuilder workerGroup(int numThreads) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
+        return this;
+    }
+
+    /**
+     * Sets the worker {@link EventLoopGroup} which is responsible for running
+     * {@link Service#serve(ServiceRequestContext, Request)}.
+     * If not set, the value set via {@linkplain #workerGroup(EventLoopGroup, boolean)}
+     * or {@linkplain #workerGroup(int)} is used.
+     *
+     * @param shutdownOnStop whether to shut down the worker {@link EventLoopGroup}
+     *                       when the {@link Server} stops
+     */
+    @UnstableApi
+    public ServerBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop) {
+        virtualHostTemplate.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * running {@link Service#serve(ServiceRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    @UnstableApi
+    public ServerBuilder serviceWorkerGroup(int numThreads) {
+        virtualHostTemplate.serviceWorkerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
         return this;
     }
 
@@ -2201,8 +2229,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         final Map<ChannelOption<?>, Object> newChildChannelOptions =
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
-
         final BlockingTaskExecutor blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
+
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
