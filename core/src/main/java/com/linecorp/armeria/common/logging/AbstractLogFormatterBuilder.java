@@ -31,16 +31,16 @@ import com.linecorp.armeria.common.annotation.Nullable;
 abstract class AbstractLogFormatterBuilder<T> {
 
     @Nullable
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestHeadersSanitizer;
+    private HeadersSanitizer<T> requestHeadersSanitizer;
 
     @Nullable
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseHeadersSanitizer;
+    private HeadersSanitizer<T> responseHeadersSanitizer;
 
     @Nullable
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestTrailersSanitizer;
+    private HeadersSanitizer<T> requestTrailersSanitizer;
 
     @Nullable
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseTrailersSanitizer;
+    private HeadersSanitizer<T> responseTrailersSanitizer;
 
     @Nullable
     private BiFunction<? super RequestContext, Object, ? extends T> requestContentSanitizer;
@@ -52,10 +52,26 @@ abstract class AbstractLogFormatterBuilder<T> {
      * Sets the {@link BiFunction} to use to sanitize request headers before logging. It is common to have the
      * {@link BiFunction} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will
      * not sanitize request headers.
+     *
+     * <pre>{@code
+     * HeadersSanitizer<String> headersSanitizer =
+     *   HeadersSanitizer
+     *     .builderForText()
+     *     .sensitiveHeaders("Authorization", "Cookie")
+     *     ...
+     *     .build();
+     *
+     *  LogFormatter
+     *    .builderForText()
+     *    .requestHeadersSanitizer(headersSanitizer)
+     *    ...
+     * }</pre>
      */
     public AbstractLogFormatterBuilder<T> requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestHeadersSanitizer) {
-        this.requestHeadersSanitizer = requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
+        requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
+        // TODO(ikhoon): Replace BiFunction with HeadersSanitizer in Armeria 2.0.
+        this.requestHeadersSanitizer = requestHeadersSanitizer::apply;
         return this;
     }
 
@@ -63,7 +79,7 @@ abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link BiFunction} to use to sanitize request headers before logging.
      */
     @Nullable
-    final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestHeadersSanitizer() {
+    final HeadersSanitizer<T> requestHeadersSanitizer() {
         return requestHeadersSanitizer;
     }
 
@@ -71,10 +87,26 @@ abstract class AbstractLogFormatterBuilder<T> {
      * Sets the {@link BiFunction} to use to sanitize response headers before logging. It is common to have the
      * {@link BiFunction} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
      * will not sanitize response headers.
+     *
+     * <pre>{@code
+     * HeadersSanitizer<String> headersSanitizer =
+     *   HeadersSanitizer
+     *     .builderForText()
+     *     .sensitiveHeaders("Set-Cookie")
+     *     ...
+     *     .build();
+     *
+     *  LogFormatter
+     *    .builderForText()
+     *    .responseHeadersSanitizer(headersSanitizer)
+     *    ...
+     * }</pre>
      */
     public AbstractLogFormatterBuilder<T> responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseHeadersSanitizer) {
-        this.responseHeadersSanitizer = requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
+        // TODO(ikhoon): Replace BiFunction with HeadersSanitizer in Armeria 2.0.
+        requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
+        this.responseHeadersSanitizer = responseHeadersSanitizer::apply;
         return this;
     }
 
@@ -82,17 +114,33 @@ abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link BiFunction} to use to sanitize response headers before logging.
      */
     @Nullable
-    final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseHeadersSanitizer() {
+    final HeadersSanitizer<T> responseHeadersSanitizer() {
         return responseHeadersSanitizer;
     }
 
     /**
      * Sets the {@link BiFunction} to use to sanitize request trailers before logging. If unset,
      * will not sanitize request trailers.
+     *
+     * <pre>{@code
+     * HeadersSanitizer<String> headersSanitizer =
+     *   HeadersSanitizer
+     *     .builderForText()
+     *     .sensitiveHeaders("...")
+     *     ...
+     *     .build();
+     *
+     *  LogFormatter
+     *    .builderForText()
+     *    .requestTrailersSanitizer(headersSanitizer)
+     *    ...
+     * }</pre>
      */
     public AbstractLogFormatterBuilder<T> requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestTrailersSanitizer) {
-        this.requestTrailersSanitizer = requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
+        // TODO(ikhoon): Replace BiFunction with HeadersSanitizer in Armeria 2.0.
+        requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
+        this.requestTrailersSanitizer = requestTrailersSanitizer::apply;
         return this;
     }
 
@@ -100,17 +148,33 @@ abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link BiFunction} to use to sanitize request trailers before logging.
      */
     @Nullable
-    final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestTrailersSanitizer() {
+    final HeadersSanitizer<T> requestTrailersSanitizer() {
         return requestTrailersSanitizer;
     }
 
     /**
      * Sets the {@link BiFunction} to use to sanitize response trailers before logging. If unset,
      * will not sanitize response trailers.
+     *
+     * <pre>{@code
+     * HeadersSanitizer<String> headersSanitizer =
+     *   HeadersSanitizer
+     *     .builderForText()
+     *     .sensitiveHeaders("...")
+     *     ...
+     *     .build();
+     *
+     *  LogFormatter
+     *    .builderForText()
+     *    .responseTrailersSanitizer(headersSanitizer)
+     *    ...
+     * }</pre>
      */
     public AbstractLogFormatterBuilder<T> responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseTrailersSanitizer) {
-        this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
+        // TODO(ikhoon): Replace BiFunction with HeadersSanitizer in Armeria 2.0.
+        requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
+        this.responseTrailersSanitizer = responseTrailersSanitizer::apply;
         return this;
     }
 
@@ -118,7 +182,7 @@ abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link Function} to use to sanitize response trailers before logging.
      */
     @Nullable
-    final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseTrailersSanitizer() {
+    final HeadersSanitizer<T> responseTrailersSanitizer() {
         return responseTrailersSanitizer;
     }
 
@@ -127,6 +191,13 @@ abstract class AbstractLogFormatterBuilder<T> {
      * It is common to have the {@link BiFunction} that removes sensitive headers, like {@code "Cookie"} and
      * {@code "Set-Cookie"}, before logging. This method is a shortcut for:
      * <pre>{@code
+     * HeadersSanitizer<String> headersSanitizer =
+     *   HeadersSanitizer
+     *     .builderForText()
+     *     .sensitiveHeaders("...")
+     *     ...
+     *     .build();
+     *
      * builder.requestHeadersSanitizer(headersSanitizer);
      * builder.requestTrailersSanitizer(headersSanitizer);
      * builder.responseHeadersSanitizer(headersSanitizer);

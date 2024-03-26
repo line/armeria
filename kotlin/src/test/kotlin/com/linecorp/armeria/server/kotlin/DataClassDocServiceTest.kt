@@ -32,15 +32,15 @@ import org.junit.jupiter.api.extension.RegisterExtension
 
 @GenerateNativeImageTrace
 class DataClassDocServiceTest {
-
     @Test
     fun dataClassParamSpecification() {
         val client = WebClient.of(server.httpUri()).blocking()
-        val jsonNode = client.prepare()
-            .get("/docs/specification.json")
-            .asJson(JsonNode::class.java)
-            .execute()
-            .content()
+        val jsonNode =
+            client.prepare()
+                .get("/docs/specification.json")
+                .asJson(JsonNode::class.java)
+                .execute()
+                .content()
 
         assertThat(jsonNode.get("services")[0]["methods"][0]["parameters"][0]["typeSignature"].asText())
             .isEqualTo("com.linecorp.armeria.server.kotlin.DataClassDocServiceTest\$ExampleQueries1")
@@ -65,24 +65,29 @@ class DataClassDocServiceTest {
     companion object {
         @JvmField
         @RegisterExtension
-        val server = object : ServerExtension() {
-            override fun configure(sb: ServerBuilder) {
-                sb.annotatedService()
-                    .requestConverters()
-                sb.annotatedService(MyKotlinService())
-                sb.serviceUnder("/docs", DocService())
+        val server =
+            object : ServerExtension() {
+                override fun configure(sb: ServerBuilder) {
+                    sb.annotatedService()
+                        .requestConverters()
+                    sb.annotatedService(MyKotlinService())
+                    sb.serviceUnder("/docs", DocService())
+                }
             }
-        }
     }
 
     class MyKotlinService {
         @Get("/example1")
-        fun getIdV1(@Suppress("UNUSED_PARAMETER") queries: ExampleQueries1): String {
+        fun getIdV1(
+            @Suppress("UNUSED_PARAMETER") queries: ExampleQueries1,
+        ): String {
             return "example"
         }
 
         @Get("/example2")
-        fun getIdV2(@Suppress("UNUSED_PARAMETER") queries: ExampleQueries2): String {
+        fun getIdV2(
+            @Suppress("UNUSED_PARAMETER") queries: ExampleQueries2,
+        ): String {
             return "example"
         }
     }
@@ -91,7 +96,7 @@ class DataClassDocServiceTest {
         @Param
         val name: String,
         @Param @Default
-        val limit: Int?
+        val limit: Int?,
     )
 
     data class ExampleQueries2(
@@ -100,6 +105,6 @@ class DataClassDocServiceTest {
         @Param
         val topic: String,
         @Param
-        val group: String
+        val group: String,
     )
 }

@@ -263,8 +263,10 @@ class FixedStreamMessageTest {
         assertThatThrownBy(stream.whenComplete()::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCause(abortCause);
-        assertThat(subscriptionRef).hasValue(NoopSubscription.get());
-        assertThat(causeRef).hasValue(abortCause);
+        await().untilAsserted(() -> {
+            assertThat(subscriptionRef).hasValue(NoopSubscription.get());
+            assertThat(causeRef).hasValue(abortCause);
+        });
     }
 
     @ArgumentsSource(FixedStreamMessageProvider.class)

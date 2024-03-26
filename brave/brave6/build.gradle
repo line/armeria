@@ -1,0 +1,13 @@
+dependencies {
+    api libs.brave6
+    api libs.brave6.instrumentation.http
+
+    if (project.ext.targetJavaVersion >= 11) {
+        testImplementation project(':thrift0.18')
+    } else {
+        testImplementation project(':thrift0.17')
+    }
+
+    testImplementation libs.brave6.context.slf4j
+    testImplementation libs.brave6.instrumentation.http.tests
+}

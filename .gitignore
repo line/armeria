@@ -28,7 +28,8 @@ hs_err_pid*
 .gradle
 
 # IntelliJ
-.idea
+**/.idea/*
+!.idea/icon.svg
 *.iml
 *.iws
 *.ipr

@@ -29,10 +29,12 @@ public class Main {
      * generated with the following commands:
      * <pre>{@code
      * $ keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa \
-     *     -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias signing
+     *     -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias signing \
+     *     -deststoretype pkcs12
      *
      * $ keytool -genkeypair -keystore sample.jks -storepass 'N5^X[hvG' -keyalg rsa -sigalg sha1withrsa \
-     *     -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias encryption
+     *     -dname 'CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, ST=Unknown, C=Unknown' -alias encryption \
+     *     -deststoretype pkcs12
      * }</pre>
      *
      * <p>The certificate of the SSOCircle can be imported into the keystore with the following command.
@@ -42,7 +44,7 @@ public class Main {
      * Public IDP Configuration</a> of SSOCircle.
      * <pre>{@code
      * $ keytool -importcert -keystore sample.jks -storepass 'N5^X[hvG' -file ssocircle.crt \
-     *     -alias 'https://idp.ssocircle.com'
+     *     -alias 'https://idp.ssocircle.com' -deststoretype pkcs12
      * }</pre>
      */
     private static SamlServiceProvider samlServiceProvider() throws IOException, GeneralSecurityException {

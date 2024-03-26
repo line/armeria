@@ -131,13 +131,22 @@ final class HttpRedirectBindingUtil {
      */
     private static void validateSignature(Credential validationCredential,
                                           SamlParameters parameters,
-                                          String messageParamName) {
+                                          String messageParamName,
+                                          boolean signatureRequired) {
         requireNonNull(validationCredential, "validationCredential");
         requireNonNull(parameters, "parameters");
         requireNonNull(messageParamName, "messageParamName");
 
-        final String signature = parameters.getFirstValue(SIGNATURE);
-        final String sigAlg = parameters.getFirstValue(SIGNATURE_ALGORITHM);
+        final String signature = parameters.getFirstValueOrNull(SIGNATURE);
+        final String sigAlg = parameters.getFirstValueOrNull(SIGNATURE_ALGORITHM);
+
+        if (signature == null || sigAlg == null) {
+            if (signatureRequired) {
+                throw new InvalidSamlRequestException("rejecting due to a missing signature");
+            } else {
+                return;
+            }
+        }
 
         // The order is one of the followings:
         // - SAMLRequest={value}&RelayState={value}=SigAlg={value}
@@ -236,7 +245,8 @@ final class HttpRedirectBindingUtil {
     static <T extends SAMLObject> MessageContext<T> toSamlObject(
             AggregatedHttpRequest req, String name,
             Map<String, SamlIdentityProviderConfig> idpConfigs,
-            @Nullable SamlIdentityProviderConfig defaultIdpConfig) {
+            @Nullable SamlIdentityProviderConfig defaultIdpConfig,
+            boolean signatureRequired) {
         requireNonNull(req, "req");
         requireNonNull(name, "name");
         requireNonNull(idpConfigs, "idpConfigs");
@@ -275,7 +285,7 @@ final class HttpRedirectBindingUtil {
 
         // If this message is sent via HTTP-redirect binding protocol, its signature parameter should
         // be validated.
-        validateSignature(config.signingCredential(), parameters, name);
+        validateSignature(config.signingCredential(), parameters, name, signatureRequired);
 
         final String relayState = parameters.getFirstValueOrNull(RELAY_STATE);
         if (relayState != null) {

@@ -25,12 +25,14 @@ import org.junit.jupiter.api.Test
 class AnnotatedServiceErrorMessageTest {
     @Test
     fun test() {
-        val serverBuilder: ServerBuilder = Server.builder()
-            .annotatedService(MyAnnotatedService())
+        val serverBuilder: ServerBuilder =
+            Server.builder()
+                .annotatedService(MyAnnotatedService())
 
         assertThatThrownBy { serverBuilder.build() }
             .hasMessageContaining(
-                "Kotlin suspending functions are supported only when you added 'armeria-kotlin' as a dependency."
+                "Kotlin suspending functions are supported" +
+                    " only when you added 'armeria-kotlin' as a dependency.",
             )
     }
 

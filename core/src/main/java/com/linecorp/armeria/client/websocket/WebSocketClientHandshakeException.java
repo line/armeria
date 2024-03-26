@@ -22,7 +22,8 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * An {@link InvalidResponseException} raised when a client received a response with invalid headers.
+ * An {@link InvalidResponseException} raised when a {@link WebSocketClient} client received a response with
+ * invalid headers during the handshake.
  */
 @UnstableApi
 public final class WebSocketClientHandshakeException extends InvalidResponseException {

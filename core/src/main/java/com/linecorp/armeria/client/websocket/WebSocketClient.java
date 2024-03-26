@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.websocket;
 
+import static com.linecorp.armeria.internal.client.ClientUtil.UNDEFINED_URI;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -23,8 +24,10 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -78,11 +81,11 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
         return DefaultWebSocketClient.DEFAULT;
     }
 
-     /**
-      * Returns a new {@link WebSocketClient} that connects to the specified {@code uri} using the
-      * default options.
-      */
-     static WebSocketClient of(String uri) {
+    /**
+     * Returns a new {@link WebSocketClient} that connects to the specified {@code uri} using the
+     * default options.
+     */
+    static WebSocketClient of(String uri) {
         return builder(uri).build();
     }
 
@@ -140,6 +143,13 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
      */
     static WebSocketClient of(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
+    }
+
+    /**
+     * Returns a new {@link WebSocketClientBuilder} without a base URI.
+     */
+    static WebSocketClientBuilder builder() {
+        return builder(UNDEFINED_URI);
     }
 
     /**
@@ -214,8 +224,31 @@ public interface WebSocketClient extends ClientBuilderParams, Unwrappable {
 
     /**
      * Connects to the specified {@code path}.
+     *
+     * <p>Note that the returned {@link CompletableFuture} is exceptionally completes with
+     * {@link WebSocketClientHandshakeException} if the handshake failed.
      */
-    CompletableFuture<WebSocketSession> connect(String path);
+    default CompletableFuture<WebSocketSession> connect(String path) {
+        return connect(path, HttpHeaders.of());
+    }
+
+    /**
+     * Connects to the specified {@code path} with the specified headers.
+     *
+     * <p>Note that the returned {@link CompletableFuture} is exceptionally completes with
+     * {@link WebSocketClientHandshakeException} if the handshake failed.
+     */
+    default CompletableFuture<WebSocketSession> connect(String path, HttpHeaders headers) {
+        return connect(path, headers, RequestOptions.of());
+    }
+
+    /**
+     * Connects to the specified {@code path} with the specified {@link HttpHeaders} and {@link RequestOptions}.
+     *
+     * <p>Note that the returned {@link CompletableFuture} is exceptionally completes with
+     * {@link WebSocketClientHandshakeException} if the handshake failed.
+     */
+    CompletableFuture<WebSocketSession> connect(String path, HttpHeaders headers, RequestOptions options);
 
     @Override
     WebClient unwrap();
