@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import java.net.URI;
+import java.util.Arrays;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -40,6 +41,7 @@ import io.envoyproxy.envoy.config.core.v3.ApiVersion;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
+import io.envoyproxy.envoy.config.core.v3.HeaderValue;
 import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
@@ -181,6 +183,20 @@ public final class XdsTestResources {
                 .build();
     }
 
+    public static ApiConfigSource apiConfigSource(String clusterName, ApiType apiType,
+                                                  HeaderValue... headerValues) {
+        return ApiConfigSource
+                .newBuilder()
+                .addGrpcServices(
+                        GrpcService
+                                .newBuilder()
+                                .addAllInitialMetadata(Arrays.asList(headerValues))
+                                .setEnvoyGrpc(EnvoyGrpc.newBuilder()
+                                                       .setClusterName(clusterName)))
+                .setApiType(apiType)
+                .build();
+    }
+
     public static Cluster createCluster(String clusterName) {
         return createCluster(clusterName, 5);
     }
@@ -232,17 +248,19 @@ public final class XdsTestResources {
                       .build();
     }
 
-    public static Listener exampleListener(String listenerName, String routeName) {
-        final HttpConnectionManager manager =
-                HttpConnectionManager
-                        .newBuilder()
-                        .setCodecType(CodecType.AUTO)
-                        .setStatPrefix("ingress_http")
-                        .setRds(Rds.newBuilder().setRouteConfigName(routeName))
-                        .addHttpFilters(HttpFilter.newBuilder()
-                                                  .setName("envoy.filters.http.router")
-                                                  .setTypedConfig(Any.pack(Router.getDefaultInstance())))
-                        .build();
+    public static HttpConnectionManager httpConnectionManager(Rds rds) {
+        return HttpConnectionManager
+                .newBuilder()
+                .setCodecType(CodecType.AUTO)
+                .setStatPrefix("ingress_http")
+                .setRds(rds)
+                .addHttpFilters(HttpFilter.newBuilder()
+                                          .setName("envoy.filters.http.router")
+                                          .setTypedConfig(Any.pack(Router.getDefaultInstance())))
+                .build();
+    }
+
+    public static Listener exampleListener(String listenerName, HttpConnectionManager manager) {
         return Listener.newBuilder()
                        .setName(listenerName)
                        .setApiListener(ApiListener.newBuilder()
@@ -250,25 +268,19 @@ public final class XdsTestResources {
                        .build();
     }
 
+    public static Listener exampleListener(String listenerName, String routeName) {
+        final HttpConnectionManager manager =
+                httpConnectionManager(Rds.newBuilder().setRouteConfigName(routeName).build());
+        return exampleListener(listenerName, manager);
+    }
+
     public static Listener exampleListener(String listenerName, String routeName, String clusterName) {
         final ConfigSource configSource = basicConfigSource(clusterName);
-        final HttpConnectionManager manager =
-                HttpConnectionManager
-                        .newBuilder()
-                        .setCodecType(CodecType.AUTO)
-                        .setStatPrefix("ingress_http")
-                        .setRds(Rds.newBuilder()
-                                   .setRouteConfigName(routeName)
-                                   .setConfigSource(configSource))
-                        .addHttpFilters(HttpFilter.newBuilder()
-                                                  .setName("envoy.filters.http.router")
-                                                  .setTypedConfig(Any.pack(Router.getDefaultInstance())))
-                        .build();
-        return Listener.newBuilder()
-                       .setName(listenerName)
-                       .setApiListener(ApiListener.newBuilder()
-                                                  .setApiListener(Any.pack(manager)))
-                       .build();
+        final HttpConnectionManager manager = httpConnectionManager(Rds.newBuilder()
+                                                                       .setRouteConfigName(routeName)
+                                                                       .setConfigSource(configSource)
+                                                                       .build());
+        return exampleListener(listenerName, manager);
     }
 
     public static RouteConfiguration routeConfiguration(String routeName, VirtualHost... virtualHosts) {

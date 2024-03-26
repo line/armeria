@@ -37,6 +37,7 @@ import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
+import io.envoyproxy.envoy.config.core.v3.HeaderValue;
 import io.envoyproxy.envoy.config.core.v3.Node;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
 import io.netty.util.concurrent.EventExecutor;
@@ -74,6 +75,10 @@ final class ConfigSourceClient implements SafeCloseable {
         final GrpcClientBuilder builder = GrpcClients.builder(sessionProtocol, endpointGroup);
         builder.responseTimeout(java.time.Duration.ZERO);
         builder.maxResponseLength(0);
+        for (HeaderValue headerValue: grpcService.getInitialMetadataList()) {
+            builder.addHeader(headerValue.getKey(), headerValue.getValue());
+        }
+
         clientCustomizer.accept(builder);
 
         if (ads) {
