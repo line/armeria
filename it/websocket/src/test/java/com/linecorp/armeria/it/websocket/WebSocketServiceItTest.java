@@ -255,9 +255,9 @@ class WebSocketServiceItTest {
 
                 @Override
                 public void onNext(WebSocketFrame webSocketFrame) {
-                    if(webSocketFrame.type() == WebSocketFrameType.PING) {
+                    if (webSocketFrame.type() == WebSocketFrameType.PING) {
                         writer.writePong(webSocketFrame.array());
-                    }else if(webSocketFrame.type() != WebSocketFrameType.PONG) {
+                    } else if (webSocketFrame.type() != WebSocketFrameType.PONG) {
                         writer.write(webSocketFrame);
                     }
                 }
