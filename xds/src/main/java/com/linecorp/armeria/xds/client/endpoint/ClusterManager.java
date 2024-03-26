@@ -78,10 +78,10 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
     private final List<Consumer<? super State>> listeners = new ArrayList<>();
     private final ReentrantShortLock listenersLock = new ReentrantShortLock();
 
-    ClusterManager(ListenerRoot safeCloseable) {
-        eventLoop = safeCloseable.eventLoop();
-        this.safeCloseable = safeCloseable;
-        safeCloseable.addSnapshotWatcher(this);
+    ClusterManager(ListenerRoot listenerRoot) {
+        eventLoop = listenerRoot.eventLoop();
+        safeCloseable = listenerRoot;
+        listenerRoot.addSnapshotWatcher(this);
     }
 
     ClusterManager(ClusterSnapshot clusterSnapshot) {
@@ -190,7 +190,7 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         return new State(listenerSnapshot, endpointsBuilder.build());
     }
 
-    void notifyListeners() {
+    private void notifyListeners() {
         if (clusterEntries == INITIAL_CLUSTER_ENTRIES) {
             return;
         }
@@ -236,14 +236,14 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
 
         static final State INITIAL_STATE = new State(null, Collections.emptyList());
 
-        // There is no guarantee that clusterEntries corresponds to the listenerSnapshot.
+        // There is no guarantee that endpoints corresponds to the listenerSnapshot.
         // However, the state will be eventually consistent and the state is only used
         // for signalling purposes so there should be no issue.
         @Nullable
         private final ListenerSnapshot listenerSnapshot;
         private final List<Endpoint> endpoints;
 
-        State(@Nullable ListenerSnapshot listenerSnapshot, List<Endpoint> endpoints) {
+        private State(@Nullable ListenerSnapshot listenerSnapshot, List<Endpoint> endpoints) {
             this.listenerSnapshot = listenerSnapshot;
             this.endpoints = ImmutableList.copyOf(endpoints);
         }

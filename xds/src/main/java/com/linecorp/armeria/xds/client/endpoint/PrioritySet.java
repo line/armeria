@@ -22,22 +22,11 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
-import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
-
 final class PrioritySet {
-    private final Cluster cluster;
-    private final ClusterLoadAssignment clusterLoadAssignment;
     private final List<Endpoint> endpoints;
 
-    PrioritySet(Cluster cluster, ClusterLoadAssignment clusterLoadAssignment, List<Endpoint> endpoints) {
-        this.cluster = cluster;
-        this.clusterLoadAssignment = clusterLoadAssignment;
+    PrioritySet(List<Endpoint> endpoints) {
         this.endpoints = ImmutableList.copyOf(endpoints);
-    }
-
-    ClusterLoadAssignment clusterLoadAssignment() {
-        return clusterLoadAssignment;
     }
 
     List<Endpoint> endpoints() {

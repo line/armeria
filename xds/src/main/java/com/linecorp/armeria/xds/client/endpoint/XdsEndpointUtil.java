@@ -66,14 +66,7 @@ final class XdsEndpointUtil {
             }
             return containsFilterMetadata(filterMetadata, endpointMetadata);
         };
-        return convertEndpoints(endpoints, lbEndpointPredicate);
-    }
-
-    private static List<Endpoint> convertEndpoints(List<Endpoint> endpoints,
-                                                   Predicate<Endpoint> lbEndpointPredicate) {
-        return endpoints.stream()
-                        .filter(lbEndpointPredicate)
-                        .collect(toImmutableList());
+        return endpoints.stream().filter(lbEndpointPredicate).collect(toImmutableList());
     }
 
     private static boolean containsFilterMetadata(Struct filterMetadata, Struct endpointMetadata) {
@@ -103,8 +96,10 @@ final class XdsEndpointUtil {
                 endpointGroup = strictDnsEndpointGroup(clusterSnapshot);
                 break;
             default:
-                throw new UnsupportedOperationException("Unsupported cluster type: " + cluster.getType() + '.' +
-                                                        "Only (STATIC, STRICT_DNS, EDS) are supported.");
+                throw new UnsupportedOperationException(
+                        "Cluster (" + cluster.getName() + ") is attempting to use an" +
+                        "unsupported cluster type: (" + cluster.getType() + "). " +
+                        "Only (STATIC, STRICT_DNS, EDS) are supported.");
         }
         if (!cluster.getHealthChecksList().isEmpty()) {
             // multiple health-checks aren't supported
@@ -130,10 +125,10 @@ final class XdsEndpointUtil {
     }
 
     private static HttpMethod healthCheckMethod(HttpHealthCheck httpHealthCheck) {
-        if (httpHealthCheck.getMethod() == RequestMethod.GET) {
-            return HttpMethod.GET;
+        if (httpHealthCheck.getMethod() == RequestMethod.HEAD) {
+            return HttpMethod.HEAD;
         }
-        return HttpMethod.HEAD;
+        return HttpMethod.GET;
     }
 
     private static EndpointGroup staticEndpointGroup(ClusterSnapshot clusterSnapshot) {
@@ -207,7 +202,8 @@ final class XdsEndpointUtil {
             endpoint = Endpoint.of(hostname)
                                .withIpAddr(socketAddress.getAddress())
                                .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint)
-                               .withAttr(XdsAttributesKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints);
+                               .withAttr(XdsAttributesKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
+                               .withWeight(weight);
         } else {
             endpoint = Endpoint.of(socketAddress.getAddress())
                                .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint)

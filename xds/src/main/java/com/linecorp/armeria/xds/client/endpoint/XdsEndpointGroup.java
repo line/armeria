@@ -109,7 +109,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
         this.clusterManager = clusterManager;
     }
 
-    void updateState(State state) {
+    private void updateState(State state) {
         if (!allowEmptyEndpoints && Iterables.isEmpty(state.endpoints())) {
             return;
         }

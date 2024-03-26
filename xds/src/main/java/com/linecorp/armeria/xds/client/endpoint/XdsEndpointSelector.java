@@ -16,17 +16,13 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import java.util.concurrent.CompletableFuture;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractEndpointSelector;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.AsyncCloseable;
 
-final class XdsEndpointSelector extends AbstractEndpointSelector
-        implements AsyncCloseable {
+final class XdsEndpointSelector extends AbstractEndpointSelector {
 
     private final ClusterManager clusterManager;
 
@@ -40,15 +36,5 @@ final class XdsEndpointSelector extends AbstractEndpointSelector
     @Nullable
     public Endpoint selectNow(ClientRequestContext ctx) {
         return clusterManager.selectNow(ctx);
-    }
-
-    @Override
-    public CompletableFuture<?> closeAsync() {
-        return clusterManager.closeAsync();
-    }
-
-    @Override
-    public void close() {
-        clusterManager.close();
     }
 }

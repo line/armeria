@@ -31,25 +31,18 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
-import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
-
 final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
 
     private final EndpointGroup endpointGroup;
     private final ClusterManager clusterManager;
-    private final Cluster cluster;
-    private final ClusterLoadAssignment clusterLoadAssignment;
     private final LoadBalancer loadBalancer;
     private List<Endpoint> endpoints = Collections.emptyList();
 
     ClusterEntry(ClusterSnapshot clusterSnapshot, ClusterManager clusterManager) {
         endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterSnapshot);
         this.clusterManager = clusterManager;
-        cluster = clusterSnapshot.xdsResource().resource();
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         assert endpointSnapshot != null;
-        clusterLoadAssignment = endpointSnapshot.xdsResource().resource();
         loadBalancer = new SubsetLoadBalancer(clusterSnapshot);
 
         // The order of adding listeners is important
@@ -65,8 +58,7 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
     @Override
     public void accept(List<Endpoint> endpoints) {
         this.endpoints = ImmutableList.copyOf(endpoints);
-        final PrioritySet prioritySet = new PrioritySet(cluster, clusterLoadAssignment,
-                                                        endpoints);
+        final PrioritySet prioritySet = new PrioritySet(endpoints);
         loadBalancer.prioritySetUpdated(prioritySet);
     }
 
