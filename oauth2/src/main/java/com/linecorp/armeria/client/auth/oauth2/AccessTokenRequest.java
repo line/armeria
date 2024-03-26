@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2Request;
 
 /**
- * A OAuth 2.0 request to obtain an access token.
+ * An OAuth 2.0 request to obtain an access token.
  */
 @UnstableApi
 public interface AccessTokenRequest extends OAuth2Request {
