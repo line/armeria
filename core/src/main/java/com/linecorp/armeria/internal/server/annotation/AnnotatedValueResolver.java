@@ -758,9 +758,13 @@ final class AnnotatedValueResolver {
                         Splitter.on(queryDelimiter)
                                 .splitToStream(first)
                                 .map(resolver::convert)
+                                .filter(AnnotatedValueResolver::isNotEmptyStringNorNull)
                                 .forEach(resolvedValues::add);
                     } else {
-                        values.stream().map(resolver::convert).forEach(resolvedValues::add);
+                        values.stream()
+                              .map(resolver::convert)
+                              .filter(AnnotatedValueResolver::isNotEmptyStringNorNull)
+                              .forEach(resolvedValues::add);
                     }
                 } else {
                     final Object defaultValue = resolver.defaultOrException();
@@ -880,6 +884,16 @@ final class AnnotatedValueResolver {
             }
         }
         return false;
+    }
+
+    private static boolean isNotEmptyStringNorNull(@Nullable Object value) {
+        if (value == null) {
+            return false;
+        }
+        if (value instanceof String) {
+            return !((String) value).isEmpty();
+        }
+        return true;
     }
 
     @Nullable
@@ -1028,7 +1042,14 @@ final class AnnotatedValueResolver {
         }
         if (value.isEmpty()) {
             logger.warn("Parameter is present but the value is missing: " + httpElementName);
-            return String.class.isAssignableFrom(elementType) ? value : null;
+            if (String.class.isAssignableFrom(elementType)) {
+                return value;
+            }
+            if (elementType.isPrimitive()) {
+                throw new IllegalArgumentException("Cannot set null to primitive type parameter: " +
+                                                   httpElementName);
+            }
+            return null;
         }
         return convert(value, elementType, enumConverter);
     }
