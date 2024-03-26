@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
@@ -23,8 +23,9 @@ class CpuHealthCheckerTest {
 
     @Test
     void shouldGatherCpuUsageInformation() {
-        final CpuHealthChecker healthChecker = HealthChecker.ofCpu(0.1, 0.3);
-        assertNotEquals(Double.NaN, healthChecker.targetSystemCpuUsage);
-        assertNotEquals(Double.NaN, healthChecker.targetProcessCpuLoad);
+        final CpuHealthChecker healthChecker =
+                (CpuHealthChecker) HealthChecker.ofCpu(0.1, 0.3);
+        assertThat(healthChecker.targetSystemCpuUsage).isNotNaN();
+        assertThat(healthChecker.targetProcessCpuLoad).isNotNaN();
     }
 }

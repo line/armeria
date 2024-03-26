@@ -23,6 +23,8 @@ import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
 
+import com.sun.management.OperatingSystemMXBean;
+
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Server;
@@ -89,13 +91,17 @@ public interface HealthChecker {
     }
 
     /**
-     * Creates a new instance of {@link CpuHealthChecker} based on the target system and process CPU usage.
+     * Creates a new instance of {@link HealthChecker} which reports health based on
+     * cpu usage reported by {@link OperatingSystemMXBean}.
+     * Both system and process cpu usage must be (inclusive) lower than the specified threshold in order
+     * for the {@link HealthChecker} to report as healthy. If the {@link HealthChecker} is unable
+     * to find a suitable {@link OperatingSystemMXBean}, an exception is thrown on construction.
      *
      * @param targetSystemCpuUsage  Target system CPU usage as a percentage (0 - 1).
      * @param targetProcessCpuUsage Target process CPU usage as a percentage (0 - 1).
-     * @return an instance of {@code CpuHealthChecker} configured with the provided CPU usage targets.
+     * @return an instance of {@link HealthChecker} configured with the provided CPU usage targets.
      */
-    static CpuHealthChecker ofCpu(double targetSystemCpuUsage, double targetProcessCpuUsage) {
+    static HealthChecker ofCpu(double targetSystemCpuUsage, double targetProcessCpuUsage) {
         return new CpuHealthChecker(targetSystemCpuUsage, targetProcessCpuUsage);
     }
 

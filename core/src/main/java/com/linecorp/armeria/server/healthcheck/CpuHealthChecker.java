@@ -100,7 +100,7 @@ final class CpuHealthChecker implements HealthChecker {
      */
     CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuUsage) {
         this(targetSystemCpuUsage, targetProcessCpuUsage,
-                currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
+             currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
     }
 
     private CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuLoad,
