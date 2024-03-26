@@ -114,7 +114,7 @@ class WebSocketFrameEncoderAndDecoderTest {
         final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(true);
         final HttpRequestWriter requestWriter = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
         final WebSocketFrameDecoder decoder =
-                new WebSocketFrameDecoder(ctx, maxPayloadLength, false, true);
+                new TestWebSocketFrameDecoder(maxPayloadLength, false, true);
         final CompletableFuture<Void> whenComplete = new CompletableFuture<>();
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(whenComplete));
 
@@ -140,8 +140,8 @@ class WebSocketFrameEncoderAndDecoderTest {
         final HttpResponseWriter httpResponseWriter = HttpResponse.streaming();
         final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(maskPayload);
         final HttpRequestWriter requestWriter = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
-        final WebSocketFrameDecoder decoder = new WebSocketFrameDecoder(ctx, 1024 * 1024, allowMaskMismatch,
-                                                                        maskPayload);
+        final WebSocketFrameDecoder decoder = new TestWebSocketFrameDecoder(
+                1024 * 1024, allowMaskMismatch, maskPayload);
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(new CompletableFuture<>()));
         executeTests(encoder, requestWriter);
         httpResponseWriter.abort();
@@ -228,5 +228,24 @@ class WebSocketFrameEncoderAndDecoderTest {
                 whenComplete.complete(null);
             }
         };
+    }
+
+    private static class TestWebSocketFrameDecoder extends WebSocketFrameDecoder {
+
+        private final boolean expectMaskedFrames;
+
+        TestWebSocketFrameDecoder(int maxFramePayloadLength,
+                                  boolean allowMaskMismatch, boolean expectMaskedFrames) {
+            super(maxFramePayloadLength, allowMaskMismatch, false);
+            this.expectMaskedFrames = expectMaskedFrames;
+        }
+
+        @Override
+        protected boolean expectMaskedFrames() {
+            return expectMaskedFrames;
+        }
+
+        @Override
+        protected void onCloseFrameRead() {}
     }
 }

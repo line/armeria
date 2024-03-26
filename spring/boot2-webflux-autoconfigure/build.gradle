@@ -64,12 +64,25 @@ task copyBoot3Sources(type: Copy) {
     into "${project.ext.genSrcDir}/main/java"
 }
 
+task copySpring6Sources(type: Copy) {
+    from("${rootProject.projectDir}/spring/spring6/src/main/java") {
+        include '**/ArmeriaClientHttpRequest.java'
+        include '**/ArmeriaClientHttpResponse.java'
+        include '**/DataBufferFactoryWrapper.java'
+    }
+
+    into "${project.ext.genSrcDir}/main/java"
+}
+
 // Copy the main and test sources from ':spring:boot3-webflux-autoconfigure'.
 task generateSources(type: Copy) {
     dependsOn(tasks.copyBoot3Sources)
+    dependsOn(tasks.copySpring6Sources)
     from("${"${rootProject.projectDir}/spring/boot3-webflux-autoconfigure"}/src") {
         exclude '**/AbstractServerHttpResponseVersionSpecific.java'
+        exclude '**/AbstractServerHttpRequestVersionSpecific.java'
         exclude '**/package-info.java'
+        exclude '**/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
     }
 
     into "${project.ext.genSrcDir}"

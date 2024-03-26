@@ -46,7 +46,6 @@ import testing.grpc.TestServiceGrpcKt.TestServiceCoroutineStub
 import java.util.concurrent.atomic.AtomicInteger
 
 class TestServiceTest {
-
     @ParameterizedTest
     @MethodSource("uris")
     fun parallelReplyFromServerSideBlockingCall(uri: String) {
@@ -54,9 +53,10 @@ class TestServiceTest {
             val helloService = GrpcClients.newClient(uri, TestServiceCoroutineStub::class.java)
             repeat(30) {
                 launch {
-                    val message = helloService.shortBlockingHello(
-                        HelloRequest.newBuilder().setName("$it Armeria").build()
-                    ).message
+                    val message =
+                        helloService.shortBlockingHello(
+                            HelloRequest.newBuilder().setName("$it Armeria").build(),
+                        ).message
                     assertThat(message).isEqualTo("Hello, $it Armeria!")
                 }
             }
@@ -86,7 +86,7 @@ class TestServiceTest {
                 launch {
                     var sequence = 0
                     service.shortBlockingLotsOfReplies(
-                        HelloRequest.newBuilder().setName("Armeria").build()
+                        HelloRequest.newBuilder().setName("Armeria").build(),
                     )
                         .collect {
                             assertThat(it.message).isEqualTo("Hello, Armeria! (sequence: ${++sequence})")
@@ -126,28 +126,37 @@ class TestServiceTest {
     @MethodSource("uris")
     fun shouldReportCloseExactlyOnceWithNonOK(uri: String) {
         val closeCalled = AtomicInteger()
-        val helloService = GrpcClients.newClient(uri, TestServiceCoroutineStub::class.java)
-            .withInterceptors(object : ClientInterceptor {
-                override fun <I, O> interceptCall(
-                    method: MethodDescriptor<I, O>,
-                    options: CallOptions,
-                    next: Channel
-                ): ClientCall<I, O> {
-                    return object : SimpleForwardingClientCall<I, O>(next.newCall(method, options)) {
-                        override fun start(responseListener: Listener<O>, headers: Metadata) {
-                            super.start(
-                                object : SimpleForwardingClientCallListener<O>(responseListener) {
-                                    override fun onClose(status: Status, trailers: Metadata) {
-                                        closeCalled.incrementAndGet()
-                                        super.onClose(status, trailers)
-                                    }
-                                },
-                                headers
-                            )
+        val helloService =
+            GrpcClients.newClient(uri, TestServiceCoroutineStub::class.java)
+                .withInterceptors(
+                    object : ClientInterceptor {
+                        override fun <I, O> interceptCall(
+                            method: MethodDescriptor<I, O>,
+                            options: CallOptions,
+                            next: Channel,
+                        ): ClientCall<I, O> {
+                            return object : SimpleForwardingClientCall<I, O>(next.newCall(method, options)) {
+                                override fun start(
+                                    responseListener: Listener<O>,
+                                    headers: Metadata,
+                                ) {
+                                    super.start(
+                                        object : SimpleForwardingClientCallListener<O>(responseListener) {
+                                            override fun onClose(
+                                                status: Status,
+                                                trailers: Metadata,
+                                            ) {
+                                                closeCalled.incrementAndGet()
+                                                super.onClose(status, trailers)
+                                            }
+                                        },
+                                        headers,
+                                    )
+                                }
+                            }
                         }
-                    }
-                }
-            })
+                    },
+                )
 
         assertThatThrownBy {
             runBlocking { helloService.helloError(HelloRequest.newBuilder().setName("Armeria").build()) }
@@ -161,7 +170,6 @@ class TestServiceTest {
     }
 
     companion object {
-
         private lateinit var server: Server
         private lateinit var blockingServer: Server
         private lateinit var service: TestServiceCoroutineStub
@@ -185,16 +193,20 @@ class TestServiceTest {
         }
 
         @JvmStatic
-        fun uris() = listOf(protoUri(), jsonUri(), blockingProtoUri(), blockingJsonUri())
-            .map { Arguments.of(it) }
+        fun uris() =
+            listOf(protoUri(), jsonUri(), blockingProtoUri(), blockingJsonUri())
+                .map { Arguments.of(it) }
 
-        private fun newServer(httpPort: Int, useBlockingTaskExecutor: Boolean = false): Server {
+        private fun newServer(
+            httpPort: Int,
+            useBlockingTaskExecutor: Boolean = false,
+        ): Server {
             return Server.builder()
                 .http(httpPort)
                 .service(
                     GrpcService.builder()
                         .addService(TestServiceImpl())
-                        .exceptionMapping { _, throwable, _ ->
+                        .exceptionHandler { _, throwable, _ ->
                             when (throwable) {
                                 is AuthError -> {
                                     Status.UNAUTHENTICATED
@@ -205,7 +217,7 @@ class TestServiceTest {
                             }
                         }
                         .useBlockingTaskExecutor(useBlockingTaskExecutor)
-                        .build()
+                        .build(),
                 )
                 .build()
         }

@@ -81,7 +81,7 @@ class ThriftClientBuilderTest {
                                                        })
                                                        .build(HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("hello")).isInstanceOf(TTransportException.class)
-                                                       .getCause()
+                                                       .cause()
                                                        .isInstanceOf(AnticipatedException.class);
         assertThatThrownBy(() -> reqCaptor.join().whenComplete().join())
                 .hasCauseInstanceOf(AbortedStreamException.class);

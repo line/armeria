@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -136,22 +135,22 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
             this.executor = executor;
-
-            final AtomicBoolean initialized = new AtomicBoolean();
-            endpointGroup.addListener(newEndpoints -> {
-                if (initialized.compareAndSet(false, true)) {
-                    final List<Endpoint> dedupEndpoints =
-                            new ArrayList<>(deduplicateEndpoints(newEndpoints).values());
-                    endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
-                    endpointsFinishedRampingUp.addAll(dedupEndpoints);
-                } else {
-                    // Use the executor so the order of endpoints change is guaranteed.
-                    executor.execute(() -> updateEndpoints(newEndpoints));
-                }
-            }, true);
-
             if (endpointGroup instanceof ListenableAsyncCloseable) {
                 ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenRunAsync(this::close, executor);
+            }
+            initialize();
+        }
+
+        @Override
+        protected void updateNewEndpoints(List<Endpoint> endpoints) {
+            if (endpointSelector == EMPTY_SELECTOR) {
+                final List<Endpoint> dedupEndpoints =
+                        new ArrayList<>(deduplicateEndpoints(endpoints).values());
+                endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
+                endpointsFinishedRampingUp.addAll(dedupEndpoints);
+            } else {
+                // Use the executor so the order of endpoints change is guaranteed.
+                executor.execute(() -> updateEndpoints(endpoints));
             }
         }
 

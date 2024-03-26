@@ -32,6 +32,7 @@ export default class GrpcUnframedTransport extends Transport {
   protected async doSend(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
   ): Promise<Response> {
@@ -41,12 +42,18 @@ export default class GrpcUnframedTransport extends Transport {
     const endpoint = this.getDebugMimeTypeEndpoint(method, endpointPath);
 
     const hdrs = new Headers();
-    hdrs.set('content-type', GRPC_UNFRAMED_MIME_TYPE);
+    // protocol=gRPC is added to mime types for the purpose of endpoint detection
+    // but is not actually used by unframed gRPC services. We use a simpler mime
+    // type when actually sending the request to better represent what a real client
+    // would do.
+    hdrs.set('content-type', 'application/json; charset=utf-8');
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
     }
 
-    return fetch(endpoint.pathMapping, {
+    const newPath = pathPrefix + (endpointPath ?? endpoint.pathMapping);
+
+    return fetch(newPath, {
       headers: hdrs,
       method: 'POST',
       body: bodyJson,

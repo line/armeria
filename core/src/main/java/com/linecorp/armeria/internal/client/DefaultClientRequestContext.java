@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
@@ -75,6 +74,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -103,6 +103,20 @@ public final class DefaultClientRequestContext
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, CompletableFuture>
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
+
+    private static SessionProtocol desiredSessionProtocol(SessionProtocol protocol, ClientOptions options) {
+        if (!options.factory().options().preferHttp1()) {
+            return protocol;
+        }
+        switch (protocol) {
+            case HTTP:
+                return SessionProtocol.H1C;
+            case HTTPS:
+                return SessionProtocol.H1;
+            default:
+                return protocol;
+        }
+    }
 
     private static final short STR_CHANNEL_AVAILABILITY = 1;
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
@@ -171,9 +185,10 @@ public final class DefaultClientRequestContext
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(eventLoop, meterRegistry, sessionProtocol,
+        this(requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
              id, method, reqTarget, options, req, rpcReq, requestOptions, serviceRequestContext(),
-             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
+             requireNonNull(responseCancellationScheduler, "responseCancellationScheduler"),
+             requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -208,10 +223,13 @@ public final class DefaultClientRequestContext
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        super(meterRegistry, sessionProtocol, id, method, reqTarget,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
+        super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
+              guessExchangeType(requestOptions, req),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
-              getAttributes(root));
+              getAttributes(root), options.contextHook());
+        assert (eventLoop == null && responseCancellationScheduler == null) ||
+               (eventLoop != null && responseCancellationScheduler != null)
+                : "'eventLoop' and 'responseCancellationScheduler' should be both null or non-null";
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -226,7 +244,8 @@ public final class DefaultClientRequestContext
                 responseTimeoutMillis = options().responseTimeoutMillis();
             }
             this.responseCancellationScheduler =
-                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                    CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+            // the cancellationScheduler is not initialized here since the eventLoop is guaranteed to be null
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
@@ -260,6 +279,17 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+    }
+
+    private static ExchangeType guessExchangeType(RequestOptions requestOptions, @Nullable HttpRequest req) {
+        final ExchangeType exchangeType = requestOptions.exchangeType();
+        if (exchangeType != null) {
+            return exchangeType;
+        }
+        if (req instanceof FixedStreamMessage) {
+            return ExchangeType.RESPONSE_STREAMING;
+        }
+        return ExchangeType.BIDI_STREAMING;
     }
 
     private static long requestAutoAbortDelayMillis(ClientOptions options, RequestOptions requestOptions) {
@@ -404,7 +434,7 @@ public final class DefaultClientRequestContext
 
     private void updateEndpoint(@Nullable Endpoint endpoint) {
         this.endpoint = endpoint;
-        autoFillSchemeAndAuthority();
+        autoFillSchemeAuthorityAndOrigin();
     }
 
     private void acquireEventLoop(EndpointGroup endpointGroup) {
@@ -413,6 +443,7 @@ public final class DefaultClientRequestContext
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
+            responseCancellationScheduler.init(eventLoop());
         }
     }
 
@@ -428,7 +459,7 @@ public final class DefaultClientRequestContext
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
         if (req != null) {
-            autoFillSchemeAndAuthority();
+            autoFillSchemeAuthorityAndOrigin();
             req.abort(wrapped);
         }
 
@@ -438,7 +469,7 @@ public final class DefaultClientRequestContext
     }
 
     // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
-    private void autoFillSchemeAndAuthority() {
+    private void autoFillSchemeAuthorityAndOrigin() {
         final String authority = authority();
         if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
             // The connection will be established with the IP address but `host` set to the `Endpoint`
@@ -453,7 +484,16 @@ public final class DefaultClientRequestContext
         final HttpHeadersBuilder headersBuilder = internalRequestHeaders.toBuilder();
         headersBuilder.set(HttpHeaderNames.SCHEME, getScheme(sessionProtocol()));
         if (endpoint != null) {
-            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpoint.authority());
+            final String endpointAuthority = endpoint.authority();
+            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpointAuthority);
+            final String origin = origin();
+            if (origin != null) {
+                headersBuilder.set(HttpHeaderNames.ORIGIN, origin);
+            } else if (options().autoFillOriginHeader()) {
+                final String uriText = sessionProtocol().isTls() ? SessionProtocol.HTTPS.uriText()
+                                                                 : SessionProtocol.HTTP.uriText();
+                headersBuilder.set(HttpHeaderNames.ORIGIN, uriText + "://" + endpointAuthority);
+            }
         }
         internalRequestHeaders = headersBuilder.build();
     }
@@ -477,7 +517,7 @@ public final class DefaultClientRequestContext
                                         SessionProtocol sessionProtocol, HttpMethod method,
                                         RequestTarget reqTarget) {
         super(ctx.meterRegistry(), sessionProtocol, id, method, reqTarget, ctx.exchangeType(),
-              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()));
+              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()), ctx.hook());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -488,14 +528,13 @@ public final class DefaultClientRequestContext
         // So we don't check the nullness of rpcRequest unlike request.
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
-        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         root = ctx.root();
 
         log = RequestLog.builder(this);
         log.startRequest();
         responseCancellationScheduler =
-                new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+                CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
@@ -508,6 +547,14 @@ public final class DefaultClientRequestContext
 
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
+        // We don't need to acquire an EventLoop for the initial attempt because it's already acquired by
+        // the root context.
+        if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
+            eventLoop = ctx.eventLoop().withoutContext();
+            responseCancellationScheduler.init(eventLoop());
+        } else {
+            acquireEventLoop(endpoint);
+        }
     }
 
     @Nullable
@@ -576,7 +623,6 @@ public final class DefaultClientRequestContext
                                                        protocol, newHeaders.method(), reqTarget);
             }
         }
-
         return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, endpointGroup(),
                                                sessionProtocol(), method(), requestTarget());
     }
@@ -696,6 +742,23 @@ public final class DefaultClientRequestContext
             authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
         }
         return authority;
+    }
+
+    @Nullable
+    private String origin() {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        String origin = additionalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        final HttpRequest request = request();
+        if (origin == null && request != null) {
+            origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = defaultRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = internalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        return origin;
     }
 
     @Override

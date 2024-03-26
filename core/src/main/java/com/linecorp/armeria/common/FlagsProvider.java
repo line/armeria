@@ -360,6 +360,19 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default option that is preventing the server from staying in an idle state when
+     * an HTTP/2 PING frame is received.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_SERVER_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    default Boolean defaultServerKeepAliveOnPing() {
+        return null;
+    }
+
+    /**
      * Returns the default client-side idle timeout of a connection for keep-alive in milliseconds.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#idleTimeout(Duration)}.
@@ -370,6 +383,19 @@ public interface FlagsProvider {
      */
     @Nullable
     default Long defaultClientIdleTimeoutMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the default option that is preventing the server from staying in an idle state when
+     * an HTTP/2 PING frame is received.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_CLIENT_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    default Boolean defaultClientKeepAliveOnPing() {
         return null;
     }
 
@@ -437,6 +463,23 @@ public interface FlagsProvider {
      */
     @Nullable
     default Boolean defaultUseHttp2Preface() {
+        return null;
+    }
+
+    /**
+     * Returns the default value of the {@link ClientFactoryBuilder#preferHttp1(boolean)} option.
+     * If enabled, the client will not attempt to upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and
+     * {@link SessionProtocol#HTTPS}.
+     *
+     * <p>Note that this option has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#preferHttp1(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultPreferHttp1=true} JVM option to enable it.
+     */
+    @UnstableApi
+    @Nullable
+    default Boolean defaultPreferHttp1() {
         return null;
     }
 
@@ -666,6 +709,22 @@ public interface FlagsProvider {
      */
     @Nullable
     default Long defaultHttp2MaxHeaderListSize() {
+        return null;
+    }
+
+    /**
+     * Returns the default maximum number of RST frames that are allowed per window before the connection is
+     * closed. This allows to protect against the remote peer flooding us with such frames and using up a lot
+     * of CPU. Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * to override the default value. {@code 0} means no protection should be applied.
+     */
+    @Nullable
+    default Integer defaultServerHttp2MaxResetFramesPerMinute() {
         return null;
     }
 

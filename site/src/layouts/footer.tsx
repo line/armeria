@@ -36,7 +36,7 @@ export default () => {
         </div>
         <div className={styles.copyright}>
           <div>
-            &copy; 2015-{buildDate.year()}, LINE Corporation
+            &copy; 2015-{buildDate.year()}, LY Corporation
             <br />
             {typeof window !== 'undefined' ? (
               <>

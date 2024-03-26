@@ -29,15 +29,17 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperExtension;
 import com.linecorp.armeria.common.zookeeper.ZooKeeperTestUtil;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.Server;
 
-public class CuratorServiceExternalClientUsageTest {
+@GenerateNativeImageTrace
+class CuratorServiceExternalClientUsageTest {
 
     private static final String Z_NODE = "/testEndPoints";
     private static final UriSpec CURATOR_X_URI_SPEC = new UriSpec("{scheme}://{address}:{port}");
 
     @RegisterExtension
-    static ZooKeeperExtension zkInstance = new ZooKeeperExtension();
+    static final ZooKeeperExtension zkInstance = new ZooKeeperExtension();
 
     @Test
     void updatingListenerWithExternalClient() {

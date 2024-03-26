@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -162,6 +163,14 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("IDLE_TIMEOUT_MILLIS", Flags.defaultClientIdleTimeoutMillis());
 
     /**
+     * If the idle timeout is reset when an HTTP/2 PING frame or the response of {@code "OPTIONS * HTTP/1.1"}
+     * is received.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Boolean> KEEP_ALIVE_ON_PING =
+            ClientFactoryOption.define("KEEP_ALIVE_ON_PING", Flags.defaultClientKeepAliveOnPing());
+
+    /**
      * The PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
      * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
@@ -202,6 +211,14 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<Boolean> USE_HTTP2_PREFACE =
             ClientFactoryOption.define("USE_HTTP2_PREFACE", Flags.defaultUseHttp2Preface());
+
+    /**
+     * Whether to use HTTP/1.1 instead of HTTP/2. If enabled, the client will not attempt to upgrade to
+     * HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Boolean> PREFER_HTTP1 =
+            ClientFactoryOption.define("PREFER_HTTP1", Flags.defaultPreferHttp1());
 
     /**
      * Whether to use HTTP/2 without ALPN. This is useful if you want to communicate with an HTTP/2
@@ -465,6 +482,15 @@ public final class ClientFactoryOptions
     }
 
     /**
+     * Returns whether to keep connection alive when an HTTP/2 PING frame or the response of
+     * {@code "OPTIONS * HTTP/1.1"} is received.
+     */
+    @UnstableApi
+    public boolean keepAliveOnPing() {
+        return get(KEEP_ALIVE_ON_PING);
+    }
+
+    /**
      * Returns the PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
      * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
@@ -497,6 +523,15 @@ public final class ClientFactoryOptions
      */
     public boolean useHttp2Preface() {
         return get(USE_HTTP2_PREFACE);
+    }
+
+    /**
+     * Returns whether to use HTTP/1.1 instead of HTTP/2 . If {@code true}, the client will not attempt to
+     * upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and {@link SessionProtocol#HTTPS}.
+     */
+    @UnstableApi
+    public boolean preferHttp1() {
+        return get(PREFER_HTTP1);
     }
 
     /**

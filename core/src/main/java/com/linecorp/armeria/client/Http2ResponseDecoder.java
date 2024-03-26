@@ -16,18 +16,17 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedStreamException;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
-
-import javax.annotation.Nonnull;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatusClass;
@@ -54,8 +53,8 @@ import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.codec.http2.Http2Stream;
 
-final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Connection.Listener,
-                                                                        Http2FrameListener {
+final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements Http2Connection.Listener,
+                                                                                Http2FrameListener {
 
     private static final Logger logger = LoggerFactory.getLogger(Http2ResponseDecoder.class);
 
@@ -138,7 +137,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
         if (res.isOpen()) {
             if (!goAwayHandler.receivedGoAway()) {
-                res.close(ClosedStreamException.get());
+                res.close(newClosedStreamException(channel()));
                 return;
             }
 
@@ -146,7 +145,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
             if (stream.id() > lastStreamId) {
                 res.close(UnprocessedRequestException.of(GoAwayReceivedException.get()));
             } else {
-                res.close(ClosedStreamException.get());
+                res.close(newClosedStreamException(channel()));
             }
         }
 
@@ -217,7 +216,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         if (!written) {
-            throw connectionError(INTERNAL_ERROR, ClosedStreamException.get(),
+            throw connectionError(INTERNAL_ERROR, newClosedStreamException(ctx),
                                   "failed to consume a HEADERS frame");
         }
 
@@ -267,7 +266,7 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
         }
 
         if (!res.tryWriteData(HttpData.wrap(data.retain()).withEndOfStream(endOfStream))) {
-            throw connectionError(INTERNAL_ERROR, ClosedSessionException.get(),
+            throw connectionError(INTERNAL_ERROR, newClosedSessionException(ctx),
                                   "failed to consume a DATA frame");
         }
 
@@ -345,9 +344,8 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                ByteBuf payload) {}
 
-    @Nonnull
     @Override
-    KeepAliveHandler keepAliveHandler() {
+    public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
     }
 

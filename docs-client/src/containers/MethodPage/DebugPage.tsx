@@ -48,7 +48,13 @@ import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
-import { extractUrlPath, Method, ServiceType } from '../../lib/specification';
+import {
+  extractUrlPath,
+  Method,
+  Route,
+  RoutePathType,
+  ServiceType,
+} from '../../lib/specification';
 import { TRANSPORTS } from '../../lib/transports';
 import { SelectOption } from '../../lib/types';
 import DebugInputs from './DebugInputs';
@@ -78,6 +84,7 @@ interface OwnProps {
   debugFormIsOpen: boolean;
   setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
   jsonSchemas: any[];
+  docServiceRoute?: Route;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -112,6 +119,24 @@ const copyTextToClipboard = (text: string) => {
   modal.removeChild(textArea);
 };
 
+const parseServerRootPath = (docServiceRoute: Route | undefined): string => {
+  if (
+    docServiceRoute === undefined ||
+    docServiceRoute.pathType !== RoutePathType.PREFIX
+  ) {
+    return '';
+  }
+
+  // Remove '/*' from the path
+  const docServicePath = docServiceRoute.patternString.slice(0, -2);
+  const index = window.location.pathname.indexOf(docServicePath);
+  if (index < 0) {
+    return '';
+  }
+
+  return window.location.pathname.substring(0, index);
+};
+
 const toggle = (prev: boolean, override: unknown) => {
   if (typeof override === 'boolean') {
     return override;
@@ -135,6 +160,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   debugFormIsOpen,
   setDebugFormIsOpen,
   jsonSchemas,
+  docServiceRoute,
 }) => {
   const [requestBody, setRequestBody] = useState('');
   const [debugResponse, setDebugResponse] = useState('');
@@ -160,10 +186,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
     const urlParams = new URLSearchParams(location.search);
 
     let urlRequestBody = '';
-    if (useRequestBody) {
-      if (urlParams.has('request_body')) {
-        urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-      }
+    if (useRequestBody && urlParams.has('request_body')) {
+      urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
+    }
+
+    let urlDebugFormIsOpen = false;
+    if (urlParams.has('debug_form_is_open')) {
+      urlDebugFormIsOpen = urlParams.get('debug_form_is_open') === 'true';
     }
 
     let urlPath;
@@ -195,6 +224,10 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
+
+    if (urlDebugFormIsOpen) {
+      setDebugFormIsOpen(urlDebugFormIsOpen);
+    }
   }, [
     exactPathMapping,
     exampleQueries.length,
@@ -205,6 +238,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
     transport,
     useRequestBody,
     keepDebugResponse,
+    docServiceRoute,
+    setDebugFormIsOpen,
   ]);
 
   /* eslint-disable react-hooks/exhaustive-deps */
@@ -255,7 +290,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         `${window.location.port ? `:${window.location.port}` : ''}`;
 
       const httpMethod = method.httpMethod;
-      let uri;
+      let mappedPath;
       let endpoint;
 
       if (
@@ -265,24 +300,26 @@ const DebugPage: React.FunctionComponent<Props> = ({
         const queries = additionalQueries;
         if (exactPathMapping) {
           endpoint = transport.getDebugMimeTypeEndpoint(method);
-          uri =
-            `'${host}${escapeSingleQuote(
+          mappedPath =
+            `'${escapeSingleQuote(
               endpoint.pathMapping.substring('exact:'.length),
             )}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         } else {
           endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-          uri =
-            `'${host}${escapeSingleQuote(additionalPath)}` +
+          mappedPath =
+            `'${escapeSingleQuote(additionalPath)}` +
             `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
         }
       } else if (additionalPath.length > 0) {
         endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-        uri = `'${host}${escapeSingleQuote(additionalPath)}'`;
+        mappedPath = `'${escapeSingleQuote(additionalPath)}'`;
       } else {
         endpoint = transport.getDebugMimeTypeEndpoint(method);
-        uri = `'${host}${escapeSingleQuote(endpoint.pathMapping)}'`;
+        mappedPath = `'${escapeSingleQuote(endpoint.pathMapping)}'`;
       }
+
+      const uri = host + parseServerRootPath(docServiceRoute) + mappedPath;
 
       const body = transport.getCurlBody(
         endpoint,
@@ -328,6 +365,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     additionalQueries,
     exactPathMapping,
     additionalPath,
+    docServiceRoute,
   ]);
 
   const onCopy = useCallback(() => {
@@ -371,6 +409,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         executedDebugResponse = await transport.send(
           method,
           headers,
+          parseServerRootPath(docServiceRoute),
           executedRequestBody,
           executedEndpointPath,
           queries,
@@ -384,7 +423,14 @@ const DebugPage: React.FunctionComponent<Props> = ({
       }
       setDebugResponse(executedDebugResponse);
     },
-    [useRequestBody, serviceType, exactPathMapping, method, transport],
+    [
+      useRequestBody,
+      serviceType,
+      exactPathMapping,
+      method,
+      transport,
+      docServiceRoute,
+    ],
   );
 
   const onSubmit = useCallback(async () => {

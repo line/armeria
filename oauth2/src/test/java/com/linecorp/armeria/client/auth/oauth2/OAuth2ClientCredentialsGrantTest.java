@@ -242,7 +242,7 @@ class OAuth2ClientCredentialsGrantTest {
 
             assertThatThrownBy(() -> client.get("/resource-read-write/").aggregate().join())
                     .isInstanceOf(CompletionException.class)
-                    .getCause().isInstanceOf(InvalidClientException.class);
+                    .cause().isInstanceOf(InvalidClientException.class);
         }
     }
 }

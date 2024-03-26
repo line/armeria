@@ -16,33 +16,24 @@
 
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
-
-import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
@@ -64,20 +55,9 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  *
  * @see ServiceBindingBuilder
  */
-public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceConfigSetters {
+public final class AnnotatedServiceBindingBuilder extends AbstractAnnotatedServiceConfigSetters {
 
     private final ServerBuilder serverBuilder;
-    private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
-    private final Builder<ExceptionHandlerFunction> exceptionHandlerFunctionBuilder = ImmutableList.builder();
-    private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
-    private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
-
-    @Nullable
-    private String queryDelimiter;
-    private boolean useBlockingTaskExecutor;
-    private String pathPrefix = "/";
-    @Nullable
-    private Object service;
 
     AnnotatedServiceBindingBuilder(ServerBuilder serverBuilder) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
@@ -85,251 +65,212 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
 
     @Override
     public AnnotatedServiceBindingBuilder pathPrefix(String pathPrefix) {
-        this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.pathPrefix(pathPrefix);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder exceptionHandlers(
             ExceptionHandlerFunction... exceptionHandlerFunctions) {
-        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        exceptionHandlerFunctionBuilder.add(exceptionHandlerFunctions);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.exceptionHandlers(exceptionHandlerFunctions);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder exceptionHandlers(
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
-        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        exceptionHandlerFunctionBuilder.addAll(exceptionHandlerFunctions);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.exceptionHandlers(exceptionHandlerFunctions);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder responseConverters(
             ResponseConverterFunction... responseConverterFunctions) {
-        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-        responseConverterFunctionBuilder.add(responseConverterFunctions);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.responseConverters(responseConverterFunctions);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder responseConverters(
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
-        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-        responseConverterFunctionBuilder.addAll(responseConverterFunctions);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.responseConverters(responseConverterFunctions);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder requestConverters(
             RequestConverterFunction... requestConverterFunctions) {
-        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requestConverterFunctionBuilder.add(requestConverterFunctions);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.requestConverters(requestConverterFunctions);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder requestConverters(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions) {
-        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requestConverterFunctionBuilder.addAll(requestConverterFunctions);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.requestConverters(requestConverterFunctions);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
-        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.useBlockingTaskExecutor(useBlockingTaskExecutor);
     }
 
-    /**
-     * Sets the delimiter for a query parameter value. Multiple values delimited by the specified
-     * {@code delimiter} will be automatically split into a list of values.
-     *
-     * <p>It is disabled by default.
-     *
-     * <p>Note that this delimiter works only when the resolve target class type is collection and the number
-     * of values of the query parameter is one. For example with the query delimiter {@code ","}:
-     * <ul>
-     *     <li>{@code ?query=a,b,c} will be resolved to {@code "a"}, {@code "b"} and {@code "c"}</li>
-     *     <li>{@code ?query=a,b,c&query=d,e,f} will be resolved to {@code "a,b,c"} and {@code "d,e,f"}</li>
-     * </ul>
-     */
-    @UnstableApi
+    @Override
     public AnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
-        queryDelimiter = requireNonNull(delimiter, "delimiter");
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.queryDelimiter(delimiter);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder decorator(
             DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (AnnotatedServiceBindingBuilder) AnnotatedServiceConfigSetters.super.decorator(
-                decoratingHttpServiceFunction);
+        return (AnnotatedServiceBindingBuilder) super.decorator(decoratingHttpServiceFunction);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder decorator(
             Function<? super HttpService, ? extends HttpService> decorator) {
-        defaultServiceConfigSetters.decorator(decorator);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.decorator(decorator);
     }
 
-    @Override
     @SafeVarargs
+    @Override
     public final AnnotatedServiceBindingBuilder decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
-        defaultServiceConfigSetters.decorators(decorators);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.decorators(decorators);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
-        defaultServiceConfigSetters.decorators(decorators);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.decorators(decorators);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder requestTimeout(Duration requestTimeout) {
-        defaultServiceConfigSetters.requestTimeout(requestTimeout);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.requestTimeout(requestTimeout);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder requestTimeoutMillis(long requestTimeoutMillis) {
-        defaultServiceConfigSetters.requestTimeoutMillis(requestTimeoutMillis);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.requestTimeoutMillis(requestTimeoutMillis);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder maxRequestLength(long maxRequestLength) {
-        defaultServiceConfigSetters.maxRequestLength(maxRequestLength);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.maxRequestLength(maxRequestLength);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder verboseResponses(boolean verboseResponses) {
-        defaultServiceConfigSetters.verboseResponses(verboseResponses);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.verboseResponses(verboseResponses);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder accessLogFormat(String accessLogFormat) {
-        defaultServiceConfigSetters.accessLogFormat(accessLogFormat);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.accessLogFormat(accessLogFormat);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
                                                           boolean shutdownOnStop) {
-        defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.accessLogWriter(accessLogWriter, shutdownOnStop);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder defaultServiceName(String defaultServiceName) {
-        defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.defaultServiceName(defaultServiceName);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
-        defaultServiceConfigSetters.defaultServiceNaming(defaultServiceNaming);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.defaultServiceNaming(defaultServiceNaming);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder defaultLogName(String defaultLogName) {
-        defaultServiceConfigSetters.defaultLogName(defaultLogName);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.defaultLogName(defaultLogName);
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
-                                                               boolean shutdownOnStop) {
-        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
-        return this;
+    public AnnotatedServiceBindingBuilder blockingTaskExecutor(
+            ScheduledExecutorService blockingTaskExecutor, boolean shutdownOnStop) {
+        return (AnnotatedServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor,
+                                                                           shutdownOnStop);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
                                                                boolean shutdownOnStop) {
-        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor,
+                                                                           shutdownOnStop);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder blockingTaskExecutor(int numThreads) {
-        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
-        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
-                                                                  .numThreads(numThreads)
-                                                                  .build();
-        return blockingTaskExecutor(executor, true);
+        return (AnnotatedServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder successFunction(SuccessFunction successFunction) {
-        defaultServiceConfigSetters.successFunction(successFunction);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.successFunction(successFunction);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
-        defaultServiceConfigSetters.requestAutoAbortDelay(delay);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.requestAutoAbortDelay(delay);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
-        defaultServiceConfigSetters.requestAutoAbortDelayMillis(delayMillis);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.requestAutoAbortDelayMillis(delayMillis);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
-        defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
-        defaultServiceConfigSetters.requestIdGenerator(requestIdGenerator);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder addHeader(CharSequence name, Object value) {
-        defaultServiceConfigSetters.addHeader(name, value);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.addHeader(name, value);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder addHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
-        defaultServiceConfigSetters.addHeaders(defaultHeaders);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.addHeaders(defaultHeaders);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder setHeader(CharSequence name, Object value) {
-        defaultServiceConfigSetters.setHeader(name, value);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.setHeader(name, value);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
-        defaultServiceConfigSetters.setHeaders(defaultHeaders);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.setHeaders(defaultHeaders);
     }
 
     @Override
     public AnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
-        defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
-        return this;
+        return (AnnotatedServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (AnnotatedServiceBindingBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                             boolean shutdownOnStop) {
+        return (AnnotatedServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (AnnotatedServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     /**
@@ -343,38 +284,8 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
      * @return {@link ServerBuilder} to continue building {@link Server}
      */
     public ServerBuilder build(Object service) {
-        requireNonNull(service, "service");
-        this.service = service;
+        service(service);
         serverBuilder.annotatedServiceBindingBuilder(this);
         return serverBuilder;
-    }
-
-    /**
-     * Builds the {@link ServiceConfigBuilder}s created with the configured
-     * {@link AnnotatedServiceExtensions} to the {@link ServerBuilder}.
-     *
-     * @param extensions the {@link AnnotatedServiceExtensions} at the server level.
-     * @param dependencyInjector the {@link DependencyInjector} to inject dependencies.
-     */
-    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions,
-                                                         DependencyInjector dependencyInjector) {
-        final List<RequestConverterFunction> requestConverterFunctions =
-                requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
-        final List<ResponseConverterFunction> responseConverterFunctions =
-                responseConverterFunctionBuilder.addAll(extensions.responseConverters()).build();
-        final List<ExceptionHandlerFunction> exceptionHandlerFunctions =
-                exceptionHandlerFunctionBuilder.addAll(extensions.exceptionHandlers()).build();
-
-        assert service != null;
-
-        final List<AnnotatedServiceElement> elements =
-                AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor,
-                                             requestConverterFunctions, responseConverterFunctions,
-                                             exceptionHandlerFunctions, dependencyInjector, queryDelimiter);
-        return elements.stream().map(element -> {
-            final HttpService decoratedService =
-                    element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());
-            return defaultServiceConfigSetters.toServiceConfigBuilder(element.route(), decoratedService);
-        }).collect(toImmutableList());
     }
 }

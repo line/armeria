@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
+
 import com.linecorp.armeria.common.ByteBufAccessMode;
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -78,16 +79,17 @@ public interface HttpObjectEncoder {
      * is in unrecoverable state, the connection will be closed. For example, in an HTTP/1 connection, this
      * will lead the connection to be closed immediately or after the previous requests that are not reset.
      */
-    default ChannelFuture writeReset(int id, int streamId, Http2Error error) {
+    default ChannelFuture writeReset(int id, int streamId, Http2Error error,
+                                     boolean sendResetOnlyIfRemoteIsOpen) {
 
         if (isClosed()) {
             return newClosedSessionFuture();
         }
 
-        return doWriteReset(id, streamId, error);
+        return doWriteReset(id, streamId, error, sendResetOnlyIfRemoteIsOpen);
     }
 
-    ChannelFuture doWriteReset(int id, int streamId, Http2Error error);
+    ChannelFuture doWriteReset(int id, int streamId, Http2Error error, boolean sendResetOnlyIfRemoteIsOpen);
 
     /**
      * Releases the resources related with this encoder and fails any unfinished writes.
@@ -105,7 +107,7 @@ public interface HttpObjectEncoder {
     boolean isWritable(int id, int streamId);
 
     default ChannelFuture newClosedSessionFuture() {
-        return newFailedFuture(ClosedSessionException.get());
+        return newFailedFuture(newClosedSessionException(channel()));
     }
 
     default ChannelFuture newFailedFuture(Throwable cause) {

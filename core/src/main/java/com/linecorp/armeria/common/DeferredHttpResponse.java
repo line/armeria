@@ -40,7 +40,7 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
     }
 
     void delegateWhenComplete(CompletionStage<? extends HttpResponse> stage) {
-        delegateWhenCompleteStage(stage);
+        delegateOnCompletion(stage);
     }
 
     @SuppressWarnings("unchecked")

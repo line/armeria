@@ -33,9 +33,12 @@ import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessageType;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 
 /**
  * Provides the metadata of a Thrift service function.
@@ -60,23 +63,27 @@ public final class ThriftFunction {
     private final TFieldIdEnum successField;
     private final Map<Class<Throwable>, TFieldIdEnum> exceptionFields;
     private final Class<?>[] declaredExceptions;
+    private final List<DecoratorAndOrder> declaredDecorators;
 
     ThriftFunction(Class<?> serviceType, ProcessFunction<?, ?> func,
                    @Nullable Object implementation) throws Exception {
         this(serviceType, func.getMethodName(), func, Type.SYNC,
-             getArgFields(func), getResult(func), getDeclaredExceptions(func), implementation);
+             getArgFields(func), getResult(func), getDeclaredExceptions(func),
+             getDeclaredDecorators(implementation, func.getMethodName()), implementation);
     }
 
     ThriftFunction(Class<?> serviceType, AsyncProcessFunction<?, ?, ?> func,
                    @Nullable Object implementation) throws Exception {
         this(serviceType, func.getMethodName(), func, Type.ASYNC,
-             getArgFields(func), getResult(func), getDeclaredExceptions(func), implementation);
+             getArgFields(func), getResult(func), getDeclaredExceptions(func),
+             getDeclaredDecorators(implementation, func.getMethodName()), implementation);
     }
 
     private <T extends TBase<T, F>, F extends TFieldIdEnum> ThriftFunction(
             Class<?> serviceType, String name, Object func, Type type,
             TFieldIdEnum[] argFields, @Nullable TBase<?, ?> result,
-            Class<?>[] declaredExceptions, @Nullable Object implementation) throws Exception {
+            Class<?>[] declaredExceptions, List<DecoratorAndOrder> declaredDecorators,
+            @Nullable Object implementation) throws Exception {
 
         this.func = func;
         this.type = type;
@@ -85,6 +92,7 @@ public final class ThriftFunction {
         this.argFields = argFields;
         this.result = result;
         this.declaredExceptions = declaredExceptions;
+        this.declaredDecorators = declaredDecorators;
         this.implementation = implementation;
 
         // Determine the success and exception fields of the function.
@@ -98,7 +106,7 @@ public final class ThriftFunction {
             //noinspection RedundantCast
             @SuppressWarnings("unchecked")
             final Map<TFieldIdEnum, FieldMetaData> metaDataMap =
-                    (Map<TFieldIdEnum, FieldMetaData>) FieldMetaData.getStructMetaDataMap(
+                    (Map<TFieldIdEnum, FieldMetaData>) ThriftMetadataAccess.getStructMetaDataMap(
                             (Class<T>) resultType);
 
             for (Entry<TFieldIdEnum, FieldMetaData> e : metaDataMap.entrySet()) {
@@ -199,6 +207,13 @@ public final class ThriftFunction {
      */
     public Class<?>[] declaredExceptions() {
         return declaredExceptions;
+    }
+
+    /**
+     * Returns the decorators declared by this function.
+     */
+    public List<DecoratorAndOrder> declaredDecorators() {
+        return declaredDecorators;
     }
 
     /**
@@ -361,6 +376,22 @@ public final class ThriftFunction {
             throw new IllegalStateException(
                     "cannot determine the declared exceptions of method: " + methodName, e);
         }
+    }
+
+    private static List<DecoratorAndOrder> getDeclaredDecorators(@Nullable Object implementation,
+                                                                 String methodName) {
+        if (implementation == null) {
+            return ImmutableList.of();
+        }
+
+        final Class<?> implClass = implementation.getClass();
+        final String methodNameCamel = getCamelMethodName(methodName);
+        for (Method m : implClass.getDeclaredMethods()) {
+            if (m.getName().equals(methodName) || m.getName().equals(methodNameCamel)) {
+                return DecoratorAnnotationUtil.collectDecorators(implClass, m);
+            }
+        }
+        return ImmutableList.of();
     }
 
     private static String typeName(Type type, Class<?> funcClass, String methodName, String toAppend) {

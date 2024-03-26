@@ -233,9 +233,15 @@ public final class Flags {
             getValue(FlagsProvider::defaultServerIdleTimeoutMillis, "defaultServerIdleTimeoutMillis",
                      value -> value >= 0);
 
+    private static final boolean DEFAULT_SERVER_KEEP_ALIVE_ON_PING =
+            getValue(FlagsProvider::defaultServerKeepAliveOnPing, "defaultServerKeepAliveOnPing");
+
     private static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultClientIdleTimeoutMillis, "defaultClientIdleTimeoutMillis",
                      value -> value >= 0);
+
+    private static final boolean DEFAULT_CLIENT_KEEP_ALIVE_ON_PING =
+            getValue(FlagsProvider::defaultClientKeepAliveOnPing, "defaultClientKeepAliveOnPing");
 
     private static final long DEFAULT_PING_INTERVAL_MILLIS =
             getValue(FlagsProvider::defaultPingIntervalMillis, "defaultPingIntervalMillis",
@@ -282,6 +288,10 @@ public final class Flags {
             getValue(FlagsProvider::defaultHttp2MaxHeaderListSize, "defaultHttp2MaxHeaderListSize",
                      value -> value > 0 && value <= 0xFFFFFFFFL);
 
+    private static final int DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE =
+            getValue(FlagsProvider::defaultServerHttp2MaxResetFramesPerMinute,
+                     "defaultServerHttp2MaxResetFramesPerMinute", value -> value >= 0);
+
     private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
             getValue(FlagsProvider::defaultHttp1MaxInitialLineLength, "defaultHttp1MaxInitialLineLength",
                      value -> value >= 0);
@@ -296,6 +306,9 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE =
             getValue(FlagsProvider::defaultUseHttp2Preface, "defaultUseHttp2Preface");
+
+    private static final boolean DEFAULT_PREFER_HTTP1 =
+            getValue(FlagsProvider::defaultPreferHttp1, "defaultPreferHttp1");
 
     private static final boolean DEFAULT_USE_HTTP2_WITHOUT_ALPN =
             getValue(FlagsProvider::defaultUseHttp2WithoutAlpn, "defaultUseHttp2WithoutAlpn");
@@ -560,7 +573,7 @@ public final class Flags {
                     SslContextBuilder::forClient,
                     /* forceHttp1 */ false,
                     /* tlsAllowUnsafeCiphers */ false,
-                    ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
+                    ImmutableList.of(), null).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
@@ -717,6 +730,18 @@ public final class Flags {
     }
 
     /**
+     * Returns the default option that is preventing the server from staying in an idle state when
+     * an HTTP/2 PING frame is received.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_SERVER_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
+    public static boolean defaultServerKeepAliveOnPing() {
+        return DEFAULT_SERVER_KEEP_ALIVE_ON_PING;
+    }
+
+    /**
      * Returns the default client-side idle timeout of a connection for keep-alive in milliseconds.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#idleTimeout(Duration)}.
@@ -727,6 +752,18 @@ public final class Flags {
      */
     public static long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default option that is preventing the server from staying in an idle state when
+     * an HTTP/2 PING frame is received.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_CLIENT_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
+    public static boolean defaultClientKeepAliveOnPing() {
+        return DEFAULT_CLIENT_KEEP_ALIVE_ON_PING;
     }
 
     /**
@@ -790,6 +827,23 @@ public final class Flags {
      */
     public static boolean defaultUseHttp2Preface() {
         return DEFAULT_USE_HTTP2_PREFACE;
+    }
+
+    /**
+     * Returns the default value of the {@link ClientFactoryBuilder#preferHttp1(boolean)} option.
+     * If enabled, the client will not attempt to upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and
+     * {@link SessionProtocol#HTTPS}. However, the client will use HTTP/2 if {@link SessionProtocol#H2} or
+     * {@link SessionProtocol#H2C} is used.
+     *
+     * <p>Note that this option has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#preferHttp1(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultPreferHttp1=true} JVM option to enable it.
+     */
+    @UnstableApi
+    public static boolean defaultPreferHttp1() {
+        return DEFAULT_PREFER_HTTP1;
     }
 
     /**
@@ -1006,6 +1060,22 @@ public final class Flags {
      */
     public static long defaultHttp2MaxHeaderListSize() {
         return DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE;
+    }
+
+    /**
+     * Returns the default maximum number of RST frames that are allowed per window before the connection is
+     * closed. This allows to protect against the remote peer flooding us with such frames and using up a lot
+     * of CPU. Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * to override the default value. {@code 0} means no protection should be applied.
+     */
+    @UnstableApi
+    public static int defaultServerHttp2MaxResetFramesPerMinute() {
+        return DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
     }
 
     /**
@@ -1441,7 +1511,7 @@ public final class Flags {
     }
 
     private static String nonnullCaffeineSpec(Function<FlagsProvider, String> method, String flagName) {
-        final String spec = caffeineSpec(method, flagName,false);
+        final String spec = caffeineSpec(method, flagName, false);
         assert spec != null; // Can never be null if allowOff is false.
         return spec;
     }

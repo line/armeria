@@ -130,9 +130,9 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
     }
 
     @VisibleForTesting
-    List<AbstractEventLoopEntry> entries(SessionProtocol sessionProtocol,
-                                         EndpointGroup endpointGroup,
-                                         @Nullable Endpoint endpoint) {
+    AbstractEventLoopEntry[] entries(SessionProtocol sessionProtocol,
+                                     EndpointGroup endpointGroup,
+                                     @Nullable Endpoint endpoint) {
         return state(sessionProtocol, endpointGroup, endpoint).entries();
     }
 
