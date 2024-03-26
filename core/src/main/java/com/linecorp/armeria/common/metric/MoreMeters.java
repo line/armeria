@@ -102,7 +102,7 @@ public final class MoreMeters {
         requireNonNull(registry, "registry");
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
-        requireNonNull(distStatsConfig, "distStatCfg");
+        requireNonNull(distStatsConfig, "distStatsConfig");
 
         final Builder builder =
                 DistributionSummary.builder(name)
@@ -151,7 +151,7 @@ public final class MoreMeters {
         requireNonNull(registry, "registry");
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
-        requireNonNull(distStatsConfig, "distStatCfg");
+        requireNonNull(distStatsConfig, "distStatsConfig");
 
         final Double maxExpectedValueNanos = distStatsConfig.getMaximumExpectedValueAsDouble();
         final Double minExpectedValueNanos = distStatsConfig.getMinimumExpectedValueAsDouble();

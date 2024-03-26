@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,19 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.metric;
+package com.linecorp.armeria.common;
 
 import java.time.Duration;
 
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 
-public final class DistributionStatisticConfigUtil {
-    public static final DistributionStatisticConfig DEFAULT_DIST_STAT_CFG =
+final class DistributionStatisticConfigUtil {
+    static final DistributionStatisticConfig DEFAULT_DIST_STAT_CFG =
             DistributionStatisticConfig.builder()
                                        .percentilesHistogram(false)
                                        .serviceLevelObjectives()
-                                       .percentiles(
-                                               0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
+                                       .percentiles(0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
                                        .percentilePrecision(2)
                                        .minimumExpectedValue(1.0)
                                        .maximumExpectedValue(Double.MAX_VALUE)

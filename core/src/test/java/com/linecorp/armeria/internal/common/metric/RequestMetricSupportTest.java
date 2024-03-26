@@ -16,7 +16,6 @@
 package com.linecorp.armeria.internal.common.metric;
 
 import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
-import static com.linecorp.armeria.internal.common.metric.DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
@@ -27,6 +26,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -292,7 +292,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
-                                   SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
         return ctx;
     }
 
@@ -325,7 +325,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
-                                   SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
@@ -364,7 +364,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
-                                   SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
 
         ctx.logBuilder().name("BarService", "baz");
 
@@ -384,7 +384,7 @@ class RequestMetricSupportTest {
 
         RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET,
                                    MeterIdPrefixFunction.ofDefault("foo"), true,
-                                   SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
         sctx.logBuilder().endRequest();
         try (SafeCloseable ignored = sctx.push()) {
             final ClientRequestContext cctx =
@@ -395,7 +395,7 @@ class RequestMetricSupportTest {
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
                                        MeterIdPrefixFunction.ofDefault("bar"), false,
-                                       SuccessFunction.ofDefault(), DEFAULT_DIST_STAT_CFG);
+                                       SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
             cctx.logBuilder().endRequest();
             cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
             cctx.logBuilder().endResponse();
@@ -453,9 +453,9 @@ class RequestMetricSupportTest {
             return (statusCode >= 200 && statusCode < 400) || statusCode == 409;
         };
         RequestMetricSupport.setup(ctx1, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction,
-                                   DEFAULT_DIST_STAT_CFG);
+                                   Flags.distributionStatisticConfig());
         RequestMetricSupport.setup(ctx2, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction,
-                                   DEFAULT_DIST_STAT_CFG);
+                                   Flags.distributionStatisticConfig());
 
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(409));
         ctx1.logBuilder().endRequest();
