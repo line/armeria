@@ -20,8 +20,6 @@ import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHtt
 import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.URISyntaxException;
 
 import org.slf4j.Logger;
@@ -38,7 +36,6 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -58,7 +55,6 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
-import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpExpectationFailedEvent;
@@ -184,38 +180,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         return;
                     }
 
+                    assert msg instanceof NettyHttp1Request;
+                    // Precompute values that rely on CONNECTION related headers since they will be cleaned
+                    // after ArmeriaHttpUtil#toArmeria is called
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     final boolean transferEncodingChunked = HttpUtil.isTransferEncodingChunked(nettyReq);
 
-                    // Convert the Netty HttpHeaders into Armeria RequestHeaders.
-                    final RequestHeaders headers;
-                    assert nettyReq instanceof ArmeriaDefaultHttpRequest;
-                    final RequestHeadersBuilder builder =
-                            ((ArmeriaDefaultHttpRequest) nettyReq).requestHeadersBuilder();
-                    final ArmeriaHttpHeaders armeriaHttpHeaders = (ArmeriaHttpHeaders) nettyReq.headers();
-
-                    builder.scheme(scheme.toString());
-                    builder.path(reqTarget.toString());
-
-                    if (!builder.contains(com.linecorp.armeria.common.HttpHeaderNames.HOST)) {
-                        // The client violates the spec that the request headers must contain a Host header.
-                        // But we just add Host header to allow the request.
-                        // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
-                        final String defaultHostname = cfg.defaultVirtualHost().defaultHostname();
-                        final SocketAddress localAddr = ctx.channel().localAddress();
-                        final String hostname;
-                        if (localAddr instanceof InetSocketAddress) {
-                            hostname = defaultHostname + ':' + ((InetSocketAddress) localAddr).getPort();
-                        } else {
-                            assert localAddr instanceof DomainSocketAddress : localAddr;
-                            hostname = defaultHostname;
-                        }
-                        builder.add(com.linecorp.armeria.common.HttpHeaderNames.HOST,
-                                    hostname);
-                    }
-
-                    headers = armeriaHttpHeaders.buildRequestHeaders();
-
+                    final NettyHttp1Headers nettyHttp1Headers = (NettyHttp1Headers) nettyReq.headers();
+                    final RequestHeaders headers =
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, nettyHttp1Headers.builder(),
+                                                      cfg, scheme.toString(), reqTarget);
                     // Do not accept unsupported methods.
                     final HttpMethod method = headers.method();
                     switch (method) {
