@@ -753,18 +753,17 @@ final class AnnotatedValueResolver {
 
                 // Do not convert value here because the element type is String.
                 if (values != null && !values.isEmpty()) {
+                    final String first = values.get(0);
+                    if (first.isEmpty()) {
+                        return resolvedValues;
+                    }
                     if (queryDelimiter != null && values.size() == 1) {
-                        final String first = values.get(0);
                         Splitter.on(queryDelimiter)
                                 .splitToStream(first)
                                 .map(resolver::convert)
-                                .filter(AnnotatedValueResolver::isNotEmptyStringNorNull)
                                 .forEach(resolvedValues::add);
                     } else {
-                        values.stream()
-                              .map(resolver::convert)
-                              .filter(AnnotatedValueResolver::isNotEmptyStringNorNull)
-                              .forEach(resolvedValues::add);
+                        values.stream().map(resolver::convert).forEach(resolvedValues::add);
                     }
                 } else {
                     final Object defaultValue = resolver.defaultOrException();
@@ -884,16 +883,6 @@ final class AnnotatedValueResolver {
             }
         }
         return false;
-    }
-
-    private static boolean isNotEmptyStringNorNull(@Nullable Object value) {
-        if (value == null) {
-            return false;
-        }
-        if (value instanceof String) {
-            return !((String) value).isEmpty();
-        }
-        return true;
     }
 
     @Nullable
