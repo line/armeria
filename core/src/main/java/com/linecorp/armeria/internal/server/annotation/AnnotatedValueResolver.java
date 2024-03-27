@@ -753,11 +753,11 @@ final class AnnotatedValueResolver {
 
                 // Do not convert value here because the element type is String.
                 if (values != null && !values.isEmpty()) {
-                    final String first = values.get(0);
-                    if (first.isEmpty()) {
-                        return resolvedValues;
-                    }
                     if (queryDelimiter != null && values.size() == 1) {
+                        final String first = values.get(0);
+                        if (first.isEmpty()) {
+                            return resolvedValues;
+                        }
                         Splitter.on(queryDelimiter)
                                 .splitToStream(first)
                                 .map(resolver::convert)
