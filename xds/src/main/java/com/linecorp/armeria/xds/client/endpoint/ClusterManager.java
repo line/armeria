@@ -19,7 +19,6 @@ package com.linecorp.armeria.xds.client.endpoint;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -181,7 +180,7 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
     private State state() {
         final Map<ClusterSnapshot, ClusterEntry> clusterEntries = this.clusterEntries;
         if (clusterEntries.isEmpty()) {
-            return new State(listenerSnapshot, Collections.emptyList());
+            return new State(listenerSnapshot, ImmutableList.of());
         }
         final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();
         for (ClusterEntry clusterEntry: clusterEntries.values()) {
@@ -234,7 +233,7 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
 
     static final class State {
 
-        static final State INITIAL_STATE = new State(null, Collections.emptyList());
+        static final State INITIAL_STATE = new State(null, ImmutableList.of());
 
         // There is no guarantee that endpoints corresponds to the listenerSnapshot.
         // However, the state will be eventually consistent and the state is only used
