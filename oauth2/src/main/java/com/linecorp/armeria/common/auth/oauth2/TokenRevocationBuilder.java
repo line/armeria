@@ -133,6 +133,7 @@ public final class TokenRevocationBuilder {
      */
     public TokenRevocationBuilder clientAuthentication(
             Supplier<ClientAuthentication> clientAuthenticationSupplier) {
+        requireNonNull(clientAuthenticationSupplier, "clientAuthenticationSupplier");
         this.clientAuthenticationSupplier = clientAuthenticationSupplier;
         return this;
     }

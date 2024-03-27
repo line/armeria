@@ -37,7 +37,8 @@ public interface AccessTokenRequest extends OAuth2Request {
      * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.4">RFC 6749, Section 4.4</a>.
      */
     static AccessTokenRequest ofClientCredentials(ClientAuthentication clientAuthentication) {
-        return ofClientCredentials(clientAuthentication, null);
+        requireNonNull(clientAuthentication, "clientAuthentication");
+        return new ClientCredentialsAccessTokenRequest(clientAuthentication, null);
     }
 
     /**
@@ -46,8 +47,9 @@ public interface AccessTokenRequest extends OAuth2Request {
      * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.4">RFC 6749, Section 4.4</a>.
      */
     static AccessTokenRequest ofClientCredentials(ClientAuthentication clientAuthentication,
-                                                  @Nullable List<String> scopes) {
+                                                  List<String> scopes) {
         requireNonNull(clientAuthentication, "clientAuthentication");
+        requireNonNull(scopes, "scopes");
         return new ClientCredentialsAccessTokenRequest(clientAuthentication, scopes);
     }
 

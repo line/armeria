@@ -42,7 +42,7 @@ final class ResourceOwnerPasswordAccessTokenRequest extends AbstractAccessTokenR
     }
 
     @Override
-    void addBodyParams0(QueryParamsBuilder formBuilder) {
+    void addBodyParams1(QueryParamsBuilder formBuilder) {
         formBuilder.add(USER_NAME, username);
         formBuilder.add(PASSWORD, password);
     }

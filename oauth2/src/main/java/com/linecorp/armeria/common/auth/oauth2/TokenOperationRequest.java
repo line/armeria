@@ -19,12 +19,14 @@ package com.linecorp.armeria.common.auth.oauth2;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An OAuth 2.0 request for token operations such as <a href="https://datatracker.ietf.org/doc/html/rfc7009">
  * OAuth 2.0 Token Revocation</a> and
  * <a href="https://datatracker.ietf.org/doc/html/rfc7662">OAuth 2.0 Token Introspection</a>
  */
+@UnstableApi
 public interface TokenOperationRequest extends OAuth2Request {
 
     /**

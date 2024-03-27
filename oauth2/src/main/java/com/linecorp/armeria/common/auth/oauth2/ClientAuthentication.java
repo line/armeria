@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides client authentication for the OAuth 2.0 requests,
@@ -30,6 +31,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * Authorization: Basic czZCaGRSa3F0Mzo3RmpmcDBaQnIxS3REUmJuZlZkbUl3
  * }</pre>
  */
+@UnstableApi
 @Nullable
 public interface ClientAuthentication {
 

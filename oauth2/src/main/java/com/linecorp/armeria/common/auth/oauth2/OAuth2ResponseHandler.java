@@ -18,10 +18,12 @@ package com.linecorp.armeria.common.auth.oauth2;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A functional interface to handle OAuth2 responses.
  */
+@UnstableApi
 @FunctionalInterface
 public interface OAuth2ResponseHandler<T> {
 

@@ -17,9 +17,11 @@
 package com.linecorp.armeria.client.auth.oauth2;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -30,6 +32,8 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 
 class AccessTokenRequestTest {
@@ -130,5 +134,51 @@ class AccessTokenRequestTest {
         assertThat(request.path()).isEqualTo("/token/jwt");
         assertThat(request.contentUtf8()).isEqualTo(
                 "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=test_jwt");
+    }
+
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    void testBodyParams(boolean useFormBuilder) {
+        final AccessTokenRequest accessTokenRequest =
+                AccessTokenRequest.ofClientCredentials(
+                        ClientAuthentication.ofClientPassword("test_client", "client_password", false));
+        final QueryParams bodyParams;
+        if (useFormBuilder) {
+            final QueryParamsBuilder formBuilder = QueryParams.builder();
+            accessTokenRequest.addBodyParams(formBuilder);
+            bodyParams = formBuilder.build();
+        } else {
+            bodyParams = accessTokenRequest.bodyParams();
+        }
+        assertThat(bodyParams.get("grant_type")).isEqualTo("client_credentials");
+        assertThat(bodyParams.get("client_id")).isEqualTo("test_client");
+        assertThat(bodyParams.get("client_secret")).isEqualTo("client_password");
+        final AggregatedHttpRequest req = accessTokenRequest.asHttpRequest("/token")
+                                                            .aggregate().join();
+        final QueryParams bodyParams1 = QueryParams.fromQueryString(req.contentUtf8());
+        assertThat(bodyParams1.get("grant_type")).isEqualTo("client_credentials");
+        assertThat(bodyParams1.get("client_id")).isEqualTo("test_client");
+        assertThat(bodyParams1.get("client_secret")).isEqualTo("client_password");
+    }
+
+    @Test
+    void invalidScope() {
+        assertThatThrownBy(() -> {
+            AccessTokenRequest.ofResourceOwnerPassword(
+                    "test_user", "user_password", null,
+                    ImmutableList.of("invalid\""));
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessage("Invalid scope token: invalid\"");
+
+        assertThatThrownBy(() -> {
+            AccessTokenRequest.ofResourceOwnerPassword(
+                    "test_user", "user_password", null,
+                    ImmutableList.of("\\invalid"));
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessage("Invalid scope token: \\invalid");
+
+        AccessTokenRequest.ofResourceOwnerPassword(
+                "test_user", "user_password", null,
+                ImmutableList.of("valid"));
     }
 }

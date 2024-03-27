@@ -47,11 +47,29 @@ abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request implemen
                                @Nullable List<String> scopes) {
         super(clientAuthentication);
         this.grantType = requireNonNull(grantType, "grantType");
+        validateScopes(scopes);
         this.scopes = scopes;
     }
 
+    private static void validateScopes(@Nullable List<String> scopes) {
+        if (scopes == null) {
+            return;
+        }
+
+        for (String scopeToken : scopes) {
+            // scope-token = 1*( %x21 / %x23-5B / %x5D-7E )
+            // https://datatracker.ietf.org/doc/html/rfc6749#section-3.3
+            for (char c : scopeToken.toCharArray()) {
+                // \x22 (") and \x5C (\) are not allowed in scope token.
+                if (c < 0x21 || c > 0x7E || c == 0x22 || c == 0x5C) {
+                    throw new IllegalArgumentException("Invalid scope token: " + scopeToken);
+                }
+            }
+        }
+    }
+
     @Override
-    public final void addBodyParams(QueryParamsBuilder formBuilder) {
+    public final void addBodyParams0(QueryParamsBuilder formBuilder) {
         requireNonNull(formBuilder, "formBuilder");
         formBuilder.add(GRANT_TYPE, grantType());
         final List<String> scopes = scopes();
@@ -61,10 +79,10 @@ abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request implemen
             scopeStr = SCOPE_JOINER.join(scopes);
             formBuilder.add(SCOPE, scopeStr);
         }
-        addBodyParams0(formBuilder);
+        addBodyParams1(formBuilder);
     }
 
-    abstract void addBodyParams0(QueryParamsBuilder formBuilder);
+    abstract void addBodyParams1(QueryParamsBuilder formBuilder);
 
     @Override
     public final String grantType() {

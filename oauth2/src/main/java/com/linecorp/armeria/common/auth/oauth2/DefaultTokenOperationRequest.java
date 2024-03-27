@@ -41,7 +41,7 @@ final class DefaultTokenOperationRequest extends AbstractOAuth2Request implement
     }
 
     @Override
-    public void addBodyParams(QueryParamsBuilder formBuilder) {
+    public void addBodyParams0(QueryParamsBuilder formBuilder) {
         formBuilder.add(TOKEN, token);
         if (tokenTypeHint != null) {
             formBuilder.add(TOKEN_TYPE_HINT, tokenTypeHint);

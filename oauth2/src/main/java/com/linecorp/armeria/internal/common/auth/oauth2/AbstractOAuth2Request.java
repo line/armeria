@@ -57,26 +57,35 @@ public abstract class AbstractOAuth2Request implements OAuth2Request {
         final RequestHeadersBuilder headersBuilder =
                 RequestHeaders.builder(HttpMethod.POST, endpointPath)
                               .contentType(MediaType.FORM_DATA);
-        String headerValue = null;
         if (clientAuthentication != null) {
-            headerValue = clientAuthentication.asHeaderValue();
-        }
-        if (headerValue != null) {
-            headersBuilder.set(HttpHeaderNames.AUTHORIZATION, headerValue);
+            final String headerValue = clientAuthentication.asHeaderValue();
+            if (headerValue != null) {
+                headersBuilder.set(HttpHeaderNames.AUTHORIZATION, headerValue);
+            }
         }
         final RequestHeaders headers = headersBuilder.build();
 
         // Build body
         final QueryParamsBuilder bodyBuilder = QueryParams.builder();
-        if (clientAuthentication != null && headerValue == null) {
-            clientAuthentication.addAsBodyParameters(bodyBuilder);
-        }
         addBodyParams(bodyBuilder);
         final QueryParams bodyParams = bodyBuilder.build();
         this.bodyParams = bodyParams;
 
         return HttpRequest.of(headers, HttpData.ofUtf8(bodyParams.toQueryString()));
     }
+
+    @Override
+    public final void addBodyParams(QueryParamsBuilder formBuilder) {
+        if (clientAuthentication != null) {
+            final String headerValue = clientAuthentication.asHeaderValue();
+            if (headerValue == null) {
+                clientAuthentication.addAsBodyParameters(formBuilder);
+            }
+        }
+        addBodyParams0(formBuilder);
+    }
+
+    public abstract void addBodyParams0(QueryParamsBuilder formBuilder);
 
     @Override
     public QueryParams bodyParams() {
