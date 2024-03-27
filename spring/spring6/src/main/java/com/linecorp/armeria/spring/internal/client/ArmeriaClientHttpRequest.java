@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.spring.web.reactive;
+package com.linecorp.armeria.spring.internal.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -35,6 +35,10 @@ import org.springframework.http.client.reactive.ClientHttpRequest;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,6 +47,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -50,34 +55,44 @@ import reactor.core.publisher.Mono;
 /**
  * A {@link ClientHttpRequest} implementation for the Armeria HTTP client.
  */
-final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
+public final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
 
     private final WebClient client;
 
     private final RequestHeadersBuilder headers;
     private final DataBufferFactoryWrapper<?> factoryWrapper;
+    @Nullable
+    private final RequestOptions requestOptions;
 
     private final HttpMethod httpMethod;
 
     private final URI uri;
 
     private final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
+    @Nullable
+    private ClientRequestContext ctx;
 
     @Nullable
     private HttpRequest request;
 
-    ArmeriaClientHttpRequest(WebClient client, HttpMethod httpMethod, String pathAndQuery,
-                             URI uri, DataBufferFactoryWrapper<?> factoryWrapper) {
+    public ArmeriaClientHttpRequest(WebClient client, HttpMethod httpMethod, String pathAndQuery,
+                                    URI uri, DataBufferFactoryWrapper<?> factoryWrapper,
+                                    @Nullable RequestOptions requestOptions) {
         this.client = requireNonNull(client, "client");
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.uri = requireNonNull(uri, "uri");
         this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
+        this.requestOptions = requestOptions;
 
         headers = RequestHeaders.builder()
                                 .add(HttpHeaderNames.METHOD, httpMethod.name())
-                                .add(HttpHeaderNames.SCHEME, uri.getScheme())
-                                .add(HttpHeaderNames.AUTHORITY, uri.getRawAuthority())
                                 .add(HttpHeaderNames.PATH, requireNonNull(pathAndQuery, "pathAndQuery"));
+        if (uri.getScheme() != null) {
+            headers.add(HttpHeaderNames.SCHEME, uri.getScheme());
+        }
+        if (uri.getRawAuthority() != null) {
+            headers.add(HttpHeaderNames.AUTHORITY, uri.getRawAuthority());
+        }
     }
 
     @Override
@@ -127,6 +142,16 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
         return future;
     }
 
+    /**
+     * Returns the {@link ClientRequestContext} associated with this request.
+     * This method returns {@code null} until the request is sent.
+     * A non-{@code null} value is available only after {@link #future()} is complete.
+     */
+    @Nullable
+    public ClientRequestContext context() {
+        return ctx;
+    }
+
     @Override
     public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
         return write(Flux.from(body));
@@ -152,14 +177,23 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
         return () -> Mono.defer(() -> {
             assert request == null : request;
             request = supplier.get();
-            future.complete(client.execute(request));
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                final HttpResponse response;
+                if (requestOptions == null) {
+                    response = client.execute(request);
+                } else {
+                    response = client.execute(request, requestOptions);
+                }
+                ctx = captor.get();
+                future.complete(response);
+            }
             return Mono.empty();
         });
     }
 
     @VisibleForTesting
     @Nullable
-    HttpRequest request() {
+    public HttpRequest request() {
         return request;
     }
 

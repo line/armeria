@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import io.netty.buffer.PooledByteBufAllocator;
 import reactor.core.publisher.Flux;

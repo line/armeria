@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
@@ -75,6 +74,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -224,7 +224,7 @@ public final class DefaultClientRequestContext
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
+              guessExchangeType(requestOptions, req),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root), options.contextHook());
         assert (eventLoop == null && responseCancellationScheduler == null) ||
@@ -279,6 +279,17 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+    }
+
+    private static ExchangeType guessExchangeType(RequestOptions requestOptions, @Nullable HttpRequest req) {
+        final ExchangeType exchangeType = requestOptions.exchangeType();
+        if (exchangeType != null) {
+            return exchangeType;
+        }
+        if (req instanceof FixedStreamMessage) {
+            return ExchangeType.RESPONSE_STREAMING;
+        }
+        return ExchangeType.BIDI_STREAMING;
     }
 
     private static long requestAutoAbortDelayMillis(ClientOptions options, RequestOptions requestOptions) {
