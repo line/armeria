@@ -168,7 +168,7 @@ class GraphqlServiceSubscriptionTest {
     }
 
     @Test
-    void completeIdIsnt() {
+    void completeEventIdIsNotSplit() {
         final WebSocketClient webSocketClient =
                 WebSocketClient.builder(server.uri(SessionProtocol.H1C, SerializationFormat.WS))
                                .subprotocols("graphql-transport-ws")
