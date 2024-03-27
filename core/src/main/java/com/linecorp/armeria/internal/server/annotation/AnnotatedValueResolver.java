@@ -753,12 +753,17 @@ final class AnnotatedValueResolver {
 
                 // Do not convert value here because the element type is String.
                 if (values != null && !values.isEmpty()) {
-                    if (queryDelimiter != null && values.size() == 1) {
+                    if (values.size() == 1) {
                         final String first = values.get(0);
-                        Splitter.on(queryDelimiter)
-                                .splitToStream(first)
-                                .map(resolver::convert)
-                                .forEach(resolvedValues::add);
+                        if (first.isEmpty()) {
+                            return resolvedValues;
+                        }
+                        if (queryDelimiter != null) {
+                            Splitter.on(queryDelimiter)
+                                    .splitToStream(first)
+                                    .map(resolver::convert)
+                                    .forEach(resolvedValues::add);
+                        }
                     } else {
                         values.stream().map(resolver::convert).forEach(resolvedValues::add);
                     }
@@ -1025,6 +1030,17 @@ final class AnnotatedValueResolver {
     private Object convert(@Nullable String value) {
         if (value == null) {
             return defaultOrException();
+        }
+        if (value.isEmpty()) {
+            logger.warn("Parameter is present but the value is missing: " + httpElementName);
+            if (String.class.isAssignableFrom(elementType)) {
+                return value;
+            }
+            if (elementType.isPrimitive()) {
+                throw new IllegalArgumentException("Cannot set null to primitive type parameter: " +
+                                                   httpElementName);
+            }
+            return null;
         }
         return convert(value, elementType, enumConverter);
     }
