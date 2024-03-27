@@ -753,17 +753,15 @@ final class AnnotatedValueResolver {
 
                 // Do not convert value here because the element type is String.
                 if (values != null && !values.isEmpty()) {
-                    if (values.size() == 1) {
+                    if (values.size() == 1 && values.get(0).isEmpty()) {
+                        return resolvedValues;
+                    }
+                    if (queryDelimiter != null && values.size() == 1) {
                         final String first = values.get(0);
-                        if (first.isEmpty()) {
-                            return resolvedValues;
-                        }
-                        if (queryDelimiter != null) {
-                            Splitter.on(queryDelimiter)
-                                    .splitToStream(first)
-                                    .map(resolver::convert)
-                                    .forEach(resolvedValues::add);
-                        }
+                        Splitter.on(queryDelimiter)
+                                .splitToStream(first)
+                                .map(resolver::convert)
+                                .forEach(resolvedValues::add);
                     } else {
                         values.stream().map(resolver::convert).forEach(resolvedValues::add);
                     }
@@ -1032,7 +1030,6 @@ final class AnnotatedValueResolver {
             return defaultOrException();
         }
         if (value.isEmpty()) {
-            logger.warn("Parameter is present but the value is missing: " + httpElementName);
             if (String.class.isAssignableFrom(elementType)) {
                 return value;
             }
@@ -1049,6 +1046,10 @@ final class AnnotatedValueResolver {
     private Object defaultOrException() {
         if (!shouldExist) {
             // May return 'null' if no default value is specified.
+            if (elementType.isPrimitive() && defaultValue == null) {
+                throw new IllegalArgumentException("Cannot set null to primitive type parameter: " +
+                                                   httpElementName);
+            }
             return defaultValue;
         }
         throw new IllegalArgumentException("Mandatory parameter/header is missing: " + httpElementName);
