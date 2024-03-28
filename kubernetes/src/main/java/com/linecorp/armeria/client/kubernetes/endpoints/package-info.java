@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,9 +15,9 @@
  */
 
 /**
- * Fabric8 Kubernetes client based on <a href="https://armeria.dev">Armeria</a>.
+ * {@link com.linecorp.armeria.client.endpoint.EndpointGroup} for Kubernetes services.
  */
 @NonNullByDefault
-package com.linecorp.armeria.client.kubernetes;
+package com.linecorp.armeria.client.kubernetes.endpoints;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
