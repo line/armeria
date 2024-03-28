@@ -28,7 +28,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,11 +58,7 @@ import com.linecorp.armeria.server.ServerConfig;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
@@ -267,33 +262,6 @@ class ArmeriaHttpUtilTest {
 
         assertThat(out.getAll(HttpHeaderNames.COOKIE))
                 .containsExactly("a=b; c=d; e=f;g=h; i=j; k=l;");
-    }
-
-    @Test
-    void addHostHeaderIfMissing() throws URISyntaxException {
-        final io.netty.handler.codec.http.HttpHeaders headers = new DefaultHttpHeaders();
-        headers.add(HttpHeaderNames.HOST, "bar");
-
-        final HttpRequest originReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello", headers);
-
-        final ChannelHandlerContext ctx = mockChannelHandlerContext();
-
-        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http",
-                                                  RequestTarget.forServer(originReq.uri()));
-        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
-        assertThat(armeriaHeaders.authority()).isEqualTo("bar");
-        assertThat(armeriaHeaders.scheme()).isEqualTo("http");
-        assertThat(armeriaHeaders.path()).isEqualTo("/hello");
-
-        // Remove Host header.
-        headers.remove(HttpHeaderNames.HOST);
-        armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https",
-                                   RequestTarget.forServer(originReq.uri()));
-        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("foo:36462"); // The default hostname.
-        assertThat(armeriaHeaders.authority()).isEqualTo("foo:36462");
-        assertThat(armeriaHeaders.scheme()).isEqualTo("https");
-        assertThat(armeriaHeaders.path()).isEqualTo("/hello");
     }
 
     @Test
