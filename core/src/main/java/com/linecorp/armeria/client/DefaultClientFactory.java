@@ -137,6 +137,9 @@ final class DefaultClientFactory implements ClientFactory {
     public ReleasableHolder<EventLoop> acquireEventLoop(SessionProtocol sessionProtocol,
                                                         EndpointGroup endpointGroup,
                                                         @Nullable Endpoint endpoint) {
+        if (isClosing()) {
+            throw new IllegalStateException("Cannot acquire an event loop because the factory is closing.");
+        }
         return httpClientFactory.acquireEventLoop(sessionProtocol, endpointGroup, endpoint);
     }
 
@@ -163,6 +166,9 @@ final class DefaultClientFactory implements ClientFactory {
 
     @Override
     public Object newClient(ClientBuilderParams params) {
+        if (isClosing()) {
+            throw new IllegalStateException("Cannot create a client because the factory is closing.");
+        }
         validateParams(params);
         final Scheme scheme = params.scheme();
         final Class<?> clientType = params.clientType();

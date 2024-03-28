@@ -242,6 +242,13 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
 
     /**
+     * The client-side maximum allowed duration of a connection drain in microseconds.
+     */
+    public static final ClientFactoryOption<Long> CLIENT_CONNECTION_DRAIN_DURATION_MICROS =
+            ClientFactoryOption.define("CLIENT_CONNECTION_DRAIN_DURATION_MICROS",
+                                       Flags.defaultClientConnectionDrainDurationMicros());
+
+    /**
      * The {@link MeterRegistry} which collects various stats.
      */
     public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
@@ -555,6 +562,13 @@ public final class ClientFactoryOptions
      */
     public ConnectionPoolListener connectionPoolListener() {
         return get(CONNECTION_POOL_LISTENER);
+    }
+
+    /**
+     * Returns the client-side maximum allowed duration of a connection drain in microseconds.
+     */
+    public long clientConnectionDrainDurationMicros() {
+        return get(CLIENT_CONNECTION_DRAIN_DURATION_MICROS);
     }
 
     /**
