@@ -25,7 +25,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -106,8 +105,8 @@ class WebSocketServiceItTest {
 
         client.sendFrame(pingFrame);
 
-        final String pongContent = client.receivedMessages().poll(5, TimeUnit.SECONDS);
-
+        await().untilAsserted(() -> assertThat(client.receivedMessages()).isNotEmpty());
+        final String pongContent = client.receivedMessages().poll();
         assertThat(pongContent).isEqualTo(pingContent);
     }
 
