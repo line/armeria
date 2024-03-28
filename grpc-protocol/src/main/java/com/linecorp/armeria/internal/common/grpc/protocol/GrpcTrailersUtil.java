@@ -53,7 +53,7 @@ public final class GrpcTrailersUtil {
         }
         if (details != null && details.length > 0) {
             final String encodedDetails = Base64.getEncoder().encodeToString(details);
-            trailersBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_DETAILS, encodedDetails);
+            trailersBuilder.add(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, encodedDetails);
         }
     }
 

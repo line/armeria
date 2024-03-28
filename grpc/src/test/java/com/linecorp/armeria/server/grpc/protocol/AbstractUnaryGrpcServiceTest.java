@@ -223,8 +223,8 @@ class AbstractUnaryGrpcServiceTest {
                     .cause()
                     .satisfies(ex -> {
                             final ArmeriaStatusException cause = (ArmeriaStatusException) ex;
-                            assertThat(cause.getDetails()).isNotEmpty();
-                            assertThat(cause.getDetails()).isEqualTo("TestDetails".getBytes());
+                            assertThat(cause.getGrpcStatusDetailsBin()).isNotEmpty();
+                            assertThat(cause.getGrpcStatusDetailsBin()).isEqualTo("TestDetails".getBytes());
                         });
             final ClientRequestContext ctx = captor.get();
             final HttpHeaders trailers = GrpcWebTrailers.get(ctx);

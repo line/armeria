@@ -162,7 +162,7 @@ public final class UnaryGrpcClient {
             if (grpcMessage != null) {
                 grpcMessage = StatusMessageEscaper.unescape(grpcMessage);
             }
-            final String grpcDetails = headers.get(GrpcHeaderNames.ARMERIA_GRPC_DETAILS);
+            final String grpcDetails = headers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
             final byte[] details;
             if (grpcDetails != null) {
                 details = Base64.getDecoder().decode(grpcDetails);

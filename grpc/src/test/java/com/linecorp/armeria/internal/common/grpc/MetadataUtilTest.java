@@ -61,7 +61,7 @@ class MetadataUtilTest {
                                .add(HttpHeaderNames.CONTENT_TYPE, "application/grpc+proto")
                                .add(GrpcHeaderNames.GRPC_STATUS, "3")
                                .add(GrpcHeaderNames.GRPC_MESSAGE, "test_grpc_message")
-                               .add(GrpcHeaderNames.ARMERIA_GRPC_DETAILS,
+                               .add(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN,
                                     Base64.getEncoder().encodeToString("test_grpc_details".getBytes()));
 
         final Metadata metadata = new Metadata();
@@ -83,7 +83,7 @@ class MetadataUtilTest {
         assertThat(trailers.getAll(HttpHeaderNames.CONTENT_TYPE)).containsExactly("application/grpc+proto");
         assertThat(trailers.getAll(GrpcHeaderNames.GRPC_STATUS)).containsExactly("3");
         assertThat(trailers.getAll(GrpcHeaderNames.GRPC_MESSAGE)).containsOnly("test_grpc_message");
-        assertThat(Base64.getDecoder().decode(trailers.get(GrpcHeaderNames.ARMERIA_GRPC_DETAILS)))
+        assertThat(Base64.getDecoder().decode(trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN)))
                 .containsExactly("test_grpc_details".getBytes());
         assertThat(trailers.getAll(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN)).isEmpty();
     }

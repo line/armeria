@@ -164,7 +164,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                         final ArmeriaStatusException statusException = (ArmeriaStatusException) cause;
                         GrpcTrailersUtil.addStatusMessageToTrailers(
                                 trailersBuilder, statusException.getCode(), statusException.getMessage(),
-                                statusException.getDetails());
+                                statusException.getGrpcStatusDetailsBin());
                     } else {
                         GrpcTrailersUtil.addStatusMessageToTrailers(
                                 trailersBuilder, StatusCodes.INTERNAL, cause.getMessage(), null);

@@ -29,7 +29,7 @@ public final class ArmeriaStatusException extends RuntimeException {
 
     private final int code;
 
-    private final byte[] details;
+    private final byte[] grpcStatusDetailsBin;
 
     /**
      * Constructs an {@link ArmeriaStatusException} for the given gRPC status code and message.
@@ -39,10 +39,13 @@ public final class ArmeriaStatusException extends RuntimeException {
     }
 
     /**
-     * Constructs an {@link ArmeriaStatusException} for the given gRPC status code, message and details.
+     * Constructs an {@link ArmeriaStatusException} for the given gRPC status code, message
+     * and grpcStatusDetailsBin. {@code grpcStatusDetailsBin} may be formatted as
+     * {@code com.google.rpc.Status} to follow the
+     * <a href="https://github.com/grpc/grpc/issues/24007">unofficial specification</a>.
      */
-    public ArmeriaStatusException(int code, @Nullable String message, @Nullable byte[] details) {
-        this(code, message, details, null);
+    public ArmeriaStatusException(int code, @Nullable String message, @Nullable byte[] grpcStatusDetailsBin) {
+        this(code, message, grpcStatusDetailsBin, null);
     }
 
     /**
@@ -53,13 +56,16 @@ public final class ArmeriaStatusException extends RuntimeException {
     }
 
     /**
-     * Constructs an {@link ArmeriaStatusException} for the given gRPC status code, message, details and cause.
+     * Constructs an {@link ArmeriaStatusException} for the given gRPC status code, message,
+     * grpcStatusDetailsBin and cause. {@code grpcStatusDetailsBin} may be formatted as
+     * {@code com.google.rpc.Status} to follow the
+     * <a href="https://github.com/grpc/grpc/issues/24007">unofficial specification</a>.
      */
-    public ArmeriaStatusException(int code, @Nullable String message, @Nullable byte[] details,
+    public ArmeriaStatusException(int code, @Nullable String message, @Nullable byte[] grpcStatusDetailsBin,
                                   @Nullable Throwable cause) {
         super(message, cause);
         this.code = code;
-        this.details = details;
+        this.grpcStatusDetailsBin = grpcStatusDetailsBin;
     }
 
     /**
@@ -70,10 +76,10 @@ public final class ArmeriaStatusException extends RuntimeException {
     }
 
     /**
-     * Returns the gRPC details for this {@link ArmeriaStatusException}.
+     * Returns the gRPC details binary for this {@link ArmeriaStatusException}.
      */
     @Nullable
-    public byte[] getDetails() {
-        return details;
+    public byte[] getGrpcStatusDetailsBin() {
+        return grpcStatusDetailsBin;
     }
 }
