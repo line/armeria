@@ -20,17 +20,13 @@ In this step, we'll write a method for deleting a blog post. By completing this 
 
 ## What you need
 
-You must have the following files ready for deleting a blog post. You can always [download](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
+You need to have the following files obtained from previous steps.
+You can always [download](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
 
-- Main.java from [Step 1. Create a server](/tutorials/rest/blog/create-server)
-- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/prepare-data-object)
-- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/add-services-to-server)
-
-<Warning>
-
-To test deleting a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implement-create) for instructions.
-
-</Warning>
+- `Main.java`
+- `BlogPost.java`
+- `BlogService.java`
+- `BlogServiceTest.java`
 
 ## 1. Map HTTP method
 
@@ -112,7 +108,7 @@ What if there is no such post to delete? We can check if the blog exists before 
   ```
 
 2. Create an exception handler for the blog service:
-   1. Create a file, BadRequestExceptionHandler.java.
+   1. Create a file, `BadRequestExceptionHandler.java`.
    2. In the file, declare a custom exception handler implementing Armeria's <type://ExceptionHandlerFunction> interface.
 
    ```java filename=BadRequestExceptionHandler.java
@@ -200,50 +196,26 @@ public final class BlogService {
 }
 ```
 
-## 5. Test deleting a blog post
+## 5. Test an error case
 
-Let's test deleting a blog post.
+Add a test method as follows to test if our exception handler is working properly.
 
-1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/create-server) by running the `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
-2. Create a couple of blog posts to test deleting a blog post and get the ID value returned. Enter the cURL commands below.
+```java filename=BlogServiceTest.java
+import static org.assertj.core.api.Assertions.assertThat;
 
-  ```bash
-  $ curl --request POST 'localhost:8080/blogs' \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"First post for testing", "content":"Test deletion."}'
-  ```
+@Test
+@Order(5)
+void badRequestExceptionHandlerWhenTryingDeleteMissingBlogPost() throws JsonProcessingException {
+    final WebClient client = WebClient.of(server.httpUri());
+    final AggregatedHttpResponse res = client.delete("/blogs/100").aggregate().join();
+    assertThat(res.status()).isSameAs(HttpStatus.BAD_REQUEST);
+    assertThatJson(res.contentUtf8()).isEqualTo("{\"error\":\"The blog post does not exist. ID: 100\"}");
+}
+```
 
-  ```bash
-  $ curl --request POST 'localhost:8080/blogs' \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"Second post for testing", "content":"Test deleting a post."}'
-  ```
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
 
-  For each command, you'll get a response similar to the following.
-
-  ```bash
-  {"id":0,"title":"First post for testing","content":"Test deletion.","createdAt":...,"modifiedAt":...}
-
-  {"id":1,"title":"Second post for testing","content":"Test deleting a post.","createdAt":...,"modifiedAt":...}
-  ```
-
-3. Let's delete the second blog with the ID, `0`. Since our service method doesn't return anything, you won't see any response.
-
-  ```bash
-  $ curl --request DELETE 'localhost:8080/blogs/0'
-  ```
-
-4. Let's retrieve the blog post list to see if the post has been deleted successfully.
-
-  ```bash
-  $ curl --request GET 'localhost:8080/blogs'
-  ```
-
-  The response contains only one blog post. We can tell that the blog post with the ID `0` has been removed.
-
-  ```bash
-  {"id":1,"title":"Second post for testing","content":"Test deleting a post.","createdAt":...,"modifiedAt":...}
-  ```
 You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 
 ## Next step

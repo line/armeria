@@ -1,0 +1,144 @@
+---
+menuTitle: "Run a service"
+order: 2
+category: thrift
+type: step
+targetLang: java
+---
+
+# Running a service
+
+In this step, we'll do three things with the code we obtained from our Thrift file; define the blog service in Java, create a server instance, and run the service.
+
+<TutorialSteps current={2} />
+
+## What you need
+
+You need to have the [generated Java code](/tutorials/thrift/blog/define-service#3-compile-the-thrift-file) obtained from the previous step.
+You can always [download](https://github.com/line/armeria-examples/tree/main/tutorials/thrift) the full version, instead of creating one yourself.
+
+## 1. Implement the service
+
+Create a file, `BlogServiceImpl.java`, and declare the `BlogServiceImpl` class implementing the `BlogService` service we defined earlier in [Step 1. Define a service](/tutorials/thrift/blog/define-service).
+
+```java filename=BlogServiceImpl.java
+package example.armeria.server.blog.thrift;
+
+import example.armeria.blog.thrift.BlogService;
+
+public class BlogServiceImpl implements BlogService.AsyncIface {}
+```
+
+## 2. Override service methods
+
+Add empty service methods as follows to override the service methods.
+We'll implement the service methods one by one in this tutorial.
+Let's leave them empty for now.
+
+```java filename=BlogServiceImpl.java
+import example.armeria.blog.thrift.BlogPost;
+import example.armeria.blog.thrift.CreateBlogPostRequest;
+import example.armeria.blog.thrift.GetBlogPostRequest;
+import example.armeria.blog.thrift.ListBlogPostsRequest;
+import example.armeria.blog.thrift.ListBlogPostsResponse;
+import example.armeria.blog.thrift.UpdateBlogPostRequest;
+import example.armeria.blog.thrift.DeleteBlogPostRequest;
+import org.apache.thrift.TException;
+import org.apache.thrift.async.AsyncMethodCallback;
+
+public class BlogServiceImpl implements BlogService.AsyncIface {
+
+  @Override
+  public void createBlogPost(CreateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {}
+
+  @Override
+  public void getBlogPost(GetBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {}
+
+  @Override
+  public void listBlogPosts(ListBlogPostsRequest request, AsyncMethodCallback<ListBlogPostsResponse> resultHandler)
+          throws TException {}
+
+  @Override
+  public void updateBlogPost(UpdateBlogPostRequest request, AsyncMethodCallback<BlogPost> resultHandler)
+          throws TException {}
+
+  @Override
+  public void deleteBlogPost(DeleteBlogPostRequest request, AsyncMethodCallback<Void> resultHandler)
+          throws TException {}
+}
+```
+
+## 3. Create a server
+
+Let's create a server to serve our service.
+
+1. Create the `Main` class for the server.
+You can see the full version of the file [here](https://github.com/line/armeria-examples/tree/main/tutorials/thrift/src/main/java/example/armeria/server/blog/thrift/Main.java).
+  ```java filename=Main.java
+  package example.armeria.server.blog.thrift;
+
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+
+  public final class Main {
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+  }
+  ```
+2. Add the `newServer()` method in the `Main` class as follows.
+We are using Armeria's <type://THttpService> to handle Thrift calls.
+  ```java filename=Main.java
+  import com.linecorp.armeria.server.Server;
+  import com.linecorp.armeria.server.thrift.THttpService;
+  ...
+  private static Server newServer(int port) throws Exception {
+    final THttpService tHttpService =
+              THttpService.builder()
+                          .addService(new BlogServiceImpl())
+                          .build();
+  }
+  ```
+3. Create and return a server instance using Armeria's <type://ServerBuilder>.
+Note that the service instance, `tHttpService`, is added to the server instance.
+  ```java filename=Main.java
+  private static Server newServer(int port) throws Exception {
+    ...
+    return Server.builder()
+                 .http(port)
+                 .service("/thrift", tHttpService) // Add the service to server
+                 .build();
+  }
+  ```
+4. Add the `main()` method in the `Main` class as follows.
+  ```java filename=Main.java
+  public static void main(String[] args) throws Exception {
+    final Server server = newServer(8080);
+
+    server.closeOnJvmShutdown().thenRun(() -> {
+      logger.info("Server has been stopped.");
+    });
+
+    server.start().join();
+  }
+  ```
+
+## 4. Run the server
+
+Run the `Main.main()` method on your IDE or using Gradle.
+```bash
+./gradlew run
+```
+
+Your server is running if you see the following message.
+```bash
+[armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
+```
+
+## What's next
+
+In this step, we've created and added an empty Thrift service to a server.
+
+Next, we'll get on with implementing a service method for [creating blog posts](/tutorials/thrift/blog/implement-create).
+
+<TutorialSteps current={2} />

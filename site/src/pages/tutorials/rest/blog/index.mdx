@@ -24,10 +24,9 @@ In particular, you'll be using these Armeria features:
 - [Exception handler](/docs/server-annotated-service#handling-exceptions)
 - [Blocking task executor](/docs/server-annotated-service/#specifying-a-blocking-task-executor)
 
-This tutorial is based on a [sample service](https://github.com/line/armeria-examples/tree/main/tutorials/rest-api-annotated-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
-To keep our focus on Armeria, this tutorial and the sample service use memory-based operations instead of database operations.
+This tutorial is based on a [sample service](#sample-service), a minimal blog service, with which you can create, read, update, and delete blog posts.
 
-[Try writing a service yourself](#try-writing-blog-service-yourself) by following this tutorial or have a go at [running the sample service](#build-and-run-sample-service) right away.
+Follow this tutorial to write a service yourself or try [running the sample service](#build-and-run-sample-service) right away.
 
 ## Assumptions
 
@@ -46,7 +45,7 @@ To run and develop the sample service, set your computer with the requirements:
 
 ## Sample service
 
-The sample service provides you implementations of CRUD operations as specified below.
+The [sample service](https://github.com/line/armeria-examples/tree/main/tutorials/rest-api-annotated-service) provides you implementations of CRUD operations as specified below.
 
 | Operation | Method | Annotation |
 | -- | -- | -- |
@@ -55,52 +54,31 @@ The sample service provides you implementations of CRUD operations as specified 
 | Update | `updateBlogPost()` | <type://@Put> |
 | Delete | `deleteBlogPost()` | <type://@Delete> |
 
-### Sample service structure
+The sample service code consists of the following folders and files.
 
-The [sample service code](https://github.com/line/armeria-examples/tree/main/tutorials/rest-api-annotated-service) consists of the following folders and files.
-
-```plantuml
-@startsalt
-{
-{T
-+ rest-api-annotated-service
-++ src
-+++ main
-++++ java
-+++++ example.armeria.server.blog
-++++++ BadRequestExceptionHandler.java
-++++++ BlogPost.java
-++++++ BlogPostRequestConverter.java
-++++++ BlogService.java
-++++++ Main.java
-+++ test
-++++ java
-+++++ example.armeria.server.blog
-++++++ BlogServiceTest.java
-+++ build.gradle
-}
-}
-@endsalt
+```
+rest-api-annotated-service/
+├─ src/
+│  ├─ main/
+│  │  ├─ java/
+│  │  │  ├─ example.armeria.server.blog/
+│  │  │  │  ├─ BadRequestExceptionHandler.java
+│  │  │  │  ├─ BlogPost.java
+│  │  │  │  ├─ BlogPostRequestConverter.java
+│  │  │  │  ├─ BlogService.java
+│  │  │  │  └─ Main.java
+│  └─ test/
+│     └─ java/
+│        └─ example.armeria.server.blog/
+│           └─ BlogServiceTest.java
+└─ build.gradle
 ```
 
-### build.gradle
+<Tip>
 
-Here is a part of the build.gradle file for the sample service. If you are trying the tutorial from scratch, base your file on the sample service's.
+  To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using a database.
 
-<CodeBlock language="groovy" filename="build.gradle">{`
-  apply plugin: 'java'
-  apply plugin: 'idea'
-  apply plugin: 'eclipse'\n
-  repositories {
-      mavenCentral()
-  }\n
-  dependencies {
-      implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
-      // Logging
-      runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
-      runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
-  }
-`}</CodeBlock>
+</Tip>
 
 ## Build and run sample service
 
@@ -120,7 +98,28 @@ Using Armeria's [Documentation Service](/docs/server-docservice), you can see a 
 
 ## Try writing blog service yourself
 
-Try writing the blog service yourself by following the guides in the given order:
+Use the sample service's [build.gradle](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/build.gradle) file to start building the service from scratch.
+Below is a part of the `build.gradle` file for the sample service.
+
+<CodeBlock language="groovy" filename="build.gradle">{`
+  apply plugin: 'java'
+  apply plugin: 'idea'
+  apply plugin: 'eclipse'\n
+  repositories {
+    mavenCentral()
+  }\n
+  dependencies {
+    implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
+    // Logging
+    runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'\n
+    runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'\n
+    testImplementation "org.junit.jupiter:junit-jupiter:${versions['org.junit:junit-bom']}"\n
+    testImplementation "com.linecorp.armeria:armeria-junit5:${versions['com.linecorp.armeria:armeria-bom']}"\n
+    testImplementation "org.assertj:assertj-core:${versions['org.assertj:assertj-core']}"
+  }
+`}</CodeBlock>
+
+Start writing the blog service yourself by following the tutorial step by step:
 
 1. [Creating a server](/tutorials/rest/blog/create-server)
 2. [Preparing a data object](/tutorials/rest/blog/prepare-data-object)

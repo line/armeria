@@ -1,0 +1,114 @@
+---
+menuTitle: "Define a service"
+order: 1
+category: thrift
+type: step
+targetLang: java
+---
+
+# Defining a blog service
+
+Let's begin by defining our blog service in a Thrift file.
+
+<TutorialSteps current={1} />
+
+## What you need
+
+No preparation is required for this step. Do check that you've prepared the [prerequisites](/tutorials/thrift/blog/#prerequisites).
+
+## 1. Create a Thrift file
+
+Create a Thrift file, `blog.thrift` in the `{project_root}/src/main/thrift` folder as follows.
+You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/thrift/src/main/thrift/blog.thrift).
+
+```cpp filename=blog.thrift
+namespace java example.armeria.blog.thrift
+```
+
+<Tip>
+
+  See [Sample service structure](/tutorials/thrift/blog#sample-service) for the overall folder structure.
+
+</Tip>
+
+## 2. Define a service
+
+Let's define our blog service in the `blog.thrift` file.
+We'll add structs, an exception, and service methods.
+
+1. Add the `BlogPost` struct.
+  ```cpp filename=blog.thrift
+  struct BlogPost {
+    1: i32 id;
+    2: string title;
+    3: string content;
+    4: i64 createdAt;
+    5: i64 modifiedAt;
+  }
+  ```
+2. Add structs for request and response objects as follows.
+  ```cpp filename=blog.thrift
+  struct CreateBlogPostRequest {
+    1: string title;
+    2: string content;
+  }
+
+  struct GetBlogPostRequest {
+    1: i32 id;
+  }
+
+  struct ListBlogPostsRequest {
+    1: bool descending;
+  }
+
+  struct ListBlogPostsResponse {
+    1: list<BlogPost> blogs;
+  }
+
+  struct UpdateBlogPostRequest {
+    1: i32 id;
+    2: string title;
+    3: string content;
+  }
+
+  struct DeleteBlogPostRequest {
+    1: i32 id;
+  }
+  ```
+3. Add the `BlogNotFoundException`.
+  ```cpp filename=blog.thrift
+  exception BlogNotFoundException {
+    1: string reason
+  }
+  ```
+4. Add a service with methods for create, read, update, and delete operations.
+  ```cpp filename=blog.thrift
+  service BlogService {
+    BlogPost createBlogPost(1:CreateBlogPostRequest request),
+
+    BlogPost getBlogPost(1:GetBlogPostRequest request) throws (1:BlogNotFoundException e),
+
+    ListBlogPostsResponse listBlogPosts(1:ListBlogPostsRequest request),
+
+    BlogPost updateBlogPost(1:UpdateBlogPostRequest request) throws (1:BlogNotFoundException e),
+
+    void deleteBlogPost(1:DeleteBlogPostRequest request) throws (1:BlogNotFoundException e),
+  }
+  ```
+
+## 3. Compile the Thrift file
+
+Compile the `blog.thrift` file to generate Java code.
+You can refer to the full [build.gradle](https://github.com/line/armeria-examples/tree/main/tutorials/thrift/build.gradle) file for generating code with [Gradle Thrift Plugin](https://github.com/jruyi/thrift-gradle-plugin).
+
+```bash
+./gradlew compileThrift
+```
+You'll see the generated Java code in the `{project_root}/build/generated-sources/thrift/gen-java/example/armeria/blog/thrift/` folder.
+
+## Next step
+
+In this step, we've defined a Thrift file for our service and generated Java code.
+Next, we'll [run a service](/tutorials/thrift/blog/run-service) and test the connection.
+
+<TutorialSteps current={1} />

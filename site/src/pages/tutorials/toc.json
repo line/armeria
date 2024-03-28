@@ -22,14 +22,12 @@
     "grpc/blog/implement-create",
     "grpc/blog/implement-read",
     "grpc/blog/implement-update",
-    "grpc/blog/implement-delete",
-    "grpc/blog/add-docservice"
+    "grpc/blog/implement-delete"
   ],
   "Thrift service":[
     "thrift/blog",
-    "thrift/blog/create-service",
-    "thrift/blog/run-server",
-    "thrift/blog/define-service-methods",
+    "thrift/blog/define-service",
+    "thrift/blog/run-service",
     "thrift/blog/implement-create",
     "thrift/blog/implement-read",
     "thrift/blog/implement-update",

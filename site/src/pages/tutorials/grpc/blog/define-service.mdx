@@ -1,5 +1,5 @@
 ---
-menuTitle: "Define service"
+menuTitle: "Define a service"
 order: 1
 type: step
 targetLang: java
@@ -10,6 +10,10 @@ targetLang: java
 Let's begin by defining our gRPC blog service in a proto file.
 
 <TutorialSteps current={1} />
+
+## What you need
+
+No preparation is required for this step. Do check that you've prepared the [prerequisites](/tutorials/grpc/blog/#prerequisites).
 
 ## 1. Create a proto file
 
@@ -22,6 +26,12 @@ package example.armeria.blog.grpc;
 option java_package = "example.armeria.blog.grpc";
 option java_multiple_files = true;
 ```
+
+<Tip>
+
+  See [Sample service structure](/tutorials/grpc/blog#sample-service) for the overall folder structure.
+
+</Tip>
 
 ## 2. Define a blog post
 
@@ -88,7 +98,7 @@ message DeleteBlogPostRequest {
 }
 ```
 
-## 5. Add response type
+## 5. Add a response type
 
 Add a response type to return multiple blog posts.
 
@@ -98,24 +108,19 @@ message ListBlogPostsResponse {
 }
 ```
 
-## 6. Compile proto file
+## 6. Compile the proto file
 
 Compile the `blog.proto` file to generate Java code.
+You can refer to the full [build.gradle](https://github.com/line/armeria-examples/tree/main/tutorials/grpc/build.gradle) file for generating code with [protobuf-gradle-plugin](https://github.com/google/protobuf-gradle-plugin).
 
 ```bash
 ./gradlew generateProto
 ```
 
-<Tip>
-
-  Please refer to [build.gradle](https://github.com/line/armeria-examples/blob/main/tutorials/grpc/build.gradle) for generating code with [Protobuf Plugin for Gradle](https://github.com/google/protobuf-gradle-plugin).
-
-</Tip>
-
-Find the Java code output in the directory, `{project_root}/build/generated/source/proto/main`.
+You'll see the generated Java code in the `{project_root}/build/generated/source/proto/main` folder.
 
 ## Next step
 
-In this step, we've defined a proto file for our service and generated Java code. Next, we'll implement a minimal blog service and a client to [test run](/tutorials/grpc/blog/run-service).
+In this step, we've defined a proto file for our service and generated Java code. Next, we'll [run a service](/tutorials/grpc/blog/run-service) and test the connection.
 
 <TutorialSteps current={1} />
