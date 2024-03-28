@@ -59,6 +59,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CaseFormat;
@@ -79,6 +81,8 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.Blocking;
 
 import io.grpc.MethodDescriptor;
+import io.grpc.ServerInterceptor;
+import io.grpc.ServerInterceptors;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 
@@ -204,6 +208,7 @@ final class HandlerRegistry {
 
     static final class Builder {
         private final List<Entry> entries = new ArrayList<>();
+        private final List<ServerInterceptor> interceptors = new ArrayList<>();
 
         @Nullable
         private GrpcExceptionHandlerFunction defaultExceptionHandler;
@@ -234,6 +239,16 @@ final class HandlerRegistry {
         Builder setDefaultExceptionHandler(GrpcExceptionHandlerFunction defaultExceptionHandler) {
             requireNonNull(defaultExceptionHandler, "defaultExceptionHandler");
             this.defaultExceptionHandler = defaultExceptionHandler;
+            return this;
+        }
+
+        /**
+         * Find the applied {@link GrpcInterceptor} annotations and apply them with the given
+         * {@link ServerInterceptor}s to all services.
+         */
+        Builder addInterceptors(List<ServerInterceptor> globalInterceptors) {
+            requireNonNull(globalInterceptors, "globalInterceptors");
+            this.interceptors.addAll(globalInterceptors);
             return this;
         }
 
@@ -287,8 +302,157 @@ final class HandlerRegistry {
             });
         }
 
-        List<Entry> entries() {
-            return entries;
+        /**
+         * Get the Method from the MethodDescriptor for the given gRPC service. This method can be used to
+         * get annotations applied to the method.
+         *
+         * @param clazz The class of the service.
+         * @param methodDescriptor The method descriptor to get the method for.
+         * @return The method for the given method descriptor.
+         */
+        private static Optional<Method> getMethodFromMethodDescriptor(Class<?> clazz,
+                                                               MethodDescriptor<?, ?> methodDescriptor) {
+            final String methodName = methodDescriptor.getBareMethodName();
+
+            if (methodName == null) {
+                return Optional.empty();
+            }
+
+            final String matchingMethodName = CaseFormat.UPPER_CAMEL
+                    .converterTo(CaseFormat.LOWER_CAMEL)
+                    .convert(methodName);
+
+            if (matchingMethodName == null) {
+                return Optional.empty();
+            }
+
+            return InternalReflectionUtils.getAllSortedMethods(clazz, withModifier(Modifier.PUBLIC))
+                                          .stream()
+                                          .filter(m -> matchingMethodName.equals(m.getName()))
+                                          .findFirst();
+        }
+
+        /**
+         * Get the interceptors for the given method created by using annotations.
+         * @param clazz The class of the service.
+         * @param method The method to get interceptors for.
+         * @param dependencyInjector The dependency injector to use.
+         * @param globalInterceptors The global interceptors to use. This comes from the builder.
+         * @return The list of interceptors for the given method in order.
+         */
+        private static List<ServerInterceptor>
+        getInterceptorsFromAnnotations(Class<?> clazz, Method method, DependencyInjector dependencyInjector,
+                                       List<ServerInterceptor> globalInterceptors) {
+            final List<ServerInterceptor> methodAndClassInterceptors =
+                    AnnotationUtil.getAnnotatedInstances(method, clazz,
+                                                         GrpcInterceptor.class,
+                                                         ServerInterceptor.class,
+                                                         dependencyInjector).build().reverse();
+
+            return Stream.concat(globalInterceptors.stream(), methodAndClassInterceptors.stream())
+                         .collect(Collectors.toList());
+        }
+
+        private static String calculateServicePath(Entry entry, MethodDescriptor<?, ?> methodDescriptor) {
+            // Use the path of method descriptor instead of the path of service. We are adding a
+            // single method to the registry as a service opposed to adding the entire service
+            // to the registry. The reason is that we can't intercept individual methods if we
+            // add the service as a whole to the registry.
+            return entry.path() + '/' + methodDescriptor.getBareMethodName();
+        }
+
+        /**
+         * Intercepts the entries using {@link GrpcInterceptor} annotations and globally added interceptors.
+         * This method should only be called once. Otherwise the interceptors will be added multiple times.
+         * @param dependencyInjector The dependency injector to find the annotations.
+         */
+        private void interceptEntries(DependencyInjector dependencyInjector) {
+            // Copy services and methods to intercept them.
+            final List<Entry> initialListOfEntries = ImmutableList.copyOf(this.entries);
+
+            for (Entry entry : initialListOfEntries) {
+                final MethodDescriptor<?, ?> methodDescriptor = entry.method();
+
+                if (entry.type() != null && methodDescriptor == null) {
+                    // A "Service" entry thus there is no method descriptor.
+
+                    final List<MethodDescriptor<?, ?>> serverMethodDescriptors =
+                            entry.service().getMethods().stream()
+                                 .map(ServerMethodDefinition::getMethodDescriptor)
+                                 .collect(Collectors.toList());
+
+                    final boolean shouldSplitServiceToMethod = serverMethodDescriptors.stream().anyMatch(
+                            methodDescriptor1 -> {
+                                final Optional<Method> methodOption =
+                                        getMethodFromMethodDescriptor(entry.type(), methodDescriptor1);
+
+                                if (methodOption.isPresent()) {
+                                    final List<ServerInterceptor> allInterceptors =
+                                            getInterceptorsFromAnnotations(entry.type(), methodOption.get(),
+                                                                           dependencyInjector,
+                                                                           ImmutableList.of());
+
+                                    return !allInterceptors.isEmpty();
+                                }
+
+                                return false;
+                            }
+                    );
+
+                    if (shouldSplitServiceToMethod) {
+                        // Add all methods of the service to the new registry builder one by one and intercept.
+                        for (MethodDescriptor<?, ?> serverMethodDescriptor : serverMethodDescriptors) {
+                            final Optional<Method> methodOption =
+                                    getMethodFromMethodDescriptor(entry.type(), serverMethodDescriptor);
+
+                            if (methodOption.isPresent()) {
+                                final List<ServerInterceptor> allInterceptors =
+                                        getInterceptorsFromAnnotations(entry.type(), methodOption.get(),
+                                                                       dependencyInjector, this.interceptors);
+
+                                final ServerServiceDefinition intercepted =
+                                        ServerInterceptors.intercept(entry.service(), allInterceptors);
+
+                                final String path = calculateServicePath(entry, serverMethodDescriptor);
+                                addService(path, intercepted,
+                                           serverMethodDescriptor, entry.type(),
+                                           ImmutableList.copyOf(entry.additionalDecorators()));
+                            }
+                        }
+                    } else {
+                        // No need to split service into individual methods if there are no interceptors.
+                        final ServerServiceDefinition intercepted =
+                                ServerInterceptors.intercept(entry.service(), this.interceptors);
+                        addService(entry.path(), intercepted, methodDescriptor,
+                                   entry.type(), entry.additionalDecorators());
+                    }
+                } else if (entry.type() != null) {
+                    // A "Method" entry
+                    final Optional<Method> methodOption =
+                            getMethodFromMethodDescriptor(entry.type(), methodDescriptor);
+
+                    if (methodOption.isPresent()) {
+                        final List<ServerInterceptor> allInterceptors =
+                                getInterceptorsFromAnnotations(entry.type(), methodOption.get(),
+                                                               dependencyInjector, this.interceptors);
+
+                        final ServerServiceDefinition intercepted =
+                                ServerInterceptors.intercept(entry.service(), allInterceptors);
+                        addService(entry.path(), intercepted, methodDescriptor,
+                                   entry.type(), entry.additionalDecorators());
+                    }
+                } else {
+                    // Others
+                    // Only intercept the service with global interceptors.
+                    final ServerServiceDefinition intercepted = ServerInterceptors.intercept(entry.service(),
+                                                                                             this.interceptors);
+                    addService(entry.path(), intercepted, methodDescriptor,
+                               entry.type(), entry.additionalDecorators());
+                }
+            }
+
+            // Remove the original entries as they are now re-added as intercepted entries.
+            entries.removeAll(initialListOfEntries);
         }
 
         HandlerRegistry build() {
@@ -308,6 +472,10 @@ final class HandlerRegistry {
             final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                     grpcExceptionHandlersBuilder = ImmutableMap.builder();
             final DependencyInjector dependencyInjector = new ReflectiveDependencyInjector();
+
+            // Intercept entries using {@link GrpcInterceptor} annotations and globally added interceptors.
+            interceptEntries(dependencyInjector);
+
             for (Entry entry : entries) {
                 final ServerServiceDefinition service = entry.service();
                 final String path = entry.path();
