@@ -39,6 +39,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.util.AttributeKey;
 
 /**
@@ -84,13 +85,17 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
     @Nullable
     private final BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
     private final ConcurrentMap<Route, Boolean> routeCache = new ConcurrentHashMap<>();
+    private final DistributionStatisticConfig distributionStatisticConfig;
 
     MetricCollectingService(HttpService delegate,
                             MeterIdPrefixFunction meterIdPrefixFunction,
-                            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction) {
+                            @Nullable BiPredicate<? super RequestContext, ? super RequestLog> successFunction,
+                            DistributionStatisticConfig distributionStatisticConfig) {
         super(delegate);
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
         this.successFunction = successFunction;
+        this.distributionStatisticConfig =
+                requireNonNull(distributionStatisticConfig, "distributionStatisticConfig");
     }
 
     @Override
@@ -98,7 +103,8 @@ public final class MetricCollectingService extends SimpleDecoratingHttpService {
         if (shouldRecordMetrics(ctx)) {
             RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
                                        successFunction != null ? successFunction::test
-                                                               : ctx.config().successFunction());
+                                                               : ctx.config().successFunction(),
+                                       distributionStatisticConfig);
         }
         return unwrap().serve(ctx, req);
     }

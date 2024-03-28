@@ -26,6 +26,8 @@ import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
 
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
+
 /**
  * Builds a {@link MetricCollectingService} instance.
  */
@@ -41,13 +43,20 @@ public final class MetricCollectingServiceBuilder extends AbstractMetricCollecti
         return (MetricCollectingServiceBuilder) super.successFunction(successFunction);
     }
 
+    @Override
+    public MetricCollectingServiceBuilder distributionStatisticConfig(
+            DistributionStatisticConfig distributionStatisticConfig) {
+        return (MetricCollectingServiceBuilder) super.distributionStatisticConfig(distributionStatisticConfig);
+    }
+
     /**
      * Returns a newly-created {@link MetricCollectingService} decorating {@link HttpService} based
      * on the properties of this builder.
      */
     public MetricCollectingService build(HttpService delegate) {
         requireNonNull(delegate, "delegate");
-        return new MetricCollectingService(delegate, meterIdPrefixFunction(), successFunction());
+        return new MetricCollectingService(delegate, meterIdPrefixFunction(), successFunction(),
+                                           distributionStatisticConfig());
     }
 
     /**
