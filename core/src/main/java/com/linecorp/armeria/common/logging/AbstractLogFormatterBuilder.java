@@ -66,6 +66,8 @@ abstract class AbstractLogFormatterBuilder<T> {
      *    .requestHeadersSanitizer(headersSanitizer)
      *    ...
      * }</pre>
+     *
+     * @see HeadersSanitizer
      */
     public AbstractLogFormatterBuilder<T> requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestHeadersSanitizer) {
@@ -101,6 +103,8 @@ abstract class AbstractLogFormatterBuilder<T> {
      *    .responseHeadersSanitizer(headersSanitizer)
      *    ...
      * }</pre>
+     *
+     * @see HeadersSanitizer
      */
     public AbstractLogFormatterBuilder<T> responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseHeadersSanitizer) {
@@ -135,6 +139,8 @@ abstract class AbstractLogFormatterBuilder<T> {
      *    .requestTrailersSanitizer(headersSanitizer)
      *    ...
      * }</pre>
+     *
+     * @see HeadersSanitizer
      */
     public AbstractLogFormatterBuilder<T> requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestTrailersSanitizer) {
@@ -169,6 +175,8 @@ abstract class AbstractLogFormatterBuilder<T> {
      *    .responseTrailersSanitizer(headersSanitizer)
      *    ...
      * }</pre>
+     *
+     * @see HeadersSanitizer
      */
     public AbstractLogFormatterBuilder<T> responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseTrailersSanitizer) {
@@ -204,6 +212,7 @@ abstract class AbstractLogFormatterBuilder<T> {
      * builder.responseTrailersSanitizer(headersSanitizer);
      * }</pre>
      *
+     * @see HeadersSanitizer
      * @see #requestHeadersSanitizer(BiFunction)
      * @see #requestTrailersSanitizer(BiFunction)
      * @see #responseHeadersSanitizer(BiFunction)

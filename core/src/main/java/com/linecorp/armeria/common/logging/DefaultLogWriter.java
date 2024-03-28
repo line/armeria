@@ -21,13 +21,14 @@ import static com.linecorp.armeria.common.logging.LogWriterBuilder.DEFAULT_REQUE
 import static com.linecorp.armeria.common.logging.LogWriterBuilder.DEFAULT_RESPONSE_LOG_LEVEL_MAPPER;
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.Predicate;
+import java.util.function.BiPredicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 final class DefaultLogWriter implements LogWriter {
@@ -37,7 +38,7 @@ final class DefaultLogWriter implements LogWriter {
     static final DefaultLogWriter DEFAULT =
             new DefaultLogWriter(defaultLogger, DEFAULT_REQUEST_LOG_LEVEL_MAPPER,
                                  DEFAULT_RESPONSE_LOG_LEVEL_MAPPER,
-                                 throwable -> false, LogFormatter.ofText());
+                                 (ctx, throwable) -> false, LogFormatter.ofText());
 
     private static boolean warnedNullRequestLogLevelMapper;
     private static boolean warnedNullResponseLogLevelMapper;
@@ -45,12 +46,13 @@ final class DefaultLogWriter implements LogWriter {
     private final Logger logger;
     private final RequestLogLevelMapper requestLogLevelMapper;
     private final ResponseLogLevelMapper responseLogLevelMapper;
-    private final Predicate<? super Throwable> responseCauseFilter;
+    private final BiPredicate<? super RequestContext, ? super Throwable> responseCauseFilter;
     private final LogFormatter logFormatter;
 
     DefaultLogWriter(Logger logger, RequestLogLevelMapper requestLogLevelMapper,
                      ResponseLogLevelMapper responseLogLevelMapper,
-                     Predicate<? super Throwable> responseCauseFilter, LogFormatter logFormatter) {
+                     BiPredicate<? super RequestContext, ? super Throwable> responseCauseFilter,
+                     LogFormatter logFormatter) {
         this.logger = logger;
         this.requestLogLevelMapper = requestLogLevelMapper;
         this.responseLogLevelMapper = responseLogLevelMapper;
@@ -94,7 +96,8 @@ final class DefaultLogWriter implements LogWriter {
 
         if (responseLogLevel.isEnabled(logger)) {
             final String responseStr = logFormatter.formatResponse(log);
-            try (SafeCloseable ignored = log.context().push()) {
+            final RequestContext ctx = log.context();
+            try (SafeCloseable ignored = ctx.push()) {
                 if (responseCause == null) {
                     responseLogLevel.log(logger, responseStr);
                     return;
@@ -108,7 +111,7 @@ final class DefaultLogWriter implements LogWriter {
                     responseLogLevel.log(logger, logFormatter.formatRequest(log));
                 }
 
-                if (responseCauseFilter.test(responseCause)) {
+                if (responseCauseFilter.test(ctx, responseCause)) {
                     responseLogLevel.log(logger, responseStr);
                 } else {
                     responseLogLevel.log(logger, responseStr, responseCause);
