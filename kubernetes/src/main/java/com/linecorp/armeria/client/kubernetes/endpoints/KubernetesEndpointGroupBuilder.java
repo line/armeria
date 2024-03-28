@@ -29,6 +29,7 @@ import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.fabric8.kubernetes.api.model.NodeAddress;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -36,6 +37,7 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 /**
  * A builder for creating a new {@link KubernetesEndpointGroup}.
  */
+@UnstableApi
 public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
 
     private final KubernetesClient kubernetesClient;

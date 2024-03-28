@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 
 import io.fabric8.kubernetes.api.model.Node;
@@ -97,6 +98,7 @@ import io.fabric8.kubernetes.client.WatcherException;
  *   .build();
  * }</pre>
  */
+@UnstableApi
 public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesEndpointGroup.class);
@@ -127,6 +129,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
      * {@code namespace} and {@code serviceName}.
      */
     public static KubernetesEndpointGroup of(Config config, String namespace, String serviceName) {
+        requireNonNull(config, "config");
         return builder(new KubernetesClientBuilder().withConfig(config).build(), true)
                 .namespace(namespace)
                 .serviceName(serviceName)
@@ -135,7 +138,8 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
 
     /**
      * Returns a newly created {@link KubernetesEndpointGroup} with the specified {@code serviceName}.
-     * The default configuration in the $HOME/.kube/config will be used to create a {@link KubernetesClient}.
+     * The default configuration in the {@code $HOME/.kube/config} will be used to create a
+     * {@link KubernetesClient}.
      */
     public static KubernetesEndpointGroup of(String serviceName) {
         return builder(DEFAULT_CLIENT, false)

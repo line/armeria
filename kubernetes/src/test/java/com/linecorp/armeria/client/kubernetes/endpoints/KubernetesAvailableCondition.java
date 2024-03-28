@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientBuilder;
 
+@SuppressWarnings("unused")
 final class KubernetesAvailableCondition {
 
     private static final Logger logger = LoggerFactory.getLogger(KubernetesAvailableCondition.class);
