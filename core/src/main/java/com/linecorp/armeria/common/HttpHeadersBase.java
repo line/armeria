@@ -57,6 +57,7 @@ import com.google.common.math.IntMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.StringUtil;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.AsciiString;
 
@@ -214,18 +215,17 @@ class HttpHeadersBase
             checkState(scheme != null, ":scheme header does not exist.");
             final String authority = authority();
 
-            final StringBuilder sb = new StringBuilder(
-                    scheme.length() + 1 +
-                    (authority != null ? (authority.length() + 2) : 0) +
-                    path.length());
-            sb.append(scheme);
-            sb.append(':');
-            if (authority != null) {
-                sb.append("//");
-                sb.append(authority);
+            try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+                final StringBuilder sb = tmp.stringBuilder();
+                sb.append(scheme);
+                sb.append(':');
+                if (authority != null) {
+                    sb.append("//");
+                    sb.append(authority);
+                }
+                sb.append(path);
+                uri = sb.toString();
             }
-            sb.append(path);
-            uri = sb.toString();
         }
 
         try {

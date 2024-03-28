@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority;
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
@@ -24,6 +25,7 @@ import java.util.Objects;
 
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.RequestTargetForm;
+import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -122,6 +124,8 @@ public final class DefaultRequestTarget implements RequestTarget {
             RequestTargetForm.ASTERISK,
             null,
             null,
+            null,
+            -1,
             "*",
             "*",
             null,
@@ -185,9 +189,10 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     public static RequestTarget createWithoutValidation(
             RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
-            String path, String pathWithMatrixVariables, @Nullable String query, @Nullable String fragment) {
+            @Nullable String host, int port, String path, String pathWithMatrixVariables,
+            @Nullable String query, @Nullable String fragment) {
         return new DefaultRequestTarget(
-                form, scheme, authority, path, pathWithMatrixVariables, query, fragment);
+                form, scheme, authority, host, port, path, pathWithMatrixVariables, query, fragment);
     }
 
     private final RequestTargetForm form;
@@ -195,6 +200,9 @@ public final class DefaultRequestTarget implements RequestTarget {
     private final String scheme;
     @Nullable
     private final String authority;
+    @Nullable
+    private final String host;
+    private final int port;
     private final String path;
     private final String maybePathWithMatrixVariables;
     @Nullable
@@ -203,16 +211,20 @@ public final class DefaultRequestTarget implements RequestTarget {
     private final String fragment;
     private boolean cached;
 
-    private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
+    private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme,
+                                 @Nullable String authority, @Nullable String host, int port,
                                  String path, String maybePathWithMatrixVariables,
                                  @Nullable String query, @Nullable String fragment) {
 
-        assert (scheme != null && authority != null) ||
-               (scheme == null && authority == null) : "scheme: " + scheme + ", authority: " + authority;
+        assert (scheme != null && authority != null && host != null) ||
+               (scheme == null && authority == null && host == null)
+                : "scheme: " + scheme + ", authority: " + authority + ", host: " + host;
 
         this.form = form;
         this.scheme = scheme;
         this.authority = authority;
+        this.host = host;
+        this.port = port;
         this.path = path;
         this.maybePathWithMatrixVariables = maybePathWithMatrixVariables;
         this.query = query;
@@ -232,6 +244,17 @@ public final class DefaultRequestTarget implements RequestTarget {
     @Override
     public String authority() {
         return authority;
+    }
+
+    @Override
+    @Nullable
+    public String host() {
+        return host;
+    }
+
+    @Override
+    public int port() {
+        return port;
     }
 
     @Override
@@ -369,6 +392,8 @@ public final class DefaultRequestTarget implements RequestTarget {
         return new DefaultRequestTarget(RequestTargetForm.ORIGIN,
                                         null,
                                         null,
+                                        null,
+                                        -1,
                                         matrixVariablesRemovedPath,
                                         encodedPath,
                                         encodeQueryToPercents(query),
@@ -436,12 +461,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         }
 
         if (nextPos < 0) {
-            return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
-                                            schemeAndAuthority.getScheme(),
-                                            schemeAndAuthority.getRawAuthority(),
-                                            "/",
-                                            "/", null,
-                                            null);
+            return newAbsoluteTarget(schemeAndAuthority, "/", null, null);
         }
 
         return slowForClient(reqTarget, schemeAndAuthority, nextPos);
@@ -569,41 +589,63 @@ public final class DefaultRequestTarget implements RequestTarget {
         final String encodedFragment = encodeFragmentToPercents(fragment);
 
         if (schemeAndAuthority != null) {
-            return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
-                                            schemeAndAuthority.getScheme(),
-                                            schemeAndAuthority.getRawAuthority(),
-                                            encodedPath,
-                                            encodedPath, encodedQuery,
-                                            encodedFragment);
+            return newAbsoluteTarget(schemeAndAuthority, encodedPath, encodedQuery, encodedFragment);
         } else {
             return new DefaultRequestTarget(RequestTargetForm.ORIGIN,
                                             null,
                                             null,
+                                            null,
+                                            -1,
                                             encodedPath,
                                             encodedPath, encodedQuery,
                                             encodedFragment);
         }
     }
 
-    /**
-     * Returns the index of the authority part if the specified {@code reqTarget} is an absolute URI.
-     * Returns {@code -1} otherwise.
-     */
-    private static int findAuthority(String reqTarget) {
-        final int firstColonIdx = reqTarget.indexOf(':');
-        if (firstColonIdx <= 0 || reqTarget.length() <= firstColonIdx + 3) {
-            return -1;
-        }
-        final int firstSlashIdx = reqTarget.indexOf('/');
-        if (firstSlashIdx <= 0 || firstSlashIdx < firstColonIdx) {
-            return -1;
+    private static DefaultRequestTarget newAbsoluteTarget(
+            URI schemeAndAuthority, String encodedPath,
+            @Nullable String encodedQuery, @Nullable String encodedFragment) {
+
+        final String scheme = schemeAndAuthority.getScheme();
+        final String maybeAuthority = schemeAndAuthority.getRawAuthority();
+        final String maybeHost = schemeAndAuthority.getHost();
+        final int maybePort = schemeAndAuthority.getPort();
+        final String authority;
+        final String host;
+        final int port;
+        if (maybeHost == null) {
+            authority = maybeAuthority;
+            host = maybeAuthority;
+            port = -1;
+        } else {
+            host = maybeHost;
+
+            // Specify the port number only when necessary, so that https://foo/ and https://foo:443/
+            // are considered equal.
+            if (maybePort >= 0) {
+                final Scheme parsedScheme = Scheme.tryParse(scheme);
+                if (parsedScheme == null || parsedScheme.sessionProtocol().defaultPort() != maybePort) {
+                    authority = maybeAuthority;
+                    port = maybePort;
+                } else {
+                    authority = maybeHost;
+                    port = -1;
+                }
+            } else {
+                authority = maybeHost;
+                port = -1;
+            }
         }
 
-        if (reqTarget.charAt(firstColonIdx + 1) == '/' && reqTarget.charAt(firstColonIdx + 2) == '/') {
-            return firstColonIdx + 3;
-        }
-
-        return -1;
+        return new DefaultRequestTarget(RequestTargetForm.ABSOLUTE,
+                                        scheme,
+                                        authority,
+                                        host,
+                                        port,
+                                        encodedPath,
+                                        encodedPath,
+                                        encodedQuery,
+                                        encodedFragment);
     }
 
     @Nullable
