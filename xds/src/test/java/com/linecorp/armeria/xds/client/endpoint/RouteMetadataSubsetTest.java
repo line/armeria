@@ -31,8 +31,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Struct;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -116,9 +119,12 @@ class RouteMetadataSubsetTest {
                                                          staticResourceListener(routeMetadataMatch1),
                                                          bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
-            await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
-                    .containsExactly(Endpoint.of("127.0.0.1", 8082)));
+            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+
+            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+            final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
 
         // No metadata. Fallback to all endpoints.
@@ -127,10 +133,13 @@ class RouteMetadataSubsetTest {
         bootstrap = XdsTestResources.bootstrap(configSource, staticResourceListener(routeMetadataMatch2),
                                                bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
-            await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
-                    .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081),
-                                               Endpoint.of("127.0.0.1", 8082)));
+            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+
+            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+            final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
 
         // No matched metadata. Fallback to all endpoints.
@@ -141,10 +150,13 @@ class RouteMetadataSubsetTest {
         bootstrap = XdsTestResources.bootstrap(configSource, staticResourceListener(routeMetadataMatch3),
                                                bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
-            await().untilAsserted(() -> assertThat(xdsEndpointGroup.endpoints())
-                    .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 8080), Endpoint.of("127.0.0.1", 8081),
-                                               Endpoint.of("127.0.0.1", 8082)));
+            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+
+            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+            final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
     }
 }

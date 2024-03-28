@@ -113,7 +113,7 @@ final class ConfigSourceClient implements SafeCloseable {
     @Override
     public void close() {
         stream.close();
-        endpointGroup.close();
+        endpointGroup.closeAsync();
         subscriberStorage.close();
     }
 
