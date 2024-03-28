@@ -110,6 +110,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
+    private final boolean preservePercentEncoding;
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
@@ -144,7 +145,7 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
-            boolean enableServerHeader, boolean enableDateHeader,
+            boolean enableServerHeader, boolean enableDateHeader, boolean preservePercentEncoding,
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
@@ -260,6 +261,7 @@ final class DefaultServerConfig implements ServerConfig {
 
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
+        this.preservePercentEncoding = preservePercentEncoding;
 
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
@@ -639,6 +641,11 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
+    public boolean isPercentEncodingPreserved() {
+        return preservePercentEncoding;
+    }
+
+    @Override
     public Function<RoutingContext, RequestId> requestIdGenerator() {
         return defaultVirtualHost.requestIdGenerator();
     }
@@ -696,7 +703,7 @@ final class DefaultServerConfig implements ServerConfig {
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
-                    isServerHeaderEnabled(), isDateHeaderEnabled(),
+                    isServerHeaderEnabled(), isDateHeaderEnabled(), isPercentEncodingPreserved(),
                     dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportIntervalMillis());
         }
 
@@ -719,7 +726,7 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
-            boolean serverHeaderEnabled, boolean dateHeaderEnabled,
+            boolean serverHeaderEnabled, boolean dateHeaderEnabled, boolean percentEncodingPreserved,
             @Nullable DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
             long unhandledExceptionsReportIntervalMillis) {
@@ -815,6 +822,8 @@ final class DefaultServerConfig implements ServerConfig {
         buf.append(serverHeaderEnabled ? "enabled" : "disabled");
         buf.append(", dateHeader: ");
         buf.append(dateHeaderEnabled ? "enabled" : "disabled");
+        buf.append(", percentEncoding: ");
+        buf.append(percentEncodingPreserved ? "preserved" : "decoded");
         if (dependencyInjector != null) {
             buf.append(", dependencyInjector: ");
             buf.append(dependencyInjector);

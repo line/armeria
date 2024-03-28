@@ -301,6 +301,8 @@ public interface ServerConfig {
      */
     boolean isServerHeaderEnabled();
 
+    boolean isPercentEncodingPreserved();
+
     /**
      * Returns the {@link Function} that generates a {@link RequestId} for each {@link Request}.
      *
