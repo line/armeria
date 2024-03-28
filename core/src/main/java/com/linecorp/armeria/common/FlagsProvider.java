@@ -86,6 +86,15 @@ public interface FlagsProvider {
     int priority();
 
     /**
+     * Returns whether this {@link FlagsProvider} should be enabled
+     * when calculating {@link Flags}. The default value is {@code true}.
+     */
+    @UnstableApi
+    default boolean enabled() {
+        return true;
+    }
+
+    /**
      * Returns the name of the {@link FlagsProvider} to use for logging.
      */
     default String name() {

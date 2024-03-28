@@ -101,6 +101,7 @@ public final class Flags {
         final List<FlagsProvider> flagsProviders =
                 ImmutableList.copyOf(ServiceLoader.load(FlagsProvider.class, Flags.class.getClassLoader()))
                              .stream()
+                             .filter(FlagsProvider::enabled)
                              .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
                              .collect(Collectors.toList());
         flagsProviders.add(0, SystemPropertyFlagsProvider.INSTANCE);
