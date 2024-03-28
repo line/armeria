@@ -24,7 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +72,24 @@ public final class CorsServiceBuilder {
     CorsServiceBuilder(List<String> origins) {
         anyOriginSupported = false;
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, origins);
+    }
+
+    /**
+     * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing origins matched by
+     * {@code originPredicate}.
+     */
+    CorsServiceBuilder(Predicate<String> originPredicate) {
+        anyOriginSupported = false;
+        firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, originPredicate);
+    }
+
+    /**
+     * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing origins matched by
+     * {@code originRegex}.
+     */
+    CorsServiceBuilder(Pattern originRegex) {
+        anyOriginSupported = false;
+        firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, originRegex);
     }
 
     /**
@@ -446,6 +466,30 @@ public final class CorsServiceBuilder {
      */
     public ChainedCorsPolicyBuilder andForOrigin(String origin) {
         return andForOrigins(ImmutableList.of(origin));
+    }
+
+    /**
+     * Creates a new builder instance for a new {@link CorsPolicy}.
+     * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
+     */
+    public ChainedCorsPolicyBuilder andForOrigin(Predicate<String> originPredicate) {
+        return new ChainedCorsPolicyBuilder(this, originPredicate);
+    }
+
+    /**
+     * Creates a new builder instance for a new {@link CorsPolicy}.
+     * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
+     */
+    public ChainedCorsPolicyBuilder andForOriginRegex(String regex) {
+        return andForOriginRegex(Pattern.compile(regex));
+    }
+
+    /**
+     * Creates a new builder instance for a new {@link CorsPolicy}.
+     * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
+     */
+    public ChainedCorsPolicyBuilder andForOriginRegex(Pattern regex) {
+        return new ChainedCorsPolicyBuilder(this, regex);
     }
 
     @Override

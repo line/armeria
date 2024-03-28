@@ -29,7 +29,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
@@ -38,6 +40,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
@@ -53,7 +56,9 @@ import io.netty.util.AsciiString;
  */
 abstract class AbstractCorsPolicyBuilder {
 
-    private final Set<String> origins;
+    private Set<String> origins = Collections.emptySet();
+    @Nullable
+    private Predicate<String> originPredicate;
     private final List<Route> routes = new ArrayList<>();
     private boolean credentialsAllowed;
     private boolean nullOriginAllowed;
@@ -66,19 +71,26 @@ abstract class AbstractCorsPolicyBuilder {
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders = new HashMap<>();
     private boolean preflightResponseHeadersDisabled;
 
-    AbstractCorsPolicyBuilder() {
-        origins = Collections.emptySet();
-    }
+    AbstractCorsPolicyBuilder() {}
 
     AbstractCorsPolicyBuilder(List<String> origins) {
         requireNonNull(origins, "origins");
-        checkArgument(!origins.isEmpty(), "origins is empty.");
         for (int i = 0; i < origins.size(); i++) {
             if (origins.get(i) == null) {
                 throw new NullPointerException("origins[" + i + ']');
             }
         }
         this.origins = origins.stream().map(Ascii::toLowerCase).collect(toImmutableSet());
+    }
+
+    AbstractCorsPolicyBuilder(Predicate<String> originPredicate) {
+        requireNonNull(originPredicate, "originPredicate");
+        this.originPredicate = originPredicate;
+    }
+
+    AbstractCorsPolicyBuilder(Pattern originRegex) {
+        requireNonNull(originRegex, "originRegex");
+        this.originPredicate = (origin) -> originRegex.matcher(origin).matches();
     }
 
     final void setConfig(CorsDecorator corsDecorator) {
@@ -428,8 +440,8 @@ abstract class AbstractCorsPolicyBuilder {
      * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
      */
     CorsPolicy build() {
-        return new CorsPolicy(origins, routes, credentialsAllowed, maxAge, nullOriginAllowed,
-                              exposedHeaders, allowAllRequestHeaders, allowedRequestHeaders,
+        return new CorsPolicy(origins, originPredicate, routes, credentialsAllowed, maxAge,
+                              nullOriginAllowed, exposedHeaders, allowAllRequestHeaders, allowedRequestHeaders,
                               allowedRequestMethods, preflightResponseHeadersDisabled,
                               preflightResponseHeaders);
     }

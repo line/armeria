@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHtt
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.newCloseWebSocketFrame;
 
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -94,11 +95,14 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private final Set<String> allowedOrigins;
     private final boolean allowAnyOrigin;
     private final boolean aggregateContinuation;
+    @Nullable
+    private final Predicate<String> originPredicate;
 
     public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
                                    int maxFramePayloadLength, boolean allowMaskMismatch,
                                    Set<String> subprotocols, Set<String> allowedOrigins,
-                                   boolean allowAnyOrigin, boolean aggregateContinuation) {
+                                   boolean allowAnyOrigin, boolean aggregateContinuation,
+                                   @Nullable Predicate<String> originPredicate) {
         this.handler = handler;
         this.fallbackService = fallbackService;
         this.maxFramePayloadLength = maxFramePayloadLength;
@@ -107,6 +111,7 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         this.allowedOrigins = allowedOrigins;
         this.allowAnyOrigin = allowAnyOrigin;
         this.aggregateContinuation = aggregateContinuation;
+        this.originPredicate = originPredicate;
     }
 
     @Override
@@ -286,18 +291,26 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
                                    "missing the origin header");
         }
 
-        if (allowedOrigins.isEmpty()) {
-            // Only the same-origin is allowed.
-            if (!isSameOrigin(ctx, headers, origin)) {
+        if (originPredicate != null) {
+            if (!originPredicate.test(origin)) {
                 return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
-                                       "not allowed origin: " + origin);
+                                       "not allowed origin: " + origin + ", please check originPredicate");
             }
-            return null;
+        } else {
+            if (allowedOrigins.isEmpty()) {
+                // Only the same-origin is allowed.
+                if (!isSameOrigin(ctx, headers, origin)) {
+                    return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
+                                           "not allowed origin: " + origin);
+                }
+                return null;
+            }
+            if (!allowedOrigins.contains(origin)) {
+                return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
+                                       "not allowed origin: " + origin + ", allowed: " + allowedOrigins);
+            }
         }
-        if (!allowedOrigins.contains(origin)) {
-            return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
-                                   "not allowed origin: " + origin + ", allowed: " + allowedOrigins);
-        }
+
         return null;
     }
 

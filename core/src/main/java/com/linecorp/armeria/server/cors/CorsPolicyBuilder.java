@@ -15,7 +15,9 @@
  */
 package com.linecorp.armeria.server.cors;
 
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import com.google.common.collect.ImmutableList;
 
@@ -44,6 +46,14 @@ public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder {
 
     CorsPolicyBuilder(Iterable<String> origins) {
         super(ImmutableList.copyOf(origins));
+    }
+
+    CorsPolicyBuilder(Predicate<String> predicate) {
+        super(predicate);
+    }
+
+    CorsPolicyBuilder(Pattern regex) {
+        super(regex);
     }
 
     /**
