@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
@@ -115,8 +116,8 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
      * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
-     *                           the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
-     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     *     the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
+     *     or {@link #subscribe(Subscriber, SubscriptionOption...)}.
      *
      * @deprecated Use {@link #of(CompletionStage, EventExecutor)}.
      */
@@ -224,7 +225,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Creates a new HTTP response of the specified {@code statusCode}.
      *
      * @throws IllegalArgumentException if the specified {@code statusCode} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(int statusCode) {
         return of(HttpStatus.valueOf(statusCode));
@@ -234,7 +235,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Creates a new HTTP response of the specified {@link HttpStatus}.
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status) {
         requireNonNull(status, "status");
@@ -256,7 +257,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, CharSequence content) {
         requireNonNull(mediaType, "mediaType");
@@ -272,7 +273,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, String content) {
         requireNonNull(mediaType, "mediaType");
@@ -337,7 +338,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param args the arguments referenced by the format specifiers in the format string
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     @FormatMethod
     static HttpResponse of(HttpStatus status, MediaType mediaType,
@@ -355,7 +356,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, byte[] content) {
         requireNonNull(content, "content");
@@ -369,7 +370,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param content the content of the response
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content) {
         return of(status, mediaType, content, HttpHeaders.of());
@@ -383,7 +384,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * @param trailers the HTTP trailers
      *
      * @throws IllegalArgumentException if the specified {@link HttpStatus} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(HttpStatus status, MediaType mediaType, HttpData content,
                            HttpHeaders trailers) {
@@ -401,7 +402,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Creates a new HTTP response of the specified headers.
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(ResponseHeaders headers) {
         return of(headers, HttpData.empty());
@@ -411,7 +412,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Creates a new HTTP response of the specified headers and content.
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(ResponseHeaders headers, HttpData content) {
         return of(headers, content, HttpHeaders.of());
@@ -421,7 +422,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Creates a new HTTP response of the specified objects.
      *
      * @throws IllegalArgumentException if the status of the specified {@link ResponseHeaders} is
-     *                                  {@linkplain HttpStatus#isInformational() informational}.
+     *     {@linkplain HttpStatus#isInformational() informational}.
      */
     static HttpResponse of(ResponseHeaders headers, HttpData content, HttpHeaders trailers) {
         requireNonNull(headers, "headers");
@@ -559,8 +560,8 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * @param stage the {@link CompletionStage} which will produce the actual {@link HttpResponse}
      * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
-     *                           the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
-     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     *     the returned {@link HttpResponse} using {@link #subscribe(Subscriber)}
+     *     or {@link #subscribe(Subscriber, SubscriptionOption...)}.
      */
     static HttpResponse of(CompletionStage<? extends HttpResponse> stage,
                            EventExecutor subscriberExecutor) {
@@ -623,7 +624,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * converted into JSON using the default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
-     *                                  if failed to encode the {@code content} into JSON.
+     *     if failed to encode the {@code content} into JSON.
      * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(MediaType contentType, Object content) {
@@ -635,7 +636,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * {@code content} that is converted into JSON using the default {@link ObjectMapper}.
      *
      * @throws IllegalArgumentException if the specified {@link MediaType} is not a JSON compatible type; or
-     *                                  if failed to encode the {@code content} into JSON.
+     *     if failed to encode the {@code content} into JSON.
      * @see JacksonObjectMapperProvider
      */
     static HttpResponse ofJson(HttpStatus status, MediaType contentType, Object content) {
@@ -808,9 +809,8 @@ public interface HttpResponse extends Response, HttpMessage {
      * }</pre>
      *
      * @see PooledObjects
-     *
      * @deprecated Use {@link #aggregate(AggregationOptions)} with
-     *             {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
+     *     {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
      */
     @Deprecated
     @UnstableApi
@@ -834,7 +834,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * }</pre>
      *
      * @deprecated Use {@link #aggregate(AggregationOptions)} with
-     *             {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
+     *     {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
      */
     @Deprecated
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(
@@ -938,6 +938,26 @@ public interface HttpResponse extends Response, HttpMessage {
                 }
             }
             return obj;
+        });
+        return of(stream);
+    }
+
+    /**
+     * Transforms the non-informational {@link ResponseHeaders} emitted by {@link HttpResponse} by applying
+     * the specified asynchronous {@link Function}.
+     */
+    default HttpResponse mapAsyncHeaders(
+            Function<? super ResponseHeaders, ? extends CompletableFuture<? extends ResponseHeaders>> function
+    ) {
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream = mapAsync(obj -> {
+            if (obj instanceof ResponseHeaders) {
+                final ResponseHeaders headers = (ResponseHeaders) obj;
+                if (!headers.status().isInformational()) {
+                    return function.apply(headers);
+                }
+            }
+            return UnmodifiableFuture.completedFuture(obj);
         });
         return of(stream);
     }
