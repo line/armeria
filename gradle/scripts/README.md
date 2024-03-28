@@ -120,7 +120,7 @@ sensible defaults. By applying them, you can:
    googleAnalyticsId=UA-XXXXXXXX
    javaSourceCompatibility=1.8
    javaTargetCompatibility=1.8
-   automaticJavaModuleNames=false
+   automaticModuleNames=false
    ```
 
 5. That's all. You now have two Java subprojects with sensible defaults.
