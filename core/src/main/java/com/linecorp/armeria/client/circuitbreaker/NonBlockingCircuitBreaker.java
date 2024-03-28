@@ -35,7 +35,10 @@ import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * A non-blocking implementation of circuit breaker pattern.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.NonBlockingCircuitBreaker} instead.
  */
+@Deprecated
 final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerCallback {
 
     private static final Logger logger = LoggerFactory.getLogger(NonBlockingCircuitBreaker.class);

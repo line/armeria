@@ -66,8 +66,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *         // Everything else is reported as a failure
  *         ClientBreakerRule.builder().thenFailure());
  * }</pre>
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRule} instead.
  */
 @FunctionalInterface
+@Deprecated
 public interface CircuitBreakerRule {
 
     /**

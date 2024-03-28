@@ -30,7 +30,10 @@ import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * Builds a {@link CircuitBreaker} instance using builder pattern.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreaker} instead.
  */
+@Deprecated
 public final class CircuitBreakerBuilder {
 
     private static final double DEFAULT_FAILURE_RATE_THRESHOLD = 0.5;
@@ -204,8 +207,11 @@ public final class CircuitBreakerBuilder {
         return this;
     }
 
+    /**
+     * Adds a {@link CircuitBreakerListener} with a ticker for testing.
+     */
     @VisibleForTesting
-    CircuitBreakerBuilder ticker(Ticker ticker) {
+    public CircuitBreakerBuilder ticker(Ticker ticker) {
         this.ticker = requireNonNull(ticker, "ticker");
         return this;
     }

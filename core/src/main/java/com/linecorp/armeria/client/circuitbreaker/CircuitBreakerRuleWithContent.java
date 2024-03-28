@@ -41,7 +41,10 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * to make a decision, use {@link CircuitBreakerRule} for efficiency.
  *
  * @param <T> the response type
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleWithContent} instead.
  */
+@Deprecated
 @FunctionalInterface
 public interface CircuitBreakerRuleWithContent<T extends Response> {
 

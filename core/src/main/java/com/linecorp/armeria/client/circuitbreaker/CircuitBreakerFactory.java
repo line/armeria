@@ -21,8 +21,11 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * A functional interface that represents a mapper factory, mapping a combination of host, method and path
  * to a {@link CircuitBreaker}.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerFactory} instead.
  */
 @FunctionalInterface
+@Deprecated
 public interface CircuitBreakerFactory {
     /**
      * Given a combination of host, method and path, creates a {@link CircuitBreaker}.

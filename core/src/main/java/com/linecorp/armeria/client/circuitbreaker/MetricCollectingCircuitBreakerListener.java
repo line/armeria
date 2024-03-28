@@ -30,7 +30,10 @@ import io.micrometer.core.instrument.MeterRegistry;
  *
  * @see CircuitBreakerListener#metricCollecting(MeterRegistry)
  * @see CircuitBreakerListener#metricCollecting(MeterRegistry, String)
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.MetricCollectingCircuitBreakerListener} instead.
  */
+@Deprecated
 final class MetricCollectingCircuitBreakerListener implements CircuitBreakerListener {
 
     private final MeterRegistry registry;
