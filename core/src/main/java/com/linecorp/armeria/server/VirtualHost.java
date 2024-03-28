@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -81,6 +82,7 @@ public final class VirtualHost {
     private final int port;
     @Nullable
     private final SslContext sslContext;
+    private final TlsProvider tlsProvider;
     private final Router<ServiceConfig> router;
     private final List<ServiceConfig> serviceConfigs;
     private final ServiceConfig fallbackServiceConfig;
@@ -103,6 +105,7 @@ public final class VirtualHost {
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
+                @Nullable TlsProvider tlsProvider,
                 Iterable<ServiceConfig> serviceConfigs,
                 ServiceConfig fallbackServiceConfig,
                 RejectedRouteHandler rejectionHandler,
@@ -130,6 +133,7 @@ public final class VirtualHost {
         }
         this.port = port;
         this.sslContext = sslContext;
+        this.tlsProvider = tlsProvider;
         this.defaultServiceNaming = defaultServiceNaming;
         this.defaultLogName = defaultLogName;
         this.requestTimeoutMillis = requestTimeoutMillis;
@@ -162,7 +166,7 @@ public final class VirtualHost {
     }
 
     VirtualHost withNewSslContext(SslContext sslContext) {
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, tlsProvider,
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
@@ -541,7 +545,7 @@ public final class VirtualHost {
         final ServiceConfig fallbackServiceConfig =
                 this.fallbackServiceConfig.withDecoratedService(decorator);
 
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, tlsProvider,
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,

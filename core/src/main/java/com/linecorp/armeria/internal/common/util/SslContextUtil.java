@@ -98,7 +98,7 @@ public final class SslContextUtil {
     public static SslContext createSslContext(
             Supplier<SslContextBuilder> builderSupplier, boolean forceHttp1,
             boolean tlsAllowUnsafeCiphers,
-            Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers,
+            @Nullable Consumer<? super SslContextBuilder> userCustomizer,
             @Nullable List<X509Certificate> keyCertChainCaptor) {
 
         return MinifiedBouncyCastleProvider.call(() -> {
@@ -127,7 +127,9 @@ public final class SslContextUtil {
             builder.protocols(protocols.toArray(EmptyArrays.EMPTY_STRINGS))
                    .ciphers(DEFAULT_CIPHERS, SupportedCipherSuiteFilter.INSTANCE);
 
-            userCustomizers.forEach(customizer -> customizer.accept(builder));
+            if (userCustomizer != null) {
+                userCustomizer.accept(builder);
+            }
 
             // We called user customization logic before setting ALPN to make sure they don't break
             // compatibility with HTTP/2.
