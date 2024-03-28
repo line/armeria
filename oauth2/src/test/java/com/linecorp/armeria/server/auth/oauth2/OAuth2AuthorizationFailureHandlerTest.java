@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-public class OAuth2AuthorizationFailureHandlerTest {
+class OAuth2AuthorizationFailureHandlerTest {
 
     @Test
     void testInvalidRequest() throws Exception {

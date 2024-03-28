@@ -26,32 +26,17 @@ import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
-import com.linecorp.armeria.internal.client.auth.oauth2.AbstractAccessTokenRequest;
-import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
 
 @SuppressWarnings("rawtypes")
 abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2AuthorizationGrantBuilder> {
 
-    /**
-     * A period when the token should be refreshed proactively prior to its expiry.
-     */
-    private static final Duration DEFAULT_REFRESH_BEFORE = Duration.ofMinutes(1L); // 1 minute
-
-    private final WebClient accessTokenEndpoint;
-    private final String accessTokenEndpointPath;
+    private final OAuth2AuthorizationGrantBuilder delegate;
 
     @Nullable
     private ClientAuthorization clientAuthorization;
-
-    private Duration refreshBefore = DEFAULT_REFRESH_BEFORE;
-
-    @Nullable
-    private Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider;
-
-    @Nullable
-    private Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer;
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
@@ -63,8 +48,11 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      *                                OAuth 2 system.
      */
     AbstractOAuth2AuthorizationGrantBuilder(WebClient accessTokenEndpoint, String accessTokenEndpointPath) {
-        this.accessTokenEndpoint = requireNonNull(accessTokenEndpoint, "accessTokenEndpoint");
-        this.accessTokenEndpointPath = requireNonNull(accessTokenEndpointPath, "accessTokenEndpointPath");
+        delegate = OAuth2AuthorizationGrant.builder(accessTokenEndpoint, accessTokenEndpointPath);
+    }
+
+    final OAuth2AuthorizationGrantBuilder delegate() {
+        return delegate;
     }
 
     /**
@@ -143,17 +131,21 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
         return (T) this;
     }
 
+    @Nullable
+    final ClientAuthentication buildClientAuthentication() {
+        if (clientAuthorization == null) {
+            return null;
+        }
+        return clientAuthorization.toClientAuthentication();
+    }
+
     /**
      * A period when the token should be refreshed proactively prior to its expiry.
      */
     @SuppressWarnings("unchecked")
     public final T refreshBefore(Duration refreshBefore) {
-        this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
+        delegate.refreshBefore(refreshBefore);
         return (T) this;
-    }
-
-    final Duration refreshBefore() {
-        return refreshBefore;
     }
 
     /**
@@ -171,13 +163,8 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
     @SuppressWarnings("unchecked")
     public final T fallbackTokenProvider(
             Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider) {
-        this.fallbackTokenProvider = requireNonNull(fallbackTokenProvider, "fallbackTokenProvider");
+        delegate.fallbackTokenProvider(fallbackTokenProvider);
         return (T) this;
-    }
-
-    @Nullable
-    final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider() {
-        return fallbackTokenProvider;
     }
 
     /**
@@ -188,24 +175,7 @@ abstract class AbstractOAuth2AuthorizationGrantBuilder<T extends AbstractOAuth2A
      */
     @SuppressWarnings("unchecked")
     public final T newTokenConsumer(Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
-        this.newTokenConsumer = requireNonNull(newTokenConsumer, "newTokenConsumer");
+        delegate.newTokenConsumer(requireNonNull(newTokenConsumer, "newTokenConsumer"));
         return (T) this;
-    }
-
-    @Nullable
-    final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer() {
-        return newTokenConsumer;
-    }
-
-    abstract AbstractAccessTokenRequest buildObtainRequest(
-            WebClient accessTokenEndpoint, String accessTokenEndpointPath,
-            @Nullable ClientAuthorization clientAuthorization);
-
-    final AbstractAccessTokenRequest buildObtainRequest() {
-        return buildObtainRequest(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
-    }
-
-    final RefreshAccessTokenRequest buildRefreshRequest() {
-        return new RefreshAccessTokenRequest(accessTokenEndpoint, accessTokenEndpointPath, clientAuthorization);
     }
 }

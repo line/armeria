@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.server.auth.oauth2.TokenIntrospectionRequest;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AbstractAuthorizerWithHandlers;
 import com.linecorp.armeria.server.auth.AuthFailureHandler;
@@ -74,7 +73,7 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
     private final String accessTokenType;
     @Nullable
     private final String realm;
-    private final TokenIntrospectionRequest tokenIntrospectionRequest;
+    private final TokenIntrospection tokenIntrospection;
     private final AuthFailureHandler authFailureHandler;
     private final AuthorizationStatus failureStatus;
     private final CompletionStage<AuthorizationStatus> failureStatusFuture;
@@ -82,13 +81,13 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
     OAuth2TokenIntrospectionAuthorizer(Cache<String, OAuth2TokenDescriptor> tokenCache,
                                        @Nullable String accessTokenType, @Nullable String realm,
                                        Set<String> permittedScope,
-                                       TokenIntrospectionRequest tokenIntrospectionRequest) {
+                                       TokenIntrospection tokenIntrospection) {
         this.tokenCache = requireNonNull(tokenCache, "tokenCache");
         this.accessTokenType = accessTokenType;
         this.realm = realm;
         this.permittedScope = requireNonNull(permittedScope, "permittedScope");
-        this.tokenIntrospectionRequest =
-                requireNonNull(tokenIntrospectionRequest, "tokenIntrospectionRequest");
+        this.tokenIntrospection =
+                requireNonNull(tokenIntrospection, "tokenIntrospection");
         authFailureHandler =
                 new OAuth2AuthorizationFailureHandler(accessTokenType, realm,
                                                       permittedScope.isEmpty() ? null
@@ -146,7 +145,7 @@ public final class OAuth2TokenIntrospectionAuthorizer extends AbstractAuthorizer
             return validateDescriptor(ctx, tokenDescriptor) ? SUCCESS_STATUS_FUTURE : failureStatusFuture;
         }
         // using OAuth 2.0 introspection request to obtain the token descriptor
-        return tokenIntrospectionRequest.make(accessToken).thenApply(descriptor -> {
+        return tokenIntrospection.introspect(accessToken).thenApply(descriptor -> {
             // first, authorize the new token descriptor
             if (!authorizeNewDescriptor(ctx, descriptor)) {
                 return failureStatus;

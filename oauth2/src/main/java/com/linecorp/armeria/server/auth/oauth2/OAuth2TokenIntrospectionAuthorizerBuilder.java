@@ -29,9 +29,10 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2TokenDescriptor;
-import com.linecorp.armeria.internal.server.auth.oauth2.TokenIntrospectionRequest;
+import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Endpoint;
 import com.linecorp.armeria.server.auth.Authorizer;
 
 /**
@@ -47,7 +48,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     private final String introspectionEndpointPath;
 
     @Nullable
-    private ClientAuthorization clientAuthorization;
+    private Supplier<ClientAuthentication> clientAuthenticationSupplier;
 
     @Nullable
     private String accessTokenType;
@@ -85,11 +86,16 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
+     *
+     * @deprecated Use {@link #clientAuthentication(Supplier)} with
+     *             {@link ClientAuthentication#ofAuthorization(String, String)} instead.
      */
+    @Deprecated
     public OAuth2TokenIntrospectionAuthorizerBuilder clientAuthorization(
             Supplier<String> authorizationSupplier, String authorizationType) {
-        clientAuthorization = ClientAuthorization.ofAuthorization(authorizationSupplier, authorizationType);
-        return this;
+        final ClientAuthorization clientAuthorization =
+                ClientAuthorization.ofAuthorization(authorizationSupplier, authorizationType);
+        return clientAuthentication(clientAuthorization.toClientAuthentication());
     }
 
     /**
@@ -98,11 +104,17 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
      * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
+     *
+     * @deprecated Use {@link #clientAuthentication(Supplier)} with {@link ClientAuthentication#ofBasic(String)}
+     *             instead.
      */
+    @Deprecated
     public OAuth2TokenIntrospectionAuthorizerBuilder clientBasicAuthorization(
             Supplier<String> authorizationSupplier) {
-        clientAuthorization = ClientAuthorization.ofBasicAuthorization(authorizationSupplier);
-        return this;
+        requireNonNull(authorizationSupplier, "authorizationSupplier");
+        final ClientAuthorization clientAuthorization =
+                ClientAuthorization.ofBasicAuthorization(authorizationSupplier);
+        return clientAuthentication(clientAuthorization.toClientAuthentication());
     }
 
     /**
@@ -114,11 +126,16 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
+     *
+     * @deprecated Use {@link #clientAuthentication(Supplier)} with
+     *             {@link ClientAuthentication#ofClientPassword(String, String)} instead.
      */
+    @Deprecated
     public OAuth2TokenIntrospectionAuthorizerBuilder clientCredentials(
             Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
-        clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier, authorizationType);
-        return this;
+        final ClientAuthorization clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier,
+                                                                                          authorizationType);
+        return clientAuthentication(clientAuthorization.toClientAuthentication());
     }
 
     /**
@@ -127,10 +144,36 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
      * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param credentialsSupplier A supplier of client credentials.
+     *
+     * @deprecated Use {@link #clientAuthentication(Supplier)} with
+     *             {@link ClientAuthentication#ofClientPassword(String, String)} instead.
      */
+    @Deprecated
     public OAuth2TokenIntrospectionAuthorizerBuilder clientCredentials(
             Supplier<? extends Map.Entry<String, String>> credentialsSupplier) {
-        clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier);
+        final ClientAuthorization clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier);
+        return clientAuthentication(clientAuthorization.toClientAuthentication());
+    }
+
+    /**
+     * Provides client authentication for the OAuth 2.0 Introspection requests, as per
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     */
+    public OAuth2TokenIntrospectionAuthorizerBuilder clientAuthentication(
+            ClientAuthentication clientAuthentication) {
+        requireNonNull(clientAuthentication, "clientAuthentication");
+        clientAuthentication(() -> clientAuthentication);
+        return this;
+    }
+
+    /**
+     * Provides client authentication for the OAuth 2.0 Introspection requests, as per
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     */
+    public OAuth2TokenIntrospectionAuthorizerBuilder clientAuthentication(
+            Supplier<ClientAuthentication> clientAuthenticationSupplier) {
+        requireNonNull(clientAuthenticationSupplier, "clientAuthenticationSupplier");
+        this.clientAuthenticationSupplier = clientAuthenticationSupplier;
         return this;
     }
 
@@ -186,17 +229,17 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
      */
     public OAuth2TokenIntrospectionAuthorizer build() {
         // init introspection request
-        final TokenIntrospectionRequest introspectionRequest =
-                new TokenIntrospectionRequest(introspectionEndpoint,
-                                              requireNonNull(introspectionEndpointPath,
-                                                             "introspectionEndpointPath"),
-                                              clientAuthorization);
+        final OAuth2Endpoint<OAuth2TokenDescriptor> oAuth2Endpoint =
+                new OAuth2Endpoint<>(introspectionEndpoint, introspectionEndpointPath,
+                                     OAuth2TokenIntrospectionResponseHandler.INSTANCE);
+        final TokenIntrospection tokenIntrospection =
+                new TokenIntrospection(oAuth2Endpoint, clientAuthenticationSupplier);
 
         final Cache<String, OAuth2TokenDescriptor> tokenCache =
                 Caffeine.from(cacheSpec == null ? DEFAULT_CACHE_SPEC_OBJ : cacheSpec).build();
 
         return new OAuth2TokenIntrospectionAuthorizer(tokenCache,
                                                       accessTokenType, realm, permittedScope.build(),
-                                                      introspectionRequest);
+                                                      tokenIntrospection);
     }
 }

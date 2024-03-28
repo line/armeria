@@ -27,6 +27,7 @@ public final class OAuth2Constants {
      */
     public static final String GRANT_TYPE = "grant_type";
     public static final String CLIENT_ID = "client_id";
+    public static final String CLIENT_SECRET = "client_secret";
     public static final String USER_NAME = "username";
     public static final String PASSWORD = "password";
 
@@ -95,6 +96,16 @@ public final class OAuth2Constants {
      * <a href="https://datatracker.ietf.org/doc/rfc7009/">[RFC7009]</a>.
      */
     public static final String UNSUPPORTED_TOKEN_TYPE = "unsupported_token_type";
+
+    /**
+     * JWT constants, as per <a href="https://datatracker.ietf.org/doc/html/rfc7523>[RFC7523]</a>.
+     */
+    public static final String JWT_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+    public static final String JWT_ASSERTION = "assertion";
+    public static final String CLIENT_ASSERTION = "client_assertion";
+    public static final String CLIENT_ASSERTION_TYPE = "client_assertion_type";
+    public static final String CLIENT_ASSERTION_TYPE_JWT =
+            "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 
     private OAuth2Constants() {}
 }

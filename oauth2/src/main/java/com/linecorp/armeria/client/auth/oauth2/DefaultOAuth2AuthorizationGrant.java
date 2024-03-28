@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -31,66 +32,55 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
-import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
-import com.linecorp.armeria.common.auth.oauth2.TokenRequestException;
-import com.linecorp.armeria.common.auth.oauth2.UnsupportedMediaTypeException;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2Request;
+import com.linecorp.armeria.common.auth.oauth2.OAuth2ResponseHandler;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
+import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Endpoint;
 
 /**
- * Base implementation of OAuth 2.0 Access Token Grant flow to obtain Access Token.
+ * The default implementation of OAuth 2.0 Access Token Grant flow to obtain Access Token.
  * Implements Access Token loading, storing and refreshing.
  */
-abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
+// final is removed to make it mockable in the test
+class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractOAuth2AuthorizationGrant.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultOAuth2AuthorizationGrant.class);
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<
-            AbstractOAuth2AuthorizationGrant, CompletableFuture> tokenFutureUpdater =
+            DefaultOAuth2AuthorizationGrant, CompletableFuture> tokenFutureUpdater =
             AtomicReferenceFieldUpdater.newUpdater(
-                    AbstractOAuth2AuthorizationGrant.class, CompletableFuture.class, "tokenFuture");
+                    DefaultOAuth2AuthorizationGrant.class, CompletableFuture.class, "tokenFuture");
 
-    private final RefreshAccessTokenRequest refreshRequest;
-
+    private final OAuth2Endpoint<GrantedOAuth2AccessToken> oAuth2Endpoint;
+    private final Supplier<AccessTokenRequest> requestSupplier;
     private final Duration refreshBefore;
-
     @Nullable
     private final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider;
-
     @Nullable
     private final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer;
 
     private volatile CompletableFuture<GrantedOAuth2AccessToken> tokenFuture =
             UnmodifiableFuture.completedFuture(null);
 
-    AbstractOAuth2AuthorizationGrant(
-            RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
+    DefaultOAuth2AuthorizationGrant(
+            WebClient accessTokenEndpoint, String accessTokenEndpointPath,
+            Supplier<AccessTokenRequest> requestSupplier,
+            OAuth2ResponseHandler<GrantedOAuth2AccessToken> responseHandler,
+            Duration refreshBefore,
             @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider,
             @Nullable Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
-        this.refreshRequest = requireNonNull(refreshRequest, "refreshRequest");
-        this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
+
+        oAuth2Endpoint = new OAuth2Endpoint<>(accessTokenEndpoint, accessTokenEndpointPath, responseHandler);
+        this.requestSupplier = requestSupplier;
+        this.refreshBefore = refreshBefore;
         this.fallbackTokenProvider = fallbackTokenProvider;
         this.newTokenConsumer = newTokenConsumer;
     }
-
-    /**
-     * Obtains a new access token from the token end-point asynchronously.
-     * @return A {@link CompletableFuture} carrying the requested {@link GrantedOAuth2AccessToken} or an
-     *         exception, if the request failed.
-     * @throws TokenRequestException when the endpoint returns {code HTTP 400 (Bad Request)} status and the
-     *                               response payload contains the details of the error.
-     * @throws InvalidClientException when the endpoint returns {@code HTTP 401 (Unauthorized)} status, which
-     *                                typically indicates that client authentication failed (e.g.: unknown
-     *                                client, no client authentication included, or unsupported authentication
-     *                                method).
-     * @throws UnsupportedMediaTypeException if the media type of the response does not match the expected
-     *                                       (JSON).
-     */
-    abstract CompletableFuture<GrantedOAuth2AccessToken> obtainAccessToken(
-            @Nullable GrantedOAuth2AccessToken token);
 
     /**
      * Issues an {@code OAuth 2.0 Access Token} and cache it in memory and returns the cached one
@@ -100,15 +90,13 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
      * <p>Renewing a token is guaranteed to be atomic even though the method is invoked by multiple threads.
      *
      * <p>It optionally tries to load an access token from
-     * {@link OAuth2ClientCredentialsGrantBuilder#fallbackTokenProvider(Supplier)} or
-     * {@link OAuth2ResourceOwnerPasswordCredentialsGrantBuilder#fallbackTokenProvider(Supplier)}
+     * {@link OAuth2AuthorizationGrantBuilder#fallbackTokenProvider(Supplier)}
      * which supposedly gets one by querying to a longer term storage, before it makes a request
      * to the authorization server.
      *
      * <p>One may choose to provide a hook which gets executed every time a token is issued or refreshed
      * from the authorization server to store the renewed token to a longer term storage via
-     * {@link OAuth2ClientCredentialsGrantBuilder#newTokenConsumer(Consumer)} or
-     * {@link OAuth2ResourceOwnerPasswordCredentialsGrantBuilder#newTokenConsumer(Consumer)}.
+     * {@link OAuth2AuthorizationGrantBuilder#newTokenConsumer(Consumer)} .
      */
     @Override
     public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
@@ -148,7 +136,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
                         newTokenFuture.complete(storedToken);
                         return null;
                     }
-                    issueAccessToken(null, newTokenFuture);
+                    obtainAccessToken(newTokenFuture);
                     return null;
                 });
                 return newTokenFuture;
@@ -158,7 +146,7 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
             refreshAccessToken(token, newTokenFuture);
             return newTokenFuture;
         }
-        issueAccessToken(token, newTokenFuture);
+        obtainAccessToken(newTokenFuture);
         return newTokenFuture;
     }
 
@@ -166,35 +154,40 @@ abstract class AbstractOAuth2AuthorizationGrant implements OAuth2AuthorizationGr
         return token != null && token.isValid(Instant.now().plus(refreshBefore));
     }
 
-    private void issueAccessToken(@Nullable GrantedOAuth2AccessToken token,
-                                  CompletableFuture<GrantedOAuth2AccessToken> future) {
-        obtainAccessToken(token).handle((newToken, cause) -> {
-            if (cause != null) {
-                future.completeExceptionally(cause);
-            } else {
-                tryConsumeNewToken(newToken);
-                future.complete(newToken);
-            }
-            return null;
-        });
+    @VisibleForTesting
+    void obtainAccessToken(CompletableFuture<GrantedOAuth2AccessToken> future) {
+        executeRequest(accessTokenRequest(), future);
     }
 
     @VisibleForTesting
     void refreshAccessToken(GrantedOAuth2AccessToken token,
                             CompletableFuture<GrantedOAuth2AccessToken> future) {
-        refreshRequest.make(token).handle((newToken, cause) -> {
-            if (cause instanceof TokenRequestException) {
-                issueAccessToken(token, future);
-                return null;
-            }
-            if (cause != null) {
-                future.completeExceptionally(cause);
-                return null;
-            }
-            tryConsumeNewToken(newToken);
-            future.complete(newToken);
-            return null;
-        });
+        final AccessTokenRequest accessTokenRequest = accessTokenRequest();
+        final ClientAuthentication clientAuthentication = accessTokenRequest.clientAuthentication();
+        final String refreshToken = token.refreshToken();
+        assert refreshToken != null;
+        final List<String> scopes = accessTokenRequest.scopes();
+        final RefreshAccessTokenRequest refreshRequest =
+                new RefreshAccessTokenRequest(clientAuthentication, refreshToken, scopes);
+        executeRequest(refreshRequest, future);
+    }
+
+    private void executeRequest(OAuth2Request request, CompletableFuture<GrantedOAuth2AccessToken> future) {
+        oAuth2Endpoint.execute(request)
+                      .handle((token, cause) -> {
+                          if (cause != null) {
+                              future.completeExceptionally(cause);
+                          } else {
+                              tryConsumeNewToken(token);
+                              future.complete(token);
+                          }
+                          return null;
+                      });
+    }
+
+    private AccessTokenRequest accessTokenRequest() {
+        final AccessTokenRequest accessTokenRequest = requestSupplier.get();
+        return requireNonNull(accessTokenRequest, "requestSupplier.get() returned null");
     }
 
     private void tryConsumeNewToken(GrantedOAuth2AccessToken newToken) {

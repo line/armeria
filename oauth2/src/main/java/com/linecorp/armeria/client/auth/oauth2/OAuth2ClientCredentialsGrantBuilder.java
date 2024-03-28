@@ -19,16 +19,15 @@ package com.linecorp.armeria.client.auth.oauth2;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.auth.oauth2.ClientAuthorization;
-import com.linecorp.armeria.internal.client.auth.oauth2.AbstractAccessTokenRequest;
-import com.linecorp.armeria.internal.client.auth.oauth2.ClientCredentialsTokenRequest;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 
 /**
  * Builds {@link OAuth2ClientCredentialsGrant}.
+ *
+ * @deprecated Use {@link OAuth2ClientCredentialsGrant#builder(WebClient, String)} with
+ *             {@link AccessTokenRequest#ofClientCredentials(String, String)} instead.
  */
-@UnstableApi
+@Deprecated
 public final class OAuth2ClientCredentialsGrantBuilder
         extends AbstractOAuth2AuthorizationGrantBuilder<OAuth2ClientCredentialsGrantBuilder> {
 
@@ -43,21 +42,17 @@ public final class OAuth2ClientCredentialsGrantBuilder
         super(accessTokenEndpoint, accessTokenEndpointPath);
     }
 
-    @Override
-    protected AbstractAccessTokenRequest buildObtainRequest(WebClient accessTokenEndpoint,
-                                                            String accessTokenEndpointPath,
-                                                            @Nullable ClientAuthorization clientAuthorization) {
-        return new ClientCredentialsTokenRequest(accessTokenEndpoint, accessTokenEndpointPath,
-                                                 // clientAuthorization require for this Grant flow
-                                                 requireNonNull(clientAuthorization, "clientAuthorization"));
-    }
-
     /**
      * Builds a new instance of {@link OAuth2ClientCredentialsGrant} using configured parameters.
      */
     public OAuth2ClientCredentialsGrant build() {
-        return new OAuth2ClientCredentialsGrant((ClientCredentialsTokenRequest) buildObtainRequest(),
-                                                buildRefreshRequest(), refreshBefore(),
-                                                fallbackTokenProvider(), newTokenConsumer());
+        final ClientAuthentication clientAuthentication = buildClientAuthentication();
+        // clientAuthentication is required for this Grant flow
+        requireNonNull(clientAuthentication, "clientAuthentication");
+        final AccessTokenRequest accessTokenRequest =
+                AccessTokenRequest.ofClientCredentials(clientAuthentication);
+        delegate().accessTokenRequest(accessTokenRequest);
+        final OAuth2AuthorizationGrant delegate = delegate().build();
+        return new OAuth2ClientCredentialsGrant(delegate);
     }
 }

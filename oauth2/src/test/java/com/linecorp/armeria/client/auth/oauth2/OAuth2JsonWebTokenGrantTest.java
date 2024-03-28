@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,43 +14,47 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.auth.oauth2;
+package com.linecorp.armeria.client.auth.oauth2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
 import com.google.common.collect.ImmutableMap;
 
-import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
+import com.linecorp.armeria.internal.client.auth.oauth2.MockOAuth2JsonWebTokenService;
 import com.linecorp.armeria.internal.server.auth.oauth2.MockOAuth2IntrospectionService;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthService;
+import com.linecorp.armeria.server.auth.oauth2.OAuth2TokenIntrospectionAuthorizer;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class OAuth2TokenIntrospectionAuthorizerTest {
+class OAuth2JsonWebTokenGrantTest {
 
     static final String CLIENT_CREDENTIALS = "dGVzdF9jbGllbnQ6Y2xpZW50X3NlY3JldA=="; //test_client:client_secret
     static final String SERVER_CREDENTIALS = "dGVzdF9zZXJ2ZXI6c2VydmVyX3NlY3JldA=="; //test_server:server_secret
+    static final long EXPIRES_IN_HOURS = 3L;
 
     static final MockOAuth2AccessToken TOKEN =
-            MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(3L),
+            MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(EXPIRES_IN_HOURS),
                                            ImmutableMap.of("extension_field", "twenty-seven"), "read", "write");
 
     static final HttpService SERVICE = new AbstractHttpService() {
@@ -65,6 +69,10 @@ class OAuth2TokenIntrospectionAuthorizerTest {
     static ServerExtension authServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.annotatedService("/token", new MockOAuth2JsonWebTokenService()
+                    .withJsonWebToken("test_client", "client_secret")
+                    .withAuthorizedClient("test_client", "client_secret")
+                    .withClientToken("test_client", TOKEN));
             sb.annotatedService("/introspect", new MockOAuth2IntrospectionService()
                     .withAuthorizedClient("test_client", "client_secret")
                     .withAuthorizedClient("test_server", "server_secret")
@@ -74,7 +82,6 @@ class OAuth2TokenIntrospectionAuthorizerTest {
 
     @RegisterExtension
     final ServerExtension resourceServer = new ServerExtension() {
-
         @Override
         protected boolean runForEachTest() {
             return true;
@@ -83,26 +90,23 @@ class OAuth2TokenIntrospectionAuthorizerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final WebClient introspectClient = WebClient.of(authServer.httpUri());
-            sb.service("/resource-read-write/",
-                       AuthService.builder().addOAuth2(
-                               OAuth2TokenIntrospectionAuthorizer
-                                       .builder(introspectClient, "/introspect/token/")
-                                       .realm("protected resource read-write")
-                                       .accessTokenType("Bearer")
-                                       .clientAuthentication(
-                                               () -> ClientAuthentication.ofBasic(CLIENT_CREDENTIALS))
-                                       .permittedScope("read", "write")
-                                       .build()
-                       ).build(SERVICE));
+            sb.service("/resource-read-write/", AuthService.builder().addOAuth2(
+                    OAuth2TokenIntrospectionAuthorizer
+                            .builder(introspectClient, "/introspect/token/")
+                            .realm("protected resource read-write")
+                            .accessTokenType("Bearer")
+                            .clientAuthentication(
+                                    ClientAuthentication.ofClientPassword("test_server", "server_secret"))
+                            .permittedScope("read", "write")
+                            .build()
+            ).build(SERVICE));
             sb.service("/resource-read/",
                        AuthService.builder().addOAuth2(
                                OAuth2TokenIntrospectionAuthorizer
                                        .builder(introspectClient, "/introspect/token/")
                                        .realm("protected resource read")
                                        .accessTokenType("Bearer")
-                                       .clientAuthentication(
-                                               ClientAuthentication.ofClientPassword("test_server",
-                                                                                     "server_secret"))
+                                       .clientAuthentication(ClientAuthentication.ofBasic(SERVER_CREDENTIALS))
                                        .permittedScope("read")
                                        .build()
                        ).build(SERVICE));
@@ -112,7 +116,9 @@ class OAuth2TokenIntrospectionAuthorizerTest {
                                        .builder(introspectClient, "/introspect/token/")
                                        .realm("protected resource read-write-update")
                                        .accessTokenType("Bearer")
-                                       .clientAuthentication(ClientAuthentication.ofBasic(SERVER_CREDENTIALS))
+                                       .clientAuthentication(() -> {
+                                           return ClientAuthentication.ofBasic(SERVER_CREDENTIALS);
+                                       })
                                        .permittedScope("read", "write", "update")
                                        .build()
                        ).build(SERVICE));
@@ -121,48 +127,40 @@ class OAuth2TokenIntrospectionAuthorizerTest {
 
     @Test
     void testOk() throws Exception {
-        final BlockingWebClient client = resourceServer.blockingWebClient();
+        final String jwtToken = generateJwtToken("test_client", "client_secret");
+        final ClientAuthentication clientAuthentication = ClientAuthentication.ofBasic(CLIENT_CREDENTIALS);
+        final AccessTokenRequest accessTokenRequest =
+                AccessTokenRequest.ofJsonWebToken(jwtToken, clientAuthentication, null);
+        final OAuth2AuthorizationGrant grant =
+                OAuth2AuthorizationGrant.builder(authServer.webClient(), "/token/jwt/")
+                                        .accessTokenRequest(accessTokenRequest)
+                                        .build();
 
-        final RequestHeaders requestHeaders1 = RequestHeaders.of(
-                HttpMethod.GET, "/resource-read-write/",
-                HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
-        final AggregatedHttpResponse response1 = client.execute(requestHeaders1);
-        assertThat(response1.status()).isEqualTo(HttpStatus.OK);
+        final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                          .decorator(OAuth2Client.newDecorator(grant))
+                                          .build();
 
-        final RequestHeaders requestHeaders2 = RequestHeaders.of(
-                HttpMethod.GET, "/resource-read/",
-                HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
-        final AggregatedHttpResponse response2 = client.execute(requestHeaders2);
-        assertThat(response2.status()).isEqualTo(HttpStatus.OK);
+        final HttpRequest request1 = HttpRequest.of(HttpMethod.GET, "/resource-read-write/");
+        final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/resource-read/");
+        final HttpRequest request3 = HttpRequest.of(HttpMethod.GET, "/resource-read-write-update/");
 
-        final RequestHeaders requestHeaders3 = RequestHeaders.of(
-                HttpMethod.GET, "/resource-read-write-update/",
-                HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
-        final AggregatedHttpResponse response3 = client.execute(requestHeaders3);
-        assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
+        final CompletableFuture<AggregatedHttpResponse> response1 = client.execute(request1).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> response2 = client.execute(request2).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> response3 = client.execute(request3).aggregate();
+
+        assertThat(response1.get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response2.get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response3.get().status()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
-    @Test
-    void testUnauthorized() throws Exception {
-        final BlockingWebClient client = resourceServer.blockingWebClient();
-
-        final RequestHeaders requestHeaders1 = RequestHeaders.of(
-                HttpMethod.GET, "/resource-read-write/",
-                HttpHeaderNames.AUTHORIZATION, "Bearer XYZ");
-        final AggregatedHttpResponse response1 = client.execute(requestHeaders1);
-        assertThat(response1.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response1.headers().get(HttpHeaderNames.WWW_AUTHENTICATE))
-                .isEqualTo("Bearer realm=\"protected resource read-write\", " +
-                           "error=\"invalid_token\", scope=\"read write\"");
-        assertThat(response1.content().isEmpty()).isTrue();
-
-        final RequestHeaders requestHeaders2 = RequestHeaders.of(
-                HttpMethod.GET, "/resource-read-write/",
-                HttpHeaderNames.AUTHORIZATION, "Basic " + CLIENT_CREDENTIALS);
-        final AggregatedHttpResponse response2 = client.execute(requestHeaders2);
-        assertThat(response2.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        assertThat(response2.headers().get(HttpHeaderNames.WWW_AUTHENTICATE))
-                .isEqualTo("Bearer realm=\"protected resource read-write\", scope=\"read write\"");
-        assertThat(response2.content().isEmpty()).isTrue();
+    private static String generateJwtToken(String subject, String secret) throws Exception {
+        final Instant currentTime = Instant.now();
+        return JWT.create()
+                  .withIssuer("armeria.dev")
+                  .withSubject(subject)
+                  .withIssuedAt(currentTime)
+                  .withExpiresAt(currentTime.plusSeconds(3600))
+                  .withAudience("armeria.dev")
+                  .sign(Algorithm.HMAC384(secret));
     }
 }

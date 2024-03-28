@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Endpoint;
 
 /**
  * Builds {@link TokenRevocation}.
@@ -35,7 +36,7 @@ public final class TokenRevocationBuilder {
     private final String revocationEndpointPath;
 
     @Nullable
-    private ClientAuthorization clientAuthorization;
+    private Supplier<ClientAuthentication> clientAuthenticationSupplier;
 
     /**
      * A common abstraction for the requests implementing various Access Token request/response flows,
@@ -60,10 +61,18 @@ public final class TokenRevocationBuilder {
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
+     *
+     * @deprecated Use {@link #clientAuthentication(ClientAuthentication)} instead.
      */
+    @Deprecated
     public TokenRevocationBuilder clientAuthorization(
             Supplier<String> authorizationSupplier, String authorizationType) {
-        clientAuthorization = ClientAuthorization.ofAuthorization(authorizationSupplier, authorizationType);
+        requireNonNull(authorizationSupplier, "authorizationSupplier");
+        requireNonNull(authorizationType, "authorizationType");
+
+        final ClientAuthorization clientAuthorization =
+                ClientAuthorization.ofAuthorization(authorizationSupplier, authorizationType);
+        clientAuthentication(clientAuthorization.toClientAuthentication());
         return this;
     }
 
@@ -73,9 +82,16 @@ public final class TokenRevocationBuilder {
      * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
+     *
+     * @deprecated Use {@link #clientAuthentication(ClientAuthentication)} instead.
      */
+    @Deprecated
     public TokenRevocationBuilder clientBasicAuthorization(Supplier<String> authorizationSupplier) {
-        clientAuthorization = ClientAuthorization.ofBasicAuthorization(authorizationSupplier);
+        requireNonNull(authorizationSupplier, "authorizationSupplier");
+
+        final ClientAuthorization clientAuthorization =
+                ClientAuthorization.ofBasicAuthorization(authorizationSupplier);
+        clientAuthentication(clientAuthorization.toClientAuthentication());
         return this;
     }
 
@@ -88,10 +104,37 @@ public final class TokenRevocationBuilder {
      * @param authorizationType One of the registered HTTP authentication schemes as per
      *                          <a href="https://www.iana.org/assignments/http-authschemes/http-authschemes.xhtml">
      *                          HTTP Authentication Scheme Registry</a>.
+     * @deprecated Use {@link #clientAuthentication(ClientAuthentication)} instead.
      */
+    @Deprecated
     public TokenRevocationBuilder clientCredentials(
             Supplier<? extends Map.Entry<String, String>> credentialsSupplier, String authorizationType) {
-        clientAuthorization = ClientAuthorization.ofCredentials(credentialsSupplier, authorizationType);
+        requireNonNull(credentialsSupplier, "credentialsSupplier");
+        requireNonNull(authorizationType, "authorizationType");
+        final ClientAuthorization clientAuthorization =
+                ClientAuthorization.ofCredentials(credentialsSupplier, authorizationType);
+        clientAuthentication(clientAuthorization.toClientAuthentication());
+        return this;
+    }
+
+    /**
+     * Provides client authentication for the OAuth 2.0 requests as per
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     */
+    public TokenRevocationBuilder clientAuthentication(ClientAuthentication clientAuthentication) {
+        requireNonNull(clientAuthentication, "clientAuthentication");
+        clientAuthentication(() -> clientAuthentication);
+        return this;
+    }
+
+    /**
+     * Provides client authentication for the OAuth 2.0 requests as per
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     */
+    public TokenRevocationBuilder clientAuthentication(
+            Supplier<ClientAuthentication> clientAuthenticationSupplier) {
+        requireNonNull(clientAuthenticationSupplier, "clientAuthenticationSupplier");
+        this.clientAuthenticationSupplier = clientAuthenticationSupplier;
         return this;
     }
 
@@ -99,6 +142,9 @@ public final class TokenRevocationBuilder {
      * Builds a new instance of {@link TokenRevocation} using configured parameters.
      */
     public TokenRevocation build() {
-        return new TokenRevocation(revocationEndpoint, revocationEndpointPath, clientAuthorization);
+        final OAuth2Endpoint<Boolean> oAuth2Endpoint =
+                new OAuth2Endpoint<>(revocationEndpoint, revocationEndpointPath,
+                                     TokenRevocationResponseHandler.INSTANCE);
+        return new TokenRevocation(oAuth2Endpoint, clientAuthenticationSupplier);
     }
 }
