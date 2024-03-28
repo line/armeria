@@ -115,6 +115,13 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     }
 
     @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        if (fallbackService != null) {
+            fallbackService.serviceAdded(cfg);
+        }
+    }
+
+    @Override
     public WebSocketUpgradeResult upgrade(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final HttpMethod method = ctx.method();
         switch (method) {
