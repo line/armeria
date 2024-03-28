@@ -90,6 +90,7 @@ import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -2181,7 +2182,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 ports = ImmutableList.of(new ServerPort(0, HTTP));
             }
         } else {
-            if (!Flags.useOpenSsl() && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
+            if (Flags.tlsEngineType() != TlsEngineType.OPENSSL && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
                 throw new IllegalStateException(
                         "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
                         "detected. To use TLS with Armeria, you must either use Java 9+, enable OpenSSL, " +
