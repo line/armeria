@@ -1118,4 +1118,13 @@ public interface FlagsProvider {
     default Long defaultUnhandledExceptionsReportIntervalMillis() {
         return null;
     }
+
+    /**
+     * TBU.
+     */
+    @Nullable
+    @UnstableApi
+    default ServiceWorkerGroupFactory defaultServiceWorkerGroupFactory() {
+        return null;
+    }
 }

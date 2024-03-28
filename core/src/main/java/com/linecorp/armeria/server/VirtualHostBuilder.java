@@ -173,6 +173,9 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private final VirtualHostContextPathServicesBuilder servicesBuilder =
             new VirtualHostContextPathServicesBuilder(this, this, ImmutableSet.of("/"));
     private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
+    @Nullable
+    private static final EventLoopGroup SERVICE_WORKER_GROUP =
+            Flags.serviceWorkerGroupFactory().serviceWorkerGroup();
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -1364,6 +1367,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             serviceWorkerGroup = this.serviceWorkerGroup;
         } else if (template.serviceWorkerGroup != null) {
             serviceWorkerGroup = template.serviceWorkerGroup;
+        } else if (SERVICE_WORKER_GROUP != null)  {
+            serviceWorkerGroup = SERVICE_WORKER_GROUP;
         } else {
             serviceWorkerGroup = serverBuilder.workerGroup;
         }

@@ -405,6 +405,10 @@ public final class Flags {
             getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
                      "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
 
+    private static final ServiceWorkerGroupFactory DEFAULT_SERVICE_WORKER_GROUP_FACTORY =
+            getValue(FlagsProvider::defaultServiceWorkerGroupFactory,
+                     "defaultUnhandledExceptionsReportIntervalMillis");
+
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
      * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
@@ -1473,6 +1477,14 @@ public final class Flags {
     @UnstableApi
     public static long defaultUnhandledExceptionsReportIntervalMillis() {
         return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    /**
+     * TBU.
+     */
+    @UnstableApi
+    public static ServiceWorkerGroupFactory serviceWorkerGroupFactory() {
+        return DEFAULT_SERVICE_WORKER_GROUP_FACTORY;
     }
 
     @Nullable
