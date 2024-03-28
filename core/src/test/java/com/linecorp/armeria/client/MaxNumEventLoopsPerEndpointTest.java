@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.client.DefaultEventLoopSchedulerTest.acquireEntry;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -51,7 +52,8 @@ class MaxNumEventLoopsPerEndpointTest {
     @Test
     void defaultMaxNumEventLoopsEqualsOne() {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
-        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 0, 0, ImmutableList.of());
+        final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 0, 0, ImmutableList.of(),
+                                                                          Duration.ofMinutes(1).toMillis());
         final AbstractEventLoopEntry[] entries1 = s.entries(SessionProtocol.H1C, endpointA, endpointA);
         assertThat(removeNullOrInactiveElements(entries1)).hasSize(1);
     }
@@ -84,7 +86,7 @@ class MaxNumEventLoopsPerEndpointTest {
             } else {
                 return -1;
             }
-        }));
+        }), Duration.ofMinutes(1).toMillis());
         checkMaxNumEventLoops(s, endpointA, endpointB);
     }
 
@@ -148,7 +150,8 @@ class MaxNumEventLoopsPerEndpointTest {
                     return -1;
                 });
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 7, 7,
-                                                                          maxNumEventLoopsFunctions);
+                                                                          maxNumEventLoopsFunctions,
+                                                                          Duration.ofMinutes(1).toMillis());
         final AbstractEventLoopEntry[] entries1 = s.entries(SessionProtocol.H1C, endpointA, endpointA);
         assertThat(removeNullOrInactiveElements(entries1)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H1C, endpointA, endpointA);
@@ -281,7 +284,8 @@ class MaxNumEventLoopsPerEndpointTest {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, maxNumEventLoops,
                                                                           maxNumEventLoops,
-                                                                          maxNumEventLoopsFunctions);
+                                                                          maxNumEventLoopsFunctions,
+                                                                          Duration.ofMinutes(1).toMillis());
 
         // endpointA
 

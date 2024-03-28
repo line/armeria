@@ -72,7 +72,8 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<Function<? super EventLoopGroup, ? extends EventLoopScheduler>>
             EVENT_LOOP_SCHEDULER_FACTORY = ClientFactoryOption.define(
             "EVENT_LOOP_SCHEDULER_FACTORY",
-            eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, ImmutableList.of()));
+            eventLoopGroup -> new DefaultEventLoopScheduler(eventLoopGroup, 0, 0, ImmutableList.of(),
+                                                            Flags.defaultClientIdleTimeoutMillis()));
 
     /**
      * The {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
