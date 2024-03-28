@@ -169,7 +169,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             httpResponse.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
                         .handle((res, cause) -> {
                             if (cause != null) {
-                                handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause));
+                                handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause), httpReq);
                                 return null;
                             }
 
@@ -178,21 +178,21 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                                 if (status.code() != HttpStatus.OK.code()) {
                                     handlePreDecodeException(
                                             ctx, reply, func,
-                                            new InvalidResponseHeadersException(res.headers()));
+                                            new InvalidResponseHeadersException(res.headers()), httpReq);
                                     return null;
                                 }
 
                                 try {
                                     handle(ctx, seqId, reply, func, content);
                                 } catch (Throwable t) {
-                                    handlePreDecodeException(ctx, reply, func, t);
+                                    handlePreDecodeException(ctx, reply, func, t, httpReq);
                                 }
                             }
 
                             return null;
                         }).exceptionally(CompletionActions::log);
         } catch (Throwable cause) {
-            handlePreDecodeException(ctx, reply, func, cause);
+            handlePreDecodeException(ctx, reply, func, cause, null);
         }
 
         return reply;
@@ -309,9 +309,15 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
     }
 
     private static void handlePreDecodeException(ClientRequestContext ctx, CompletableRpcResponse reply,
-                                                 ThriftFunction thriftMethod, Throwable cause) {
-        handleException(ctx, reply, null,
-                        decodeException(cause, thriftMethod.declaredExceptions()));
+                                                 ThriftFunction thriftMethod, Throwable cause,
+                                                 @Nullable HttpRequest request) {
+        final Exception decodedCause =
+                decodeException(cause, thriftMethod.declaredExceptions());
+        if (request != null) {
+            // abort the request to potentially release pooled buffers
+            request.abort(decodedCause);
+        }
+        handleException(ctx, reply, null, decodedCause);
     }
 
     static Exception decodeException(Throwable cause, @Nullable Class<?>[] declaredThrowableExceptions) {
