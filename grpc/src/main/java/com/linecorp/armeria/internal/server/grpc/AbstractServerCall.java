@@ -562,7 +562,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                     .build();
         }
         GrpcTrailersUtil.addStatusMessageToTrailers(
-                trailersBuilder, status.getCode().value(), status.getDescription());
+                trailersBuilder, status.getCode().value(), status.getDescription(), null);
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());

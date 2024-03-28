@@ -209,7 +209,7 @@ class ArmeriaMessageFramerTest {
     private static ByteBuf serializedTrailers() {
         final ResponseHeadersBuilder trailersBuilder = ResponseHeaders.builder(200).contentType(
                 GrpcSerializationFormats.PROTO.mediaType());
-        GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null);
+        GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null, null);
         return serializeTrailersAsMessage(ByteBufAllocator.DEFAULT, trailersBuilder.build());
     }
 }

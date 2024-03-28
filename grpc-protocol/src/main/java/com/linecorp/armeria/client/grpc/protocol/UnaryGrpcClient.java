@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client.grpc.protocol;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -161,7 +162,14 @@ public final class UnaryGrpcClient {
             if (grpcMessage != null) {
                 grpcMessage = StatusMessageEscaper.unescape(grpcMessage);
             }
-            throw new ArmeriaStatusException(Integer.parseInt(grpcStatus), grpcMessage);
+            final String grpcDetails = headers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
+            final byte[] details;
+            if (grpcDetails != null) {
+                details = Base64.getDecoder().decode(grpcDetails);
+            } else {
+                details = null;
+            }
+            throw new ArmeriaStatusException(Integer.parseInt(grpcStatus), grpcMessage, details);
         }
     }
 
