@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
@@ -73,6 +74,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
             Optional<List<DependencyInjector>> dependencyInjectors,
+            Optional<List<ServerErrorHandler>> serverErrorHandlers,
             BeanFactory beanFactory) {
 
         if (!armeriaServerConfigurators.isPresent() &&
@@ -98,6 +100,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")),
                                            metricCollectingServiceConfigurators.orElse(ImmutableList.of()),
                                            dependencyInjectors.orElse(ImmutableList.of()),
+                                           serverErrorHandlers.orElse(ImmutableList.of()),
                                            beanFactory);
 
         return serverBuilder.build();
