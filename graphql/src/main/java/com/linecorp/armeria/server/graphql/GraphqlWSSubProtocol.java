@@ -401,7 +401,14 @@ class GraphqlWSSubProtocol {
     }
 
     private static void writeComplete(WebSocketWriter out, String operationId) {
-        out.tryWrite("{\"type\":\"complete\",\"id\":\"" + operationId + "\"}");
+        try {
+            final String json = serializeToJson(ImmutableMap.of("type", "complete", "id", operationId));
+            out.tryWrite(json);
+        } catch (JsonProcessingException e) {
+            logger.warn("Unexpected exception while serializing complete event. operationId: {}",
+                        operationId, e);
+            out.close(e);
+        }
     }
 
     private static final class GraphqlWebSocketCloseException extends Exception {

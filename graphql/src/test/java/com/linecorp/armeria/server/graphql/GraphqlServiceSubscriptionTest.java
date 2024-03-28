@@ -24,13 +24,14 @@ import static org.awaitility.Awaitility.await;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -92,7 +93,7 @@ class GraphqlServiceSubscriptionTest {
 
     @BeforeEach
     void beforeEach() {
-         streamRef = new AtomicReference<>(StreamMessage.streaming());
+        streamRef = new AtomicReference<>(StreamMessage.streaming());
     }
 
     @Test
@@ -110,100 +111,47 @@ class GraphqlServiceSubscriptionTest {
                 .isEqualTo("Use GraphQL over WebSocket for subscription");
     }
 
-    @Test
-    void testSubscriptionOverWebSocketHttp1() {
-        testWebSocket(SessionProtocol.H1C);
-    }
-
-    @Test
-    void testSubscriptionOverWebSocketHttp2() {
-        testWebSocket(SessionProtocol.H2C);
-    }
-
-    private void testWebSocket(SessionProtocol sessionProtocol) {
+    @CsvSource({ "H1C", "H2C" })
+    @ParameterizedTest
+    void testSubscriptionOverWebSocketHttp1(SessionProtocol sessionProtocol) {
         final WebSocketClient webSocketClient =
                 WebSocketClient.builder(server.uri(sessionProtocol, SerializationFormat.WS))
                                .subprotocols("graphql-transport-ws")
                                .build();
-        final CompletableFuture<WebSocketSession> future = webSocketClient.connect("/graphql");
-
-        final WebSocketSession webSocketSession = future.join();
-
+        final WebSocketSession webSocketSession = webSocketClient.connect("/graphql").join();
         final WebSocketWriter outbound = webSocketSession.outbound();
 
         final List<String> receivedEvents = new ArrayList<>();
-        //noinspection ReactiveStreamsSubscriberImplementation
-        webSocketSession.inbound().subscribe(new Subscriber<WebSocketFrame>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                s.request(Long.MAX_VALUE);
-            }
-
-            @Override
-            public void onNext(WebSocketFrame webSocketFrame) {
-                if (webSocketFrame.type() == WebSocketFrameType.TEXT) {
-                    receivedEvents.add(webSocketFrame.text());
-                }
-            }
-
-            @Override
-            public void onError(Throwable t) {
-            }
-
-            @Override
-            public void onComplete() {
-            }
-        });
+        webSocketSession.inbound().subscribe(new TestSubscriber(receivedEvents));
 
         outbound.write("{\"type\":\"ping\"}");
         outbound.write("{\"type\":\"connection_init\"}");
         outbound.write(
                 "{\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription {hello}\"}}");
 
-        await().until(() -> receivedEvents.size() >= 3);
+        await().until(() -> receivedEvents.size() >= 4);
         assertThatJson(receivedEvents.get(0)).node("type").isEqualTo("pong");
         assertThatJson(receivedEvents.get(1)).node("type").isEqualTo("connection_ack");
         assertThatJson(receivedEvents.get(2))
                 .node("type").isEqualTo("next")
                 .node("id").isEqualTo("\"1\"")
                 .node("payload.data.hello").isEqualTo("Armeria");
+        assertThatJson(receivedEvents.get(3))
+                .node("type").isEqualTo("complete")
+                .node("id").isEqualTo("\"1\"");
     }
 
     @Test
-    void testSubscriptionCleanedUpWhenClosed() throws Exception {
+    void testSubscriptionCleanedUpWhenClosed() {
         final WebSocketClient webSocketClient =
                 WebSocketClient.builder(server.uri(SessionProtocol.H1C, SerializationFormat.WS))
                                .subprotocols("graphql-transport-ws")
                                .build();
-        final CompletableFuture<WebSocketSession> future = webSocketClient.connect("/graphql");
-
-        final WebSocketSession webSocketSession = future.join();
-
+        final WebSocketSession webSocketSession = webSocketClient.connect("/graphql").join();
         final WebSocketWriter outbound = webSocketSession.outbound();
 
         final List<String> receivedEvents = new ArrayList<>();
-        //noinspection ReactiveStreamsSubscriberImplementation
-        webSocketSession.inbound().subscribe(new Subscriber<WebSocketFrame>() {
-            @Override
-            public void onSubscribe(Subscription s) {
-                s.request(Long.MAX_VALUE);
-            }
-
-            @Override
-            public void onNext(WebSocketFrame webSocketFrame) {
-                if (webSocketFrame.type() == WebSocketFrameType.TEXT) {
-                    receivedEvents.add(webSocketFrame.text());
-                }
-            }
-
-            @Override
-            public void onError(Throwable t) {
-            }
-
-            @Override
-            public void onComplete() {
-            }
-        });
+        webSocketSession.inbound().subscribe(new TestSubscriber(receivedEvents));
 
         outbound.write("{\"type\":\"ping\"}");
         outbound.write("{\"type\":\"connection_init\"}");
@@ -217,5 +165,62 @@ class GraphqlServiceSubscriptionTest {
         assertThatThrownBy(() -> streamRef.get().whenComplete().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(CancelledSubscriptionException.class);
+    }
+
+    @Test
+    void completeEventIdIsNotSplit() {
+        final WebSocketClient webSocketClient =
+                WebSocketClient.builder(server.uri(SessionProtocol.H1C, SerializationFormat.WS))
+                               .subprotocols("graphql-transport-ws")
+                               .build();
+        final WebSocketSession webSocketSession = webSocketClient.connect("/graphql").join();
+        final WebSocketWriter outbound = webSocketSession.outbound();
+
+        final List<String> receivedEvents = new ArrayList<>();
+        webSocketSession.inbound().subscribe(new TestSubscriber(receivedEvents));
+
+        outbound.write("{\"type\":\"connection_init\"}");
+        outbound.write(
+                "{\"id\":\"1\\\",\\\"hehe\\\":\\\"hehe\", " +
+                "\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription {hello}\"}}");
+
+        await().until(() -> receivedEvents.size() >= 3);
+        assertThatJson(receivedEvents.get(0)).node("type").isEqualTo("connection_ack");
+        assertThatJson(receivedEvents.get(1))
+                .node("type").isEqualTo("next")
+                .node("id").isEqualTo("\"1\\\",\\\"hehe\\\":\\\"hehe\"")
+                .node("payload.data.hello").isEqualTo("Armeria");
+        assertThatJson(receivedEvents.get(2))
+                .node("type").isEqualTo("complete")
+                // Before #5531, "hehe" was set as another property.
+                .node("id").isEqualTo("\"1\\\",\\\"hehe\\\":\\\"hehe\"");
+    }
+
+    @SuppressWarnings("ReactiveStreamsSubscriberImplementation")
+    private static class TestSubscriber implements Subscriber<WebSocketFrame> {
+
+        private final List<String> receivedEvents;
+
+        TestSubscriber(List<String> receivedEvents) {
+            this.receivedEvents = receivedEvents;
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            s.request(Long.MAX_VALUE);
+        }
+
+        @Override
+        public void onNext(WebSocketFrame webSocketFrame) {
+            if (webSocketFrame.type() == WebSocketFrameType.TEXT) {
+                receivedEvents.add(webSocketFrame.text());
+            }
+        }
+
+        @Override
+        public void onError(Throwable t) {}
+
+        @Override
+        public void onComplete() {}
     }
 }
