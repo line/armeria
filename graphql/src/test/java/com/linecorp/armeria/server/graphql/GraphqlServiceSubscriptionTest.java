@@ -18,13 +18,17 @@ package com.linecorp.armeria.server.graphql;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Publisher;
@@ -40,6 +44,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
@@ -51,6 +56,8 @@ import graphql.schema.DataFetcher;
 import graphql.schema.StaticDataFetcher;
 
 class GraphqlServiceSubscriptionTest {
+
+    private static AtomicReference<StreamMessage<String>> streamRef;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -67,7 +74,8 @@ class GraphqlServiceSubscriptionTest {
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("foo", bar));
                                       c.type("Subscription",
-                                             typeWiring -> typeWiring.dataFetcher("hello", dataFetcher()));
+                                             typeWiring -> typeWiring.dataFetcher("hello", dataFetcher())
+                                                                     .dataFetcher("bye", notCompleting()));
                                   })
                                   .build();
             sb.service("/graphql", service);
@@ -76,6 +84,15 @@ class GraphqlServiceSubscriptionTest {
 
     private static DataFetcher<Publisher<String>> dataFetcher() {
         return environment -> StreamMessage.of("Armeria");
+    }
+
+    private static DataFetcher<Publisher<String>> notCompleting() {
+        return environment -> streamRef.get();
+    }
+
+    @BeforeEach
+    void beforeEach() {
+         streamRef = new AtomicReference<>(StreamMessage.streaming());
     }
 
     @Test
@@ -150,5 +167,55 @@ class GraphqlServiceSubscriptionTest {
                 .node("type").isEqualTo("next")
                 .node("id").isEqualTo("\"1\"")
                 .node("payload.data.hello").isEqualTo("Armeria");
+    }
+
+    @Test
+    void testSubscriptionCleanedUpWhenClosed() throws Exception {
+        final WebSocketClient webSocketClient =
+                WebSocketClient.builder(server.uri(SessionProtocol.H1C, SerializationFormat.WS))
+                               .subprotocols("graphql-transport-ws")
+                               .build();
+        final CompletableFuture<WebSocketSession> future = webSocketClient.connect("/graphql");
+
+        final WebSocketSession webSocketSession = future.join();
+
+        final WebSocketWriter outbound = webSocketSession.outbound();
+
+        final List<String> receivedEvents = new ArrayList<>();
+        //noinspection ReactiveStreamsSubscriberImplementation
+        webSocketSession.inbound().subscribe(new Subscriber<WebSocketFrame>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(WebSocketFrame webSocketFrame) {
+                if (webSocketFrame.type() == WebSocketFrameType.TEXT) {
+                    receivedEvents.add(webSocketFrame.text());
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+            }
+
+            @Override
+            public void onComplete() {
+            }
+        });
+
+        outbound.write("{\"type\":\"ping\"}");
+        outbound.write("{\"type\":\"connection_init\"}");
+        outbound.write(
+                "{\"id\":\"1\",\"type\":\"subscribe\",\"payload\":{\"query\":\"subscription {bye}\"}}");
+        // wait until the streamRef is subscribed
+        await().untilAsserted(() -> assertThat(streamRef.get().demand()).isGreaterThan(0));
+        outbound.close();
+
+        await().untilAsserted(() -> assertThat(streamRef.get().whenComplete()).isDone());
+        assertThatThrownBy(() -> streamRef.get().whenComplete().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(CancelledSubscriptionException.class);
     }
 }
