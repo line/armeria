@@ -29,6 +29,7 @@ public final class ArmeriaStatusException extends RuntimeException {
 
     private final int code;
 
+    @Nullable
     private final byte[] grpcStatusDetailsBin;
 
     /**
