@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ResponseAsUtil.OBJECT_MAPPER;
+import static com.linecorp.armeria.client.ResponseAsUtil.SUCCESS_PREDICATE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -63,7 +65,8 @@ class AggregatedResponseAsTest {
         final byte[] content = JacksonUtil.writeValueAsBytes(myObject);
         final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers, HttpData.wrap(content));
 
-        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(MyObject.class).as(response);
+        final ResponseEntity<MyObject> entity =
+                AggregatedResponseAs.json(MyObject.class, OBJECT_MAPPER, SUCCESS_PREDICATE).as(response);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
@@ -75,9 +78,10 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(ResponseHeaders.of(500), HttpData.wrap(content));
 
-        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class).as(response))
+        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class, OBJECT_MAPPER, SUCCESS_PREDICATE)
+                                                     .as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
-                .hasMessageContaining("(expect: the success class (2xx)");
+                .hasMessageContaining("status: 500 Internal Server Error");
     }
 
     @Test
@@ -85,7 +89,8 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(headers, HttpData.ofUtf8("{ 'id': 10 }"));
 
-        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class).as(response))
+        assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class, OBJECT_MAPPER, SUCCESS_PREDICATE)
+                                                     .as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
                 .hasCauseInstanceOf(JsonProcessingException.class);
     }
@@ -98,7 +103,8 @@ class AggregatedResponseAsTest {
         final JsonMapper mapper = JsonMapper.builder()
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
-        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(MyObject.class, mapper).as(response);
+        final ResponseEntity<MyObject> entity =
+                AggregatedResponseAs.json(MyObject.class, mapper, SUCCESS_PREDICATE).as(response);
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(entity.content()).isEqualTo(myObject);
@@ -112,7 +118,9 @@ class AggregatedResponseAsTest {
         final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers, HttpData.wrap(content));
 
         final ResponseEntity<List<MyObject>> entity =
-                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}).as(response);
+                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {},
+                                          OBJECT_MAPPER, SUCCESS_PREDICATE)
+                                    .as(response);
         final List<MyObject> objects = entity.content();
         assertThat(objects).containsExactly(myObject);
     }
@@ -125,7 +133,8 @@ class AggregatedResponseAsTest {
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
         final ResponseEntity<List<MyObject>> entity =
-                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper).as(response);
+                AggregatedResponseAs.json(
+                        new TypeReference<List<MyObject>>() {}, mapper, SUCCESS_PREDICATE).as(response);
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
         myObject.setId(10);

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ResponseAsUtil.OBJECT_MAPPER;
 import static com.linecorp.armeria.client.ResponseAsUtil.aggregateAndConvert;
 import static com.spotify.futures.CompletableFutures.allAsList;
 import static java.util.Objects.requireNonNull;
@@ -24,6 +25,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.JacksonObjectMapperProvider;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -93,30 +96,92 @@ public interface ResponseAs<T, R> {
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
      * into the specified non-container type using the default {@link ObjectMapper}.
+     * An {@link InvalidHttpResponseException} is raised if the status of the response is not
+     * {@link HttpStatusClass#SUCCESS}. Use {@link #json(Class, Predicate)} if you want to deserialize
+     * the content differently depending on the {@link AggregatedHttpResponse}.
      *
-     * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
-     * {@link Map}. Use {@link #json(TypeReference)} for the container type.
-     *
-     * @see JacksonObjectMapperProvider
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #json(TypeReference)} for the container type.
      */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz) {
-        requireNonNull(clazz, "clazz");
-        return aggregateAndConvert(AggregatedResponseAs.json(clazz));
+        return json(clazz, OBJECT_MAPPER);
     }
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
      * into the specified non-container type using the specified {@link ObjectMapper}.
+     * An {@link InvalidHttpResponseException} is raised if the status of the response is not
+     * {@link HttpStatusClass#SUCCESS}. Use {@link #json(Class, Predicate)} if you want to deserialize
+     * the content differently depending on the {@link AggregatedHttpResponse}.
      *
-     * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
-     * {@link Map}. Use {@link #json(TypeReference, ObjectMapper)} for the container type.
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #json(TypeReference, ObjectMapper)} for the container type.
      */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
-        return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper));
+        return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper, ResponseAsUtil.SUCCESS_PREDICATE));
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the default {@link ObjectMapper}.
+     * An {@link InvalidHttpResponseException} is raised if the status of the response is not
+     * {@link HttpStatusClass#SUCCESS}. Use {@link #json(Class, Predicate)} if you want to deserialize
+     * the content differently depending on the {@link AggregatedHttpResponse}.
+     */
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef) {
+        return json(typeRef, OBJECT_MAPPER);
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the specified {@link ObjectMapper}.
+     * An {@link InvalidHttpResponseException} is raised if the status of the response is not
+     * {@link HttpStatusClass#SUCCESS}. Use {@link #json(Class, Predicate)} if you want to deserialize
+     * the content differently depending on the {@link AggregatedHttpResponse}.
+     */
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                        ObjectMapper mapper) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        return aggregateAndConvert(
+                AggregatedResponseAs.json(typeRef, mapper, ResponseAsUtil.SUCCESS_PREDICATE));
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the default {@link ObjectMapper} if the
+     * {@link Predicate} is satisfied.
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #json(TypeReference, Predicate)} for the container type.
+     */
+    @UnstableApi
+    static <V> JsonConditionalResponseAs<V> json(
+            Class<? extends V> clazz, Predicate<AggregatedHttpResponse> predicate) {
+        return json(clazz, OBJECT_MAPPER, predicate);
+    }
+
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the specified {@link ObjectMapper} if the
+     * {@link Predicate} is satisfied.
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #json(TypeReference, ObjectMapper, Predicate)} for the container type.
+     */
+    @UnstableApi
+    static <V> JsonConditionalResponseAs<V> json(
+            Class<? extends V> clazz, ObjectMapper mapper, Predicate<AggregatedHttpResponse> predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return new JsonConditionalResponseAs<>(predicate, AggregatedResponseAs.json(clazz, mapper));
     }
 
     /**
@@ -126,21 +191,24 @@ public interface ResponseAs<T, R> {
      * @see JacksonObjectMapperProvider
      */
     @UnstableApi
-    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef) {
-        requireNonNull(typeRef, "typeRef");
-        return aggregateAndConvert(AggregatedResponseAs.json(typeRef));
+    static <V> JsonConditionalResponseAs<V> json(
+            TypeReference<? extends V> typeRef, Predicate<AggregatedHttpResponse> predicate) {
+        return json(typeRef, OBJECT_MAPPER, predicate);
     }
 
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
-     * into the specified Java type using the specified {@link ObjectMapper}.
+     * into the specified Java type using the specified {@link ObjectMapper} if the {@link Predicate}
+     * is satisfied.
      */
     @UnstableApi
-    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                        ObjectMapper mapper) {
+    static <V> JsonConditionalResponseAs<V> json(
+            TypeReference<? extends V> typeRef, ObjectMapper mapper,
+            Predicate<AggregatedHttpResponse> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
-        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper));
+        requireNonNull(predicate, "predicate");
+        return new JsonConditionalResponseAs<>(predicate, AggregatedResponseAs.json(typeRef, mapper));
     }
 
     /**

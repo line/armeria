@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.ResponseAsUtil.OBJECT_MAPPER;
+import static com.linecorp.armeria.client.ResponseAsUtil.SUCCESS_PREDICATE;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -133,8 +135,7 @@ public final class BlockingWebClientRequestPreparation
     @UnstableApi
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             Class<? extends T> clazz) {
-        requireNonNull(clazz, "clazz");
-        return as(AggregatedResponseAs.json(clazz));
+        return asJson(clazz, OBJECT_MAPPER);
     }
 
     /**
@@ -162,7 +163,7 @@ public final class BlockingWebClientRequestPreparation
             Class<? extends T> clazz, ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
-        return as(AggregatedResponseAs.json(clazz, mapper));
+        return as(AggregatedResponseAs.json(clazz, mapper, SUCCESS_PREDICATE));
     }
 
     /**
@@ -187,8 +188,7 @@ public final class BlockingWebClientRequestPreparation
     @UnstableApi
     public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef) {
-        requireNonNull(typeRef, "typeRef");
-        return as(AggregatedResponseAs.json(typeRef));
+        return asJson(typeRef, OBJECT_MAPPER);
     }
 
     /**
@@ -214,7 +214,7 @@ public final class BlockingWebClientRequestPreparation
             TypeReference<? extends T> typeRef, ObjectMapper mapper) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
-        return as(AggregatedResponseAs.json(typeRef, mapper));
+        return as(AggregatedResponseAs.json(typeRef, mapper, SUCCESS_PREDICATE));
     }
 
     @Override
