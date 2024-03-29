@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.DefaultRequestTarget.removeMatrixVariables;
 import static java.util.Objects.requireNonNull;
 
@@ -148,13 +149,19 @@ public interface RoutingContext {
      */
     default RoutingContext withPath(String path) {
         requireNonNull(path, "path");
+        final String pathWithoutMatrixVariables = removeMatrixVariables(path);
+        checkArgument(pathWithoutMatrixVariables != null,
+                      "path with invalid matrix variables: %s", path);
+
         final RequestTarget oldReqTarget = requestTarget();
         final RequestTarget newReqTarget =
                 DefaultRequestTarget.createWithoutValidation(
                         oldReqTarget.form(),
                         oldReqTarget.scheme(),
                         oldReqTarget.authority(),
-                        removeMatrixVariables(path),
+                        oldReqTarget.host(),
+                        oldReqTarget.port(),
+                        pathWithoutMatrixVariables,
                         path,
                         oldReqTarget.query(),
                         oldReqTarget.fragment());

@@ -14,12 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+/**
+ * Provides client-side {@link com.linecorp.armeria.client.Endpoint} related integrations with xDS.
+ */
+@NonNullByDefault
+@UnstableApi
+package com.linecorp.armeria.xds.client.endpoint;
 
-final class XdsConstants {
-
-    // https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/subsets
-    static final String SUBSET_LOAD_BALANCING_FILTER_NAME = "envoy.lb";
-
-    private XdsConstants() {}
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;
+import com.linecorp.armeria.common.annotation.UnstableApi;

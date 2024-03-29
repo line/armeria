@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -87,6 +88,26 @@ public final class ClusterSnapshot implements Snapshot<ClusterXdsResource> {
 
     int index() {
         return index;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final ClusterSnapshot that = (ClusterSnapshot) object;
+        return index == that.index && Objects.equal(clusterXdsResource, that.clusterXdsResource) &&
+               Objects.equal(endpointSnapshot, that.endpointSnapshot) &&
+               Objects.equal(virtualHost, that.virtualHost) &&
+               Objects.equal(route, that.route);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(clusterXdsResource, endpointSnapshot, virtualHost, route, index);
     }
 
     @Override

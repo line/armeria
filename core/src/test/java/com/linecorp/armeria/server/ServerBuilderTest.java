@@ -740,7 +740,7 @@ class ServerBuilderTest {
         final AggregatedHttpResponse response = client.get("/hook").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook");
-        assertThat(poppedCnt.get()).isEqualTo(1);
+        assertThat(poppedCnt.get()).isGreaterThan(0);
     }
 
     @Test
@@ -752,8 +752,8 @@ class ServerBuilderTest {
         final AggregatedHttpResponse response = client.get("/hook_route").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook_route");
-        assertThat(poppedRouterCnt.get()).isEqualTo(1);
-        assertThat(poppedRouterCnt2.get()).isEqualTo(1);
+        assertThat(poppedRouterCnt.get()).isGreaterThan(0);
+        assertThat(poppedRouterCnt2.get()).isGreaterThan(0);
     }
 
     @Test

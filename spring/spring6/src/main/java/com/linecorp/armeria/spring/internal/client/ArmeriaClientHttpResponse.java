@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.spring.web.reactive;
+package com.linecorp.armeria.spring.internal.client;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp1Headers;
 import static java.util.Objects.requireNonNull;
@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import io.netty.handler.codec.http.cookie.ClientCookieDecoder;
 import reactor.core.publisher.Flux;
@@ -39,7 +40,7 @@ import reactor.core.publisher.Flux;
 /**
  * A {@link ClientHttpResponse} implementation for the Armeria HTTP client.
  */
-final class ArmeriaClientHttpResponse implements ClientHttpResponse {
+public final class ArmeriaClientHttpResponse implements ClientHttpResponse {
 
     private final com.linecorp.armeria.common.HttpStatus status;
     private final ResponseHeaders headers;
@@ -51,9 +52,9 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
     @Nullable
     private HttpHeaders httpHeaders;
 
-    ArmeriaClientHttpResponse(ResponseHeaders headers,
-                              SplitHttpResponse response,
-                              DataBufferFactoryWrapper<?> factoryWrapper) {
+    public ArmeriaClientHttpResponse(ResponseHeaders headers,
+                                     SplitHttpResponse response,
+                                     DataBufferFactoryWrapper<?> factoryWrapper) {
         this.headers = requireNonNull(headers, "headers");
         status = headers.status();
 

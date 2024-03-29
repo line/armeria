@@ -35,6 +35,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpResponse;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.core.publisher.Flux;
