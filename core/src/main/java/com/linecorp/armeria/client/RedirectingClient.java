@@ -22,8 +22,10 @@ import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowSa
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority;
 
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
@@ -266,15 +268,16 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             if (isCyclicRedirects(redirectCtx, nextReqTarget.toString(), newReqDuplicator.headers().method())) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
                                 CyclicRedirectsException.of(redirectCtx.originalUri(),
-                                                            redirectCtx.redirectUris().values()));
+                                                            redirectCtx.redirectUris()));
                 return;
             }
 
-            final Multimap<HttpMethod, String> redirectUris = redirectCtx.redirectUris();
-            if (redirectUris.size() > maxRedirects) {
+            final Set<RedirectSignature> redirectSignatures = redirectCtx.redirectSignatures();
+            // Minus 1 because the original signature is also included.
+            if (redirectSignatures.size() - 1 > maxRedirects) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture,
                                 response, TooManyRedirectsException.of(maxRedirects, redirectCtx.originalUri(),
-                                                                       redirectUris.values()));
+                                                                       redirectCtx.redirectUris()));
                 return;
             }
 
@@ -471,13 +474,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     private static boolean isCyclicRedirects(RedirectContext redirectCtx,
                                              String redirectUri, HttpMethod method) {
-        final boolean added = redirectCtx.addRedirectUri(method, redirectUri);
-        if (!added) {
-            return true;
-        }
-
-        return redirectCtx.originalUri().equals(redirectUri) &&
-               redirectCtx.request().method() == method;
+        return !redirectCtx.addRedirectSignature(redirectUri, method);
     }
 
     private static String buildUri(ClientRequestContext ctx, RequestHeaders headers) {
@@ -549,9 +546,10 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         private final CompletableFuture<Void> responseWhenComplete;
         private final CompletableFuture<HttpResponse> responseFuture;
         @Nullable
-        private Multimap<HttpMethod, String> redirectUris;
-        @Nullable
         private String originalUri;
+        @Nullable
+        private Set<RedirectSignature> redirectSignatures;
+        private boolean isAddedOriginalSignature;
 
         RedirectContext(ClientRequestContext ctx, HttpRequest request,
                         HttpResponse response, CompletableFuture<HttpResponse> responseFuture) {
@@ -580,17 +578,63 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return originalUri;
         }
 
-        boolean addRedirectUri(HttpMethod method, String redirectUri) {
-            if (redirectUris == null) {
-                redirectUris = LinkedListMultimap.create();
+        boolean addRedirectSignature(String redirectUri, HttpMethod method) {
+            if (redirectSignatures == null) {
+                redirectSignatures = ConcurrentHashMap.newKeySet();
             }
-            return redirectUris.put(method, redirectUri);
+
+            if (!isAddedOriginalSignature) {
+                final RedirectSignature originalSignature =
+                        new RedirectSignature(originalUri(), request.method());
+                redirectSignatures.add(originalSignature);
+                isAddedOriginalSignature = true;
+            }
+
+            final RedirectSignature signature = new RedirectSignature(redirectUri, method);
+            return redirectSignatures.add(signature);
         }
 
-        Multimap<HttpMethod, String> redirectUris() {
-            // Always called after addRedirectUri is called.
-            assert redirectUris != null;
-            return redirectUris;
+        Set<RedirectSignature> redirectSignatures() {
+            // Always called after addRedirectSignature is called.
+            assert redirectSignatures != null;
+            return redirectSignatures;
+        }
+
+        Set<String> redirectUris() {
+            // Always called after addRedirectSignature is called.
+            assert redirectSignatures != null;
+            return redirectSignatures.stream()
+                                     .map(signature -> signature.uri)
+                                     .collect(ImmutableSet.toImmutableSet());
+        }
+    }
+
+    static class RedirectSignature {
+        private final String uri;
+        private final HttpMethod method;
+
+        RedirectSignature(String uri, HttpMethod method) {
+            this.uri = uri;
+            this.method = method;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(uri, method);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) {
+                return true;
+            }
+            if (!(obj instanceof RedirectSignature)) {
+                return false;
+            }
+
+            final RedirectSignature that = (RedirectSignature) obj;
+            return method == that.method &&
+                   uri.equals(that.uri);
         }
     }
 }

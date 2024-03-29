@@ -23,14 +23,19 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.client.redirect.CyclicRedirectsException;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
 import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
@@ -111,9 +116,13 @@ class RedirectingClientTest {
               .service("/removeDoubleDotSegments/foo",
                        (ctx, req) -> HttpResponse.ofRedirect("../removeDotSegments/bar"));
 
-            sb.service("/loop", (ctx, req) -> HttpResponse.ofRedirect("loop1"))
-              .service("/loop1", (ctx, req) -> HttpResponse.ofRedirect("loop2"))
-              .service("/loop2", (ctx, req) -> HttpResponse.ofRedirect("loop"));
+            sb.service("/completeLoop", (ctx, req) -> HttpResponse.ofRedirect("completeLoop1"))
+              .service("/completeLoop1", (ctx, req) -> HttpResponse.ofRedirect("completeLoop2"))
+              .service("/completeLoop2", (ctx, req) -> HttpResponse.ofRedirect("completeLoop"));
+
+            sb.service("/partialLoop", (ctx, req) -> HttpResponse.ofRedirect("partialLoop1"))
+              .service("/partialLoop1", (ctx, req) -> HttpResponse.ofRedirect("partialLoop2"))
+              .service("/partialLoop2", (ctx, req) -> HttpResponse.ofRedirect("partialLoop1"));
 
             sb.service("/differentHttpMethod", (ctx, req) -> {
                 if (ctx.method() == HttpMethod.GET) {
@@ -285,18 +294,41 @@ class RedirectingClientTest {
         assertThat(res2.status()).isSameAs(HttpStatus.OK);
     }
 
-    @Test
-    void cyclicRedirectsException() {
+    @ParameterizedTest
+    @MethodSource("provideRedirectPatterns")
+    void cyclicRedirectsException(String originalPath, List<String> expectedPathRegexPatterns) {
         final WebClient client = Clients.builder(server.httpUri())
                                         .followRedirects()
                                         .decorator(LoggingClient.newDecorator())
                                         .build(WebClient.class);
-        assertThatThrownBy(() -> client.get("/loop").aggregate().join())
-                .hasMessageContainingAll("The original URI:", "/loop", "Redirect URIs:", "/loop1", "/loop2")
-                // All URIs have a port number.
-                .hasMessageFindingMatch("http://.*:[0-9]+/loop")
-                .hasMessageFindingMatch("http://.*:[0-9]+/loop1")
-                .hasMessageFindingMatch("http://.*:[0-9]+/loop2");
+        assertThatThrownBy(() -> client.get(originalPath).aggregate().join())
+                .hasCauseInstanceOf(CyclicRedirectsException.class)
+                .hasMessageContainingAll("The original URI:", "Redirect URIs:")
+                .satisfies(exception -> {
+                    final String message = exception.getMessage();
+                    // All URIs have a port number.
+                    expectedPathRegexPatterns.forEach(pattern ->
+                          assertThat(message).containsPattern(pattern));
+                });
+    }
+
+    private static Stream<Arguments> provideRedirectPatterns() {
+        return Stream.of(
+                Arguments.of("/completeLoop",
+                             redirectExceptionPathRegexPatterns(
+                                     "http://.*:[0-9]+/completeLoop",
+                                     "http://.*:[0-9]+/completeLoop1",
+                                     "http://.*:[0-9]+/completeLoop2")),
+                Arguments.of("/partialLoop",
+                             redirectExceptionPathRegexPatterns(
+                                     "http://.*:[0-9]+/partialLoop",
+                                     "http://.*:[0-9]+/partialLoop1",
+                                     "http://.*:[0-9]+/partialLoop2"))
+        );
+    }
+
+    private static List<String> redirectExceptionPathRegexPatterns(String... patterns) {
+        return ImmutableList.copyOf(patterns);
     }
 
     @Test
