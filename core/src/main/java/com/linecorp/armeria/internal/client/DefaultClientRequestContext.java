@@ -475,7 +475,7 @@ public final class DefaultClientRequestContext
             // The connection will be established with the IP address but `host` set to the `Endpoint`
             // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
             // proxy based on an authority.
-            final String host = HostAndPort.fromString(removeUserInfo(authority)).getHost();
+            final String host = authorityToHost(authority);
             if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
                 endpoint = endpoint.withHost(host);
             }
@@ -496,6 +496,10 @@ public final class DefaultClientRequestContext
             }
         }
         internalRequestHeaders = headersBuilder.build();
+    }
+
+    private static String authorityToHost(String authority) {
+        return HostAndPort.fromString(removeUserInfo(authority)).getHost();
     }
 
     private static String removeUserInfo(String authority) {
@@ -762,10 +766,38 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    public String host() {
+        final String authority = authority();
+        if (authority == null) {
+            return null;
+        }
+
+        return authorityToHost(authority);
+    }
+
+    @Override
     public URI uri() {
         final String scheme = getScheme(sessionProtocol());
-        try {
-            return new URI(scheme, authority(), path(), query(), fragment());
+        final String authority = authority();
+        final String path = path();
+        final String query = query();
+        final String fragment = fragment();
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tmp.stringBuilder();
+            buf.append(scheme);
+            if (authority != null) {
+                buf.append("://").append(authority);
+            } else {
+                buf.append(':');
+            }
+            buf.append(path);
+            if (query != null) {
+                buf.append('?').append(query);
+            }
+            if (fragment != null) {
+                buf.append('#').append(fragment);
+            }
+            return new URI(buf.toString());
         } catch (URISyntaxException e) {
             throw new IllegalStateException("not a valid URI", e);
         }
