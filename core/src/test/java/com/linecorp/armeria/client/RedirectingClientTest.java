@@ -116,13 +116,37 @@ class RedirectingClientTest {
               .service("/removeDoubleDotSegments/foo",
                        (ctx, req) -> HttpResponse.ofRedirect("../removeDotSegments/bar"));
 
-            sb.service("/completeLoop", (ctx, req) -> HttpResponse.ofRedirect("completeLoop1"))
-              .service("/completeLoop1", (ctx, req) -> HttpResponse.ofRedirect("completeLoop2"))
-              .service("/completeLoop2", (ctx, req) -> HttpResponse.ofRedirect("completeLoop"));
+            sb.service("/completeLoop1", (ctx, req) -> HttpResponse.ofRedirect("completeLoop2"))
+              .service("/completeLoop2", (ctx, req) -> HttpResponse.ofRedirect("completeLoop3"))
+              .service("/completeLoop3", (ctx, req) -> HttpResponse.ofRedirect("completeLoop1"));
 
-            sb.service("/partialLoop", (ctx, req) -> HttpResponse.ofRedirect("partialLoop1"))
-              .service("/partialLoop1", (ctx, req) -> HttpResponse.ofRedirect("partialLoop2"))
-              .service("/partialLoop2", (ctx, req) -> HttpResponse.ofRedirect("partialLoop1"));
+            sb.service("/partialLoop1", (ctx, req) -> HttpResponse.ofRedirect("partialLoop2"))
+              .service("/partialLoop2", (ctx, req) -> HttpResponse.ofRedirect("partialLoop3"))
+              .service("/partialLoop3", (ctx, req) -> HttpResponse.ofRedirect("partialLoop2"));
+
+            sb.service("/protocolLoop", (ctx, req) ->
+                    HttpResponse.ofRedirect("h1c://127.0.0.1:" + server.httpPort() + "/protocolLoop"));
+
+            sb.service("/authorityLoop", (ctx, req) -> HttpResponse.ofRedirect(
+                    "http://domain1.com:" + server.httpPort() + "/authorityLoop"));
+            sb.virtualHost("domain1.com")
+              .service("/authorityLoop", (ctx, req) -> HttpResponse.ofRedirect(
+                      "http://domain2.com:" + server.httpPort() + "/authorityLoop"));
+            sb.virtualHost("domain2.com")
+              .service("/authorityLoop", (ctx, req) -> HttpResponse.ofRedirect(
+                      "http://domain1.com:" + server.httpPort() + "/authorityLoop"));
+
+            sb.service("/queryLoop1", (ctx, req) -> {
+                final String queryParams = ctx.query();
+                final String redirectUrl = "/queryLoop2" + (queryParams == null ? "" : '?' + queryParams);
+                return HttpResponse.ofRedirect(redirectUrl);
+              })
+              .service("/queryLoop2", (ctx, req) -> {
+                  final String queryParams = ctx.query();
+                  final String redirectUrl = "/queryLoop1?" + (queryParams == null ? "q=1" : queryParams);
+                  return HttpResponse.ofRedirect(redirectUrl);
+              });
+
 
             sb.service("/differentHttpMethod", (ctx, req) -> {
                 if (ctx.method() == HttpMethod.GET) {
@@ -297,10 +321,16 @@ class RedirectingClientTest {
     @ParameterizedTest
     @MethodSource("provideRedirectPatterns")
     void cyclicRedirectsException(String originalPath, List<String> expectedPathRegexPatterns) {
+        final ClientFactory factory = localhostAccessingClientFactory();
+        final RedirectConfig redirectConfig = RedirectConfig.builder()
+                                                            .allowDomains("domain1.com", "domain2.com")
+                                                            .build();
         final WebClient client = Clients.builder(server.httpUri())
-                                        .followRedirects()
+                                        .factory(factory)
+                                        .followRedirects(redirectConfig)
                                         .decorator(LoggingClient.newDecorator())
                                         .build(WebClient.class);
+
         assertThatThrownBy(() -> client.get(originalPath).aggregate().join())
                 .hasCauseInstanceOf(CyclicRedirectsException.class)
                 .hasMessageContainingAll("The original URI:", "Redirect URIs:")
@@ -314,17 +344,30 @@ class RedirectingClientTest {
 
     private static Stream<Arguments> provideRedirectPatterns() {
         return Stream.of(
-                Arguments.of("/completeLoop",
+                Arguments.of("/completeLoop1",
                              redirectExceptionPathRegexPatterns(
-                                     "http://.*:[0-9]+/completeLoop",
                                      "http://.*:[0-9]+/completeLoop1",
-                                     "http://.*:[0-9]+/completeLoop2")),
-                Arguments.of("/partialLoop",
+                                     "http://.*:[0-9]+/completeLoop2",
+                                     "http://.*:[0-9]+/completeLoop3")),
+                Arguments.of("/partialLoop1",
                              redirectExceptionPathRegexPatterns(
-                                     "http://.*:[0-9]+/partialLoop",
                                      "http://.*:[0-9]+/partialLoop1",
-                                     "http://.*:[0-9]+/partialLoop2"))
-        );
+                                     "http://.*:[0-9]+/partialLoop2",
+                                     "http://.*:[0-9]+/partialLoop3")),
+                Arguments.of("/protocolLoop",
+                             redirectExceptionPathRegexPatterns(
+                                     "http://.*:[0-9]+/protocolLoop")),
+                Arguments.of("/authorityLoop",
+                             redirectExceptionPathRegexPatterns(
+                                     "http://.*:[0-9]+/authorityLoop",
+                                     "http://domain1.com:[0-9]+/authorityLoop",
+                                     "http://domain2.com:[0-9]+/authorityLoop")),
+                Arguments.of("/queryLoop1",
+                             redirectExceptionPathRegexPatterns(
+                                     "http://.*:[0-9]+/queryLoop1",
+                                     "http://.*:[0-9]+/queryLoop2",
+                                     "http://.*:[0-9]+/queryLoop1\\?q=1",
+                                     "http://.*:[0-9]+/queryLoop2\\?q=1")));
     }
 
     private static List<String> redirectExceptionPathRegexPatterns(String... patterns) {
