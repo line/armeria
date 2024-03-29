@@ -32,8 +32,6 @@ import java.util.function.Function;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.redirect.CyclicRedirectsException;

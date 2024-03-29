@@ -147,7 +147,6 @@ class RedirectingClientTest {
                   return HttpResponse.ofRedirect(redirectUrl);
               });
 
-
             sb.service("/differentHttpMethod", (ctx, req) -> {
                 if (ctx.method() == HttpMethod.GET) {
                     return HttpResponse.of(200);
