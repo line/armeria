@@ -55,6 +55,7 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,6 +85,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Attribute;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Delimiter;
@@ -99,6 +101,7 @@ import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.util.AttributeKey;
 import scala.concurrent.ExecutionContext;
 
 final class AnnotatedValueResolver {
@@ -444,6 +447,13 @@ final class AnnotatedValueResolver {
         requireNonNull(dependencyInjector, "dependencyInjector");
 
         final DescriptionInfo description = findDescription(annotatedElement);
+
+        final Attribute attr = annotatedElement.getAnnotation(Attribute.class);
+        if (attr != null) {
+            final String name = findName(attr, typeElement);
+            return ofAttribute(name, annotatedElement, typeElement, type, description);
+        }
+
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(param, typeElement);
@@ -520,6 +530,7 @@ final class AnnotatedValueResolver {
 
     private static boolean isAnnotationPresent(AnnotatedElement element) {
         return element.isAnnotationPresent(Param.class) ||
+               element.isAnnotationPresent(Attribute.class) ||
                element.isAnnotationPresent(Header.class) ||
                element.isAnnotationPresent(RequestObject.class);
     }
@@ -618,6 +629,25 @@ final class AnnotatedValueResolver {
                 .aggregation(AggregationStrategy.ALWAYS)
                 .resolver(resolver(objectResolvers, beanFactoryId))
                 .beanFactoryId(beanFactoryId)
+                .build();
+    }
+
+    private static AnnotatedValueResolver ofAttribute(String name,
+                                                      AnnotatedElement annotatedElement,
+                                                      AnnotatedElement typeElement, Class<?> type,
+                                                      DescriptionInfo description) {
+        return new Builder(annotatedElement, type, name)
+                .annotationType(Attribute.class)
+                .typeElement(typeElement)
+                .supportDefault(true)
+                .supportContainer(true)
+                .description(description)
+                .resolver(resolverAttribute((ctx, clazz) -> {
+                                                return ctx.context.attr(AttributeKey.valueOf(clazz, name)) != null ?
+                                                       ctx.context.attr(AttributeKey.valueOf(clazz, name)) :
+                                                       ctx.context.attr(AttributeKey.valueOf(name));
+                                            }
+                ))
                 .build();
     }
 
@@ -774,6 +804,61 @@ final class AnnotatedValueResolver {
             }
         };
     }
+
+    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
+    resolverAttribute(BiFunction<ResolverContext, Class<?>, Object> getter) {
+        return (resolver, ctx) -> {
+            final Class<?> type = resolver.elementType().isPrimitive() ?
+                                  PrimitiveToReference.primitiveToReference(resolver.elementType.getName()) :
+                                  resolver.elementType();
+            // Primitive to Reference.
+            Object value = getter.apply(ctx, type);
+            if (value != null) {
+                return value;
+            }
+            return resolver.defaultOrException();
+        };
+    }
+
+    enum PrimitiveToReference {
+        BOOLEAN("boolean", Boolean.class),
+        BYTE("byte", Byte.class),
+        CHAR("char", Character.class),
+        SHORT("short", Short.class),
+        INTEGER("int", Integer.class),
+        LONG("long", Long.class),
+        FLOAT("float", Float.class),
+        DOUBLE("double", Double.class);
+
+        PrimitiveToReference(String name, Class<?> clazz) {
+            this.name = name;
+            this.clazz = clazz;
+        }
+
+        public String getName() {
+            return this.name;
+        }
+
+        public Class<?> getClazz() {
+            return this.clazz;
+        }
+
+        static Class<?> primitiveToReference(String name) {
+            final Class<?> clazz = PrimitiveToReference.map.get(name);
+            if (clazz != null) {
+                return clazz;
+            }
+            throw new IllegalStateException("There is no Reference type corresponding to " + name);
+        }
+
+        private final String name;
+        private final Class<?> clazz;
+        private static final Map<String, Class<?>> map = Arrays.stream(values())
+                                                               .collect(Collectors.toMap(
+                                                                       e -> e.getName(),
+                                                                       e -> e.getClazz()));
+    }
+
 
     /**
      * Returns a bean resolver which retrieves a value using request converters. If the target element
