@@ -203,6 +203,8 @@ public final class DefaultRequestTarget implements RequestTarget {
     private final String fragment;
     private boolean cached;
 
+    private static boolean isPreservedPercentEncoding;
+
     private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
                                  String path, String maybePathWithMatrixVariables,
                                  @Nullable String query, @Nullable String fragment) {
@@ -267,6 +269,10 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     public void setCached() {
         cached = true;
+    }
+
+    public static void setPreservedPercentEncoding(boolean preservedPercentEncoding) {
+        isPreservedPercentEncoding = preservedPercentEncoding;
     }
 
     @Override
@@ -650,8 +656,9 @@ public final class DefaultRequestTarget implements RequestTarget {
                 }
 
                 final int decoded = (digit1 << 4) | digit2;
+
                 if (type.mustPreserveEncoding(decoded) ||
-                    (!allowSemicolonInPathComponent && decoded == ';')) {
+                    (!allowSemicolonInPathComponent && decoded == ';' ) || isPreservedPercentEncoding) {
                     buf.ensure(1);
                     buf.addEncoded((byte) decoded);
                     wasSlash = false;

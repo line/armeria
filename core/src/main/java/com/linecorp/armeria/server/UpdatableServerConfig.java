@@ -286,6 +286,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public boolean isPercentEncodingPreserved() {
+        return delegate.isPercentEncodingPreserved();
+    }
+
+    @Override
     public Function<RoutingContext, RequestId> requestIdGenerator() {
         return delegate.requestIdGenerator();
     }
