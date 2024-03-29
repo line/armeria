@@ -27,7 +27,6 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -54,9 +53,6 @@ class HostnameBasedVirtualHostTest {
               .virtualHost("foo.bar.com")
               .service("/foo-bar", (ctx, req) -> HttpResponse.of("foo bar"))
               .and()
-              .virtualHost("def.bar.com", "*.bar.com")
-              .service("/foo-all", (ctx, req) -> HttpResponse.of("foo all"))
-              .and()
               .build();
         }
     };
@@ -80,44 +76,6 @@ class HostnameBasedVirtualHostTest {
     }
 
     @Test
-    void testDefaultHostname() {
-        try (ClientFactory factory = ClientFactory.builder()
-                                                  .addressResolverGroupFactory(
-                                                          unused -> MockAddressResolverGroup.localhost())
-                                                  .build()) {
-
-            final WebClient fooBarClient = WebClient.builder("http://foo.bar.com:" + fooHostPort)
-                                                    .factory(factory)
-                                                    .build();
-            AggregatedHttpResponse response = fooBarClient.get("/foo-bar").aggregate().join();
-            assertThat(response.contentUtf8()).isEqualTo("foo bar");
-
-            response = fooBarClient.get("/foo-all").aggregate().join();
-            assertThat(response.status()).isEqualTo(HttpStatus.NOT_FOUND);
-
-            final WebClient barBarClient = WebClient.builder("http://bar.bar.com:" + fooHostPort)
-                                                    .factory(factory)
-                                                    .build();
-
-            response = barBarClient.get("/foo-all").aggregate().join();
-            assertThat(response.contentUtf8()).isEqualTo("foo all");
-
-            response = barBarClient.get("/foo-bar").aggregate().join();
-            assertThat(response.status()).isEqualTo(HttpStatus.NOT_FOUND);
-
-            final WebClient defBarClient = WebClient.builder("http://def.bar.com:" + fooHostPort)
-                                                    .factory(factory)
-                                                    .build();
-
-            response = defBarClient.get("/foo-all").aggregate().join();
-            assertThat(response.contentUtf8()).isEqualTo("foo all");
-
-            response = defBarClient.get("/foo-bar").aggregate().join();
-            assertThat(response.status()).isEqualTo(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @Test
     void shouldReturnSameInstanceForHostnameBasedVirtualHost() {
         final ServerBuilder serverBuilder = Server.builder();
         final VirtualHostBuilder virtualHost1 = serverBuilder.virtualHost("foo.com");
@@ -136,16 +94,6 @@ class HostnameBasedVirtualHostTest {
         final VirtualHostBuilder virtualHost2 = serverBuilder.virtualHost("foo.com:18080");
         assertThat(virtualHost1).isSameAs(virtualHost2);
         final VirtualHostBuilder virtualHost3 = serverBuilder.virtualHost("foo.com:18081");
-        assertThat(virtualHost2).isNotSameAs(virtualHost3);
-    }
-
-    @Test
-    void shouldReturnSameInstanceForDefaultHostnameAndHostnameBasedVirtualHost() {
-        final ServerBuilder serverBuilder = Server.builder();
-        final VirtualHostBuilder virtualHost1 = serverBuilder.virtualHost("def.foo.com", "*.foo.com");
-        final VirtualHostBuilder virtualHost2 = serverBuilder.virtualHost("def.foo.com", "*.foo.com");
-        assertThat(virtualHost1).isSameAs(virtualHost2);
-        final VirtualHostBuilder virtualHost3 = serverBuilder.virtualHost("def2.foo.com", "*.foo.com");
         assertThat(virtualHost2).isNotSameAs(virtualHost3);
     }
 }

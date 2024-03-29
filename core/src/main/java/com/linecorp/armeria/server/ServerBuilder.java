@@ -1594,26 +1594,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
     public VirtualHostBuilder virtualHost(String defaultHostname, String hostnamePattern) {
-        requireNonNull(defaultHostname, "defaultHostname");
-        requireNonNull(hostnamePattern, "hostnamePattern");
-
-        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
-
-        validateHostnamePattern(hostAndPort.getHost());
-
-        final String normalizedHostnamePattern = normalizeHostnamePattern(hostAndPort.getHost());
-        final int port = hostAndPort.getPortOrDefault(-1);
-        for (VirtualHostBuilder virtualHostBuilder : virtualHostBuilders) {
-            if (!virtualHostBuilder.defaultVirtualHost() &&
-                virtualHostBuilder.equalsDefaultHostname(defaultHostname) &&
-                virtualHostBuilder.equalsHostnamePattern(normalizedHostnamePattern, port)) {
-                return virtualHostBuilder;
-            }
-        }
-
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
                 .defaultHostname(defaultHostname)
-                .hostnamePattern(normalizedHostnamePattern, port);
+                .hostnamePattern(hostnamePattern);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }

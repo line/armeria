@@ -1527,10 +1527,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         return this;
     }
 
-    boolean equalsDefaultHostname(String defaultHostname) {
-        return normalizeDefaultHostname(defaultHostname).equals(this.defaultHostname);
-    }
-
     boolean equalsHostnamePattern(String validHostnamePattern, int port) {
         checkArgument(!validHostnamePattern.isEmpty(), "hostnamePattern is empty.");
 
