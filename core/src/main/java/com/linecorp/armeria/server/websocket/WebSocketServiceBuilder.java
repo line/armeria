@@ -159,6 +159,11 @@ public final class WebSocketServiceBuilder {
         return this;
     }
 
+    /**
+     * Sets the regex pattern to match allowed origins. The same-origin is allowed by default.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
+     */
     public WebSocketServiceBuilder allowedOrigins(Pattern regex) {
         originMatchingPredicate = originMatchingPredicate.or(regex.asPredicate());
         return this;
