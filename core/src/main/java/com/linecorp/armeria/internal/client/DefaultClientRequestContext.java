@@ -328,8 +328,9 @@ public final class DefaultClientRequestContext
                 return initEndpointGroup(endpointGroup);
             }
         } catch (Throwable t) {
-            acquireEventLoop(endpointGroup);
-            failEarly(t);
+            if (acquireEventLoop(endpointGroup)) {
+                failEarly(t);
+            }
             return initFuture(false, null);
         }
     }
@@ -346,8 +347,8 @@ public final class DefaultClientRequestContext
     private CompletableFuture<Boolean> initEndpoint(Endpoint endpoint) {
         endpointGroup = null;
         updateEndpoint(endpoint);
-        acquireEventLoop(endpoint);
-        return initFuture(true, null);
+        final boolean acquired = acquireEventLoop(endpoint);
+        return initFuture(acquired, null);
     }
 
     private CompletableFuture<Boolean> initEndpointGroup(EndpointGroup endpointGroup) {
@@ -355,15 +356,17 @@ public final class DefaultClientRequestContext
         final Endpoint endpoint = endpointGroup.selectNow(this);
         if (endpoint != null) {
             updateEndpoint(endpoint);
-            acquireEventLoop(endpointGroup);
-            return initFuture(true, null);
+            final boolean acquired = acquireEventLoop(endpoint);
+            return initFuture(acquired, null);
         }
 
         // Use an arbitrary event loop for asynchronous Endpoint selection.
         final EventLoop temporaryEventLoop = options().factory().eventLoopSupplier().get();
         return endpointGroup.select(this, temporaryEventLoop).handle((e, cause) -> {
             updateEndpoint(e);
-            acquireEventLoop(endpointGroup);
+            if (!acquireEventLoop(endpointGroup)) {
+                return initFuture(false, null);
+            }
 
             final boolean success;
             if (cause != null) {
@@ -426,10 +429,35 @@ public final class DefaultClientRequestContext
         autoFillSchemeAuthorityAndOrigin();
     }
 
-    private void acquireEventLoop(EndpointGroup endpointGroup) {
+    private boolean acquireEventLoop(EndpointGroup endpointGroup) {
         if (eventLoop == null) {
-            final ReleasableHolder<EventLoop> releasableEventLoop =
-                    options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
+            final ReleasableHolder<EventLoop> releasableEventLoop;
+            try {
+                releasableEventLoop =
+                        options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
+            } catch (Exception e) {
+                failEarly(e);
+                return false;
+            }
+
+            eventLoop = releasableEventLoop.get();
+            log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
+            responseCancellationScheduler.init(eventLoop());
+        }
+
+        return true;
+    }
+
+    private void acquireEventLoopWithoutFailEarly(EndpointGroup endpointGroup) {
+        if (eventLoop == null) {
+            final ReleasableHolder<EventLoop> releasableEventLoop;
+            try {
+                releasableEventLoop = options().factory().acquireEventLoop(sessionProtocol(), endpointGroup,
+                                                                           endpoint);
+            } catch (Throwable t) {
+                return;
+            }
+
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
             responseCancellationScheduler.init(eventLoop());

@@ -169,7 +169,15 @@ final class HttpClientDelegate implements HttpClient {
                                               ClientConnectionTimingsBuilder timingsBuilder,
                                               ProxyConfig proxyConfig) {
         final PoolKey key = new PoolKey(endpoint, proxyConfig);
-        final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
+        final HttpChannelPool pool;
+        try {
+            pool = factory.pool(ctx.eventLoop().withoutContext());
+        } catch (Throwable t) {
+            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
+            handleEarlyRequestException(ctx, req, wrapped);
+            res.close(wrapped);
+            return;
+        }
         final SessionProtocol protocol = ctx.sessionProtocol();
         final SerializationFormat serializationFormat = ctx.log().partial().serializationFormat();
         final PooledChannel pooledChannel = pool.acquireNow(protocol, serializationFormat, key);

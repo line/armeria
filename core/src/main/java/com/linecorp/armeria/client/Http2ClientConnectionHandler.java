@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
+import com.linecorp.armeria.internal.common.GracefulConnectionShutdownHandler;
+import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
@@ -30,6 +32,7 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
@@ -38,6 +41,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     private final HttpClientFactory clientFactory;
     private final Http2ResponseDecoder responseDecoder;
+    private final Http2GracefulConnectionShutdownHandler gracefulConnectionShutdownHandler;
 
     Http2ClientConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel,
@@ -46,6 +50,9 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         super(decoder, encoder, initialSettings,
               newKeepAliveHandler(encoder, channel, clientFactory, protocol));
         this.clientFactory = clientFactory;
+
+        gracefulConnectionShutdownHandler = new Http2GracefulConnectionShutdownHandler(
+                clientFactory.drainDurationMicros());
 
         responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAliveHandler());
         connection().addListener(responseDecoder);
@@ -110,7 +117,8 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return clientFactory.isClosing() ||
+        return gracefulConnectionShutdownHandler.hasDrainStarted() ||
+               clientFactory.isClosing() ||
                responseDecoder.goAwayHandler().receivedErrorGoAway() ||
                keepAliveHandler().isClosing();
     }
@@ -129,5 +137,65 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     private void destroyKeepAliveHandler() {
         keepAliveHandler().destroy();
+    }
+
+    private void cancelScheduledTasks() {
+        gracefulConnectionShutdownHandler.cancel();
+        keepAliveHandler().destroy();
+    }
+
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt instanceof InitiateConnectionShutdown) {
+            setGoAwayDebugMessage("app-requested");
+            gracefulConnectionShutdownHandler.handleInitiateConnectionShutdown(
+                    ctx, (InitiateConnectionShutdown) evt);
+            return;
+        }
+        super.userEventTriggered(ctx, evt);
+    }
+
+    @Override
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        if (keepAliveHandler().needsDisconnection()) {
+            // Connection timed out or exceeded maximum number of requests.
+            setGoAwayDebugMessage("max-age");
+        }
+        gracefulConnectionShutdownHandler.start(ctx, promise);
+    }
+
+    private final class Http2GracefulConnectionShutdownHandler extends GracefulConnectionShutdownHandler {
+
+        private boolean started;
+
+        Http2GracefulConnectionShutdownHandler(long drainDurationMicros) {
+            super(drainDurationMicros);
+        }
+
+        private boolean hasDrainStarted() {
+            return started;
+        }
+
+        /**
+         * Send GOAWAY frame with stream ID 2^31-1 to signal clients that shutdown is imminent,
+         * but still accept in flight streams.
+         */
+        @Override
+        protected void onDrainStart(ChannelHandlerContext ctx) {
+            started = true;
+            goAway(ctx, Integer.MAX_VALUE);
+            ctx.flush();
+        }
+
+        /**
+         * Start channel shutdown. Will send final GOAWAY with the latest created stream ID.
+         */
+        @Override
+        protected void onDrainEnd(ChannelHandlerContext ctx) throws Exception {
+            Http2ClientConnectionHandler.super.close(ctx, ctx.newPromise());
+            // Cancel scheduled tasks after the call to the super class above to avoid triggering
+            // needsImmediateDisconnection.
+            cancelScheduledTasks();
+        }
     }
 }
