@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -155,6 +156,11 @@ public final class WebSocketServiceBuilder {
      */
     public WebSocketServiceBuilder allowedOrigins(Predicate<String> predicate) {
         originMatchingPredicate = originMatchingPredicate.or(predicate);
+        return this;
+    }
+
+    public WebSocketServiceBuilder allowedOrigins(Pattern regex) {
+        originMatchingPredicate = originMatchingPredicate.or(regex.asPredicate());
         return this;
     }
 
