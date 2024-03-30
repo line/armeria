@@ -120,6 +120,7 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp2WithoutAlpn;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
+    private final long drainDurationMicros;
     private MeterRegistry meterRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
     private final Http1HeaderNaming http1HeaderNaming;
@@ -200,6 +201,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
+        drainDurationMicros = options.clientConnectionDrainDurationMicros();
         meterRegistry = options.meterRegistry();
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();
@@ -297,6 +299,10 @@ final class HttpClientFactory implements ClientFactory {
 
     ConnectionPoolListener connectionPoolListener() {
         return connectionPoolListener;
+    }
+
+    long drainDurationMicros() {
+        return drainDurationMicros;
     }
 
     ProxyConfigSelector proxyConfigSelector() {
@@ -475,6 +481,10 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {
+        if (isClosing()) {
+            throw new IllegalStateException("ClientFactory is closing or closed.");
+        }
+
         final HttpChannelPool pool = pools.get(eventLoop);
         if (pool != null) {
             return pool;

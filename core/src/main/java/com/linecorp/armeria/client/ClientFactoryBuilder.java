@@ -41,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -789,6 +790,32 @@ public final class ClientFactoryBuilder implements TlsSetters {
             ConnectionPoolListener connectionPoolListener) {
         option(ClientFactoryOptions.CONNECTION_POOL_LISTENER,
                requireNonNull(connectionPoolListener, "connectionPoolListener"));
+        return this;
+    }
+
+    /**
+     * Sets the graceful connection shutdown drain duration. When the client factory is closed, it waits for
+     * the specified {@code duration} to allow pre-existing connections to be closed gracefully.
+     */
+    public ClientFactoryBuilder connectionDrainDuration(Duration duration) {
+        requireNonNull(duration, "duration");
+        option(ClientFactoryOptions.CLIENT_CONNECTION_DRAIN_DURATION_MICROS,
+               TimeUnit.NANOSECONDS.toMicros(duration.toNanos()));
+        return this;
+    }
+
+    /**
+     * Sets the graceful connection shutdown drain duration in microseconds. When the client factory is closed,
+     * it waits for the specified {@code clientConnectionDrainDurationMicros} to allow pre-existing connections
+     * to be closed gracefully.
+     */
+    public ClientFactoryBuilder clientConnectionDrainDurationMicros(
+            long clientConnectionDrainDurationMicros) {
+        checkArgument(clientConnectionDrainDurationMicros >= 0,
+                      "clientConnectionDrainDurationMicros: %s (expected: >= 0)",
+                      clientConnectionDrainDurationMicros);
+        option(ClientFactoryOptions.CLIENT_CONNECTION_DRAIN_DURATION_MICROS,
+               clientConnectionDrainDurationMicros);
         return this;
     }
 
