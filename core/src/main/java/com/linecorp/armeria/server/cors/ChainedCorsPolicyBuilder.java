@@ -18,8 +18,11 @@ package com.linecorp.armeria.server.cors;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import com.linecorp.armeria.common.HttpMethod;
 
@@ -36,12 +39,25 @@ public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder {
     private final CorsServiceBuilder serviceBuilder;
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder) {
+        super(Collections.singletonList("*"));
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
     }
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder, List<String> origins) {
         super(origins);
+        requireNonNull(builder, "builder");
+        serviceBuilder = builder;
+    }
+
+    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, Predicate<String> originPredicate) {
+        super(originPredicate);
+        requireNonNull(builder, "builder");
+        serviceBuilder = builder;
+    }
+
+    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, Pattern originRegex) {
+        super(originRegex);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
     }

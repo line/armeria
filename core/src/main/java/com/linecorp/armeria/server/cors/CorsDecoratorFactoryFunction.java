@@ -17,7 +17,11 @@ package com.linecorp.armeria.server.cors;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
@@ -31,7 +35,28 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(CorsDecorator parameter) {
         requireNonNull(parameter, "parameter");
-        final CorsServiceBuilder cb = CorsService.builder(parameter.origins());
+        if (parameter.origins().length == 0 && parameter.originRegex().isEmpty()) {
+            throw new IllegalArgumentException("Either origins or originRegex must be configured");
+        }
+
+        final CorsServiceBuilder cb;
+        final List<String> origins = Arrays.asList(parameter.origins());
+        if (!origins.isEmpty() && origins.contains("*")) {
+            cb = CorsService.builderForAnyOrigin();
+        } else {
+            Predicate<String> originPredicate = (unused) -> false;
+            for (String origin: origins) {
+                originPredicate = originPredicate.or(Predicate.isEqual(origin));
+            }
+
+            if (!parameter.originRegex().isEmpty()) {
+                final Pattern pattern = Pattern.compile(parameter.originRegex());
+                originPredicate = originPredicate.or(pattern.asPredicate());
+            }
+
+            cb = CorsService.builder(originPredicate);
+        }
+
         cb.firstPolicyBuilder.setConfig(parameter);
 
         final Function<? super HttpService, CorsService> decorator = cb.newDecorator();

@@ -23,7 +23,9 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
@@ -76,7 +78,30 @@ public final class CorsPolicy {
         return new CorsPolicyBuilder(origins);
     }
 
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code predicate}.
+     */
+    public static CorsPolicyBuilder builder(Predicate<String> predicate) {
+        return new CorsPolicyBuilder(predicate);
+    }
+
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code regex}.
+     */
+    public static CorsPolicyBuilder builderForOriginRegex(String regex) {
+        return builderForOriginRegex(Pattern.compile(regex));
+    }
+
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code regex}.
+     */
+    public static CorsPolicyBuilder builderForOriginRegex(Pattern regex) {
+        return new CorsPolicyBuilder(regex);
+    }
+
     private final Set<String> origins;
+    @Nullable
+    private final Predicate<String> originPredicate;
     private final List<Route> routes;
     private final boolean credentialsAllowed;
     private final boolean nullOriginAllowed;
@@ -90,12 +115,14 @@ public final class CorsPolicy {
     private final String joinedAllowedRequestMethods;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
-    CorsPolicy(Set<String> origins, List<Route> routes, boolean credentialsAllowed, long maxAge,
+    CorsPolicy(Set<String> origins, @Nullable Predicate<String> originPredicate,
+               List<Route> routes, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
                boolean allowAllRequestHeaders, Set<AsciiString> allowedRequestHeaders,
                EnumSet<HttpMethod> allowedRequestMethods, boolean preflightResponseHeadersDisabled,
                Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         this.origins = ImmutableSet.copyOf(origins);
+        this.originPredicate = originPredicate;
         this.routes = ImmutableList.copyOf(routes);
         this.credentialsAllowed = credentialsAllowed;
         this.maxAge = maxAge;
@@ -134,6 +161,14 @@ public final class CorsPolicy {
      */
     public Set<String> origins() {
         return origins;
+    }
+
+    /**
+     * Returns predicate to match origins.
+     */
+    @Nullable
+    public Predicate<String> originPredicate() {
+        return originPredicate;
     }
 
     /**

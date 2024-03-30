@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -62,6 +63,7 @@ public final class WebSocketServiceBuilder {
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
+    private Predicate<String> originMatchingPredicate = (origin) -> false;
     private boolean aggregateContinuation;
     @Nullable
     private HttpService fallbackService;
@@ -146,6 +148,16 @@ public final class WebSocketServiceBuilder {
         return this;
     }
 
+    /**
+     * Sets the predicate to match allowed origins. The same-origin is allowed by default.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
+     */
+    public WebSocketServiceBuilder allowedOrigins(Predicate<String> predicate) {
+        originMatchingPredicate = originMatchingPredicate.or(predicate);
+        return this;
+    }
+
     private static Set<String> validateOrigins(Iterable<String> allowedOrigins) {
         //TODO(minwoox): Dedup the same logic in cors service.
         final Set<String> copied = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"));
@@ -176,6 +188,6 @@ public final class WebSocketServiceBuilder {
     public WebSocketService build() {
         return new DefaultWebSocketService(handler, fallbackService, maxFramePayloadLength, allowMaskMismatch,
                                            subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN),
-                                           aggregateContinuation);
+                                           originMatchingPredicate, aggregateContinuation);
     }
 }
