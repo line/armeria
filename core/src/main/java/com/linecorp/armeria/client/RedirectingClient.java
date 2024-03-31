@@ -607,6 +607,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         }
     }
 
+    @VisibleForTesting
     static class RedirectSignature {
         private final String uri;
         private final HttpMethod method;
