@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Objects;
 
@@ -27,15 +28,34 @@ import com.linecorp.armeria.common.HttpMethod;
 
 public class RedirectSignatureTest {
     @Test
-    public void equality() {
+    public void equalityWithSameObject() {
+        final RedirectSignature signature = new RedirectSignature("http://example.com", HttpMethod.GET);
+        assertThat(signature.equals(signature)).isTrue();
+    }
+
+    @Test
+    public void equalityWithDifferentType() {
+        final RedirectSignature signature = new RedirectSignature("http://example.com", HttpMethod.GET);
+        final Object other = new Object();
+        assertThat(signature).isNotEqualTo(other);
+    }
+
+    @Test
+    public void equalityWithEquivalentObjects() {
         final RedirectSignature signature1 = new RedirectSignature("http://example.com", HttpMethod.GET);
         final RedirectSignature signature2 = new RedirectSignature("http://example.com", HttpMethod.GET);
-        final RedirectSignature signature3 = new RedirectSignature("http://another.com", HttpMethod.GET);
-        final RedirectSignature signature4 = new RedirectSignature("http://example.com", HttpMethod.POST);
-
         assertThat(signature1).isEqualTo(signature2);
-        assertThat(signature1).isNotEqualTo(signature3);
-        assertThat(signature1).isNotEqualTo(signature4);
+    }
+
+    @Test
+    public void equalityWithNonEquivalentObjects() {
+        final RedirectSignature signature = new RedirectSignature("http://example.com", HttpMethod.GET);
+        final RedirectSignature differentUriSignature =
+                new RedirectSignature("http://another.com", HttpMethod.GET);
+        final RedirectSignature differentMethodSignature =
+                new RedirectSignature("http://example.com", HttpMethod.POST);
+        assertThat(signature).isNotEqualTo(differentUriSignature);
+        assertThat(signature).isNotEqualTo(differentMethodSignature);
     }
 
     @Test
