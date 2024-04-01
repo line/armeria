@@ -332,11 +332,9 @@ class HttpServerCorsTest {
 
                 @Delete("/index3")
                 public void index3() {}
-            }, CorsService.builder()
-                          .andForOriginRegex("^http:\\/\\/example.*")
+            }, CorsService.builderForOriginRegex("^http:\\/\\/example.*")
                           .route("/cors19/index1")
                           .allowRequestMethods(HttpMethod.GET)
-                          .and()
                           .andForOriginRegex(Pattern.compile(".*line.*"))
                           .route("/cors19/index2")
                           .allowRequestMethods(HttpMethod.POST)
