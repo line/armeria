@@ -320,25 +320,26 @@ class RedirectingClientTest {
     @ParameterizedTest
     @MethodSource("provideRedirectPatterns")
     void cyclicRedirectsException(String originalPath, List<String> expectedPathRegexPatterns) {
-        final ClientFactory factory = localhostAccessingClientFactory();
-        final RedirectConfig redirectConfig = RedirectConfig.builder()
-                                                            .allowDomains("domain1.com", "domain2.com")
-                                                            .build();
-        final WebClient client = Clients.builder(server.httpUri())
-                                        .factory(factory)
-                                        .followRedirects(redirectConfig)
-                                        .decorator(LoggingClient.newDecorator())
-                                        .build(WebClient.class);
+        try (ClientFactory factory = localhostAccessingClientFactory()) {
+            final RedirectConfig redirectConfig = RedirectConfig.builder()
+                                                                .allowDomains("domain1.com", "domain2.com")
+                                                                .build();
+            final WebClient client = Clients.builder(server.httpUri())
+                                            .factory(factory)
+                                            .followRedirects(redirectConfig)
+                                            .decorator(LoggingClient.newDecorator())
+                                            .build(WebClient.class);
 
-        assertThatThrownBy(() -> client.get(originalPath).aggregate().join())
-                .hasCauseInstanceOf(CyclicRedirectsException.class)
-                .hasMessageContainingAll("The original URI:", "Redirect URIs:")
-                .satisfies(exception -> {
-                    final String message = exception.getMessage();
-                    // All URIs have a port number.
-                    expectedPathRegexPatterns.forEach(pattern ->
-                          assertThat(message).containsPattern(pattern));
-                });
+            assertThatThrownBy(() -> client.get(originalPath).aggregate().join())
+                    .hasCauseInstanceOf(CyclicRedirectsException.class)
+                    .hasMessageContainingAll("The original URI:", "Redirect URIs:")
+                    .satisfies(exception -> {
+                        final String message = exception.getMessage();
+                        // All URIs have a port number.
+                        expectedPathRegexPatterns.forEach(pattern ->
+                              assertThat(message).containsPattern(pattern));
+                    });
+        }
     }
 
     private static Stream<Arguments> provideRedirectPatterns() {
