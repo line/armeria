@@ -188,9 +188,9 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             }
             closed = true;
 
-            completionFuture.completeExceptionally(cause);
             cancelChildSubscribersAndBuffer();
             downstream.onError(cause);
+            completionFuture.completeExceptionally(cause);
         }
 
         @Override
