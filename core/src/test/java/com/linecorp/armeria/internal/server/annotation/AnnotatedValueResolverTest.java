@@ -157,15 +157,7 @@ class AnnotatedValueResolverTest {
                 final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofServiceMethod(
                         method, pathParams, objectResolvers, false, noopDependencyInjector, null);
                 final Map<String, AttributeKey<?>> attrKeyMap = injectAttrKeyToServiceContextForAttributeTest();
-                elements.forEach(annotatedValueResolver ->
-                                 {
-                                     if (annotatedValueResolver.annotationType() == Attribute.class) {
-                                         testResolver(annotatedValueResolver, attrKeyMap);
-                                     } else {
-                                         testResolver(annotatedValueResolver);
-                                     }
-                                 }
-                        );
+                elements.forEach(annotatedValueResolver -> testResolver(annotatedValueResolver, attrKeyMap));
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.
             }
