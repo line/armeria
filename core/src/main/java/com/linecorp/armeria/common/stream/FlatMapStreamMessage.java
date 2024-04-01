@@ -335,6 +335,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
             if (canComplete()) {
                 complete();
+                return;
             }
 
             if (!closed && !completing) {
@@ -367,11 +368,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
             publishedAny = true;
 
-            downstream.onNext(item);
-
             if (requestedByDownstream != Long.MAX_VALUE) {
                 requestedByDownstream--;
             }
+            downstream.onNext(item);
         }
     }
 
