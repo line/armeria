@@ -1153,6 +1153,7 @@ final class AnnotatedValueResolver {
          */
         private Builder annotationType(Class<? extends Annotation> annotationType) {
             assert annotationType == Param.class ||
+                   annotationType == Attribute.class ||
                    annotationType == Header.class ||
                    annotationType == RequestObject.class : annotationType.getSimpleName();
             this.annotationType = annotationType;

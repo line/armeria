@@ -37,16 +37,21 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testng.annotations.BeforeMethod;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -66,6 +71,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Re
 import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.RoutingResultBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Attribute;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
@@ -73,6 +79,7 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
 
 import io.netty.util.AsciiString;
+import io.netty.util.AttributeKey;
 
 class AnnotatedValueResolverTest {
 
@@ -149,7 +156,16 @@ class AnnotatedValueResolverTest {
             try {
                 final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofServiceMethod(
                         method, pathParams, objectResolvers, false, noopDependencyInjector, null);
-                elements.forEach(AnnotatedValueResolverTest::testResolver);
+                final Map<String, AttributeKey<?>> attrKeyMap = injectAttrKeyToServiceContextForAttributeTest();
+                elements.forEach(annotatedValueResolver ->
+                                 {
+                                     if (annotatedValueResolver.annotationType() == Attribute.class) {
+                                         testResolver(annotatedValueResolver, attrKeyMap);
+                                     } else {
+                                         testResolver(annotatedValueResolver);
+                                     }
+                                 }
+                        );
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.
             }
@@ -235,6 +251,24 @@ class AnnotatedValueResolverTest {
             // Ignore this exception because MixedBean class has not annotated method.
         } catch (Throwable cause) {
             throw new Error("should not reach here", cause);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void testResolver(AnnotatedValueResolver resolver, Map<String, AttributeKey<?>> attrKeys) {
+        // When
+        final Object value = resolver.resolve(resolverContext);
+        logger.debug("Element {}: value {}", resolver, value);
+
+        if (resolver.annotationType() == Attribute.class) {
+            final AttributeKey<?> attrKey = attrKeys.get(resolver.httpElementName());
+            final Object expectedValue = resolverContext.context().attr(attrKey);
+
+            // Then
+            assertThat(value).isEqualTo(expectedValue);
+            assertThat(value).isNotNull();
+        } else {
+            testResolver(resolver);
         }
     }
 
@@ -405,6 +439,21 @@ class AnnotatedValueResolverTest {
         @Get("/r3/:var1")
         void redundant3(@Param Optional<String> var1) {}
 
+        @Get("/attribute-test")
+        void attributeTest(
+                @Attribute(value = "primitiveIntWithPrimitivePrefix", prefix = int.class) int primitiveIntWithPrimitivePrefix,
+                @Attribute(value = "primitiveIntWithoutPrefix") int primitiveIntOutPrefix,
+                @Attribute(value = "primitiveIntWithReferencePrefix", prefix = Integer.class) int ReferenceIntWithReferencePrefix,
+                @Attribute(value = "primitiveIntWithoutType") int primitiveIntWithoutType,
+                @Attribute(value = "referenceIntWithPrimitivePrefix", prefix = int.class) Integer referenceIntWithPrimitivePrefix,
+                @Attribute(value = "referenceIntWithoutPrefix") Integer referenceIntWithoutPrefix,
+                @Attribute(value = "referenceIntWithoutType") Integer referenceIntWithoutType,
+                @Attribute(value = "referenceIntWithReferencePrefix", prefix = Integer.class) Integer referenceIntWithReferencePrefix,
+                @Attribute(value = "stringCollectionWithPrefix", prefix = List.class) List<String> stringCollectionWithPrefix,
+                @Attribute(value = "stringCollectionWithoutPrefix") List<String> stringCollectionWithoutPrefix,
+                @Attribute(value = "stringCollectionWithoutType") List<String> stringCollectionWithoutType) { }
+
+
         void time(@Param @Default("PT20.345S") Duration duration,
                   @Param @Default("2007-12-03T10:15:30.00Z") Instant instant,
                   @Param @Default("2007-12-03") LocalDate localDate,
@@ -416,6 +465,53 @@ class AnnotatedValueResolverTest {
                   @Param @Default("2007-12-03T10:15:30+01:00[Europe/Paris]") ZonedDateTime zonedDateTime,
                   @Param @Default("America/New_York") ZoneId zoneId,
                   @Param @Default("+01:00:00") ZoneOffset zoneOffset) {}
+    }
+
+    private Map<String, AttributeKey<?>> injectAttrKeyToServiceContextForAttributeTest() {
+
+        ServiceRequestContext ctx = resolverContext.context();
+
+        AttributeKey<Integer> primitiveIntWithPrimitivePrefix = AttributeKey.valueOf(int.class, "primitiveIntWithPrimitivePrefix");
+        AttributeKey<Integer> primitiveIntWithoutPrefix = AttributeKey.valueOf(int.class, "primitiveIntWithoutPrefix");
+        AttributeKey<Integer> primitiveIntWithReferencePrefix = AttributeKey.valueOf(int.class, "primitiveIntWithReferencePrefix");
+        AttributeKey<Integer> primitiveIntWithoutType = AttributeKey.valueOf("primitiveIntWithoutType");
+        AttributeKey<Integer> referenceIntWithPrimitivePrefix = AttributeKey.valueOf(Integer.class, "referenceIntWithPrimitivePrefix");
+        AttributeKey<Integer> referenceIntWithoutPrefix = AttributeKey.valueOf(Integer.class, "referenceIntWithoutPrefix");
+        AttributeKey<Integer> referenceIntWithReferencePrefix = AttributeKey.valueOf(Integer.class, "referenceIntWithReferencePrefix");
+        AttributeKey<Integer> referenceIntWithoutType = AttributeKey.valueOf(Integer.class, "referenceIntWithoutType");
+        AttributeKey<List<String>> stringCollectionWithPrefix = AttributeKey.valueOf(List.class, "stringCollectionWithPrefix");
+        AttributeKey<List<String>> stringCollectionWithoutPrefix = AttributeKey.valueOf(List.class, "stringCollectionWithoutPrefix");
+        AttributeKey<List<String>> stringCollectionWithoutType = AttributeKey.valueOf(List.class, "stringCollectionWithoutType");
+
+        ctx.setAttr(primitiveIntWithPrimitivePrefix, 10);
+        ctx.setAttr(primitiveIntWithoutPrefix, 10);
+        ctx.setAttr(primitiveIntWithReferencePrefix, 10);
+        ctx.setAttr(primitiveIntWithoutType, 10);
+        ctx.setAttr(referenceIntWithPrimitivePrefix, 10);
+        ctx.setAttr(referenceIntWithoutPrefix, 10);
+        ctx.setAttr(referenceIntWithReferencePrefix, 10);
+        ctx.setAttr(referenceIntWithoutType, 10);
+
+        ArrayList<String> testValue = new ArrayList<>();
+        testValue.add("A");
+        ctx.setAttr(stringCollectionWithPrefix, testValue);
+        ctx.setAttr(stringCollectionWithoutPrefix, testValue);
+        ctx.setAttr(stringCollectionWithoutType, testValue);
+
+        Map<String, AttributeKey<?>> expectedCtx = new HashMap<>();
+        expectedCtx.put("primitiveIntWithPrimitivePrefix", primitiveIntWithPrimitivePrefix);
+        expectedCtx.put("primitiveIntWithoutPrefix", primitiveIntWithoutPrefix);
+        expectedCtx.put("primitiveIntWithReferencePrefix", primitiveIntWithReferencePrefix);
+        expectedCtx.put("primitiveIntWithoutType", primitiveIntWithoutType);
+        expectedCtx.put("referenceIntWithPrimitivePrefix", referenceIntWithPrimitivePrefix);
+        expectedCtx.put("referenceIntWithoutPrefix", referenceIntWithoutPrefix);
+        expectedCtx.put("referenceIntWithReferencePrefix", referenceIntWithReferencePrefix);
+        expectedCtx.put("referenceIntWithoutType", referenceIntWithoutType);
+        expectedCtx.put("stringCollectionWithPrefix", stringCollectionWithPrefix);
+        expectedCtx.put("stringCollectionWithoutPrefix", stringCollectionWithoutPrefix);
+        expectedCtx.put("stringCollectionWithoutType", stringCollectionWithoutType);
+
+        return expectedCtx;
     }
 
     interface Bean {
