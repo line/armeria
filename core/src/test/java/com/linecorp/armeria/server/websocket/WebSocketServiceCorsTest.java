@@ -76,20 +76,7 @@ class WebSocketServiceCorsTest {
             sb.route()
               .path("/chat")
               .build(WebSocketService.builder(new CustomWebSocketServiceHandler())
-                                     .allowedOrigins(origin -> origin.contains("armeria"))
-                                     .build());
-        }
-    };
-
-    @RegisterExtension
-    static final ServerExtension server4 = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.route()
-              .path("/chat")
-              .build(WebSocketService.builder(new CustomWebSocketServiceHandler())
-                                     .allowedOrigins(origin -> origin.contains("armeria"))
-                                     .allowedOrigins("http://line.com")
+                                     .allowedOrigin(origin -> origin.contains("armeria"))
                                      .build());
         }
     };
@@ -129,18 +116,7 @@ class WebSocketServiceCorsTest {
                 .isEqualTo(HttpStatus.FORBIDDEN);
     }
 
-    @Test
-    void testWhenBothStringAndPredicateForAllowedOriginsAreSpecified() {
-        final WebClient client = WebClient.builder(server4.uri(SessionProtocol.H1C))
-                                          .responseTimeoutMillis(0)
-                                          .build();
-        assertThat(sendRequestAndRetrieveResponseHeaders(client, "http://armeria.com").status())
-                .isEqualTo(HttpStatus.SWITCHING_PROTOCOLS);
-        assertThat(sendRequestAndRetrieveResponseHeaders(client, "http://line.com").status())
-                .isEqualTo(HttpStatus.SWITCHING_PROTOCOLS);
-    }
-
-    private ResponseHeaders sendRequestAndRetrieveResponseHeaders(WebClient client, String origin) {
+    private static ResponseHeaders sendRequestAndRetrieveResponseHeaders(WebClient client, String origin) {
         final RequestHeaders requestHeaders = webSocketUpgradeHeaders(origin);
         final CompletableFuture<ResponseHeaders> informationalHeadersFuture = new CompletableFuture<>();
         client.execute(requestHeaders).subscribe(new WebSocketClientSubscriber(informationalHeadersFuture));

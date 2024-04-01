@@ -106,8 +106,7 @@ public final class CorsConfig {
                 isPathMatched(policy, routingContext)) {
                 return policy;
             } else if (!isNullOrigin && isPathMatched(policy, routingContext)) {
-                if (policy.origins().contains(lowerCaseOrigin) ||
-                    (policy.originPredicate() != null && policy.originPredicate().test(origin))) {
+                if (policy.originPredicate().test(origin)) {
                     return policy;
                 }
             }

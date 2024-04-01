@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.cors;
 
 import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.EnumSet;
@@ -89,18 +90,17 @@ public final class CorsPolicy {
      * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code regex}.
      */
     public static CorsPolicyBuilder builderForOriginRegex(String regex) {
-        return builderForOriginRegex(Pattern.compile(regex));
+        return builderForOriginRegex(Pattern.compile(requireNonNull(regex, "regex")));
     }
 
     /**
      * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code regex}.
      */
     public static CorsPolicyBuilder builderForOriginRegex(Pattern regex) {
-        return new CorsPolicyBuilder(regex);
+        return builder(requireNonNull(regex, "regex").asPredicate());
     }
 
     private final Set<String> origins;
-    @Nullable
     private final Predicate<String> originPredicate;
     private final List<Route> routes;
     private final boolean credentialsAllowed;
@@ -115,7 +115,7 @@ public final class CorsPolicy {
     private final String joinedAllowedRequestMethods;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
-    CorsPolicy(Set<String> origins, @Nullable Predicate<String> originPredicate,
+    CorsPolicy(Set<String> origins, Predicate<String> originPredicate,
                List<Route> routes, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
                boolean allowAllRequestHeaders, Set<AsciiString> allowedRequestHeaders,
@@ -151,14 +151,20 @@ public final class CorsPolicy {
      * This method returns the first specified origin if this policy has more than one origin.
      *
      * @return the value that will be used for the CORS response header {@code "Access-Control-Allow-Origin"}
+     *
+     * @deprecated Use {@link #originPredicate()} to check if an origin is allowed.
      */
+    @Deprecated
     public String origin() {
         return Iterables.getFirst(origins, ANY_ORIGIN);
     }
 
     /**
      * Returns the set of allowed origins.
+     *
+     * @deprecated @deprecated Use {@link #originPredicate()} to check if an origin is allowed.
      */
+    @Deprecated
     public Set<String> origins() {
         return origins;
     }
@@ -166,7 +172,6 @@ public final class CorsPolicy {
     /**
      * Returns predicate to match origins.
      */
-    @Nullable
     public Predicate<String> originPredicate() {
         return originPredicate;
     }
@@ -334,7 +339,7 @@ public final class CorsPolicy {
         headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
     }
 
-    private void copyCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
+    private static void copyCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
         final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
         if (Strings.isNullOrEmpty(header)) {
             return;

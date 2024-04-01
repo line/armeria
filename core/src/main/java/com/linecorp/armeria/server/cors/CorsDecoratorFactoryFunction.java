@@ -44,14 +44,16 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
         if (!origins.isEmpty() && origins.contains("*")) {
             cb = CorsService.builderForAnyOrigin();
         } else {
-            Predicate<String> originPredicate = (unused) -> false;
-            for (String origin: origins) {
-                originPredicate = originPredicate.or(Predicate.isEqual(origin));
+            Predicate<String> originPredicate;
+            if (!origins.isEmpty()) {
+                originPredicate = origins::contains;
+            } else {
+                originPredicate = origin -> false;
             }
 
             if (!parameter.originRegex().isEmpty()) {
-                final Pattern pattern = Pattern.compile(parameter.originRegex());
-                originPredicate = originPredicate.or(pattern.asPredicate());
+                final Pattern regex = Pattern.compile(parameter.originRegex());
+                originPredicate = originPredicate.or(regex.asPredicate());
             }
 
             cb = CorsService.builder(originPredicate);

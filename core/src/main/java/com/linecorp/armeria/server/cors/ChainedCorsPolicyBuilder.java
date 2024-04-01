@@ -22,7 +22,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 import com.linecorp.armeria.common.HttpMethod;
 
@@ -52,12 +51,6 @@ public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder {
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder, Predicate<String> originPredicate) {
         super(originPredicate);
-        requireNonNull(builder, "builder");
-        serviceBuilder = builder;
-    }
-
-    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, Pattern originRegex) {
-        super(originRegex);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
     }

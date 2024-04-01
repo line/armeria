@@ -67,7 +67,6 @@ public final class CorsServiceBuilder {
 
     /**
      * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing {@code origins}.
-     *
      */
     CorsServiceBuilder(List<String> origins) {
         anyOriginSupported = false;
@@ -81,15 +80,6 @@ public final class CorsServiceBuilder {
     CorsServiceBuilder(Predicate<String> originPredicate) {
         anyOriginSupported = false;
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, originPredicate);
-    }
-
-    /**
-     * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing origins matched by
-     * {@code originRegex}.
-     */
-    CorsServiceBuilder(Pattern originRegex) {
-        anyOriginSupported = false;
-        firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, originRegex);
     }
 
     /**
@@ -492,8 +482,7 @@ public final class CorsServiceBuilder {
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
     public ChainedCorsPolicyBuilder andForOriginRegex(Pattern regex) {
-        requireNonNull(regex, "regex");
-        return new ChainedCorsPolicyBuilder(this, regex);
+        return andForOrigin(requireNonNull(regex, "regex").asPredicate());
     }
 
     @Override

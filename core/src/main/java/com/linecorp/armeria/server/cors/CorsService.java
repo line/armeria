@@ -106,8 +106,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
      * Returns a new {@link CorsServiceBuilder} with origins matching the {@code originRegex}.
      */
     public static CorsServiceBuilder builderForOriginRegex(Pattern originRegex) {
-        requireNonNull(originRegex, "originRegex");
-        return new CorsServiceBuilder(originRegex);
+        return builder(requireNonNull(originRegex, "originRegex").asPredicate());
     }
 
     private final CorsConfig config;

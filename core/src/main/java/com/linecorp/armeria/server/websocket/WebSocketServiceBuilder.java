@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.websocket;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
@@ -63,8 +64,10 @@ public final class WebSocketServiceBuilder {
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
-    private Set<String> allowedOrigins = ImmutableSet.of();
-    private Predicate<String> originMatchingPredicate = (origin) -> false;
+    @Nullable
+    private Set<String> allowedOrigins;
+    @Nullable
+    private Predicate<String> originPredicate;
     private boolean aggregateContinuation;
     @Nullable
     private HttpService fallbackService;
@@ -145,28 +148,38 @@ public final class WebSocketServiceBuilder {
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
     public WebSocketServiceBuilder allowedOrigins(Iterable<String> allowedOrigins) {
+        checkState(originPredicate == null, "allowedOrigins and originPredicate are mutually exclusive.");
         this.allowedOrigins = validateOrigins(allowedOrigins);
         return this;
     }
 
     /**
-     * Sets the predicate to match allowed origins. The same-origin is allowed by default.
+     * Sets the predicate that evaluates whether an origin is allowed. The same-origin is allowed by default.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
-    public WebSocketServiceBuilder allowedOrigins(Predicate<String> predicate) {
-        originMatchingPredicate = originMatchingPredicate.or(predicate);
+    public WebSocketServiceBuilder allowedOrigin(Predicate<String> predicate) {
+        checkState(allowedOrigins == null, "allowedOrigins and originPredicate are mutually exclusive.");
+        originPredicate = requireNonNull(predicate, "predicate");
         return this;
     }
 
     /**
-     * Sets the regex pattern to match allowed origins. The same-origin is allowed by default.
+     * Sets the regex pattern to evaluate whether an origin is allowed. The same-origin is allowed by default.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
-    public WebSocketServiceBuilder allowedOrigins(Pattern regex) {
-        originMatchingPredicate = originMatchingPredicate.or(regex.asPredicate());
-        return this;
+    public WebSocketServiceBuilder allowedOrigin(String regex) {
+        return allowedOrigin(Pattern.compile(requireNonNull(regex, "regex")));
+    }
+
+    /**
+     * Sets the regex pattern to evaluate whether an origin is allowed. The same-origin is allowed by default.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
+     */
+    public WebSocketServiceBuilder allowedOrigin(Pattern regex) {
+        return allowedOrigin(requireNonNull(regex, "regex").asPredicate());
     }
 
     private static Set<String> validateOrigins(Iterable<String> allowedOrigins) {
@@ -197,8 +210,17 @@ public final class WebSocketServiceBuilder {
      * Returns a newly-created {@link WebSocketService} with the properties set so far.
      */
     public WebSocketService build() {
+        final boolean allowAnyOrigin;
+        final Predicate<String> originPredicate;
+        if (allowedOrigins != null) {
+            allowAnyOrigin = allowedOrigins.contains(ANY_ORIGIN);
+            originPredicate = allowedOrigins::contains;
+        } else {
+            allowAnyOrigin = false;
+            originPredicate = this.originPredicate;
+        }
         return new DefaultWebSocketService(handler, fallbackService, maxFramePayloadLength, allowMaskMismatch,
-                                           subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN),
-                                           originMatchingPredicate, aggregateContinuation);
+                                           subprotocols, allowAnyOrigin,
+                                           originPredicate, aggregateContinuation);
     }
 }
