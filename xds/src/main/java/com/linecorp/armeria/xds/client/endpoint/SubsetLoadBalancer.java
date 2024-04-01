@@ -95,7 +95,7 @@ final class SubsetLoadBalancer implements LoadBalancer {
         return createEndpointGroup(endpoints);
     }
 
-    EndpointGroup createEndpointGroup(List<Endpoint> endpoints) {
+    private static EndpointGroup createEndpointGroup(List<Endpoint> endpoints) {
         return EndpointGroup.of(endpoints);
     }
 }
