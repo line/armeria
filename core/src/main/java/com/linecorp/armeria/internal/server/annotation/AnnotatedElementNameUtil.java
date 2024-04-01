@@ -32,14 +32,12 @@ import com.linecorp.armeria.server.annotation.Param;
 final class AnnotatedElementNameUtil {
 
     /**
-     * Returns the value of the {@link Param} annotation which is specified on the {@code element} if
+     * Returns the value of the {@link Param} or {@link Attribute} annotation which is specified on the {@code element} if
      * the value is not blank. If the value is blank, it returns the name of the specified
-     * {@code nameRetrievalTarget} object which is an instance of {@link Parameter} or {@link Field}.
+     * {@code nameRetrievalTarget} object which is an instance of Both {@link Parameter} and {@link Attribute} {} or {@link Field}.
      */
-    static String findName(Param param, Object nameRetrievalTarget) {
+    static String findName(Object nameRetrievalTarget, String value) {
         requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
-
-        final String value = param.value();
         if (DefaultValues.isSpecified(value)) {
             checkArgument(!value.isEmpty(), "value is empty.");
             return value;
@@ -47,16 +45,6 @@ final class AnnotatedElementNameUtil {
         return getName(nameRetrievalTarget);
     }
 
-    static String findName(Attribute attribute, Object nameRetrievalTarget) {
-        requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
-
-        final String value = attribute.value();
-        if (DefaultValues.isSpecified(value)) {
-            checkArgument(!value.isEmpty(), "value is empty.");
-            return value;
-        }
-        return getName(nameRetrievalTarget);
-    }
     /**
      * Returns the value of the {@link Header} annotation which is specified on the {@code element} if
      * the value is not blank. If the value is blank, it returns the name of the specified

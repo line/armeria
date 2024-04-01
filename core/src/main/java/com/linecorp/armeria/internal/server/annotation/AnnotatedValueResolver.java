@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.primitives.Primitives;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
@@ -450,13 +452,13 @@ final class AnnotatedValueResolver {
 
         final Attribute attr = annotatedElement.getAnnotation(Attribute.class);
         if (attr != null) {
-            final String name = findName(attr, typeElement);
-            return ofAttribute(name, annotatedElement, typeElement, type, description);
+            final String name = findName(typeElement, attr.value());
+            return ofAttribute(name, attr, annotatedElement, typeElement, type, description);
         }
 
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
-            final String name = findName(param, typeElement);
+            final String name = findName(typeElement, param.value());
             if (type == File.class || type == Path.class || type == MultipartFile.class) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
@@ -633,21 +635,42 @@ final class AnnotatedValueResolver {
     }
 
     private static AnnotatedValueResolver ofAttribute(String name,
+                                                      Attribute attr,
                                                       AnnotatedElement annotatedElement,
                                                       AnnotatedElement typeElement, Class<?> type,
                                                       DescriptionInfo description) {
+
+        final List<AttributeKey<?>> attrKeys = new ArrayList<>();
+
+        final AttributeKey<?> prefixTypeAttrKey = AttributeKey.valueOf(attr.prefix(), name);
+        attrKeys.add(prefixTypeAttrKey);
+
+        final AttributeKey<?> declaredTypeKey = AttributeKey.valueOf(type, name);
+        attrKeys.add(declaredTypeKey);
+
+        if (type.isPrimitive()) {
+            final Class<?> mustRefType = Primitives.wrap(type);
+            final AttributeKey<?> mustRefTypeKey = AttributeKey.valueOf(mustRefType, name);
+            attrKeys.add(mustRefTypeKey);
+        }
+
+        final AttributeKey<Object> objectTypeAttrKey = AttributeKey.valueOf(name);
+        attrKeys.add(objectTypeAttrKey);
+
         return new Builder(annotatedElement, type, name)
                 .annotationType(Attribute.class)
                 .typeElement(typeElement)
                 .supportDefault(true)
                 .supportContainer(true)
                 .description(description)
-                .resolver(resolverAttribute((ctx, clazz) -> {
-                                                return ctx.context.attr(AttributeKey.valueOf(clazz, name)) != null ?
-                                                       ctx.context.attr(AttributeKey.valueOf(clazz, name)) :
-                                                       ctx.context.attr(AttributeKey.valueOf(name));
-                                            }
-                ))
+                .resolver(attributeResolver(ctx -> {
+                                                for (AttributeKey<?> attrKey : attrKeys) {
+                                                    final Object value = ctx.context.attr(attrKey);
+                                                    if (value != null)
+                                                        return value;
+                                                }
+                                                return null;
+                }))
                 .build();
     }
 
@@ -806,59 +829,15 @@ final class AnnotatedValueResolver {
     }
 
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
-    resolverAttribute(BiFunction<ResolverContext, Class<?>, Object> getter) {
+    attributeResolver(Function<ResolverContext, Object> getter) {
         return (resolver, ctx) -> {
-            final Class<?> type = resolver.elementType().isPrimitive() ?
-                                  PrimitiveToReference.primitiveToReference(resolver.elementType.getName()) :
-                                  resolver.elementType();
-            // Primitive to Reference.
-            Object value = getter.apply(ctx, type);
+            Object value = getter.apply(ctx);
             if (value != null) {
                 return value;
             }
             return resolver.defaultOrException();
         };
     }
-
-    enum PrimitiveToReference {
-        BOOLEAN("boolean", Boolean.class),
-        BYTE("byte", Byte.class),
-        CHAR("char", Character.class),
-        SHORT("short", Short.class),
-        INTEGER("int", Integer.class),
-        LONG("long", Long.class),
-        FLOAT("float", Float.class),
-        DOUBLE("double", Double.class);
-
-        PrimitiveToReference(String name, Class<?> clazz) {
-            this.name = name;
-            this.clazz = clazz;
-        }
-
-        public String getName() {
-            return this.name;
-        }
-
-        public Class<?> getClazz() {
-            return this.clazz;
-        }
-
-        static Class<?> primitiveToReference(String name) {
-            final Class<?> clazz = PrimitiveToReference.map.get(name);
-            if (clazz != null) {
-                return clazz;
-            }
-            throw new IllegalStateException("There is no Reference type corresponding to " + name);
-        }
-
-        private final String name;
-        private final Class<?> clazz;
-        private static final Map<String, Class<?>> map = Arrays.stream(values())
-                                                               .collect(Collectors.toMap(
-                                                                       e -> e.getName(),
-                                                                       e -> e.getClazz()));
-    }
-
 
     /**
      * Returns a bean resolver which retrieves a value using request converters. If the target element

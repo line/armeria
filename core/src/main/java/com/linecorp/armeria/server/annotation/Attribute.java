@@ -11,5 +11,6 @@ import com.linecorp.armeria.internal.server.annotation.DefaultValues;
 @Target(ElementType.PARAMETER)
 public @interface Attribute {
 
-    String value() default DefaultValues.UNSPECIFIED;
+    String value();
+    Class<?> prefix() default DefaultValues.class;
 }
