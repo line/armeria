@@ -67,7 +67,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
      */
     public static EndpointGroup of(ListenerRoot listenerRoot) {
         requireNonNull(listenerRoot, "listenerRoot");
-        return new XdsEndpointGroup(new ClusterManager(listenerRoot), false);
+        return of(listenerRoot, false);
     }
 
     /**

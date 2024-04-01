@@ -37,12 +37,12 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
     private List<Endpoint> endpoints = ImmutableList.of();
 
     ClusterEntry(ClusterSnapshot clusterSnapshot, ClusterManager clusterManager) {
-        endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterSnapshot);
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         assert endpointSnapshot != null;
         loadBalancer = new SubsetLoadBalancer(clusterSnapshot);
 
         // The order of adding listeners is important
+        endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterSnapshot);
         endpointGroup.addListener(this, true);
         endpointGroup.addListener(clusterManager, true);
     }

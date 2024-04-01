@@ -127,15 +127,16 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
             }
             mappingBuilder.put(clusterSnapshot, clusterEntry);
         }
-        clusterEntries = mappingBuilder.build();
+        final ImmutableMap<ClusterSnapshot, ClusterEntry> newClusterEntries = mappingBuilder.build();
+        clusterEntries = newClusterEntries;
         this.listenerSnapshot = listenerSnapshot;
         notifyListeners();
-        cleanupEndpointGroups(clusterEntries, oldEndpointGroups);
+        cleanupEndpointGroups(newClusterEntries, oldEndpointGroups);
     }
 
     private void cleanupEndpointGroups(Map<ClusterSnapshot, ClusterEntry> newEndpointGroups,
                                        Map<ClusterSnapshot, ClusterEntry> oldEndpointGroups) {
-        for (Entry<ClusterSnapshot, ClusterEntry> entry: oldEndpointGroups.entrySet()) {
+        for (Entry<ClusterSnapshot, ClusterEntry> entry : oldEndpointGroups.entrySet()) {
             if (newEndpointGroups.containsKey(entry.getKey())) {
                 continue;
             }
@@ -183,7 +184,7 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
             return new State(listenerSnapshot, ImmutableList.of());
         }
         final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();
-        for (ClusterEntry clusterEntry: clusterEntries.values()) {
+        for (ClusterEntry clusterEntry : clusterEntries.values()) {
             endpointsBuilder.addAll(clusterEntry.allEndpoints());
         }
         return new State(listenerSnapshot, endpointsBuilder.build());
