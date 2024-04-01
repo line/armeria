@@ -137,9 +137,6 @@ final class DefaultClientFactory implements ClientFactory {
     public ReleasableHolder<EventLoop> acquireEventLoop(SessionProtocol sessionProtocol,
                                                         EndpointGroup endpointGroup,
                                                         @Nullable Endpoint endpoint) {
-        if (isClosing()) {
-            throw new IllegalStateException("Cannot acquire an event loop because the factory is closing.");
-        }
         return httpClientFactory.acquireEventLoop(sessionProtocol, endpointGroup, endpoint);
     }
 
