@@ -22,6 +22,7 @@ import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowSa
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority;
 
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -263,7 +264,10 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                     newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders,
                                      nextReqTarget.toString(), nextAuthority);
 
-            if (isCyclicRedirects(redirectCtx, nextReqTarget.toString(), newReqDuplicator.headers().method())) {
+            final boolean isCyclicRedirects =
+                    !redirectCtx.addRedirectSignature(nextReqTarget.toString(),
+                                                      newReqDuplicator.headers().method());
+            if (isCyclicRedirects) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
                                 CyclicRedirectsException.of(redirectCtx.originalUri(),
                                                             redirectCtx.redirectUris()));
@@ -271,8 +275,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             final Set<RedirectSignature> redirectSignatures = redirectCtx.redirectSignatures();
-            // Minus 1 because the original signature is also included.
-            if (redirectSignatures.size() - 1 > maxRedirects) {
+            // Plus 1 to maxRedirects because the original signature is also included.
+            if (redirectSignatures.size() > maxRedirects + 1) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture,
                                 response, TooManyRedirectsException.of(maxRedirects, redirectCtx.originalUri(),
                                                                        redirectCtx.redirectUris()));
@@ -470,11 +474,6 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         }
     }
 
-    private static boolean isCyclicRedirects(RedirectContext redirectCtx,
-                                             String redirectUri, HttpMethod method) {
-        return !redirectCtx.addRedirectSignature(redirectUri, method);
-    }
-
     private static String buildUri(ClientRequestContext ctx, RequestHeaders headers) {
         final String originalUri;
         try (TemporaryThreadLocals threadLocals = TemporaryThreadLocals.acquire()) {
@@ -578,7 +577,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
         boolean addRedirectSignature(String redirectUri, HttpMethod method) {
             if (redirectSignatures == null) {
-                redirectSignatures = ConcurrentHashMap.newKeySet();
+                redirectSignatures = new LinkedHashSet<>();
             }
 
             if (!isAddedOriginalSignature) {
