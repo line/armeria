@@ -161,7 +161,7 @@ configure(projectsWithFlags('java')) {
         options.compilerArgs += '-parameters'
     }
 
-    // Set the 'Automatic-Module-Name' property in 'MANIFEST.MF' if `automaticModuleNames` is true.
+    // Set the 'Automatic-Module-Name' property in 'MANIFEST.MF' if `automaticModuleName` is not null.
     if (project.ext.automaticModuleName != null) {
         tasks.named('jar') {
             manifest {
