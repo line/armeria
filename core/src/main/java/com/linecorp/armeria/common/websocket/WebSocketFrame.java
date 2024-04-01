@@ -174,7 +174,7 @@ public interface WebSocketFrame extends Bytes {
         if (data.length == 0) {
             return EMPTY_PONG;
         }
-        return new ByteArrayWebSocketFrame(data, WebSocketFrameType.PING);
+        return new ByteArrayWebSocketFrame(data, WebSocketFrameType.PONG);
     }
 
     /**

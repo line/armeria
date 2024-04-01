@@ -14,12 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.xds.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
-import static com.linecorp.armeria.xds.XdsConverterUtil.convertEndpoints;
 import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.stringValue;
+import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
+import static com.linecorp.armeria.xds.client.endpoint.XdsEndpointUtil.convertEndpoints;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;

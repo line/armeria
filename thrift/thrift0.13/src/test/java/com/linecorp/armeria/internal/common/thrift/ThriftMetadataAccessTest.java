@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.thrift;
+package com.linecorp.armeria.internal.common.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
