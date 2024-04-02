@@ -117,7 +117,7 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         final ImmutableMap.Builder<ClusterSnapshot, ClusterEntry> mappingBuilder =
                 ImmutableMap.builder();
         final Map<ClusterSnapshot, ClusterEntry> oldEndpointGroups = clusterEntries;
-        for (ClusterSnapshot clusterSnapshot: routeSnapshot.clusterSnapshots()) {
+        for (ClusterSnapshot clusterSnapshot : routeSnapshot.clusterSnapshots()) {
             if (clusterSnapshot.endpointSnapshot() == null) {
                 continue;
             }
