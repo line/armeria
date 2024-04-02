@@ -428,7 +428,7 @@ public final class Flags {
      *
      * @see #verboseExceptionSampler()
      * @deprecated Use {@link #verboseExceptionSampler()} and
-     * {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>}.
+     *             {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>}.
      */
     @Deprecated
     public static String verboseExceptionSamplerSpec() {
@@ -1266,7 +1266,7 @@ public final class Flags {
      *
      * @see ExceptionVerbosity
      * @deprecated Use {@link LoggingService} or log exceptions using
-     * {@link ServerBuilder#errorHandler(ServerErrorHandler)}.
+     *             {@link ServerBuilder#errorHandler(ServerErrorHandler)}.
      */
     @Deprecated
     public static ExceptionVerbosity annotatedServiceExceptionVerbosity() {
