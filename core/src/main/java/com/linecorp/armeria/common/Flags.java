@@ -71,8 +71,11 @@ import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.logging.LoggingService;
 
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -404,6 +407,9 @@ public final class Flags {
     private static final long DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
             getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
                      "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
+
+    private static final DistributionStatisticConfig DISTRIBUTION_STATISTIC_CONFIG =
+            getValue(FlagsProvider::distributionStatisticConfig, "distributionStatisticConfig");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1473,6 +1479,30 @@ public final class Flags {
     @UnstableApi
     public static long defaultUnhandledExceptionsReportIntervalMillis() {
         return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    /**
+     * Returns the default {@link DistributionStatisticConfig} of the {@link Timer}s and
+     * {@link DistributionSummary}s created by Armeria.
+     *
+     * <p>The default value of this flag is as follows:
+     * <pre>{@code
+     * DistributionStatisticConfig.builder()
+     *     .percentilesHistogram(false)
+     *     .serviceLevelObjectives()
+     *     .percentiles(
+     *          0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
+     *     .percentilePrecision(2)
+     *     .minimumExpectedValue(1.0)
+     *     .maximumExpectedValue(Double.MAX_VALUE)
+     *     .expiry(Duration.ofMinutes(3))
+     *     .bufferLength(3)
+     *     .build();
+     * }</pre>
+     */
+    @UnstableApi
+    public static DistributionStatisticConfig distributionStatisticConfig() {
+        return DISTRIBUTION_STATISTIC_CONFIG;
     }
 
     @Nullable
