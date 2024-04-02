@@ -747,8 +747,9 @@ public final class ArmeriaHttpUtil {
      * This method should be preferred going forward as we continue implementing zero-copy
      * for HTTP1 en/decoders.
      */
-    public static void purgeHttp1OnlyHeaders(io.netty.handler.codec.http.HttpHeaders inHeaders,
+    private static void purgeHttp1OnlyHeaders(io.netty.handler.codec.http.HttpHeaders inHeaders,
                                              HttpHeadersBuilder out) {
+        //TODO(minwoox): dedup the logic between these method and toArmeria
         maybeSetTeHeader(inHeaders, out);
         maybeRemoveConnectionHeaders(inHeaders, out);
         maybeSetCookie(inHeaders, out);
@@ -780,8 +781,8 @@ public final class ArmeriaHttpUtil {
         }
     }
 
-    public static void maybeSetTeHeader(io.netty.handler.codec.http.HttpHeaders inHeaders,
-                                        HttpHeadersBuilder out) {
+    private static void maybeSetTeHeader(io.netty.handler.codec.http.HttpHeaders inHeaders,
+                                         HttpHeadersBuilder out) {
         if (!inHeaders.contains(HttpHeaderNames.TE)) {
             return;
         }
@@ -803,8 +804,8 @@ public final class ArmeriaHttpUtil {
         return isUpgrade && isWebsocket;
     }
 
-    public static boolean findDelimitedIgnoreCase(AsciiString targetName, AsciiString targetValue,
-                                                  io.netty.handler.codec.http.HttpHeaders httpHeaders) {
+    private static boolean findDelimitedIgnoreCase(AsciiString targetName, AsciiString targetValue,
+                                                   io.netty.handler.codec.http.HttpHeaders httpHeaders) {
         final List<String> allValues = httpHeaders.getAll(targetName);
         if (allValues.isEmpty()) {
             return false;

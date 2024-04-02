@@ -19,11 +19,9 @@ package com.linecorp.armeria.server;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpHeadersFactory;
 
-final class ArmeriaHttpHeadersFactory implements HttpHeadersFactory {
+enum ArmeriaHttpHeadersFactory implements HttpHeadersFactory {
 
-    static final ArmeriaHttpHeadersFactory INSTANCE = new ArmeriaHttpHeadersFactory();
-
-    private ArmeriaHttpHeadersFactory() {}
+    INSTANCE;
 
     @Override
     public HttpHeaders newHeaders() {

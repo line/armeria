@@ -54,7 +54,7 @@ import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.HttpVersion;
 
 /**
- * Forked from {@link HttpClientCodec}.
+ * Forked from {@link HttpClientCodec} to override {@code HttpServerRequestDecoder#createMessage(String[])}.
  * A combination of {@link HttpRequestDecoder} and {@link HttpResponseEncoder}
  * which enables easier server side HTTP implementation.
  */
