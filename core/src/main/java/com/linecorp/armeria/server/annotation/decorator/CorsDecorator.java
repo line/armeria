@@ -43,9 +43,9 @@ public @interface CorsDecorator {
     String[] origins() default {};
 
     /**
-     * Specify allowed origins by regular expression.
+     * Specify allowed origins by regular expressions.
      */
-    String originRegex() default "";
+    String[] originRegexes() default {};
 
     /**
      * The path patterns that this policy is supposed to be applied to. If unspecified, all paths would be

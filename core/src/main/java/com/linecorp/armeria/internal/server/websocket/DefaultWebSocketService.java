@@ -94,13 +94,13 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private final Set<String> subprotocols;
     private final boolean allowAnyOrigin;
     @Nullable
-    private final Predicate<String> originPredicate;
+    private final Predicate<? super String> originPredicate;
     private final boolean aggregateContinuation;
 
     public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
                                    int maxFramePayloadLength, boolean allowMaskMismatch,
                                    Set<String> subprotocols, boolean allowAnyOrigin,
-                                   @Nullable Predicate<String> originPredicate,
+                                   @Nullable Predicate<? super String> originPredicate,
                                    boolean aggregateContinuation) {
         this.handler = handler;
         this.fallbackService = fallbackService;

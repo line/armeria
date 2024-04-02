@@ -35,7 +35,7 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(CorsDecorator parameter) {
         requireNonNull(parameter, "parameter");
-        if (parameter.origins().length == 0 && parameter.originRegex().isEmpty()) {
+        if (parameter.origins().length == 0 && parameter.originRegexes().length == 0) {
             throw new IllegalArgumentException("Either origins or originRegex must be configured");
         }
 
@@ -51,8 +51,8 @@ public final class CorsDecoratorFactoryFunction implements DecoratorFactoryFunct
                 originPredicate = origin -> false;
             }
 
-            if (!parameter.originRegex().isEmpty()) {
-                final Pattern regex = Pattern.compile(parameter.originRegex());
+            for (String originRegex : parameter.originRegexes()) {
+                final Pattern regex = Pattern.compile(originRegex);
                 originPredicate = originPredicate.or(regex.asPredicate());
             }
 

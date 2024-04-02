@@ -98,7 +98,7 @@ class HttpServerCorsTest {
     }
 
     @CorsDecorator(
-            originRegex = "http:\\/\\/example.*",
+            originRegexes = "http:\\/\\/example.*",
             allowedRequestMethods = HttpMethod.GET
     )
     private static class MyAnnotatedService4 {
@@ -109,7 +109,7 @@ class HttpServerCorsTest {
 
     @CorsDecorator(
             origins = "http://armeria.com",
-            originRegex = "http:\\/\\/line.*",
+            originRegexes = { "http:\\/\\/line.*", "http:\\/\\/test.*" },
             allowedRequestMethods = HttpMethod.GET
     )
     private static class MyAnnotatedService5 {
@@ -360,7 +360,7 @@ class HttpServerCorsTest {
                                   HttpHeaderNames.ACCEPT, "utf-8",
                                   HttpHeaderNames.ORIGIN, origin,
                                   HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, requestMethod)
-                             ).aggregate().join();
+        ).aggregate().join();
     }
 
     static AggregatedHttpResponse preflightRequest(WebClient client, String path, String origin,
@@ -534,7 +534,8 @@ class HttpServerCorsTest {
     @Test
     void testCorsPreflightWithQueryParams() throws Exception {
         final WebClient client = client();
-        final AggregatedHttpResponse response = preflightRequest(client, "/cors?a=b", "http://example.com", "POST");
+        final AggregatedHttpResponse response = preflightRequest(client, "/cors?a=b", "http://example.com",
+                                                                 "POST");
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
                 .isEqualTo("http://example.com");
@@ -807,6 +808,9 @@ class HttpServerCorsTest {
         res = request(client, HttpMethod.GET, "/cors17/index", "http://line2.org", "GET");
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
                 .isEqualTo("http://line2.org");
+        res = request(client, HttpMethod.GET, "/cors17/index", "http://test.org", "GET");
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .isEqualTo("http://test.org");
 
         res = request(client, HttpMethod.GET, "/cors17/index", "http://invalid.com", "GET");
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN)).isNull();

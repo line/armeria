@@ -67,7 +67,7 @@ public final class WebSocketServiceBuilder {
     @Nullable
     private Set<String> allowedOrigins;
     @Nullable
-    private Predicate<String> originPredicate;
+    private Predicate<? super String> originPredicate;
     private boolean aggregateContinuation;
     @Nullable
     private HttpService fallbackService;
@@ -158,7 +158,7 @@ public final class WebSocketServiceBuilder {
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
-    public WebSocketServiceBuilder allowedOrigin(Predicate<String> predicate) {
+    public WebSocketServiceBuilder allowedOrigin(Predicate<? super String> predicate) {
         checkState(allowedOrigins == null, "allowedOrigins and originPredicate are mutually exclusive.");
         originPredicate = requireNonNull(predicate, "predicate");
         return this;
@@ -211,7 +211,7 @@ public final class WebSocketServiceBuilder {
      */
     public WebSocketService build() {
         final boolean allowAnyOrigin;
-        final Predicate<String> originPredicate;
+        final Predicate<? super String> originPredicate;
         if (allowedOrigins != null) {
             allowAnyOrigin = allowedOrigins.contains(ANY_ORIGIN);
             originPredicate = allowedOrigins::contains;

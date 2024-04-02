@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 
 /**
@@ -463,6 +464,7 @@ public final class CorsServiceBuilder {
      * Creates a new builder instance for a new {@link CorsPolicy}.
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
+    @UnstableApi
     public ChainedCorsPolicyBuilder andForOrigin(Predicate<String> originPredicate) {
         requireNonNull(originPredicate, "originPredicate");
         return new ChainedCorsPolicyBuilder(this, originPredicate);
@@ -472,6 +474,7 @@ public final class CorsServiceBuilder {
      * Creates a new builder instance for a new {@link CorsPolicy}.
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
+    @UnstableApi
     public ChainedCorsPolicyBuilder andForOriginRegex(String regex) {
         requireNonNull(regex, "regex");
         return andForOriginRegex(Pattern.compile(regex));
@@ -481,6 +484,7 @@ public final class CorsServiceBuilder {
      * Creates a new builder instance for a new {@link CorsPolicy}.
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
+    @UnstableApi
     public ChainedCorsPolicyBuilder andForOriginRegex(Pattern regex) {
         return andForOrigin(requireNonNull(regex, "regex").asPredicate());
     }

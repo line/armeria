@@ -82,7 +82,7 @@ public final class CorsPolicy {
     /**
      * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code predicate}.
      */
-    public static CorsPolicyBuilder builder(Predicate<String> predicate) {
+    public static CorsPolicyBuilder builder(Predicate<? super String> predicate) {
         return new CorsPolicyBuilder(predicate);
     }
 
@@ -101,7 +101,7 @@ public final class CorsPolicy {
     }
 
     private final Set<String> origins;
-    private final Predicate<String> originPredicate;
+    private final Predicate<? super String> originPredicate;
     private final List<Route> routes;
     private final boolean credentialsAllowed;
     private final boolean nullOriginAllowed;
@@ -115,7 +115,7 @@ public final class CorsPolicy {
     private final String joinedAllowedRequestMethods;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
-    CorsPolicy(Set<String> origins, Predicate<String> originPredicate,
+    CorsPolicy(Set<String> origins, Predicate<? super String> originPredicate,
                List<Route> routes, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
                boolean allowAllRequestHeaders, Set<AsciiString> allowedRequestHeaders,
@@ -172,7 +172,7 @@ public final class CorsPolicy {
     /**
      * Returns predicate to match origins.
      */
-    public Predicate<String> originPredicate() {
+    public Predicate<? super String> originPredicate() {
         return originPredicate;
     }
 

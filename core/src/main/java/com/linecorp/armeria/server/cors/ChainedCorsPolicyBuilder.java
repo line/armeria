@@ -36,10 +36,11 @@ import com.linecorp.armeria.common.HttpMethod;
  */
 public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder {
 
+    private static final List<String> ALLOW_ANY_ORIGIN = ImmutableList.of("*");
     private final CorsServiceBuilder serviceBuilder;
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder) {
-        super(ImmutableList.of("*"));
+        super(ALLOW_ANY_ORIGIN);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
     }

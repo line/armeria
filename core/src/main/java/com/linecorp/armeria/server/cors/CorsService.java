@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -89,6 +90,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
     /**
      * Returns a new {@link CorsServiceBuilder} with origins matching the {@code originPredicate}.
      */
+    @UnstableApi
     public static CorsServiceBuilder builder(Predicate<String> originPredicate) {
         requireNonNull(originPredicate, "originPredicate");
         return new CorsServiceBuilder(originPredicate);
@@ -97,6 +99,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
     /**
      * Returns a new {@link CorsServiceBuilder} with origins matching the {@code originRegex}.
      */
+    @UnstableApi
     public static CorsServiceBuilder builderForOriginRegex(String originRegex) {
         requireNonNull(originRegex, "originRegex");
         return builderForOriginRegex(Pattern.compile(originRegex));
@@ -105,6 +108,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
     /**
      * Returns a new {@link CorsServiceBuilder} with origins matching the {@code originRegex}.
      */
+    @UnstableApi
     public static CorsServiceBuilder builderForOriginRegex(Pattern originRegex) {
         return builder(requireNonNull(originRegex, "originRegex").asPredicate());
     }
