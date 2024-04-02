@@ -33,10 +33,10 @@ package com.linecorp.armeria.internal.common.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.junit.jupiter.api.Test;
 
 import com.google.api.gax.grpc.GrpcStatusCode;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
 import com.linecorp.armeria.client.circuitbreaker.FailFastException;
@@ -62,7 +62,8 @@ class GrpcStatusTest {
 
     @Test
     void invalidProtocolBufferExceptionToInvalidArgumentCode() {
-        assertThat(GrpcStatus.fromThrowable(new InvalidProtocolBufferException("Failed to parse message")).getCode())
+        assertThat(GrpcStatus.fromThrowable(new InvalidProtocolBufferException("Failed to parse message"))
+                             .getCode())
                 .isEqualTo(Status.Code.INVALID_ARGUMENT);
     }
 }
