@@ -72,6 +72,7 @@ import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
@@ -814,6 +815,21 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response =
                 jsonPostRequest(webClient, "/v1/echo/response_body/repeated", jsonContent);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"int32Val\": 1.1}",
+            "{\"int64Val\": 2.2}",
+            "{\"uint32Val\": 3.3}",
+            "{\"uint64Val\": 4.4}"
+    })
+    void shouldDenyTypeMismatchedValue(String jsonContent)
+            throws JsonProcessingException {
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/wrappers", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(root.get("code").asInt()).isEqualTo(Code.INVALID_ARGUMENT.value());
     }
 
     @Test
