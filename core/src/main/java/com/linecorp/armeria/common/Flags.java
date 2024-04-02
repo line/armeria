@@ -996,7 +996,7 @@ public final class Flags {
      * </p>
      *
      * @see ClientFactoryBuilder#connectionDrainDuration(Duration)
-     * @see ClientFactoryBuilder#clientConnectionDrainDurationMicros(long)
+     * @see ClientFactoryBuilder#connectionDrainDurationMicros(long)
      */
     public static long defaultClientConnectionDrainDurationMicros() {
         return DEFAULT_CLIENT_CONNECTION_DRAIN_DURATION_MICROS;

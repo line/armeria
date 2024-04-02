@@ -569,7 +569,7 @@ public interface FlagsProvider {
      * the specified {@code duration} to allow pre-existing connections to be closed gracefully.
      *
      * <p></p>Note that this flag has no effect if a user specified the value explicitly via
-     * {@link ClientFactoryBuilder#clientConnectionDrainDurationMicros(long)}.
+     * {@link ClientFactoryBuilder#connectionDrainDurationMicros(long)}.
      *
      * <p>The default value of this flag is
      * {@value DefaultFlagsProvider#DEFAULT_CLIENT_CONNECTION_DRAIN_DURATION_MICROS}.

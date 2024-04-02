@@ -303,13 +303,13 @@ class ClientFactoryBuilderTest {
     @Test
     void clientConnectionDrainDurationMicros() {
         try (ClientFactory factory = ClientFactory.builder().build()) {
-            assertThat(factory.options().clientConnectionDrainDurationMicros()).isEqualTo(0);
+            assertThat(factory.options().connectionDrainDurationMicros()).isEqualTo(0);
         }
 
         try (ClientFactory factory = ClientFactory.builder()
-                                                  .clientConnectionDrainDurationMicros(500000)
+                                                  .connectionDrainDurationMicros(500000)
                                                   .build()) {
-            assertThat(factory.options().clientConnectionDrainDurationMicros()).isEqualTo(500000);
+            assertThat(factory.options().connectionDrainDurationMicros()).isEqualTo(500000);
         }
     }
 }

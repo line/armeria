@@ -244,8 +244,8 @@ public final class ClientFactoryOptions
     /**
      * The client-side maximum allowed duration of a connection drain in microseconds.
      */
-    public static final ClientFactoryOption<Long> CLIENT_CONNECTION_DRAIN_DURATION_MICROS =
-            ClientFactoryOption.define("CLIENT_CONNECTION_DRAIN_DURATION_MICROS",
+    public static final ClientFactoryOption<Long> CONNECTION_DRAIN_DURATION_MICROS =
+            ClientFactoryOption.define("CONNECTION_DRAIN_DURATION_MICROS",
                                        Flags.defaultClientConnectionDrainDurationMicros());
 
     /**
@@ -567,8 +567,8 @@ public final class ClientFactoryOptions
     /**
      * Returns the client-side maximum allowed duration of a connection drain in microseconds.
      */
-    public long clientConnectionDrainDurationMicros() {
-        return get(CLIENT_CONNECTION_DRAIN_DURATION_MICROS);
+    public long connectionDrainDurationMicros() {
+        return get(CONNECTION_DRAIN_DURATION_MICROS);
     }
 
     /**

@@ -201,7 +201,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
-        drainDurationMicros = options.clientConnectionDrainDurationMicros();
+        drainDurationMicros = options.connectionDrainDurationMicros();
         meterRegistry = options.meterRegistry();
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();

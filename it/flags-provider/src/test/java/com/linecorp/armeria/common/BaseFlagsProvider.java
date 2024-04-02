@@ -72,11 +72,6 @@ public final class BaseFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Long defaultClientConnectionDrainDurationMicros() {
-        return 0L;
-    }
-
-    @Override
     public String routeCacheSpec() {
         return "off";
     }

@@ -799,23 +799,22 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     public ClientFactoryBuilder connectionDrainDuration(Duration duration) {
         requireNonNull(duration, "duration");
-        option(ClientFactoryOptions.CLIENT_CONNECTION_DRAIN_DURATION_MICROS,
+        option(ClientFactoryOptions.CONNECTION_DRAIN_DURATION_MICROS,
                TimeUnit.NANOSECONDS.toMicros(duration.toNanos()));
         return this;
     }
 
     /**
      * Sets the graceful connection shutdown drain duration in microseconds. When the client factory is closed,
-     * it waits for the specified {@code clientConnectionDrainDurationMicros} to allow pre-existing connections
+     * it waits for the specified {@code connectionDrainDurationMicros} to allow pre-existing connections
      * to be closed gracefully.
      */
-    public ClientFactoryBuilder clientConnectionDrainDurationMicros(
-            long clientConnectionDrainDurationMicros) {
-        checkArgument(clientConnectionDrainDurationMicros >= 0,
-                      "clientConnectionDrainDurationMicros: %s (expected: >= 0)",
-                      clientConnectionDrainDurationMicros);
-        option(ClientFactoryOptions.CLIENT_CONNECTION_DRAIN_DURATION_MICROS,
-               clientConnectionDrainDurationMicros);
+    public ClientFactoryBuilder connectionDrainDurationMicros(long connectionDrainDurationMicros) {
+        checkArgument(connectionDrainDurationMicros >= 0,
+                      "connectionDrainDurationMicros: %s (expected: >= 0)",
+                      connectionDrainDurationMicros);
+        option(ClientFactoryOptions.CONNECTION_DRAIN_DURATION_MICROS,
+               connectionDrainDurationMicros);
         return this;
     }
 
