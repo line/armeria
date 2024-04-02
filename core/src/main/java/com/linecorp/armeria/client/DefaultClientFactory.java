@@ -84,8 +84,7 @@ final class DefaultClientFactory implements ClientFactory {
                     }
                 }));
             } catch (IllegalStateException e) {
-                logger.info("Trying to add shutdown hook during JVM shutdown, " +
-                            "skip it because it does not matter any more since the JVM is already shutting down");
+                logger.debug("Skipped adding a shutdown hook to the DefaultClientFactory.", e);
             }
         }
     }
