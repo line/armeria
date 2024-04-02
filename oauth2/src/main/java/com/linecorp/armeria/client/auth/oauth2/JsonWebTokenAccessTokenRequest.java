@@ -36,7 +36,7 @@ final class JsonWebTokenAccessTokenRequest extends AbstractAccessTokenRequest {
     }
 
     @Override
-    void addBodyParams1(QueryParamsBuilder formBuilder) {
+    void doAddBodyParams0(QueryParamsBuilder formBuilder) {
         formBuilder.add(JWT_ASSERTION, jsonWebToken);
     }
 

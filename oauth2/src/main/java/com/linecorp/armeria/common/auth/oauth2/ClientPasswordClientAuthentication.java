@@ -56,7 +56,7 @@ final class ClientPasswordClientAuthentication implements ClientAuthentication {
     }
 
     @Override
-    public void addAsBodyParameters(QueryParamsBuilder formBuilder) {
+    public void addAsBodyParams(QueryParamsBuilder formBuilder) {
         if (useBasicAuth) {
             return;
         }

@@ -39,7 +39,7 @@ final class AnyAuthorizationSchemeClientAuthentication implements ClientAuthenti
     }
 
     @Override
-    public void addAsBodyParameters(QueryParamsBuilder formBuilder) {}
+    public void addAsBodyParams(QueryParamsBuilder formBuilder) {}
 
     @Override
     public boolean equals(Object o) {

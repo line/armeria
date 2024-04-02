@@ -32,7 +32,7 @@ final class ClientCredentialsAccessTokenRequest extends AbstractAccessTokenReque
     }
 
     @Override
-    void addBodyParams1(QueryParamsBuilder formBuilder) {
+    void doAddBodyParams0(QueryParamsBuilder formBuilder) {
         // No additional body params are required for client credentials grant.
     }
 }

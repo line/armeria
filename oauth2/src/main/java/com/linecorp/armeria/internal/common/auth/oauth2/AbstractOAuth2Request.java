@@ -79,13 +79,13 @@ public abstract class AbstractOAuth2Request implements OAuth2Request {
         if (clientAuthentication != null) {
             final String headerValue = clientAuthentication.asHeaderValue();
             if (headerValue == null) {
-                clientAuthentication.addAsBodyParameters(formBuilder);
+                clientAuthentication.addAsBodyParams(formBuilder);
             }
         }
-        addBodyParams0(formBuilder);
+        doAddBodyParams(formBuilder);
     }
 
-    public abstract void addBodyParams0(QueryParamsBuilder formBuilder);
+    public abstract void doAddBodyParams(QueryParamsBuilder formBuilder);
 
     @Override
     public QueryParams bodyParams() {

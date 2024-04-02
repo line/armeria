@@ -218,7 +218,7 @@ public final class ClientAuthorization {
             }
 
             @Override
-            public void addAsBodyParameters(QueryParamsBuilder formBuilder) {
+            public void addAsBodyParams(QueryParamsBuilder formBuilder) {
                 ClientAuthorization.this.addAsBodyParameters(formBuilder);
             }
         };

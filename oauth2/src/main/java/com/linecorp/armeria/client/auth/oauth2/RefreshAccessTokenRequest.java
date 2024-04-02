@@ -40,7 +40,7 @@ final class RefreshAccessTokenRequest extends AbstractAccessTokenRequest {
     }
 
     @Override
-    void addBodyParams1(QueryParamsBuilder formBuilder) {
+    void doAddBodyParams0(QueryParamsBuilder formBuilder) {
         formBuilder.add(REFRESH_TOKEN, refreshToken);
     }
 

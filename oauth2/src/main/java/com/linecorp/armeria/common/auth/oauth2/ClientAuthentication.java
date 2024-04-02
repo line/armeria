@@ -104,14 +104,14 @@ public interface ClientAuthentication {
     /**
      * Sets this {@link ClientAuthentication} as body parameters.
      */
-    void addAsBodyParameters(QueryParamsBuilder formBuilder);
+    void addAsBodyParams(QueryParamsBuilder formBuilder);
 
     /**
      * Returns this {@link ClientAuthentication} as body parameters.
      */
     default QueryParams asBodyParameters() {
         final QueryParamsBuilder formBuilder = QueryParams.builder();
-        addAsBodyParameters(formBuilder);
+        addAsBodyParams(formBuilder);
         return formBuilder.build();
     }
 }

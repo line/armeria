@@ -38,7 +38,7 @@ final class JsonWebTokenClientAuthentication implements ClientAuthentication {
     }
 
     @Override
-    public void addAsBodyParameters(QueryParamsBuilder formBuilder) {
+    public void addAsBodyParams(QueryParamsBuilder formBuilder) {
         formBuilder.add(CLIENT_ASSERTION_TYPE, CLIENT_ASSERTION_TYPE_JWT);
         formBuilder.add(CLIENT_ASSERTION, jsonWebToken);
     }
