@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.StaticResourceUtils.staticCluster;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -33,10 +35,15 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
 
     ClusterRoot(XdsBootstrapImpl xdsBootstrap, ConfigSourceMapper configSourceMapper, String resourceName) {
         super(xdsBootstrap.eventLoop());
-        final ConfigSource configSource = configSourceMapper.cdsConfigSource(null, null, resourceName);
-        node = new ClusterResourceNode(configSource, resourceName, xdsBootstrap,
-                                       null, this, ResourceNodeType.DYNAMIC);
-        xdsBootstrap.subscribe(node);
+        final Cluster cluster = xdsBootstrap.bootstrapClusters().cluster(resourceName);
+        if (cluster != null) {
+            node = staticCluster(xdsBootstrap, resourceName, this, cluster);
+        } else {
+            final ConfigSource configSource = configSourceMapper.cdsConfigSource(null, null, resourceName);
+            node = new ClusterResourceNode(configSource, resourceName, xdsBootstrap,
+                                           null, this, ResourceNodeType.DYNAMIC);
+            xdsBootstrap.subscribe(node);
+        }
     }
 
     @Override

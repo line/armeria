@@ -106,7 +106,7 @@ public final class ThriftFunction {
             //noinspection RedundantCast
             @SuppressWarnings("unchecked")
             final Map<TFieldIdEnum, FieldMetaData> metaDataMap =
-                    (Map<TFieldIdEnum, FieldMetaData>) FieldMetaData.getStructMetaDataMap(
+                    (Map<TFieldIdEnum, FieldMetaData>) ThriftMetadataAccess.getStructMetaDataMap(
                             (Class<T>) resultType);
 
             for (Entry<TFieldIdEnum, FieldMetaData> e : metaDataMap.entrySet()) {

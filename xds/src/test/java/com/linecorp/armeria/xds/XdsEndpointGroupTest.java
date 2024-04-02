@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.net.URI;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.client.endpoint.XdsEndpointGroup;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -49,7 +51,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
-public class XdsEndpointGroupTest {
+class XdsEndpointGroupTest {
 
     private static final String GROUP = "key";
     private static final SimpleCache<String> cache = new SimpleCache<>(node -> GROUP);
@@ -59,7 +61,6 @@ public class XdsEndpointGroupTest {
     private static final String httpsListenerName = "https-listener1";
     private static final String routeName = "route1";
     private static final String httpsRouteName = "https-route1";
-    private static final String bootstrapClusterName = "bootstrap-cluster";
     private static final String httpsBootstrapClusterName = "https-bootstrap-cluster";
 
     @RegisterExtension
@@ -126,13 +127,13 @@ public class XdsEndpointGroupTest {
 
     @Test
     void testWithListener() {
-        final ConfigSource configSource = XdsTestResources.basicConfigSource(bootstrapClusterName);
+        final ConfigSource configSource = XdsTestResources.basicConfigSource(BOOTSTRAP_CLUSTER_NAME);
         final URI uri = server.httpUri();
         final ClusterLoadAssignment loadAssignment =
-                XdsTestResources.loadAssignment(bootstrapClusterName,
+                XdsTestResources.loadAssignment(BOOTSTRAP_CLUSTER_NAME,
                                                 uri.getHost(), uri.getPort());
         final Cluster bootstrapCluster =
-                XdsTestResources.createStaticCluster(bootstrapClusterName, loadAssignment);
+                XdsTestResources.createStaticCluster(BOOTSTRAP_CLUSTER_NAME, loadAssignment);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final EndpointGroup xdsEndpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot(listenerName));

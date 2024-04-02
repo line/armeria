@@ -18,48 +18,15 @@ package com.linecorp.armeria.xds;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
-
-import com.google.common.base.Strings;
-
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource;
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
-import io.envoyproxy.envoy.config.core.v3.SocketAddress;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 final class XdsConverterUtil {
 
     private XdsConverterUtil() {}
-
-    static List<Endpoint> convertEndpoints(ClusterLoadAssignment clusterLoadAssignment) {
-        return clusterLoadAssignment.getEndpointsList().stream().flatMap(
-                localityLbEndpoints -> localityLbEndpoints
-                        .getLbEndpointsList()
-                        .stream()
-                        .map(lbEndpoint -> {
-                            final SocketAddress socketAddress =
-                                    lbEndpoint.getEndpoint().getAddress().getSocketAddress();
-                            final String hostname = lbEndpoint.getEndpoint().getHostname();
-                            if (!Strings.isNullOrEmpty(hostname)) {
-                                return Endpoint.of(hostname, socketAddress.getPortValue())
-                                               .withIpAddr(socketAddress.getAddress());
-                            } else {
-                                return Endpoint.of(socketAddress.getAddress(), socketAddress.getPortValue());
-                            }
-                        })).collect(Collectors.toList());
-    }
-
-    static List<Endpoint> convertEndpoints(Collection<ClusterLoadAssignment> clusterLoadAssignments) {
-        return clusterLoadAssignments.stream()
-                                     .flatMap(cla -> convertEndpoints(cla).stream())
-                                     .collect(Collectors.toList());
-    }
 
     static void validateConfigSource(@Nullable ConfigSource configSource) {
         if (configSource == null || configSource.equals(ConfigSource.getDefaultInstance())) {

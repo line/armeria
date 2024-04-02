@@ -164,7 +164,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
             switch (state) {
                 case NEEDS_HANDSHAKE_RESPONSE:
                     if (!(msg instanceof HttpObject)) {
-                        ctx.fireChannelRead(msg);
+                        ctx.fireChannelRead(ReferenceCountUtil.retain(msg));
                         return;
                     }
                     if (!(msg instanceof HttpResponse)) {
@@ -191,8 +191,6 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                     res.startResponse();
                     final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                     if (responseHeaders.status() == HttpStatus.SWITCHING_PROTOCOLS) {
-                        final ChannelPipeline pipeline = ctx.pipeline();
-                        pipeline.remove(HttpClientCodec.class);
                         state = State.NEEDS_HANDSHAKE_RESPONSE_END;
                     }
                     if (!res.tryWriteResponseHeaders(responseHeaders)) {
@@ -205,7 +203,11 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                         failWithUnexpectedMessageType(ctx, msg, EMPTY_LAST_CONTENT.getClass());
                         return;
                     }
+                    // The state should be set to UPGRADE_COMPLETE before removing HttpClientCodec.
+                    // Because pipeline.remove() could trigger channelRead() recursively.
                     state = State.UPGRADE_COMPLETE;
+                    final ChannelPipeline pipeline = ctx.pipeline();
+                    pipeline.remove(HttpClientCodec.class);
                     break;
                 case UPGRADE_COMPLETE:
                     assert msg instanceof ByteBuf;

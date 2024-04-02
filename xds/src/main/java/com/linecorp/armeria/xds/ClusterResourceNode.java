@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.xds.XdsType.CLUSTER;
 import static java.util.Objects.requireNonNull;
 
@@ -24,6 +25,7 @@ import java.util.Objects;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.route.v3.Route;
@@ -66,17 +68,17 @@ final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXd
     @Override
     public void doOnChanged(ClusterXdsResource resource) {
         final Cluster cluster = resource.resource();
-        final String clusterName = cluster.getName();
         if (cluster.hasLoadAssignment()) {
             final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
             final EndpointResourceNode node =
-                    StaticResourceUtils.staticEndpoint(xdsBootstrap(), clusterName,
+                    StaticResourceUtils.staticEndpoint(xdsBootstrap(), loadAssignment.getClusterName(),
                                                        resource, snapshotWatcher, loadAssignment);
             children().add(node);
         } else if (cluster.hasEdsClusterConfig()) {
-            final ConfigSource configSource =
-                    configSourceMapper().edsConfigSource(
-                            configSource(), cluster.getEdsClusterConfig().getEdsConfig(), clusterName);
+            final EdsClusterConfig edsClusterConfig = cluster.getEdsClusterConfig();
+            final String serviceName = edsClusterConfig.getServiceName();
+            final String clusterName = !isNullOrEmpty(serviceName) ? serviceName : cluster.getName();
+            final ConfigSource configSource = edsClusterConfig.getEdsConfig();
             final EndpointResourceNode node =
                     new EndpointResourceNode(configSource, clusterName, xdsBootstrap(), resource,
                                              snapshotWatcher, ResourceNodeType.DYNAMIC);

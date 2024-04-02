@@ -31,12 +31,19 @@ public final class ListenerRoot extends AbstractRoot<ListenerSnapshot> {
 
     private final ListenerResourceNode node;
 
-    ListenerRoot(XdsBootstrapImpl xdsBootstrap, ConfigSourceMapper configSourceMapper, String resourceName) {
+    ListenerRoot(XdsBootstrapImpl xdsBootstrap, ConfigSourceMapper configSourceMapper,
+                 String resourceName, BootstrapListeners bootstrapListeners) {
         super(xdsBootstrap.eventLoop());
-        final ConfigSource configSource = configSourceMapper.ldsConfigSource(null, null);
-        node = new ListenerResourceNode(configSource, resourceName, xdsBootstrap,
-                                        this, ResourceNodeType.DYNAMIC);
-        xdsBootstrap.subscribe(node);
+        final ListenerXdsResource listenerXdsResource = bootstrapListeners.staticListeners().get(resourceName);
+        if (listenerXdsResource != null) {
+            node = new ListenerResourceNode(null, resourceName, xdsBootstrap, this, ResourceNodeType.STATIC);
+            node.onChanged(listenerXdsResource);
+        } else {
+            final ConfigSource configSource = configSourceMapper.ldsConfigSource(null, null);
+            node = new ListenerResourceNode(configSource, resourceName, xdsBootstrap,
+                                            this, ResourceNodeType.DYNAMIC);
+            xdsBootstrap.subscribe(node);
+        }
     }
 
     @Override

@@ -9,7 +9,7 @@ assertj = "3.25.2"
 awaitility = "4.2.0"
 blockhound = "1.0.8.RELEASE"
 bouncycastle = "1.70"
-brave5 = "5.18.0"
+brave5 = "5.18.1"
 brave6 = "6.0.0"
 brotli4j = "1.15.0"
 bucket4j = "7.6.0"
@@ -1191,8 +1191,17 @@ module = "org.slf4j:slf4j-api"
 version.ref = "slf4j2"
 javadocs = "https://www.javadoc.io/doc/org.slf4j/slf4j-api/2.0.7/"
 
+[libraries.spring6-context]
+module = "org.springframework:spring-context"
+version.ref = "spring6"
+[libraries.spring6-test]
+module = "org.springframework:spring-test"
+version.ref = "spring6"
 [libraries.spring6-web]
 module = "org.springframework:spring-web"
+version.ref = "spring6"
+[libraries.spring6-webflux]
+module = "org.springframework:spring-webflux"
 version.ref = "spring6"
 
 [libraries.spring-boot2-actuator-autoconfigure]

@@ -1,0 +1,36 @@
+---
+date: 2024-02-26
+---
+
+## 🔒 Security fixes
+
+- Armeria's SAML integration now rejects unsigned SAML messages by default. [CVE-2024-1735](https://github.com/line/armeria/security/advisories/GHSA-4m6j-23p2-8c54)
+  - You can set <type://SamlServiceProviderBuilder#signatureRequired(boolean)> to control whether to accept unsigned SAML messages.
+
+## 🛠️ Bug fixes
+
+- <type://XdsEndpointGroup> now supports [Subset based Load Balancing](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/subsets),
+  which enables more sophisticated load balancing configurations. #5461
+- You can now specify a static `Cluster` configuration to define the `ClusterLoadAssignment` instead of receiving
+  the `Cluster` resource from the control plane. #5468
+- Armeria's [Eureka](https://github.com/Netflix/eureka) integration no longer incorrectly appends
+  port information to `vipAddress`. #5451
+- `homePageUrl` and `statusPageUrl` of an `InstanceInfo` in Eureka are correctly set if corresponding path properties are configured. #5464 #5465
+- You no longer see `IllegalArgumentException` when using <type://ConnectionPoolListener#metricCollecting(MeterRegistry)?full>. #5466
+
+## ☢️ Breaking changes
+
+- The `.connections` suffix is now automatically appended to the names of connection pool metrics. #5466
+  - If you use a custom <type://MeterIdPrefix> with <type://ConnectionPoolListener#metricCollecting(MeterRegistry,MeterIdPrefix)?full>, 
+    this changes will affect your meter naming.
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'codefromthecrypt',
+  'ikhoon',
+  'jrhee17',
+  'lishiki',
+  'minwoox',
+  'trustin'
+]} />

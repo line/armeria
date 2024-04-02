@@ -214,14 +214,14 @@ class NonBlockingCircuitBreakerTest {
         cb.onFailure();
 
         ticker.addAndGet(counterUpdateInterval.toNanos());
-        assertThat(cb.canRequest()).isTrue();
+        assertThat(cb.tryRequest()).isTrue();
         cb.onFailure();
         assertThat(cb.state().isOpen()).isTrue();
 
-        assertThat(cb.canRequest()).isFalse();
+        assertThat(cb.tryRequest()).isFalse();
         ticker.addAndGet(trialRequestInterval.toNanos());
 
-        assertThat(cb.canRequest()).isTrue();
+        assertThat(cb.tryRequest()).isTrue();
         cb.onSuccess();
         assertThat(cb.state().isClosed()).isTrue();
     }
@@ -293,7 +293,7 @@ class NonBlockingCircuitBreakerTest {
         cb.onFailure();
         assertThat(cb.state().isOpen()).isTrue();
         ticker.addAndGet(circuitOpenWindow.toNanos() - 1);
-        assertThat(cb.canRequest()).isFalse();
+        assertThat(cb.tryRequest()).isFalse();
 
         // transition open -> closed -> open
         cb.enterState(CircuitState.CLOSED);
@@ -303,7 +303,7 @@ class NonBlockingCircuitBreakerTest {
         cb.onFailure();
         assertThat(cb.state().isOpen()).isTrue();
         ticker.addAndGet(circuitOpenWindow.toNanos() - 1);
-        assertThat(cb.canRequest()).isFalse();
+        assertThat(cb.tryRequest()).isFalse();
     }
 
     @Test
@@ -319,16 +319,16 @@ class NonBlockingCircuitBreakerTest {
 
         // rejected requests should be notified
         reset(listener);
-        assertThat(cb.canRequest()).isFalse();
+        assertThat(cb.tryRequest()).isFalse();
         verify(listener).onRequestRejected(name);
 
         // even when circuitOpenWindow passes, the state isn't changed
         ticker.addAndGet(circuitOpenWindow.toNanos());
         assertThat(cb.state().isForcedOpen()).isTrue();
 
-        // canRequest should still be false
+        // tryRequest should still be false
         reset(listener);
-        assertThat(cb.canRequest()).isFalse();
+        assertThat(cb.tryRequest()).isFalse();
         verify(listener).onRequestRejected(name);
     }
 

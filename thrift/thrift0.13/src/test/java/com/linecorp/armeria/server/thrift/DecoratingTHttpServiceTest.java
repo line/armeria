@@ -39,6 +39,7 @@ import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.SimpleDecoratingRpcService;
@@ -63,6 +64,7 @@ class DecoratingTHttpServiceTest {
     };
 
     private static final BlockingDeque<String> decorators = new LinkedBlockingDeque<>();
+    private static final BlockingDeque<String> serviceAddedEvents = new LinkedBlockingDeque<>();
 
     @BeforeEach
     void setUp() {
@@ -83,6 +85,19 @@ class DecoratingTHttpServiceTest {
         // Rpc decorators will be executed later than http decorators
         assertThat(decorators.poll()).isEqualTo("GlobalRpcDecorator");
         assertThat(decorators).isEmpty();
+    }
+
+    @Test
+    void shouldInvokeServiceAdded() {
+        // serviceAddedEvents will be set when the server starts
+        assertThat(serviceAddedEvents)
+                .containsExactlyInAnyOrder("GlobalRpcDecorator",
+                                           "ClassFirstDecorator",
+                                           "ClassSecondDecorator",
+                                           "MethodFirstDecorator",
+                                           "MethodSecondDecorator",
+                                           "CustomDecorator");
+        serviceAddedEvents.clear();
     }
 
     @DecoratorFactory(CustomDecoratorFunction.class)
@@ -106,6 +121,12 @@ class DecoratingTHttpServiceTest {
             decorators.offer("GlobalRpcDecorator");
             return unwrap().serve(ctx, req);
         }
+
+        @Override
+        public void serviceAdded(ServiceConfig cfg) throws Exception {
+            super.serviceAdded(cfg);
+            serviceAddedEvents.offer("GlobalRpcDecorator");
+        }
     }
 
     private static class ClassFirstDecorator implements DecoratingHttpServiceFunction {
@@ -114,6 +135,11 @@ class DecoratingTHttpServiceTest {
                 throws Exception {
             decorators.offer("ClassFirstDecorator");
             return delegate.serve(ctx, req);
+        }
+
+        @Override
+        public void serviceAdded(ServiceConfig cfg) throws Exception {
+            serviceAddedEvents.offer("ClassFirstDecorator");
         }
     }
 
@@ -124,6 +150,11 @@ class DecoratingTHttpServiceTest {
             decorators.offer("ClassSecondDecorator");
             return delegate.serve(ctx, req);
         }
+
+        @Override
+        public void serviceAdded(ServiceConfig cfg) throws Exception {
+            serviceAddedEvents.offer("ClassSecondDecorator");
+        }
     }
 
     private static class MethodFirstDecorator implements DecoratingHttpServiceFunction {
@@ -133,6 +164,11 @@ class DecoratingTHttpServiceTest {
             decorators.offer("MethodFirstDecorator");
             return delegate.serve(ctx, req);
         }
+
+        @Override
+        public void serviceAdded(ServiceConfig cfg) throws Exception {
+            serviceAddedEvents.offer("MethodFirstDecorator");
+        }
     }
 
     private static class MethodSecondDecorator implements DecoratingHttpServiceFunction {
@@ -141,6 +177,11 @@ class DecoratingTHttpServiceTest {
                 throws Exception {
             decorators.offer("MethodSecondDecorator");
             return delegate.serve(ctx, req);
+        }
+
+        @Override
+        public void serviceAdded(ServiceConfig cfg) throws Exception {
+            serviceAddedEvents.offer("MethodSecondDecorator");
         }
     }
 
@@ -152,6 +193,12 @@ class DecoratingTHttpServiceTest {
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     decorators.offer("CustomDecorator");
                     return service.serve(ctx, req);
+                }
+
+                @Override
+                public void serviceAdded(ServiceConfig cfg) throws Exception {
+                    super.serviceAdded(cfg);
+                    serviceAddedEvents.offer("CustomDecorator");
                 }
             };
         }
