@@ -567,14 +567,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return responseFuture;
         }
 
-        String originalUri() {
-            if (originalUri == null) {
-                originalUri = buildUri(ctx, request.headers());
-            }
-            return originalUri;
-        }
-
-        boolean addRedirectSignature(RequestTarget nextTarget, HttpMethod nextMethod) {
+        boolean addRedirectSignature(RequestTarget nextReqTarget, HttpMethod nextMethod) {
             if (redirectSignatures == null) {
                 redirectSignatures = new LinkedHashSet<>();
             }
@@ -589,11 +582,18 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 isAddedOriginalSignature = true;
             }
 
-            final RedirectSignature signature = new RedirectSignature(nextTarget.scheme(),
-                                                                      nextTarget.authority(),
-                                                                      nextTarget.pathAndQuery(),
+            final RedirectSignature signature = new RedirectSignature(nextReqTarget.scheme(),
+                                                                      nextReqTarget.authority(),
+                                                                      nextReqTarget.pathAndQuery(),
                                                                       nextMethod);
             return redirectSignatures.add(signature);
+        }
+
+        String originalUri() {
+            if (originalUri == null) {
+                originalUri = buildUri(ctx, request.headers());
+            }
+            return originalUri;
         }
 
         Set<RedirectSignature> redirectSignatures() {
