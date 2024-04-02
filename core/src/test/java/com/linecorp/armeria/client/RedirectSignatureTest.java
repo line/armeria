@@ -25,7 +25,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.RedirectingClient.RedirectSignature;
 import com.linecorp.armeria.common.HttpMethod;
 
-public class RedirectSignatureTest {
+class RedirectSignatureTest {
 
     private static final String PROTOCOL = "http";
     private static final String AUTHORITY = "example.com";
@@ -36,25 +36,25 @@ public class RedirectSignatureTest {
             new RedirectSignature(PROTOCOL, AUTHORITY, PATH_AND_QUERY, METHOD);
 
     @Test
-    public void equalityWithSameObject() {
+    void equalityWithSameObject() {
         assertThat(SIGNATURE.equals(SIGNATURE)).isTrue();
     }
 
     @Test
-    public void equalityWithDifferentType() {
+    void equalityWithDifferentType() {
         final Object other = new Object();
         assertThat(SIGNATURE).isNotEqualTo(other);
     }
 
     @Test
-    public void equalityWithEquivalentObjects() {
+    void equalityWithEquivalentObjects() {
         final RedirectSignature signature =
                 new RedirectSignature(PROTOCOL, AUTHORITY, PATH_AND_QUERY, METHOD);
         assertThat(SIGNATURE).isEqualTo(signature);
     }
 
     @Test
-    public void equalityWithNonEquivalentObjects() {
+    void equalityWithNonEquivalentObjects() {
         final RedirectSignature differentProtocolSignature =
                 new RedirectSignature("https", AUTHORITY, PATH_AND_QUERY, METHOD);
         final RedirectSignature differentAuthoritySignature =
@@ -70,14 +70,14 @@ public class RedirectSignatureTest {
     }
 
     @Test
-    public void hash() {
+    void hash() {
         final int hash = Objects.hash(PROTOCOL, AUTHORITY, PATH_AND_QUERY, METHOD);
 
         assertThat(SIGNATURE.hashCode()).isEqualTo(hash);
     }
 
     @Test
-    public void uri() {
+    void uri() {
         assertThat(SIGNATURE.uri()).isEqualTo("http://example.com/query?q=1");
     }
 }

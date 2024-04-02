@@ -274,8 +274,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             final Set<RedirectSignature> redirectSignatures = redirectCtx.redirectSignatures();
-            // Plus 1 to maxRedirects because the original signature is also included.
-            if (redirectSignatures.size() > maxRedirects + 1) {
+            // Minus 1 because the original signature is also included.
+            if (redirectSignatures.size() - 1 > maxRedirects) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture,
                                 response, TooManyRedirectsException.of(maxRedirects, redirectCtx.originalUri(),
                                                                        redirectCtx.redirectUris()));
@@ -640,9 +640,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             final RedirectSignature that = (RedirectSignature) obj;
-            return protocol.equals(that.protocol) &&
+            return pathAndQuery.equals(that.pathAndQuery) &&
                    authority.equals(that.authority) &&
-                   pathAndQuery.equals(that.pathAndQuery) &&
+                   protocol.equals(that.protocol) &&
                    method == that.method;
         }
 
