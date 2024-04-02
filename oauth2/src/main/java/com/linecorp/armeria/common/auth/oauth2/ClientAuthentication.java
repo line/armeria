@@ -32,7 +32,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * }</pre>
  */
 @UnstableApi
-@Nullable
 public interface ClientAuthentication {
 
     /**
@@ -109,7 +108,7 @@ public interface ClientAuthentication {
     /**
      * Returns this {@link ClientAuthentication} as body parameters.
      */
-    default QueryParams asBodyParameters() {
+    default QueryParams asBodyParams() {
         final QueryParamsBuilder formBuilder = QueryParams.builder();
         addAsBodyParams(formBuilder);
         return formBuilder.build();

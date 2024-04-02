@@ -32,7 +32,7 @@ class ClientAuthenticationTest {
     void basicAuth() {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofBasic("foo");
         assertThat(clientAuthentication.asHeaderValue()).isEqualTo("Basic foo");
-        assertThat(clientAuthentication.asBodyParameters()).isEmpty();
+        assertThat(clientAuthentication.asBodyParams()).isEmpty();
     }
 
     @Test
@@ -40,7 +40,7 @@ class ClientAuthenticationTest {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofClientPassword("foo", "bar");
         assertThat(clientAuthentication.asHeaderValue()).isEqualTo(
                 AuthToken.ofBasic("foo", "bar").asHeaderValue());
-        assertThat(clientAuthentication.asBodyParameters()).isEmpty();
+        assertThat(clientAuthentication.asBodyParams()).isEmpty();
     }
 
     @Test
@@ -48,7 +48,7 @@ class ClientAuthenticationTest {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofClientPassword("foo", "bar",
                                                                                                 false);
         assertThat(clientAuthentication.asHeaderValue()).isNull();
-        final QueryParams bodyParameters = clientAuthentication.asBodyParameters();
+        final QueryParams bodyParameters = clientAuthentication.asBodyParams();
         assertThat(bodyParameters.get(CLIENT_ID)).isEqualTo("foo");
         assertThat(bodyParameters.get(CLIENT_SECRET)).isEqualTo("bar");
     }
@@ -57,14 +57,14 @@ class ClientAuthenticationTest {
     void anyAuthorization() {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofAuthorization("Bearer", "foo");
         assertThat(clientAuthentication.asHeaderValue()).isEqualTo("Bearer foo");
-        assertThat(clientAuthentication.asBodyParameters()).isEmpty();
+        assertThat(clientAuthentication.asBodyParams()).isEmpty();
     }
 
     @Test
     void jsonWebToken() {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofJsonWebToken("foo");
         assertThat(clientAuthentication.asHeaderValue()).isNull();
-        final QueryParams bodyParameters = clientAuthentication.asBodyParameters();
+        final QueryParams bodyParameters = clientAuthentication.asBodyParams();
         assertThat(bodyParameters.get("client_assertion")).isEqualTo("foo");
         assertThat(bodyParameters.get("client_assertion_type"))
                 .isEqualTo("urn:ietf:params:oauth:client-assertion-type:jwt-bearer");
