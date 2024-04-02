@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.spring;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil.configureServerWithArmeriaSettings;
 
 import java.net.InetAddress;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -68,15 +70,15 @@ public abstract class AbstractArmeriaAutoConfiguration {
             ArmeriaSettings armeriaSettings,
             InternalServices internalService,
             Optional<MeterRegistry> meterRegistry,
-            Optional<List<MetricCollectingServiceConfigurator>> metricCollectingServiceConfigurators,
+            ObjectProvider<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators,
             Optional<MeterIdPrefixFunction> meterIdPrefixFunction,
-            Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
-            Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
-            Optional<List<DependencyInjector>> dependencyInjectors,
+            ObjectProvider<ArmeriaServerConfigurator> armeriaServerConfigurators,
+            ObjectProvider<Consumer<ServerBuilder>> armeriaServerBuilderConsumers,
+            ObjectProvider<DependencyInjector> dependencyInjectors,
             BeanFactory beanFactory) {
 
-        if (!armeriaServerConfigurators.isPresent() &&
-            !armeriaServerBuilderConsumers.isPresent()) {
+        if (armeriaServerConfigurators.getIfAvailable() == null &&
+            armeriaServerBuilderConsumers.getIfAvailable() == null) {
             throw new IllegalStateException(
                     "No services to register, " +
                     "use ArmeriaServerConfigurator or Consumer<ServerBuilder> to configure an Armeria server.");
@@ -91,13 +93,17 @@ public abstract class AbstractArmeriaAutoConfiguration {
         }
 
         configureServerWithArmeriaSettings(serverBuilder, armeriaSettings, internalService,
-                                           armeriaServerConfigurators.orElse(ImmutableList.of()),
-                                           armeriaServerBuilderConsumers.orElse(ImmutableList.of()),
+                                           armeriaServerConfigurators
+                                                   .orderedStream().collect(toImmutableList()),
+                                           armeriaServerBuilderConsumers
+                                                   .orderedStream().collect(toImmutableList()),
                                            meterRegistry.orElse(Flags.meterRegistry()),
                                            meterIdPrefixFunction.orElse(
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")),
-                                           metricCollectingServiceConfigurators.orElse(ImmutableList.of()),
-                                           dependencyInjectors.orElse(ImmutableList.of()),
+                                           metricCollectingServiceConfigurators
+                                                   .orderedStream().collect(toImmutableList()),
+                                           dependencyInjectors
+                                                   .orderedStream().collect(toImmutableList()),
                                            beanFactory);
 
         return serverBuilder.build();
@@ -128,16 +134,16 @@ public abstract class AbstractArmeriaAutoConfiguration {
     public InternalServices internalServices(
             ArmeriaSettings settings,
             Optional<MeterRegistry> meterRegistry,
-            Optional<List<HealthChecker>> healthCheckers,
-            Optional<List<HealthCheckServiceConfigurator>> healthCheckServiceConfigurators,
-            Optional<List<DocServiceConfigurator>> docServiceConfigurators,
+            ObjectProvider<HealthChecker> healthCheckers,
+            ObjectProvider<HealthCheckServiceConfigurator> healthCheckServiceConfigurators,
+            ObjectProvider<DocServiceConfigurator> docServiceConfigurators,
             @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort,
             @Value("${management.server.address:#{null}}") @Nullable InetAddress managementServerAddress,
             @Value("${management.server.ssl.enabled:#{false}}") boolean enableManagementServerSsl) {
         return InternalServices.of(settings, meterRegistry.orElse(Flags.meterRegistry()),
-                                   healthCheckers.orElse(ImmutableList.of()),
-                                   healthCheckServiceConfigurators.orElse(ImmutableList.of()),
-                                   docServiceConfigurators.orElse(ImmutableList.of()),
+                                   healthCheckers.orderedStream().collect(toImmutableList()),
+                                   healthCheckServiceConfigurators.orderedStream().collect(toImmutableList()),
+                                   docServiceConfigurators.orderedStream().collect(toImmutableList()),
                                    managementServerPort, managementServerAddress, enableManagementServerSsl);
     }
 
