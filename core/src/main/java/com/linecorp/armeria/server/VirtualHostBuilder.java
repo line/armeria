@@ -232,7 +232,11 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * will be bound to the {@code 8080} port. Otherwise, the virtual host will allow all active ports.
      *
      * @throws UnsupportedOperationException if this is the default {@link VirtualHostBuilder}
+     *
+     * @deprecated prefer specifying the hostnamePattern using {@link ServerBuilder#virtualHost(String)}
+     *             or {@link ServerBuilder#withVirtualHost(String, Consumer)}
      */
+    @Deprecated
     public VirtualHostBuilder hostnamePattern(String hostnamePattern) {
         if (defaultVirtualHost) {
             throw new UnsupportedOperationException(
@@ -251,6 +255,19 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         validateHostnamePattern(hostnamePattern);
 
         this.hostnamePattern = normalizeHostnamePattern(hostnamePattern);
+        return this;
+    }
+
+    VirtualHostBuilder hostnamePattern(String hostnamePattern, int port) {
+        if (defaultVirtualHost) {
+            throw new UnsupportedOperationException(
+                    "Cannot set hostnamePattern for the default virtual host builder");
+        }
+
+        this.hostnamePattern = hostnamePattern;
+        if (port >= 1 && port <= 65535) {
+            this.port = port;
+        }
         return this;
     }
 
@@ -1512,19 +1529,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             return selfSignedCertificate = new SelfSignedCertificate(defaultHostname);
         }
         return selfSignedCertificate;
-    }
-
-    VirtualHostBuilder hostnamePattern(String hostnamePattern, int port) {
-        if (defaultVirtualHost) {
-            throw new UnsupportedOperationException(
-                    "Cannot set hostnamePattern for the default virtual host builder");
-        }
-
-        this.hostnamePattern = hostnamePattern;
-        if (port >= 1 && port <= 65535) {
-            this.port = port;
-        }
-        return this;
     }
 
     boolean equalsHostnamePattern(String validHostnamePattern, int port) {

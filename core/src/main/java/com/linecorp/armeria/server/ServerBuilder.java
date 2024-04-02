@@ -1559,29 +1559,24 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Configures a {@link VirtualHost} with the {@code customizer}.
+     */
+    public ServerBuilder withVirtualHost(String hostnamePattern,
+                                         Consumer<? super VirtualHostBuilder> customizer) {
+        final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
+        customizer.accept(virtualHostBuilder);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return this;
+    }
+
+    /**
      * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
      *
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
     public VirtualHostBuilder virtualHost(String hostnamePattern) {
-        requireNonNull(hostnamePattern, "hostnamePattern");
-
-        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
-
-        validateHostnamePattern(hostAndPort.getHost());
-
-        final String normalizedHostnamePattern = normalizeHostnamePattern(hostAndPort.getHost());
-        final int port = hostAndPort.getPortOrDefault(-1);
-        for (VirtualHostBuilder virtualHostBuilder : virtualHostBuilders) {
-            if (!virtualHostBuilder.defaultVirtualHost() &&
-                virtualHostBuilder.equalsHostnamePattern(normalizedHostnamePattern, port)) {
-                return virtualHostBuilder;
-            }
-        }
-
-        final VirtualHostBuilder virtualHostBuilder =
-                new VirtualHostBuilder(this, false).hostnamePattern(normalizedHostnamePattern, port);
+        final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1592,7 +1587,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @param defaultHostname default hostname of this virtual host
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for building the virtual host
+     *
+     * @deprecated prefer {@link #virtualHost(String)} with {@link VirtualHostBuilder#defaultHostname(String)}.
      */
+    @Deprecated
     public VirtualHostBuilder virtualHost(String defaultHostname, String hostnamePattern) {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
                 .defaultHostname(defaultHostname)
@@ -1627,6 +1625,22 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, port);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
+    }
+
+    private VirtualHostBuilder findOrCreateVirtualHostBuilder(String hostnamePattern) {
+        requireNonNull(hostnamePattern, "hostnamePattern");
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        validateHostnamePattern(hostAndPort.getHost());
+
+        final String normalizedHostnamePattern = normalizeHostnamePattern(hostAndPort.getHost());
+        final int port = hostAndPort.getPortOrDefault(-1);
+        for (VirtualHostBuilder virtualHostBuilder : virtualHostBuilders) {
+            if (!virtualHostBuilder.defaultVirtualHost() &&
+                virtualHostBuilder.equalsHostnamePattern(normalizedHostnamePattern, port)) {
+                return virtualHostBuilder;
+            }
+        }
+        return new VirtualHostBuilder(this, false).hostnamePattern(normalizedHostnamePattern, port);
     }
 
     /**
