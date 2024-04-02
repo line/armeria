@@ -216,7 +216,6 @@ class KubernetesEndpointGroupMockServerTest {
                         Endpoint.of("3.3.3.3", httpNodePort));
             });
         }
-        client.close();
     }
 
     @Test

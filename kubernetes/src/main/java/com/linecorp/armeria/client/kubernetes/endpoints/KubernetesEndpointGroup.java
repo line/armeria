@@ -374,7 +374,7 @@ public final class KubernetesEndpointGroup extends DynamicEndpointGroup {
                                                   .map(NodeAddress::getAddress)
                                                   .findFirst().orElse(null);
                         if (nodeIp == null) {
-                            logger.debug("No 'InternalIP' is found in {}. node: {}", nodeName, node);
+                            logger.debug("No matching IP address is found in {}. node: {}", nodeName, node);
                             nodeToIp.remove(nodeName);
                             return;
                         }
