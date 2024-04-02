@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -48,6 +50,10 @@ public interface UnframedGrpcErrorHandler {
         return UnframedGrpcErrorHandlers.of(statusMappingFunction);
     }
 
+    static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
+        return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
+    }
+
     /**
      * Returns a JSON response based on Google APIs.
      * See <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
@@ -67,6 +73,14 @@ public interface UnframedGrpcErrorHandler {
      */
     static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction);
+    }
+
+    static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
+        return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction, jsonMarshaller);
+    }
+
+    static UnframedGrpcErrorHandler ofJson(MessageMarshaller jsonMarshaller) {
+        return UnframedGrpcErrorHandlers.ofJson(UnframedGrpcStatusMappingFunction.of(), jsonMarshaller);
     }
 
     /**

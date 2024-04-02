@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -119,7 +120,7 @@ class ErrorDetailsMarshallerTest {
 
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
-        UnframedGrpcErrorHandlers.writeErrorDetails(status.getDetailsList(), jsonGenerator);
+        UnframedGrpcErrorHandlers.writeErrorDetails(status.getDetailsList(), jsonGenerator, ERROR_DETAILS_MARSHALLER);
         jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
@@ -199,6 +200,6 @@ class ErrorDetailsMarshallerTest {
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
 
         assertThatThrownBy(() -> UnframedGrpcErrorHandlers.writeErrorDetails(
-                status.getDetailsList(), jsonGenerator)).isInstanceOf(IOException.class);
+                status.getDetailsList(), jsonGenerator, ERROR_DETAILS_MARSHALLER)).isInstanceOf(IOException.class);
     }
 }

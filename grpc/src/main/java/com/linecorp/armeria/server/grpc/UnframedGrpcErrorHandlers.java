@@ -69,7 +69,8 @@ final class UnframedGrpcErrorHandlers {
     private static final Logger logger = LoggerFactory.getLogger(UnframedGrpcErrorHandlers.class);
 
     // XXX(ikhoon): Support custom JSON marshaller?
-    private static final MessageMarshaller ERROR_DETAILS_MARSHALLER =
+    @VisibleForTesting
+    static final MessageMarshaller ERROR_DETAILS_MARSHALLER =
             MessageMarshaller.builder()
                              .omittingInsignificantWhitespace(true)
                              .register(RetryInfo.getDefaultInstance())
@@ -93,16 +94,21 @@ final class UnframedGrpcErrorHandlers {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        return of(statusMappingFunction, ERROR_DETAILS_MARSHALLER);
+    }
+
+    static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
         final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
         return (ctx, status, response) -> {
             final MediaType grpcMediaType = response.contentType();
             if (grpcMediaType != null && grpcMediaType.isJson()) {
-                return ofJson(mappingFunction).handle(ctx, status, response);
+                return ofJson(mappingFunction, jsonMarshaller).handle(ctx, status, response);
             } else {
                 return ofPlaintext(mappingFunction).handle(ctx, status, response);
             }
         };
     }
+
 
     /**
      * Returns a JSON response based on Google APIs.
@@ -110,7 +116,7 @@ final class UnframedGrpcErrorHandlers {
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
      */
-    static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+    static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
         final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
         return (ctx, status, response) -> {
             final ByteBuf buffer = ctx.alloc().buffer();
@@ -148,7 +154,7 @@ final class UnframedGrpcErrorHandlers {
                     }
                     if (rpcStatus != null) {
                         jsonGenerator.writeFieldName("details");
-                        writeErrorDetails(rpcStatus.getDetailsList(), jsonGenerator);
+                        writeErrorDetails(rpcStatus.getDetailsList(), jsonGenerator, jsonMarshaller);
                     }
                 }
                 jsonGenerator.writeEndObject();
@@ -167,6 +173,10 @@ final class UnframedGrpcErrorHandlers {
                 return HttpResponse.of(responseHeaders);
             }
         };
+    }
+
+    static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        return ofJson(statusMappingFunction, ERROR_DETAILS_MARSHALLER);
     }
 
     /**
@@ -217,11 +227,11 @@ final class UnframedGrpcErrorHandlers {
     }
 
     @VisibleForTesting
-    static void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator) throws IOException {
+    static void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator, MessageMarshaller jsonMarshaller) throws IOException {
         jsonGenerator.writeStartArray();
         for (Any detail : details) {
             try {
-                ERROR_DETAILS_MARSHALLER.writeValue(detail, jsonGenerator);
+                jsonMarshaller.writeValue(detail, jsonGenerator);
             } catch (IOException e) {
                 logger.warn("Unexpected exception while writing an error detail to JSON. detail: {}",
                             detail, e);
