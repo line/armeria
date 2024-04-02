@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getNameOrDefault;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.toHeaderName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
@@ -45,7 +46,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -56,7 +56,6 @@ import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -471,7 +470,7 @@ final class AnnotatedValueResolver {
 
         final Header header = annotatedElement.getAnnotation(Header.class);
         if (header != null) {
-            final String name = findName(header, typeElement);
+            final String name = findName(typeElement, header.value(), v -> toHeaderName(v));
             return ofHeader(name, annotatedElement, typeElement, type, description);
         }
 
@@ -640,37 +639,38 @@ final class AnnotatedValueResolver {
                                                       AnnotatedElement typeElement, Class<?> type,
                                                       DescriptionInfo description) {
 
-        final List<AttributeKey<?>> attrKeys = new ArrayList<>();
+        final ImmutableList.Builder<AttributeKey<?>> builder = ImmutableList.builder();
 
-        final AttributeKey<?> prefixTypeAttrKey = AttributeKey.valueOf(attr.prefix(), name);
-        attrKeys.add(prefixTypeAttrKey);
+        if (attr.prefix() != DefaultValues.class) {
+            // If @Attribute#prefix are defined, use only it to resolve Parameter.
+            builder.add(AttributeKey.valueOf(attr.prefix(), name));
+        }
+        else {
+            // If @Attribute@preifx are undefined, search in order of priority 1-3.
+            // Pri 1. ServiceName
+            final Class<?> serviceClass = ((Parameter) annotatedElement).getDeclaringExecutable()
+                                                                        .getDeclaringClass();
+            builder.add(AttributeKey.valueOf(serviceClass, name));
+            // Pri 2. Parameter type.
+            builder.add(AttributeKey.valueOf(type, name));
 
-        final AttributeKey<?> declaredTypeKey = AttributeKey.valueOf(type, name);
-        attrKeys.add(declaredTypeKey);
-
-        if (type.isPrimitive()) {
-            final Class<?> mustRefType = Primitives.wrap(type);
-            final AttributeKey<?> mustRefTypeKey = AttributeKey.valueOf(mustRefType, name);
-            attrKeys.add(mustRefTypeKey);
+            if (type.isPrimitive()) {
+                // Pri 2+a, Reference Type of Parameter in case of Parameter is primitive type.
+                final Class<?> mustRefType = Primitives.wrap(type);
+                builder.add(AttributeKey.valueOf(mustRefType, name));
+            }
+            // Pri 3, Object Type.
+            builder.add(AttributeKey.valueOf(name));
         }
 
-        final AttributeKey<Object> objectTypeAttrKey = AttributeKey.valueOf(name);
-        attrKeys.add(objectTypeAttrKey);
-
+        final ImmutableList<AttributeKey<?>> attrKeys = builder.build();
         return new Builder(annotatedElement, type, name)
                 .annotationType(Attribute.class)
                 .typeElement(typeElement)
                 .supportDefault(true)
                 .supportContainer(true)
                 .description(description)
-                .resolver(attributeResolver(ctx -> {
-                                                for (AttributeKey<?> attrKey : attrKeys) {
-                                                    final Object value = ctx.context.attr(attrKey);
-                                                    if (value != null)
-                                                        return value;
-                                                }
-                                                return null;
-                }))
+                .resolver(attributeResolver(attrKeys))
                 .build();
     }
 
@@ -828,12 +828,18 @@ final class AnnotatedValueResolver {
         };
     }
 
+    /**
+     * Returns a collection value resolver which retrieves a list of string from the specified {@code getter}
+     * AttributeKeys {@code ofAttribute} and adds them to the specified collection data type.
+     */
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
-    attributeResolver(Function<ResolverContext, Object> getter) {
+    attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
         return (resolver, ctx) -> {
-            Object value = getter.apply(ctx);
-            if (value != null) {
-                return value;
+            for (AttributeKey<?> attrKey : attrKeys) {
+                final Object value = ctx.context.attr(attrKey);
+                if (value != null) {
+                    return value;
+                }
             }
             return resolver.defaultOrException();
         };
