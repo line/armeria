@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import graphql.ExecutionResult;
@@ -67,7 +68,7 @@ final class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
                 protocol.sendGraphqlErrors(executionResult.getErrors());
                 subscription.cancel();
             }
-        } catch (JsonProcessingException e) {
+        } catch (JsonProcessingException | ClosedStreamException e) {
             protocol.completeWithError(e);
             if (subscription != null) {
                 subscription.cancel();

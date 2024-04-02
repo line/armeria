@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
@@ -352,7 +353,9 @@ class GraphqlWSSubProtocol {
                 "payload", executionResult.toSpecification());
         final String event = serializeToJson(response);
         logger.trace("NEXT: {}", event);
-        out.tryWrite(event);
+        if (!out.tryWrite(event)) {
+            throw ClosedStreamException.get();
+        }
     }
 
     private static void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors)
