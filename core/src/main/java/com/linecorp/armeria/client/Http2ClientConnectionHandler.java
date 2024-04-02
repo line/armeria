@@ -117,8 +117,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return gracefulConnectionShutdownHandler.hasDrainStarted() ||
-               clientFactory.isClosing() ||
+        return clientFactory.isClosing() ||
                responseDecoder.goAwayHandler().receivedErrorGoAway() ||
                keepAliveHandler().isClosing();
     }
@@ -165,15 +164,8 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     private final class Http2GracefulConnectionShutdownHandler extends GracefulConnectionShutdownHandler {
-
-        private boolean started;
-
         Http2GracefulConnectionShutdownHandler(long drainDurationMicros) {
             super(drainDurationMicros);
-        }
-
-        private boolean hasDrainStarted() {
-            return started;
         }
 
         /**
@@ -182,7 +174,6 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
          */
         @Override
         protected void onDrainStart(ChannelHandlerContext ctx) {
-            started = true;
             goAway(ctx, Integer.MAX_VALUE);
             ctx.flush();
         }
