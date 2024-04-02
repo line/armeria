@@ -82,10 +82,9 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
                 } else {
                     final ConfigSource configSource =
                             configSourceMapper().cdsConfigSource(configSource(), null, clusterName);
-                    node =
-                            new ClusterResourceNode(configSource, clusterName, xdsBootstrap(),
-                                                    resource, snapshotWatcher, virtualHost, route,
-                                                    index++, ResourceNodeType.DYNAMIC);
+                    node = new ClusterResourceNode(configSource, clusterName, xdsBootstrap(),
+                                                   resource, snapshotWatcher, virtualHost, route,
+                                                   index++, ResourceNodeType.DYNAMIC);
                     children().add(node);
                     xdsBootstrap().subscribe(node);
                 }

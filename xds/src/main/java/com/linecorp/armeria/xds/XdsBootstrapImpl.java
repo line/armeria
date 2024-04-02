@@ -109,8 +109,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     @Override
     public ListenerRoot listenerRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ListenerRoot(this, configSourceMapper,
-                                resourceName, bootstrapListeners);
+        return new ListenerRoot(this, configSourceMapper, resourceName, bootstrapListeners);
     }
 
     @Override
