@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.DefaultServiceWorkerGroupFactory;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -466,5 +467,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultUnhandledExceptionsReportIntervalMillis() {
         return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    @Override
+    public ServiceWorkerGroupFactory defaultServiceWorkerGroupFactory() {
+        return new DefaultServiceWorkerGroupFactory();
     }
 }
