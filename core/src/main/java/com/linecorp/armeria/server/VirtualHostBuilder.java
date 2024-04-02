@@ -737,7 +737,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                     routeDecoratingServices.stream()
                                            .map(service -> service.withRoutePrefix(baseContextPath))
                                            .collect(toImmutableList());
-            return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed));
+            return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed),
+                                                       routeDecoratingServices);
         } else {
             return null;
         }

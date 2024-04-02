@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 import org.slf4j.Logger;
@@ -25,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -42,12 +45,14 @@ public final class LogWriterBuilder {
     static final ResponseLogLevelMapper DEFAULT_RESPONSE_LOG_LEVEL_MAPPER =
             ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN);
 
-    private Logger logger = DefaultLogWriter.defaultLogger;
+    @Nullable
+    private Logger logger;
     @Nullable
     private RequestLogLevelMapper requestLogLevelMapper;
     @Nullable
     private ResponseLogLevelMapper responseLogLevelMapper;
-    private Predicate<? super Throwable> responseCauseFilter = throwable -> false;
+    private BiPredicate<? super RequestContext, ? super Throwable> responseCauseFilter =
+            (ctx, cause) -> false;
     private LogFormatter logFormatter = LogFormatter.ofText();
 
     LogWriterBuilder() {}
@@ -69,6 +74,11 @@ public final class LogWriterBuilder {
         requireNonNull(loggerName, "loggerName");
         logger = LoggerFactory.getLogger(loggerName);
         return this;
+    }
+
+    @Nullable
+    Logger logger() {
+        return logger;
     }
 
     /**
@@ -101,7 +111,7 @@ public final class LogWriterBuilder {
         return this;
     }
 
-    private RequestLogLevelMapper requestLogLevelMapper() {
+    RequestLogLevelMapper requestLogLevelMapper() {
         if (requestLogLevelMapper == null) {
             return DEFAULT_REQUEST_LOG_LEVEL_MAPPER;
         }
@@ -164,7 +174,7 @@ public final class LogWriterBuilder {
         return this;
     }
 
-    private ResponseLogLevelMapper responseLogLevelMapper() {
+    ResponseLogLevelMapper responseLogLevelMapper() {
         if (responseLogLevelMapper == null) {
             return DEFAULT_RESPONSE_LOG_LEVEL_MAPPER;
         }
@@ -176,7 +186,8 @@ public final class LogWriterBuilder {
      * You can prevent logging the response cause by returning {@code true}
      * in the {@link Predicate}. By default, the response cause will always be logged.
      */
-    public LogWriterBuilder responseCauseFilter(Predicate<? super Throwable> responseCauseFilter) {
+    public LogWriterBuilder responseCauseFilter(
+            BiPredicate<? super RequestContext, ? super Throwable> responseCauseFilter) {
         this.responseCauseFilter = requireNonNull(responseCauseFilter, "responseCauseFilter");
         return this;
     }
@@ -196,7 +207,8 @@ public final class LogWriterBuilder {
      * Returns a newly-created {@link LogWriter} based on the properties of this builder.
      */
     public LogWriter build() {
-        return new DefaultLogWriter(logger, requestLogLevelMapper(), responseLogLevelMapper(),
+        return new DefaultLogWriter(firstNonNull(logger, DefaultLogWriter.defaultLogger),
+                                    requestLogLevelMapper(), responseLogLevelMapper(),
                                     responseCauseFilter, logFormatter);
     }
 }
