@@ -26,42 +26,58 @@ import com.linecorp.armeria.client.RedirectingClient.RedirectSignature;
 import com.linecorp.armeria.common.HttpMethod;
 
 public class RedirectSignatureTest {
+
+    private static final String PROTOCOL = "http";
+    private static final String AUTHORITY = "example.com";
+    private static final String PATH_AND_QUERY = "/query?q=1";
+    private static final HttpMethod METHOD = HttpMethod.GET;
+
+    private static final RedirectSignature SIGNATURE =
+            new RedirectSignature(PROTOCOL, AUTHORITY, PATH_AND_QUERY, METHOD);
+
     @Test
     public void equalityWithSameObject() {
-        final RedirectSignature signature = new RedirectSignature("http://example.com", HttpMethod.GET);
-        assertThat(signature.equals(signature)).isTrue();
+        assertThat(SIGNATURE.equals(SIGNATURE)).isTrue();
     }
 
     @Test
     public void equalityWithDifferentType() {
-        final RedirectSignature signature = new RedirectSignature("http://example.com", HttpMethod.GET);
         final Object other = new Object();
-        assertThat(signature).isNotEqualTo(other);
+        assertThat(SIGNATURE).isNotEqualTo(other);
     }
 
     @Test
     public void equalityWithEquivalentObjects() {
-        final RedirectSignature signature1 = new RedirectSignature("http://example.com", HttpMethod.GET);
-        final RedirectSignature signature2 = new RedirectSignature("http://example.com", HttpMethod.GET);
-        assertThat(signature1).isEqualTo(signature2);
+        final RedirectSignature signature =
+                new RedirectSignature(PROTOCOL, AUTHORITY, PATH_AND_QUERY, METHOD);
+        assertThat(SIGNATURE).isEqualTo(signature);
     }
 
     @Test
     public void equalityWithNonEquivalentObjects() {
-        final RedirectSignature signature = new RedirectSignature("http://example.com", HttpMethod.GET);
-        final RedirectSignature differentUriSignature =
-                new RedirectSignature("http://another.com", HttpMethod.GET);
+        final RedirectSignature differentProtocolSignature =
+                new RedirectSignature("https", AUTHORITY, PATH_AND_QUERY, METHOD);
+        final RedirectSignature differentAuthoritySignature =
+                new RedirectSignature(PROTOCOL, "another.com", PATH_AND_QUERY, METHOD);
+        final RedirectSignature differentPathAndQuerySignature =
+                new RedirectSignature(PROTOCOL, AUTHORITY, "/another?q=2", METHOD);
         final RedirectSignature differentMethodSignature =
-                new RedirectSignature("http://example.com", HttpMethod.POST);
-        assertThat(signature).isNotEqualTo(differentUriSignature);
-        assertThat(signature).isNotEqualTo(differentMethodSignature);
+                new RedirectSignature(PROTOCOL, AUTHORITY, PATH_AND_QUERY, HttpMethod.POST);
+        assertThat(SIGNATURE).isNotEqualTo(differentProtocolSignature);
+        assertThat(SIGNATURE).isNotEqualTo(differentAuthoritySignature);
+        assertThat(SIGNATURE).isNotEqualTo(differentPathAndQuerySignature);
+        assertThat(SIGNATURE).isNotEqualTo(differentMethodSignature);
     }
 
     @Test
     public void hash() {
-        final RedirectSignature signature = new RedirectSignature("http://example.com", HttpMethod.GET);
-        final int hash = Objects.hash("http://example.com", HttpMethod.GET);
+        final int hash = Objects.hash(PROTOCOL, AUTHORITY, PATH_AND_QUERY, METHOD);
 
-        assertThat(signature.hashCode()).isEqualTo(hash);
+        assertThat(SIGNATURE.hashCode()).isEqualTo(hash);
+    }
+
+    @Test
+    public void uri() {
+        assertThat(SIGNATURE.uri()).isEqualTo("http://example.com/query?q=1");
     }
 }

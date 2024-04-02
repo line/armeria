@@ -264,7 +264,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                                      nextReqTarget.toString(), nextAuthority);
 
             final boolean isCyclicRedirects =
-                    !redirectCtx.addRedirectSignature(nextReqTarget.toString(),
+                    !redirectCtx.addRedirectSignature(nextReqTarget,
                                                       newReqDuplicator.headers().method());
             if (isCyclicRedirects) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
@@ -574,19 +574,25 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return originalUri;
         }
 
-        boolean addRedirectSignature(String redirectUri, HttpMethod method) {
+        boolean addRedirectSignature(RequestTarget nextTarget, HttpMethod nextMethod) {
             if (redirectSignatures == null) {
                 redirectSignatures = new LinkedHashSet<>();
             }
 
             if (!isAddedOriginalSignature) {
-                final RedirectSignature originalSignature =
-                        new RedirectSignature(originalUri(), request.method());
+                final String originalProtocol = ctx.sessionProtocol().isTls() ? "https" : "http";
+                final RedirectSignature originalSignature = new RedirectSignature(originalProtocol,
+                                                                                  ctx.authority(),
+                                                                                  request.headers().path(),
+                                                                                  request.method());
                 redirectSignatures.add(originalSignature);
                 isAddedOriginalSignature = true;
             }
 
-            final RedirectSignature signature = new RedirectSignature(redirectUri, method);
+            final RedirectSignature signature = new RedirectSignature(nextTarget.scheme(),
+                                                                      nextTarget.authority(),
+                                                                      nextTarget.pathAndQuery(),
+                                                                      nextMethod);
             return redirectSignatures.add(signature);
         }
 
@@ -600,24 +606,28 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             // Always called after addRedirectSignature is called.
             assert redirectSignatures != null;
             return redirectSignatures.stream()
-                                     .map(signature -> signature.uri)
+                                     .map(RedirectSignature::uri)
                                      .collect(ImmutableSet.toImmutableSet());
         }
     }
 
     @VisibleForTesting
     static class RedirectSignature {
-        private final String uri;
+        private final String protocol;
+        private final String authority;
+        private final String pathAndQuery;
         private final HttpMethod method;
 
-        RedirectSignature(String uri, HttpMethod method) {
-            this.uri = uri;
+        RedirectSignature(String protocol, String authority, String pathAndQuery, HttpMethod method) {
+            this.protocol = protocol;
+            this.authority = authority;
+            this.pathAndQuery = pathAndQuery;
             this.method = method;
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(uri, method);
+            return Objects.hash(protocol, authority, pathAndQuery, method);
         }
 
         @Override
@@ -630,8 +640,14 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             final RedirectSignature that = (RedirectSignature) obj;
-            return method == that.method &&
-                   uri.equals(that.uri);
+            return protocol.equals(that.protocol) &&
+                   authority.equals(that.authority) &&
+                   pathAndQuery.equals(that.pathAndQuery) &&
+                   method == that.method;
+        }
+
+        public String uri() {
+            return protocol + "://" + authority + pathAndQuery;
         }
     }
 }
