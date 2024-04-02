@@ -52,11 +52,13 @@ final class ConfigSourceMapper {
 
     ConfigSource edsConfigSource(@Nullable ConfigSource parentConfigSource,
                                  @Nullable ConfigSource configSource, String resourceName) {
-        if (configSource != null && configSource.hasApiConfigSource()) {
-            return configSource;
-        }
-        if (configSource != null && configSource.hasSelf() && parentConfigSource != null) {
-            return parentConfigSource;
+        if (configSource != null) {
+            if (configSource.hasApiConfigSource()) {
+                return configSource;
+            }
+            if (configSource.hasSelf() && parentConfigSource != null) {
+                return parentConfigSource;
+            }
         }
         if (bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
@@ -66,14 +68,16 @@ final class ConfigSourceMapper {
 
     ConfigSource cdsConfigSource(@Nullable ConfigSource parentConfigSource,
                                  @Nullable ConfigSource configSource, String resourceName) {
-        if (configSource != null && configSource.hasApiConfigSource()) {
-            return configSource;
-        }
-        if (configSource != null && configSource.hasSelf() && parentConfigSource != null) {
-            return parentConfigSource;
-        }
-        if (configSource != null && configSource.hasAds() && bootstrapAdsConfig != null) {
-            return bootstrapAdsConfig;
+        if (configSource != null) {
+            if (configSource.hasApiConfigSource()) {
+                return configSource;
+            }
+            if (configSource.hasSelf() && parentConfigSource != null) {
+                return parentConfigSource;
+            }
+            if (configSource.hasAds() && bootstrapAdsConfig != null) {
+                return bootstrapAdsConfig;
+            }
         }
         if (bootstrapCdsConfig != null && bootstrapCdsConfig.hasApiConfigSource()) {
             return bootstrapCdsConfig;
@@ -86,11 +90,13 @@ final class ConfigSourceMapper {
 
     ConfigSource rdsConfigSource(@Nullable ConfigSource parentConfigSource, @Nullable ConfigSource configSource,
                                  String resourceName) {
-        if (configSource != null && configSource.hasApiConfigSource()) {
-            return configSource;
-        }
-        if (configSource != null && configSource.hasSelf() && parentConfigSource != null) {
-            return parentConfigSource;
+        if (configSource != null) {
+            if (configSource.hasApiConfigSource()) {
+                return configSource;
+            }
+            if (configSource.hasSelf() && parentConfigSource != null) {
+                return parentConfigSource;
+            }
         }
         if (bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
@@ -99,15 +105,17 @@ final class ConfigSourceMapper {
     }
 
     ConfigSource ldsConfigSource(@Nullable ConfigSource parentConfigSource,
-                                 @Nullable ConfigSource configSource) {
-        if (configSource != null && configSource.hasApiConfigSource()) {
-            return configSource;
-        }
-        if (configSource != null && configSource.hasSelf() && parentConfigSource != null) {
-            return parentConfigSource;
-        }
-        if (configSource != null && configSource.hasAds() && bootstrapAdsConfig != null) {
-            return bootstrapAdsConfig;
+                                 @Nullable ConfigSource configSource, String resourceName) {
+        if (configSource != null) {
+            if (configSource.hasApiConfigSource()) {
+                return configSource;
+            }
+            if (configSource.hasSelf() && parentConfigSource != null) {
+                return parentConfigSource;
+            }
+            if (configSource.hasAds() && bootstrapAdsConfig != null) {
+                return bootstrapAdsConfig;
+            }
         }
         if (bootstrapLdsConfig != null && bootstrapLdsConfig.hasApiConfigSource()) {
             return bootstrapLdsConfig;
@@ -115,6 +123,6 @@ final class ConfigSourceMapper {
         if (bootstrapAdsConfig != null) {
             return bootstrapAdsConfig;
         }
-        throw new IllegalArgumentException("Cannot find an LDS config source");
+        throw new IllegalArgumentException("Cannot find an LDS config source for listener: " + resourceName);
     }
 }

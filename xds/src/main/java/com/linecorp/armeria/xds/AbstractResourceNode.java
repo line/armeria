@@ -35,7 +35,6 @@ abstract class AbstractResourceNode<T extends XdsResource> implements ResourceNo
     private final String resourceName;
     private final SnapshotWatcher<? extends Snapshot<T>> parentWatcher;
     private final ResourceNodeType resourceNodeType;
-    private final ConfigSourceMapper configSourceMapper;
     @Nullable
     private T current;
 
@@ -49,7 +48,6 @@ abstract class AbstractResourceNode<T extends XdsResource> implements ResourceNo
         this.resourceName = resourceName;
         this.parentWatcher = parentWatcher;
         this.resourceNodeType = resourceNodeType;
-        configSourceMapper = xdsBootstrap.configSourceMapper();
     }
 
     XdsBootstrapImpl xdsBootstrap() {
@@ -129,6 +127,6 @@ abstract class AbstractResourceNode<T extends XdsResource> implements ResourceNo
     }
 
     ConfigSourceMapper configSourceMapper() {
-        return configSourceMapper;
+        return xdsBootstrap.configSourceMapper();
     }
 }
