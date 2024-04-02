@@ -6,7 +6,7 @@ import versions from '../../../gen-src/versions.json';
 
 <Tip>
 
-Visit [annotated-http-service-kotlin](https://github.com/line/armeria/examples/annotated-http-service-kotlin) to check out a fully working example.
+Visit [annotated-http-service-kotlin](https://github.com/line/armeria/tree/main/examples/annotated-http-service-kotlin) to check out a fully working example.
 
 </Tip>
 
@@ -152,9 +152,17 @@ val response: ResponseEntity<RestResponse> =
 
 <Tip>
 
-Visit [grpc-kotlin](https://github.com/line/armeria/examples/grpc-kotlin) to check out a fully working example.
+Visit [grpc-kotlin](https://github.com/line/armeria/tree/main/examples/grpc-kotlin) to check out a fully working example.
 
 </Tip>
+
+To use gRPC-Kotlin with Armeria, add the following dependency:
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-grpc-kotlin' },
+  ]}
+/>
 
 ### Running a gRPC-Kotlin service
 

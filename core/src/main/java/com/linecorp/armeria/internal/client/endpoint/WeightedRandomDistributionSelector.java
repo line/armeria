@@ -25,20 +25,17 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.client.endpoint.WeightedRandomDistributionSelector.AbstractEntry;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
- * This selector selects an {@link Endpoint} using random and the weight of the {@link Endpoint}. If there are
- * A(weight 10), B(weight 4) and C(weight 6) {@link Endpoint}s, the chances that {@link Endpoint}s are selected
- * are 10/20, 4/20 and 6/20, respectively. If {@link Endpoint} A is selected 10 times and B and C are not
- * selected as much as their weight, then A is removed temporarily and the chances that B and C are selected
- * are 4/10 and 6/10.
+ * This selector selects an {@link AbstractEntry} using random and the weight of the {@link AbstractEntry}.
+ * If there are A(weight 10), B(weight 4) and C(weight 6) {@link AbstractEntry}s, the chances that
+ * {@link AbstractEntry}s are selected are 10/20, 4/20 and 6/20, respectively. If {@link AbstractEntry}
+ * A is selected 10 times and B and C are not selected as much as their weight, then A is removed temporarily
+ * and the chances that B and C are selected are 4/10 and 6/10.
  */
-@UnstableApi
 public class WeightedRandomDistributionSelector<T extends AbstractEntry> {
 
     private final ReentrantLock lock = new ReentrantShortLock();

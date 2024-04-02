@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

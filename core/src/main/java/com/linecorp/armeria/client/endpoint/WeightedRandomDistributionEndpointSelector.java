@@ -25,13 +25,6 @@ import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSe
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.endpoint.WeightedRandomDistributionSelector;
 
-/**
- * This selector selects an {@link Endpoint} using random and the weight of the {@link Endpoint}. If there are
- * A(weight 10), B(weight 4) and C(weight 6) {@link Endpoint}s, the chances that {@link Endpoint}s are selected
- * are 10/20, 4/20 and 6/20, respectively. If {@link Endpoint} A is selected 10 times and B and C are not
- * selected as much as their weight, then A is removed temporarily and the chances that B and C are selected
- * are 4/10 and 6/10.
- */
 final class WeightedRandomDistributionEndpointSelector
         extends WeightedRandomDistributionSelector<Entry> {
 

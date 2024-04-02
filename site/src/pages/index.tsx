@@ -75,7 +75,7 @@ const IndexPage = (props: RouteComponentProps): JSX.Element => {
         'Armeria is your go-to microservice framework for any situation. ' +
         'You can build any type of microservice leveraging your favorite technologies, ' +
         'including gRPC, Thrift, Kotlin, Retrofit, Reactive Streams, Spring Boot and Dropwizard. ' +
-        'Brought to you by the creator of Netty and his colleagues at LINE.'
+        'Brought to you by the creator of Netty and his colleagues at LY Corporation.'
       }
       contentClassName={styles.wrapper}
     >
@@ -114,9 +114,9 @@ const IndexPage = (props: RouteComponentProps): JSX.Element => {
               <OutboundLink href="https://netty.io/">Netty</OutboundLink>
             </Tooltip>{' '}
             and his colleagues at{' '}
-            <Tooltip title="The company behind the most popular mobile messaging app in Japan, Taiwan and Thai">
-              <OutboundLink href="https://engineering.linecorp.com/en/">
-                LINE
+            <Tooltip title="The company behind LINE and Yahoo! Japan, leaders in digital communication and web services">
+              <OutboundLink href="https://techblog.lycorp.co.jp/en">
+                LY Corporation
               </OutboundLink>
             </Tooltip>{' '}
             &rdquo;

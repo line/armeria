@@ -46,7 +46,7 @@ import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 
 final class XdsEndpointUtil {
 
-    public static EndpointGroup convertEndpointGroup(ClusterSnapshot clusterSnapshot) {
+    static EndpointGroup convertEndpointGroup(ClusterSnapshot clusterSnapshot) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         if (endpointSnapshot == null) {
             return EndpointGroup.of();
@@ -62,8 +62,10 @@ final class XdsEndpointUtil {
                 endpointGroup = strictDnsEndpointGroup(clusterSnapshot);
                 break;
             default:
-                throw new UnsupportedOperationException("Unsupported cluster type: " + cluster.getType() + '.' +
-                                                        "Only (STATIC, STRICT_DNS, EDS) are supported.");
+                throw new UnsupportedOperationException(
+                        "Cluster (" + cluster.getName() + ") is attempting to use an" +
+                        "unsupported cluster type: (" + cluster.getType() + "). " +
+                        "Only (STATIC, STRICT_DNS, EDS) are supported.");
         }
         if (!cluster.getHealthChecksList().isEmpty()) {
             // multiple health-checks aren't supported
@@ -89,10 +91,10 @@ final class XdsEndpointUtil {
     }
 
     private static HttpMethod healthCheckMethod(HttpHealthCheck httpHealthCheck) {
-        if (httpHealthCheck.getMethod() == RequestMethod.GET) {
-            return HttpMethod.GET;
+        if (httpHealthCheck.getMethod() == RequestMethod.HEAD) {
+            return HttpMethod.HEAD;
         }
-        return HttpMethod.HEAD;
+        return HttpMethod.GET;
     }
 
     private static EndpointGroup staticEndpointGroup(ClusterSnapshot clusterSnapshot) {
@@ -136,8 +138,6 @@ final class XdsEndpointUtil {
                         builder.backoff(Backoff.random(baseSeconds, maxSeconds));
                     }
                 }
-                // We could also use cluster.getDnsLookupFamily() after publicly opening
-                // DnsAddressEndpointGroupBuilder#resolvedAddressTypes
 
                 // wrap in an assigning EndpointGroup to set appropriate attributes
                 final EndpointGroup xdsEndpointGroup = new XdsAttributeAssigningEndpointGroup(
@@ -150,10 +150,11 @@ final class XdsEndpointUtil {
 
     private static List<Endpoint> convertLoadAssignment(ClusterLoadAssignment clusterLoadAssignment) {
         return clusterLoadAssignment.getEndpointsList().stream().flatMap(
-                localityLbEndpoints -> localityLbEndpoints
-                        .getLbEndpointsList()
-                        .stream()
-                        .map(lbEndpoint -> convertToEndpoint(localityLbEndpoints, lbEndpoint)))
+                                            localityLbEndpoints -> localityLbEndpoints
+                                                    .getLbEndpointsList()
+                                                    .stream()
+                                                    .map(lbEndpoint -> convertToEndpoint(localityLbEndpoints,
+                                                                                         lbEndpoint)))
                                     .collect(toImmutableList());
     }
 
@@ -167,7 +168,8 @@ final class XdsEndpointUtil {
             endpoint = Endpoint.of(hostname)
                                .withIpAddr(socketAddress.getAddress())
                                .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint)
-                               .withAttr(XdsAttributesKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints);
+                               .withAttr(XdsAttributesKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
+                               .withWeight(weight);
         } else {
             endpoint = Endpoint.of(socketAddress.getAddress())
                                .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint)

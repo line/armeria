@@ -15,7 +15,7 @@
  */
 
 /**
- * Provides client related integrations with xDS.
+ * Provides client-side {@link com.linecorp.armeria.client.Endpoint} related integrations with xDS.
  */
 @NonNullByDefault
 @UnstableApi

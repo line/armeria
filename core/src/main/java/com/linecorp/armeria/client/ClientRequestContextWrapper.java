@@ -73,6 +73,11 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public String host() {
+        return unwrap().host();
+    }
+
+    @Override
     public URI uri() {
         return unwrap().uri();
     }

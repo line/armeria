@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -37,18 +36,15 @@ import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
 
     private final EndpointGroup endpointGroup;
-    private final ClusterManager clusterManager;
     private final Cluster cluster;
     private final ClusterLoadAssignment clusterLoadAssignment;
     private final LoadBalancer loadBalancer;
-    private List<Endpoint> endpoints = Collections.emptyList();
+    private List<Endpoint> endpoints = ImmutableList.of();
 
     ClusterEntry(ClusterSnapshot clusterSnapshot, ClusterManager clusterManager) {
-        endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterSnapshot);
-        this.clusterManager = clusterManager;
-        cluster = clusterSnapshot.xdsResource().resource();
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         assert endpointSnapshot != null;
+        cluster = clusterSnapshot.xdsResource().resource();
         clusterLoadAssignment = endpointSnapshot.xdsResource().resource();
         if (cluster.hasLbSubsetConfig()) {
             loadBalancer = new SubsetLoadBalancer(clusterSnapshot);
@@ -57,6 +53,7 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
         }
 
         // The order of adding listeners is important
+        endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterSnapshot);
         endpointGroup.addListener(this, true);
         endpointGroup.addListener(clusterManager, true);
     }
@@ -84,8 +81,6 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
 
     @Override
     public CompletableFuture<?> closeAsync() {
-        endpointGroup.removeListener(this);
-        endpointGroup.removeListener(clusterManager);
         return endpointGroup.closeAsync();
     }
 

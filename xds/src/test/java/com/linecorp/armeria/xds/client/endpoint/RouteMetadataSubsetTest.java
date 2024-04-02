@@ -18,9 +18,9 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
+import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
 import static com.linecorp.armeria.xds.XdsTestResources.stringValue;
 import static com.linecorp.armeria.xds.client.endpoint.EndpointTestUtil.sampleClusterLoadAssignment;
-import static com.linecorp.armeria.xds.client.endpoint.EndpointTestUtil.staticResourceListener;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
