@@ -28,6 +28,8 @@ import org.springframework.http.client.reactive.ClientHttpConnector;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClient.Builder;
 
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
+
 /**
  * An auto-configuration for Armeria-based {@link WebClient}.
  */

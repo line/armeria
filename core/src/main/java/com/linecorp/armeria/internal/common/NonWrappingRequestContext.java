@@ -69,6 +69,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
 
     @Nullable
     private String decodedPath;
+
     private final Request originalRequest;
     @Nullable
     private volatile HttpRequest req;

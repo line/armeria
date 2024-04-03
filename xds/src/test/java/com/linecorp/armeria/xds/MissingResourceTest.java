@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -98,12 +99,12 @@ class MissingResourceTest {
 
     @Test
     void missingResource() {
-        final String bootstrapClusterName = "bootstrap-cluster";
         final String clusterName = "cluster1";
         final Cluster bootstrapCluster = XdsTestResources.createStaticCluster(
-                bootstrapClusterName, XdsTestResources.loadAssignment(bootstrapClusterName, server.httpUri()));
+                BOOTSTRAP_CLUSTER_NAME,
+                XdsTestResources.loadAssignment(BOOTSTRAP_CLUSTER_NAME, server.httpUri()));
         final ApiConfigSource configSource =
-                XdsTestResources.apiConfigSource(bootstrapClusterName, ApiType.AGGREGATED_GRPC);
+                XdsTestResources.apiConfigSource(BOOTSTRAP_CLUSTER_NAME, ApiType.AGGREGATED_GRPC);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, null, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);
@@ -155,11 +156,11 @@ class MissingResourceTest {
                         ImmutableList.of(),
                         "1"));
 
-        final String bootstrapClusterName = "bootstrap-cluster";
         final Cluster bootstrapCluster = XdsTestResources.createStaticCluster(
-                bootstrapClusterName, XdsTestResources.loadAssignment(bootstrapClusterName, server.httpUri()));
+                BOOTSTRAP_CLUSTER_NAME,
+                XdsTestResources.loadAssignment(BOOTSTRAP_CLUSTER_NAME, server.httpUri()));
         final ApiConfigSource configSource =
-                XdsTestResources.apiConfigSource(bootstrapClusterName, ApiType.AGGREGATED_GRPC);
+                XdsTestResources.apiConfigSource(BOOTSTRAP_CLUSTER_NAME, ApiType.AGGREGATED_GRPC);
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, null, bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ClusterRoot clusterRoot = xdsBootstrap.clusterRoot(clusterName);

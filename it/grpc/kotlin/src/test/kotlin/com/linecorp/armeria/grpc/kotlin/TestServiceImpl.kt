@@ -105,12 +105,16 @@ class TestServiceImpl : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
             ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher()
 
         // A blocking dispatcher that does not propagate a request context
-        fun blockingDispatcher(): CoroutineDispatcher = CommonPools.blockingTaskExecutor().asCoroutineDispatcher()
+        fun blockingDispatcher(): CoroutineDispatcher =
+            CommonPools.blockingTaskExecutor().asCoroutineDispatcher()
 
         suspend fun <T> withArmeriaBlockingContext(block: suspend CoroutineScope.() -> T): T =
             withContext(ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher(), block)
 
-        private fun buildReply(message: String): HelloReply = HelloReply.newBuilder().setMessage(message).build()
+        private fun buildReply(message: String): HelloReply =
+            HelloReply.newBuilder().setMessage(
+                message,
+            ).build()
 
         private fun toMessage(message: String): String = "Hello, $message!"
     }

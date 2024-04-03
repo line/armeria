@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -36,6 +37,23 @@ public final class EndpointSnapshot implements Snapshot<EndpointXdsResource> {
     @Override
     public EndpointXdsResource xdsResource() {
         return endpoint;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final EndpointSnapshot that = (EndpointSnapshot) object;
+        return Objects.equal(endpoint, that.endpoint);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(endpoint);
     }
 
     @Override

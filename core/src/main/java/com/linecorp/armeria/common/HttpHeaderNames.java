@@ -901,6 +901,20 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString CDN_LOOP = create("CDN-Loop");
 
+    /**
+     * The HTTP <a
+     * href="https://wicg.github.io/turtledove/#handling-direct-from-seller-signals">{@code
+     * Sec-Ad-Auction-Fetch}</a> header field name.
+     */
+    public static final AsciiString SEC_AD_AUCTION_FETCH = create("Sec-Ad-Auction-Fetch");
+
+    /**
+     * The HTTP <a
+     * href="https://wicg.github.io/turtledove/#handling-direct-from-seller-signals">{@code
+     * Ad-Auction-Signals}</a> header field name.
+     */
+    public static final AsciiString AD_AUCTION_SIGNALS = create("Ad-Auction-Signals");
+
     private static final Map<CharSequence, AsciiString> map;
     private static final Map<AsciiString, String> inverseMap;
 
