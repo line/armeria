@@ -453,9 +453,10 @@ public final class DefaultRequestTarget implements RequestTarget {
             return null;
         }
 
-        // Normalize scheme and authority.
-        schemeAndAuthority = normalizeSchemeAndAuthority(scheme, authority);
-        if (schemeAndAuthority == null) {
+        try {
+            // Normalize scheme and authority.
+            schemeAndAuthority = ArmeriaHttpUtil.normalizeSchemeAndAuthority(scheme, authority);
+        } catch (Exception ignored) {
             // Invalid scheme or authority.
             return null;
         }
@@ -646,15 +647,6 @@ public final class DefaultRequestTarget implements RequestTarget {
                                         encodedPath,
                                         encodedQuery,
                                         encodedFragment);
-    }
-
-    @Nullable
-    private static URI normalizeSchemeAndAuthority(String scheme, String authority) {
-        try {
-            return new URI(scheme + "://" + authority);
-        } catch (Exception unused) {
-            return null;
-        }
     }
 
     private static boolean isRelativePath(Bytes path) {

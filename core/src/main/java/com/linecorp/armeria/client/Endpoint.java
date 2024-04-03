@@ -44,7 +44,6 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
-import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -58,6 +57,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -96,7 +96,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Parse the authority part of a URI. The authority part may have one of the following formats:
      * <ul>
      *   <li>{@code "<host>:<port>"} for a host endpoint (The userinfo part will be ignored.)</li>
-     *   <li>{@code "<host>"} for a host endpoint with no port number specified</li>
+     *   <li>{@code "<host>"}, {@code "<host>:"} for a host endpoint with no port number specified</li>
      * </ul>
      * An IPv4 or IPv6 address can be specified in lieu of a host name, e.g. {@code "127.0.0.1:8080"} and
      * {@code "[::1]:8080"}.
@@ -105,21 +105,11 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         requireNonNull(authority, "authority");
         checkArgument(!authority.isEmpty(), "authority is empty");
         return cache.get(authority, key -> {
-            if (key.charAt(key.length() - 1) == ':') {
-                // HostAndPort.fromString() does not validate an authority that ends with ':' such as "0.0.0.0:"
-                throw new IllegalArgumentException("Missing port number: " + key);
-            }
-            final HostAndPort hostAndPort = HostAndPort.fromString(removeUserInfo(key)).withDefaultPort(0);
-            return create(hostAndPort.getHost(), hostAndPort.getPort(), true);
+            final URI uri = ArmeriaHttpUtil.normalizeAuthority(key);
+            // If the port is undefined, set to 0
+            final int port = uri.getPort() == -1 ? 0 : uri.getPort();
+            return create(uri.getHost(), port, true);
         });
-    }
-
-    private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf('@');
-        if (indexOfDelimiter == -1) {
-            return authority;
-        }
-        return authority.substring(indexOfDelimiter + 1);
     }
 
     /**

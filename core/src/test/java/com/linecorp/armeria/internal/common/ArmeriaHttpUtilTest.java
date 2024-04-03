@@ -28,6 +28,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -41,6 +42,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -583,6 +585,54 @@ class ArmeriaHttpUtilTest {
         assertThat(out).isEqualTo(new DefaultHttpHeaders()
                                           .add(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON.toString())
                                           .add(HttpHeaderNames.CONNECTION, "close"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "0.0.0.0:80,    0.0.0.0:80,     0.0.0.0,    80",
+            "[::1]:8080,    [::1]:8080,     [::1],      8080",
+            "foo.bar,       foo.bar,        foo.bar,    -1",
+            "foo:,          foo:,           foo,        -1",
+            "bar:80,        bar:80,         bar,        80",
+            "foo@bar:80,    bar:80,         bar,        80",
+    })
+    void normalizeBadAuthorityaa(String authority, String expectedAuthority, String expectedHost,
+                                 int expectedPort) throws Exception {
+        assertThat(ArmeriaHttpUtil.normalizeAuthority(authority)).satisfies(uri -> {
+            assertThat(uri.getScheme()).isNull();
+            assertThat(uri.getAuthority()).isEqualTo(expectedAuthority);
+            assertThat(uri.getUserInfo()).isNull();
+            assertThat(uri.getHost()).isEqualTo(expectedHost);
+            assertThat(uri.getPort()).isEqualTo(expectedPort);
+        });
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "foo:bar", "http://foo:80", "foo/bar", "foo?bar=1", "foo#bar",
+            "[192.168.0.1]", "[::1", "::1]", "[::1]%eth0"
+    })
+    void normalizeBadAuthority(String badAuthority) throws Exception {
+        System.out.println(badAuthority);
+        assertThatThrownBy(() -> ArmeriaHttpUtil.normalizeAuthority(badAuthority))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "http", "https", "ftp", "mailto", "file", "data", "tel", "ssh" })
+    void normalizeSchemeAndAuthority(String scheme) throws URISyntaxException {
+        assertThat(ArmeriaHttpUtil.normalizeSchemeAndAuthority(scheme, "foo")).satisfies(uri -> {
+            assertThat(uri.getScheme()).isEqualTo(scheme);
+        });
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "1http", "+http", ".http", "-http", "http!", "http$", "http?", "http#", "http ftp", "htTP", "HTTP"
+    })
+    void normalizeBadSchemeAndAuthority(String badScheme) throws URISyntaxException {
+        assertThatThrownBy(() -> ArmeriaHttpUtil.normalizeSchemeAndAuthority(badScheme, "foo"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static ServerConfig serverConfig() {
