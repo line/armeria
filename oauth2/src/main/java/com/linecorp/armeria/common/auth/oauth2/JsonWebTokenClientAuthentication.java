@@ -23,6 +23,10 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.C
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 
+/**
+ * A client authentication method that uses a JSON Web Token (JWT) as the client assertion, as per
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7523#section-2.2">[RFC7523], Section 2.2</a>.
+ */
 final class JsonWebTokenClientAuthentication implements ClientAuthentication {
 
     private final String jsonWebToken;

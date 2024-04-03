@@ -25,6 +25,10 @@ import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 
+/**
+ * An access token request that uses a JSON Web Token (JWT) as an authorization grant, as per
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7523#section-2.1">[RFC7523], Section 2.1</a>.
+ */
 final class JsonWebTokenAccessTokenRequest extends AbstractAccessTokenRequest {
 
     private final String jsonWebToken;

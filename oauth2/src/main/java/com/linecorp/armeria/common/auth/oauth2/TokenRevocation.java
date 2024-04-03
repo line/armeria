@@ -68,8 +68,8 @@ public final class TokenRevocation {
      */
     public CompletableFuture<Boolean> revokeAccessToken(String accessToken) {
         final ClientAuthentication clientAuthentication = clientAuthentication();
-        final DefaultTokenOperationRequest tokenOperationRequest =
-                new DefaultTokenOperationRequest(clientAuthentication, accessToken, REFRESH_TOKEN);
+        final TokenOperationRequest tokenOperationRequest =
+                TokenOperationRequest.of(clientAuthentication, accessToken, REFRESH_TOKEN);
         return revocationEndpoint.execute(tokenOperationRequest);
     }
 
