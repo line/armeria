@@ -105,7 +105,6 @@ public final class Flags {
                              .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
                              .collect(Collectors.toList());
         flagsProviders.add(0, SystemPropertyFlagsProvider.INSTANCE);
-        flagsProviders.add(DefaultFlagsProvider.INSTANCE);
         FLAGS_PROVIDERS = ImmutableList.copyOf(flagsProviders);
     }
 
@@ -550,6 +549,7 @@ public final class Flags {
      * Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
      * the default value.
      */
+    @UnstableApi
     public static TlsEngineType tlsEngineType() {
         if (tlsEngineType != null) {
             return tlsEngineType;
@@ -1605,10 +1605,6 @@ public final class Flags {
     private static <T> T getUserValue(Function<FlagsProvider, @Nullable T> method, String flagName,
                                       Predicate<T> validator) {
         for (FlagsProvider provider : FLAGS_PROVIDERS) {
-            if (provider instanceof DefaultFlagsProvider) {
-                continue;
-            }
-
             try {
                 final T value = method.apply(provider);
                 if (value == null) {
