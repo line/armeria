@@ -297,29 +297,28 @@ const DebugPage: React.FunctionComponent<Props> = ({
         serviceType === ServiceType.HTTP ||
         serviceType === ServiceType.GRAPHQL
       ) {
-        const queries = additionalQueries;
+        const queries =
+          additionalQueries.length > 0 ? `?${additionalQueries}` : '';
+
         if (exactPathMapping) {
           endpoint = transport.getDebugMimeTypeEndpoint(method);
           mappedPath =
-            `'${escapeSingleQuote(
-              endpoint.pathMapping.substring('exact:'.length),
-            )}` +
-            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
+            endpoint.pathMapping.substring('exact:'.length) + queries;
         } else {
           endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-          mappedPath =
-            `'${escapeSingleQuote(additionalPath)}` +
-            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
+          mappedPath = additionalPath + queries;
         }
       } else if (additionalPath.length > 0) {
         endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-        mappedPath = `'${escapeSingleQuote(additionalPath)}'`;
+        mappedPath = additionalPath;
       } else {
         endpoint = transport.getDebugMimeTypeEndpoint(method);
-        mappedPath = `'${escapeSingleQuote(endpoint.pathMapping)}'`;
+        mappedPath = endpoint.pathMapping;
       }
 
-      const uri = host + parseServerRootPath(docServiceRoute) + mappedPath;
+      const uri = `'${escapeSingleQuote(
+        host + parseServerRootPath(docServiceRoute) + mappedPath,
+      )}'`;
 
       const body = transport.getCurlBody(
         endpoint,
