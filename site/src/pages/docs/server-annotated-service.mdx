@@ -394,6 +394,32 @@ public class MyAnnotatedService {
 }
 ```
 
+### Getting an AttributeKey
+
+Armeria also provides the <type://@Attribute> annotation to inject an <type://AttributeKey> value from
+<type://RequestContext> into a parameter. The parameter annotated with <type://@Attribute> can be compatible
+with all types corresponding to the <type://AttributeKey> stored within the <type://RequestContext>. The
+<type://@Attribute> annotation has two parameters: `name` and `prefix`, as shown in the example below.
+The parameter `name` corresponds to the <type://AttributeKey>'s name, and `prefix` corresponds to the type of
+the <type://AttributeKey>. In short, it's `AttributeKey.valueOf(prefix, name)`. Also, the parameter `prefix` is
+optional. If the `prefix` is not declared in <type://@Attribute>, `AnnotatedService Type` and `DefaultType` are
+used to retrieve the value from <type://RequestContext>. In the example below, `MyAnnotatedService` is used as
+the `ServiceType`.
+
+```java
+public class MyAnnotatedService {
+
+    @Get("/hello1")
+    public HttpResponse hello1(@Attribute(name = "Name", prefix = OtherService.class) String name) { ... }
+
+    @Post("/hello2")
+    public HttpResponse hello2(@Attribute(age = "Age") int age) { ... }
+
+}
+```
+
+Note that if there is no value from <type://RequestContext> to inject, `IllegalArgumentException` will occur at runtime.
+
 ### Other classes automatically injected
 
 The following classes are automatically injected when you specify them on the parameter list of your method.
@@ -1541,4 +1567,3 @@ for more information about RPC and HTTP service names, and how to use it.
 </Tip>
 
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html
-
