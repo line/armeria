@@ -90,7 +90,7 @@ public abstract class AbstractOAuth2Request implements OAuth2Request {
     @Override
     public QueryParams bodyParams() {
         if (bodyParams != null) {
-            // Mico-optimization: return the cached body parameters if available.
+            // Micro-optimization: return the cached body parameters if available.
             return bodyParams;
         }
         return bodyParams = OAuth2Request.super.bodyParams();
