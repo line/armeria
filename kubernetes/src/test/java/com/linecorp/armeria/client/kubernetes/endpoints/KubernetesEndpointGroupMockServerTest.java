@@ -22,6 +22,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.List;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -65,7 +66,16 @@ import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
 @EnableKubernetesMockClient(crud = true)
 class KubernetesEndpointGroupMockServerTest {
 
+    private static KubernetesClient staticClient;
+
     private KubernetesClient client;
+
+    @AfterAll
+    static void afterAll() {
+        // A workaround for the issue that the static client is leaked.
+        // Remove once https://github.com/fabric8io/kubernetes-client/pull/5854 is released.
+        staticClient.close();
+    }
 
     @Test
     void createEndpointsWithNodeIpAndPort() throws InterruptedException {
