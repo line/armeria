@@ -1,3 +1,8 @@
+# todo regenerate pom.xml in each module
+
+filename="1.xml"
+dirlist=`find . -name build.gradle | perl -p -e  's#\.\/##'| perl -p  -e 's#/build.gradle##'`
+cat >>$filename<<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -7,33 +12,15 @@
   <artifactId>examples</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
+EOF
+echo "<modules>" >>$filename
+for tmp1 in `echo $dirlist | tr " " "\n"`
+do
+  echo "<module>"$tmp1"</module>" >>$filename
+done
+echo "</modules>" >>$filename
 
-  <modules>
-    <module>spring-boot-webflux</module>
-    <module>context-propagation/dagger</module>
-    <module>context-propagation/manual</module>
-    <module>context-propagation/rxjava</module>
-    <module>context-propagation/reactor</module>
-    <module>graphql-sangria</module>
-    <module>spring-boot-jetty</module>
-    <module>grpc</module>
-    <module>annotated-http-service</module>
-    <module>server-sent-events</module>
-    <module>saml-service-provider</module>
-    <module>spring-boot-tomcat</module>
-    <module>proxy-server</module>
-    <module>thrift</module>
-    <module>graphql</module>
-    <module>spring-boot-minimal</module>
-    <module>grpc-scala</module>
-    <module>tutorials/rest-api-annotated-service</module>
-    <module>tutorials/grpc</module>
-    <module>tutorials/thrift</module>
-    <module>static-files</module>
-    <module>dropwizard</module>
-    <module>grpc-reactor</module>
-    <module>resilience4j-spring</module>
-  </modules>
+cat >>$filename<<'EOF'
 
   <properties>
     <maven.compiler.target>17</maven.compiler.target>
@@ -239,4 +226,4 @@
   </build>
 
 </project>
-
+EOF
