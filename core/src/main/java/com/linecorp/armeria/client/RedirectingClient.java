@@ -545,7 +545,6 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         private String originalUri;
         @Nullable
         private Set<RedirectSignature> redirectSignatures;
-        private boolean isAddedOriginalSignature;
 
         RedirectContext(ClientRequestContext ctx, HttpRequest request,
                         HttpResponse response, CompletableFuture<HttpResponse> responseFuture) {
@@ -570,16 +569,13 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         boolean addRedirectSignature(RequestTarget nextReqTarget, HttpMethod nextMethod) {
             if (redirectSignatures == null) {
                 redirectSignatures = new LinkedHashSet<>();
-            }
 
-            if (!isAddedOriginalSignature) {
                 final String originalProtocol = ctx.sessionProtocol().isTls() ? "https" : "http";
                 final RedirectSignature originalSignature = new RedirectSignature(originalProtocol,
                                                                                   ctx.authority(),
                                                                                   request.headers().path(),
                                                                                   request.method());
                 redirectSignatures.add(originalSignature);
-                isAddedOriginalSignature = true;
             }
 
             final RedirectSignature signature = new RedirectSignature(nextReqTarget.scheme(),
