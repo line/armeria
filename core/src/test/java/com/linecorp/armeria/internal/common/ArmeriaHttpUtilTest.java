@@ -28,7 +28,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -42,7 +41,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -597,7 +595,7 @@ class ArmeriaHttpUtilTest {
             "foo@bar:80,    bar:80,         bar,        80",
     })
     void normalizeBadAuthorityaa(String authority, String expectedAuthority, String expectedHost,
-                                 int expectedPort) throws Exception {
+                                 int expectedPort) {
         assertThat(ArmeriaHttpUtil.normalizeAuthority(authority)).satisfies(uri -> {
             assertThat(uri.getScheme()).isNull();
             assertThat(uri.getAuthority()).isEqualTo(expectedAuthority);
@@ -612,7 +610,7 @@ class ArmeriaHttpUtilTest {
             "foo:bar", "http://foo:80", "foo/bar", "foo?bar=1", "foo#bar",
             "[192.168.0.1]", "[::1", "::1]", "[::1]%eth0"
     })
-    void normalizeBadAuthority(String badAuthority) throws Exception {
+    void normalizeBadAuthority(String badAuthority) {
         System.out.println(badAuthority);
         assertThatThrownBy(() -> ArmeriaHttpUtil.normalizeAuthority(badAuthority))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -620,7 +618,7 @@ class ArmeriaHttpUtilTest {
 
     @ParameterizedTest
     @CsvSource({ "http", "https", "ftp", "mailto", "file", "data", "tel", "ssh" })
-    void normalizeSchemeAndAuthority(String scheme) throws URISyntaxException {
+    void normalizeSchemeAndAuthority(String scheme) {
         assertThat(ArmeriaHttpUtil.normalizeSchemeAndAuthority(scheme, "foo")).satisfies(uri -> {
             assertThat(uri.getScheme()).isEqualTo(scheme);
         });
@@ -630,7 +628,7 @@ class ArmeriaHttpUtilTest {
     @CsvSource({
             "1http", "+http", ".http", "-http", "http!", "http$", "http?", "http#", "http ftp", "htTP", "HTTP"
     })
-    void normalizeBadSchemeAndAuthority(String badScheme) throws URISyntaxException {
+    void normalizeBadSchemeAndAuthority(String badScheme) {
         assertThatThrownBy(() -> ArmeriaHttpUtil.normalizeSchemeAndAuthority(badScheme, "foo"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
