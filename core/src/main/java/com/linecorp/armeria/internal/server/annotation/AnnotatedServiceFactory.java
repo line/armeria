@@ -591,7 +591,7 @@ public final class AnnotatedServiceFactory {
      */
     static DescriptionInfo findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
-        final Description description = AnnotationUtil.findFirst(annotatedElement, Description.class);
+        final Description description = AnnotationUtil.findFirstDescription(annotatedElement);
         if (description != null) {
             final String value = description.value();
             if (DefaultValues.isSpecified(value)) {

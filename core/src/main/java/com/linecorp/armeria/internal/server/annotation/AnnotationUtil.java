@@ -27,7 +27,9 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -35,6 +37,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -47,6 +50,7 @@ import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.annotation.Description;
 
 /**
  * A utility class which helps to get annotations from an {@link AnnotatedElement}.
@@ -74,7 +78,19 @@ public final class AnnotationUtil {
          * given {@link AnnotatedElement} will be collected at last. This option will work only with
          * the {@link #LOOKUP_SUPER_CLASSES}.
          */
-        COLLECT_SUPER_CLASSES_FIRST
+        COLLECT_SUPER_CLASSES_FIRST,
+        /**
+         * Get annotations from methods in super classes of the given {@link AnnotatedElement} if the element
+         * is a {@link Method}. Otherwise, this option will be ignored.
+         * This option will work only with the {@link #LOOKUP_SUPER_CLASSES}.
+         */
+        LOOKUP_SUPER_METHODS,
+        /**
+         * Get annotations from methods in super classes of the given {@link AnnotatedElement} if the element
+         * is a {@link Parameter}. Otherwise, this option will be ignored.
+         * This option will work only with the {@link #LOOKUP_SUPER_CLASSES}.
+         */
+        LOOKUP_SUPER_PARAMETERS
     }
 
     /**
@@ -106,6 +122,29 @@ public final class AnnotationUtil {
     @Nullable
     public static <T extends Annotation> T findFirst(AnnotatedElement element, Class<T> annotationType) {
         final List<T> found = findAll(element, annotationType);
+        return found.isEmpty() ? null : found.get(0);
+    }
+
+    /**
+     * Returns an annotation of the {@link Description} if it is found from one of the following:
+     * <ul>
+     *     <li>the specified {@code element}</li>
+     *     <li>the super classes of the specified {@code element} if the {@code element} is a class or a method
+     *     or a parameter</li>
+     *     <li>the meta-annotations of the annotations specified on the {@code element}
+     *     or its super classes</li>
+     * </ul>
+     * Otherwise, {@code null} will be returned.
+     *
+     * @param element the {@link AnnotatedElement} to find the first annotation
+     */
+    @Nullable
+    public static Description findFirstDescription(AnnotatedElement element) {
+        final EnumSet<FindOption> options = EnumSet.of(FindOption.LOOKUP_SUPER_CLASSES,
+                                                       FindOption.LOOKUP_META_ANNOTATIONS,
+                                                       FindOption.LOOKUP_SUPER_METHODS,
+                                                       FindOption.LOOKUP_SUPER_PARAMETERS);
+        final List<Description> found = find(element, Description.class, options);
         return found.isEmpty() ? null : found.get(0);
     }
 
@@ -404,26 +443,73 @@ public final class AnnotationUtil {
      */
     private static List<AnnotatedElement> resolveTargetElements(AnnotatedElement element,
                                                                 EnumSet<FindOption> findOptions) {
-        final List<AnnotatedElement> elements;
-        if (findOptions.contains(FindOption.LOOKUP_SUPER_CLASSES) && element instanceof Class) {
-            final Class<?> superclass = ((Class<?>) element).getSuperclass();
-            if ((superclass == null || superclass == Object.class) &&
-                ((Class<?>) element).getInterfaces().length == 0) {
-                elements = ImmutableList.of(element);
-            } else {
-                final Builder<AnnotatedElement> collector = new Builder<>();
-                collectSuperClasses((Class<?>) element, collector,
-                                    findOptions.contains(FindOption.COLLECT_SUPER_CLASSES_FIRST));
-                elements = collector.build();
-            }
-        } else {
-            elements = ImmutableList.of(element);
+        if (!findOptions.contains(FindOption.LOOKUP_SUPER_CLASSES)) {
+            return ImmutableList.of(element);
         }
-        return elements;
+
+        final boolean collectSuperClassFirst = findOptions.contains(FindOption.COLLECT_SUPER_CLASSES_FIRST);
+
+        if (element instanceof Class) {
+            final List<Class<?>> classes = collectClasses((Class<?>) element, collectSuperClassFirst);
+            return convertToAnnotatedElements(classes);
+
+        } else if (element instanceof Method && findOptions.contains(FindOption.LOOKUP_SUPER_METHODS)) {
+            final Method method = (Method) element;
+            final Class<?> clazz = method.getDeclaringClass();
+            final List<Method> methods = collectMethods(clazz, method, collectSuperClassFirst);
+            return convertToAnnotatedElements(methods);
+
+        } else if (element instanceof Parameter && findOptions.contains(FindOption.LOOKUP_SUPER_PARAMETERS)) {
+            final Parameter parameter = (Parameter) element;
+            final Executable executable = parameter.getDeclaringExecutable();
+            final Class<?> clazz = executable.getDeclaringClass();
+            final List<Parameter> parameters = collectParameters(clazz, executable, parameter,
+                                                                 collectSuperClassFirst);
+            return convertToAnnotatedElements(parameters);
+
+        } else {
+            return ImmutableList.of(element);
+        }
     }
 
-    private static void collectSuperClasses(Class<?> clazz, Builder<AnnotatedElement> collector,
-                                            boolean collectSuperClassesFirst) {
+    private static <T extends AnnotatedElement> List<AnnotatedElement> convertToAnnotatedElements(List<T> list) {
+        return list.stream().map(element -> (AnnotatedElement)element).collect(Collectors.toList());
+    }
+
+    private static List<Parameter> collectParameters(Class<?> clazz, Executable executable,
+                                                     Parameter parameter, boolean collectSuperClassesFirst) {
+        final Builder<Parameter> parameterCollector = new Builder<>();
+        for (Method targetMethod : collectMethods(clazz, executable, collectSuperClassesFirst)) {
+            Arrays.stream(targetMethod.getParameters())
+                  .filter(p -> p.getName().equals(parameter.getName()))
+                  .findAny()
+                  .ifPresent(parameterCollector::add);
+        }
+        return parameterCollector.build();
+    }
+
+    private static List<Method> collectMethods(Class<?> clazz, Executable executable,
+                                               boolean collectSuperClassesFirst) {
+        final Builder<Method> methodCollector = new Builder<>();
+        for (Class<?> targetClass : collectClasses(clazz, collectSuperClassesFirst)) {
+            try {
+                final Method targetMethod = targetClass.getDeclaredMethod(executable.getName(),
+                                                                          executable.getParameterTypes());
+                methodCollector.add(targetMethod);
+            } catch (NoSuchMethodException ignored) {
+            }
+        }
+        return methodCollector.build();
+    }
+
+    private static List<Class<?>> collectClasses(Class<?> clazz, boolean collectSuperClassesFirst) {
+        final Builder<Class<?>> classCollector = new Builder<>();
+        collectClasses(clazz, classCollector, collectSuperClassesFirst);
+        return classCollector.build();
+    }
+
+    private static void collectClasses(Class<?> clazz, Builder<Class<?>> collector,
+                                       boolean collectSuperClassesFirst) {
         final Class<?> superClass = clazz.getSuperclass();
         final Class<?>[] superInterfaces = clazz.getInterfaces();
 
@@ -432,11 +518,11 @@ public final class AnnotationUtil {
         }
         if (superInterfaces.length > 0) {
             Arrays.stream(superInterfaces)
-                  .forEach(superInterface -> collectSuperClasses(
+                  .forEach(superInterface -> collectClasses(
                           superInterface, collector, collectSuperClassesFirst));
         }
         if (superClass != null && superClass != Object.class) {
-            collectSuperClasses(superClass, collector, collectSuperClassesFirst);
+            collectClasses(superClass, collector, collectSuperClassesFirst);
         }
         if (collectSuperClassesFirst) {
             collector.add(clazz);
