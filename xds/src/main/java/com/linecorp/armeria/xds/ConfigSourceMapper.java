@@ -24,15 +24,23 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 
 final class ConfigSourceMapper {
 
+    private final Bootstrap bootstrap;
     @Nullable
     private final ConfigSource bootstrapCdsConfig;
     @Nullable
     private final ConfigSource bootstrapLdsConfig;
     @Nullable
     private final ConfigSource bootstrapAdsConfig;
+    @Nullable
+    private ConfigSource parentConfigSource;
 
     ConfigSourceMapper(Bootstrap bootstrap) {
-        if (bootstrap.hasDynamicResources()) {
+        this(bootstrap, null);
+    }
+
+    ConfigSourceMapper(Bootstrap bootstrap, @Nullable ConfigSource parentConfigSource) {
+        this.bootstrap = bootstrap;
+        if (this.bootstrap.hasDynamicResources()) {
             final DynamicResources dynamicResources = bootstrap.getDynamicResources();
             bootstrapCdsConfig = dynamicResources.getCdsConfig();
             if (dynamicResources.hasAdsConfig()) {
@@ -48,10 +56,14 @@ final class ConfigSourceMapper {
             bootstrapLdsConfig = null;
             bootstrapAdsConfig = null;
         }
+        this.parentConfigSource = parentConfigSource;
     }
 
-    ConfigSource edsConfigSource(@Nullable ConfigSource parentConfigSource,
-                                 @Nullable ConfigSource configSource, String resourceName) {
+    ConfigSourceMapper withParentConfigSource(@Nullable ConfigSource parentConfigSource) {
+        return new ConfigSourceMapper(bootstrap, parentConfigSource);
+    }
+
+    ConfigSource edsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
         if (configSource != null) {
             if (configSource.hasApiConfigSource()) {
                 return configSource;
@@ -66,8 +78,7 @@ final class ConfigSourceMapper {
         throw new IllegalArgumentException("Cannot find an EDS config source for " + resourceName);
     }
 
-    ConfigSource cdsConfigSource(@Nullable ConfigSource parentConfigSource,
-                                 @Nullable ConfigSource configSource, String resourceName) {
+    ConfigSource cdsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
         if (configSource != null) {
             if (configSource.hasApiConfigSource()) {
                 return configSource;
@@ -88,8 +99,7 @@ final class ConfigSourceMapper {
         throw new IllegalArgumentException("Cannot find a CDS config source for route: " + resourceName);
     }
 
-    ConfigSource rdsConfigSource(@Nullable ConfigSource parentConfigSource, @Nullable ConfigSource configSource,
-                                 String resourceName) {
+    ConfigSource rdsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
         if (configSource != null) {
             if (configSource.hasApiConfigSource()) {
                 return configSource;
@@ -104,8 +114,7 @@ final class ConfigSourceMapper {
         throw new IllegalArgumentException("Cannot find an RDS config source for route: " + resourceName);
     }
 
-    ConfigSource ldsConfigSource(@Nullable ConfigSource parentConfigSource,
-                                 @Nullable ConfigSource configSource, String resourceName) {
+    ConfigSource ldsConfigSource(@Nullable ConfigSource configSource, String resourceName) {
         if (configSource != null) {
             if (configSource.hasApiConfigSource()) {
                 return configSource;

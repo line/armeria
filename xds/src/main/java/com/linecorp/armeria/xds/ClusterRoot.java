@@ -39,7 +39,7 @@ public final class ClusterRoot extends AbstractRoot<ClusterSnapshot> {
         if (cluster != null) {
             node = staticCluster(xdsBootstrap, resourceName, this, cluster);
         } else {
-            final ConfigSource configSource = configSourceMapper.cdsConfigSource(null, null, resourceName);
+            final ConfigSource configSource = configSourceMapper.cdsConfigSource(null, resourceName);
             node = new ClusterResourceNode(configSource, resourceName, xdsBootstrap,
                                            null, this, ResourceNodeType.DYNAMIC);
             xdsBootstrap.subscribe(node);
