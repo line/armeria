@@ -17,9 +17,6 @@ package com.linecorp.armeria.spring.web.reactive;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.util.List;
@@ -27,6 +24,7 @@ import java.util.Map.Entry;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpMethod;
@@ -38,6 +36,11 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpRequest;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -47,17 +50,28 @@ class ArmeriaClientHttpRequestTest {
 
     private static final String TEST_PATH_AND_QUERY = "/index.html?q=1";
 
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service(Route.ofCatchAll(), (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+        }
+    };
     static WebClient webClient;
 
     @BeforeAll
     public static void beforeClass() {
-        webClient = mock(WebClient.class);
-        when(webClient.execute((HttpRequest) any())).thenReturn(HttpResponse.of(HttpStatus.OK));
+        webClient = WebClient.builder()
+                .decorator((delegate, ctx, req) -> {
+                    return HttpResponse.of(HttpStatus.OK);
+                })
+                .build();
     }
 
     private static ArmeriaClientHttpRequest request() {
         return new ArmeriaClientHttpRequest(webClient, HttpMethod.GET, TEST_PATH_AND_QUERY,
-                                            URI.create("http://localhost"), DataBufferFactoryWrapper.DEFAULT);
+                                            URI.create("http://localhost"), DataBufferFactoryWrapper.DEFAULT,
+                                            null);
     }
 
     @Test

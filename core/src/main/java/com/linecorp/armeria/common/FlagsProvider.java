@@ -57,6 +57,7 @@ import com.linecorp.armeria.server.file.HttpFile;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -1132,6 +1133,30 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default Long defaultUnhandledExceptionsReportIntervalMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link DistributionStatisticConfig} where armeria utilizes.
+     *
+     * <p>The default value of this flag is as follows:
+     * <pre>{@code
+     * DistributionStatisticConfig.builder()
+     *     .percentilesHistogram(false)
+     *     .serviceLevelObjectives()
+     *     .percentiles(
+     *          0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
+     *     .percentilePrecision(2)
+     *     .minimumExpectedValue(1.0)
+     *     .maximumExpectedValue(Double.MAX_VALUE)
+     *     .expiry(Duration.ofMinutes(3))
+     *     .bufferLength(3)
+     *     .build();
+     * }</pre>
+     */
+    @Nullable
+    @UnstableApi
+    default DistributionStatisticConfig distributionStatisticConfig() {
         return null;
     }
 }

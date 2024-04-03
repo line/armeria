@@ -153,6 +153,12 @@ class FlagsProviderTest {
         assertThat(Flags.meterRegistry()).isNotSameAs(Metrics.globalRegistry);
     }
 
+    @Test
+    void testDistributionStatisticConfig() {
+        assertThat(Flags.distributionStatisticConfig())
+                .isEqualTo(DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG);
+    }
+
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
         final Method method = flags.getDeclaredMethod(flagsMethod);
         return assertThat(method.invoke(null));
