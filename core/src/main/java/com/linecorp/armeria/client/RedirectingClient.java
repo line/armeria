@@ -642,7 +642,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                    method == that.method;
         }
 
-        public String uri() {
+        String uri() {
             return protocol + "://" + authority + pathAndQuery;
         }
     }
