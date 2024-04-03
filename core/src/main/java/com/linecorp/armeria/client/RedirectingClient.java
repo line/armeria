@@ -263,13 +263,10 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                     newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders,
                                      nextReqTarget.toString(), nextAuthority);
 
-            final boolean isCyclicRedirects =
-                    !redirectCtx.addRedirectSignature(nextReqTarget,
-                                                      newReqDuplicator.headers().method());
-            if (isCyclicRedirects) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
-                                CyclicRedirectsException.of(redirectCtx.originalUri(),
-                                                            redirectCtx.redirectUris()));
+            try {
+                redirectCtx.validateCyclicRedirects(nextReqTarget, newReqDuplicator.headers().method());
+            } catch (Throwable t) {
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
                 return;
             }
 
@@ -566,7 +563,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return responseFuture;
         }
 
-        boolean addRedirectSignature(RequestTarget nextReqTarget, HttpMethod nextMethod) {
+        void validateCyclicRedirects(RequestTarget nextReqTarget, HttpMethod nextMethod) {
             if (redirectSignatures == null) {
                 redirectSignatures = new LinkedHashSet<>();
 
@@ -582,7 +579,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                                                                       nextReqTarget.authority(),
                                                                       nextReqTarget.pathAndQuery(),
                                                                       nextMethod);
-            return redirectSignatures.add(signature);
+            if (!redirectSignatures.add(signature)) {
+                throw CyclicRedirectsException.of(originalUri(), redirectUris());
+            }
         }
 
         String originalUri() {
