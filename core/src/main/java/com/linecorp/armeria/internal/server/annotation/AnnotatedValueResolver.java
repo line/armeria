@@ -642,24 +642,12 @@ final class AnnotatedValueResolver {
         final ImmutableList.Builder<AttributeKey<?>> builder = ImmutableList.builder();
 
         if (attr.prefix() != DefaultValues.class) {
-            // If @Attribute#prefix are defined, use only it to resolve Parameter.
             builder.add(AttributeKey.valueOf(attr.prefix(), name));
         }
         else {
-            // If @Attribute@preifx are undefined, search in order of priority 1-3.
-            // Pri 1. ServiceName
             final Class<?> serviceClass = ((Parameter) annotatedElement).getDeclaringExecutable()
                                                                         .getDeclaringClass();
             builder.add(AttributeKey.valueOf(serviceClass, name));
-            // Pri 2. Parameter type.
-            builder.add(AttributeKey.valueOf(type, name));
-
-            if (type.isPrimitive()) {
-                // Pri 2+a, Reference Type of Parameter in case of Parameter is primitive type.
-                final Class<?> mustRefType = Primitives.wrap(type);
-                builder.add(AttributeKey.valueOf(mustRefType, name));
-            }
-            // Pri 3, Object Type.
             builder.add(AttributeKey.valueOf(name));
         }
 

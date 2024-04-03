@@ -32,6 +32,10 @@ import com.linecorp.armeria.server.annotation.Param;
 
 final class AnnotatedElementNameUtil {
 
+    static String findName(Object nameRetrievalTarget, String value) {
+        return findName(nameRetrievalTarget, value, Function.identity());
+    }
+
     /**
      * Returns the value of {@link Header}, {@link Param}, {@link Attribute} if the value is not blank.
      * If the value is blank, it returns the name of the specified {@code nameRetrievalTarget} object
@@ -45,11 +49,6 @@ final class AnnotatedElementNameUtil {
         }
         return delegate.apply(getName(nameRetrievalTarget));
     }
-
-    static String findName(Object nameRetrievalTarget, String value) {
-        return findName(nameRetrievalTarget, value, Function.identity());
-    }
-
 
     /**
      * Returns the name of the specified element or the default name if it can't get.
@@ -73,9 +72,7 @@ final class AnnotatedElementNameUtil {
                 throw new IllegalArgumentException(
                         "cannot obtain the name of the parameter or field automatically. " +
                         "Please make sure you compiled your code with '-parameters' option. " +
-                        "If not, you need to specify parameter and header names with @" +
-                        Param.class.getSimpleName() + " and @" + Header.class.getSimpleName() +
-                        " and @" + Attribute.class.getSimpleName() + '.');
+                        "Alternatively, you could specify the name explicitly in the annotation.");
             }
             return parameter.getName();
         }
