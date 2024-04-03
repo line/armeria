@@ -18,8 +18,8 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistryTest.noopDependencyInjector;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.toArguments;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
-import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.reflections.ReflectionUtils.getAllConstructors;
 import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -47,8 +47,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -105,6 +105,8 @@ class AnnotatedValueResolverTest {
     static final ServiceRequestContext context;
     static final HttpRequest request;
     static final RequestHeaders originalHeaders;
+    static Map<String, AttributeKey<?>> successExpectAttrKeys;
+    static Map<String, AttributeKey<?>> failExpectAttrKeys;
 
     static {
         final String path = "/";
@@ -135,6 +137,12 @@ class AnnotatedValueResolverTest {
         assertThat(request.headers()).isEqualTo(originalHeaders);
     }
 
+    @BeforeEach
+    void injectAttributeKeys() {
+        successExpectAttrKeys = injectAttrKeyToServiceContextForAttributeTest();
+        failExpectAttrKeys = injectFailCaseOfAttrKeyToServiceContextForAttributeTest();
+    }
+
     static boolean shouldHttpHeaderExist(AnnotatedValueResolver element) {
         return element.shouldExist() ||
                existingHttpHeaders.contains(HttpHeaderNames.of(element.httpElementName()));
@@ -156,9 +164,7 @@ class AnnotatedValueResolverTest {
             try {
                 final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofServiceMethod(
                         method, pathParams, objectResolvers, false, noopDependencyInjector, null);
-                final Map<String, AttributeKey<?>> successExpectAttrKeys = injectAttrKeyToServiceContextForAttributeTest();
-                final Map<String, AttributeKey<?>> failExpectAttrKeys = injectFailCaseOfAttrKeyToServiceContextForAttributeTest();
-                elements.forEach(annotatedValueResolver -> testResolver(annotatedValueResolver, successExpectAttrKeys, failExpectAttrKeys));
+                elements.forEach(AnnotatedValueResolverTest::testResolver);
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.
             }
@@ -248,17 +254,14 @@ class AnnotatedValueResolverTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static void testResolver(AnnotatedValueResolver resolver,
-                                     Map<String, AttributeKey<?>> successExpectAttrKeys,
-                                     Map<String, AttributeKey<?>> failExpectAttrKeys) {
-        // When
+    private static void testResolver(AnnotatedValueResolver resolver) {
+
         if (resolver.annotationType() == Attribute.class) {
             if (failExpectAttrKeys.containsKey(resolver.httpElementName())) {
                 // When + Then
                 assertThatThrownBy(() -> resolver.resolve(resolverContext))
                         .isInstanceOf(IllegalArgumentException.class);
-            }
-            else {
+            } else {
                 // When
                 final Object value = resolver.resolve(resolverContext);
                 logger.debug("Element {}: value {}", resolver, value);
@@ -270,15 +273,10 @@ class AnnotatedValueResolverTest {
                 assertThat(value).isEqualTo(expectedValue);
                 assertThat(value).isNotNull();
             }
+            return;
         }
-        else {
-            testResolver(resolver);
-        }
-    }
 
-
-    @SuppressWarnings("unchecked")
-    private static void testResolver(AnnotatedValueResolver resolver) {
+        // Given Case.
         final Object value = resolver.resolve(resolverContext);
         logger.debug("Element {}: value {}", resolver, value);
         if (resolver.annotationType() == null) {
@@ -414,7 +412,7 @@ class AnnotatedValueResolverTest {
         VALUE1, VALUE2, VALUE3
     }
 
-    static class DummyService {}
+    static class AttrDummyService {}
 
     static class Service {
         void method1(@Param String var1,
@@ -449,19 +447,29 @@ class AnnotatedValueResolverTest {
         @Get("/attribute-test")
         void attributeTest(
 
-                @Attribute(value = "successPrefixOtherValuesOfOtherTypeInt", prefix = DummyService.class) int successPrefixOtherValuesOfOtherTypeInt,
-                @Attribute(value = "failPrefixNoneValuesOfOtherTypeInt") int failPrefixNoneValuesOfOtherTypeInt,
-                @Attribute(value = "successPrefixMineValuesOfMineTypeInt", prefix = Service.class) int successPrefixMineValuesOfMineTypeInt,
-                @Attribute(value = "successPrefixNoneValuesOfMineTypeInt") int successPrefixNoneValuesOfMineTypeInt,
-                @Attribute(value = "successPrefixNoneValuesOfNoneTypeInt") int successPrefixNoneValuesOfNoneTypeInt,
-                @Attribute(value = "failPrefixNoneValuesOfNoneTypeInt") int failPrefixNoneValuesOfNoneTypeInt,
-                @Attribute(value = "failPrefixOtherValuesOfMineTypeInt") int failPrefixOtherValuesOfMineTypeInt,
-                @Attribute(value = "failPrefixMineValuesOfNoneTypeInt", prefix = Service.class) int failPrefixMineValuesOfNoneTypeInt,
-                @Attribute(value = "successPrefixMineValuesOfMineTypeCollection", prefix = Service.class) List<String> successPrefixMineValuesOfMineTypeCollection,
-                @Attribute(value = "successPrefixNoneValuesOfMineTypeCollection") List<String> successPrefixNoneValuesOfMineTypeCollection,
-                @Attribute(value = "successPrefixNoneValuesOfNoneTypeCollection") List<String> successPrefixNoneValuesOfNoneTypeCollection
+                @Attribute(value = "successPrefixOtherValuesOfOtherTypeInt", prefix = AttrDummyService.class)
+                int successPrefixOtherValuesOfOtherTypeInt,
+                @Attribute(value = "failPrefixNoneValuesOfOtherTypeInt")
+                int failPrefixNoneValuesOfOtherTypeInt,
+                @Attribute(value = "successPrefixMineValuesOfMineTypeInt", prefix = Service.class)
+                int successPrefixMineValuesOfMineTypeInt,
+                @Attribute(value = "successPrefixNoneValuesOfMineTypeInt")
+                int successPrefixNoneValuesOfMineTypeInt,
+                @Attribute(value = "successPrefixNoneValuesOfNoneTypeInt")
+                int successPrefixNoneValuesOfNoneTypeInt,
+                @Attribute(value = "failPrefixNoneValuesOfNoneTypeInt")
+                int failPrefixNoneValuesOfNoneTypeInt,
+                @Attribute(value = "failPrefixOtherValuesOfMineTypeInt")
+                int failPrefixOtherValuesOfMineTypeInt,
+                @Attribute(value = "failPrefixMineValuesOfNoneTypeInt", prefix = Service.class)
+                int failPrefixMineValuesOfNoneTypeInt,
+                @Attribute(value = "successPrefixMineValuesOfMineTypeCollection", prefix = Service.class)
+                List<String> successPrefixMineValuesOfMineTypeCollection,
+                @Attribute(value = "successPrefixNoneValuesOfMineTypeCollection")
+                List<String> successPrefixNoneValuesOfMineTypeCollection,
+                @Attribute(value = "successPrefixNoneValuesOfNoneTypeCollection")
+                List<String> successPrefixNoneValuesOfNoneTypeCollection
         ) { }
-
 
         void time(@Param @Default("PT20.345S") Duration duration,
                   @Param @Default("2007-12-03T10:15:30.00Z") Instant instant,
@@ -477,58 +485,92 @@ class AnnotatedValueResolverTest {
     }
 
     private Map<String, AttributeKey<?>> injectFailCaseOfAttrKeyToServiceContextForAttributeTest() {
-        ServiceRequestContext ctx = resolverContext.context();
-        Map<String, AttributeKey<?>> expectFailAttrs = new HashMap<>();
+        final ServiceRequestContext ctx = resolverContext.context();
+        final Map<String, AttributeKey<?>> expectFailAttrs = new HashMap<>();
 
-        AttributeKey<Integer> failPrefixNoneValuesOfOtherTypeInt = AttributeKey.valueOf(DummyService.class, "failPrefixNoneValuesOfOtherTypeInt");
+        final AttributeKey<Integer> failPrefixNoneValuesOfOtherTypeInt =
+                AttributeKey.valueOf(AttrDummyService.class, "failPrefixNoneValuesOfOtherTypeInt");
         ctx.setAttr(failPrefixNoneValuesOfOtherTypeInt, 10);
-        expectFailAttrs.put("failPrefixNoneValuesOfOtherTypeInt", failPrefixNoneValuesOfOtherTypeInt);
+        expectFailAttrs.put(
+                "failPrefixNoneValuesOfOtherTypeInt",
+                failPrefixNoneValuesOfOtherTypeInt);
 
-        AttributeKey<Integer> failPrefixNoneValuesOfNoneTypeInt = AttributeKey.valueOf(DummyService.class, "failPrefixNoneValuesOfNoneTypeInt");
-        expectFailAttrs.put("failPrefixNoneValuesOfNoneTypeInt", failPrefixNoneValuesOfNoneTypeInt);
+        final AttributeKey<Integer> failPrefixNoneValuesOfNoneTypeInt =
+                AttributeKey.valueOf(AttrDummyService.class, "failPrefixNoneValuesOfNoneTypeInt");
+        expectFailAttrs.put(
+                "failPrefixNoneValuesOfNoneTypeInt",
+                failPrefixNoneValuesOfNoneTypeInt);
 
-        AttributeKey<Integer> failPrefixMineValuesOfNoneTypeInt = AttributeKey.valueOf("failPrefixMineValuesOfNoneTypeInt");
+        final AttributeKey<Integer> failPrefixMineValuesOfNoneTypeInt =
+                AttributeKey.valueOf("failPrefixMineValuesOfNoneTypeInt");
         ctx.setAttr(failPrefixMineValuesOfNoneTypeInt, 10);
-        expectFailAttrs.put("failPrefixMineValuesOfNoneTypeInt", failPrefixMineValuesOfNoneTypeInt);
+        expectFailAttrs.put(
+                "failPrefixMineValuesOfNoneTypeInt",
+                failPrefixMineValuesOfNoneTypeInt);
 
-        AttributeKey<Integer> failPrefixOtherValuesOfMineTypeInt = AttributeKey.valueOf(DummyService.class, "failPrefixOtherValuesOfMineTypeInt");
+        final AttributeKey<Integer> failPrefixOtherValuesOfMineTypeInt =
+                AttributeKey.valueOf(AttrDummyService.class, "failPrefixOtherValuesOfMineTypeInt");
         ctx.setAttr(failPrefixOtherValuesOfMineTypeInt, 10);
-        expectFailAttrs.put("failPrefixOtherValuesOfMineTypeInt", failPrefixOtherValuesOfMineTypeInt);
+        expectFailAttrs.put(
+                "failPrefixOtherValuesOfMineTypeInt",
+                failPrefixOtherValuesOfMineTypeInt);
 
         return expectFailAttrs;
     }
 
     private Map<String, AttributeKey<?>> injectAttrKeyToServiceContextForAttributeTest() {
 
-        ServiceRequestContext ctx = resolverContext.context();
-        HashMap<String, AttributeKey<?>> successAttrs = new HashMap<>();
-        AttributeKey<Integer> successPrefixOtherValuesOfOtherTypeInt = AttributeKey.valueOf(DummyService.class, "successPrefixOtherValuesOfOtherTypeInt");
+        final ServiceRequestContext ctx = resolverContext.context();
+        final HashMap<String, AttributeKey<?>> successAttrs = new HashMap<>();
+
+        final AttributeKey<Integer> successPrefixOtherValuesOfOtherTypeInt =
+                AttributeKey.valueOf(AttrDummyService.class, "successPrefixOtherValuesOfOtherTypeInt");
         ctx.setAttr(successPrefixOtherValuesOfOtherTypeInt, 10);
-        successAttrs.put("successPrefixOtherValuesOfOtherTypeInt", successPrefixOtherValuesOfOtherTypeInt);
+        successAttrs.put(
+                "successPrefixOtherValuesOfOtherTypeInt",
+                successPrefixOtherValuesOfOtherTypeInt);
 
-        AttributeKey<Integer> successPrefixMineValuesOfMineTypeInt = AttributeKey.valueOf(Service.class, "successPrefixMineValuesOfMineTypeInt");
+        final AttributeKey<Integer> successPrefixMineValuesOfMineTypeInt =
+                AttributeKey.valueOf(Service.class, "successPrefixMineValuesOfMineTypeInt");
         ctx.setAttr(successPrefixMineValuesOfMineTypeInt, 10);
-        successAttrs.put("successPrefixMineValuesOfMineTypeInt", successPrefixMineValuesOfMineTypeInt);
+        successAttrs.put(
+                "successPrefixMineValuesOfMineTypeInt",
+                successPrefixMineValuesOfMineTypeInt);
 
-        AttributeKey<Integer> successPrefixNoneValuesOfMineTypeInt = AttributeKey.valueOf(Service.class, "successPrefixNoneValuesOfMineTypeInt");
+        final AttributeKey<Integer> successPrefixNoneValuesOfMineTypeInt =
+                AttributeKey.valueOf(Service.class, "successPrefixNoneValuesOfMineTypeInt");
         ctx.setAttr(successPrefixNoneValuesOfMineTypeInt, 10);
-        successAttrs.put("successPrefixNoneValuesOfMineTypeInt", successPrefixNoneValuesOfMineTypeInt);
+        successAttrs.put(
+                "successPrefixNoneValuesOfMineTypeInt",
+                successPrefixNoneValuesOfMineTypeInt);
 
-        AttributeKey<Integer> successPrefixNoneValuesOfNoneTypeInt = AttributeKey.valueOf("successPrefixNoneValuesOfNoneTypeInt");
+        final AttributeKey<Integer> successPrefixNoneValuesOfNoneTypeInt =
+                AttributeKey.valueOf("successPrefixNoneValuesOfNoneTypeInt");
         ctx.setAttr(successPrefixNoneValuesOfNoneTypeInt, 10);
-        successAttrs.put("successPrefixNoneValuesOfNoneTypeInt", successPrefixNoneValuesOfNoneTypeInt);
+        successAttrs.put(
+                "successPrefixNoneValuesOfNoneTypeInt",
+                successPrefixNoneValuesOfNoneTypeInt);
 
-        AttributeKey<List<String>> successPrefixMineValuesOfMineTypeCollection = AttributeKey.valueOf(Service.class, "successPrefixMineValuesOfMineTypeCollection");
+        final AttributeKey<List<String>> successPrefixMineValuesOfMineTypeCollection =
+                AttributeKey.valueOf(Service.class, "successPrefixMineValuesOfMineTypeCollection");
         ctx.setAttr(successPrefixMineValuesOfMineTypeCollection, new ArrayList<>());
-        successAttrs.put("successPrefixMineValuesOfMineTypeCollection", successPrefixMineValuesOfMineTypeCollection);
+        successAttrs.put(
+                "successPrefixMineValuesOfMineTypeCollection",
+                successPrefixMineValuesOfMineTypeCollection);
 
-        AttributeKey<List<String>> successPrefixNoneValuesOfMineTypeCollection = AttributeKey.valueOf(Service.class, "successPrefixNoneValuesOfMineTypeCollection");
+        final AttributeKey<List<String>> successPrefixNoneValuesOfMineTypeCollection =
+                AttributeKey.valueOf(Service.class, "successPrefixNoneValuesOfMineTypeCollection");
         ctx.setAttr(successPrefixNoneValuesOfMineTypeCollection, new ArrayList<>());
-        successAttrs.put("successPrefixNoneValuesOfMineTypeCollection", successPrefixNoneValuesOfMineTypeCollection);
+        successAttrs.put(
+                "successPrefixNoneValuesOfMineTypeCollection",
+                successPrefixNoneValuesOfMineTypeCollection);
 
-        AttributeKey<List<String>> successPrefixNoneValuesOfNoneTypeCollection = AttributeKey.valueOf("successPrefixNoneValuesOfNoneTypeCollection");
+        final AttributeKey<List<String>> successPrefixNoneValuesOfNoneTypeCollection =
+                AttributeKey.valueOf("successPrefixNoneValuesOfNoneTypeCollection");
         ctx.setAttr(successPrefixNoneValuesOfNoneTypeCollection, new ArrayList<>());
-        successAttrs.put("successPrefixNoneValuesOfNoneTypeCollection", successPrefixNoneValuesOfNoneTypeCollection);
+        successAttrs.put(
+                "successPrefixNoneValuesOfNoneTypeCollection",
+                successPrefixNoneValuesOfNoneTypeCollection);
 
         return successAttrs;
     }

@@ -65,7 +65,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.primitives.Primitives;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
@@ -643,8 +642,7 @@ final class AnnotatedValueResolver {
 
         if (attr.prefix() != DefaultValues.class) {
             builder.add(AttributeKey.valueOf(attr.prefix(), name));
-        }
-        else {
+        } else {
             final Class<?> serviceClass = ((Parameter) annotatedElement).getDeclaringExecutable()
                                                                         .getDeclaringClass();
             builder.add(AttributeKey.valueOf(serviceClass, name));
@@ -817,23 +815,6 @@ final class AnnotatedValueResolver {
     }
 
     /**
-     * Returns a collection value resolver which retrieves a list of string from the specified {@code getter}
-     * AttributeKeys {@code ofAttribute} and adds them to the specified collection data type.
-     */
-    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
-    attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
-        return (resolver, ctx) -> {
-            for (AttributeKey<?> attrKey : attrKeys) {
-                final Object value = ctx.context.attr(attrKey);
-                if (value != null) {
-                    return value;
-                }
-            }
-            return resolver.defaultOrException();
-        };
-    }
-
-    /**
      * Returns a bean resolver which retrieves a value using request converters. If the target element
      * is an annotated bean, a bean factory of the specified {@link BeanFactoryId} will be used for creating an
      * instance.
@@ -870,6 +851,23 @@ final class AnnotatedValueResolver {
             }
 
             return value;
+        };
+    }
+
+    /**
+     * Returns an attribute resolver which retrieves a value specified by {@code attrKeys}
+     * from the {@link RequestContext}.
+     */
+    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
+    attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
+        return (resolver, ctx) -> {
+            for (AttributeKey<?> attrKey : attrKeys) {
+                final Object value = ctx.context.attr(attrKey);
+                if (value != null) {
+                    return value;
+                }
+            }
+            return resolver.defaultOrException();
         };
     }
 
