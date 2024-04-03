@@ -449,13 +449,6 @@ class AnnotatedValueResolverTest {
         @Get("/attribute-test")
         void attributeTest(
 
-                // 다른 서비스 + Prefix 이름 표시 : Success
-                // 다른 서비스 + Prefix 표시 X : Fail
-                // 같은 서비스 + Prefix 이름 표시 : Sucess
-                // 같은 서비스 + Prefix 표시 X : Success
-                // 이름만으로 검색 O : Success
-                // 이름만으로 검색 X : Fail
-
                 @Attribute(value = "successPrefixOtherValuesOfOtherTypeInt", prefix = DummyService.class) int successPrefixOtherValuesOfOtherTypeInt,
                 @Attribute(value = "failPrefixNoneValuesOfOtherTypeInt") int failPrefixNoneValuesOfOtherTypeInt,
                 @Attribute(value = "successPrefixMineValuesOfMineTypeInt", prefix = Service.class) int successPrefixMineValuesOfMineTypeInt,
