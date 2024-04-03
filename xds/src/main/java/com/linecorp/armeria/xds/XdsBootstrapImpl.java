@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -38,8 +39,8 @@ final class XdsBootstrapImpl implements XdsBootstrap {
 
     private final Map<ConfigSource, ConfigSourceClient> clientMap = new HashMap<>();
 
-    private final BootstrapApiConfigs bootstrapApiConfigs;
     private final BootstrapListeners bootstrapListeners;
+    private final ConfigSourceMapper configSourceMapper;
     private final BootstrapClusters bootstrapClusters;
     private final Consumer<GrpcClientBuilder> configClientCustomizer;
     private final Node bootstrapNode;
@@ -58,7 +59,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.configClientCustomizer = configClientCustomizer;
-        bootstrapApiConfigs = new BootstrapApiConfigs(bootstrap);
+        configSourceMapper = new ConfigSourceMapper(bootstrap);
         bootstrapListeners = new BootstrapListeners(bootstrap);
         bootstrapClusters = new BootstrapClusters(bootstrap, this);
         bootstrapNode = bootstrap.hasNode() ? bootstrap.getNode() : Node.getDefaultInstance();
@@ -71,9 +72,9 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     void subscribe(ResourceNode<?> node) {
         final XdsType type = node.type();
         final String name = node.name();
-        final ConfigSource mappedConfigSource =
-                bootstrapApiConfigs.configSource(type, name, node);
-        subscribe0(mappedConfigSource, type, name, node);
+        final ConfigSource configSource = node.configSource();
+        checkArgument(configSource != null, "Cannot subscribe to a node without a configSource");
+        subscribe0(configSource, type, name, node);
     }
 
     private void subscribe0(ConfigSource configSource, XdsType type, String resourceName,
@@ -98,25 +99,23 @@ final class XdsBootstrapImpl implements XdsBootstrap {
         checkState(!closed, "Attempting to unsubscribe to a closed XdsBootstrap");
         final XdsType type = node.type();
         final String resourceName = node.name();
-        final ConfigSource mappedConfigSource =
-                bootstrapApiConfigs.configSource(type, resourceName, node);
-        final ConfigSourceClient client = clientMap.get(mappedConfigSource);
+        final ConfigSourceClient client = clientMap.get(node.configSource());
         if (client != null && client.removeSubscriber(type, resourceName, node)) {
             client.close();
-            clientMap.remove(mappedConfigSource);
+            clientMap.remove(node.configSource());
         }
     }
 
     @Override
     public ListenerRoot listenerRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ListenerRoot(this, resourceName, bootstrapListeners);
+        return new ListenerRoot(this, configSourceMapper, resourceName, bootstrapListeners);
     }
 
     @Override
     public ClusterRoot clusterRoot(String resourceName) {
         requireNonNull(resourceName, "resourceName");
-        return new ClusterRoot(this, resourceName);
+        return new ClusterRoot(this, configSourceMapper, resourceName);
     }
 
     @Override
@@ -138,5 +137,9 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     @Override
     public EventExecutor eventLoop() {
         return eventLoop;
+    }
+
+    ConfigSourceMapper configSourceMapper() {
+        return configSourceMapper;
     }
 }
