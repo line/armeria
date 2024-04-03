@@ -111,7 +111,8 @@ private fun toArgMap(
                                 ReflectionUtils.getAllMethods(
                                     classifier.java,
                                     Predicate {
-                                        it.isSynthetic && Modifier.isStatic(it.modifiers) && it.name == "box-impl"
+                                        it.isSynthetic && Modifier.isStatic(it.modifiers) &&
+                                            it.name == "box-impl"
                                     },
                                 )
                             checkState(
