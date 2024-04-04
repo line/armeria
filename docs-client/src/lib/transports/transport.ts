@@ -14,12 +14,10 @@
  * under the License.
  */
 import JSONbig from 'json-bigint';
-import jsonPrettify from '../json-prettify';
+import { jsonPrettify } from '../json-util';
 import { docServiceDebug, providers } from '../header-provider';
 
 import { Endpoint, Method } from '../specification';
-
-const ignoringPrettyMimeTypes: string[] = ['x-ndjson', 'json-seq'];
 
 export default abstract class Transport {
   public abstract supportsMimeType(mimeType: string): boolean;
@@ -65,9 +63,6 @@ export default abstract class Transport {
     const applicationType = httpResponse.headers.get('content-type') || '';
     if (applicationType.indexOf('json') >= 0) {
       try {
-        if (this.ignorePretty(applicationType)) {
-          return responseText;
-        }
         const json = JSONbig.parse(responseText);
         const prettified = jsonPrettify(JSONbig.stringify(json));
         if (prettified.length > 0) {
@@ -157,14 +152,6 @@ export default abstract class Transport {
       };
     }
     return {};
-  }
-
-  private ignorePretty(applicationType: string) {
-    return (
-      ignoringPrettyMimeTypes.filter(
-        (type) => applicationType.indexOf(type) >= 0,
-      ).length > 0
-    );
   }
 
   protected abstract doSend(

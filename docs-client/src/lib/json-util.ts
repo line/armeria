@@ -42,7 +42,7 @@ function doPrettify(ch: string, indentation: number): [string, number] {
 }
 
 // A modified version of JSON.minify() by Kyle Simpson that prettifies a JSON string without fully parsing it.
-export default function prettify(json: string) {
+export function jsonPrettify(json: string) {
   if (json === '{}') {
     return json;
   }
@@ -103,4 +103,20 @@ export default function prettify(json: string) {
   }
 
   return newStr.join('');
+}
+
+export function validateJsonObject(jsonObject: string, description: string) {
+  let parsedJson;
+  try {
+    parsedJson = JSON.parse(jsonObject);
+  } catch (e) {
+    throw new Error(
+      `Failed to parse a JSON object in the ${description}:\n${e}`,
+    );
+  }
+  if (typeof parsedJson !== 'object') {
+    throw new Error(
+      `The ${description} must be a JSON object.\nYou entered: ${typeof parsedJson}`,
+    );
+  }
 }

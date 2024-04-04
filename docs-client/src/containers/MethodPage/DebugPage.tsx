@@ -47,7 +47,7 @@ import Alert from '@material-ui/lab/Alert';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
-import jsonPrettify from '../../lib/json-prettify';
+import { jsonPrettify, validateJsonObject } from '../../lib/json-util';
 import {
   extractUrlPath,
   Method,
@@ -88,22 +88,6 @@ interface OwnProps {
 }
 
 type Props = OwnProps & RouteComponentProps;
-
-const validateJsonObject = (jsonObject: string, description: string) => {
-  let parsedJson;
-  try {
-    parsedJson = JSON.parse(jsonObject);
-  } catch (e) {
-    throw new Error(
-      `Failed to parse a JSON object in the ${description}:\n${e}`,
-    );
-  }
-  if (typeof parsedJson !== 'object') {
-    throw new Error(
-      `The ${description} must be a JSON object.\nYou entered: ${typeof parsedJson}`,
-    );
-  }
-};
 
 const copyTextToClipboard = (text: string) => {
   const textArea = document.createElement('textarea');
@@ -445,11 +429,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     try {
       if (useRequestBody) {
-        // Validate requestBody only if it's not empty string.
-        if (requestBody.trim()) {
-          validateJsonObject(requestBody, 'request body');
-        }
-
         // Do not round-trip through JSON.parse to minify the text so as to not lose numeric precision.
         // See: https://github.com/line/armeria/issues/273
 
