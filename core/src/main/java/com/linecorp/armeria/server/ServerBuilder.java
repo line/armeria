@@ -1564,6 +1564,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public ServerBuilder withVirtualHost(String hostnamePattern,
                                          Consumer<? super VirtualHostBuilder> customizer) {
         final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
+        requireNonNull(customizer, "customizer");
         customizer.accept(virtualHostBuilder);
         virtualHostBuilders.add(virtualHostBuilder);
         return this;
