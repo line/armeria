@@ -120,3 +120,17 @@ export function validateJsonObject(jsonObject: string, description: string) {
     );
   }
 }
+
+export function isValidateJsonMimeType(applicationType: string | null) {
+  if (!applicationType) {
+    return false;
+  }
+  const isStreamingJson =
+    ['x-ndjson', 'json-seq'].filter(
+      (type) => applicationType.indexOf(type) >= 0,
+    ).length > 0;
+  if (isStreamingJson) {
+    return false;
+  }
+  return applicationType.indexOf('json') >= 0;
+}

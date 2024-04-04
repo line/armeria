@@ -16,7 +16,7 @@
 import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
-import { validateJsonObject } from '../json-util';
+import { isValidateJsonMimeType, validateJsonObject } from '../json-util';
 
 export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
 
@@ -99,7 +99,7 @@ export default class AnnotatedHttpTransport extends Transport {
 
     // Validate requestBody only if the content-type hasn't been overwritten and if it's not an empty string.
     if (
-      hdrs.get('content-type') === ANNOTATED_HTTP_MIME_TYPE &&
+      isValidateJsonMimeType(hdrs.get('content-type')) &&
       bodyJson &&
       bodyJson.trim()
     ) {
