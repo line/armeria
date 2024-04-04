@@ -57,7 +57,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.SchemeAndAuthority;
 import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -105,10 +105,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         requireNonNull(authority, "authority");
         checkArgument(!authority.isEmpty(), "authority is empty");
         return cache.get(authority, key -> {
-            final URI uri = ArmeriaHttpUtil.normalizeAuthority(key);
+            final SchemeAndAuthority schemeAndAuthority = SchemeAndAuthority.fromAuthority(key);
             // If the port is undefined, set to 0
-            final int port = uri.getPort() == -1 ? 0 : uri.getPort();
-            return create(uri.getHost(), port, true);
+            final int port = schemeAndAuthority.getPort() == -1 ? 0 : schemeAndAuthority.getPort();
+            return create(schemeAndAuthority.getHost(), port, true);
         });
     }
 

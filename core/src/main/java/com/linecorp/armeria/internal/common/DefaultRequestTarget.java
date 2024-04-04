@@ -19,7 +19,6 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
-import java.net.URI;
 import java.util.BitSet;
 import java.util.Objects;
 
@@ -436,7 +435,7 @@ public final class DefaultRequestTarget implements RequestTarget {
     @Nullable
     private static RequestTarget slowAbsoluteFormForClient(String reqTarget, int authorityPos) {
         // Extract scheme and authority while looking for path.
-        final URI schemeAndAuthority;
+        final SchemeAndAuthority schemeAndAuthority;
         final String scheme = reqTarget.substring(0, authorityPos - 3);
         final int nextPos = findNextComponent(reqTarget, authorityPos);
         final String authority;
@@ -455,7 +454,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
         try {
             // Normalize scheme and authority.
-            schemeAndAuthority = ArmeriaHttpUtil.normalizeSchemeAndAuthority(scheme, authority);
+            schemeAndAuthority = SchemeAndAuthority.fromSchemeAndAuthority(scheme, authority);
         } catch (Exception ignored) {
             // Invalid scheme or authority.
             return null;
@@ -483,7 +482,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
     @Nullable
     private static RequestTarget slowForClient(String reqTarget,
-                                               @Nullable URI schemeAndAuthority,
+                                               @Nullable SchemeAndAuthority schemeAndAuthority,
                                                int pathPos) {
         final Bytes fragment;
         final Bytes path;
@@ -604,11 +603,11 @@ public final class DefaultRequestTarget implements RequestTarget {
     }
 
     private static DefaultRequestTarget newAbsoluteTarget(
-            URI schemeAndAuthority, String encodedPath,
+            SchemeAndAuthority schemeAndAuthority, String encodedPath,
             @Nullable String encodedQuery, @Nullable String encodedFragment) {
 
         final String scheme = schemeAndAuthority.getScheme();
-        final String maybeAuthority = schemeAndAuthority.getRawAuthority();
+        final String maybeAuthority = schemeAndAuthority.getAuthority();
         final String maybeHost = schemeAndAuthority.getHost();
         final int maybePort = schemeAndAuthority.getPort();
         final String authority;

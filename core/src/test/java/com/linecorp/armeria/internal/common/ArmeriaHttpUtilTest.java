@@ -585,54 +585,6 @@ class ArmeriaHttpUtilTest {
                                           .add(HttpHeaderNames.CONNECTION, "close"));
     }
 
-    @ParameterizedTest
-    @CsvSource({
-            "0.0.0.0:80,    0.0.0.0:80,     0.0.0.0,    80",
-            "[::1]:8080,    [::1]:8080,     [::1],      8080",
-            "foo.bar,       foo.bar,        foo.bar,    -1",
-            "foo:,          foo:,           foo,        -1",
-            "bar:80,        bar:80,         bar,        80",
-            "foo@bar:80,    bar:80,         bar,        80",
-    })
-    void normalizeBadAuthorityaa(String authority, String expectedAuthority, String expectedHost,
-                                 int expectedPort) {
-        assertThat(ArmeriaHttpUtil.normalizeAuthority(authority)).satisfies(uri -> {
-            assertThat(uri.getScheme()).isNull();
-            assertThat(uri.getAuthority()).isEqualTo(expectedAuthority);
-            assertThat(uri.getUserInfo()).isNull();
-            assertThat(uri.getHost()).isEqualTo(expectedHost);
-            assertThat(uri.getPort()).isEqualTo(expectedPort);
-        });
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "foo:bar", "http://foo:80", "foo/bar", "foo?bar=1", "foo#bar",
-            "[192.168.0.1]", "[::1", "::1]", "[::1]%eth0"
-    })
-    void normalizeBadAuthority(String badAuthority) {
-        System.out.println(badAuthority);
-        assertThatThrownBy(() -> ArmeriaHttpUtil.normalizeAuthority(badAuthority))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @ParameterizedTest
-    @CsvSource({ "http", "https", "ftp", "mailto", "file", "data", "tel", "ssh" })
-    void normalizeSchemeAndAuthority(String scheme) {
-        assertThat(ArmeriaHttpUtil.normalizeSchemeAndAuthority(scheme, "foo")).satisfies(uri -> {
-            assertThat(uri.getScheme()).isEqualTo(scheme);
-        });
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-            "1http", "+http", ".http", "-http", "http!", "http$", "http?", "http#", "http ftp", "htTP", "HTTP"
-    })
-    void normalizeBadSchemeAndAuthority(String badScheme) {
-        assertThatThrownBy(() -> ArmeriaHttpUtil.normalizeSchemeAndAuthority(badScheme, "foo"))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
-
     private static ServerConfig serverConfig() {
         final Server server = Server.builder()
                                     .defaultHostname("foo")

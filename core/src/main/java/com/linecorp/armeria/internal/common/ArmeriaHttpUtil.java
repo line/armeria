@@ -40,7 +40,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -50,8 +49,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.BiConsumer;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -250,13 +247,6 @@ public final class ArmeriaHttpUtil {
             Flags.headerValueCacheSpec() != null ? buildCache(Flags.headerValueCacheSpec()) : null;
     private static final Set<AsciiString> CACHED_HEADERS = Flags.cachedHeaders().stream().map(AsciiString::of)
                                                                 .collect(toImmutableSet());
-
-    /**
-     * Validator for the scheme part of the URI, as defined in
-     * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1">the section 3.1 of RFC3986</a>.
-     */
-    private static final Predicate<String> SCHEME_VALIDATOR =
-            scheme -> Pattern.compile("^([a-z][a-z0-9+\\-.]*)").matcher(scheme).matches();
 
     private static LoadingCache<AsciiString, String> buildCache(String spec) {
         return Caffeine.from(spec).build(AsciiString::toString);
@@ -1273,66 +1263,6 @@ public final class ArmeriaHttpUtil {
                 writer.accept(output, HttpHeaderNames.HOST, v);
             }
         }
-    }
-
-    /**
-     * Attempts to parse this URI's authority component and return {@link URI}.
-     * The authority part may have one of the following formats (The userinfo part will be ignored.):
-     * <ul>
-     *   <li>{@code "<host>:<port>"} for a host endpoint </li>
-     *   <li>{@code "<host>"}, {@code "<host>:"} for a host endpoint with no port number specified</li>
-     * </ul>
-     * An IPv4 or IPv6 address can be specified in lieu of a host name, e.g. {@code "127.0.0.1:8080"} and
-     * {@code "[::1]:8080"}.
-     *
-     * @throws IllegalArgumentException if {@code authority} do not comply with RFC 2396
-     */
-    public static URI normalizeAuthority(String authority) {
-        requireNonNull(authority, "authority");
-        final String authorityWithoutUserInfo = removeUserInfo(authority);
-        try {
-            final URI uri = new URI(null, authorityWithoutUserInfo, null, null, null);
-            return uri.parseServerAuthority();
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Attempts to parse this URI's scheme and authority component and return {@link URI}.
-     * The authority part may have one of the following formats (The userinfo part will be ignored.):
-     * <ul>
-     *   <li>{@code "<host>:<port>"} for a host endpoint </li>
-     *   <li>{@code "<host>"}, {@code "<host>:"} for a host endpoint with no port number specified</li>
-     * </ul>
-     * An IPv4 or IPv6 address can be specified in lieu of a host name, e.g. {@code "127.0.0.1:8080"} and
-     * {@code "[::1]:8080"}.
-     *
-     * @throws IllegalArgumentException if {@code scheme} or {@code authority} do not comply with RFC 2396
-     */
-    public static URI normalizeSchemeAndAuthority(String scheme, String authority) {
-        requireNonNull(scheme, "scheme");
-        requireNonNull(authority, "authority");
-
-        if (!SCHEME_VALIDATOR.test(scheme)) {
-            throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
-        }
-
-        final String authorityWithoutUserInfo = removeUserInfo(authority);
-        try {
-            final URI uri = new URI(scheme, authorityWithoutUserInfo, null, null, null);
-            return uri.parseServerAuthority();
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
-        }
-    }
-
-    private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf('@');
-        if (indexOfDelimiter == -1) {
-            return authority;
-        }
-        return authority.substring(indexOfDelimiter + 1);
     }
 
     // TODO(minwoox): Will provide this interface to public API
