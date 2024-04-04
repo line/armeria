@@ -22,18 +22,19 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -54,6 +55,7 @@ import io.netty.util.AsciiString;
 abstract class AbstractCorsPolicyBuilder {
 
     private final Set<String> origins;
+    private final Predicate<? super String> originPredicate;
     private final List<Route> routes = new ArrayList<>();
     private boolean credentialsAllowed;
     private boolean nullOriginAllowed;
@@ -66,10 +68,6 @@ abstract class AbstractCorsPolicyBuilder {
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders = new HashMap<>();
     private boolean preflightResponseHeadersDisabled;
 
-    AbstractCorsPolicyBuilder() {
-        origins = Collections.emptySet();
-    }
-
     AbstractCorsPolicyBuilder(List<String> origins) {
         requireNonNull(origins, "origins");
         checkArgument(!origins.isEmpty(), "origins is empty.");
@@ -79,6 +77,13 @@ abstract class AbstractCorsPolicyBuilder {
             }
         }
         this.origins = origins.stream().map(Ascii::toLowerCase).collect(toImmutableSet());
+        originPredicate = this.origins::contains;
+    }
+
+    AbstractCorsPolicyBuilder(Predicate<? super String> originPredicate) {
+        requireNonNull(originPredicate, "originPredicate");
+        origins = ImmutableSet.of();
+        this.originPredicate = originPredicate;
     }
 
     final void setConfig(CorsDecorator corsDecorator) {
@@ -428,8 +433,8 @@ abstract class AbstractCorsPolicyBuilder {
      * Returns a newly-created {@link CorsPolicy} based on the properties of this builder.
      */
     CorsPolicy build() {
-        return new CorsPolicy(origins, routes, credentialsAllowed, maxAge, nullOriginAllowed,
-                              exposedHeaders, allowAllRequestHeaders, allowedRequestHeaders,
+        return new CorsPolicy(origins, originPredicate, routes, credentialsAllowed, maxAge,
+                              nullOriginAllowed, exposedHeaders, allowAllRequestHeaders, allowedRequestHeaders,
                               allowedRequestMethods, preflightResponseHeadersDisabled,
                               preflightResponseHeaders);
     }
