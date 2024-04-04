@@ -121,7 +121,7 @@ export function validateJsonObject(jsonObject: string, description: string) {
   }
 }
 
-export function isValidateJsonMimeType(applicationType: string | null) {
+export function isValidJsonMimeType(applicationType: string | null) {
   if (!applicationType) {
     return false;
   }
