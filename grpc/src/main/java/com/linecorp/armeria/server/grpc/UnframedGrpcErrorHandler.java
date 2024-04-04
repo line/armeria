@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import org.curioswitch.common.protobuf.json.MessageMarshaller;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -32,6 +30,14 @@ import io.grpc.Status;
 @FunctionalInterface
 @UnstableApi
 public interface UnframedGrpcErrorHandler {
+
+    static UnframedGrpcErrorHandlerBuilder builder() {
+        return new UnframedGrpcErrorHandlerBuilder(UnframedGrpcStatusMappingFunction.of());
+    }
+
+    static UnframedGrpcErrorHandlerBuilder builder(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        return new UnframedGrpcErrorHandlerBuilder(statusMappingFunction);
+    }
 
     /**
      * Returns a plain text or json response based on the content type.
@@ -48,10 +54,6 @@ public interface UnframedGrpcErrorHandler {
      */
     static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         return UnframedGrpcErrorHandlers.of(statusMappingFunction);
-    }
-
-    static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
-        return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
     }
 
     /**
@@ -73,14 +75,6 @@ public interface UnframedGrpcErrorHandler {
      */
     static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction);
-    }
-
-    static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
-        return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction, jsonMarshaller);
-    }
-
-    static UnframedGrpcErrorHandler ofJson(MessageMarshaller jsonMarshaller) {
-        return UnframedGrpcErrorHandlers.ofJson(UnframedGrpcStatusMappingFunction.of(), jsonMarshaller);
     }
 
     /**

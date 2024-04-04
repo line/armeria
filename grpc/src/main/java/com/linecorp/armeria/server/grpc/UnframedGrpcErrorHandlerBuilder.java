@@ -18,26 +18,27 @@ package com.linecorp.armeria.server.grpc;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.EnumSet;
 import java.util.Set;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 public final class UnframedGrpcErrorHandlerBuilder {
-
-    private static final Set<UnframedGrpcErrorResponseType> DEFAULT_RESPONSE_TYPES =
-            ImmutableSet.copyOf(UnframedGrpcErrorResponseType.values());
-
-    @Nullable
     private UnframedGrpcStatusMappingFunction statusMappingFunction;
 
-    @Nullable
-    private MessageMarshaller jsonMarshaller;
+    private MessageMarshaller jsonMarshaller = UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER;
 
-    private Set<UnframedGrpcErrorResponseType> responseTypes = DEFAULT_RESPONSE_TYPES;
+    @Nullable
+    private Set<UnframedGrpcErrorResponseType> responseTypes;
+
+    UnframedGrpcErrorHandlerBuilder(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        this.statusMappingFunction = statusMappingFunction;
+    }
 
     public UnframedGrpcErrorHandlerBuilder jsonMarshaller(MessageMarshaller jsonMarshaller) {
         this.jsonMarshaller = requireNonNull(jsonMarshaller, "jsonMarshaller");
@@ -51,27 +52,65 @@ public final class UnframedGrpcErrorHandlerBuilder {
     }
 
     public UnframedGrpcErrorHandlerBuilder responseTypes(UnframedGrpcErrorResponseType... responseTypes) {
-        this.responseTypes = ImmutableSet.copyOf(requireNonNull(responseTypes, "responseTypes"));
+        requireNonNull(responseTypes, "responseTypes");
+        if (this.responseTypes == null) {
+            this.responseTypes = EnumSet.noneOf(UnframedGrpcErrorResponseType.class);
+        }
+        this.responseTypes.addAll(ImmutableSet.copyOf(responseTypes));
+        return this;
+    }
+
+    public UnframedGrpcErrorHandlerBuilder registerMarshallers(Message... messages) {
+        requireNonNull(messages, "messages");
+        MessageMarshaller.Builder jsonMarshallerBuilder = jsonMarshaller.toBuilder();
+
+        for (Message message : messages) {
+            jsonMarshallerBuilder = jsonMarshallerBuilder.register(message);
+        }
+
+        jsonMarshaller = jsonMarshallerBuilder.build();
+        return this;
+    }
+
+    @SafeVarargs
+    public final UnframedGrpcErrorHandlerBuilder registerMarshallers(Class<? extends Message>... messageTypes) {
+        requireNonNull(messageTypes, "messageTypes");
+        MessageMarshaller.Builder jsonMarshallerBuilder = jsonMarshaller.toBuilder();
+
+        for (Class<? extends Message> messageType : messageTypes) {
+            jsonMarshallerBuilder = jsonMarshallerBuilder.register(messageType);
+        }
+
+        jsonMarshaller = jsonMarshallerBuilder.build();
+        return this;
+    }
+
+    public UnframedGrpcErrorHandlerBuilder registerMarshallers(Iterable<?> messagesOrMessageTypes) {
+        requireNonNull(messagesOrMessageTypes, "messagesOrMessageTypes");
+        MessageMarshaller.Builder jsonMarshallerBuilder = jsonMarshaller.toBuilder();
+
+        for (final Object messageOrMessageType : messagesOrMessageTypes) {
+            requireNonNull(messageOrMessageType, "messagesOrMessageTypes contains null.");
+            if(messageOrMessageType instanceof Message) {
+                jsonMarshallerBuilder = jsonMarshallerBuilder.register((Message)messageOrMessageType);
+            } else {
+                throw new IllegalArgumentException(messageOrMessageType.getClass().getName() +
+                                                   " is neither Message type nor Message extended type.");
+            }
+
+        }
+
+        jsonMarshaller = jsonMarshallerBuilder.build();
         return this;
     }
 
     public UnframedGrpcErrorHandler build() {
-        final UnframedGrpcStatusMappingFunction statusMappingFunction =
-                this.statusMappingFunction != null ? this.statusMappingFunction
-                                                   : UnframedGrpcStatusMappingFunction.of();
         if(responseTypes == ImmutableSet.of(UnframedGrpcErrorResponseType.JSON)) {
-            if(jsonMarshaller != null) {
-                return UnframedGrpcErrorHandler.ofJson(statusMappingFunction, jsonMarshaller);
-            } else {
-                return UnframedGrpcErrorHandler.ofJson(statusMappingFunction);
-            }
+            return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction, jsonMarshaller);
         }
         if(responseTypes == ImmutableSet.of(UnframedGrpcErrorResponseType.PLAINTEXT)) {
-            return UnframedGrpcErrorHandler.ofPlainText(statusMappingFunction);
+            return UnframedGrpcErrorHandlers.ofPlaintext(statusMappingFunction);
         }
-        if(jsonMarshaller != null) {
-            return UnframedGrpcErrorHandler.of(statusMappingFunction, jsonMarshaller);
-        }
-        return UnframedGrpcErrorHandler.of(statusMappingFunction);
+        return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
     }
 }

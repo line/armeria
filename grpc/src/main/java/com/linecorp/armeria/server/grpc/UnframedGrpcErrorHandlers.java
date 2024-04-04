@@ -68,8 +68,6 @@ final class UnframedGrpcErrorHandlers {
 
     private static final Logger logger = LoggerFactory.getLogger(UnframedGrpcErrorHandlers.class);
 
-    // XXX(ikhoon): Support custom JSON marshaller?
-    @VisibleForTesting
     static final MessageMarshaller ERROR_DETAILS_MARSHALLER =
             MessageMarshaller.builder()
                              .omittingInsignificantWhitespace(true)
