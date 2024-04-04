@@ -22,6 +22,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBufferFactory;
 
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
+
 /**
  * A configuration class which creates an {@link DataBufferFactoryWrapper}.
  */

@@ -37,7 +37,15 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
-    public void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
+    public void initAndStart(EventExecutor eventLoop, CancellationTask task) {
+    }
+
+    @Override
+    public void init(EventExecutor eventLoop) {
+    }
+
+    @Override
+    public void start(CancellationTask task) {
     }
 
     @Override
@@ -99,10 +107,5 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     @Override
     public CompletableFuture<Void> whenTimedOut() {
         return VOID_FUTURE;
-    }
-
-    @Override
-    public boolean isInitialized() {
-        return false;
     }
 }

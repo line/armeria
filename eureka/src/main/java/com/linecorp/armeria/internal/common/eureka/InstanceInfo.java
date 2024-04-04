@@ -23,6 +23,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRootName;
@@ -62,9 +63,15 @@ public final class InstanceInfo {
     private final InstanceStatus status;
 
     @Nullable
+    private final String homePageUrlPath;
+    @Nullable
     private final String homePageUrl;
     @Nullable
+    private final String statusPageUrlPath;
+    @Nullable
     private final String statusPageUrl;
+    @Nullable
+    private final String healthCheckUrlPath;
     @Nullable
     private final String healthCheckUrl;
     @Nullable
@@ -96,6 +103,34 @@ public final class InstanceInfo {
                         @JsonProperty("dataCenterInfo") DataCenterInfo dataCenterInfo,
                         @JsonProperty("leaseInfo") LeaseInfo leaseInfo,
                         @Nullable @JsonProperty("metadata") Map<String, String> metadata) {
+        this(instanceId, appName, appGroupName, hostName, ipAddr, vipAddress, secureVipAddress, port,
+             securePort, status, null, homePageUrl, null, statusPageUrl, null, healthCheckUrl,
+             secureHealthCheckUrl, dataCenterInfo, leaseInfo, metadata);
+    }
+
+    /**
+     * Creates a new instance which may have {@link #healthCheckUrlPath}.
+     */
+    public InstanceInfo(@Nullable String instanceId,
+                        @Nullable String appName,
+                        @Nullable String appGroupName,
+                        @Nullable String hostName,
+                        @Nullable String ipAddr,
+                        @Nullable String vipAddress,
+                        @Nullable String secureVipAddress,
+                        PortWrapper port,
+                        PortWrapper securePort,
+                        InstanceStatus status,
+                        @Nullable String homePageUrlPath, // Not in JSON
+                        @Nullable String homePageUrl,
+                        @Nullable String statusPageUrlPath, // Not in JSON
+                        @Nullable String statusPageUrl,
+                        @Nullable String healthCheckUrlPath, // Not in JSON
+                        @Nullable String healthCheckUrl,
+                        @Nullable String secureHealthCheckUrl,
+                        DataCenterInfo dataCenterInfo,
+                        LeaseInfo leaseInfo,
+                        @Nullable Map<String, String> metadata) {
         this.instanceId = instanceId;
         this.hostName = hostName;
         this.appName = appName;
@@ -106,8 +141,11 @@ public final class InstanceInfo {
         this.port = requireNonNull(port, "port");
         this.securePort = requireNonNull(securePort, "securePort");
         this.status = requireNonNull(status, "status");
+        this.homePageUrlPath = homePageUrlPath;
         this.homePageUrl = homePageUrl;
+        this.statusPageUrlPath = statusPageUrlPath;
         this.statusPageUrl = statusPageUrl;
+        this.healthCheckUrlPath = healthCheckUrlPath;
         this.healthCheckUrl = healthCheckUrl;
         this.secureHealthCheckUrl = secureHealthCheckUrl;
         this.dataCenterInfo = dataCenterInfo;
@@ -201,6 +239,17 @@ public final class InstanceInfo {
     }
 
     /**
+     * Returns the home page URL path of this instance.
+     *
+     * <p>When set, {@link #getHomePageUrl()} will be built with {@link #getHostName()} and {@link #getPort()}.
+     */
+    @Nullable
+    @JsonIgnore
+    public String getHomePageUrlPath() {
+        return homePageUrlPath;
+    }
+
+    /**
      * Returns the home page URL of this instance.
      */
     @Nullable
@@ -209,11 +258,35 @@ public final class InstanceInfo {
     }
 
     /**
+     * Returns the status page URL path of this instance.
+     *
+     * <p>When set, {@link #getStatusPageUrl()} will be built with {@link #getHostName()} and
+     * {@link #getPort()}.
+     */
+    @Nullable
+    @JsonIgnore
+    public String getStatusPageUrlPath() {
+        return statusPageUrlPath;
+    }
+
+    /**
      * Returns the status page URL of this instance.
      */
     @Nullable
     public String getStatusPageUrl() {
         return statusPageUrl;
+    }
+
+    /**
+     * Returns the health check path of this instance.
+     *
+     * <p>When set, {@link #getHealthCheckUrl()} will be built from {@link #getHostName()} and
+     * {@link #getPort()} or {@link #getSecurePort()} for {@link #getSecureHealthCheckUrl()}.
+     */
+    @Nullable
+    @JsonIgnore
+    public String getHealthCheckUrlPath() {
+        return healthCheckUrlPath;
     }
 
     /**
@@ -287,8 +360,11 @@ public final class InstanceInfo {
                Objects.equal(port, that.port) &&
                Objects.equal(securePort, that.securePort) &&
                status == that.status &&
+               Objects.equal(homePageUrlPath, that.homePageUrlPath) &&
                Objects.equal(homePageUrl, that.homePageUrl) &&
+               Objects.equal(statusPageUrlPath, that.statusPageUrlPath) &&
                Objects.equal(statusPageUrl, that.statusPageUrl) &&
+               Objects.equal(healthCheckUrlPath, that.healthCheckUrlPath) &&
                Objects.equal(healthCheckUrl, that.healthCheckUrl) &&
                Objects.equal(secureHealthCheckUrl, that.secureHealthCheckUrl) &&
                Objects.equal(dataCenterInfo, that.dataCenterInfo) &&
@@ -300,8 +376,9 @@ public final class InstanceInfo {
     public int hashCode() {
         return Objects.hashCode(instanceId, hostName, appName, appGroupName, ipAddr, vipAddress,
                                 secureVipAddress, port, securePort, status,
-                                homePageUrl, statusPageUrl, healthCheckUrl, secureHealthCheckUrl,
-                                dataCenterInfo, leaseInfo, metadata);
+                                homePageUrlPath, homePageUrl, statusPageUrlPath, statusPageUrl,
+                                healthCheckUrlPath, healthCheckUrl,
+                                secureHealthCheckUrl, dataCenterInfo, leaseInfo, metadata);
     }
 
     @Override
@@ -317,8 +394,11 @@ public final class InstanceInfo {
                                    .add("port", port)
                                    .add("securePort", securePort)
                                    .add("status", status)
+                                   .add("homePageUrlPath", homePageUrlPath)
                                    .add("homePageUrl", homePageUrl)
+                                   .add("statusPageUrlPath", statusPageUrlPath)
                                    .add("statusPageUrl", statusPageUrl)
+                                   .add("healthCheckUrlPath", healthCheckUrlPath)
                                    .add("healthCheckUrl", healthCheckUrl)
                                    .add("secureHealthCheckUrl", secureHealthCheckUrl)
                                    .add("dataCenterInfo", dataCenterInfo)

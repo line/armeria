@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.util.concurrent.CompletableFuture;
@@ -91,42 +92,60 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private volatile TimeoutFuture whenTimedOut;
     @SuppressWarnings("FieldMayBeFinal")
     private volatile long pendingTimeoutNanos;
-    private boolean server;
+    private final boolean server;
     @Nullable
     private Throwable cause;
 
+    @VisibleForTesting
     DefaultCancellationScheduler(long timeoutNanos) {
+        this(timeoutNanos, true);
+    }
+
+    DefaultCancellationScheduler(long timeoutNanos, boolean server) {
         this.timeoutNanos = timeoutNanos;
         pendingTimeoutNanos = timeoutNanos;
+        this.server = server;
     }
 
     /**
      * Initializes this {@link DefaultCancellationScheduler}.
      */
     @Override
-    public void init(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
+    public void initAndStart(EventExecutor eventLoop, CancellationTask task) {
+        init(eventLoop);
         if (!eventLoop.inEventLoop()) {
-            eventLoop.execute(() -> init0(eventLoop, task, timeoutNanos, server));
+            eventLoop.execute(() -> start(task));
         } else {
-            init0(eventLoop, task, timeoutNanos, server);
+            start(task);
         }
     }
 
-    private void init0(EventExecutor eventLoop, CancellationTask task, long timeoutNanos, boolean server) {
-        if (state != State.INIT) {
+    @Override
+    public void init(EventExecutor eventLoop) {
+        checkState(this.eventLoop == null, "Can't init() more than once");
+        this.eventLoop = eventLoop;
+    }
+
+    @Override
+    public void start(CancellationTask task) {
+        assert eventLoop != null;
+        assert eventLoop.inEventLoop();
+        if (isFinished()) {
+            assert cause != null;
+            task.run(cause);
             return;
         }
-        this.eventLoop = eventLoop;
-        this.task = task;
-        if (timeoutNanos > 0) {
-            this.timeoutNanos = timeoutNanos;
+        if (this.task != null) {
+            // just replace the task
+            this.task = task;
+            return;
         }
-        this.server = server;
+        this.task = task;
         startTimeNanos = System.nanoTime();
-        if (this.timeoutNanos != 0) {
+        if (timeoutNanos != 0) {
             state = State.SCHEDULED;
             scheduledFuture =
-                    eventLoop.schedule(() -> invokeTask(null), this.timeoutNanos, NANOSECONDS);
+                    eventLoop.schedule(() -> invokeTask(null), timeoutNanos, NANOSECONDS);
         } else {
             state = State.INACTIVE;
         }
@@ -312,14 +331,16 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (isFinishing()) {
             return;
         }
+        assert eventLoop != null;
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> finishNow(cause));
+            return;
+        }
         if (isInitialized()) {
-            if (eventLoop.inEventLoop()) {
-                finishNow0(cause);
-            } else {
-                eventLoop.execute(() -> finishNow0(cause));
-            }
+            finishNow0(cause);
         } else {
-            addPendingTask(() -> finishNow0(cause));
+            start(noopCancellationTask);
+            finishNow0(cause);
         }
     }
 
@@ -430,9 +451,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         }
     }
 
-    @Override
-    @VisibleForTesting
-    public boolean isInitialized() {
+    private boolean isInitialized() {
         return pendingTask == noopPendingTask && eventLoop != null;
     }
 
@@ -531,9 +550,8 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     private static CancellationScheduler finished0(boolean server) {
-        final CancellationScheduler cancellationScheduler = CancellationScheduler.of(0);
-        cancellationScheduler
-                .init(ImmediateEventExecutor.INSTANCE, noopCancellationTask, 0, server);
+        final CancellationScheduler cancellationScheduler = new DefaultCancellationScheduler(0, server);
+        cancellationScheduler.initAndStart(ImmediateEventExecutor.INSTANCE, noopCancellationTask);
         cancellationScheduler.finishNow();
         return cancellationScheduler;
     }

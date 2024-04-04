@@ -4,6 +4,9 @@
       "excludeClasses": "com.google.protobuf.Android"
     },
     {
+      "excludeClasses": "com.gradle.**"
+    },
+    {
       "excludeClasses": "com.sun.beans.**"
     },
     {
@@ -41,6 +44,9 @@
     },
     {
       "excludeClasses": "org.testcontainers.**"
+    },
+    {
+      "excludeClasses": "org.testng.**"
     },
     {
       "excludeClasses": "worker.org.gradle.**"

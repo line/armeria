@@ -19,15 +19,16 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowAllDomains;
 import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowSameDomain;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority;
 
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
@@ -48,8 +49,9 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.RequestTargetForm;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -69,6 +71,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     private static final Set<SessionProtocol> httpAndHttps =
             Sets.immutableEnumSet(SessionProtocol.HTTP, SessionProtocol.HTTPS);
+
+    private static final Splitter pathSplitter = Splitter.on('/');
 
     static Function<? super HttpClient, RedirectingClient> newDecorator(
             ClientBuilderParams params, RedirectConfig redirectConfig) {
@@ -212,24 +216,43 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             final RequestHeaders requestHeaders = log.requestHeaders();
-            final URI redirectUri;
-            try {
-                redirectUri = URI.create(requestHeaders.path()).resolve(location);
-                if (redirectUri.isAbsolute()) {
-                    final SessionProtocol redirectProtocol = Scheme.parse(redirectUri.getScheme())
-                                                                   .sessionProtocol();
-                    if (!allowedProtocols.contains(redirectProtocol)) {
-                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
-                                        UnexpectedProtocolRedirectException.of(
-                                                redirectProtocol, allowedProtocols));
-                        return;
-                    }
 
-                    if (!domainFilter.test(ctx, redirectUri.getHost())) {
-                        handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
-                                        UnexpectedDomainRedirectException.of(redirectUri.getHost()));
-                        return;
-                    }
+            // Resolve the actual redirect location.
+            final RequestTarget nextReqTarget = resolveLocation(ctx, location);
+            if (nextReqTarget == null) {
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                                new IllegalArgumentException("Invalid redirect location: " + location));
+                return;
+            }
+
+            final String nextScheme = nextReqTarget.scheme();
+            final String nextAuthority = nextReqTarget.authority();
+            final String nextHost = nextReqTarget.host();
+            assert nextReqTarget.form() == RequestTargetForm.ABSOLUTE &&
+                   nextScheme != null && nextAuthority != null && nextHost != null
+                    : "resolveLocation() must return an absolute request target: " + nextReqTarget;
+
+            try {
+                // Reject if:
+                // 1) the protocol is not same with the original one; and
+                // 2) the protocol is not in the allow-list.
+                final SessionProtocol nextProtocol = SessionProtocol.of(nextScheme);
+                if (ctx.sessionProtocol() != nextProtocol &&
+                    !allowedProtocols.contains(nextProtocol)) {
+                    handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                                    UnexpectedProtocolRedirectException.of(
+                                            nextProtocol, allowedProtocols));
+                    return;
+                }
+
+                // Reject if:
+                // 1) the host is not same with the original one; and
+                // 2) the host does not pass the domain filter.
+                if (!nextHost.equals(ctx.host()) &&
+                    !domainFilter.test(ctx, nextHost)) {
+                    handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
+                                    UnexpectedDomainRedirectException.of(nextHost));
+                    return;
                 }
             } catch (Throwable t) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
@@ -237,17 +260,10 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             final HttpRequestDuplicator newReqDuplicator =
-                    newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri);
+                    newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders,
+                                     nextReqTarget.toString(), nextAuthority);
 
-            final String redirectFullUri;
-            try {
-                redirectFullUri = buildFullUri(ctx, redirectUri, newReqDuplicator.headers());
-            } catch (Throwable t) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
-                return;
-            }
-
-            if (isCyclicRedirects(redirectCtx, redirectFullUri, newReqDuplicator.headers())) {
+            if (isCyclicRedirects(redirectCtx, nextReqTarget.toString(), newReqDuplicator.headers().method())) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
                                 CyclicRedirectsException.of(redirectCtx.originalUri(),
                                                             redirectCtx.redirectUris().values()));
@@ -274,17 +290,127 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         });
     }
 
+    @Nullable
+    @VisibleForTesting
+    static RequestTarget resolveLocation(ClientRequestContext ctx, String location) {
+        final long length = location.length();
+        assert length > 0;
+
+        final String resolvedUri;
+        if (location.charAt(0) == '/') {
+            if (length > 1 && location.charAt(1) == '/') {
+                // No scheme, e.g. //foo.com/bar
+                resolvedUri = ctx.sessionProtocol().uriText() + ':' + location;
+            } else {
+                // No scheme, no authority, e.g. /bar
+                resolvedUri = ctx.sessionProtocol().uriText() + "://" + ctx.authority() + location;
+            }
+        } else {
+            final int authorityIdx = findAuthority(location);
+            if (authorityIdx < 0) {
+                // A relative path, e.g. ./bar
+                resolvedUri = resolveRelativeLocation(ctx, location);
+                if (resolvedUri == null) {
+                    return null;
+                }
+            } else {
+                // A full absolute URI, e.g. http://foo.com/bar
+                // Note that we should normalize an explicit scheme such as `h1c` into `http` or `https`,
+                // because otherwise a potentially malicious peer can force us to use inefficient protocols
+                // like HTTP/1.
+                final SessionProtocol proto = SessionProtocol.find(location.substring(0, authorityIdx - 3));
+                if (proto != null) {
+                    switch (proto) {
+                        case HTTP:
+                        case HTTPS:
+                            resolvedUri = location;
+                            break;
+                        default:
+                            if (proto.isHttp()) {
+                                resolvedUri = "http://" + location.substring(authorityIdx);
+                            } else if (proto.isHttps()) {
+                                resolvedUri = "https://" + location.substring(authorityIdx);
+                            } else {
+                                return null;
+                            }
+                    }
+                } else {
+                    // Unknown scheme.
+                    return null;
+                }
+            }
+        }
+
+        return RequestTarget.forClient(resolvedUri);
+    }
+
+    @Nullable
+    private static String resolveRelativeLocation(ClientRequestContext ctx, String location) {
+        final String originalPath = ctx.path();
+
+        // Find the base path, e.g.
+        // - /foo     -> /
+        // - /foo/    -> /foo/
+        // - /foo/bar -> /foo/
+        final int lastSlashIdx = originalPath.lastIndexOf('/');
+        assert lastSlashIdx >= 0 : "originalPath doesn't contain a slash: " + originalPath;
+
+        // Generate the full path.
+        final String fullPath = originalPath.substring(0, lastSlashIdx + 1) + location;
+        final Iterator<String> it = pathSplitter.split(fullPath).iterator();
+        // Splitter will always emit an empty string as the first component, so we skip it.
+        assert it.hasNext() && it.next().isEmpty() : fullPath;
+
+        // Resolve `.` and `..` from the full path.
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tmp.stringBuilder();
+            buf.append(ctx.sessionProtocol().uriText()).append("://").append(ctx.authority());
+            final int authorityEndIdx = buf.length();
+            while (it.hasNext()) {
+                final String component = it.next();
+                switch (component) {
+                    case ".":
+                        if (!it.hasNext()) {
+                            // Append '/' only when the '.' is the last component, e.g. /foo/. -> /foo/
+                            buf.append('/');
+                        }
+                        break;
+                    case "..":
+                        final int idx = buf.lastIndexOf("/");
+                        if (idx < authorityEndIdx) {
+                            // Too few parents
+                            return null;
+                        }
+                        if (it.hasNext()) {
+                            // Don't keep the '/' because the next component will add it anyway,
+                            // e.g. /foo/../bar -> /bar
+                            buf.delete(idx, buf.length());
+                        } else {
+                            // Keep the last '/' if the '..' is the last component,
+                            // e.g. /foo/bar/.. -> /foo/
+                            buf.delete(idx + 1, buf.length());
+                        }
+                        break;
+                    default:
+                        buf.append('/').append(component);
+                        break;
+                }
+            }
+
+            return buf.toString();
+        }
+    }
+
     private static HttpRequestDuplicator newReqDuplicator(HttpRequestDuplicator reqDuplicator,
                                                           ResponseHeaders responseHeaders,
-                                                          RequestHeaders requestHeaders, URI newUri) {
+                                                          RequestHeaders requestHeaders,
+                                                          String nextUri,
+                                                          String nextAuthority) {
+
         final RequestHeadersBuilder builder = requestHeaders.toBuilder();
-        builder.path(newUri.toString());
-        final String newAuthority = newUri.getAuthority();
-        if (newAuthority != null) {
-            // Update the old authority with the new one because the request is redirected to a different
-            // domain.
-            builder.authority(newAuthority);
-        }
+        builder.path(nextUri);
+        builder.authority(nextAuthority);
+
         final HttpMethod method = requestHeaders.method();
         if (responseHeaders.status() == HttpStatus.SEE_OTHER &&
             !(method == HttpMethod.GET || method == HttpMethod.HEAD)) {
@@ -343,36 +469,15 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         }
     }
 
-    private static String buildFullUri(ClientRequestContext ctx, URI redirectUri, RequestHeaders newHeaders)
-            throws URISyntaxException {
-        // Build the full uri so we don't consider the situation, which session protocol or port is changed,
-        // as a cyclic redirects.
-        if (redirectUri.isAbsolute()) {
-            if (redirectUri.getPort() > 0) {
-                return redirectUri.toString();
-            }
-            final int port;
-            if (redirectUri.getScheme().startsWith("https")) {
-                port = SessionProtocol.HTTPS.defaultPort();
-            } else {
-                port = SessionProtocol.HTTP.defaultPort();
-            }
-            return new URI(redirectUri.getScheme(), redirectUri.getRawUserInfo(), redirectUri.getHost(), port,
-                           redirectUri.getRawPath(), redirectUri.getRawQuery(), redirectUri.getRawFragment())
-                    .toString();
-        }
-        return buildUri(ctx, newHeaders);
-    }
-
-    private static boolean isCyclicRedirects(RedirectContext redirectCtx, String redirectUri,
-                                             RequestHeaders newHeaders) {
-        final boolean added = redirectCtx.addRedirectUri(newHeaders.method(), redirectUri);
+    private static boolean isCyclicRedirects(RedirectContext redirectCtx,
+                                             String redirectUri, HttpMethod method) {
+        final boolean added = redirectCtx.addRedirectUri(method, redirectUri);
         if (!added) {
             return true;
         }
 
         return redirectCtx.originalUri().equals(redirectUri) &&
-               redirectCtx.request().method() == newHeaders.method();
+               redirectCtx.request().method() == method;
     }
 
     private static String buildUri(ClientRequestContext ctx, RequestHeaders headers) {
@@ -391,15 +496,15 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             if (authority == null) {
                 authority = endpoint.authority();
             }
-            setAuthorityAndPort(ctx, endpoint, sb, authority);
+            appendAuthority(ctx, endpoint, sb, authority);
             sb.append(headers.path());
             originalUri = sb.toString();
         }
         return originalUri;
     }
 
-    private static void setAuthorityAndPort(ClientRequestContext ctx, Endpoint endpoint, StringBuilder sb,
-                                            String authority) {
+    private static void appendAuthority(ClientRequestContext ctx, Endpoint endpoint, StringBuilder sb,
+                                        String authority) {
         // Add port number as well so that we don't raise a CyclicRedirectsException when the port is
         // different.
 

@@ -40,9 +40,9 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
+import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -175,7 +175,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                 maybeCancel();
             }
         } catch (Throwable e) {
-            close(e);
+            close(e, true);
         }
     }
 
@@ -185,7 +185,9 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public void doClose(Status status, Metadata metadata, boolean completed) {
+    public void doClose(ServerStatusAndMetadata statusAndMetadata) {
+        final Status status = statusAndMetadata.status();
+        final Metadata metadata = statusAndMetadata.metadata();
         final boolean trailersOnly;
         if (firstResponse != null) {
             // ResponseHeaders was written successfully.
@@ -207,13 +209,14 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                     trailersOnly = false;
                 } else {
                     // A stream was closed already.
-                    closeListener(status, metadata, false, true);
+                    statusAndMetadata.shouldCancel();
+                    statusAndMetadata.setResponseContent(true);
+                    closeListener(statusAndMetadata);
                     return;
                 }
             }
         }
 
-        final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
         // Set responseContent before closing stream to use responseCause in error handling
         ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
         try {
@@ -221,7 +224,8 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                 res.close();
             }
         } finally {
-            closeListener(statusAndMetadata, completed, false);
+            statusAndMetadata.setResponseContent(false);
+            closeListener(statusAndMetadata);
         }
     }
 
@@ -254,7 +258,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     @Override
     public void onError(Throwable t) {
         if (!isCloseCalled() && !(t instanceof AbortedStreamException)) {
-            close(t);
+            close(t, true);
         }
     }
 
@@ -269,6 +273,6 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        closeListener(status, metadata, false, true);
+        closeListener(new ServerStatusAndMetadata(status, metadata, true, true));
     }
 }

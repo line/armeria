@@ -36,6 +36,9 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpRequest;
+import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpResponse;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import reactor.core.publisher.Mono;
 
@@ -105,7 +108,7 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
         checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: %s", uri);
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;
 
-        return new ArmeriaClientHttpRequest(webClient, method, pathAndQuery, uri, factoryWrapper);
+        return new ArmeriaClientHttpRequest(webClient, method, pathAndQuery, uri, factoryWrapper, null);
     }
 
     private CompletableFuture<ArmeriaClientHttpResponse> createResponse(HttpResponse response) {

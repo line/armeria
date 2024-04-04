@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
@@ -75,6 +74,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -185,9 +185,10 @@ public final class DefaultClientRequestContext
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(eventLoop, meterRegistry, sessionProtocol,
+        this(requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
              id, method, reqTarget, options, req, rpcReq, requestOptions, serviceRequestContext(),
-             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
+             requireNonNull(responseCancellationScheduler, "responseCancellationScheduler"),
+             requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -223,9 +224,12 @@ public final class DefaultClientRequestContext
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING),
+              guessExchangeType(requestOptions, req),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root), options.contextHook());
+        assert (eventLoop == null && responseCancellationScheduler == null) ||
+               (eventLoop != null && responseCancellationScheduler != null)
+                : "'eventLoop' and 'responseCancellationScheduler' should be both null or non-null";
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -240,7 +244,8 @@ public final class DefaultClientRequestContext
                 responseTimeoutMillis = options().responseTimeoutMillis();
             }
             this.responseCancellationScheduler =
-                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                    CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+            // the cancellationScheduler is not initialized here since the eventLoop is guaranteed to be null
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
@@ -274,6 +279,17 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+    }
+
+    private static ExchangeType guessExchangeType(RequestOptions requestOptions, @Nullable HttpRequest req) {
+        final ExchangeType exchangeType = requestOptions.exchangeType();
+        if (exchangeType != null) {
+            return exchangeType;
+        }
+        if (req instanceof FixedStreamMessage) {
+            return ExchangeType.RESPONSE_STREAMING;
+        }
+        return ExchangeType.BIDI_STREAMING;
     }
 
     private static long requestAutoAbortDelayMillis(ClientOptions options, RequestOptions requestOptions) {
@@ -427,6 +443,7 @@ public final class DefaultClientRequestContext
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
+            responseCancellationScheduler.init(eventLoop());
         }
     }
 
@@ -458,7 +475,7 @@ public final class DefaultClientRequestContext
             // The connection will be established with the IP address but `host` set to the `Endpoint`
             // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
             // proxy based on an authority.
-            final String host = HostAndPort.fromString(removeUserInfo(authority)).getHost();
+            final String host = authorityToHost(authority);
             if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
                 endpoint = endpoint.withHost(host);
             }
@@ -479,6 +496,10 @@ public final class DefaultClientRequestContext
             }
         }
         internalRequestHeaders = headersBuilder.build();
+    }
+
+    private static String authorityToHost(String authority) {
+        return HostAndPort.fromString(removeUserInfo(authority)).getHost();
     }
 
     private static String removeUserInfo(String authority) {
@@ -511,14 +532,13 @@ public final class DefaultClientRequestContext
         // So we don't check the nullness of rpcRequest unlike request.
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
-        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         root = ctx.root();
 
         log = RequestLog.builder(this);
         log.startRequest();
         responseCancellationScheduler =
-                CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+                CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
 
@@ -531,6 +551,14 @@ public final class DefaultClientRequestContext
 
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
+        // We don't need to acquire an EventLoop for the initial attempt because it's already acquired by
+        // the root context.
+        if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
+            eventLoop = ctx.eventLoop().withoutContext();
+            responseCancellationScheduler.init(eventLoop());
+        } else {
+            acquireEventLoop(endpoint);
+        }
     }
 
     @Nullable
@@ -738,10 +766,38 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    public String host() {
+        final String authority = authority();
+        if (authority == null) {
+            return null;
+        }
+
+        return authorityToHost(authority);
+    }
+
+    @Override
     public URI uri() {
         final String scheme = getScheme(sessionProtocol());
-        try {
-            return new URI(scheme, authority(), path(), query(), fragment());
+        final String authority = authority();
+        final String path = path();
+        final String query = query();
+        final String fragment = fragment();
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tmp.stringBuilder();
+            buf.append(scheme);
+            if (authority != null) {
+                buf.append("://").append(authority);
+            } else {
+                buf.append(':');
+            }
+            buf.append(path);
+            if (query != null) {
+                buf.append('?').append(query);
+            }
+            if (fragment != null) {
+                buf.append('#').append(fragment);
+            }
+            return new URI(buf.toString());
         } catch (URISyntaxException e) {
             throw new IllegalStateException("not a valid URI", e);
         }

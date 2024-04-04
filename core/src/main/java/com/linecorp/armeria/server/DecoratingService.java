@@ -45,7 +45,11 @@ public abstract class DecoratingService<T_I extends Request, T_O extends Respons
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
-        ServiceCallbackInvoker.invokeServiceAdded(cfg, unwrap());
+        final Service<T_I, T_O> unwrapped = unwrap();
+        if (unwrapped == this) {
+            return;
+        }
+        ServiceCallbackInvoker.invokeServiceAdded(cfg, unwrapped);
     }
 
     @Override
