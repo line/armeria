@@ -137,7 +137,7 @@ class VirtualHostBuilderTest {
     @Test
     void withVirtualHost() {
         final ServerBuilder sb = Server.builder();
-        final Server server = sb.withVirtualHost(builder -> {
+        final Server server = sb.withVirtualHost("*.foo", builder -> {
             builder.defaultHostname("foo")
                    .service("/test", (ctx, req) -> HttpResponse.of(OK));
         }).build();

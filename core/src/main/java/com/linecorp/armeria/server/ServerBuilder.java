@@ -1550,7 +1550,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
 
     /**
      * Configures a {@link VirtualHost} with the {@code customizer}.
+     *
+     * @deprecated Use {@link #withVirtualHost(String, Consumer)} instead.
      */
+    @Deprecated
     public ServerBuilder withVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false);
         customizer.accept(virtualHostBuilder);
