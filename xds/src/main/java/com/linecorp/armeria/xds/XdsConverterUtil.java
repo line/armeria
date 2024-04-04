@@ -32,8 +32,9 @@ final class XdsConverterUtil {
         if (configSource == null || configSource.equals(ConfigSource.getDefaultInstance())) {
             return;
         }
-        checkArgument(configSource.hasAds() || configSource.hasApiConfigSource(),
-                      "Only configSource with Ads or ApiConfigSource is supported for %s", configSource);
+        checkArgument(configSource.hasAds() || configSource.hasApiConfigSource() || configSource.hasSelf(),
+                      "Only one of (Ads, ApiConfigSource, or Self) type ConfigSource is supported for %s",
+                      configSource);
         if (configSource.hasApiConfigSource()) {
             final ApiConfigSource apiConfigSource = configSource.getApiConfigSource();
             final ApiType apiType = apiConfigSource.getApiType();

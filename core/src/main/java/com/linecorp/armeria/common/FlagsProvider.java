@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -198,9 +199,24 @@ public interface FlagsProvider {
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
+     *
+     * @deprecated Use {@link #tlsEngineType()} and {@code -Dcom.linecorp.armeria.tlsEngineType=openssl}.
      */
     @Nullable
+    @Deprecated
     default Boolean useOpenSsl() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * <p>The default value of this flag is "openssl", which means the {@link TlsEngineType#OPENSSL} will
+     * be used. Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
+     * the default.</p>
+     */
+    @Nullable
+    default TlsEngineType tlsEngineType() {
         return null;
     }
 
@@ -211,8 +227,8 @@ public interface FlagsProvider {
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
      * option to enable it.
      *
-     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
-     * specified the JVM option.
+     * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
+     * {@code false} no matter what the specified JVM option is.
      */
     @Nullable
     default Boolean dumpOpenSslInfo() {
