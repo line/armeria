@@ -69,7 +69,7 @@ class HttpServerCorsTest {
         @Get("/dup_test")
         @StatusCode(200)
         @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2",
-                allowedRequestHeaders = "content-type")
+                       allowedRequestHeaders = "content-type")
         public void dupTest() {}
     }
 
@@ -210,7 +210,7 @@ class HttpServerCorsTest {
                         allowedRequestMethods = HttpMethod.GET, maxAge = 3600,
                         preflightRequestHeaders = {
                                 @AdditionalHeader(name = "x-preflight-cors",
-                                        value = { "Hello CORS", "Hello CORS2" })
+                                                  value = { "Hello CORS", "Hello CORS2" })
                         })
                 public HttpResponse anyoneGet() {
                     return HttpResponse.of(HttpStatus.OK);
@@ -231,9 +231,9 @@ class HttpServerCorsTest {
 
                 @Get("/multi/get")
                 @CorsDecorator(origins = "http://example.com", exposedHeaders = "expose_header_1",
-                        allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
+                               allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
                 @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2",
-                        allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
+                               allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
                 public HttpResponse multiGet() {
                     return HttpResponse.of(HttpStatus.OK);
                 }

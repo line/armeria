@@ -78,7 +78,7 @@ public final class CorsServiceBuilder {
      * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing origins matched by
      * {@code originPredicate}.
      */
-    CorsServiceBuilder(Predicate<String> originPredicate) {
+    CorsServiceBuilder(Predicate<? super String> originPredicate) {
         anyOriginSupported = false;
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, originPredicate);
     }

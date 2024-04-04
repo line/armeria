@@ -101,7 +101,7 @@ public final class CorsPolicy {
     }
 
     private final Set<String> origins;
-    private final Predicate<? super String> originPredicate;
+    private final Predicate<String> originPredicate;
     private final List<Route> routes;
     private final boolean credentialsAllowed;
     private final boolean nullOriginAllowed;
@@ -122,7 +122,7 @@ public final class CorsPolicy {
                EnumSet<HttpMethod> allowedRequestMethods, boolean preflightResponseHeadersDisabled,
                Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         this.origins = ImmutableSet.copyOf(origins);
-        this.originPredicate = originPredicate;
+        this.originPredicate = (Predicate<String>) originPredicate;
         this.routes = ImmutableList.copyOf(routes);
         this.credentialsAllowed = credentialsAllowed;
         this.maxAge = maxAge;
@@ -172,7 +172,7 @@ public final class CorsPolicy {
     /**
      * Returns predicate to match origins.
      */
-    public Predicate<? super String> originPredicate() {
+    public Predicate<String> originPredicate() {
         return originPredicate;
     }
 

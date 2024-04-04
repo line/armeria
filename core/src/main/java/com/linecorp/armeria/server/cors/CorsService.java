@@ -91,7 +91,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
      * Returns a new {@link CorsServiceBuilder} with origins matching the {@code originPredicate}.
      */
     @UnstableApi
-    public static CorsServiceBuilder builder(Predicate<String> originPredicate) {
+    public static CorsServiceBuilder builder(Predicate<? super String> originPredicate) {
         requireNonNull(originPredicate, "originPredicate");
         return new CorsServiceBuilder(originPredicate);
     }

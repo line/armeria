@@ -151,19 +151,15 @@ class WebSocketServiceCorsTest {
                     try (WebSocketFrame frame = webSocketFrame) {
                         switch (frame.type()) {
                             case TEXT:
-                                System.out.println("text");
                                 webSocketWriter.write(frame.text());
                                 break;
                             case BINARY:
-                                System.out.println("binary");
                                 break;
                             case CLOSE:
-                                System.out.println("close");
                                 final CloseWebSocketFrame closeFrame = (CloseWebSocketFrame) frame;
                                 webSocketWriter.close(closeFrame.status(), closeFrame.reasonPhrase());
                                 break;
                             default:
-                                System.out.println("default");
                         }
                     } catch (Throwable t) {
                         webSocketWriter.close(t);

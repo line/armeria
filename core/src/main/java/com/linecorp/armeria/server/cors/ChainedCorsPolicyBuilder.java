@@ -51,7 +51,7 @@ public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder {
         serviceBuilder = builder;
     }
 
-    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, Predicate<String> originPredicate) {
+    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, Predicate<? super String> originPredicate) {
         super(originPredicate);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
