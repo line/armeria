@@ -89,7 +89,8 @@ final class SamlService implements HttpServiceWithRoutes {
                                                                      sp.idpConfigs(),
                                                                      sp.defaultIdpConfig(),
                                                                      sp.requestIdManager(),
-                                                                     sp.ssoHandler())));
+                                                                     sp.ssoHandler(),
+                                                                     sp.isSignatureRequired())));
         sp.sloEndpoints().forEach(
                 cfg -> builder.put(cfg.uri().getPath(),
                                    new SamlSingleLogoutFunction(cfg,
@@ -99,7 +100,8 @@ final class SamlService implements HttpServiceWithRoutes {
                                                                 sp.idpConfigs(),
                                                                 sp.defaultIdpConfig(),
                                                                 sp.requestIdManager(),
-                                                                sp.sloHandler())));
+                                                                sp.sloHandler(),
+                                                                sp.isSignatureRequired())));
         final Route route = sp.metadataRoute();
         if (route.pathType() == RoutePathType.EXACT) {
             builder.put(route.paths().get(0),

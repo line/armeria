@@ -19,33 +19,37 @@ package com.linecorp.armeria.xds;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 class SubscriberStorageTest {
 
+    @RegisterExtension
+    static EventLoopExtension eventLoop = new EventLoopExtension();
+
     @Test
-    void registerAndUnregister() {
-        try (SubscriberStorage storage = new SubscriberStorage()) {
-            storage.register(XdsType.CLUSTER, "cluster1");
-            assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
-            storage.unregister(XdsType.CLUSTER, "cluster1");
-            assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
-            assertThat(storage.allSubscribers()).isEmpty();
-        }
+    void registerAndUnregister() throws Exception {
+        final DummyResourceWatcher watcher = new DummyResourceWatcher();
+        final SubscriberStorage storage = new SubscriberStorage(eventLoop.get(), 15_000);
+        storage.register(XdsType.CLUSTER, "cluster1", watcher);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
+        storage.unregister(XdsType.CLUSTER, "cluster1", watcher);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
+        assertThat(storage.allSubscribers()).isEmpty();
     }
 
     @Test
-    void referenceCount() {
-        try (SubscriberStorage storage = new SubscriberStorage()) {
-            storage.register(XdsType.CLUSTER, "cluster1");
-            assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
-            storage.register(XdsType.CLUSTER, "cluster1");
-            assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
+    void identityBasedUnregister() {
+        final DummyResourceWatcher watcher1 = new DummyResourceWatcher();
+        final SubscriberStorage storage = new SubscriberStorage(eventLoop.get(), 15_000);
+        storage.register(XdsType.CLUSTER, "cluster1", watcher1);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
+        storage.register(XdsType.CLUSTER, "cluster1", watcher1);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
 
-            storage.unregister(XdsType.CLUSTER, "cluster1");
-            assertThat(storage.subscribers(XdsType.CLUSTER)).hasSize(1);
-            storage.unregister(XdsType.CLUSTER, "cluster1");
-            assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
-            assertThat(storage.allSubscribers()).isEmpty();
-        }
+        storage.unregister(XdsType.CLUSTER, "cluster1", watcher1);
+        assertThat(storage.subscribers(XdsType.CLUSTER)).isEmpty();
+        assertThat(storage.allSubscribers()).isEmpty();
     }
 }

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.eureka;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.server.eureka.InstanceInfoBuilder.disabledPort;
 import static java.util.Objects.requireNonNull;
 
@@ -131,6 +132,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
     }
 
     private final EurekaWebClient client;
+    private final InstanceInfo initialInstanceInfo;
     private InstanceInfo instanceInfo;
     @Nullable
     private volatile ScheduledFuture<?> heartBeatFuture;
@@ -144,12 +146,13 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
      */
     EurekaUpdatingListener(EurekaWebClient client, InstanceInfo instanceInfo) {
         this.client = client;
-        this.instanceInfo = instanceInfo;
+        initialInstanceInfo = instanceInfo;
     }
 
     @Override
     public void serverStarted(Server server) throws Exception {
-        this.instanceInfo = fillAndCreateNewInfo(instanceInfo, server);
+        instanceInfo = fillAndCreateNewInfo(initialInstanceInfo, server);
+        appName = instanceInfo.getAppName();
         register(instanceInfo);
     }
 
@@ -187,10 +190,10 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
                                              TimeUnit.SECONDS);
     }
 
-    private InstanceInfo fillAndCreateNewInfo(InstanceInfo oldInfo, Server server) {
+    private static InstanceInfo fillAndCreateNewInfo(InstanceInfo oldInfo, Server server) {
         final String defaultHostname = server.defaultHostname();
         final String hostName = oldInfo.getHostName() != null ? oldInfo.getHostName() : defaultHostname;
-        appName = oldInfo.getAppName() != null ? oldInfo.getAppName() : hostName;
+        final String appName = oldInfo.getAppName() != null ? oldInfo.getAppName() : hostName;
 
         final Inet4Address defaultInet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
         final String defaultIpAddr = defaultInet4Address != null ? defaultInet4Address.getHostAddress()
@@ -223,15 +226,22 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         } else {
             hostnameOrIpAddr = hostName;
         }
-        final String healthCheckUrl = healthCheckUrl(hostnameOrIpAddr, oldInfo.getHealthCheckUrl(), portWrapper,
+
+        final String homePageUrl = pageUrl(hostnameOrIpAddr, oldInfo.getHomePageUrlPath(),
+                                           oldInfo.getHomePageUrl(), portWrapper);
+        final String statusPageUrl = pageUrl(hostnameOrIpAddr, oldInfo.getStatusPageUrlPath(),
+                                             oldInfo.getStatusPageUrl(), portWrapper);
+        final String healthCheckUrl = healthCheckUrl(hostnameOrIpAddr, oldInfo.getHealthCheckUrlPath(),
+                                                     oldInfo.getHealthCheckUrl(), portWrapper,
                                                      healthCheckService, SessionProtocol.HTTP);
         final String secureHealthCheckUrl =
-                healthCheckUrl(hostnameOrIpAddr, oldInfo.getSecureHealthCheckUrl(), securePortWrapper,
+                healthCheckUrl(hostnameOrIpAddr, oldInfo.getHealthCheckUrlPath(),
+                               oldInfo.getSecureHealthCheckUrl(), securePortWrapper,
                                healthCheckService, SessionProtocol.HTTPS);
 
         return new InstanceInfo(instanceId, appName, oldInfo.getAppGroupName(), hostName, ipAddr,
                                 vipAddress, secureVipAddress, portWrapper, securePortWrapper, InstanceStatus.UP,
-                                oldInfo.getHomePageUrl(), oldInfo.getStatusPageUrl(), healthCheckUrl,
+                                homePageUrl, statusPageUrl, healthCheckUrl,
                                 secureHealthCheckUrl, oldInfo.getDataCenterInfo(),
                                 oldInfo.getLeaseInfo(), oldInfo.getMetadata());
     }
@@ -262,28 +272,53 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         if (!portWrapper.isEnabled()) {
             return null;
         }
-        return vipAddress != null ? vipAddress : hostName + ':' + portWrapper.getPort();
+        return vipAddress != null ? vipAddress : hostName;
     }
 
     @Nullable
-    private static String healthCheckUrl(String hostnameOrIpAddr, @Nullable String oldHealthCheckUrl,
+    private static String pageUrl(String hostnameOrIpAddr, @Nullable String pageUrlPath,
+                                  @Nullable String pageUrl, PortWrapper portWrapper) {
+        if (!isNullOrEmpty(pageUrl)) {
+            return pageUrl;
+        }
+        if (pageUrlPath == null || !portWrapper.isEnabled()) { // allow an empty String.
+            return null;
+        }
+        return concatPath(baseUrl(hostnameOrIpAddr, portWrapper, SessionProtocol.HTTP), pageUrlPath);
+    }
+
+    private static String baseUrl(String hostnameOrIpAddr, PortWrapper portWrapper,
+                                  SessionProtocol sessionProtocol) {
+        return sessionProtocol.uriText() + "://" +
+               hostnameOrIpAddr(hostnameOrIpAddr) + ':' + portWrapper.getPort();
+    }
+
+    private static String concatPath(String baseURL, String path) {
+        return !path.isEmpty() && path.charAt(0) == '/' ? baseURL + path : baseURL + '/' + path;
+    }
+
+    @Nullable
+    private static String healthCheckUrl(String hostnameOrIpAddr, @Nullable String oldHealthCheckUrlPath,
+                                         @Nullable String oldHealthCheckUrl,
                                          PortWrapper portWrapper,
                                          Optional<ServiceConfig> healthCheckService,
                                          SessionProtocol sessionProtocol) {
-        if (oldHealthCheckUrl != null) {
+        if (!isNullOrEmpty(oldHealthCheckUrl)) {
             return oldHealthCheckUrl;
         }
         if (!portWrapper.isEnabled() || !healthCheckService.isPresent()) {
             return null;
+        }
+        final String baseURL = baseUrl(hostnameOrIpAddr, portWrapper, sessionProtocol);
+        if (oldHealthCheckUrlPath != null) { // allow an empty String
+            return concatPath(baseURL, oldHealthCheckUrlPath);
         }
         final ServiceConfig healthCheckServiceConfig = healthCheckService.get();
         final Route route = healthCheckServiceConfig.route();
         if (route.pathType() != RoutePathType.EXACT && route.pathType() != RoutePathType.PREFIX) {
             return null;
         }
-
-        return sessionProtocol.uriText() + "://" + hostnameOrIpAddr(hostnameOrIpAddr) +
-               ':' + portWrapper.getPort() + route.paths().get(0);
+        return baseURL + route.paths().get(0);
     }
 
     private static String hostnameOrIpAddr(String hostnameOrIpAddr) {

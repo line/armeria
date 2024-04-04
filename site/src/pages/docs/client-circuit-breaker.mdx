@@ -251,7 +251,7 @@ If you use <type://CircuitBreakerBuilder>, you can configure the parameters whic
 clients:
 
 1. Create a <type://CircuitBreaker>.
-2. Guard your client calls with `CircuitBreaker.canRequest()`.
+2. Guard your client calls with `CircuitBreaker.tryRequest()`.
 3. Update the state of <type://CircuitBreaker> by calling <type://CircuitBreaker#onSuccess()> or
    <type://CircuitBreaker#onFailure()> depending on the outcome of the client call.
 
@@ -262,7 +262,7 @@ private final CircuitBreaker cb = CircuitBreaker.of("some-client");
 private final SomeClient client = ...;
 
 public void sendRequestWithCircuitBreaker() {
-    if (!cb.canRequest()) {
+    if (!cb.tryRequest()) {
         throw new RuntimeException();
     }
 

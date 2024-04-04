@@ -82,6 +82,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
@@ -163,6 +164,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private Long requestAutoAbortDelayMillis;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private EventLoopGroup serviceWorkerGroup;
     @Nullable
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
     @Nullable
@@ -734,7 +737,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                     routeDecoratingServices.stream()
                                            .map(service -> service.withRoutePrefix(baseContextPath))
                                            .collect(toImmutableList());
-            return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed));
+            return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed),
+                                                       routeDecoratingServices);
         } else {
             return null;
         }
@@ -1195,6 +1199,36 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
+     * Sets the {@link EventLoopGroup} dedicated to the execution of services' methods.
+     * If not set, the work group of the belonging channel is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link EventLoopGroup} when the
+     *                       {@link Server} stops
+     */
+    @UnstableApi
+    public VirtualHostBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                 boolean shutdownOnStop) {
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(serviceWorkerGroup));
+        }
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads dedicated to
+     * the execution of services' methods.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    @UnstableApi
+    public VirtualHostBuilder serviceWorkerGroup(int numThreads) {
+        final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
+        return serviceWorkerGroup(workerGroup, true);
+    }
+
+    /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
@@ -1326,6 +1360,15 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
         final Supplier<AutoCloseable> contextHook = mergeHooks(template.contextHook, this.contextHook);
 
+        final EventLoopGroup serviceWorkerGroup;
+        if (this.serviceWorkerGroup != null) {
+            serviceWorkerGroup = this.serviceWorkerGroup;
+        } else if (template.serviceWorkerGroup != null) {
+            serviceWorkerGroup = template.serviceWorkerGroup;
+        } else {
+            serviceWorkerGroup = serverBuilder.workerGroup;
+        }
+
         assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
         assert accessLoggerMapper != null;
@@ -1352,7 +1395,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
                                             successFunction, requestAutoAbortDelayMillis,
-                                            multipartUploadsLocation, defaultHeaders,
+                                            multipartUploadsLocation, serviceWorkerGroup, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
                                             unhandledExceptionsReporter, baseContextPath, contextHook);
                 }).collect(toImmutableList());
@@ -1361,7 +1404,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, "/", FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               requestAutoAbortDelayMillis, multipartUploadsLocation,
+                               requestAutoAbortDelayMillis, multipartUploadsLocation, serviceWorkerGroup,
                                defaultHeaders, requestIdGenerator,
                                defaultErrorHandler, unhandledExceptionsReporter, "/", contextHook);
 
@@ -1375,7 +1418,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
                                 requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
-                                builder.build(), requestIdGenerator);
+                                serviceWorkerGroup, builder.build(), requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template, baseContextPath);

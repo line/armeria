@@ -69,6 +69,7 @@ import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
