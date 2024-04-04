@@ -37,9 +37,9 @@ public @interface Default {
      * When {@link Default} annotation exists but {@link Default#value()} is not specified, {@code null}
      * value would be set if the parameter is not present in the request.
      *
-     * <p>When {@link Default} annotation exists and {@link Default#value()} is not specified, but parameter is
-     * present in the request without the value e.g., {@code /foo?bar=}, then actions below will be processed
-     * depending on the type of the parameter.
+     * <p>When {@link Default} annotation exists and {@link Default#value()} is not specified, the parameter
+     * may be present in the request without a value (e.g. {@code /foo?bar=}). In this case, the behavior
+     * depends on the java type with which the parameter will be bound to.
      * <table>
      * <caption>Actions</caption>
      * <tr><th>Type</th><th>Action</th></tr>
