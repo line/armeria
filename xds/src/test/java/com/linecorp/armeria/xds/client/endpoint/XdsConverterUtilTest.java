@@ -23,10 +23,16 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsEndpointUtil.convertEn
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Struct;
+import com.google.protobuf.Value;
 
 import com.linecorp.armeria.client.Endpoint;
 
@@ -39,13 +45,42 @@ class XdsConverterUtilTest {
 
     @Test
     void convertEndpointsWithFilterMetadata() {
-        final ClusterLoadAssignment loadAssignment = sampleClusterLoadAssignment();
+        final Metadata metadata1 = metadata(ImmutableMap.of("foo", "foo1"));
+        final LbEndpoint lbEndpoint1 = endpoint("127.0.0.1", 8080, metadata1);
+        final Endpoint endpoint1 = Endpoint.of("127.0.0.1", 8080)
+                                           .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint1);
+        final Metadata metadata2 = metadata(ImmutableMap.of("foo", "foo1", "bar", "bar2"));
+        final LbEndpoint lbEndpoint2 = endpoint("127.0.0.1", 8081, metadata2);
+        final Endpoint endpoint2 = Endpoint.of("127.0.0.1", 8081)
+                                           .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint2);
+        final Metadata metadata3 = metadata(ImmutableMap.of("foo", "foo1", "bar", "bar1", "baz", "baz1"));
+        final LbEndpoint lbEndpoint3 = endpoint("127.0.0.1", 8082, metadata3);
+        final Endpoint endpoint3 = Endpoint.of("127.0.0.1", 8082)
+                                           .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint3);
         final List<Endpoint> endpoints =
-                convertEndpoints(loadAssignment, Struct.newBuilder()
-                                                       .putFields("foo", stringValue("foo1"))
-                                                       .putFields("bar", stringValue("bar1"))
-                                                       .build());
+                convertEndpoints(ImmutableList.of(endpoint1, endpoint2, endpoint3), Struct.newBuilder()
+                                                      .putFields("foo", stringValue("foo1"))
+                                                      .putFields("bar", stringValue("bar1"))
+                                                      .build());
         assertThat(endpoints).containsExactly(Endpoint.of("127.0.0.1", 8082));
+    }
+
+    static Metadata metadata(Struct struct) {
+        return Metadata.newBuilder().putFilterMetadata(SUBSET_LOAD_BALANCING_FILTER_NAME, struct)
+                       .build();
+    }
+
+    static Metadata metadata(Map<String, String> map) {
+        return metadata(struct(map));
+    }
+
+    static Struct struct(Map<String, String> map) {
+        final Map<String, Value> structMap =
+                map.entrySet().stream()
+                   .collect(Collectors.toMap(Entry::getKey,
+                                             e -> Value.newBuilder()
+                                                       .setStringValue(e.getValue()).build()));
+        return Struct.newBuilder().putAllFields(structMap).build();
     }
 
     static ClusterLoadAssignment sampleClusterLoadAssignment() {

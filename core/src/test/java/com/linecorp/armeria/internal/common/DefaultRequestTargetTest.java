@@ -465,6 +465,11 @@ class DefaultRequestTargetTest {
             // IP addresses
             "a://127.0.0.1/, a, 127.0.0.1, /,,",
             "a://[::1]:80/,  a, [::1]:80, /,,",
+            // default port numbers should be omitted
+            "http://a:80/,   http, a, /,,",
+            "http://a:443/,  http, a:443, /,,",
+            "https://a:80/,  https, a:80, /,,",
+            "https://a:443/, https, a, /,,",
     })
     void clientShouldAcceptAbsoluteUri(String uri,
                                        String expectedScheme, String expectedAuthority, String expectedPath,

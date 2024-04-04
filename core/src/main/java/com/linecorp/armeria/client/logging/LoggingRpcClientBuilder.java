@@ -64,8 +64,8 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     // Override the return type of the chaining methods in the superclass.
 
     @Override
-    protected LoggingRpcClientBuilder defaultLogger(Logger logger) {
-        return (LoggingRpcClientBuilder) super.defaultLogger(logger);
+    protected LoggingRpcClientBuilder defaultLogger(Logger defaultLogger) {
+        return (LoggingRpcClientBuilder) super.defaultLogger(defaultLogger);
     }
 
     @Override
@@ -98,23 +98,32 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.failureSamplingRate(samplingRate);
     }
 
+    @Override
+    public LoggingRpcClientBuilder logWriter(LogWriter logWriter) {
+        return (LoggingRpcClientBuilder) super.logWriter(logWriter);
+    }
+
     // Override the return type of the chaining methods in the super-superclass.
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder logger(Logger logger) {
         return (LoggingRpcClientBuilder) super.logger(logger);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder logger(String loggerName) {
         return (LoggingRpcClientBuilder) super.logger(loggerName);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder requestLogLevel(LogLevel requestLogLevel) {
         return (LoggingRpcClientBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
         return (LoggingRpcClientBuilder) super.requestLogLevel(clazz, requestLogLevel);
@@ -127,31 +136,37 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         return (LoggingRpcClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
         return (LoggingRpcClientBuilder) super.responseLogLevel(status, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return (LoggingRpcClientBuilder) super.responseLogLevel(statusClass, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
         return (LoggingRpcClientBuilder) super.responseLogLevel(clazz, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         return (LoggingRpcClientBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder failureResponseLogLevel(LogLevel failureResponseLogLevel) {
         return (LoggingRpcClientBuilder) super.failureResponseLogLevel(failureResponseLogLevel);
@@ -164,6 +179,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
@@ -240,13 +256,9 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
         return (LoggingRpcClientBuilder) super.responseCauseFilter(responseCauseFilter);
-    }
-
-    @Override
-    public LoggingRpcClientBuilder logWriter(LogWriter logWriter) {
-        return (LoggingRpcClientBuilder) super.logWriter(logWriter);
     }
 }
