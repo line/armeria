@@ -1,0 +1,7 @@
+dependencies {
+    api project(':grpc')
+    api libs.controlplane.api
+
+    testImplementation libs.controlplane.server
+    testImplementation libs.controlplane.cache
+}

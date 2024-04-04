@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.stream.AggregatingStreamMessage;
 
 import io.netty.channel.EventLoop;
@@ -55,7 +56,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     @Nullable
     private HttpResponse response;
-    private boolean isResponseAborted;
+    @Nullable
+    private Throwable abortResponseCause;
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
@@ -82,6 +84,11 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         if (trailers != null) {
             ctx.logBuilder().requestTrailers(trailers);
         }
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return ctx != null;
     }
 
     @SuppressWarnings("unchecked")
@@ -160,10 +167,10 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public void setResponse(HttpResponse response) {
         // TODO(ikhoon): Dedup
-        if (isResponseAborted) {
+        if (abortResponseCause != null) {
             // This means that we already tried to close the request, so abort the response immediately.
             if (!response.isComplete()) {
-                response.abort();
+                response.abort(abortResponseCause);
             }
         } else {
             this.response = response;
@@ -172,7 +179,10 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     @Override
     public void abortResponse(Throwable cause, boolean cancel) {
-        isResponseAborted = true;
+        if (abortResponseCause != null) {
+            return;
+        }
+        abortResponseCause = cause;
 
         // Make sure to invoke the ServiceRequestContext.whenRequestCancelling() and whenRequestCancelled()
         // by cancelling a request
@@ -183,6 +193,11 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         if (response != null && !response.isComplete()) {
             response.abort(cause);
         }
+    }
+
+    @Override
+    public boolean isResponseAborted() {
+        return abortResponseCause != null;
     }
 
     @Override
@@ -208,5 +223,19 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public RequestHeaders headers() {
         return headers;
+    }
+
+    @Override
+    public StreamingDecodedHttpRequest toAbortedStreaming(
+            InboundTrafficController inboundTrafficController,
+            Throwable cause, boolean shouldResetOnlyIfRemoteIsOpen) {
+        final StreamingDecodedHttpRequest streamingDecodedHttpRequest = new StreamingDecodedHttpRequest(
+                eventLoop, id, streamId, headers, keepAlive,
+                inboundTrafficController, maxRequestLength, routingCtx,
+                exchangeType, requestStartTimeNanos, requestStartTimeMicros,
+                false, shouldResetOnlyIfRemoteIsOpen);
+        abort(cause);
+        streamingDecodedHttpRequest.abortResponse(cause, true);
+        return streamingDecodedHttpRequest;
     }
 }

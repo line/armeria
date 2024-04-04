@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -31,6 +32,8 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
@@ -252,6 +255,22 @@ public final class AnnotatedServiceBindingBuilder extends AbstractAnnotatedServi
     @Override
     public AnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         return (AnnotatedServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (AnnotatedServiceBindingBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                             boolean shutdownOnStop) {
+        return (AnnotatedServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (AnnotatedServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     /**

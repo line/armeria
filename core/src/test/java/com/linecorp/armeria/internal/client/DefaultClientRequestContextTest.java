@@ -300,7 +300,7 @@ class DefaultClientRequestContextTest {
         return new DefaultClientRequestContext(
                 mock(EventLoop.class), NoopMeterRegistry.get(), SessionProtocol.H2C,
                 RequestId.random(), HttpMethod.POST, reqTarget, clientOptions, httpRequest,
-                null, RequestOptions.of(), new CancellationScheduler(0), System.nanoTime(),
+                null, RequestOptions.of(), CancellationScheduler.ofClient(0), System.nanoTime(),
                 SystemInfo.currentTimeMicros());
     }
 

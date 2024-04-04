@@ -18,7 +18,6 @@ package com.linecorp.armeria.internal.common.util;
 
 import java.util.Map;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 
 public final class StringUtil {
@@ -29,8 +28,10 @@ public final class StringUtil {
     private static final Map<String, Boolean> stringToBoolean =
             ImmutableMap.<String, Boolean>builder()
                         .put("true", true)
+                        .put("TRUE", true)
                         .put("1", true)
                         .put("false", false)
+                        .put("FALSE", false)
                         .put("0", false)
                         .build();
 
@@ -56,7 +57,7 @@ public final class StringUtil {
     }
 
     public static Boolean toBoolean(String s, boolean errorOnFailure) {
-        final Boolean result = stringToBoolean.get(Ascii.toLowerCase(s));
+        final Boolean result = stringToBoolean.get(s);
         if (result != null) {
             return result;
         }

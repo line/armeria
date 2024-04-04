@@ -736,7 +736,7 @@ public class ThriftOverHttpClientTest {
                                                        .build(Handlers.HELLO.iface());
         assertThatThrownBy(() -> client.hello(""))
                 .isInstanceOf(TTransportException.class)
-                .getCause()
+                .cause()
                 .isInstanceOfSatisfying(InvalidResponseHeadersException.class, cause -> {
                     assertThat(cause.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
                 })

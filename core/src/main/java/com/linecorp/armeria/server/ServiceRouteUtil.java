@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isCorsPreflig
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.netty.channel.Channel;
@@ -28,6 +29,7 @@ import io.netty.channel.Channel;
 final class ServiceRouteUtil {
 
     static RoutingContext newRoutingContext(ServerConfig serverConfig, Channel channel,
+                                            SessionProtocol sessionProtocol,
                                             RequestHeaders headers, RequestTarget reqTarget) {
 
         final String hostname = hostname(headers);
@@ -48,7 +50,7 @@ final class ServiceRouteUtil {
         }
 
         return DefaultRoutingContext.of(serverConfig.findVirtualHost(hostname, port),
-                                        hostname, reqTarget, headers, routingStatus);
+                                        hostname, reqTarget, headers, routingStatus, sessionProtocol);
     }
 
     private static String hostname(RequestHeaders headers) {

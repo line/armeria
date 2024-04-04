@@ -431,6 +431,12 @@ public class ArmeriaSettings {
     private List<Port> ports = new ArrayList<>();
 
     /**
+     * The context path to serve the requests on. If not set, requests will be served on the root context path.
+     */
+    @Nullable
+    private String contextPath;
+
+    /**
      * The path to serve health check requests on. Should correspond to what is
      * registered in the load balancer. If not set, health check service will not
      * be registered.
@@ -635,6 +641,22 @@ public class ArmeriaSettings {
      */
     public void setPorts(List<Port> ports) {
         this.ports = ports;
+    }
+
+    /**
+     * Returns the context path of the {@link Server}.
+     */
+    @Nullable
+    public String getContextPath() {
+        return contextPath;
+    }
+
+    /**
+     * Sets the context path to serve the requests on. If not set, requests will be served on the root context
+     * path.
+     */
+    public void setContextPath(String contextPath) {
+        this.contextPath = contextPath;
     }
 
     /**

@@ -35,9 +35,7 @@ import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
  */
 public final class DecodingClientBuilder {
 
-    private List<StreamDecoderFactory> decoderFactories = ImmutableList.of(StreamDecoderFactory.brotli(),
-                                                                           StreamDecoderFactory.gzip(),
-                                                                           StreamDecoderFactory.deflate());
+    private List<StreamDecoderFactory> decoderFactories = StreamDecoderFactory.all();
 
     private boolean autoFillAcceptEncoding = true;
     private boolean strictContentEncoding;

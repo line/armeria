@@ -56,11 +56,10 @@ import kotlin.reflect.full.memberProperties
  */
 @UnstableApi
 interface CoroutineServerInterceptor : AsyncServerInterceptor {
-
     override fun <I : Any, O : Any> asyncInterceptCall(
         call: ServerCall<I, O>,
         headers: Metadata,
-        next: ServerCallHandler<I, O>
+        next: ServerCallHandler<I, O>,
     ): CompletableFuture<ServerCall.Listener<I>> {
         // COROUTINE_CONTEXT_KEY.get():
         //   It is necessary to propagate the CoroutineContext set by the previous CoroutineContextServerInterceptor.
@@ -68,7 +67,7 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
         // GrpcContextElement.current():
         //   In gRPC-kotlin, the Coroutine Context is propagated using the gRPC Context.
         return CoroutineScope(
-            COROUTINE_CONTEXT_KEY.get() + GrpcContextElement.current()
+            COROUTINE_CONTEXT_KEY.get() + GrpcContextElement.current(),
         ).future {
             suspendedInterceptCall(call, headers, next)
         }
@@ -87,7 +86,7 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
     suspend fun <ReqT, RespT> suspendedInterceptCall(
         call: ServerCall<ReqT, RespT>,
         headers: Metadata,
-        next: ServerCallHandler<ReqT, RespT>
+        next: ServerCallHandler<ReqT, RespT>,
     ): ServerCall.Listener<ReqT>
 
     companion object {
@@ -96,7 +95,9 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
             CoroutineContextServerInterceptor::class.let { kclass ->
                 val companionObject = checkNotNull(kclass.companionObject)
                 val property = companionObject.memberProperties.single { it.name == "COROUTINE_CONTEXT_KEY" }
-                checkNotNull(property.getter.call(kclass.companionObjectInstance)) as Context.Key<CoroutineContext>
+                checkNotNull(
+                    property.getter.call(kclass.companionObjectInstance),
+                ) as Context.Key<CoroutineContext>
             }
     }
 }

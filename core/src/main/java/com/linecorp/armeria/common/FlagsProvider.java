@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -56,6 +57,7 @@ import com.linecorp.armeria.server.file.HttpFile;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -197,9 +199,24 @@ public interface FlagsProvider {
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
+     *
+     * @deprecated Use {@link #tlsEngineType()} and {@code -Dcom.linecorp.armeria.tlsEngineType=openssl}.
      */
     @Nullable
+    @Deprecated
     default Boolean useOpenSsl() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * <p>The default value of this flag is "openssl", which means the {@link TlsEngineType#OPENSSL} will
+     * be used. Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
+     * the default.</p>
+     */
+    @Nullable
+    default TlsEngineType tlsEngineType() {
         return null;
     }
 
@@ -210,8 +227,8 @@ public interface FlagsProvider {
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
      * option to enable it.
      *
-     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
-     * specified the JVM option.
+     * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
+     * {@code false} no matter what the specified JVM option is.
      */
     @Nullable
     default Boolean dumpOpenSslInfo() {
@@ -466,6 +483,23 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default value of the {@link ClientFactoryBuilder#preferHttp1(boolean)} option.
+     * If enabled, the client will not attempt to upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and
+     * {@link SessionProtocol#HTTPS}.
+     *
+     * <p>Note that this option has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#preferHttp1(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultPreferHttp1=true} JVM option to enable it.
+     */
+    @UnstableApi
+    @Nullable
+    default Boolean defaultPreferHttp1() {
+        return null;
+    }
+
+    /**
      * Returns the default value of the {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)} option.
      * If enabled, even when ALPN negotiation fails client will try to attempt upgrade to HTTP/2 when needed.
      * This will be either HTTP/2 connection preface or HTTP/1-to-2 upgrade request,
@@ -691,6 +725,22 @@ public interface FlagsProvider {
      */
     @Nullable
     default Long defaultHttp2MaxHeaderListSize() {
+        return null;
+    }
+
+    /**
+     * Returns the default maximum number of RST frames that are allowed per window before the connection is
+     * closed. This allows to protect against the remote peer flooding us with such frames and using up a lot
+     * of CPU. Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * to override the default value. {@code 0} means no protection should be applied.
+     */
+    @Nullable
+    default Integer defaultServerHttp2MaxResetFramesPerMinute() {
         return null;
     }
 
@@ -1083,6 +1133,30 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default Long defaultUnhandledExceptionsReportIntervalMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link DistributionStatisticConfig} where armeria utilizes.
+     *
+     * <p>The default value of this flag is as follows:
+     * <pre>{@code
+     * DistributionStatisticConfig.builder()
+     *     .percentilesHistogram(false)
+     *     .serviceLevelObjectives()
+     *     .percentiles(
+     *          0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
+     *     .percentilePrecision(2)
+     *     .minimumExpectedValue(1.0)
+     *     .maximumExpectedValue(Double.MAX_VALUE)
+     *     .expiry(Duration.ofMinutes(3))
+     *     .bufferLength(3)
+     *     .build();
+     * }</pre>
+     */
+    @Nullable
+    @UnstableApi
+    default DistributionStatisticConfig distributionStatisticConfig() {
         return null;
     }
 }

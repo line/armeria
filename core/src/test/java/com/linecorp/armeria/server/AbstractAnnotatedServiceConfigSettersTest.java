@@ -29,6 +29,8 @@ class AbstractAnnotatedServiceConfigSettersTest {
 
     @ParameterizedTest
     @ValueSource(classes = {
+            ContextPathAnnotatedServiceConfigSetters.class,
+            VirtualHostContextPathAnnotatedServiceConfigSetters.class,
             VirtualHostAnnotatedServiceBindingBuilder.class,
             AnnotatedServiceBindingBuilder.class
     })

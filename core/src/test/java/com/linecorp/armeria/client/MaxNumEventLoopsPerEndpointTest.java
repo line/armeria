@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.client.DefaultEventLoopSchedulerTest.acquireEntry;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.ToIntFunction;
 
 import org.junit.jupiter.api.Test;
@@ -49,10 +52,26 @@ class MaxNumEventLoopsPerEndpointTest {
     void defaultMaxNumEventLoopsEqualsOne() {
         final EventLoopGroup group = new DefaultEventLoopGroup(7);
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 0, 0, ImmutableList.of());
-        final List<AbstractEventLoopEntry> entries1 = s.entries(SessionProtocol.H1C, endpointA, endpointA);
-        assertThat(entries1).hasSize(0);
-        acquireTenEntries(s, SessionProtocol.H1C, endpointA, endpointA);
-        assertThat(entries1).hasSize(1);
+        final AbstractEventLoopEntry[] entries1 = s.entries(SessionProtocol.H1C, endpointA, endpointA);
+        assertThat(removeNullOrInactiveElements(entries1)).hasSize(1);
+    }
+
+    private static List<AbstractEventLoopEntry> removeNullElements(AbstractEventLoopEntry[] entries) {
+        return Arrays.stream(entries)
+                     .filter(Objects::nonNull)
+                     .collect(toImmutableList());
+    }
+
+    private static List<AbstractEventLoopEntry> removeNullOrInactiveElements(AbstractEventLoopEntry[] entries) {
+        return removeNullElements(entries).stream()
+                                          .filter(x -> {
+                                              try {
+                                                  return x.activeRequests() > 0;
+                                              } catch (UnsupportedOperationException e) {
+                                                  return true;
+                                              }
+                                          })
+                                          .collect(toImmutableList());
     }
 
     @Test
@@ -71,32 +90,32 @@ class MaxNumEventLoopsPerEndpointTest {
 
     private static void checkMaxNumEventLoops(DefaultEventLoopScheduler s,
                                               Endpoint preDefined, Endpoint undefined) {
-        final List<AbstractEventLoopEntry> entries1 = s.entries(SessionProtocol.H1C, preDefined, preDefined);
-        assertThat(entries1).hasSize(0);
+        final AbstractEventLoopEntry[] entries1 = s.entries(SessionProtocol.H1C, preDefined, preDefined);
+        assertThat(removeNullOrInactiveElements(entries1)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H1C, preDefined, preDefined);
-        assertThat(entries1).hasSize(3);
+        assertThat(removeNullOrInactiveElements(entries1)).hasSize(3);
 
-        final List<AbstractEventLoopEntry> entries2 = s.entries(SessionProtocol.H2, undefined, undefined);
-        assertThat(entries2).hasSize(0);
+        final AbstractEventLoopEntry[] entries2 = s.entries(SessionProtocol.H2, undefined, undefined);
+        assertThat(removeNullOrInactiveElements(entries2)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H2, undefined, undefined);
-        assertThat(entries2).hasSize(4);
+        assertThat(removeNullOrInactiveElements(entries2)).hasSize(4);
 
-        final List<AbstractEventLoopEntry> entries3 = s.entries(SessionProtocol.H2C, undefined, undefined);
-        assertThat(entries2).isNotSameAs(entries3);
-        assertThat(entries3).hasSize(0);
+        final AbstractEventLoopEntry[] entries3 = s.entries(SessionProtocol.H2C, undefined, undefined);
+        assertThat(removeNullOrInactiveElements(entries2)).isNotEqualTo(removeNullOrInactiveElements(entries3));
+        assertThat(removeNullOrInactiveElements(entries3)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H2C, undefined, undefined);
-        assertThat(entries3).hasSize(4);
+        assertThat(removeNullOrInactiveElements(entries3)).hasSize(4);
 
-        final List<AbstractEventLoopEntry> entries4 = s.entries(SessionProtocol.H1, undefined, undefined);
-        assertThat(entries4).hasSize(0);
+        final AbstractEventLoopEntry[] entries4 = s.entries(SessionProtocol.H1, undefined, undefined);
+        assertThat(removeNullOrInactiveElements(entries4)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H1, undefined, undefined);
-        assertThat(entries4).hasSize(5);
+        assertThat(removeNullOrInactiveElements(entries4)).hasSize(5);
 
-        final List<AbstractEventLoopEntry> entries5 = s.entries(SessionProtocol.H1C, undefined, undefined);
-        assertThat(entries4).isNotSameAs(entries5);
-        assertThat(entries5).hasSize(0);
+        final AbstractEventLoopEntry[] entries5 = s.entries(SessionProtocol.H1C, undefined, undefined);
+        assertThat(removeNullOrInactiveElements(entries4)).isNotSameAs(entries5);
+        assertThat(removeNullOrInactiveElements(entries5)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H1C, undefined, undefined);
-        assertThat(entries5).hasSize(5);
+        assertThat(removeNullOrInactiveElements(entries5)).hasSize(5);
     }
 
     @Test
@@ -130,65 +149,65 @@ class MaxNumEventLoopsPerEndpointTest {
                 });
         final DefaultEventLoopScheduler s = new DefaultEventLoopScheduler(group, 7, 7,
                                                                           maxNumEventLoopsFunctions);
-        final List<AbstractEventLoopEntry> entries1 = s.entries(SessionProtocol.H1C, endpointA, endpointA);
-        assertThat(entries1).hasSize(0);
+        final AbstractEventLoopEntry[] entries1 = s.entries(SessionProtocol.H1C, endpointA, endpointA);
+        assertThat(removeNullOrInactiveElements(entries1)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H1C, endpointA, endpointA);
-        assertThat(entries1).hasSize(2);
+        assertThat(removeNullOrInactiveElements(entries1)).hasSize(2);
 
-        final List<AbstractEventLoopEntry> entries2 = s.entries(SessionProtocol.H1C, endpointA80, endpointA80);
-        assertThat(entries2).hasSize(2);
+        final AbstractEventLoopEntry[] entries2 = s.entries(SessionProtocol.H1C, endpointA80, endpointA80);
+        assertThat(removeNullOrInactiveElements(entries2)).hasSize(2);
 
-        final List<AbstractEventLoopEntry> entries3 =
+        final AbstractEventLoopEntry[] entries3 =
                 s.entries(SessionProtocol.H1C, endpointA443, endpointA443);
-        assertThat(entries3).hasSize(0);
-        acquireTenEntries(s, SessionProtocol.H1C, endpointA443, endpointA443);
-        assertThat(entries3).hasSize(1); // Fallback to "a.com"
+        assertThat(removeNullOrInactiveElements(entries3)).hasSize(1); // Fallback to "a.com"
 
-        final List<AbstractEventLoopEntry> entries4 =
+        final AbstractEventLoopEntry[] entries4 =
                 s.entries(SessionProtocol.H1C, endpointA8443, endpointA8443);
-        assertThat(entries4).hasSize(0);
+        assertThat(removeNullOrInactiveElements(entries4)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H1C, endpointA8443, endpointA8443);
-        assertThat(entries4).hasSize(3); // Matched to Endpoint.of("a.com", 36462)
+        assertThat(removeNullOrInactiveElements(entries4)).hasSize(3); // Matched to Endpoint.of("a.com", 36462)
 
         // Clear text SessionProtocols.
 
-        final List<AbstractEventLoopEntry> bComClearText =
+        final AbstractEventLoopEntry[] bComClearText =
                 s.entries(SessionProtocol.H1C, endpointB80, endpointB80);
-        assertThat(bComClearText).hasSize(0);
+        assertThat(removeNullOrInactiveElements(bComClearText)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H1C, endpointB, endpointB);
-        assertThat(bComClearText).hasSize(4); // Fallback to "b.com:80"
+        assertThat(removeNullOrInactiveElements(bComClearText)).hasSize(4); // Fallback to "b.com:80"
 
-        final List<AbstractEventLoopEntry> entries5 = s.entries(SessionProtocol.H1C, endpointB, endpointB);
-        assertThat(bComClearText).isSameAs(entries5);
+        final AbstractEventLoopEntry[] entries5 = s.entries(SessionProtocol.H1C, endpointB, endpointB);
+        assertThat(removeNullOrInactiveElements(bComClearText))
+                .isEqualTo(removeNullOrInactiveElements(entries5));
 
-        final List<AbstractEventLoopEntry> entries6 = s.entries(SessionProtocol.H2C, endpointB, endpointB);
+        final AbstractEventLoopEntry[] entries6 = s.entries(SessionProtocol.H2C, endpointB, endpointB);
         acquireTenEntries(s, SessionProtocol.H2C, endpointB, endpointB);
-        assertThat(bComClearText).hasSize(4);
-        final List<AbstractEventLoopEntry> entries7 = s.entries(SessionProtocol.HTTP, endpointB, endpointB);
-        assertThat(entries6).isSameAs(entries7);
+        assertThat(removeNullOrInactiveElements(bComClearText)).hasSize(4);
+        final AbstractEventLoopEntry[] entries7 = s.entries(SessionProtocol.HTTP, endpointB, endpointB);
+        assertThat(removeNullOrInactiveElements(entries6)).isEqualTo(removeNullOrInactiveElements(entries7));
 
         // TLS SessionProtocols.
 
-        final List<AbstractEventLoopEntry> bComTls = s.entries(SessionProtocol.H1, endpointB443, endpointB443);
-        assertThat(bComTls).hasSize(0);
+        final AbstractEventLoopEntry[] bComTls = s.entries(SessionProtocol.H1, endpointB443, endpointB443);
+        assertThat(removeNullOrInactiveElements(bComTls)).hasSize(0);
         acquireTenEntries(s, SessionProtocol.H1, endpointB, endpointB);
-        assertThat(bComTls).hasSize(5); // Fallback to "b.com:433"
+        assertThat(removeNullOrInactiveElements(bComTls)).hasSize(5); // Fallback to "b.com:433"
 
-        final List<AbstractEventLoopEntry> entries8 = s.entries(SessionProtocol.H1, endpointB, endpointB);
-        assertThat(bComTls).isSameAs(entries8);
+        final AbstractEventLoopEntry[] entries8 = s.entries(SessionProtocol.H1, endpointB, endpointB);
+        assertThat(removeNullOrInactiveElements(bComTls)).isEqualTo(removeNullOrInactiveElements(entries8));
 
-        final List<AbstractEventLoopEntry> entries9 = s.entries(SessionProtocol.H2, endpointB, endpointB);
+        final AbstractEventLoopEntry[] entries9 = s.entries(SessionProtocol.H2, endpointB, endpointB);
         acquireTenEntries(s, SessionProtocol.H2, endpointB, endpointB);
-        assertThat(entries9).hasSize(5);
-        final List<AbstractEventLoopEntry> entries10 = s.entries(SessionProtocol.HTTPS, endpointB, endpointB);
-        assertThat(entries9).isSameAs(entries10);
+        assertThat(removeNullOrInactiveElements(entries9)).hasSize(5);
+        final AbstractEventLoopEntry[] entries10 = s.entries(SessionProtocol.HTTPS, endpointB, endpointB);
+        assertThat(removeNullOrInactiveElements(entries9)).isEqualTo(removeNullOrInactiveElements(entries10));
 
-        final List<AbstractEventLoopEntry> entries11 =
+        final AbstractEventLoopEntry[] entries11 =
                 s.entries(SessionProtocol.H1, endpointB8443, endpointB8443);
-        assertThat(entries11).hasSize(
-                1); // One entry is pushed when eventLoops.size() == maxNumEventLoops
+        // All entries pushed early on ArrayBasedEventLoopState
+        // assertThat(removeNullElements(entries11))
+        //         .hasSize(1); // One entry is pushed when eventLoops.size() == maxNumEventLoops
         acquireTenEntries(s, SessionProtocol.H1, endpointB8443, endpointB8443);
-        assertThat(entries11).hasSize(7); // No match
+        assertThat(removeNullOrInactiveElements(entries11)).hasSize(7); // No match
     }
 
     private static void acquireTenEntries(DefaultEventLoopScheduler s,

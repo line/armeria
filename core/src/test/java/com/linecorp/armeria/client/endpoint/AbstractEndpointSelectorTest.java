@@ -15,16 +15,19 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -42,44 +45,67 @@ class AbstractEndpointSelectorTest {
     void immediateSelection() {
         final Endpoint endpoint = Endpoint.of("foo");
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        assertThat(newSelector(endpoint).select(ctx, ctx.eventLoop(), Long.MAX_VALUE))
+        final AbstractEndpointSelector endpointSelector = newSelector(endpoint);
+        assertThat(endpointSelector.select(ctx, ctx.eventLoop(), Long.MAX_VALUE))
                 .isCompletedWithValue(endpoint);
+        assertThat(endpointSelector.pendingFutures()).isEmpty();
     }
 
     @Test
     void delayedSelection() {
         final DynamicEndpointGroup group = new DynamicEndpointGroup();
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final CompletableFuture<Endpoint> future = newSelector(group).select(ctx, ctx.eventLoop(),
-                                                                             Long.MAX_VALUE);
+        final AbstractEndpointSelector endpointSelector = newSelector(group);
+        final CompletableFuture<Endpoint> future = endpointSelector.select(ctx, ctx.eventLoop(),
+                                                                           Long.MAX_VALUE);
         assertThat(future).isNotDone();
 
         final Endpoint endpoint = Endpoint.of("foo");
         group.addEndpoint(endpoint);
         assertThat(future.join()).isSameAs(endpoint);
+        assertThat(endpointSelector.pendingFutures()).isEmpty();
+    }
+
+    @Test
+    void bulkUpdate() {
+        final DynamicEndpointGroup group = new DynamicEndpointGroup();
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final AbstractEndpointSelector endpointSelector = newSelector(group);
+        final List<CompletableFuture<Endpoint>> futures = IntStream.range(0, 10).mapToObj(i -> {
+            return endpointSelector.select(ctx, ctx.eventLoop(), Long.MAX_VALUE);
+        }).collect(toImmutableList());
+
+        final List<Endpoint> endpoints = ImmutableList.of(Endpoint.of("foo"));
+        group.setEndpoints(endpoints);
+        for (CompletableFuture<Endpoint> future : futures) {
+            assertThat(future.join()).isEqualTo(endpoints.get(0));
+        }
+        assertThat(endpointSelector.pendingFutures()).isEmpty();
     }
 
     @Test
     void timeout() {
         final DynamicEndpointGroup group = new DynamicEndpointGroup();
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final AbstractEndpointSelector endpointSelector = newSelector(group);
         final CompletableFuture<Endpoint> future =
-                newSelector(group).select(ctx, ctx.eventLoop(), 1000)
-                                  .handle((res, cause) -> {
-                                      // Must be invoked from the event loop thread.
-                                      assertThat(ctx.eventLoop().inEventLoop()).isTrue();
+                endpointSelector.select(ctx, ctx.eventLoop(), 1000)
+                                .handle((res, cause) -> {
+                                    // Must be invoked from the event loop thread.
+                                    assertThat(ctx.eventLoop().inEventLoop()).isTrue();
 
-                                      if (cause != null) {
-                                          Exceptions.throwUnsafely(cause);
-                                      }
+                                    if (cause != null) {
+                                        Exceptions.throwUnsafely(cause);
+                                    }
 
-                                      return res;
-                                  });
+                                    return res;
+                                });
         assertThat(future).isNotDone();
 
         final Stopwatch stopwatch = Stopwatch.createStarted();
         assertThat(future.join()).isNull();
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isGreaterThan(900);
+        assertThat(endpointSelector.pendingFutures()).isEmpty();
     }
 
     @Test
@@ -90,8 +116,9 @@ class AbstractEndpointSelectorTest {
                 .hasRootCauseInstanceOf(EndpointSelectionTimeoutException.class);
     }
 
-    private static EndpointSelector newSelector(EndpointGroup endpointGroup) {
-        return new AbstractEndpointSelector(endpointGroup) {
+    private static AbstractEndpointSelector newSelector(EndpointGroup endpointGroup) {
+        final AbstractEndpointSelector selector = new AbstractEndpointSelector(endpointGroup) {
+
             @Nullable
             @Override
             public Endpoint selectNow(ClientRequestContext ctx) {
@@ -99,5 +126,7 @@ class AbstractEndpointSelectorTest {
                 return endpoints.isEmpty() ? null : endpoints.get(0);
             }
         };
+        selector.initialize();
+        return selector;
     }
 }

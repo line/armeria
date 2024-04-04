@@ -30,7 +30,6 @@ import org.junit.jupiter.api.extension.RegisterExtension
 
 @GenerateNativeImageTrace
 class CoroutineRestClientTest {
-
     @Test
     fun get() {
         runBlocking {
@@ -66,23 +65,24 @@ class CoroutineRestClientTest {
 
     companion object {
         @RegisterExtension
-        var server: ServerExtension = object : ServerExtension() {
-            override fun configure(sb: ServerBuilder) {
-                sb.service("/rest/{id}") { ctx: ServiceRequestContext, req: HttpRequest ->
-                    HttpResponse.of(
-                        req.aggregate().thenApply { agg: AggregatedHttpRequest ->
-                            val restResponse =
-                                RestResponse(
-                                    ctx.pathParam("id")!!,
-                                    req.method().toString(),
-                                    agg.contentUtf8()
-                                )
-                            HttpResponse.ofJson(restResponse)
-                        }
-                    )
+        var server: ServerExtension =
+            object : ServerExtension() {
+                override fun configure(sb: ServerBuilder) {
+                    sb.service("/rest/{id}") { ctx: ServiceRequestContext, req: HttpRequest ->
+                        HttpResponse.of(
+                            req.aggregate().thenApply { agg: AggregatedHttpRequest ->
+                                val restResponse =
+                                    RestResponse(
+                                        ctx.pathParam("id")!!,
+                                        req.method().toString(),
+                                        agg.contentUtf8(),
+                                    )
+                                HttpResponse.ofJson(restResponse)
+                            },
+                        )
+                    }
                 }
             }
-        }
     }
 
     data class RestResponse(val id: String, val method: String, val content: String)

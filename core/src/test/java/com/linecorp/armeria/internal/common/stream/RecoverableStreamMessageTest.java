@@ -116,7 +116,7 @@ class RecoverableStreamMessageTest {
         assertThatThrownBy(() -> recoverable.collect().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(CompositeException.class)
-                .getCause()
+                .cause()
                 .extracting("exceptions", ITERABLE)
                 .element(0)
                 .isInstanceOf(ClosedStreamException.class);

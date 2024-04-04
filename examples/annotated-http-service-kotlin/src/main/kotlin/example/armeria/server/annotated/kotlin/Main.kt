@@ -34,7 +34,7 @@ fun configureServices(sb: ServerBuilder) {
         .decorator(
             CoroutineContextService.newDecorator { ctx ->
                 CoroutineName(ctx.config().defaultServiceNaming().serviceName(ctx) ?: "name")
-            }
+            },
         )
         .applyCommonDecorator()
         .build(ContextAwareService())
@@ -59,9 +59,9 @@ private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServ
                     LogWriter.builder()
                         .requestLogLevel(LogLevel.INFO)
                         .successfulResponseLogLevel(LogLevel.INFO)
-                        .build()
+                        .build(),
                 )
-                .newDecorator()
+                .newDecorator(),
         )
 }
 

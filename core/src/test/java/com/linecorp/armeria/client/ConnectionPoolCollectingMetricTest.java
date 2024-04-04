@@ -24,9 +24,9 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
 
@@ -36,7 +36,8 @@ class ConnectionPoolCollectingMetricTest {
 
     @BeforeEach
     void setUp() {
-        registry = new SimpleMeterRegistry();
+        // PrometheusMeterRegistry is preferred for testing because it has additional validation.
+        registry = PrometheusMeterRegistries.newRegistry();
         connectionPoolListener = ConnectionPoolListener.metricCollecting(registry);
     }
 
@@ -49,38 +50,57 @@ class ConnectionPoolCollectingMetricTest {
                                        "protocol=H1,remote.ip=10.10.10.10,state=opened}";
         final String closedABMetricKey = "armeria.client.connections#count{local.ip=10.10.10.11," +
                                          "protocol=H1,remote.ip=10.10.10.10,state=closed}";
+        final String activeABMetricKey = "armeria.client.active.connections#value{local.ip=10.10.10.11," +
+                                         "protocol=H1,remote.ip=10.10.10.10}";
         final String openBAMetricKey = "armeria.client.connections#count{local.ip=10.10.10.10," +
                                        "protocol=H1,remote.ip=10.10.10.11,state=opened}";
-        final String closedBAMetricKey = "armeria.client.connections#count{local.ip=10.10.10.10," +
-                                         "protocol=H1,remote.ip=10.10.10.11,state=closed}";
+        final String activeBAMetricKey = "armeria.client.active.connections#value{local.ip=10.10.10.10," +
+                                         "protocol=H1,remote.ip=10.10.10.11}";
 
         final AttributeMap attributeMap = new DefaultAttributeMap();
 
         connectionPoolListener.connectionOpen(SessionProtocol.H1, addressA, addressB, attributeMap);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openABMetricKey, 1.0);
+        assertThat(MoreMeters.measureAll(registry)).containsEntry(activeABMetricKey, 1.0);
 
         connectionPoolListener.connectionClosed(SessionProtocol.H1, addressA, addressB, attributeMap);
+        // If the number of connections is 0, the metric is not collected.
+        assertThat(MoreMeters.measureAll(registry))
+                .doesNotContainKey(openABMetricKey)
+                .doesNotContainKey(closedABMetricKey)
+                .doesNotContainKey(activeABMetricKey);
+        connectionPoolListener.connectionOpen(SessionProtocol.H1, addressA, addressB, attributeMap);
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry(openABMetricKey, 1.0)
-                .containsEntry(closedABMetricKey, 1.0);
-
+                .containsEntry(closedABMetricKey, 0.0)
+                .containsEntry(activeABMetricKey, 1.0);
         connectionPoolListener.connectionOpen(SessionProtocol.H1, addressA, addressB, attributeMap);
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry(openABMetricKey, 2.0)
-                .containsEntry(closedABMetricKey, 1.0);
+                .containsEntry(closedABMetricKey, 0.0)
+                .containsEntry(activeABMetricKey, 2.0);
 
         connectionPoolListener.connectionOpen(SessionProtocol.H1, addressB, addressA, attributeMap);
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry(openABMetricKey, 2.0)
-                .containsEntry(closedABMetricKey, 1.0)
-                .containsEntry(openBAMetricKey, 1.0);
+                .containsEntry(closedABMetricKey, 0.0)
+                .containsEntry(activeABMetricKey, 2.0)
+                .containsEntry(openBAMetricKey, 1.0)
+                .containsEntry(activeBAMetricKey, 1.0);
 
         connectionPoolListener.connectionClosed(SessionProtocol.H1, addressA, addressB, attributeMap);
+        assertThat(MoreMeters.measureAll(registry))
+                .containsEntry(openABMetricKey, 2.0)
+                .containsEntry(closedABMetricKey, 1.0)
+                .containsEntry(activeABMetricKey, 1.0)
+                .containsEntry(openBAMetricKey, 1.0)
+                .containsEntry(activeBAMetricKey, 1.0);
         connectionPoolListener.connectionClosed(SessionProtocol.H1, addressB, addressA, attributeMap);
         assertThat(MoreMeters.measureAll(registry))
                 .containsEntry(openABMetricKey, 2.0)
-                .containsEntry(closedABMetricKey, 2.0)
-                .containsEntry(openBAMetricKey, 1.0)
-                .containsEntry(closedBAMetricKey, 1.0);
+                .containsEntry(closedABMetricKey, 1.0)
+                .containsEntry(activeABMetricKey, 1.0)
+                .doesNotContainKey(openBAMetricKey)
+                .doesNotContainKey(activeBAMetricKey);
     }
 }

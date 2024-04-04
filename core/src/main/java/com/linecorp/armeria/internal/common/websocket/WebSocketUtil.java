@@ -15,22 +15,29 @@
  */
 package com.linecorp.armeria.internal.common.websocket;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static io.netty.util.AsciiString.contentEquals;
+import static io.netty.util.AsciiString.contentEqualsIgnoreCase;
+import static io.netty.util.AsciiString.trim;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Iterator;
 
 import com.google.common.hash.Hashing;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.util.AsciiString;
 
 public final class WebSocketUtil {
 
@@ -46,8 +53,66 @@ public final class WebSocketUtil {
         // Connection: Upgrade
         // ...
         return headers.method() == HttpMethod.GET &&
-               HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(headers.get(HttpHeaderNames.CONNECTION)) &&
-               HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(headers.get(HttpHeaderNames.UPGRADE));
+               containsValue(headers, HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE, true) &&
+               containsValue(headers, HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET, true);
+    }
+
+    // Forked from https://github.com/netty/netty/blob/4.1/codec-http/src/main/java/io/netty/handler/codec/http/HttpHeaders.java#L1597-L1651
+    private static boolean containsValue(RequestHeaders headers, CharSequence name,
+                                         CharSequence value, boolean ignoreCase) {
+        final Iterator<? extends CharSequence> itr = headers.valueIterator(name);
+        while (itr.hasNext()) {
+            if (containsCommaSeparatedTrimmed(itr.next(), value, ignoreCase)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsCommaSeparatedTrimmed(CharSequence rawNext, CharSequence expected,
+                                                         boolean ignoreCase) {
+        int begin = 0;
+        int end;
+        if (ignoreCase) {
+            if ((end = AsciiString.indexOf(rawNext, ',', begin)) == -1) {
+                if (contentEqualsIgnoreCase(trim(rawNext), expected)) {
+                    return true;
+                }
+            } else {
+                do {
+                    if (contentEqualsIgnoreCase(trim(rawNext.subSequence(begin, end)), expected)) {
+                        return true;
+                    }
+                    begin = end + 1;
+                } while ((end = AsciiString.indexOf(rawNext, ',', begin)) != -1);
+
+                if (begin < rawNext.length()) {
+                    if (contentEqualsIgnoreCase(trim(rawNext.subSequence(begin, rawNext.length())), expected)) {
+                        return true;
+                    }
+                }
+            }
+        } else {
+            if ((end = AsciiString.indexOf(rawNext, ',', begin)) == -1) {
+                if (contentEquals(trim(rawNext), expected)) {
+                    return true;
+                }
+            } else {
+                do {
+                    if (contentEquals(trim(rawNext.subSequence(begin, end)), expected)) {
+                        return true;
+                    }
+                    begin = end + 1;
+                } while ((end = AsciiString.indexOf(rawNext, ',', begin)) != -1);
+
+                if (begin < rawNext.length()) {
+                    if (contentEquals(trim(rawNext.subSequence(begin, rawNext.length())), expected)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public static boolean isHttp2WebSocketUpgradeRequest(RequestHeaders headers) {
@@ -57,7 +122,7 @@ public final class WebSocketUtil {
         // :protocol = websocket
         // ...
         return headers.method() == HttpMethod.CONNECT &&
-               HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(headers.get(HttpHeaderNames.PROTOCOL));
+               containsValue(headers, HttpHeaderNames.PROTOCOL, HttpHeaderValues.WEBSOCKET, true);
     }
 
     /**
@@ -83,11 +148,24 @@ public final class WebSocketUtil {
         } else {
             closeStatus = WebSocketCloseStatus.INTERNAL_SERVER_ERROR;
         }
-        String reasonPhrase = cause.getMessage();
+        // If the length of the phrase exceeds 125 characters, it is truncated to satisfy the
+        // <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5">specification</a>.
+        String reasonPhrase = maybeTruncate(cause.getMessage());
         if (reasonPhrase == null) {
             reasonPhrase = closeStatus.reasonPhrase();
         }
         return WebSocketFrame.ofClose(closeStatus, reasonPhrase);
+    }
+
+    @Nullable
+    public static String maybeTruncate(@Nullable String message) {
+        if (isNullOrEmpty(message)) {
+            return null;
+        }
+        if (message.length() <= 125) {
+            return message;
+        }
+        return message.substring(0, 111) + "...(truncated)"; // + 14 characters
     }
 
     private WebSocketUtil() {}

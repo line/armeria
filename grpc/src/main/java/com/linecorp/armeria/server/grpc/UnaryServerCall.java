@@ -34,12 +34,12 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
-import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
+import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -70,11 +70,12 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                     ServiceRequestContext ctx, SerializationFormat serializationFormat,
                     @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
                     ResponseHeaders defaultHeaders,
-                    @Nullable GrpcStatusFunction statusFunction, @Nullable Executor blockingExecutor,
+                    @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                    @Nullable Executor blockingExecutor,
                     boolean autoCompress) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              defaultHeaders, statusFunction, blockingExecutor, autoCompress);
+              defaultHeaders, exceptionHandler, blockingExecutor, autoCompress);
         requireNonNull(req, "req");
         this.ctx = requireNonNull(ctx, "ctx");
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
@@ -139,9 +140,10 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     }
 
     @Override
-    public void doClose(Status status, Metadata metadata, boolean completed) {
+    public void doClose(ServerStatusAndMetadata statusAndMetadata) {
         final ResponseHeaders responseHeaders = responseHeaders();
-        final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
+        final Status status = statusAndMetadata.status();
+        final Metadata metadata = statusAndMetadata.metadata();
         final HttpResponse response;
         try {
             if (status.isOk()) {
@@ -171,11 +173,13 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
             // Set responseContent before closing stream to use responseCause in error handling
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, responseMessage), null);
+            statusAndMetadata.setResponseContent(false);
             resFuture.complete(response);
         } catch (Exception ex) {
+            statusAndMetadata.shouldCancel();
             resFuture.completeExceptionally(ex);
         } finally {
-            closeListener(statusAndMetadata, completed, false);
+            closeListener(statusAndMetadata);
         }
     }
 

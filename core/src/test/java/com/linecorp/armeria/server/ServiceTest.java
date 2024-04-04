@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.assertj.core.util.Files;
@@ -64,9 +65,10 @@ public class ServiceTest {
                                   AccessLogWriter.disabled(),
                                   CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of(),
+                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
+                                  ImmutableList.of(), HttpHeaders.of(),
                                   ctx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler());
+                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

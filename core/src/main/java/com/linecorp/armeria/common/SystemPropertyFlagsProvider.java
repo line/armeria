@@ -39,6 +39,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
@@ -149,6 +150,23 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public TlsEngineType tlsEngineType() {
+        final String strTlsEngineType = getNormalized("tlsEngineType");
+        if (strTlsEngineType == null) {
+            return null;
+        }
+        switch (strTlsEngineType) {
+            case "jdk":
+                return TlsEngineType.JDK;
+            case "openssl":
+                return TlsEngineType.OPENSSL;
+            default:
+                throw new IllegalArgumentException(
+                        String.format("%s isn't one of 'jdk' or 'openssl'", strTlsEngineType));
+        }
+    }
+
+    @Override
     public Boolean dumpOpenSslInfo() {
         return getBoolean("dumpOpenSslInfo");
     }
@@ -229,6 +247,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean defaultPreferHttp1() {
+        return getBoolean("preferHttp1");
+    }
+
+    @Override
     public Boolean defaultUseHttp2WithoutAlpn() {
         return getBoolean("defaultUseHttp2WithoutAlpn");
     }
@@ -291,6 +314,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultHttp2MaxHeaderListSize() {
         return getLong("defaultHttp2MaxHeaderListSize");
+    }
+
+    @Override
+    public Integer defaultServerHttp2MaxResetFramesPerMinute() {
+        return getInt("defaultServerHttp2MaxResetFramesPerMinute");
     }
 
     @Override

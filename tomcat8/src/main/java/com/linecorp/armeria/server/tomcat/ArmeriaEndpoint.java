@@ -41,6 +41,9 @@ final class ArmeriaEndpoint extends AbstractEndpoint {
     protected void createSSLContext(SSLHostConfig sslHostConfig) throws Exception {}
 
     @Override
+    protected void setDefaultSslHostConfig(SSLHostConfig sslHostConfig) {}
+
+    @Override
     protected InetSocketAddress getLocalAddress() throws IOException {
         // Doesn't seem to be used.
         return null;
