@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -32,6 +33,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -77,6 +79,17 @@ class GrpcExceptionHandlerTest {
                                       exceptionHandler.add("global");
                                       return Status.INTERNAL;
                                   })
+                                  .build());
+        }
+    };
+
+    @RegisterExtension
+    static final ServerExtension serverWithDefaultExceptionHandler = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.requestTimeoutMillis(5000)
+              .service(GrpcService.builder()
+                                  .addService(new TestServiceIOException())
                                   .build());
         }
     };
@@ -430,6 +443,24 @@ class GrpcExceptionHandlerTest {
         assertThat(client.unaryCall(fifthRequest)).isNotNull();
     }
 
+    @Test
+    void defaultGrpcExceptionHandlerConvertIOExceptionToUnavailable() {
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(serverWithDefaultExceptionHandler.httpUri(), TestServiceBlockingStub.class);
+
+        final SimpleRequest globalRequest = SimpleRequest
+                .newBuilder()
+                .setNestedRequest(NestedRequest
+                                          .newBuilder()
+                                          .setNestedPayload("global")
+                                          .build())
+                .build();
+        assertThatThrownBy(() -> client.unaryCall(globalRequest))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
+                    assertThat(e.getStatus().getCode()).isEqualTo(Status.UNAVAILABLE.getCode());
+                });
+    }
+
     private static class FirstGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
         @Override
@@ -560,6 +591,14 @@ class GrpcExceptionHandlerTest {
                                                   .setUsername("bar user")
                                                   .build());
             responseObserver.onCompleted();
+        }
+    }
+
+    @GrpcExceptionHandler(DefaultGrpcExceptionHandlerFunction.class)
+    private static class TestServiceIOException extends TestServiceImpl {
+        @Override
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onError(new IOException());
         }
     }
 }

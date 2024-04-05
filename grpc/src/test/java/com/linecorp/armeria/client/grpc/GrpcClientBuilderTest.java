@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -153,5 +154,15 @@ class GrpcClientBuilderTest {
         final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
         assertThat(clientParams.options().get(GrpcClientOptions.INTERCEPTORS))
                 .containsExactly(interceptorA, interceptorB);
+    }
+
+    @Test
+    void useDefaultGrpcExceptionHandlerFunction() {
+        TestServiceBlockingStub client = GrpcClients.builder("http://foo.com").build(
+                TestServiceBlockingStub.class);
+
+        final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
+        assertThat(clientParams.options().get(GrpcClientOptions.EXCEPTION_HANDLER))
+                .isEqualTo(DefaultGrpcExceptionHandlerFunction.INSTANCE);
     }
 }
