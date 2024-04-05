@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.MetricCollectingServiceBuilder;
@@ -110,6 +111,7 @@ public final class ArmeriaConfigurationUtil {
             MeterIdPrefixFunction meterIdPrefixFunction,
             List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators,
             List<DependencyInjector> dependencyInjectors,
+            List<ServerErrorHandler> serverErrorHandlers,
             BeanFactory beanFactory) {
 
         requireNonNull(server, "server");
@@ -203,6 +205,7 @@ public final class ArmeriaConfigurationUtil {
         if (settings.isEnableAutoInjection()) {
             server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
         }
+        serverErrorHandlers.forEach(server::errorHandler);
     }
 
     private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,
