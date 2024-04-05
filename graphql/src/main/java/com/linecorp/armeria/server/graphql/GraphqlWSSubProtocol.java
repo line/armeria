@@ -353,9 +353,7 @@ class GraphqlWSSubProtocol {
                 "payload", executionResult.toSpecification());
         final String event = serializeToJson(response);
         logger.trace("NEXT: {}", event);
-        if (!out.tryWrite(event)) {
-            throw ClosedStreamException.get();
-        }
+        out.write(event);
     }
 
     private static void writeError(WebSocketWriter out, String operationId, List<GraphQLError> errors)
@@ -368,7 +366,7 @@ class GraphqlWSSubProtocol {
                 "payload", errorSpecifications);
         final String event = serializeToJson(errorResponse);
         logger.trace("ERROR: {}", event);
-        out.tryWrite(event);
+        out.write(event);
     }
 
     private static void writeError(WebSocketWriter out, String operationId, Throwable t) {
