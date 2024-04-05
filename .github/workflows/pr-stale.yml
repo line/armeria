@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: actions/stale@v9
         with:
-          # Mark PRs as stale if they are open and inactive for 60 days.
+          # Mark PRs as stale if they are open and inactive for 30 days.
           days-before-pr-stale: 30
           # Do not leave a message when marking PRs as stale.
           stale-pr-message: ''
