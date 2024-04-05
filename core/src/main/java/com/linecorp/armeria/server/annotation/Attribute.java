@@ -37,6 +37,7 @@ public @interface Attribute {
 
     /**
      * The name of the {@link AttributeKey} to bind to.
+     * You might also want to specify the {@link #prefix()}.
      */
     String value();
 
