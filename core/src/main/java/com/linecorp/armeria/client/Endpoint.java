@@ -85,7 +85,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1">the section 3.1 of RFC3986</a>.
      */
     private static final Predicate<String> SCHEME_VALIDATOR =
-            scheme -> Pattern.compile("^([a-z][a-z0-9+\\-.]*)").matcher(scheme).matches();
+            scheme -> Pattern.compile("^([a-zA-Z][a-zA-Z0-9+\\-.]*)").matcher(scheme).matches();
 
     private static final Cache<String, Endpoint> cache =
             Caffeine.newBuilder()
@@ -763,6 +763,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (!SCHEME_VALIDATOR.test(scheme)) {
             throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
         }
+        scheme = Ascii.toLowerCase(scheme);
 
         try {
             return new URI(scheme, authority, path, null, null);

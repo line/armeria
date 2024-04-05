@@ -23,6 +23,8 @@ import java.net.URISyntaxException;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import com.google.common.base.Ascii;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 
 public final class SchemeAndAuthority {
@@ -31,7 +33,7 @@ public final class SchemeAndAuthority {
      * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1">the section 3.1 of RFC3986</a>.
      */
     private static final Predicate<String> SCHEME_VALIDATOR =
-            scheme -> Pattern.compile("^([a-z][a-z0-9+\\-.]*)").matcher(scheme).matches();
+            scheme -> Pattern.compile("^([a-zA-Z][a-zA-Z0-9+\\-.]*)").matcher(scheme).matches();
 
     @Nullable
     private final String scheme;
@@ -118,6 +120,7 @@ public final class SchemeAndAuthority {
         if (!SCHEME_VALIDATOR.test(scheme)) {
             throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
         }
+        scheme = Ascii.toLowerCase(scheme);
 
         final SchemeAndAuthority authorityObj = fromAuthority(authority);
         return new SchemeAndAuthority(scheme, authorityObj.authority, authorityObj.host, authorityObj.port);

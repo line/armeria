@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.google.common.base.Ascii;
+
 class SchemeAndAuthorityTest {
     @ParameterizedTest
     @CsvSource({
@@ -54,16 +56,17 @@ class SchemeAndAuthorityTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "http", "https", "ftp", "mailto", "file", "data", "tel", "ssh" })
+    @CsvSource({ "http", "https", "ftp", "mailto", "file", "data", "tel", "ssh", "htTP", "HTTP", "http+none" })
     void fromSchemeAndAuthority(String scheme) {
+        final String lowerCaseScheme = Ascii.toLowerCase(scheme);
         assertThat(SchemeAndAuthority.fromSchemeAndAuthority(scheme, "foo")).satisfies(uri -> {
-            assertThat(uri.getScheme()).isEqualTo(scheme);
+            assertThat(uri.getScheme()).isEqualTo(lowerCaseScheme);
         });
     }
 
     @ParameterizedTest
     @CsvSource({
-            "1http", "+http", ".http", "-http", "http!", "http$", "http?", "http#", "http ftp", "htTP", "HTTP"
+            "1http", "+http", ".http", "-http", "http!", "http$", "http?", "http#", "http ftp"
     })
     void fromBadSchemeAndAuthority(String badScheme) {
         assertThatThrownBy(() -> SchemeAndAuthority.fromSchemeAndAuthority(badScheme, "foo"))
