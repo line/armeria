@@ -54,9 +54,9 @@ class DefaultGrpcExceptionHandlerFunctionTest {
 
     @Test
     void failFastExceptionToUnavailableCode() {
-        assertThat(DefaultGrpcExceptionHandlerFunction.fromThrowable(
-                                                              new FailFastException(CircuitBreaker.ofDefaultName()))
-                                                      .getCode())
+        assertThat(DefaultGrpcExceptionHandlerFunction
+                           .fromThrowable(new FailFastException(CircuitBreaker.ofDefaultName()))
+                           .getCode())
                 .isEqualTo(Status.Code.UNAVAILABLE);
     }
 }

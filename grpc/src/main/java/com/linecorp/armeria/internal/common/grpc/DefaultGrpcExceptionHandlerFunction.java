@@ -65,10 +65,8 @@ import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.grpc.NullCallCredentials;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
-import io.grpc.CallCredentials;
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.Status.Code;

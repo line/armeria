@@ -446,7 +446,8 @@ class GrpcExceptionHandlerTest {
     @Test
     void defaultGrpcExceptionHandlerConvertIOExceptionToUnavailable() {
         final TestServiceBlockingStub client =
-                GrpcClients.newClient(serverWithDefaultExceptionHandler.httpUri(), TestServiceBlockingStub.class);
+                GrpcClients.newClient(serverWithDefaultExceptionHandler.httpUri(),
+                                      TestServiceBlockingStub.class);
 
         final SimpleRequest globalRequest = SimpleRequest
                 .newBuilder()

@@ -158,7 +158,7 @@ class GrpcClientBuilderTest {
 
     @Test
     void useDefaultGrpcExceptionHandlerFunction() {
-        TestServiceBlockingStub client = GrpcClients.builder("http://foo.com").build(
+        final TestServiceBlockingStub client = GrpcClients.builder("http://foo.com").build(
                 TestServiceBlockingStub.class);
 
         final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);

@@ -239,7 +239,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx, e, metadata),
+                                    DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx, e,
+                                                                                      metadata),
                                     metadata));
                 }
             } else {
