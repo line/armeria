@@ -43,9 +43,9 @@ public @interface Attribute {
 
     /**
      * The class of the {@link AttributeKey} to bind to.
-     * If you make AttributeKey with AttributeKeys.valueOf(MyAttributeKeys.class, "INT_ATTR"),
-     * prefix should be 'MyAttributeKeys.class'.
-     * See, <a href="https://armeria.dev/docs/advanced-custom-attributes/">advanced-customer-attributes</a>.
+     * If you created an {@link AttributeKey} with {@code AttributeKeys.valueOf(MyAttributeKeys.class, "INT_ATTR")},
+     * the {@code prefix} should be {@code MyAttributeKeys.class}.
+     * See <a href="https://armeria.dev/docs/advanced-custom-attributes/">advanced-customer-attributes</a>.
      */
     Class<?> prefix() default DefaultValues.class;
 }
