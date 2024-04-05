@@ -27,7 +27,7 @@ import com.linecorp.armeria.internal.server.annotation.DefaultValues;
 import io.netty.util.AttributeKey;
 
 /**
- * Annotation for mapping a {@link AttributeKey} from {@link RequestContext} onto the following elements.
+ * Annotation for mapping an attribute of the given {@link AttributeKey}, retrieved from a {@link RequestContext}, onto the following elements.
  *
  * <p>a parameter of an annotated service method. </p>
  */
