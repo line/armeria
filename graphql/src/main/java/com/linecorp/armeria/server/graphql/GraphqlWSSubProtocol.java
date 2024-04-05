@@ -370,6 +370,10 @@ class GraphqlWSSubProtocol {
     }
 
     private static void writeError(WebSocketWriter out, String operationId, Throwable t) {
+        if (t instanceof ClosedStreamException) {
+            return;
+        }
+        
         final Map<String, Object> errorResponse = ImmutableMap.of(
                 "type", "error",
                 "id", operationId,
