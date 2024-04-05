@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -87,6 +88,25 @@ class AnnotatedServiceMultipartTest {
                            "\"multipartFile1\":\"qux.txt_qux (application/octet-stream)\"," +
                            "\"multipartFile2\":\"quz.txt_quz (text/plain)\"," +
                            "\"param1\":\"armeria\"}");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = "/uploadWithFileParam")
+    void testUploadFileWithUnexpectedParameters(String path) throws Exception {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo"),
+                BodyPart.of(ContentDisposition.of("form-data", "path1", "bar.txt"), "bar"),
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile1", "qux.txt"), "qux"),
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile2", "quz.txt"),
+                            MediaType.PLAIN_TEXT, "quz"),
+                // Unexpected parameter: multipartFile3
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile3", "qux.txt"), "qux"),
+                BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
+
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest(path));
+        assertEquals(HttpStatus.BAD_REQUEST, response.status());
     }
 
     @Test

@@ -32,6 +32,7 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,6 +72,8 @@ import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ServiceName;
+
+import io.netty.util.AttributeKey;
 
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
@@ -316,6 +319,11 @@ final class DefaultAnnotatedService implements AnnotatedService {
     private CompletionStage<HttpResponse> serve1(ServiceRequestContext ctx, HttpRequest req,
                                                  AggregationType aggregationType) {
         final CompletableFuture<AggregatedResult> f;
+        final AttributeKey<List<String>> PARAM_LIST_KEY = AttributeKey.valueOf(List.class, "names");
+        final List<String> names = resolvers.stream()
+                                            .map(AnnotatedValueResolver::httpElementName)
+                                            .collect(Collectors.toList());
+        ctx.setAttr(PARAM_LIST_KEY, names);
         switch (aggregationType) {
             case MULTIPART:
                 f = FileAggregatedMultipart.aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);

@@ -21,6 +21,8 @@ import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
+import io.netty.util.AttributeKey;
 
 public final class FileAggregatedMultipart {
     private final ListMultimap<String, String> params;
@@ -64,6 +67,29 @@ public final class FileAggregatedMultipart {
             assert name != null;
             final String filename = bodyPart.filename();
             final EventLoop eventLoop = ctx.eventLoop();
+
+            final Iterator<Entry<AttributeKey<?>, Object>> attrs = ctx.attrs();
+            boolean expectedValue = !attrs.hasNext();
+            while (attrs.hasNext()) {
+                final Entry<AttributeKey<?>, Object> next = attrs.next();
+                final Object nextValue = next.getValue();
+                if (nextValue instanceof List<?>) {
+                    final List<?> list = (List<?>) nextValue;
+                    for (Object obj : list) {
+                        if (obj instanceof String) {
+                            final String value = (String) obj;
+                            if (name.equals(value)) {
+                                expectedValue = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!expectedValue) {
+                throw new IllegalArgumentException("Unexpected parameter received: " + name);
+            }
 
             if (filename != null) {
                 final Path incompleteDir = destination.resolve("incomplete");
