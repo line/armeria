@@ -26,7 +26,8 @@ import com.linecorp.armeria.common.RequestContext;
 import io.netty.util.AttributeKey;
 
 /**
- * Annotation for mapping an attribute of the given {@link AttributeKey}, retrieved from a {@link RequestContext}, onto the following elements.
+ * Annotation for mapping an attribute of the given {@link AttributeKey}, retrieved
+ * from a {@link RequestContext}, onto the following elements.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
@@ -39,8 +40,8 @@ public @interface Attribute {
     String value();
 
     /**
-     * The class of the {@link AttributeKey} to bind to.
-     * If you created an {@link AttributeKey} with {@code AttributeKey.valueOf(MyAttributeKeys.class, "INT_ATTR")},
+     * The class of the {@link AttributeKey} to bind to. If you created an {@link AttributeKey} with
+     * {@code AttributeKey.valueOf(MyAttributeKeys.class, "INT_ATTR")},
      * the {@link #prefix} should be {@code MyAttributeKeys.class}.
      * See <a href="https://armeria.dev/docs/advanced-custom-attributes/">advanced-customer-attributes</a>.
      */
