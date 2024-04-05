@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHtt
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.newCloseWebSocketFrame;
 
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -91,21 +92,23 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private final int maxFramePayloadLength;
     private final boolean allowMaskMismatch;
     private final Set<String> subprotocols;
-    private final Set<String> allowedOrigins;
     private final boolean allowAnyOrigin;
+    @Nullable
+    private final Predicate<? super String> originPredicate;
     private final boolean aggregateContinuation;
 
     public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
                                    int maxFramePayloadLength, boolean allowMaskMismatch,
-                                   Set<String> subprotocols, Set<String> allowedOrigins,
-                                   boolean allowAnyOrigin, boolean aggregateContinuation) {
+                                   Set<String> subprotocols, boolean allowAnyOrigin,
+                                   @Nullable Predicate<? super String> originPredicate,
+                                   boolean aggregateContinuation) {
         this.handler = handler;
         this.fallbackService = fallbackService;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
         this.subprotocols = subprotocols;
-        this.allowedOrigins = allowedOrigins;
         this.allowAnyOrigin = allowAnyOrigin;
+        this.originPredicate = originPredicate;
         this.aggregateContinuation = aggregateContinuation;
     }
 
@@ -286,7 +289,7 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
                                    "missing the origin header");
         }
 
-        if (allowedOrigins.isEmpty()) {
+        if (originPredicate == null) {
             // Only the same-origin is allowed.
             if (!isSameOrigin(ctx, headers, origin)) {
                 return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
@@ -294,9 +297,9 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
             }
             return null;
         }
-        if (!allowedOrigins.contains(origin)) {
+        if (!originPredicate.test(origin)) {
             return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
-                                   "not allowed origin: " + origin + ", allowed: " + allowedOrigins);
+                                   "not allowed origin: " + origin);
         }
         return null;
     }
