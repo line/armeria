@@ -472,8 +472,9 @@ public final class AnnotationUtil {
         }
     }
 
-    private static <T extends AnnotatedElement> List<AnnotatedElement> convertToAnnotatedElements(List<T> list) {
-        return list.stream().map(element -> (AnnotatedElement)element).collect(Collectors.toList());
+    private static <T extends AnnotatedElement> List<AnnotatedElement> convertToAnnotatedElements(
+            List<T> elements) {
+        return elements.stream().map(element -> (AnnotatedElement)element).collect(Collectors.toList());
     }
 
     private static List<Parameter> collectParameters(Class<?> clazz, Executable executable,
