@@ -68,7 +68,7 @@ final class ExecutionResultSubscriber implements Subscriber<ExecutionResult> {
                 protocol.sendGraphqlErrors(executionResult.getErrors());
                 subscription.cancel();
             }
-        } catch (JsonProcessingException | ClosedStreamException e) {
+        } catch (Throwable e) {
             protocol.completeWithError(e);
             if (subscription != null) {
                 subscription.cancel();
