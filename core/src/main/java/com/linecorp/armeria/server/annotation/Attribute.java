@@ -31,7 +31,6 @@ import io.netty.util.AttributeKey;
  *
  * <p>a parameter of an annotated service method. </p>
  */
-
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
 public @interface Attribute {
