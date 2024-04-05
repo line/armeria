@@ -63,6 +63,8 @@ final class CompositeResponseConverterFunction implements ResponseConverterFunct
         if (result instanceof HttpResponse) {
             return (HttpResponse) result;
         }
+
+        // TODO: support ResponseEntity
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
             headers = HttpResultUtil.buildResponseHeaders(ctx, httpResult);

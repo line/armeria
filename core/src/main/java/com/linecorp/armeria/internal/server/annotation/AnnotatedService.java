@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -192,25 +193,29 @@ public final class AnnotatedService implements HttpService {
             genericReturnType = method.getGenericReturnType();
         }
 
-        if (HttpResult.class.isAssignableFrom(returnType)) {
+        if (HttpResult.class.isAssignableFrom(returnType) ||
+            ResponseEntity.class.isAssignableFrom(returnType)) {
             final ParameterizedType type = (ParameterizedType) genericReturnType;
-            warnIfHttpResponseArgumentExists(type, type);
+            final String returnTypeName = returnType.getSimpleName();
+            warnIfHttpResponseArgumentExists(type, type, returnTypeName);
             return type.getActualTypeArguments()[0];
         } else {
             return genericReturnType;
         }
     }
 
-    private static void warnIfHttpResponseArgumentExists(Type returnType, ParameterizedType type) {
+    private static void warnIfHttpResponseArgumentExists(Type returnType,
+                                                         ParameterizedType type,
+                                                         String returnTypeName) {
         for (final Type arg : type.getActualTypeArguments()) {
             if (arg instanceof ParameterizedType) {
-                warnIfHttpResponseArgumentExists(returnType, (ParameterizedType) arg);
+                warnIfHttpResponseArgumentExists(returnType, (ParameterizedType) arg, returnTypeName);
             } else if (arg instanceof Class) {
                 final Class<?> clazz = (Class<?>) arg;
                 if (HttpResponse.class.isAssignableFrom(clazz) ||
                     AggregatedHttpResponse.class.isAssignableFrom(clazz)) {
                     logger.warn("{} in the return type '{}' may take precedence over {}.",
-                                clazz.getSimpleName(), returnType, HttpResult.class.getSimpleName());
+                                clazz.getSimpleName(), returnType, returnTypeName);
                 }
             }
         }
@@ -400,7 +405,12 @@ public final class AnnotatedService implements HttpService {
         final ResponseHeaders headers;
         final HttpHeaders trailers;
 
-        if (result instanceof HttpResult) {
+        if (result instanceof ResponseEntity) {
+            final ResponseEntity<?> responseEntity = (ResponseEntity<?>) result;
+            headers = responseEntity.headers();
+            result = responseEntity.hasContent() ? responseEntity.content() : null;
+            trailers = responseEntity.trailers();
+        } else if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
             headers = HttpResultUtil.buildResponseHeaders(ctx, httpResult);
             result = httpResult.content();

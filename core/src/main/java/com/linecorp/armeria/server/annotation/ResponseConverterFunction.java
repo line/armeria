@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -78,7 +79,9 @@ public interface ResponseConverterFunction {
      *                The headers also will include a {@link MediaType} if
      *                {@link ServiceRequestContext#negotiatedResponseMediaType()} returns it.
      *                If the method returns {@link HttpResult}, this headers is the same headers from
-     *                {@link HttpResult#headers()}
+     *                {@link HttpResult#headers()}.
+     *                If the method return {@link ResponseEntity}, this headers is the same headers from
+     *                {@link ResponseEntity#headers()}.
      *                Please note that the additional headers set by
      *                {@link ServiceRequestContext#mutateAdditionalResponseHeaders(Consumer)}
      *                and {@link AdditionalHeader} are not included in this headers.
