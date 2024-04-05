@@ -27,6 +27,8 @@ import static com.linecorp.armeria.server.DefaultServerConfig.validateGreaterTha
 import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
+import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
+import static com.linecorp.armeria.server.VirtualHost.validateHostnamePattern;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static java.util.Objects.requireNonNull;
@@ -90,6 +92,7 @@ import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -1548,9 +1551,24 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
 
     /**
      * Configures a {@link VirtualHost} with the {@code customizer}.
+     *
+     * @deprecated Use {@link #withVirtualHost(String, Consumer)} instead.
      */
+    @Deprecated
     public ServerBuilder withVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false);
+        customizer.accept(virtualHostBuilder);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return this;
+    }
+
+    /**
+     * Configures a {@link VirtualHost} with the {@code customizer}.
+     */
+    public ServerBuilder withVirtualHost(String hostnamePattern,
+                                         Consumer<? super VirtualHostBuilder> customizer) {
+        final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
+        requireNonNull(customizer, "customizer");
         customizer.accept(virtualHostBuilder);
         virtualHostBuilders.add(virtualHostBuilder);
         return this;
@@ -1563,8 +1581,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
     public VirtualHostBuilder virtualHost(String hostnamePattern) {
-        final VirtualHostBuilder virtualHostBuilder =
-                new VirtualHostBuilder(this, false).hostnamePattern(hostnamePattern);
+        final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1575,7 +1592,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * @param defaultHostname default hostname of this virtual host
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for building the virtual host
+     *
+     * @deprecated prefer {@link #virtualHost(String)} with {@link VirtualHostBuilder#defaultHostname(String)}.
      */
+    @Deprecated
     public VirtualHostBuilder virtualHost(String defaultHostname, String hostnamePattern) {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
                 .defaultHostname(defaultHostname)
@@ -1610,6 +1630,22 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, port);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
+    }
+
+    private VirtualHostBuilder findOrCreateVirtualHostBuilder(String hostnamePattern) {
+        requireNonNull(hostnamePattern, "hostnamePattern");
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        validateHostnamePattern(hostAndPort.getHost());
+
+        final String normalizedHostnamePattern = normalizeHostnamePattern(hostAndPort.getHost());
+        final int port = hostAndPort.getPortOrDefault(-1);
+        for (VirtualHostBuilder virtualHostBuilder : virtualHostBuilders) {
+            if (!virtualHostBuilder.defaultVirtualHost() &&
+                virtualHostBuilder.equalsHostnamePattern(normalizedHostnamePattern, port)) {
+                return virtualHostBuilder;
+            }
+        }
+        return new VirtualHostBuilder(this, false).hostnamePattern(normalizedHostnamePattern, port);
     }
 
     /**
@@ -2181,7 +2217,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 ports = ImmutableList.of(new ServerPort(0, HTTP));
             }
         } else {
-            if (!Flags.useOpenSsl() && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
+            if (Flags.tlsEngineType() != TlsEngineType.OPENSSL && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
                 throw new IllegalStateException(
                         "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
                         "detected. To use TLS with Armeria, you must either use Java 9+, enable OpenSSL, " +

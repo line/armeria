@@ -292,6 +292,10 @@ public final class XdsTestResources {
 
     public static Listener exampleListener(String listenerName, String routeName, String clusterName) {
         final ConfigSource configSource = basicConfigSource(clusterName);
+        return exampleListener(listenerName, routeName, configSource);
+    }
+
+    public static Listener exampleListener(String listenerName, String routeName, ConfigSource configSource) {
         final HttpConnectionManager manager = httpConnectionManager(Rds.newBuilder()
                                                                        .setRouteConfigName(routeName)
                                                                        .setConfigSource(configSource)
