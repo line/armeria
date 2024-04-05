@@ -22,14 +22,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.server.annotation.DefaultValues;
 
 import io.netty.util.AttributeKey;
 
 /**
  * Annotation for mapping an attribute of the given {@link AttributeKey}, retrieved from a {@link RequestContext}, onto the following elements.
- *
- * <p>a parameter of an annotated service method. </p>
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
@@ -43,9 +40,9 @@ public @interface Attribute {
 
     /**
      * The class of the {@link AttributeKey} to bind to.
-     * If you created an {@link AttributeKey} with {@code AttributeKeys.valueOf(MyAttributeKeys.class, "INT_ATTR")},
-     * the {@code prefix} should be {@code MyAttributeKeys.class}.
+     * If you created an {@link AttributeKey} with {@code AttributeKey.valueOf(MyAttributeKeys.class, "INT_ATTR")},
+     * the {@link #prefix} should be {@code MyAttributeKeys.class}.
      * See <a href="https://armeria.dev/docs/advanced-custom-attributes/">advanced-customer-attributes</a>.
      */
-    Class<?> prefix() default DefaultValues.class;
+    Class<?> prefix() default Default.class;
 }

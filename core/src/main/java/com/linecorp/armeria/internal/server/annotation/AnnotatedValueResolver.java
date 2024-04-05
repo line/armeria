@@ -640,7 +640,7 @@ final class AnnotatedValueResolver {
 
         final ImmutableList.Builder<AttributeKey<?>> builder = ImmutableList.builder();
 
-        if (attr.prefix() != DefaultValues.class) {
+        if (attr.prefix() != Default.class) {
             builder.add(AttributeKey.valueOf(attr.prefix(), name));
         } else {
             final Class<?> serviceClass = ((Parameter) annotatedElement).getDeclaringExecutable()
