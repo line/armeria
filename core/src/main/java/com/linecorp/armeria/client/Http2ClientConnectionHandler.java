@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.GracefulConnectionShutdownHandler;
-import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
@@ -141,17 +140,6 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     private void cancelScheduledTasks() {
         gracefulConnectionShutdownHandler.cancel();
         keepAliveHandler().destroy();
-    }
-
-    @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof InitiateConnectionShutdown) {
-            setGoAwayDebugMessage("app-requested");
-            gracefulConnectionShutdownHandler.handleInitiateConnectionShutdown(
-                    ctx, (InitiateConnectionShutdown) evt);
-            return;
-        }
-        super.userEventTriggered(ctx, evt);
     }
 
     @Override
