@@ -19,7 +19,6 @@ package com.linecorp.armeria.internal.common.auth.oauth2;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
@@ -58,10 +57,7 @@ public abstract class AbstractOAuth2Request implements OAuth2Request {
                 RequestHeaders.builder(HttpMethod.POST, endpointPath)
                               .contentType(MediaType.FORM_DATA);
         if (clientAuthentication != null) {
-            final String headerValue = clientAuthentication.asHeaderValue();
-            if (headerValue != null) {
-                headersBuilder.set(HttpHeaderNames.AUTHORIZATION, headerValue);
-            }
+            clientAuthentication.addAsHeaders(headersBuilder);
         }
         final RequestHeaders headers = headersBuilder.build();
 
@@ -77,10 +73,7 @@ public abstract class AbstractOAuth2Request implements OAuth2Request {
     @Override
     public final void addBodyParams(QueryParamsBuilder formBuilder) {
         if (clientAuthentication != null) {
-            final String headerValue = clientAuthentication.asHeaderValue();
-            if (headerValue == null) {
-                clientAuthentication.addAsBodyParams(formBuilder);
-            }
+            clientAuthentication.addAsBodyParams(formBuilder);
         }
         doAddBodyParams(formBuilder);
     }

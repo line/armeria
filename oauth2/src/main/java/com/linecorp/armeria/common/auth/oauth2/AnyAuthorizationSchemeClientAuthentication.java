@@ -20,6 +20,8 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.internal.common.auth.oauth2.CaseUtil;
 
@@ -34,8 +36,8 @@ final class AnyAuthorizationSchemeClientAuthentication implements ClientAuthenti
     }
 
     @Override
-    public String asHeaderValue() {
-        return headerValue;
+    public void addAsHeaders(HttpHeadersBuilder headersBuilder) {
+        headersBuilder.add(HttpHeaderNames.AUTHORIZATION, headerValue);
     }
 
     @Override

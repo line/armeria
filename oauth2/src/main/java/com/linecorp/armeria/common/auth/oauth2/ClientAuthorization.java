@@ -25,6 +25,8 @@ import java.util.function.Supplier;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -213,13 +215,13 @@ public final class ClientAuthorization {
     public ClientAuthentication toClientAuthentication() {
         return new ClientAuthentication() {
             @Override
-            public String asHeaderValue() {
-                return ClientAuthorization.this.asHeaderValue();
+            public void addAsHeaders(HttpHeadersBuilder headersBuilder) {
+                headersBuilder.add(HttpHeaderNames.AUTHORIZATION, asHeaderValue());
             }
 
             @Override
             public void addAsBodyParams(QueryParamsBuilder formBuilder) {
-                ClientAuthorization.this.addAsBodyParameters(formBuilder);
+                addAsBodyParameters(formBuilder);
             }
         };
     }

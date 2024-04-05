@@ -23,6 +23,8 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.QueryParamsBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -42,17 +44,15 @@ final class ClientPasswordClientAuthentication implements ClientAuthentication {
         this.useBasicAuth = useBasicAuth;
     }
 
-    @Nullable
     @Override
-    public String asHeaderValue() {
+    public void addAsHeaders(HttpHeadersBuilder headersBuilder) {
         if (!useBasicAuth) {
-            return null;
+            return;
         }
-
-        if (headerValue != null) {
-            return headerValue;
+        if (headerValue == null) {
+            headerValue = AuthToken.ofBasic(clientId, clientSecret).asHeaderValue();
         }
-        return headerValue = AuthToken.ofBasic(clientId, clientSecret).asHeaderValue();
+        headersBuilder.add(HttpHeaderNames.AUTHORIZATION, headerValue);
     }
 
     @Override

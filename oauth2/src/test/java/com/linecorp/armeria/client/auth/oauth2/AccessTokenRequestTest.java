@@ -54,7 +54,8 @@ class AccessTokenRequestTest {
         }
         final ClientAuthentication clientAuthentication = accessTokenRequest.clientAuthentication();
         assertThat(clientAuthentication).isNotNull();
-        assertThat(clientAuthentication.asHeaderValue()).isEqualTo("Basic " + BASIC_CLIENT_CREDENTIALS);
+        assertThat(clientAuthentication.asHeaders().get(HttpHeaderNames.AUTHORIZATION))
+                .isEqualTo("Basic " + BASIC_CLIENT_CREDENTIALS);
         assertThat(clientAuthentication).isEqualTo(
                 ClientAuthentication.ofClientPassword("test_client", "client_secret"));
         final AggregatedHttpRequest request =
@@ -82,7 +83,7 @@ class AccessTokenRequestTest {
                     AccessTokenRequest.ofResourceOwnerPassword("test_user", "user_password",
                                                                clientAuthentication);
             assertThat(accessTokenRequest.clientAuthentication()).isNotNull();
-            assertThat(accessTokenRequest.clientAuthentication().asHeaderValue())
+            assertThat(accessTokenRequest.clientAuthentication().asHeaders().get(HttpHeaderNames.AUTHORIZATION))
                     .isEqualTo("Basic " + BASIC_CLIENT_CREDENTIALS);
             assertThat(accessTokenRequest.clientAuthentication())
                     .isEqualTo(clientAuthentication);
@@ -114,7 +115,7 @@ class AccessTokenRequestTest {
                     ClientAuthentication.ofClientPassword("test_client", "client_secret");
             accessTokenRequest = AccessTokenRequest.ofJsonWebToken("test_jwt", clientAuthentication);
             assertThat(accessTokenRequest.clientAuthentication()).isNotNull();
-            assertThat(accessTokenRequest.clientAuthentication().asHeaderValue())
+            assertThat(accessTokenRequest.clientAuthentication().asHeaders().get(HttpHeaderNames.AUTHORIZATION))
                     .isEqualTo("Basic " + BASIC_CLIENT_CREDENTIALS);
             assertThat(accessTokenRequest.clientAuthentication())
                     .isEqualTo(clientAuthentication);

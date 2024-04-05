@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
@@ -31,15 +32,16 @@ class ClientAuthenticationTest {
     @Test
     void basicAuth() {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofBasic("foo");
-        assertThat(clientAuthentication.asHeaderValue()).isEqualTo("Basic foo");
+        assertThat(clientAuthentication.asHeaders().get(HttpHeaderNames.AUTHORIZATION))
+                .isEqualTo("Basic foo");
         assertThat(clientAuthentication.asBodyParams()).isEmpty();
     }
 
     @Test
     void clientPasswordAsBasicAuth() {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofClientPassword("foo", "bar");
-        assertThat(clientAuthentication.asHeaderValue()).isEqualTo(
-                AuthToken.ofBasic("foo", "bar").asHeaderValue());
+        assertThat(clientAuthentication.asHeaders().get(HttpHeaderNames.AUTHORIZATION))
+                .isEqualTo(AuthToken.ofBasic("foo", "bar").asHeaderValue());
         assertThat(clientAuthentication.asBodyParams()).isEmpty();
     }
 
@@ -47,7 +49,7 @@ class ClientAuthenticationTest {
     void clientPasswordAsBodyParams() {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofClientPassword("foo", "bar",
                                                                                                 false);
-        assertThat(clientAuthentication.asHeaderValue()).isNull();
+        assertThat(clientAuthentication.asHeaders()).isEmpty();
         final QueryParams bodyParameters = clientAuthentication.asBodyParams();
         assertThat(bodyParameters.get(CLIENT_ID)).isEqualTo("foo");
         assertThat(bodyParameters.get(CLIENT_SECRET)).isEqualTo("bar");
@@ -56,14 +58,15 @@ class ClientAuthenticationTest {
     @Test
     void anyAuthorization() {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofAuthorization("Bearer", "foo");
-        assertThat(clientAuthentication.asHeaderValue()).isEqualTo("Bearer foo");
+        assertThat(clientAuthentication.asHeaders().get(HttpHeaderNames.AUTHORIZATION))
+                .isEqualTo("Bearer foo");
         assertThat(clientAuthentication.asBodyParams()).isEmpty();
     }
 
     @Test
     void jsonWebToken() {
         final ClientAuthentication clientAuthentication = ClientAuthentication.ofJsonWebToken("foo");
-        assertThat(clientAuthentication.asHeaderValue()).isNull();
+        assertThat(clientAuthentication.asHeaders()).isEmpty();
         final QueryParams bodyParameters = clientAuthentication.asBodyParams();
         assertThat(bodyParameters.get("client_assertion")).isEqualTo("foo");
         assertThat(bodyParameters.get("client_assertion_type"))

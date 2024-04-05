@@ -18,9 +18,10 @@ package com.linecorp.armeria.common.auth.oauth2;
 
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.QueryParamsBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -93,15 +94,27 @@ public interface ClientAuthentication {
     }
 
     /**
-     * Returns the client authentication as a header value.
-     * The returned value will be used as the value of the {@code Authorization} header.
-     * If null, this {@link ClientAuthentication} will be added as body parameters.
+     * Sets this {@link ClientAuthentication} as headers.
+     *
+     * <p>The client authentication can be set via the given {@link HttpHeadersBuilder}
+     * or {@link #addAsBodyParams(QueryParamsBuilder)}.
      */
-    @Nullable
-    String asHeaderValue();
+    void addAsHeaders(HttpHeadersBuilder headersBuilder);
+
+    /**
+     * Returns this {@link ClientAuthentication} as {@link HttpHeaders}.
+     */
+    default HttpHeaders asHeaders() {
+        final HttpHeadersBuilder headersBuilder = HttpHeaders.builder();
+        addAsHeaders(headersBuilder);
+        return headersBuilder.build();
+    }
 
     /**
      * Sets this {@link ClientAuthentication} as body parameters.
+     *
+     * <p>The client authentication can be set via the given {@link QueryParamsBuilder}
+     * or {@link #addAsHeaders(HttpHeadersBuilder)}.
      */
     void addAsBodyParams(QueryParamsBuilder formBuilder);
 

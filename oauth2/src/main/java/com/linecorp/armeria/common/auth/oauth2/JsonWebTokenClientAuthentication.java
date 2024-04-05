@@ -20,8 +20,10 @@ import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.C
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.CLIENT_ASSERTION_TYPE;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.CLIENT_ASSERTION_TYPE_JWT;
 
+import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.QueryParamsBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A client authentication method that uses a JSON Web Token (JWT) as the client assertion, as per
@@ -35,15 +37,19 @@ final class JsonWebTokenClientAuthentication implements ClientAuthentication {
         this.jsonWebToken = jsonWebToken;
     }
 
-    @Nullable
     @Override
-    public String asHeaderValue() {
-        return null;
-    }
+    public void addAsHeaders(HttpHeadersBuilder headersBuilder) {}
 
     @Override
     public void addAsBodyParams(QueryParamsBuilder formBuilder) {
         formBuilder.add(CLIENT_ASSERTION_TYPE, CLIENT_ASSERTION_TYPE_JWT);
         formBuilder.add(CLIENT_ASSERTION, jsonWebToken);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("jsonWebToken", "****")
+                          .toString();
     }
 }
