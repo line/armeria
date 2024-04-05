@@ -65,8 +65,10 @@ import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.client.grpc.NullCallCredentials;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
+import io.grpc.CallCredentials;
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.Status.Code;
@@ -76,9 +78,15 @@ import io.netty.handler.codec.http2.Http2Exception;
 /**
  * Utilities for handling {@link Status} in Armeria.
  */
-public final class GrpcStatus {
+public final class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
+    public static final GrpcExceptionHandlerFunction INSTANCE = new DefaultGrpcExceptionHandlerFunction();
+    private static final Logger logger = LoggerFactory.getLogger(DefaultGrpcExceptionHandlerFunction.class);
 
-    private static final Logger logger = LoggerFactory.getLogger(GrpcStatus.class);
+    @Nullable
+    @Override
+    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        return fromThrowable(cause);
+    }
 
     /**
      * Converts the {@link Throwable} to a {@link Status}, taking into account exceptions specific to Armeria as
@@ -400,5 +408,5 @@ public final class GrpcStatus {
         return builder.build();
     }
 
-    private GrpcStatus() {}
+    private DefaultGrpcExceptionHandlerFunction() {}
 }

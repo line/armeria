@@ -50,7 +50,7 @@ class MetadataUtilTest {
             Metadata.Key.of("testBinary-bin", Metadata.BINARY_BYTE_MARSHALLER);
 
     private static final ThrowableProto THROWABLE_PROTO =
-            GrpcStatus.serializeThrowable(new RuntimeException("test"));
+            DefaultGrpcExceptionHandlerFunction.serializeThrowable(new RuntimeException("test"));
 
     @Test
     void fillHeadersTest() {

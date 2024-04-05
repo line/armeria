@@ -61,7 +61,7 @@ import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
+import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.StatusExceptionConverter;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
@@ -213,16 +213,18 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Throwable exception, boolean cancelled) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        final Status status = GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata);
+        final Status status = DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx,
+                                                                                exception, metadata);
         close(new ServerStatusAndMetadata(status, metadata, false, cancelled), exception);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
         final ServerStatusAndMetadata statusAndMetadata =
-                new ServerStatusAndMetadata(GrpcStatus.fromExceptionHandler(exceptionHandler, ctx,
-                                                                            status, metadata),
-                                            metadata, false);
+                new ServerStatusAndMetadata(
+                        DefaultGrpcExceptionHandlerFunction.fromExceptionHandler(exceptionHandler, ctx,
+                                                                                 status, metadata),
+                        metadata, false);
         close(statusAndMetadata);
     }
 
@@ -565,7 +567,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 trailersBuilder, status.getCode().value(), status.getDescription(), null);
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
-            final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
+            final ThrowableProto proto = DefaultGrpcExceptionHandlerFunction.serializeThrowable(
+                    status.getCause());
             trailersBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
                                 Base64.getEncoder().encodeToString(proto.toByteArray()));
         }

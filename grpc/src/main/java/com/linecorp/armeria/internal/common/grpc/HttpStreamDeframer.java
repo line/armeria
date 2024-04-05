@@ -96,7 +96,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             // Just mark trailers as received since a non-OK response may not have trailers.
             trailersReceived = true;
             transportStatusListener.transportReportStatus(
-                    GrpcStatus.httpStatusToGrpcStatus(status.code()));
+                    DefaultGrpcExceptionHandlerFunction.httpStatusToGrpcStatus(status.code()));
             return;
         }
 
@@ -104,7 +104,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
             trailersReceived = true;
-            GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
+            DefaultGrpcExceptionHandlerFunction.reportStatusLater(headers, deframedStreamMessage,
+                                                                  transportStatusListener);
         }
 
         // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
@@ -122,7 +123,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             } catch (Throwable t) {
                 final Metadata metadata = new Metadata();
                 transportStatusListener.transportReportStatus(
-                        GrpcStatus.fromThrowable(exceptionHandler, ctx, t, metadata),
+                        DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx, t, metadata),
                         metadata);
                 return;
             }
@@ -143,7 +144,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
             trailersReceived = true;
-            GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
+            DefaultGrpcExceptionHandlerFunction.reportStatusLater(headers, deframedStreamMessage,
+                                                                  transportStatusListener);
         }
     }
 
@@ -151,7 +153,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     public void processOnError(Throwable cause) {
         final Metadata metadata = new Metadata();
         transportStatusListener.transportReportStatus(
-                GrpcStatus.fromThrowable(exceptionHandler, ctx, cause, metadata), metadata);
+                DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx, cause, metadata),
+                metadata);
     }
 
     @Override

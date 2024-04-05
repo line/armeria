@@ -42,11 +42,11 @@ import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 
 import io.grpc.Status;
 
-class GrpcStatusTest {
+class DefaultGrpcExceptionHandlerFunctionTest {
     @Test
     void grpcCodeToHttpStatus() {
         for (Status.Code code : Status.Code.values()) {
-            assertThat(GrpcStatus.grpcCodeToHttpStatus(code).code())
+            assertThat(DefaultGrpcExceptionHandlerFunction.grpcCodeToHttpStatus(code).code())
                     .as("gRPC code: {}", code)
                     .isEqualTo(GrpcStatusCode.of(code).getCode().getHttpStatusCode());
         }
@@ -54,8 +54,9 @@ class GrpcStatusTest {
 
     @Test
     void failFastExceptionToUnavailableCode() {
-        assertThat(GrpcStatus.fromThrowable(new FailFastException(CircuitBreaker.ofDefaultName()))
-                             .getCode())
+        assertThat(DefaultGrpcExceptionHandlerFunction.fromThrowable(
+                                                              new FailFastException(CircuitBreaker.ofDefaultName()))
+                                                      .getCode())
                 .isEqualTo(Status.Code.UNAVAILABLE);
     }
 }
