@@ -216,7 +216,8 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void testParameterDescriptionLoad() throws NoSuchMethodException {
-        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod3", String.class)
+        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod3",
+                                                                                  String.class, String.class)
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
@@ -225,7 +226,8 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void testParameterDescriptionLoadByParentClass() throws NoSuchMethodException {
-        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod4", String.class)
+        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod4",
+                                                                                  String.class, String.class)
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
@@ -234,7 +236,8 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void testParameterDescriptionLoadByChildClass() throws NoSuchMethodException {
-        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod5", String.class)
+        final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod5",
+                                                                                  String.class, String.class)
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = findDescription(parameter);
         assertThat(descriptionInfo.docString())
@@ -243,7 +246,8 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void testMethodDescriptionLoad() throws NoSuchMethodException {
-        final Method method = DescriptionAnnotatedTestClass.class.getMethod("testMethod3", String.class);
+        final Method method = DescriptionAnnotatedTestClass.class.getMethod("testMethod3",
+                                                                            String.class, String.class);
         final DescriptionInfo descriptionInfo = findDescription(method);
         assertThat(descriptionInfo.docString())
                 .isEqualTo("This is a description from the annotation");
@@ -251,7 +255,8 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void testMethodDescriptionLoadByParentClass() throws NoSuchMethodException {
-        final Method method = DescriptionAnnotatedTestClass.class.getMethod("testMethod4", String.class);
+        final Method method = DescriptionAnnotatedTestClass.class.getMethod("testMethod4",
+                                                                            String.class, String.class);
         final DescriptionInfo descriptionInfo = findDescription(method);
         assertThat(descriptionInfo.docString())
                 .isEqualTo("This is a super description from the annotation");
@@ -259,7 +264,8 @@ class AnnotatedServiceFactoryTest {
 
     @Test
     void testMethodDescriptionLoadByChildClass() throws NoSuchMethodException {
-        final Method method = DescriptionAnnotatedTestClass.class.getMethod("testMethod5", String.class);
+        final Method method = DescriptionAnnotatedTestClass.class.getMethod("testMethod5", String.class,
+                                                                            String.class);
         final DescriptionInfo descriptionInfo = findDescription(method);
         assertThat(descriptionInfo.docString())
                 .isEqualTo("This is a description from the annotation");
@@ -275,13 +281,13 @@ class AnnotatedServiceFactoryTest {
 
     @Description(ANNOTATED_DESCRIPTION_SUPER)
     private interface DescriptionAnnotatedTestInterface {
-        void testMethod3(String param);
+        void testMethod3(String param1, String param2);
 
         @Description(ANNOTATED_DESCRIPTION_SUPER)
-        void testMethod4(@Description(ANNOTATED_DESCRIPTION_SUPER) String param);
+        void testMethod4(@Description(ANNOTATED_DESCRIPTION_SUPER) String param1, String param2);
 
         @Description(ANNOTATED_DESCRIPTION_SUPER)
-        void testMethod5(@Description(ANNOTATED_DESCRIPTION_SUPER) String param);
+        void testMethod5(@Description(ANNOTATED_DESCRIPTION_SUPER) String param1, String param2);
     }
 
     private static class DescriptionAnnotatedTestClass implements DescriptionAnnotatedTestInterface {
@@ -296,16 +302,18 @@ class AnnotatedServiceFactoryTest {
         @Override
         @Description(ANNOTATED_DESCRIPTION)
         @Get("/some/path")
-        public void testMethod3(@Description(ANNOTATED_DESCRIPTION) @Param("param") String param) {}
+        public void testMethod3(@Description(ANNOTATED_DESCRIPTION) @Param("param") String param1,
+                                String param2) {}
 
         @Override
         @Get("/some/path")
-        public void testMethod4(@Param("param") String param) {}
+        public void testMethod4(@Param("param") String param1, String param2) {}
 
         @Override
         @Description(ANNOTATED_DESCRIPTION)
         @Get("/some/path")
-        public void testMethod5(@Description(ANNOTATED_DESCRIPTION) @Param("param") String param) {}
+        public void testMethod5(@Description(ANNOTATED_DESCRIPTION) @Param("param") String param1,
+                                String param2) {}
     }
 
     private static List<AnnotatedServiceElement> getServiceElements(

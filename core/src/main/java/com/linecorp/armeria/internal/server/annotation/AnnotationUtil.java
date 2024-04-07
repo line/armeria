@@ -69,17 +69,6 @@ public final class AnnotationUtil {
          */
         LOOKUP_SUPER_CLASSES,
         /**
-         * Get additional annotations from the meta-annotations which annotate the annotations specified
-         * on the given {@link AnnotatedElement}.
-         */
-        LOOKUP_META_ANNOTATIONS,
-        /**
-         * Collect the annotations specified in the super classes first, the annotations specified on the
-         * given {@link AnnotatedElement} will be collected at last. This option will work only with
-         * the {@link #LOOKUP_SUPER_CLASSES}.
-         */
-        COLLECT_SUPER_CLASSES_FIRST,
-        /**
          * Get annotations from methods in super classes of the given {@link AnnotatedElement} if the element
          * is a {@link Method}. Otherwise, this option will be ignored.
          * This option will work only with the {@link #LOOKUP_SUPER_CLASSES}.
@@ -90,7 +79,18 @@ public final class AnnotationUtil {
          * is a {@link Parameter}. Otherwise, this option will be ignored.
          * This option will work only with the {@link #LOOKUP_SUPER_CLASSES}.
          */
-        LOOKUP_SUPER_PARAMETERS
+        LOOKUP_SUPER_PARAMETERS,
+        /**
+         * Get additional annotations from the meta-annotations which annotate the annotations specified
+         * on the given {@link AnnotatedElement}.
+         */
+        LOOKUP_META_ANNOTATIONS,
+        /**
+         * Collect the annotations specified in the super classes first, the annotations specified on the
+         * given {@link AnnotatedElement} will be collected at last. This option will work only with
+         * the {@link #LOOKUP_SUPER_CLASSES}.
+         */
+        COLLECT_SUPER_CLASSES_FIRST,
     }
 
     /**
@@ -452,29 +452,27 @@ public final class AnnotationUtil {
         if (element instanceof Class) {
             final List<Class<?>> classes = collectClasses((Class<?>) element, collectSuperClassFirst);
             return convertToAnnotatedElements(classes);
-
-        } else if (element instanceof Method && findOptions.contains(FindOption.LOOKUP_SUPER_METHODS)) {
+        }
+        if (element instanceof Method && findOptions.contains(FindOption.LOOKUP_SUPER_METHODS)) {
             final Method method = (Method) element;
             final Class<?> clazz = method.getDeclaringClass();
             final List<Method> methods = collectMethods(clazz, method, collectSuperClassFirst);
             return convertToAnnotatedElements(methods);
-
-        } else if (element instanceof Parameter && findOptions.contains(FindOption.LOOKUP_SUPER_PARAMETERS)) {
+        }
+        if (element instanceof Parameter && findOptions.contains(FindOption.LOOKUP_SUPER_PARAMETERS)) {
             final Parameter parameter = (Parameter) element;
             final Executable executable = parameter.getDeclaringExecutable();
             final Class<?> clazz = executable.getDeclaringClass();
             final List<Parameter> parameters = collectParameters(clazz, executable, parameter,
                                                                  collectSuperClassFirst);
             return convertToAnnotatedElements(parameters);
-
-        } else {
-            return ImmutableList.of(element);
         }
+        return ImmutableList.of(element);
     }
 
     private static <T extends AnnotatedElement> List<AnnotatedElement> convertToAnnotatedElements(
             List<T> elements) {
-        return elements.stream().map(element -> (AnnotatedElement)element).collect(Collectors.toList());
+        return elements.stream().map(element -> (AnnotatedElement) element).collect(toImmutableList());
     }
 
     private static List<Parameter> collectParameters(Class<?> clazz, Executable executable,
