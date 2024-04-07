@@ -216,8 +216,8 @@ class AnnotatedServiceTest {
         @Get
         @Path("/string-result-async/:var")
         @ResponseConverter(NaiveStringConverterFunction.class)
-        public CompletableFuture<HttpResult<String>> returnStringResultAsync(@Param String var) {
-            return CompletableFuture.supplyAsync(() -> HttpResult.of(var));
+        public CompletableFuture<ResponseEntity<String>> returnStringResultAsync(@Param String var) {
+            return CompletableFuture.supplyAsync(() -> ResponseEntity.of(var));
         }
 
         @Get
@@ -868,7 +868,7 @@ class AnnotatedServiceTest {
         @Path("/response-entity-string/{name}")
         public ResponseEntity<String> responseEntityString(RequestContext ctx, @Param("name") String name) {
             validateContext(ctx);
-            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK), name);
+            return ResponseEntity.of(name);
         }
 
         @Get
