@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
@@ -171,15 +172,7 @@ public final class RequestMetricSupport {
         }
 
         for (RequestLogAccess child: log.children()) {
-
-            child.whenComplete().thenAccept(requestLog -> {
-                final Throwable error = requestLog.responseCause();
-                if (error != null) {
-                    metrics.failureAttempts(error).increment();
-                } else {
-                    metrics.failureAttempts(requestLog.responseStatus()).increment();
-                }
-            }).join();
+            child.whenComplete().thenAccept(recordCausesOfFailedAttempts(metrics)).join();
         }
     }
 
@@ -209,6 +202,17 @@ public final class RequestMetricSupport {
         } else {
             metrics.failureAttempts().record(childrenSize);
         }
+    }
+
+    private static Consumer<RequestLog> recordCausesOfFailedAttempts(ClientRequestMetrics metrics) {
+        return requestLog -> {
+            final Throwable error = requestLog.responseCause();
+            if (error != null) {
+                metrics.failureAttempts(error).increment();
+            } else {
+                metrics.failureAttempts(requestLog.responseStatus()).increment();
+            }
+        };
     }
 
     private RequestMetricSupport() {}
