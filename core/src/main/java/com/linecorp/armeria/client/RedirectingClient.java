@@ -264,18 +264,11 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                                      nextReqTarget.toString(), nextAuthority);
 
             try {
-                redirectCtx.validateCyclicRedirects(nextReqTarget, newReqDuplicator.headers().method());
+                redirectCtx.validateRedirects(nextReqTarget,
+                                              newReqDuplicator.headers().method(),
+                                              maxRedirects);
             } catch (Throwable t) {
                 handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
-                return;
-            }
-
-            final Set<RedirectSignature> redirectSignatures = redirectCtx.redirectSignatures();
-            // Minus 1 because the original signature is also included.
-            if (redirectSignatures.size() - 1 > maxRedirects) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture,
-                                response, TooManyRedirectsException.of(maxRedirects, redirectCtx.originalUri(),
-                                                                       redirectCtx.redirectUris()));
                 return;
             }
 
@@ -563,7 +556,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return responseFuture;
         }
 
-        void validateCyclicRedirects(RequestTarget nextReqTarget, HttpMethod nextMethod) {
+        void validateRedirects(RequestTarget nextReqTarget, HttpMethod nextMethod, int maxRedirects) {
             if (redirectSignatures == null) {
                 redirectSignatures = new LinkedHashSet<>();
 
@@ -582,6 +575,11 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             if (!redirectSignatures.add(signature)) {
                 throw CyclicRedirectsException.of(originalUri(), redirectUris());
             }
+
+            // Minus 1 because the original signature is also included.
+            if (redirectSignatures.size() - 1 > maxRedirects) {
+                throw TooManyRedirectsException.of(maxRedirects, originalUri(), redirectUris());
+            }
         }
 
         String originalUri() {
@@ -589,12 +587,6 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 originalUri = buildUri(ctx, request.headers());
             }
             return originalUri;
-        }
-
-        Set<RedirectSignature> redirectSignatures() {
-            // Always called after addRedirectSignature is called.
-            assert redirectSignatures != null;
-            return redirectSignatures;
         }
 
         Set<String> redirectUris() {
