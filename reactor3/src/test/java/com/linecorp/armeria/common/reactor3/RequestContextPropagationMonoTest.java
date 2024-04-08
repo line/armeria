@@ -29,9 +29,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.reactor3.RequestContextHooks.ContextAwareMono;
-import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
