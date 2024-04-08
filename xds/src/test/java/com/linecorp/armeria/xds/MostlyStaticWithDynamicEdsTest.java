@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.linecorp.armeria.xds.RouteMetadataSubsetTest.staticResourceListener;
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.createCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.loadAssignment;
+import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;

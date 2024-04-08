@@ -25,10 +25,10 @@ import static com.linecorp.armeria.server.ServerSslContextUtil.buildSslContext;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
-import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_WITH_NO_PORT_PATTERN;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
+import static com.linecorp.armeria.server.VirtualHost.validateHostnamePattern;
 import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.isPseudoHeader;
 import static java.util.Objects.requireNonNull;
 
@@ -232,7 +232,11 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * will be bound to the {@code 8080} port. Otherwise, the virtual host will allow all active ports.
      *
      * @throws UnsupportedOperationException if this is the default {@link VirtualHostBuilder}
+     *
+     * @deprecated prefer specifying the hostnamePattern using {@link ServerBuilder#virtualHost(String)}
+     *             or {@link ServerBuilder#withVirtualHost(String, Consumer)}
      */
+    @Deprecated
     public VirtualHostBuilder hostnamePattern(String hostnamePattern) {
         if (defaultVirtualHost) {
             throw new UnsupportedOperationException(
@@ -248,20 +252,22 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             hostnamePattern = hostAndPort.getHost();
         }
 
-        final boolean validHostnamePattern;
-        if (hostnamePattern.charAt(0) == '*') {
-            validHostnamePattern =
-                    hostnamePattern.length() >= 3 &&
-                    hostnamePattern.charAt(1) == '.' &&
-                    HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern.substring(2)).matches();
-        } else {
-            validHostnamePattern = HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern).matches();
-        }
-
-        checkArgument(validHostnamePattern,
-                      "hostnamePattern: %s (expected: *.<hostname> or <hostname>)", hostnamePattern);
+        validateHostnamePattern(hostnamePattern);
 
         this.hostnamePattern = normalizeHostnamePattern(hostnamePattern);
+        return this;
+    }
+
+    VirtualHostBuilder hostnamePattern(String hostnamePattern, int port) {
+        if (defaultVirtualHost) {
+            throw new UnsupportedOperationException(
+                    "Cannot set hostnamePattern for the default virtual host builder");
+        }
+
+        this.hostnamePattern = hostnamePattern;
+        if (port >= 1 && port <= 65535) {
+            this.port = port;
+        }
         return this;
     }
 
@@ -737,7 +743,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                     routeDecoratingServices.stream()
                                            .map(service -> service.withRoutePrefix(baseContextPath))
                                            .collect(toImmutableList());
-            return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed));
+            return RouteDecoratingService.newDecorator(Routers.ofRouteDecoratingService(prefixed),
+                                                       routeDecoratingServices);
         } else {
             return null;
         }
@@ -1522,6 +1529,15 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             return selfSignedCertificate = new SelfSignedCertificate(defaultHostname);
         }
         return selfSignedCertificate;
+    }
+
+    boolean equalsHostnamePattern(String validHostnamePattern, int port) {
+        checkArgument(!validHostnamePattern.isEmpty(), "hostnamePattern is empty.");
+
+        if (this.port != port) {
+            return false;
+        }
+        return validHostnamePattern.equals(hostnamePattern);
     }
 
     int port() {

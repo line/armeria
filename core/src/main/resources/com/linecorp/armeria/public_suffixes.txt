@@ -30,7 +30,6 @@
 *.ca-central-1.airflow.amazonaws.com
 *.ck
 *.cloud.metacentrum.cz
-*.cloudapp.azure.com
 *.cloudera.site
 *.cn-north-1.airflow.amazonaws.com.cn
 *.cn-northwest-1.airflow.amazonaws.com.cn
@@ -718,7 +717,6 @@ av.it
 av.tr
 avellino.it
 averoy.no
-avianca
 avocat.fr
 avocat.pro
 avocats.bj
@@ -1458,6 +1456,7 @@ cloud66.ws
 cloud66.zone
 cloudaccess.host
 cloudaccess.net
+cloudapp.azure.com
 cloudapp.net
 cloudapps.digital
 cloudcontrolapp.com
@@ -3222,6 +3221,7 @@ grajewo.pl
 gran.no
 grane.no
 granvin.no
+graphic.design
 graphics
 graphox.us
 gratangen.no
@@ -3848,10 +3848,12 @@ iobb.net
 iopsys.se
 ip.linodeusercontent.com
 ip6.arpa
+ipfs.nftstorage.link
 ipifony.net
 ipiranga
 iq
 ir
+ir.md
 iris.arpa
 irish
 iruma.saitama.jp

@@ -8,7 +8,7 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
     id 'com.gradle.enterprise' version '3.16.2'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.12.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.13'
 }
 
 import com.gradle.scan.plugin.PublishedBuildScan
@@ -156,6 +156,7 @@ includeWithFlags ':spring:boot3-autoconfigure',          'java17', 'publish', 'r
 includeWithFlags ':spring:boot3-starter',                'java17', 'publish', 'relocate'
 includeWithFlags ':spring:boot3-webflux-autoconfigure',  'java17', 'publish', 'relocate'
 includeWithFlags ':spring:boot3-webflux-starter',        'java17', 'publish', 'relocate'
+includeWithFlags ':spring:spring6',                      'java17', 'publish', 'relocate'
 
 includeWithFlags ':dropwizard1',                         'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':dropwizard2',                         'java', 'publish', 'relocate'

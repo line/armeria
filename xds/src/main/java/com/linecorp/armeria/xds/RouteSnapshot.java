@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -72,6 +73,24 @@ public final class RouteSnapshot implements Snapshot<RouteXdsResource> {
      */
     public Map<VirtualHost, List<ClusterSnapshot>> virtualHostMap() {
         return virtualHostMap;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) {
+            return true;
+        }
+        if (object == null || getClass() != object.getClass()) {
+            return false;
+        }
+        final RouteSnapshot that = (RouteSnapshot) object;
+        return Objects.equal(routeXdsResource, that.routeXdsResource) &&
+               Objects.equal(clusterSnapshots, that.clusterSnapshots);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(routeXdsResource, clusterSnapshots);
     }
 
     @Override

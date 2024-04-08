@@ -19,7 +19,10 @@ package com.linecorp.armeria.server.cors;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
 
@@ -33,15 +36,23 @@ import com.linecorp.armeria.common.HttpMethod;
  */
 public final class ChainedCorsPolicyBuilder extends AbstractCorsPolicyBuilder {
 
+    private static final List<String> ALLOW_ANY_ORIGIN = ImmutableList.of("*");
     private final CorsServiceBuilder serviceBuilder;
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder) {
+        super(ALLOW_ANY_ORIGIN);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
     }
 
     ChainedCorsPolicyBuilder(CorsServiceBuilder builder, List<String> origins) {
         super(origins);
+        requireNonNull(builder, "builder");
+        serviceBuilder = builder;
+    }
+
+    ChainedCorsPolicyBuilder(CorsServiceBuilder builder, Predicate<? super String> originPredicate) {
+        super(originPredicate);
         requireNonNull(builder, "builder");
         serviceBuilder = builder;
     }

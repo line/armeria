@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
@@ -71,8 +72,11 @@ import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.logging.LoggingService;
 
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -104,7 +108,6 @@ public final class Flags {
                              .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
                              .collect(Collectors.toList());
         flagsProviders.add(0, SystemPropertyFlagsProvider.INSTANCE);
-        flagsProviders.add(DefaultFlagsProvider.INSTANCE);
         FLAGS_PROVIDERS = ImmutableList.copyOf(flagsProviders);
     }
 
@@ -187,7 +190,8 @@ public final class Flags {
             getValue(FlagsProvider::transportType, "transportType", TRANSPORT_TYPE_VALIDATOR);
 
     @Nullable
-    private static Boolean useOpenSsl;
+    private static TlsEngineType tlsEngineType;
+
     @Nullable
     private static Boolean dumpOpenSslInfo;
 
@@ -409,6 +413,9 @@ public final class Flags {
             getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
                      "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
 
+    private static final DistributionStatisticConfig DISTRIBUTION_STATISTIC_CONFIG =
+            getValue(FlagsProvider::distributionStatisticConfig, "distributionStatisticConfig");
+
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
      * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
@@ -429,7 +436,6 @@ public final class Flags {
      * stack trace of the exceptions that are thrown frequently by Armeria.
      *
      * @see #verboseExceptionSampler()
-     *
      * @deprecated Use {@link #verboseExceptionSampler()} and
      *             {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>}.
      */
@@ -538,32 +544,67 @@ public final class Flags {
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
+     *
+     * @deprecated Use {@link #tlsEngineType()} and {@code -Dcom.linecorp.armeria.tlsEngineType=openssl}.
      */
+    @Deprecated
     public static boolean useOpenSsl() {
-        if (useOpenSsl != null) {
-            return useOpenSsl;
-        }
-        setUseOpenSslAndDumpOpenSslInfo();
-        return useOpenSsl;
+        return tlsEngineType() == TlsEngineType.OPENSSL;
     }
 
-    private static void setUseOpenSslAndDumpOpenSslInfo() {
-        final boolean useOpenSsl = getValue(FlagsProvider::useOpenSsl, "useOpenSsl");
-        if (!useOpenSsl) {
-            // OpenSSL explicitly disabled
-            Flags.useOpenSsl = false;
+    /**
+     * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * <p>The default value of this flag is {@link TlsEngineType#OPENSSL}.
+     * Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
+     * the default value.
+     */
+    @UnstableApi
+    public static TlsEngineType tlsEngineType() {
+        if (tlsEngineType != null) {
+            return tlsEngineType;
+        }
+        detectTlsEngineAndDumpOpenSslInfo();
+        return tlsEngineType;
+    }
+
+    private static void detectTlsEngineAndDumpOpenSslInfo() {
+
+        final Boolean useOpenSsl = getUserValue(FlagsProvider::useOpenSsl, "useOpenSsl",
+                                                ignored -> true);
+        final TlsEngineType tlsEngineTypeValue = getUserValue(FlagsProvider::tlsEngineType,
+                                                              "tlsEngineType", ignored -> true);
+
+        if (useOpenSsl != null && (useOpenSsl != (tlsEngineTypeValue == TlsEngineType.OPENSSL))) {
+            logger.warn("useOpenSsl({}) and tlsEngineType({}) are incompatible, tlsEngineType will be used",
+                        useOpenSsl, tlsEngineTypeValue);
+        }
+
+        TlsEngineType preferredTlsEngineType = null;
+        if (tlsEngineTypeValue != null) {
+            preferredTlsEngineType = tlsEngineTypeValue;
+        } else if (useOpenSsl != null) {
+            preferredTlsEngineType = useOpenSsl ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
+        }
+        if (preferredTlsEngineType == TlsEngineType.OPENSSL) {
+            if (!OpenSsl.isAvailable()) {
+                final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
+                logger.info("OpenSSL not available: {}", cause.toString());
+                preferredTlsEngineType = TlsEngineType.JDK;
+            }
+        }
+        if (preferredTlsEngineType == null) {
+            preferredTlsEngineType = OpenSsl.isAvailable() ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
+        }
+        tlsEngineType = preferredTlsEngineType;
+
+        if (tlsEngineType != TlsEngineType.OPENSSL) {
             dumpOpenSslInfo = false;
+            logger.info("Using TLS engine: {}", tlsEngineType);
             return;
         }
-        if (!OpenSsl.isAvailable()) {
-            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
-            logger.info("OpenSSL not available: {}", cause.toString());
-            Flags.useOpenSsl = false;
-            dumpOpenSslInfo = false;
-            return;
-        }
-        Flags.useOpenSsl = true;
-        logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
+
+        logger.info("Using Tls engine: OpenSSL {}, 0x{}", OpenSsl.versionString(),
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getValue(FlagsProvider::dumpOpenSslInfo, "dumpOpenSslInfo");
         if (dumpOpenSslInfo) {
@@ -588,14 +629,14 @@ public final class Flags {
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
      * option to enable it.
      *
-     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
-     * specified the JVM option.
+     * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
+     * {@code false} no matter what the specified JVM option is.
      */
     public static boolean dumpOpenSslInfo() {
         if (dumpOpenSslInfo != null) {
             return dumpOpenSslInfo;
         }
-        setUseOpenSslAndDumpOpenSslInfo();
+        detectTlsEngineAndDumpOpenSslInfo();
         return dumpOpenSslInfo;
     }
 
@@ -1252,7 +1293,6 @@ public final class Flags {
      * to override the default value.
      *
      * @see ExceptionVerbosity
-     *
      * @deprecated Use {@link LoggingService} or log exceptions using
      *             {@link ServerBuilder#errorHandler(ServerErrorHandler)}.
      */
@@ -1497,6 +1537,30 @@ public final class Flags {
         return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
     }
 
+    /**
+     * Returns the default {@link DistributionStatisticConfig} of the {@link Timer}s and
+     * {@link DistributionSummary}s created by Armeria.
+     *
+     * <p>The default value of this flag is as follows:
+     * <pre>{@code
+     * DistributionStatisticConfig.builder()
+     *     .percentilesHistogram(false)
+     *     .serviceLevelObjectives()
+     *     .percentiles(
+     *          0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
+     *     .percentilePrecision(2)
+     *     .minimumExpectedValue(1.0)
+     *     .maximumExpectedValue(Double.MAX_VALUE)
+     *     .expiry(Duration.ofMinutes(3))
+     *     .bufferLength(3)
+     *     .build();
+     * }</pre>
+     */
+    @UnstableApi
+    public static DistributionStatisticConfig distributionStatisticConfig() {
+        return DISTRIBUTION_STATISTIC_CONFIG;
+    }
+
     @Nullable
     private static String nullableCaffeineSpec(Function<FlagsProvider, String> method, String flagName) {
         return caffeineSpec(method, flagName, true);
@@ -1581,24 +1645,37 @@ public final class Flags {
 
     private static <T> T getValue(Function<FlagsProvider, @Nullable T> method,
                                   String flagName, Predicate<T> validator) {
+        final T t = getUserValue(method, flagName, validator);
+        if (t != null) {
+            return t;
+        }
+
+        return method.apply(DefaultFlagsProvider.INSTANCE);
+    }
+
+    @Nullable
+    private static <T> T getUserValue(Function<FlagsProvider, @Nullable T> method, String flagName,
+                                      Predicate<T> validator) {
         for (FlagsProvider provider : FLAGS_PROVIDERS) {
             try {
                 final T value = method.apply(provider);
                 if (value == null) {
                     continue;
                 }
+
                 if (!validator.test(value)) {
                     logger.warn("{}: {} ({}, validation failed)", flagName, value, provider.name());
                     continue;
                 }
+
                 logger.info("{}: {} ({})", flagName, value, provider.name());
                 return value;
             } catch (Exception ex) {
                 logger.warn("{}: ({}, {})", flagName, provider.name(), ex.getMessage());
             }
         }
-        // Should never reach here because DefaultFlagsProvider always returns a normal value.
-        throw new Error();
+
+        return null;
     }
 
     private Flags() {}
