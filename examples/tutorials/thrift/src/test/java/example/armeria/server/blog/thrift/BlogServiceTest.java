@@ -27,8 +27,8 @@ class BlogServiceTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/thrift", THttpService.builder()
-                                              .exceptionHandler(new BlogServiceExceptionHandler())
                                               .addService(new BlogServiceImpl())
+                                              .exceptionHandler(new BlogServiceExceptionHandler())
                                               .build());
         }
     };
@@ -41,7 +41,6 @@ class BlogServiceTest {
         assertThat(response.getId()).isGreaterThanOrEqualTo(0);
         assertThat(response.getTitle()).isEqualTo("My first blog");
         assertThat(response.getContent()).isEqualTo("Hello Armeria!");
-        System.out.println(response);
     }
 
     @Test
@@ -52,7 +51,6 @@ class BlogServiceTest {
 
         assertThat(blogPost.getTitle()).isEqualTo("My first blog");
         assertThat(blogPost.getContent()).isEqualTo("Hello Armeria!");
-        System.out.println(blogPost);
     }
 
     @Test
@@ -83,7 +81,6 @@ class BlogServiceTest {
         final BlogPost secondBlog = blogs.get(1);
         assertThat(secondBlog.getTitle()).isEqualTo("My second blog");
         assertThat(secondBlog.getContent()).isEqualTo("Armeria is awesome!");
-        System.out.println(blogs);
     }
 
     @Test
@@ -94,7 +91,6 @@ class BlogServiceTest {
         assertThat(updated.getId()).isZero();
         assertThat(updated.getTitle()).isEqualTo("My first blog");
         assertThat(updated.getContent()).isEqualTo("Hello awesome Armeria!");
-        System.out.println(updated);
     }
 
     @Test

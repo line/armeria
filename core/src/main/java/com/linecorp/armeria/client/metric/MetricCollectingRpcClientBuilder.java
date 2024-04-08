@@ -26,6 +26,8 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.AbstractMetricCollectingBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
+
 /**
  * Builds a {@link MetricCollectingRpcClient} instance.
  */
@@ -41,13 +43,21 @@ public final class MetricCollectingRpcClientBuilder extends AbstractMetricCollec
         return (MetricCollectingRpcClientBuilder) super.successFunction(successFunction);
     }
 
+    @Override
+    public MetricCollectingRpcClientBuilder distributionStatisticConfig(
+            DistributionStatisticConfig distributionStatisticConfig) {
+        return (MetricCollectingRpcClientBuilder)
+                super.distributionStatisticConfig(distributionStatisticConfig);
+    }
+
     /**
      * Returns a newly-created {@link MetricCollectingRpcClient} decorating {@link RpcClient} based
      * on the properties of this builder.
      */
     public MetricCollectingRpcClient build(RpcClient delegate) {
         requireNonNull(delegate, "delegate");
-        return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction(), successFunction());
+        return new MetricCollectingRpcClient(delegate, meterIdPrefixFunction(), successFunction(),
+                                             distributionStatisticConfig());
     }
 
     /**

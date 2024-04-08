@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.cors;
 
+import java.util.List;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
@@ -35,8 +37,11 @@ import com.linecorp.armeria.common.HttpMethod;
  *
  */
 public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder {
+    private static final List<String> ALLOW_ANY_ORIGIN = ImmutableList.of("*");
 
-    CorsPolicyBuilder() {}
+    CorsPolicyBuilder() {
+        super(ALLOW_ANY_ORIGIN);
+    }
 
     CorsPolicyBuilder(String... origins) {
         super(ImmutableList.copyOf(origins));
@@ -44,6 +49,10 @@ public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder {
 
     CorsPolicyBuilder(Iterable<String> origins) {
         super(ImmutableList.copyOf(origins));
+    }
+
+    CorsPolicyBuilder(Predicate<? super String> predicate) {
+        super(predicate);
     }
 
     /**
