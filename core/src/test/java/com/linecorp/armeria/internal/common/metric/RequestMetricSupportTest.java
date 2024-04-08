@@ -209,6 +209,28 @@ class RequestMetricSupportTest {
     }
 
     @Test
+    void allRetryingRequestFailedWithCauses() {
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final ClientRequestContext ctx = setupClientRequestCtx(registry);
+
+        addLogInfoInDerivedCtxWithCause(ctx, 501, new InvalidResponseException());
+        addLogInfoInDerivedCtx(ctx, 502);
+        addLogInfoInDerivedCtxWithCause(ctx, 503, ResponseCancellationException.get());
+
+
+        ctx.logBuilder().endResponseWithLastChild();
+
+        final Map<String, Double>  measurements = measureAll(registry);
+        assertThat(measurements)
+                .containsEntry("foo.actual.requests.attempts.errors#"
+                               + "count{cause=ResponseCancellationException,result=failure}", 1.0)
+                .containsEntry("foo.actual.requests.attempts.errors#"
+                               + "count{http.status=502,result=failure}", 1.0)
+                .containsEntry("foo.actual.requests.attempts.errors#"
+                               + "count{cause=InvalidResponseException,result=failure}", 1.0);
+    }
+
+    @Test
     void firstRetryingRequestFailedAndTheSecondOneSuccess() {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
@@ -236,24 +258,6 @@ class RequestMetricSupportTest {
                                "result=success,service=none}", 1.0)
                 .containsEntry("foo.actual.requests.attempts#total{http.status=200,method=POST," +
                                "result=success,service=none}", 2.0);
-    }
-
-    @Test
-    void firstRetryingRequestFailedAndTheSecondOneFailedWithOtherErrors() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
-        final ClientRequestContext ctx = setupClientRequestCtx(registry);
-
-        addLogInfoInDerivedCtxWithError(ctx, 503, ResponseCancellationException.get());
-        addLogInfoInDerivedCtxWithError(ctx, 501, new InvalidResponseException());
-
-        ctx.logBuilder().endResponseWithLastChild();
-
-        final Map<String, Double>  measurements = measureAll(registry);
-        assertThat(measurements)
-                .containsEntry("foo.actual.requests.attempts.causes#"
-                               + "count{cause=ResponseCancellationException,result=failure}", 1.0)
-                .containsEntry("foo.actual.requests.attempts.causes#"
-                               + "count{cause=InvalidResponseException,result=failure}", 1.0);
     }
 
     @Test
@@ -333,8 +337,8 @@ class RequestMetricSupportTest {
         derivedCtx.logBuilder().endResponse();
     }
 
-    private static void addLogInfoInDerivedCtxWithError(ClientRequestContext ctx, int statusCode,
-                                                        Throwable error) {
+    private static void addLogInfoInDerivedCtxWithCause(ClientRequestContext ctx, int statusCode,
+                                                        Throwable cause) {
         final ClientRequestContext derivedCtx =
                 ctx.newDerivedContext(ctx.id(), ctx.request(), ctx.rpcRequest(), ctx.endpoint());
 
@@ -348,7 +352,7 @@ class RequestMetricSupportTest {
         derivedCtx.logBuilder().responseFirstBytesTransferred();
         derivedCtx.logBuilder().responseLength(456);
         derivedCtx.logBuilder().endRequest();
-        derivedCtx.logBuilder().endResponse(error);
+        derivedCtx.logBuilder().endResponse(cause);
     }
 
     @Test

@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -175,6 +176,8 @@ public final class RequestMetricSupport {
                 final Throwable error = requestLog.responseCause();
                 if (error != null) {
                     metrics.failureAttempts(error).increment();
+                } else {
+                    metrics.failureAttempts(requestLog.responseStatus()).increment();
                 }
             }).join();
         }
@@ -247,6 +250,7 @@ public final class RequestMetricSupport {
         DistributionSummary failureAttempts();
 
         Counter failureAttempts(Throwable error);
+        Counter failureAttempts(HttpStatus httpStatus);
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -347,7 +351,8 @@ public final class RequestMetricSupport {
         @Nullable
         private DistributionSummary failureAttempts;
 
-        private final Map<String, Counter> failureAttemptsWithErrors;
+        private final Map<String, Counter> failureAttemptsWithCause;
+        private final Map<HttpStatus, Counter> failureAttemptsWithHttpStatus;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
                                     DistributionStatisticConfig distributionStatisticConfig) {
@@ -371,7 +376,9 @@ public final class RequestMetricSupport {
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
-            failureAttemptsWithErrors = new HashMap<>();
+
+            failureAttemptsWithCause = new HashMap<>();
+            failureAttemptsWithHttpStatus = new HashMap<>();
         }
 
         @Override
@@ -438,14 +445,28 @@ public final class RequestMetricSupport {
         public Counter failureAttempts(Throwable error) {
             final String causeName = error.getClass().getSimpleName();
 
-            if (failureAttemptsWithErrors.containsKey(causeName)) {
-                return failureAttemptsWithErrors.get(causeName);
+            if (failureAttemptsWithCause.containsKey(causeName)) {
+                return failureAttemptsWithCause.get(causeName);
             }
 
             final Counter counter = parent.counter(
-                    idPrefix.name("actual.requests.attempts.causes"),
+                    idPrefix.name("actual.requests.attempts.errors"),
                     ImmutableList.of(Tag.of("result", "failure"), Tag.of("cause", causeName)));
-            failureAttemptsWithErrors.put(causeName, counter);
+            failureAttemptsWithCause.put(causeName, counter);
+            return counter;
+        }
+
+        @Override
+        public Counter failureAttempts(HttpStatus httpStatus) {
+            if (failureAttemptsWithHttpStatus.containsKey(httpStatus)) {
+                return failureAttemptsWithHttpStatus.get(httpStatus);
+            }
+
+            final Counter counter = parent.counter(
+                    idPrefix.name("actual.requests.attempts.errors"),
+                    ImmutableList.of(
+                            Tag.of("result", "failure"), Tag.of("http.status", httpStatus.codeAsText())));
+            failureAttemptsWithHttpStatus.put(httpStatus, counter);
             return counter;
         }
     }
