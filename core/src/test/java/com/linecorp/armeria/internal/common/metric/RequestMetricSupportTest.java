@@ -217,17 +217,16 @@ class RequestMetricSupportTest {
         addLogInfoInDerivedCtx(ctx, 502);
         addLogInfoInDerivedCtxWithCause(ctx, 503, ResponseCancellationException.get());
 
-
         ctx.logBuilder().endResponseWithLastChild();
 
         final Map<String, Double>  measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.actual.requests.attempts.errors#"
-                               + "count{cause=ResponseCancellationException,result=failure}", 1.0)
-                .containsEntry("foo.actual.requests.attempts.errors#"
-                               + "count{http.status=502,result=failure}", 1.0)
-                .containsEntry("foo.actual.requests.attempts.errors#"
-                               + "count{cause=InvalidResponseException,result=failure}", 1.0);
+                .containsEntry("foo.actual.requests.attempts.errors#" +
+                               "count{cause=ResponseCancellationException,result=failure}", 1.0)
+                .containsEntry("foo.actual.requests.attempts.errors#" +
+                               "count{http.status=502,result=failure}", 1.0)
+                .containsEntry("foo.actual.requests.attempts.errors#" +
+                               "count{cause=InvalidResponseException,result=failure}", 1.0);
     }
 
     @Test

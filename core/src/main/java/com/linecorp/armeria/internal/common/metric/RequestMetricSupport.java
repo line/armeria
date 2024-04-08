@@ -254,6 +254,7 @@ public final class RequestMetricSupport {
         DistributionSummary failureAttempts();
 
         Counter failureAttempts(Throwable error);
+
         Counter failureAttempts(HttpStatus httpStatus);
     }
 
