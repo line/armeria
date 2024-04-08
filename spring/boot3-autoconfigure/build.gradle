@@ -2,6 +2,7 @@ dependencies {
     // To let a user choose between thrift and thrift0.9.
     compileOnly project(':thrift0.18')
     implementation project(':logback')
+    implementation project(':reactor3')
 
     // TODO(anuraaga): Consider removing these since this module does not have related functionality.
     optionalApi libs.micrometer.prometheus

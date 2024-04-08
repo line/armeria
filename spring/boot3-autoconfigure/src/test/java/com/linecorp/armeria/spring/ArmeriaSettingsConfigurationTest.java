@@ -27,6 +27,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.reactor3.RequestContextPropagationHook;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
 import com.linecorp.armeria.server.VirtualHost;
@@ -69,5 +70,7 @@ class ArmeriaSettingsConfigurationTest {
         assertThat(defaultVirtualHost.requestTimeoutMillis()).isEqualTo(8000);
         assertThat(defaultVirtualHost.maxRequestLength()).isEqualTo(0);
         assertThat(defaultVirtualHost.verboseResponses()).isTrue();
+
+        assertThat(RequestContextPropagationHook.isEnable()).isTrue();
     }
 }

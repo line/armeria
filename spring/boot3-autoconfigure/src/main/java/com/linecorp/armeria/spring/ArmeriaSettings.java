@@ -629,6 +629,9 @@ public class ArmeriaSettings {
      */
     private boolean enableAutoInjection;
 
+    private boolean enableContextPropagation;
+
+
     /**
      * Returns the {@link Port}s of the {@link Server}.
      */
@@ -1121,5 +1124,13 @@ public class ArmeriaSettings {
      */
     public void setEnableAutoInjection(boolean enableAutoInjection) {
         this.enableAutoInjection = enableAutoInjection;
+    }
+
+    public boolean isEnableContextPropagation() {
+        return enableContextPropagation;
+    }
+
+    public void setEnableContextPropagation(boolean enableContextPropagation) {
+        this.enableContextPropagation = enableContextPropagation;
     }
 }
