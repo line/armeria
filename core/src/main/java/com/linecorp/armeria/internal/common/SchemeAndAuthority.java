@@ -82,48 +82,33 @@ public final class SchemeAndAuthority {
      * An IPv4 or IPv6 address can be specified in lieu of a host name, e.g. {@code "127.0.0.1:8080"} and
      * {@code "[::1]:8080"}.
      *
-     * @throws IllegalArgumentException if {@code authority} do not comply with RFC 2396
+     * @throws IllegalArgumentException if {@code scheme} or {@code authority} do not comply with RFC 2396
      */
-    public static SchemeAndAuthority fromAuthority(String authority) {
+    public static SchemeAndAuthority fromSchemeAndAuthority(@Nullable String scheme, String authority) {
         requireNonNull(authority, "authority");
 
+        if (scheme != null) {
+            scheme = schemeValidateAndNormalize(scheme);
+        }
+
         if (authority.startsWith("unix%3A") || authority.startsWith("unix%3a")) {
-            return new SchemeAndAuthority(null, authority, authority, -1);
+            return new SchemeAndAuthority(scheme, authority, authority, -1);
         }
 
         final String authorityWithoutUserInfo = removeUserInfo(authority);
         try {
             final URI uri = new URI(null, authorityWithoutUserInfo, null, null, null).parseServerAuthority();
-            return new SchemeAndAuthority(null, uri.getRawAuthority(), uri.getHost(), uri.getPort());
+            return new SchemeAndAuthority(scheme, uri.getRawAuthority(), uri.getHost(), uri.getPort());
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }
     }
 
-    /**
-     * Attempts to parse this URI's authority component and return {@link SchemeAndAuthority}.
-     * The authority part may have one of the following formats (The userinfo part will be ignored.):
-     * <ul>
-     *   <li>{@code "unix$3A<socket file>"} for a domain socket authority </li>
-     *   <li>{@code "<host>:<port>"} for a host endpoint </li>
-     *   <li>{@code "<host>"}, {@code "<host>:"} for a host endpoint with no port number specified</li>
-     * </ul>
-     * An IPv4 or IPv6 address can be specified in lieu of a host name, e.g. {@code "127.0.0.1:8080"} and
-     * {@code "[::1]:8080"}.
-     *
-     * @throws IllegalArgumentException if {@code scheme} or {@code authority} do not comply with RFC 2396
-     */
-    public static SchemeAndAuthority fromSchemeAndAuthority(String scheme, String authority) {
-        requireNonNull(scheme, "scheme");
-        requireNonNull(authority, "authority");
-
+    private static String schemeValidateAndNormalize(String scheme) {
         if (!SCHEME_VALIDATOR.test(scheme)) {
             throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
         }
-        scheme = Ascii.toLowerCase(scheme);
-
-        final SchemeAndAuthority authorityObj = fromAuthority(authority);
-        return new SchemeAndAuthority(scheme, authorityObj.authority, authorityObj.host, authorityObj.port);
+        return Ascii.toLowerCase(scheme);
     }
 
     private static String removeUserInfo(String authority) {

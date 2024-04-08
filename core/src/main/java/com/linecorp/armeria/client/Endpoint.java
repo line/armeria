@@ -105,7 +105,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         requireNonNull(authority, "authority");
         checkArgument(!authority.isEmpty(), "authority is empty");
         return cache.get(authority, key -> {
-            final SchemeAndAuthority schemeAndAuthority = SchemeAndAuthority.fromAuthority(key);
+            final SchemeAndAuthority schemeAndAuthority = SchemeAndAuthority.fromSchemeAndAuthority(null, key);
             // If the port is undefined, set to 0
             final int port = schemeAndAuthority.getPort() == -1 ? 0 : schemeAndAuthority.getPort();
             return create(schemeAndAuthority.getHost(), port, true);

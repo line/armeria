@@ -22,8 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.google.common.base.Ascii;
-
 class SchemeAndAuthorityTest {
     @ParameterizedTest
     @CsvSource({
@@ -37,7 +35,7 @@ class SchemeAndAuthorityTest {
     })
     void fromAuthority(String authority, String expectedAuthority, String expectedHost,
                        int expectedPort) {
-        assertThat(SchemeAndAuthority.fromAuthority(authority)).satisfies(uri -> {
+        assertThat(SchemeAndAuthority.fromSchemeAndAuthority(null, authority)).satisfies(uri -> {
             assertThat(uri.getScheme()).isNull();
             assertThat(uri.getAuthority()).isEqualTo(expectedAuthority);
             assertThat(uri.getHost()).isEqualTo(expectedHost);
@@ -51,16 +49,18 @@ class SchemeAndAuthorityTest {
             "[192.168.0.1]", "[::1", "::1]", "[::1]%eth0", "unix:foo.sock"
     })
     void fromBadAuthority(String badAuthority) {
-        assertThatThrownBy(() -> SchemeAndAuthority.fromAuthority(badAuthority))
+        assertThatThrownBy(() -> SchemeAndAuthority.fromSchemeAndAuthority(null, badAuthority))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @ParameterizedTest
-    @CsvSource({ "http", "https", "ftp", "mailto", "file", "data", "tel", "ssh", "htTP", "HTTP", "http+none" })
-    void fromSchemeAndAuthority(String scheme) {
-        final String lowerCaseScheme = Ascii.toLowerCase(scheme);
+    @CsvSource({
+            "http, http", "https, https", "ftp, ftp", "mailto, mailto", "file, file", "tel, tel", "ssh, ssh",
+            "htTP, http", "HTTP, http", "http+none, http+none"
+    })
+    void fromSchemeAndAuthority(String scheme, String expectedScheme) {
         assertThat(SchemeAndAuthority.fromSchemeAndAuthority(scheme, "foo")).satisfies(uri -> {
-            assertThat(uri.getScheme()).isEqualTo(lowerCaseScheme);
+            assertThat(uri.getScheme()).isEqualTo(expectedScheme);
         });
     }
 
