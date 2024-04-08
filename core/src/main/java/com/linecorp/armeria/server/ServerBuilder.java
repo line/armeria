@@ -239,7 +239,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private int http2MaxResetFramesWindowSeconds = 60;
     @Nullable
     private TlsProvider tlsProvider;
-    private boolean tlsSettingsSet;
+    private boolean staticTlsSettingsSet;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -1045,14 +1045,12 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
-        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
         return (ServerBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile, keyPassword);
     }
 
     @Deprecated
     @Override
     public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
-        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
         return (ServerBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
     }
 
@@ -1060,7 +1058,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Override
     public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                              @Nullable String keyPassword) {
-        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
         return (ServerBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream, keyPassword);
     }
 
@@ -1096,22 +1093,26 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @Override
     public ServerBuilder tls(TlsKeyPair tlsKeyPair) {
-        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
-        tlsSettingsSet = true;
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
         virtualHostTemplate.tls(tlsKeyPair);
         return this;
     }
 
     @Override
     public ServerBuilder tls(KeyManagerFactory keyManagerFactory) {
-        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
-        tlsSettingsSet = true;
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
         virtualHostTemplate.tls(keyManagerFactory);
         return this;
     }
 
+    private void ensureNoTlsProvider() {
+        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
+    }
+
     /**
-     * Adds the specified {@link TlsProvider} which will be used for building an {@link SslContext} of
+     * Sets the specified {@link TlsProvider} which will be used for building an {@link SslContext} of
      * a hostname.
      *
      * <pre>{@code
@@ -1128,12 +1129,12 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      *
      * }</pre>
      *
-     * <p>Note that this method mutually exclusive with {@link #tls(TlsKeyPair)}.
+     * <p>Note that this method mutually exclusive with {@link #tls(TlsKeyPair)} and other static TLS settings.
      */
     public ServerBuilder tlsProvider(TlsProvider tlsProvider) {
         requireNonNull(tlsProvider, "tlsProvider");
-        checkState(!tlsSettingsSet,
-                   "Cannot configure the TlsProvider because a TlsKeyPair have been set already.");
+        checkState(!staticTlsSettingsSet,
+                   "Cannot configure the TlsProvider because static TLS settings have been set already.");
 
         this.tlsProvider = tlsProvider;
         return this;
@@ -1163,6 +1164,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
 
     @Override
     public ServerBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
         virtualHostTemplate.tlsCustomizer(tlsCustomizer);
         return this;
     }
@@ -1182,6 +1185,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @Deprecated
     public ServerBuilder tlsAllowUnsafeCiphers() {
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
         virtualHostTemplate.tlsAllowUnsafeCiphers();
         return this;
     }
@@ -1203,6 +1208,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     @Deprecated
     public ServerBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
         virtualHostTemplate.tlsAllowUnsafeCiphers(tlsAllowUnsafeCiphers);
         return this;
     }

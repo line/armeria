@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -122,6 +123,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
     private boolean tlsNoVerifySet;
     private final Set<String> insecureHosts = new HashSet<>();
+    @Nullable
+    private TlsProvider tlsProvider;
+    private boolean staticTlsSettingsSet;
 
     ClientFactoryBuilder() {
         connectTimeoutMillis(Flags.defaultConnectTimeoutMillis());
@@ -302,8 +306,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile}
      * and cleartext {@code keyFile}.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
     @Deprecated
     @Override
@@ -315,8 +318,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile},
      * {@code keyFile} and {@code keyPassword}.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
     @Deprecated
     @Override
@@ -328,8 +330,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified
      * {@code keyCertChainInputStream} and cleartext {@code keyInputStream}.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
     @Deprecated
     @Override
@@ -341,8 +342,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified
      * {@code keyCertChainInputStream} and {@code keyInputStream} and {@code keyPassword}.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
     @Deprecated
     @Override
@@ -358,8 +358,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
     @Deprecated
     @Override
@@ -371,8 +370,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
     @Deprecated
     @Override
@@ -384,8 +382,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
     @Deprecated
     @Override
@@ -398,8 +395,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
      */
     @Deprecated
     @Override
@@ -414,6 +410,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
         return tlsCustomizer(customizer -> customizer.keyManager(tlsKeyPair.privateKey(),
                                                                  tlsKeyPair.certificateChain()));
     }
@@ -424,6 +422,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(KeyManagerFactory keyManagerFactory) {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
         return tlsCustomizer(customizer -> customizer.keyManager(keyManagerFactory));
     }
 
@@ -436,6 +436,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
+        ensureNoTlsProvider();
+        staticTlsSettingsSet = true;
         @SuppressWarnings("unchecked")
         final ClientFactoryOptionValue<Consumer<? super SslContextBuilder>> oldTlsCustomizerValue =
                 (ClientFactoryOptionValue<Consumer<? super SslContextBuilder>>)
@@ -453,6 +455,18 @@ public final class ClientFactoryBuilder implements TlsSetters {
             });
         }
         return this;
+    }
+
+    public ClientFactoryBuilder tlsProvider(TlsProvider tlsProvider) {
+        requireNonNull(tlsProvider, "tlsProvider");
+        checkState(!staticTlsSettingsSet,
+                   "Cannot configure the TlsProvider because static TLS settings have been set already.");
+        this.tlsProvider = tlsProvider;
+        return this;
+    }
+
+    private void ensureNoTlsProvider() {
+        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
     }
 
     /**
@@ -491,6 +505,12 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Deprecated
     public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         option(ClientFactoryOptions.TLS_ALLOW_UNSAFE_CIPHERS, tlsAllowUnsafeCiphers);
+        return this;
+    }
+
+    public ClientFactoryBuilder tlsTlsProvider(TlsProvider tlsProvider) {
+        requireNonNull(tlsProvider, "tlsProvider");
+        this.tlsProvider = tlsProvider;
         return this;
     }
 

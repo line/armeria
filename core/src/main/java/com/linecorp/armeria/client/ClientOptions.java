@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
@@ -382,14 +381,6 @@ public final class ClientOptions
      */
     public Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper() {
         return get(ENDPOINT_REMAPPER);
-    }
-
-    /**
-     * Returns the {@link TlsProvider} that provides {@link TlsKeyPair}s and TLS configuration.
-     */
-    @UnstableApi
-    public TlsProvider tlsProvider() {
-        return get(TLS_PROVIDER);
     }
 
     /**

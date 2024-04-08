@@ -28,8 +28,6 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -176,16 +174,6 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
     public RestClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (RestClientBuilder) super.endpointRemapper(endpointRemapper);
-    }
-
-    @Override
-    public RestClientBuilder tls(TlsKeyPair tlsKeyPair) {
-        return (RestClientBuilder) super.tls(tlsKeyPair);
-    }
-
-    @Override
-    public RestClientBuilder tlsProvider(TlsProvider tlsProvider) {
-        return (RestClientBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override

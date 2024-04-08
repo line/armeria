@@ -304,12 +304,10 @@ final class HttpChannelPool implements AsyncCloseable {
     CompletableFuture<PooledChannel> acquireLater(SessionProtocol desiredProtocol,
                                                   SerializationFormat serializationFormat,
                                                   PoolKey key,
-                                                  ClientConnectionTimingsBuilder timingsBuilder,
-                                                  TlsProvider tlsProvider) {
+                                                  ClientConnectionTimingsBuilder timingsBuilder) {
         final ChannelAcquisitionFuture promise = new ChannelAcquisitionFuture();
-        if (!usePendingAcquisition(desiredProtocol, serializationFormat, key, promise, timingsBuilder,
-                                   tlsProvider)) {
-            connect(desiredProtocol, serializationFormat, key, promise, timingsBuilder, tlsProvider);
+        if (!usePendingAcquisition(desiredProtocol, serializationFormat, key, promise, timingsBuilder)) {
+            connect(desiredProtocol, serializationFormat, key, promise, timingsBuilder);
         }
         return promise;
     }
@@ -323,8 +321,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                           SerializationFormat serializationFormat,
                                           PoolKey key,
                                           ChannelAcquisitionFuture promise,
-                                          ClientConnectionTimingsBuilder timingsBuilder,
-                                          TlsProvider tlsProvider) {
+                                          ClientConnectionTimingsBuilder timingsBuilder) {
 
         if (desiredProtocol.isExplicitHttp1()) {
             // Can't use HTTP/1 connections because they will not be available in the pool until
@@ -338,14 +335,13 @@ final class HttpChannelPool implements AsyncCloseable {
         }
 
         timingsBuilder.pendingAcquisitionStart();
-        pendingAcquisition.piggyback(desiredProtocol, serializationFormat, key, promise, timingsBuilder,
-                                     tlsProvider);
+        pendingAcquisition.piggyback(desiredProtocol, serializationFormat, key, promise, timingsBuilder);
         return true;
     }
 
-    private void connect(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
+private void connect(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
                          PoolKey key, ChannelAcquisitionFuture promise,
-                         ClientConnectionTimingsBuilder timingsBuilder, TlsProvider tlsProvider) {
+                         ClientConnectionTimingsBuilder timingsBuilder) {
         setPendingAcquisition(desiredProtocol, key, promise);
         timingsBuilder.socketConnectStart();
 
@@ -362,7 +358,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         // Create a new connection.
         final Promise<Channel> sessionPromise = eventLoop.newPromise();
-        connect(remoteAddress, desiredProtocol, serializationFormat, key, sessionPromise, tlsProvider);
+        connect(remoteAddress, desiredProtocol, serializationFormat, key, sessionPromise);
 
         if (sessionPromise.isDone()) {
             notifyConnect(desiredProtocol, key, sessionPromise, promise, timingsBuilder);
@@ -377,15 +373,14 @@ final class HttpChannelPool implements AsyncCloseable {
      * A low-level operation that triggers a new connection attempt. Used only by:
      * <ul>
      *   <li>{@link #connect(SessionProtocol, SerializationFormat, PoolKey, ChannelAcquisitionFuture,
-     *                       ClientConnectionTimingsBuilder, TlsProvider)} - The pool has been exhausted.</li>
+     *                       ClientConnectionTimingsBuilder)} - The pool has been exhausted.</li>
      *   <li>{@link HttpSessionHandler} - HTTP/2 upgrade has failed.</li>
      * </ul>
      */
     void connect(SocketAddress remoteAddress, SessionProtocol desiredProtocol,
-                 SerializationFormat serializationFormat, PoolKey poolKey, Promise<Channel> sessionPromise,
-                 TlsProvider tlsProvider) {
+                 SerializationFormat serializationFormat, PoolKey poolKey, Promise<Channel> sessionPromise) {
 
-        final SslContext sslContext = maybeCreateSslContext(remoteAddress, desiredProtocol, tlsProvider);
+        final SslContext sslContext = maybeCreateSslContext(remoteAddress, desiredProtocol);
         final Bootstrap bootstrap;
         try {
             bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, serializationFormat, sslContext);
@@ -429,8 +424,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     @Nullable
     private static SslContext maybeCreateSslContext(SocketAddress remoteAddress,
-                                                    SessionProtocol desiredProtocol,
-                                                    TlsProvider tlsProvider) {
+                                                    SessionProtocol desiredProtocol) {
         if (tlsProvider == NullTlsProvider.INSTANCE) {
             return null;
         }
@@ -784,13 +778,13 @@ final class HttpChannelPool implements AsyncCloseable {
 
         void piggyback(SessionProtocol desiredProtocol, SerializationFormat serializationFormat, PoolKey key,
                        ChannelAcquisitionFuture childPromise,
-                       ClientConnectionTimingsBuilder timingsBuilder, TlsProvider tlsProvider) {
+                       ClientConnectionTimingsBuilder timingsBuilder) {
 
             // Add to the pending handler list if not complete yet.
             if (!isDone()) {
                 final Consumer<PooledChannel> handler =
                         pch -> handlePiggyback(desiredProtocol, serializationFormat, key,
-                                               childPromise, timingsBuilder, tlsProvider, pch);
+                                               childPromise, timingsBuilder, pch);
 
                 if (pendingPiggybackHandlers == null) {
                     // The 1st handler
@@ -820,7 +814,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
             // Handle immediately if complete already.
             handlePiggyback(desiredProtocol, serializationFormat, key, childPromise, timingsBuilder,
-                            tlsProvider, isCompletedExceptionally() ? null : getNow(null));
+                            isCompletedExceptionally() ? null : getNow(null));
         }
 
         private void handlePiggyback(SessionProtocol desiredProtocol,
@@ -828,7 +822,6 @@ final class HttpChannelPool implements AsyncCloseable {
                                      PoolKey key,
                                      ChannelAcquisitionFuture childPromise,
                                      ClientConnectionTimingsBuilder timingsBuilder,
-                                     TlsProvider tlsProvider,
                                      @Nullable PooledChannel pch) {
 
             final PiggybackedChannelAcquisitionResult result;
@@ -840,7 +833,7 @@ final class HttpChannelPool implements AsyncCloseable {
                         result = PiggybackedChannelAcquisitionResult.SUCCESS;
                         // Should use the same protocol used to acquire a new connection.
                     } else if (usePendingAcquisition(desiredProtocol, serializationFormat,
-                                                     key, childPromise, timingsBuilder, tlsProvider)) {
+                                                     key, childPromise, timingsBuilder)) {
                         result = PiggybackedChannelAcquisitionResult.PIGGYBACKED_AGAIN;
                     } else {
                         result = PiggybackedChannelAcquisitionResult.NEW_CONNECTION;
@@ -869,8 +862,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     break;
                 case NEW_CONNECTION:
                     timingsBuilder.pendingAcquisitionEnd();
-                    connect(desiredProtocol, serializationFormat, key, childPromise, timingsBuilder,
-                            tlsProvider);
+                    connect(desiredProtocol, serializationFormat, key, childPromise, timingsBuilder);
                     break;
                 case PIGGYBACKED_AGAIN:
                     // There's nothing to do because usePendingAcquisition() was called successfully above.

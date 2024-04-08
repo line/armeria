@@ -49,8 +49,6 @@ import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -451,16 +449,6 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     public EurekaUpdatingListenerBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (EurekaUpdatingListenerBuilder) super.endpointRemapper(endpointRemapper);
-    }
-
-    @Override
-    public EurekaUpdatingListenerBuilder tls(TlsKeyPair tlsKeyPair) {
-        return (EurekaUpdatingListenerBuilder) super.tls(tlsKeyPair);
-    }
-
-    @Override
-    public EurekaUpdatingListenerBuilder tlsProvider(TlsProvider tlsProvider) {
-        return (EurekaUpdatingListenerBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override

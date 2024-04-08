@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.client.ClientOptions.REDIRECT_CONFIG;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
@@ -45,7 +44,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -66,8 +64,6 @@ public class AbstractClientOptionsBuilder {
     @Nullable
     private Consumer<ClientRequestContext> contextCustomizer;
     private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
-    @Nullable
-    private TlsProvider tlsProvider;
 
     /**
      * Creates a new instance.
@@ -271,28 +267,6 @@ public class AbstractClientOptionsBuilder {
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         requireNonNull(endpointRemapper, "endpointRemapper");
         return option(ClientOptions.ENDPOINT_REMAPPER, endpointRemapper);
-    }
-
-    /**
-     * Sets the specified {@link TlsKeyPair} for <a href="https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/">
-     * mutual TLS authentication</a>.
-     */
-    @UnstableApi
-    public AbstractClientOptionsBuilder tls(TlsKeyPair tlsKeyPair) {
-        requireNonNull(tlsKeyPair, "tlsKeyPair");
-        return tlsProvider(TlsProvider.of(tlsKeyPair));
-    }
-
-    /**
-     * Sets the specified {@link TlsProvider} for <a href="https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/">
-     * mutual TLS authentication</a>.
-     */
-    @UnstableApi
-    public AbstractClientOptionsBuilder tlsProvider(TlsProvider tlsProvider) {
-        requireNonNull(tlsProvider, "tlsProvider");
-        checkState(this.tlsProvider == null, "A TlsProvider has been set already.");
-        this.tlsProvider = tlsProvider;
-        return this;
     }
 
     /**

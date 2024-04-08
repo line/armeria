@@ -28,8 +28,6 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -177,16 +175,6 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     @Override
     public WebClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         return (WebClientBuilder) super.contextHook(contextHook);
-    }
-
-    @Override
-    public WebClientBuilder tls(TlsKeyPair tlsKeyPair) {
-        return (WebClientBuilder) super.tls(tlsKeyPair);
-    }
-
-    @Override
-    public WebClientBuilder tlsProvider(TlsProvider tlsProvider) {
-        return (WebClientBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override

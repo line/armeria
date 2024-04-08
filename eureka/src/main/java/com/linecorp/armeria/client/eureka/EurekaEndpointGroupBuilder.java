@@ -55,8 +55,6 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
@@ -348,16 +346,6 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
     public EurekaEndpointGroupBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (EurekaEndpointGroupBuilder) super.endpointRemapper(endpointRemapper);
-    }
-
-    @Override
-    public EurekaEndpointGroupBuilder tls(TlsKeyPair tlsKeyPair) {
-        return (EurekaEndpointGroupBuilder) super.tls(tlsKeyPair);
-    }
-
-    @Override
-    public EurekaEndpointGroupBuilder tlsProvider(TlsProvider tlsProvider) {
-        return (EurekaEndpointGroupBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override

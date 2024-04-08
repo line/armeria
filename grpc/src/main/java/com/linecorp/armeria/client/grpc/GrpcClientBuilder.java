@@ -60,8 +60,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -491,16 +489,6 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     public GrpcClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (GrpcClientBuilder) super.endpointRemapper(endpointRemapper);
-    }
-
-    @Override
-    public GrpcClientBuilder tls(TlsKeyPair tlsKeyPair) {
-        return (GrpcClientBuilder) super.tls(tlsKeyPair);
-    }
-
-    @Override
-    public GrpcClientBuilder tlsProvider(TlsProvider tlsProvider) {
-        return (GrpcClientBuilder) super.tlsProvider(tlsProvider);
     }
 
     @Override
