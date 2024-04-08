@@ -19,6 +19,8 @@ package com.linecorp.armeria.internal.common.metric;
 import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSummary;
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -29,6 +31,7 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -162,6 +165,19 @@ public final class RequestMetricSupport {
         if (childrenSize > 0) {
             updateRetryingClientMetrics(metrics, childrenSize, isSuccess);
         }
+
+        for (RequestLogAccess child: log.children()) {
+
+            child.whenComplete().thenAccept(requestLog -> {
+                final Throwable error = requestLog.responseCause();
+                if (error != null) {
+                    metrics.failureAttempts(error).increment();
+                }
+            }).join();
+        }
+        if (log.responseCause() != null) {
+            metrics.failureAttempts(log.responseCause()).increment();
+        }
     }
 
     private static void updateMetrics(
@@ -229,6 +245,8 @@ public final class RequestMetricSupport {
         DistributionSummary successAttempts();
 
         DistributionSummary failureAttempts();
+
+        Counter failureAttempts(Throwable error);
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -329,6 +347,8 @@ public final class RequestMetricSupport {
         @Nullable
         private DistributionSummary failureAttempts;
 
+        private final Map<String, Counter> failureAttemptsWithErrors;
+
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
                                     DistributionStatisticConfig distributionStatisticConfig) {
             super(parent, idPrefix, distributionStatisticConfig);
@@ -351,6 +371,7 @@ public final class RequestMetricSupport {
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
+            failureAttemptsWithErrors = new HashMap<>();
         }
 
         @Override
@@ -411,6 +432,20 @@ public final class RequestMetricSupport {
                                                             idPrefix.name("actual.requests.attempts"),
                                                             idPrefix.tags("result", "failure"),
                                                             distributionStatisticConfig());
+        }
+
+        @Override
+        public Counter failureAttempts(Throwable error) {
+            final String causeName = error.getClass().getSimpleName();
+
+            if (failureAttemptsWithErrors.containsKey(causeName)) {
+                return failureAttemptsWithErrors.get(causeName);
+            }
+
+            final Counter counter = parent.counter(idPrefix.name("actual.requests.attempts"),
+                                                   idPrefix.tags("cause", causeName));
+            failureAttemptsWithErrors.put(causeName, counter);
+            return counter;
         }
     }
 
