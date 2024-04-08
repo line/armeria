@@ -47,6 +47,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 @UnstableApi
 abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedServiceConfigSetters {
 
@@ -277,6 +279,18 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
     @Override
     public AbstractAnnotatedServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop) {
+        defaultServiceConfigSetters.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters serviceWorkerGroup(int numThreads) {
+        defaultServiceConfigSetters.serviceWorkerGroup(numThreads);
         return this;
     }
 

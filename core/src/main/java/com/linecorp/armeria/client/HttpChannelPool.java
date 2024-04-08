@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientHeaders;
 
 import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
@@ -48,16 +49,12 @@ import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
-import com.linecorp.armeria.internal.common.TlsProviderUtil;
-import com.linecorp.armeria.internal.common.TlsProviderUtil.SslContextType;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -68,7 +65,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyHandler;
@@ -115,8 +112,7 @@ final class HttpChannelPool implements AsyncCloseable {
         bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
     }
 
-    private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol,
-                                @Nullable SslContext sslContext) {
+    private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
         if (proxyConfig.proxyType() == ProxyType.DIRECT) {
             return;
         }
@@ -137,10 +133,11 @@ final class HttpChannelPool implements AsyncCloseable {
                 final ConnectProxyConfig connectProxyConfig = (ConnectProxyConfig) proxyConfig;
                 final String username = connectProxyConfig.username();
                 final String password = connectProxyConfig.password();
+                final HttpHeaders proxyHeaders = toNettyHttp1ClientHeaders(connectProxyConfig.headers());
                 if (username == null || password == null) {
-                    proxyHandler = new HttpProxyHandler(proxyAddress);
+                    proxyHandler = new HttpProxyHandler(proxyAddress, proxyHeaders);
                 } else {
-                    proxyHandler = new HttpProxyHandler(proxyAddress, username, password);
+                    proxyHandler = new HttpProxyHandler(proxyAddress, username, password, proxyHeaders);
                 }
                 break;
             case HAPROXY:
@@ -153,13 +150,8 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext proxySslCtx;
-            if (sslContext != null) {
-                proxySslCtx = sslContext;
-            } else {
-                proxySslCtx = bootstraps.determineSslContext(desiredProtocol);
-            }
-            ch.pipeline().addFirst(proxySslCtx.newHandler(ch.alloc()));
+            final SslContext sslCtx = bootstraps.determineSslContext(desiredProtocol);
+            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
         }
     }
 
@@ -339,7 +331,7 @@ final class HttpChannelPool implements AsyncCloseable {
         return true;
     }
 
-private void connect(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
+    private void connect(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
                          PoolKey key, ChannelAcquisitionFuture promise,
                          ClientConnectionTimingsBuilder timingsBuilder) {
         setPendingAcquisition(desiredProtocol, key, promise);
@@ -378,12 +370,12 @@ private void connect(SessionProtocol desiredProtocol, SerializationFormat serial
      * </ul>
      */
     void connect(SocketAddress remoteAddress, SessionProtocol desiredProtocol,
-                 SerializationFormat serializationFormat, PoolKey poolKey, Promise<Channel> sessionPromise) {
+                 SerializationFormat serializationFormat,
+                 PoolKey poolKey, Promise<Channel> sessionPromise) {
 
-        final SslContext sslContext = maybeCreateSslContext(remoteAddress, desiredProtocol);
         final Bootstrap bootstrap;
         try {
-            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, serializationFormat, sslContext);
+            bootstrap = bootstraps.get(remoteAddress, desiredProtocol, serializationFormat);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
             return;
@@ -397,7 +389,7 @@ private void connect(SessionProtocol desiredProtocol, SerializationFormat serial
 
             try {
                 final Channel channel = registerFuture.channel();
-                configureProxy(channel, poolKey.proxyConfig, desiredProtocol, sslContext);
+                configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
 
                 // should be invoked right before channel.connect() is invoked as defined in javadocs
                 clientFactory.channelPipelineCustomizer().accept(channel.pipeline());
@@ -408,7 +400,7 @@ private void connect(SessionProtocol desiredProtocol, SerializationFormat serial
                 connectionPromise.addListener((ChannelFuture connectFuture) -> {
                     if (connectFuture.isSuccess()) {
                         initSession(desiredProtocol, serializationFormat,
-                                    poolKey, connectFuture, sessionPromise, tlsProvider);
+                                    poolKey, connectFuture, sessionPromise);
                     } else {
                         maybeHandleProxyFailure(desiredProtocol, poolKey, connectFuture.cause());
                         sessionPromise.tryFailure(connectFuture.cause());
@@ -420,33 +412,6 @@ private void connect(SessionProtocol desiredProtocol, SerializationFormat serial
                 sessionPromise.tryFailure(cause);
             }
         });
-    }
-
-    @Nullable
-    private static SslContext maybeCreateSslContext(SocketAddress remoteAddress,
-                                                    SessionProtocol desiredProtocol) {
-        if (tlsProvider == NullTlsProvider.INSTANCE) {
-            return null;
-        }
-
-        if (desiredProtocol.isTls()) {
-            final String hostname;
-            if (remoteAddress instanceof InetSocketAddress) {
-                hostname = ((InetSocketAddress) remoteAddress).getHostString();
-            } else {
-                assert remoteAddress instanceof DomainSocketAddress;
-                hostname = ((DomainSocketAddress) remoteAddress).path();
-            }
-
-            final TlsKeyPair tlsKeyPair = tlsProvider.find(hostname);
-            if (tlsKeyPair != null) {
-                final SslContextType sslContextType =
-                        desiredProtocol.isExplicitHttp1() ? SslContextType.CLIENT_HTTP1_ONLY
-                                                          : SslContextType.CLIENT;
-                return TlsProviderUtil.maybeCreateSslContext(tlsProvider, tlsKeyPair, sslContextType);
-            }
-        }
-        return null;
     }
 
     /**
@@ -473,8 +438,7 @@ private void connect(SessionProtocol desiredProtocol, SerializationFormat serial
     }
 
     private void initSession(SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
-                             PoolKey poolKey, ChannelFuture connectFuture, Promise<Channel> sessionPromise,
-                             TlsProvider tlsProvider) {
+                             PoolKey poolKey, ChannelFuture connectFuture, Promise<Channel> sessionPromise) {
         assert connectFuture.isSuccess();
 
         final Channel ch = connectFuture.channel();
@@ -483,8 +447,7 @@ private void connect(SessionProtocol desiredProtocol, SerializationFormat serial
 
         ch.pipeline().addLast(
                 new HttpSessionHandler(this, ch, sessionPromise, connectTimeoutMillis,
-                                       desiredProtocol, serializationFormat, poolKey, clientFactory,
-                                       tlsProvider));
+                                       desiredProtocol, serializationFormat, poolKey, clientFactory));
     }
 
     private void notifyConnect(SessionProtocol desiredProtocol,
@@ -515,7 +478,7 @@ private void connect(SessionProtocol desiredProtocol, SerializationFormat serial
                         : "raddr: " + remoteAddr + ", laddr: " + localAddr;
                 try {
                     listener.connectionOpen(protocol, remoteAddr, localAddr, channel);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     if (logger.isWarnEnabled()) {
                         logger.warn("{} Exception handling {}.connectionOpen()",
                                     channel, listener.getClass().getName(), e);
@@ -555,7 +518,7 @@ private void connect(SessionProtocol desiredProtocol, SerializationFormat serial
 
                     try {
                         listener.connectionClosed(protocol, remoteAddr, localAddr, channel);
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         if (logger.isWarnEnabled()) {
                             logger.warn("{} Exception handling {}.connectionClosed()",
                                         channel, listener.getClass().getName(), e);

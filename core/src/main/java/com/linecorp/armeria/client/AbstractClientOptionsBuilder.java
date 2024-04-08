@@ -29,9 +29,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
-
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -44,7 +41,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -529,19 +525,12 @@ public class AbstractClientOptionsBuilder {
         if (contextCustomizer != null) {
             extra++;
         }
-        if (tlsProvider != null) {
-            extra++;
-        }
-
-        final Builder<ClientOptionValue<?>> additionalValues =
+        final ImmutableList.Builder<ClientOptionValue<?>> additionalValues =
                 ImmutableList.builderWithExpectedSize(numOpts + extra);
         additionalValues.addAll(optVals);
         additionalValues.add(ClientOptions.DECORATION.newValue(decoration.build()));
         additionalValues.add(ClientOptions.HEADERS.newValue(headers.build()));
         additionalValues.add(ClientOptions.CONTEXT_HOOK.newValue(contextHook));
-        if (tlsProvider != null) {
-            additionalValues.add(ClientOptions.TLS_PROVIDER.newValue(tlsProvider));
-        }
         if (contextCustomizer != null) {
             additionalValues.add(ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer));
         }

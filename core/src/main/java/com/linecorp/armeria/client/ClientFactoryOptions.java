@@ -35,6 +35,8 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -44,6 +46,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.resolver.AddressResolverGroup;
 
@@ -92,11 +95,18 @@ public final class ClientFactoryOptions
      * more information.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
-     *             communicate with an insecure peer than this.
+     * communicate with an insecure peer than this.
      */
     @Deprecated
     public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS =
             ClientFactoryOption.define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
+
+    /**
+     * The {@link TlsProvider} which provides the {@link TlsKeyPair} that is used to create the
+     * {@link SslContext} for TLS handshake.
+     */
+    public static final ClientFactoryOption<TlsProvider> TLS_PROVIDER =
+            ClientFactoryOption.define("TLS_PROVIDER", NullTlsProvider.INSTANCE);
 
     /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into

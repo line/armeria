@@ -173,7 +173,8 @@ final class HttpClientFactory implements ClientFactory {
             unixBaseBootstrap = null;
         }
 
-        final Consumer<? super SslContextBuilder> tlsCustomizer = options.tlsCustomizer();
+        final Consumer<? super SslContextBuilder> tlsCustomizer =
+                options.tlsCustomizer();
         final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
         final List<X509Certificate> keyCertChainCaptor = new ArrayList<>();
         sslCtxHttp1Or2 = SslContextUtil

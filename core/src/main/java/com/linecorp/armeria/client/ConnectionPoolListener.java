@@ -70,11 +70,15 @@ public interface ConnectionPoolListener extends Unwrappable {
      *   <td>{@code armeria.client.connections#count{state="closed"}}</td>
      *   <td>The number of closed connections.</td>
      * </tr>
+     * <tr>
+     *   <td>{@code armeria.client.active.connections#value}</td>
+     *   <td>The number of active connections.</td>
+     * </tr>
      * </table>
      */
     @UnstableApi
     static ConnectionPoolListener metricCollecting(MeterRegistry registry) {
-        return metricCollecting(registry, new MeterIdPrefix("armeria.client.connections"));
+        return metricCollecting(registry, new MeterIdPrefix("armeria.client"));
     }
 
     /**
@@ -88,12 +92,16 @@ public interface ConnectionPoolListener extends Unwrappable {
      *   <th>description</th>
      * </tr>
      * <tr>
-     *   <td>{@code <name>#count{state="opened"}}</td>
+     *   <td>{@code <name>.connections#count{state="opened"}}</td>
      *   <td>The number of opened connection.</td>
      * </tr>
      * <tr>
-     *   <td>{@code <name>#count{state="closed"}}</td>
+     *   <td>{@code <name>.connections#count{state="closed"}}</td>
      *   <td>The number of closed connections.</td>
+     * </tr>
+     * <tr>
+     *   <td>{@code <name>.active.connections#value}</td>
+     *   <td>The number of active connections.</td>
      * </tr>
      * </table>
      */

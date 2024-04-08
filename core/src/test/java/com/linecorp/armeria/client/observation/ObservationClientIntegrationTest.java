@@ -19,13 +19,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.function.BiConsumer;
 
-import org.junit.AssumptionViolatedException;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
@@ -45,13 +42,7 @@ import io.micrometer.common.KeyValues;
 import io.micrometer.observation.ObservationRegistry;
 import okhttp3.Protocol;
 
-@RunWith(Parameterized.class)
-public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
-
-    @Parameters
-    public static List<SessionProtocol> sessionProtocols() {
-        return ImmutableList.of(SessionProtocol.H1C, SessionProtocol.H2C);
-    }
+abstract class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClient> {
 
     private final List<Protocol> protocols;
     private final SessionProtocol sessionProtocol;
@@ -60,7 +51,7 @@ public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClien
 
     private DefaultHttpClientObservationConvention clientObservationConvention;
 
-    public ObservationClientIntegrationTest(SessionProtocol sessionProtocol) {
+    ObservationClientIntegrationTest(SessionProtocol sessionProtocol) {
         this.sessionProtocol = sessionProtocol;
 
         if (sessionProtocol == SessionProtocol.H2C) {
@@ -70,7 +61,7 @@ public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClien
         }
     }
 
-    @Before
+    @BeforeEach
     @Override
     public void setup() throws IOException {
         clientObservationConvention = DefaultHttpClientObservationConvention.INSTANCE;
@@ -122,7 +113,7 @@ public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClien
 
     @Test
     @Override
-    @Ignore("TODO: maybe integrate with brave's clock")
+    @Disabled("TODO: maybe integrate with brave's clock")
     public void clientTimestampAndDurationEnclosedByParent() {
     }
 
@@ -160,31 +151,26 @@ public class ObservationClientIntegrationTest extends ITHttpAsyncClient<WebClien
 
     @Test
     @Override
-    @Ignore("TODO: somehow propagate the parent context to the client callback")
+    @Disabled("TODO: somehow propagate the parent context to the client callback")
     public void callbackContextIsFromInvocationTime() {
         // TODO(trustin): Can't make this pass because span is updated *after* we invoke the callback
         //                ITHttpAsyncClient gave us.
     }
 
     @Override
-    @Ignore
-    public void supportsDeprecatedPortableCustomization() {
-    }
-
-    @Override
-    @Ignore("We're not using HttpTracing at all")
+    @Disabled("We're not using HttpTracing at all")
     public void customSampler() {
     }
 
     @Test
     @Override
     public void redirect() {
-        throw new AssumptionViolatedException("Armeria does not support client redirect.");
+        Assumptions.abort("Armeria does not support client redirect.");
     }
 
     @Override
     @Test
-    @Ignore
+    @Disabled
     public void reportsServerAddress() throws IOException {
         super.reportsServerAddress();
     }

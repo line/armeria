@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
-import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
@@ -63,10 +62,9 @@ public interface TlsProvider {
     /**
      * Finds a {@link TlsKeyPair} for the specified {@code hostname}.
      *
-     * <p>Note that {@code "*"} is a special hostname which represents the
-     * {@linkplain ServerBuilder#defaultVirtualHost() default virtual hostname}.
-     * If no matching {@link TlsKeyPair} is found for a hostname, {@code "*"} can be specified to get the
-     * {@link TlsKeyPair} of the default virtual host.
+     * <p>If no matching {@link TlsKeyPair} is found for a hostname, {@code "*"} will be specified to get the
+     * default {@link TlsKeyPair} set by {@link TlsProviderBuilder#setDefault(TlsKeyPair)}.
+     * If no default {@link TlsKeyPair} is found, {@code null} will be returned.
      */
     @Nullable
     TlsKeyPair find(String hostname);

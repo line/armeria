@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;

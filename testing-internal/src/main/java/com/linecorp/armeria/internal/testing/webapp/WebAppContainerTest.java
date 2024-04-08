@@ -58,7 +58,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
  */
 public abstract class WebAppContainerTest {
 
-    private static final Pattern CR_OR_LF = Pattern.compile("[\\r\\n]");
+    protected static final Pattern CR_OR_LF = Pattern.compile("[\\r\\n]");
 
     /**
      * Returns the doc-base directory of the test web application.
@@ -151,7 +151,7 @@ public abstract class WebAppContainerTest {
         assertThat(response.status()).isSameAs(HttpStatus.OK);
         assertThat(response.contentType().toString()).startsWith("text/html");
         String actualContent = CR_OR_LF.matcher(response.contentUtf8())
-                                             .replaceAll("");
+                                       .replaceAll("");
         assertThat(actualContent).isEqualTo(
                 "<html><body>" +
                 "<p>foo is 1</p>" +
@@ -200,12 +200,13 @@ public abstract class WebAppContainerTest {
 
     @Test
     public void echoPost() throws Exception {
-        final AggregatedHttpResponse response = server().blockingWebClient().post(
-                "/jsp/echo_post.jsp", HttpData.ofUtf8("test"));
+        final AggregatedHttpResponse response =
+                server().blockingWebClient(cb -> cb.responseTimeoutMillis(0))
+                        .post("/jsp/echo_post.jsp", HttpData.ofUtf8("test"));
         assertThat(response.status()).isSameAs(HttpStatus.OK);
         assertThat(response.contentType().toString()).startsWith("text/html");
         final String actualContent = CR_OR_LF.matcher(response.contentUtf8())
-                                       .replaceAll("");
+                                             .replaceAll("");
         assertThat(actualContent).isEqualTo(
                 "<html><body>" +
                 "<p>Check request body</p>" +

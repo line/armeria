@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,9 +23,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 enum NullTlsProvider implements TlsProvider {
     INSTANCE;
 
-    @Nullable
     @Override
-    public TlsKeyPair find(@Nullable String hostname) {
+    public @Nullable TlsKeyPair find(String hostname) {
         return null;
     }
 }

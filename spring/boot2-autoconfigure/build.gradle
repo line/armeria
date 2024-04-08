@@ -38,7 +38,6 @@ tasks.compileJava.dependsOn(project(":spring:$boot3Autoconfigure").tasks.compile
 tasks.compileTestJava.dependsOn(project(":spring:$boot3Autoconfigure").tasks.compileTestJava)
 
 tasks.compileJava.source "${boot3AutoconfigureProjectDir}/src/main/java"
-tasks.processResources.from "${boot3AutoconfigureProjectDir}/src/main/resources"
 tasks.compileTestJava.source "${projectDir}/src/test/java",
         "${boot3AutoconfigureProjectDir}/src/test/java",
         "${boot3AutoconfigureProjectDir}/gen-src/test/grpc",

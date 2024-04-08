@@ -32,6 +32,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.util.AsciiString;
 
 final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler {
 
@@ -46,7 +47,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig cfg,
                                  Timer keepAliveTimer, GracefulShutdownSupport gracefulShutdownSupport,
-                                 String scheme) {
+                                 AsciiString scheme) {
 
         super(decoder, encoder, initialSettings, newKeepAliveHandler(encoder, channel, cfg, keepAliveTimer));
 

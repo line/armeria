@@ -1136,4 +1136,22 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
         return new SurroundingPublisher<>(null, this, finalizer);
     }
+
+    /**
+     * Calls {@link #subscribe(Subscriber, EventExecutor)} to the upstream
+     * {@link StreamMessage} using the specified {@link EventExecutor} and relays the stream
+     * transparently downstream. This may be useful if one would like to hide an
+     * {@link EventExecutor} from an upstream {@link Publisher}.
+     *
+     * <p>For example:<pre>{@code
+     * Subscriber<Integer> mySubscriber = null;
+     * StreamMessage<Integer> upstream = ...; // publisher callbacks are invoked by eventLoop1
+     * upstream.subscribeOn(eventLoop1)
+     *         .subscribe(mySubscriber, eventLoop2); // mySubscriber callbacks are invoked with eventLoop2
+     * }</pre>
+     */
+    default StreamMessage<T> subscribeOn(EventExecutor eventExecutor) {
+        requireNonNull(eventExecutor, "eventExecutor");
+        return new SubscribeOnStreamMessage<>(this, eventExecutor);
+    }
 }

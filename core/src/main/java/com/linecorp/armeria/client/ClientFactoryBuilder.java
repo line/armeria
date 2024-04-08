@@ -370,7 +370,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} or
+     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
      */
     @Deprecated
     @Override

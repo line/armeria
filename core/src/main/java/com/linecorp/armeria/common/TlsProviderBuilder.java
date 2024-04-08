@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.internal.common.TlsProviderUtil.normalizeHostname;
 import static java.util.Objects.requireNonNull;
 
+import java.util.Map;
 import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -35,17 +36,17 @@ import io.netty.handler.ssl.SslContextBuilder;
 /**
  * Builds a new {@link TlsProvider}.
  */
-public final class TlsProviderBuilder {
+public class TlsProviderBuilder {
 
     private static final Consumer<SslContextBuilder> NOOP = b -> {};
 
-    private final ImmutableMap.Builder<String, TlsKeyPair> tlsKeyPairMappings = ImmutableMap.builder();
+    private final ImmutableMap.Builder<String, TlsKeyPair> tlsKeyPairsBuilder = ImmutableMap.builder();
     private boolean allowsUnsafeCiphers;
     private Consumer<SslContextBuilder> tlsCustomizer = NOOP;
     @Nullable
     private MeterIdPrefix meterIdPrefix;
 
-    TlsProviderBuilder() {}
+    protected TlsProviderBuilder() {}
 
     /**
      * Set the {@link TlsKeyPair} for the specified (optionally wildcard) {@code hostname}.
@@ -60,7 +61,7 @@ public final class TlsProviderBuilder {
     public TlsProviderBuilder set(String hostname, TlsKeyPair tlsKeyPair) {
         requireNonNull(hostname, "hostname");
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        tlsKeyPairMappings.put(normalizeHostname(hostname), tlsKeyPair);
+        tlsKeyPairsBuilder.put(normalizeHostname(hostname), tlsKeyPair);
         return this;
     }
 
@@ -84,7 +85,7 @@ public final class TlsProviderBuilder {
      * @param allowsUnsafeCiphers Whether to allow the unsafe ciphers
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
-     *             communicate with an insecure peer than this.
+     * communicate with an insecure peer than this.
      */
     @Deprecated
     public TlsProviderBuilder allowsUnsafeCiphers(boolean allowsUnsafeCiphers) {
@@ -121,7 +122,14 @@ public final class TlsProviderBuilder {
      * Returns a newly-created {@link TlsProvider} instance.
      */
     public TlsProvider build() {
-        return new DefaultTlsProvider(tlsKeyPairMappings.build(), tlsCustomizer, allowsUnsafeCiphers,
+        final Map<String, TlsKeyPair> keyPairMappings = tlsKeyPairsBuilder.build();
+        if (keyPairMappings.isEmpty()) {
+            throw new IllegalStateException("No TLS key pair is set.");
+        }
+        if (keyPairMappings.size() == 1 && keyPairMappings.containsKey("*")) {
+        }
+
+        return new DefaultTlsProvider(keyPairMappings, tlsCustomizer, allowsUnsafeCiphers,
                                       meterIdPrefix);
     }
 }

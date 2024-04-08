@@ -32,16 +32,16 @@ import org.junit.jupiter.params.provider.CsvSource
 
 @GenerateNativeImageTrace
 class JacksonModuleAnnotatedServiceTest {
-
     @CsvSource(value = ["/echo", "/echo-nullable"])
     @ParameterizedTest
     fun shouldEncodeAndDecodeDataClassWithJson(path: String) {
         val client = WebClient.of(server.httpUri())
         val json = """{"x": 10, "y":"hello"}"""
-        val response = client.prepare()
-            .post(path)
-            .content(MediaType.JSON, json)
-            .execute().aggregate().join()
+        val response =
+            client.prepare()
+                .post(path)
+                .content(MediaType.JSON, json)
+                .execute().aggregate().join()
         assertThatJson(response.contentUtf8()).isEqualTo(json)
     }
 
@@ -50,10 +50,11 @@ class JacksonModuleAnnotatedServiceTest {
     fun shouldEncodeAndDecodeNullableDataClassWithJson(path: String) {
         val client = WebClient.of(server.httpUri())
         val json = """{"x": 10}"""
-        val response = client.prepare()
-            .post(path)
-            .content(MediaType.JSON, json)
-            .execute().aggregate().join()
+        val response =
+            client.prepare()
+                .post(path)
+                .content(MediaType.JSON, json)
+                .execute().aggregate().join()
         if (path == "/echo") {
             assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST)
         } else {
@@ -64,15 +65,15 @@ class JacksonModuleAnnotatedServiceTest {
     companion object {
         @JvmField
         @RegisterExtension
-        val server: ServerExtension = object : ServerExtension() {
-            override fun configure(sb: ServerBuilder) {
-                sb.annotatedService(ServiceWithDataClass())
+        val server: ServerExtension =
+            object : ServerExtension() {
+                override fun configure(sb: ServerBuilder) {
+                    sb.annotatedService(ServiceWithDataClass())
+                }
             }
-        }
     }
 
     class ServiceWithDataClass {
-
         @ProducesJson
         @Post("/echo")
         fun echo(foo: Foo): Foo {
