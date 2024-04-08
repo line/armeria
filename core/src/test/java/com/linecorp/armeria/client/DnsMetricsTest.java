@@ -28,6 +28,7 @@ import static org.assertj.core.api.Assertions.entry;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.time.Duration;
 
 import org.junit.jupiter.api.Test;
@@ -55,7 +56,6 @@ import io.netty.handler.codec.dns.DnsOpCode;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsResponseCode;
 import io.netty.resolver.ResolvedAddressTypes;
-import io.netty.resolver.dns.DnsErrorCauseException;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.ReferenceCountUtil;
@@ -208,11 +208,9 @@ class DnsMetricsTest {
                         "cause=others,name=bar.com.,result=failure}";
 
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
-                        .hasRootCauseInstanceOf(DnsErrorCauseException.class)
-                        .rootCause()
-                        .extracting("code")
-                        .asString()
-                        .isEqualTo(DnsResponseCode.NXDOMAIN.toString());
+                        .cause()
+                        .isInstanceOf(UnprocessedRequestException.class)
+                        .hasCauseInstanceOf(UnknownHostException.class);
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
@@ -264,11 +262,9 @@ class DnsMetricsTest {
                         writtenMeterId, noAnswerMeterId);
 
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
-                        .hasRootCauseInstanceOf(DnsErrorCauseException.class)
-                        .rootCause()
-                        .extracting("code")
-                        .asString()
-                        .isEqualTo(DnsResponseCode.NXDOMAIN.toString());
+                        .cause()
+                        .isInstanceOf(UnprocessedRequestException.class)
+                        .hasCauseInstanceOf(UnknownHostException.class);
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
