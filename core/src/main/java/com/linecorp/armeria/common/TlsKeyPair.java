@@ -115,7 +115,7 @@ public final class TlsKeyPair {
             final SelfSignedCertificate ssc = new SelfSignedCertificate(hostname);
             return of(ssc.key(), ssc.cert());
         } catch (CertificateException e) {
-            throw new IllegalStateException(e);
+            throw new IllegalStateException("Failed to create a self-signed certificate for " + hostname, e);
         }
     }
 

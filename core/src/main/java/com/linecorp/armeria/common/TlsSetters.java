@@ -31,7 +31,6 @@ import io.netty.handler.ssl.SslContextBuilder;
 
 /**
  * Sets properties for TLS or SSL.
- *
  */
 @UnstableApi
 public interface TlsSetters {
