@@ -91,23 +91,39 @@ public final class RequestMetricSupport {
 
     private static void onResponse(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
+           SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+        if (server) {
+            onResponseOnServer(log, meterIdPrefixFunction, successFunction, distributionStatisticConfig);
+        } else {
+            onResponseOnClient(log, meterIdPrefixFunction, successFunction, distributionStatisticConfig);
+        }
+    }
+
+    private static void onResponseOnServer(
+            RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction,
             SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
         final boolean isSuccess = successFunction.isSuccess(ctx, log);
 
-        if (server) {
-            final ServiceRequestMetrics metrics = MicrometerUtil.register(
-                    registry, idPrefix,
-                    ServiceRequestMetrics.class,
-                    (reg, idp) -> new DefaultServiceRequestMetrics(reg, idp, distributionStatisticConfig));
-            updateMetrics(log, metrics, isSuccess);
-            if (log.responseCause() instanceof RequestTimeoutException) {
-                metrics.requestTimeouts().increment();
-            }
-            return;
+        final ServiceRequestMetrics metrics = MicrometerUtil.register(
+                registry, idPrefix,
+                ServiceRequestMetrics.class,
+                (reg, idp) -> new DefaultServiceRequestMetrics(reg, idp, distributionStatisticConfig));
+        updateMetrics(log, metrics, isSuccess);
+        if (log.responseCause() instanceof RequestTimeoutException) {
+            metrics.requestTimeouts().increment();
         }
+    }
+
+    private static void onResponseOnClient(
+            RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction,
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
+        final RequestContext ctx = log.context();
+        final MeterRegistry registry = ctx.meterRegistry();
+        final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
+        final boolean isSuccess = successFunction.isSuccess(ctx, log);
 
         final ClientRequestMetrics metrics = MicrometerUtil.register(
                 registry, idPrefix,
