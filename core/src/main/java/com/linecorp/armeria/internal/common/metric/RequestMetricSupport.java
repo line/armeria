@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.RequestContext;
@@ -40,6 +42,7 @@ import com.linecorp.armeria.server.RequestTimeoutException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.util.AttributeKey;
@@ -174,9 +177,6 @@ public final class RequestMetricSupport {
                     metrics.failureAttempts(error).increment();
                 }
             }).join();
-        }
-        if (log.responseCause() != null) {
-            metrics.failureAttempts(log.responseCause()).increment();
         }
     }
 
@@ -442,8 +442,9 @@ public final class RequestMetricSupport {
                 return failureAttemptsWithErrors.get(causeName);
             }
 
-            final Counter counter = parent.counter(idPrefix.name("actual.requests.attempts"),
-                                                   idPrefix.tags("cause", causeName));
+            final Counter counter = parent.counter(
+                    idPrefix.name("actual.requests.attempts.causes"),
+                    ImmutableList.of(Tag.of("result", "failure"), Tag.of("cause", causeName)));
             failureAttemptsWithErrors.put(causeName, counter);
             return counter;
         }

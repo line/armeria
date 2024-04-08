@@ -244,23 +244,16 @@ class RequestMetricSupportTest {
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         addLogInfoInDerivedCtxWithError(ctx, 503, ResponseCancellationException.get());
-        ctx.logBuilder().endResponseWithLastChild();
-        Map<String, Double> measurements = measureAll(registry);
-
-        addLogInfoInDerivedCtxWithError(ctx, 500, new InvalidResponseException());
+        addLogInfoInDerivedCtxWithError(ctx, 501, new InvalidResponseException());
 
         ctx.logBuilder().endResponseWithLastChild();
 
-        measurements = measureAll(registry);
+        final Map<String, Double>  measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.active.requests#value{method=POST,service=none}", 0.0)
-                .containsEntry("foo.requests#count{http.status=500,method=POST,result=failure,service=none}",
-                               1.0)
-                .containsEntry("foo.actual.requests#count{http.status=500,method=POST,service=none}", 2.0)
-                .containsEntry("foo.actual.requests.attempts#count{cause=InvalidResponseException," +
-                               "http.status=500,method=POST,result=failure,service=none}", 1.0)
-                .containsEntry("foo.actual.requests.attempts#total{cause=InvalidResponseException," +
-                               "http.status=500,method=POST,result=failure,service=none}", 2.0);
+                .containsEntry("foo.actual.requests.attempts.causes#"
+                               + "count{cause=ResponseCancellationException,result=failure}", 1.0)
+                .containsEntry("foo.actual.requests.attempts.causes#"
+                               + "count{cause=InvalidResponseException,result=failure}", 1.0);
     }
 
     @Test
