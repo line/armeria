@@ -810,4 +810,10 @@ public interface HttpRequest extends Request, HttpMessage {
         requireNonNull(action, "action");
         return of(headers(), HttpMessage.super.peekError(action));
     }
+
+    @Override
+    default HttpRequest subscribeOn(EventExecutor eventExecutor) {
+        requireNonNull(eventExecutor, "eventExecutor");
+        return of(headers(), HttpMessage.super.subscribeOn(eventExecutor));
+    }
 }

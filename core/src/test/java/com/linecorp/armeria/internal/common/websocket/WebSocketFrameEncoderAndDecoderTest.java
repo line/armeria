@@ -234,9 +234,9 @@ class WebSocketFrameEncoderAndDecoderTest {
 
         private final boolean expectMaskedFrames;
 
-        TestWebSocketFrameDecoder(int maxFramePayloadLength, boolean allowMaskMismatch,
-                                  boolean expectMaskedFrames) {
-            super(maxFramePayloadLength, allowMaskMismatch);
+        TestWebSocketFrameDecoder(int maxFramePayloadLength,
+                                  boolean allowMaskMismatch, boolean expectMaskedFrames) {
+            super(maxFramePayloadLength, allowMaskMismatch, false);
             this.expectMaskedFrames = expectMaskedFrames;
         }
 

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.xds;
 
+import com.google.protobuf.Message;
+
 import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
 
 /**
@@ -23,11 +25,8 @@ import io.envoyproxy.envoy.service.discovery.v3.DiscoveryResponse;
  * Note that it is important that exceptions are not raised from the callback.
  * Otherwise, the infinite loop will break as a discovery request is not sent.
  */
-
 interface XdsResponseHandler {
 
-    void handleResponse(
-            ResourceParser resourceParser, DiscoveryResponse value, SotwXdsStream sender);
-
-    void handleReset(XdsStream sender);
+    <I extends Message, O extends XdsResource> void handleResponse(
+            ResourceParser<I, O> resourceParser, DiscoveryResponse value, SotwXdsStream sender);
 }

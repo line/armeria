@@ -38,10 +38,12 @@ import java.lang.reflect.Type
  * neither ends nor gets cancelled, which makes the converted [HttpResponse] an infinite stream.
  */
 class FlowResponseConverterFunction(
-    private val responseConverter: ResponseConverterFunction
+    private val responseConverter: ResponseConverterFunction,
 ) : ResponseConverterFunction {
-
-    override fun isResponseStreaming(returnType: Type, produceType: MediaType?): Boolean {
+    override fun isResponseStreaming(
+        returnType: Type,
+        produceType: MediaType?,
+    ): Boolean {
         // This convert is used only when the return type of an annotated service is `Flow`.
         return true
     }
@@ -50,7 +52,7 @@ class FlowResponseConverterFunction(
         ctx: ServiceRequestContext,
         headers: ResponseHeaders,
         result: Any?,
-        trailers: HttpHeaders
+        trailers: HttpHeaders,
     ): HttpResponse {
         if (result is Flow<*>) {
             // Reactive Streams doesn't allow emitting null value.

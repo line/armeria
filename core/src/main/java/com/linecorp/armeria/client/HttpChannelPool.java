@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.common.SessionProtocol.httpAndHttpsValues;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientHeaders;
 
 import java.lang.reflect.Array;
 import java.net.InetSocketAddress;
@@ -64,6 +65,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.proxy.HttpProxyHandler;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyHandler;
@@ -131,10 +133,11 @@ final class HttpChannelPool implements AsyncCloseable {
                 final ConnectProxyConfig connectProxyConfig = (ConnectProxyConfig) proxyConfig;
                 final String username = connectProxyConfig.username();
                 final String password = connectProxyConfig.password();
+                final HttpHeaders proxyHeaders = toNettyHttp1ClientHeaders(connectProxyConfig.headers());
                 if (username == null || password == null) {
-                    proxyHandler = new HttpProxyHandler(proxyAddress);
+                    proxyHandler = new HttpProxyHandler(proxyAddress, proxyHeaders);
                 } else {
-                    proxyHandler = new HttpProxyHandler(proxyAddress, username, password);
+                    proxyHandler = new HttpProxyHandler(proxyAddress, username, password, proxyHeaders);
                 }
                 break;
             case HAPROXY:
@@ -475,7 +478,7 @@ final class HttpChannelPool implements AsyncCloseable {
                         : "raddr: " + remoteAddr + ", laddr: " + localAddr;
                 try {
                     listener.connectionOpen(protocol, remoteAddr, localAddr, channel);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     if (logger.isWarnEnabled()) {
                         logger.warn("{} Exception handling {}.connectionOpen()",
                                     channel, listener.getClass().getName(), e);
@@ -515,7 +518,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
                     try {
                         listener.connectionClosed(protocol, remoteAddr, localAddr, channel);
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         if (logger.isWarnEnabled()) {
                             logger.warn("{} Exception handling {}.connectionClosed()",
                                         channel, listener.getClass().getName(), e);

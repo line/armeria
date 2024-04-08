@@ -1,8 +1,8 @@
 package example.springframework.boot.jetty;
 
+import org.eclipse.jetty.ee10.webapp.WebAppContext;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.Loader;
-import org.eclipse.jetty.webapp.WebAppContext;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.web.embedded.jetty.JettyServerCustomizer;
@@ -42,7 +42,7 @@ public class HelloConfiguration {
     @Bean
     public JettyService jettyService(ServletWebServerApplicationContext applicationContext) {
         final JettyWebServer jettyWebServer = jettyServer(applicationContext);
-        return JettyService.of(jettyWebServer.getServer(), null, false);
+        return JettyService.of(jettyWebServer.getServer(), null);
     }
 
     /**
