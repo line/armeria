@@ -197,8 +197,7 @@ public final class AnnotatedService implements HttpService {
         if (HttpResult.class.isAssignableFrom(returnType) ||
             ResponseEntity.class.isAssignableFrom(returnType)) {
             final ParameterizedType type = (ParameterizedType) genericReturnType;
-            final String returnTypeName = returnType.getSimpleName();
-            warnIfHttpResponseArgumentExists(type, type, returnTypeName);
+            warnIfHttpResponseArgumentExists(type, type, returnType);
             return type.getActualTypeArguments()[0];
         } else {
             return genericReturnType;
@@ -207,16 +206,16 @@ public final class AnnotatedService implements HttpService {
 
     private static void warnIfHttpResponseArgumentExists(Type returnType,
                                                          ParameterizedType type,
-                                                         String returnTypeName) {
+                                                         Class<?> originalReturnType) {
         for (final Type arg : type.getActualTypeArguments()) {
             if (arg instanceof ParameterizedType) {
-                warnIfHttpResponseArgumentExists(returnType, (ParameterizedType) arg, returnTypeName);
+                warnIfHttpResponseArgumentExists(returnType, (ParameterizedType) arg, originalReturnType);
             } else if (arg instanceof Class) {
                 final Class<?> clazz = (Class<?>) arg;
                 if (HttpResponse.class.isAssignableFrom(clazz) ||
                     AggregatedHttpResponse.class.isAssignableFrom(clazz)) {
                     logger.warn("{} in the return type '{}' may take precedence over {}.",
-                                clazz.getSimpleName(), returnType, returnTypeName);
+                                clazz.getSimpleName(), returnType, originalReturnType.getSimpleName());
                 }
             }
         }
