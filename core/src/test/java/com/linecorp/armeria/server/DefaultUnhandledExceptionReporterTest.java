@@ -41,7 +41,7 @@ class DefaultUnhandledExceptionReporterTest {
     @Spy
     final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
     final Logger errorHandlerLogger =
-            (Logger) LoggerFactory.getLogger(DefaultUnhandledExceptionsReporter.class);
+            (Logger) LoggerFactory.getLogger(DefaultUnloggedExceptionsReporter.class);
     private static final long reportIntervalMillis = 1000;
     private static final long awaitIntervalMillis = 2000;
     private static volatile boolean throwNonIgnorableException;
@@ -87,7 +87,7 @@ class DefaultUnhandledExceptionReporterTest {
               .build((ctx, req) -> {
                   throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
               });
-            sb.unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis));
+            sb.unloggedExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis));
         }
     };
 

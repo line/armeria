@@ -116,6 +116,8 @@ public final class Flags {
 
     private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
 
+    private static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+
     static {
         final String strSpec = getNormalized("verboseExceptions",
                                              DefaultFlagsProvider.VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
@@ -133,6 +135,17 @@ public final class Flags {
             VERBOSE_EXCEPTION_SAMPLER_SPEC = "never";
         } else {
             VERBOSE_EXCEPTION_SAMPLER_SPEC = strSpec;
+        }
+
+        final Long intervalMillis = getUserValue(
+                FlagsProvider::defaultUnloggedExceptionsReportIntervalMillis,
+                "defaultUnloggedExceptionsReportIntervalMillis", value -> value >= 0);
+        if (intervalMillis != null) {
+            DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = intervalMillis;
+        } else {
+            DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
+                    getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
+                             "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
         }
     }
 
@@ -404,10 +417,6 @@ public final class Flags {
 
     private static final MeterRegistry METER_REGISTRY =
             getValue(FlagsProvider::meterRegistry, "meterRegistry");
-
-    private static final long DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
-            getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
-                     "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
 
     private static final DistributionStatisticConfig DISTRIBUTION_STATISTIC_CONFIG =
             getValue(FlagsProvider::distributionStatisticConfig, "distributionStatisticConfig");
@@ -1503,16 +1512,31 @@ public final class Flags {
     }
 
     /**
-     * Returns the default interval in milliseconds between the reports on unhandled exceptions.
+     * Returns the default interval in milliseconds between the reports on unlogged exceptions.
      *
      * <p>The default value of this flag is
-     * {@value DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@value DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUnhandledExceptionsReportIntervalMillis=<long>} JVM option to
+     * override the default value.</p>
+     *
+     * @deprecated Use {@link #defaultUnloggedExceptionsReportIntervalMillis()} instead.
+     */
+    @Deprecated
+    public static long defaultUnhandledExceptionsReportIntervalMillis() {
+        return DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    /**
+     * Returns the default interval in milliseconds between the reports on unlogged exceptions.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUnloggedExceptionsReportIntervalMillis=<long>} JVM option to
      * override the default value.</p>
      */
     @UnstableApi
-    public static long defaultUnhandledExceptionsReportIntervalMillis() {
-        return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    public static long defaultUnloggedExceptionsReportIntervalMillis() {
+        return DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
     }
 
     /**
