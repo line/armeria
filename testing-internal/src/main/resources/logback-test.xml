@@ -38,7 +38,6 @@
   <logger name="reactor" level="INFO" />
   <logger name="io.envoyproxy.controlplane.cache" level="DEBUG" />
   <logger name="example.armeria" level="DEBUG" />
-  <logger name="io.netty" level="trace" />
   <logger name="loggerTest" level="ALL" additivity="false">
     <appender-ref ref="NOP" />
   </logger>
