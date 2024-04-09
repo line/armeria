@@ -18,7 +18,13 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * Utilities for {@link ResponseEntity}.
+ */
 public final class ResponseEntityUtil {
+    /**
+     * Build {@link ResponseHeaders} from the given {@link ServiceRequestContext} and {@link ResponseEntity}.
+     */
     public static ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx, ResponseEntity<?> result) {
         final ResponseHeadersBuilder builder = result.headers().toBuilder();
 
