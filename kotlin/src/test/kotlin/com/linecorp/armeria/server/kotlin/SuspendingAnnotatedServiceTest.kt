@@ -19,12 +19,7 @@ package com.linecorp.armeria.server.kotlin
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.AggregatedHttpResponse
-import com.linecorp.armeria.common.HttpHeaders
-import com.linecorp.armeria.common.HttpResponse
-import com.linecorp.armeria.common.HttpStatus
-import com.linecorp.armeria.common.MediaType
-import com.linecorp.armeria.common.ResponseHeaders
+import com.linecorp.armeria.common.*
 import com.linecorp.armeria.common.stream.AbortedStreamException
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
@@ -80,6 +75,11 @@ class SuspendingAnnotatedServiceTest {
         }
 
         get("/default/httpResult/hello").let {
+            assertThat(it.status().code()).isEqualTo(200)
+            assertThat(it.contentUtf8()).isEqualTo("hello")
+        }
+
+        get("/default/responseEntity/hello").let {
             assertThat(it.status().code()).isEqualTo(200)
             assertThat(it.contentUtf8()).isEqualTo("hello")
         }
@@ -146,6 +146,12 @@ class SuspendingAnnotatedServiceTest {
             assertThat(headers().get("x-custom-header")).isEqualTo("value")
             assertThat(contentUtf8()).isEqualTo("hello, bar!")
         }
+
+        get("/response-converter-spi/bar-in-response-entity").run {
+            assertThat(status()).isEqualTo(HttpStatus.BAD_REQUEST)
+            assertThat(headers().get("x-custom-header")).isEqualTo("value")
+            assertThat(contentUtf8()).isEqualTo("hello, bar!")
+        }
     }
 
     @Test
@@ -205,6 +211,17 @@ class SuspendingAnnotatedServiceTest {
                                 ): HttpResult<String> {
                                     assertInEventLoop()
                                     return HttpResult.of(
+                                        ResponseHeaders.of(200),
+                                        msg,
+                                    )
+                                }
+
+                                @Get("/responseEntity/{msg}")
+                                suspend fun responseEntity(
+                                    @Param("msg") msg: String,
+                                ): ResponseEntity<String> {
+                                    assertInEventLoop()
+                                    return ResponseEntity.of(
                                         ResponseHeaders.of(200),
                                         msg,
                                     )
@@ -299,6 +316,13 @@ class SuspendingAnnotatedServiceTest {
                                 @Get("/bar-in-http-result")
                                 suspend fun barInHttpResult() =
                                     HttpResult.of(
+                                        ResponseHeaders.of(HttpStatus.BAD_REQUEST, "x-custom-header", "value"),
+                                        Bar(),
+                                    )
+
+                                @Get("/bar-in-response-entity")
+                                suspend fun barInReponseENtity() =
+                                    ResponseEntity.of(
                                         ResponseHeaders.of(HttpStatus.BAD_REQUEST, "x-custom-header", "value"),
                                         Bar(),
                                     )
