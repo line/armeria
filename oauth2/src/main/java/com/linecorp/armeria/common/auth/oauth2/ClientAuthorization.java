@@ -184,9 +184,7 @@ public final class ClientAuthorization {
      * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
      */
     public void addAsBodyParameters(QueryParamsBuilder formBuilder) {
-        if (credentialsSupplier == null) {
-            return;
-        }
+        requireNonNull(credentialsSupplier, "credentialsSupplier");
         final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
         formBuilder.add(CLIENT_ID, requireNonNull(clientCredentials.getKey(), CLIENT_ID));
         final String clientSecret = clientCredentials.getValue();
@@ -223,7 +221,7 @@ public final class ClientAuthorization {
 
             @Override
             public void addAsBodyParams(QueryParamsBuilder formBuilder) {
-                addAsBodyParameters(formBuilder);
+                // ClientAuthorization is not used as body parameters under the current API usage.
             }
         };
     }
