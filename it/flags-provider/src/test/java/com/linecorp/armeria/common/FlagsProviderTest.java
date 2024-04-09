@@ -22,10 +22,6 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodHandles.Lookup;
-import java.lang.invoke.MethodType;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLConnection;
@@ -38,6 +34,7 @@ import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
+import com.linecorp.armeria.common.util.TlsEngineType;
 
 import io.micrometer.core.instrument.Metrics;
 
@@ -57,7 +54,7 @@ class FlagsProviderTest {
 
     @Test
     void overrideDefaultFlagsProvider() throws Throwable {
-        assertFlags("useOpenSsl").isEqualTo(false);
+        assertFlags("tlsEngineType").isNotEqualTo(TlsEngineType.OPENSSL);
         assertFlags("numCommonBlockingTaskThreads").isEqualTo(100);
     }
 
@@ -128,6 +125,14 @@ class FlagsProviderTest {
     }
 
     @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.tlsEngineType", value = "jdk")
+    void overrideDefaultTlsEngineType() throws Throwable {
+        final Method method = flags.getDeclaredMethod("tlsEngineType");
+        final String actual = method.invoke(flags).toString();
+        assertThat(actual).isEqualTo(TlsEngineType.JDK.toString());
+    }
+
+    @Test
     void twoRequestContextStorageProvidersAreProvidedButNoFQCNisSpecify() throws Throwable {
         assumeThat(System.getProperty("com.linecorp.armeria.requestContextStorageProvider")).isNull();
 
@@ -148,12 +153,15 @@ class FlagsProviderTest {
         assertThat(Flags.meterRegistry()).isNotSameAs(Metrics.globalRegistry);
     }
 
+    @Test
+    void testDistributionStatisticConfig() {
+        assertThat(Flags.distributionStatisticConfig())
+                .isEqualTo(DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG);
+    }
+
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
-        final Lookup lookup = MethodHandles.publicLookup();
-        final MethodHandle method =
-                lookup.findStatic(flags, flagsMethod, MethodType.methodType(
-                        Flags.class.getMethod(flagsMethod).getReturnType()));
-        return assertThat(method.invoke());
+        final Method method = flags.getDeclaredMethod(flagsMethod);
+        return assertThat(method.invoke(null));
     }
 
     private static class FlagsClassLoader extends ClassLoader {

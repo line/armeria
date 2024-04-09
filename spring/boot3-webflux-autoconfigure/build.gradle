@@ -10,6 +10,7 @@ dependencies {
     // To let a user choose between thrift and thrift0.9.
     compileOnly project(':thrift0.18')
     implementation project(':logback')
+    implementation project(':spring:spring6')
 
     api libs.spring.boot3.starter.webflux
     api libs.jakarta.inject

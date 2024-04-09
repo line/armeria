@@ -22,6 +22,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.Channel;
 import io.grpc.ServiceDescriptor;
@@ -45,7 +46,7 @@ public final class ReactorGrpcClientStubFactory implements GrpcClientStubFactory
             return (ServiceDescriptor) getServiceDescriptorMethod.invoke(null);
         } catch (NoSuchMethodException | IllegalAccessException |
                 InvocationTargetException | NoSuchFieldException e) {
-            return null;
+            throw new ServiceDescriptorResolutionException(getClass().getSimpleName(), Exceptions.peel(e));
         }
     }
 

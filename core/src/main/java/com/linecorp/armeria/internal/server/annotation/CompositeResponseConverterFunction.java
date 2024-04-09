@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.FallthroughException;
+import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
@@ -61,6 +62,12 @@ final class CompositeResponseConverterFunction implements ResponseConverterFunct
                                         HttpHeaders trailers) throws Exception {
         if (result instanceof HttpResponse) {
             return (HttpResponse) result;
+        }
+        if (result instanceof HttpResult) {
+            final HttpResult<?> httpResult = (HttpResult<?>) result;
+            headers = HttpResultUtil.buildResponseHeaders(ctx, httpResult);
+            result = httpResult.content();
+            trailers = httpResult.trailers();
         }
         try (SafeCloseable ignored = ctx.push()) {
             for (final ResponseConverterFunction func : functions) {

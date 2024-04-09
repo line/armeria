@@ -72,6 +72,7 @@ import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
@@ -100,6 +101,7 @@ import testing.grpc.Transcoding.GetMessageRequestV2;
 import testing.grpc.Transcoding.GetMessageRequestV2.SubMessage;
 import testing.grpc.Transcoding.GetMessageRequestV3;
 import testing.grpc.Transcoding.GetMessageRequestV4;
+import testing.grpc.Transcoding.GetMessageRequestV5;
 import testing.grpc.Transcoding.Message;
 import testing.grpc.Transcoding.MessageType;
 import testing.grpc.Transcoding.Recursive;
@@ -144,6 +146,17 @@ public class HttpJsonTranscodingTest {
                                 request.getQueryParameter() + ':' +
                                 request.getParentField().getChildField() + ':' +
                                 request.getParentField().getChildField2();
+            responseObserver.onNext(Message.newBuilder().setText(text).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void getMessageV5(GetMessageRequestV5 request, StreamObserver<Message> responseObserver) {
+            final String text = request.getMessageId() + ':' +
+                    request.getQueryParameter() + ':' +
+                    request.getQueryField1() + ':' +
+                    request.getParentField().getChildField() + ':' +
+                    request.getParentField().getChildField2();
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
         }
@@ -804,6 +817,21 @@ public class HttpJsonTranscodingTest {
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"int32Val\": 1.1}",
+            "{\"int64Val\": 2.2}",
+            "{\"uint32Val\": 3.3}",
+            "{\"uint64Val\": 4.4}"
+    })
+    void shouldDenyTypeMismatchedValue(String jsonContent)
+            throws JsonProcessingException {
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/wrappers", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(root.get("code").asInt()).isEqualTo(Code.INVALID_ARGUMENT.value());
+    }
+
     @Test
     void shouldDenyMissingContentType() {
         final String validJson = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
@@ -979,6 +1007,26 @@ public class HttpJsonTranscodingTest {
                                                             .execute()
                                                             .content();
         assertThat(response2.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+    }
+
+    @Test
+    void supportJsonName() {
+        final QueryParams query =
+                QueryParams.builder()
+                        .add("query_parameter", "query")
+                        .add("second_query", "query2")
+                        .add("parent.child_field", "childField")
+                        .add("parent.second_field", "childField2")
+                        .build();
+
+        final JsonNode response =
+                webClientCamelCaseQueryAndOriginalParameters.prepare()
+                        .get("/v5/messages/1")
+                        .queryParams(query)
+                        .asJson(JsonNode.class)
+                        .execute()
+                        .content();
+        assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
     }
 
     @Test

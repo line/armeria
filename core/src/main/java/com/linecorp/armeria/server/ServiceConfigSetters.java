@@ -37,6 +37,8 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 interface ServiceConfigSetters {
 
     /**
@@ -208,6 +210,27 @@ interface ServiceConfigSetters {
      */
     @UnstableApi
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
+
+     /**
+      * Sets a {@linkplain EventLoopGroup worker group} to be used when serving a {@link Service}.
+      *
+      * @param serviceWorkerGroup the {@linkplain ScheduledExecutorService executor} to be used.
+      * @param shutdownOnStop whether to shut down the {@link ScheduledExecutorService} when the {@link Server}
+      *                       stops.
+      */
+     @UnstableApi
+     ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                             boolean shutdownOnStop);
+
+     /**
+      * Uses a newly created {@link EventLoopGroup} with the specified number of threads dedicated to
+      * the execution of service codes.
+      * The {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+      *
+      * @param numThreads the number of threads in the executor
+      */
+     @UnstableApi
+     ServiceConfigSetters serviceWorkerGroup(int numThreads);
 
     /**
      * Sets the {@link Function} which generates a {@link RequestId}.

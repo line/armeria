@@ -365,5 +365,8 @@
   <module name="BeforeExecutionExclusionFileFilter">
     <property name="fileNamePattern" value="[\\/]reactive[\\/]DefaultSslInfo.java" />
   </module>
+  <module name="BeforeExecutionExclusionFileFilter">
+    <property name="fileNamePattern" value="[\\/]armeria[\\/]kubernetes[\\/]it[\\/].*.java" />
+  </module>
 
 </module>

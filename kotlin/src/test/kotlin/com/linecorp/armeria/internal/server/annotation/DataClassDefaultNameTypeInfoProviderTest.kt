@@ -30,7 +30,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
 class DataClassDefaultNameTypeInfoProviderTest {
-
     @CsvSource(value = ["true", "false"])
     @ParameterizedTest
     fun dataClass(request: Boolean) {
@@ -64,7 +63,7 @@ class DataClassDefaultNameTypeInfoProviderTest {
             FieldInfo.builder("renamedNullable", STRING)
                 .requirement(FieldRequirement.OPTIONAL)
                 .descriptionInfo(DescriptionInfo.of("renamed nullable description"))
-                .build()
+                .build(),
         )
     }
 
@@ -78,7 +77,7 @@ class DataClassDefaultNameTypeInfoProviderTest {
         assertThat(enumInfo.descriptionInfo()).isEqualTo(DescriptionInfo.of("Enum description"))
         assertThat(enumInfo.values()).containsExactlyInAnyOrder(
             EnumValueInfo("ENUM_1", null, DescriptionInfo.of("ENUM_1 description")),
-            EnumValueInfo("ENUM_2", null, DescriptionInfo.of("ENUM_2 description"))
+            EnumValueInfo("ENUM_2", null, DescriptionInfo.of("ENUM_2 description")),
         )
     }
 
@@ -97,7 +96,7 @@ class DataClassDefaultNameTypeInfoProviderTest {
         val nonnullName: String,
         @JsonProperty("renamedNullable")
         @Description("renamed nullable description")
-        val nullableName: String?
+        val nullableName: String?,
     )
 
     @Description("Enum description")
@@ -106,6 +105,6 @@ class DataClassDefaultNameTypeInfoProviderTest {
         ENUM_1,
 
         @Description(value = "ENUM_2 description")
-        ENUM_2
+        ENUM_2,
     }
 }
