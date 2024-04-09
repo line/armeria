@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
 
@@ -97,6 +98,11 @@ public final class AnnotationUtil {
      */
     private static final Set<Class<? extends Annotation>> knownCyclicAnnotationTypes =
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
+    private static final ImmutableSet<FindOption> findOptionsForDescription = ImmutableSet.copyOf(
+            EnumSet.of(FindOption.LOOKUP_SUPER_CLASSES,
+                       FindOption.LOOKUP_META_ANNOTATIONS,
+                       FindOption.LOOKUP_SUPER_METHODS,
+                       FindOption.LOOKUP_SUPER_PARAMETERS));
 
     static {
         // Add well known JDK annotations with cyclic dependencies which will always be blocklisted.
@@ -139,11 +145,7 @@ public final class AnnotationUtil {
      */
     @Nullable
     public static Description findFirstDescription(AnnotatedElement element) {
-        final EnumSet<FindOption> options = EnumSet.of(FindOption.LOOKUP_SUPER_CLASSES,
-                                                       FindOption.LOOKUP_META_ANNOTATIONS,
-                                                       FindOption.LOOKUP_SUPER_METHODS,
-                                                       FindOption.LOOKUP_SUPER_PARAMETERS);
-        final List<Description> found = find(element, Description.class, options);
+        final List<Description> found = find(element, Description.class, findOptionsForDescription);
         return found.isEmpty() ? null : found.get(0);
     }
 
@@ -251,7 +253,7 @@ public final class AnnotationUtil {
      * @param findOptions the options to be applied when finding annotations
      */
     static <T extends Annotation> List<T> find(AnnotatedElement element, Class<T> annotationType,
-                                               EnumSet<FindOption> findOptions) {
+                                               Set<FindOption> findOptions) {
         requireNonNull(element, "element");
         requireNonNull(annotationType, "annotationType");
 
@@ -441,7 +443,7 @@ public final class AnnotationUtil {
      * Collects the list of {@link AnnotatedElement}s which are to be used to find annotations.
      */
     private static List<AnnotatedElement> resolveTargetElements(AnnotatedElement element,
-                                                                EnumSet<FindOption> findOptions) {
+                                                                Set<FindOption> findOptions) {
         if (!findOptions.contains(FindOption.LOOKUP_SUPER_CLASSES)) {
             return ImmutableList.of(element);
         }
