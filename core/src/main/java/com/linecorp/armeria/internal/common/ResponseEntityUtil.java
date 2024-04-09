@@ -14,8 +14,12 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseEntity;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
