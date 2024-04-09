@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
+import com.linecorp.armeria.common.ResponseEntityUtil;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -407,7 +408,7 @@ public final class AnnotatedService implements HttpService {
 
         if (result instanceof ResponseEntity) {
             final ResponseEntity<?> responseEntity = (ResponseEntity<?>) result;
-            headers = responseEntity.headers();
+            headers = ResponseEntityUtil.buildResponseHeaders(ctx, responseEntity);
             result = responseEntity.hasContent() ? responseEntity.content() : null;
             trailers = responseEntity.trailers();
         } else if (result instanceof HttpResult) {
