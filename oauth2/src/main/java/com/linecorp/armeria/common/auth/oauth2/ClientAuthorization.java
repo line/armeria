@@ -184,7 +184,9 @@ public final class ClientAuthorization {
      * The client MAY omit the {@code client_secret} parameter if the client secret is an empty string.
      */
     public void addAsBodyParameters(QueryParamsBuilder formBuilder) {
-        requireNonNull(credentialsSupplier, "credentialsSupplier");
+        if (credentialsSupplier == null) {
+            return;
+        }
         final Map.Entry<String, String> clientCredentials = credentialsSupplier.get();
         formBuilder.add(CLIENT_ID, requireNonNull(clientCredentials.getKey(), CLIENT_ID));
         final String clientSecret = clientCredentials.getValue();
