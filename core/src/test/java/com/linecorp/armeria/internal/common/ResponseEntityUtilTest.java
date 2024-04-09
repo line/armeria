@@ -20,12 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.RoutingResult;
@@ -43,7 +41,6 @@ class ResponseEntityUtilTest {
         final ResponseHeaders actual = ResponseEntityUtil.buildResponseHeaders(ctx, result);
         assertThat(actual).isEqualTo(headers);
         assertThat(actual.contentType()).isNull();
-
     }
 
     @Test
