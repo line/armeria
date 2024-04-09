@@ -74,6 +74,7 @@ public final class InternalTestingBlockHoundIntegration implements BlockHoundInt
                 "com.linecorp.armeria.internal.testing.InternalTestingBlockHoundIntegration",
                 "writeBlockingMethod");
         builder.allowBlockingCallsInside("com.linecorp.armeria.client.ClientFactory", "ofDefault");
+        builder.allowBlockingCallsInside("io.envoyproxy.controlplane.cache.SimpleCache", "createWatch");
 
         // prints the exception which makes it easier to debug issues
         builder.blockingMethodCallback(this::writeBlockingMethod);
