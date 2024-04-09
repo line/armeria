@@ -17,22 +17,25 @@
 package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-public class ResponseEntityUtilTest {
+class ResponseEntityUtilTest {
     @Test
     void statusIsContentAlwaysEmpty() {
-        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
         final ResponseHeaders headers = ResponseHeaders.of(HttpStatus.NO_CONTENT);
         final ResponseEntity<Void> result = ResponseEntity.of(headers);
@@ -41,12 +44,12 @@ public class ResponseEntityUtilTest {
         assertThat(actual).isEqualTo(headers);
         assertThat(actual.contentType()).isNull();
 
-        verifyNoInteractions(ctx);
     }
 
     @Test
     void contentTypeIsNotNull() {
-        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
         final ResponseHeaders headers = ResponseHeaders
                 .builder(HttpStatus.OK)
@@ -59,14 +62,18 @@ public class ResponseEntityUtilTest {
         assertThat(actual).isEqualTo(headers);
         assertThat(actual.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(actual.get("foo")).isEqualTo("bar");
-
-        verifyNoInteractions(ctx);
     }
 
     @Test
     void useNegotiatedResponseMediaType() {
-        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        when(ctx.negotiatedResponseMediaType()).thenReturn(MediaType.JSON_UTF_8);
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/");
+        final RoutingResult routingResult = RoutingResult.builder()
+                                                         .path("/foo")
+                                                         .negotiatedResponseMediaType(MediaType.JSON_UTF_8)
+                                                         .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.builder(request)
+                                                               .routingResult(routingResult)
+                                                               .build();
 
         final ResponseEntity<Void> result = ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK));
         final ResponseHeaders actual = ResponseEntityUtil.buildResponseHeaders(ctx, result);
