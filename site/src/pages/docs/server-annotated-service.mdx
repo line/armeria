@@ -427,7 +427,7 @@ public class MyAnnotatedService {
 }
 ```
 
-Note that if there is no value from <type://RequestContext> to inject, `IllegalArgumentException` will occur at runtime.
+Note that if no attribute for the specified `AttributeKey` is found in <type://RequestContext>, `IllegalArgumentException` will occur at runtime.
 
 ### Other classes automatically injected
 
