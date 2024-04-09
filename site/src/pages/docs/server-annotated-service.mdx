@@ -394,17 +394,18 @@ public class MyAnnotatedService {
 }
 ```
 
-### Getting an AttributeKey
+### Getting a custom attribute value
 
-Armeria also provides the <type://@Attribute> annotation to inject an <type://AttributeKey> value from
-<type://RequestContext> into a parameter. The parameter annotated with <type://@Attribute> can be compatible
-with all types corresponding to the <type://AttributeKey> stored within the <type://RequestContext>. The
-<type://@Attribute> annotation has two parameters: `name` and `prefix`, as shown in the example below.
-The parameter `name` corresponds to the <type://AttributeKey>'s name, and `prefix` corresponds to the type of
-the <type://AttributeKey>. In short, it's `AttributeKey.valueOf(prefix, name)`. Also, the parameter `prefix` is
-optional. If the `prefix` is not declared in <type://@Attribute>, `AnnotatedService Type` and `DefaultType` are
-used to retrieve the value from <type://RequestContext>. In the example below, `MyAnnotatedService` is used as
-the `ServiceType`.
+Armeria also provides the <type://@Attribute> annotation to inject a
+custom attribute value of a <type://RequestContext> into the annotated
+parameter. The <type://@Attribute> annotation has two attributes:
+`value` and  `prefix`, as shown in the example below. If both `prefix`
+and `value` are specified, `AttributeKey.valueOf(prefix, value)` will
+be used to look up the `AttributeKey` of the custom attribute.
+If `prefix` is unspecified, the class of the annotated service will be
+tried as the `prefix` (e.g. `Attribute.valueOf(MyAnnotatedService.class, value)`),
+and then if there's no such attribute, `Attribute.valueOf(value)`
+will be tried as a fallback.
 
 ```java
 public class MyAttributes {
