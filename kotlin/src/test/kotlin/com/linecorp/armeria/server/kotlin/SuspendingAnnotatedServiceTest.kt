@@ -19,7 +19,13 @@ package com.linecorp.armeria.server.kotlin
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.*
+import com.linecorp.armeria.common.AggregatedHttpResponse
+import com.linecorp.armeria.common.HttpHeaders
+import com.linecorp.armeria.common.HttpResponse
+import com.linecorp.armeria.common.HttpStatus
+import com.linecorp.armeria.common.MediaType
+import com.linecorp.armeria.common.ResponseEntity
+import com.linecorp.armeria.common.ResponseHeaders
 import com.linecorp.armeria.common.stream.AbortedStreamException
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
