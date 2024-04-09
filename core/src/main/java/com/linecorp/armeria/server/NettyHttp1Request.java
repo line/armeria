@@ -38,9 +38,9 @@ final class NettyHttp1Request extends DefaultHttpMessage implements HttpRequest 
         super(httpVersion, ArmeriaHttpHeadersFactory.INSTANCE);
         this.method = checkNotNull(method, "method");
         this.uri = checkNotNull(uri, "uri");
-        headers().builder().method(
+        headers().delegate().method(
                 firstNonNull(com.linecorp.armeria.common.HttpMethod.tryParse(method.name()), UNKNOWN));
-        headers().builder().path(uri);
+        headers().delegate().path(uri);
     }
 
     @Override
@@ -68,7 +68,7 @@ final class NettyHttp1Request extends DefaultHttpMessage implements HttpRequest 
     @Override
     public HttpRequest setMethod(HttpMethod method) {
         this.method = ObjectUtil.checkNotNull(method, "method");
-        headers().builder().method(
+        headers().delegate().method(
                 firstNonNull(com.linecorp.armeria.common.HttpMethod.tryParse(method.name()), UNKNOWN));
         return this;
     }
@@ -76,7 +76,7 @@ final class NettyHttp1Request extends DefaultHttpMessage implements HttpRequest 
     @Override
     public HttpRequest setUri(String uri) {
         this.uri = ObjectUtil.checkNotNull(uri, "uri");
-        headers().builder().path(uri);
+        headers().delegate().path(uri);
         return this;
     }
 
@@ -93,7 +93,7 @@ final class NettyHttp1Request extends DefaultHttpMessage implements HttpRequest 
 
     @Override
     public int hashCode() {
-        return Objects.hash(method, uri, super.hashCode());
+        return Objects.hash(headers().delegate().hashCode(), super.hashCode());
     }
 
     @Override
@@ -104,8 +104,7 @@ final class NettyHttp1Request extends DefaultHttpMessage implements HttpRequest 
 
         final NettyHttp1Request other = (NettyHttp1Request) o;
 
-        return method().equals(other.method()) &&
-               uri().equalsIgnoreCase(other.uri()) &&
+        return headers().delegate().equals(other.headers().delegate()) &&
                super.equals(o);
     }
 

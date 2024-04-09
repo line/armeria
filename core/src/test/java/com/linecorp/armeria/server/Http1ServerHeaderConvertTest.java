@@ -48,7 +48,7 @@ class Http1ServerHeaderConvertTest {
 
         final ChannelHandlerContext ctx = mockChannelHandlerContext();
 
-        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, headers.builder(),
+        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, headers.delegate(),
                                                   serverConfig(), "http",
                                                   RequestTarget.forServer(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
@@ -58,7 +58,7 @@ class Http1ServerHeaderConvertTest {
 
         // Remove Host header.
         headers.remove(HttpHeaderNames.HOST);
-        armeriaHeaders = toArmeria(ctx, originReq, headers.builder(), serverConfig(), "https",
+        armeriaHeaders = toArmeria(ctx, originReq, headers.delegate(), serverConfig(), "https",
                                    RequestTarget.forServer(originReq.uri()));
         assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("foo:36462"); // The default hostname.
         assertThat(armeriaHeaders.authority()).isEqualTo("foo:36462");

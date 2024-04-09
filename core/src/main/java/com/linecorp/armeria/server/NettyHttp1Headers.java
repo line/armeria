@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.AbstractMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
@@ -44,33 +43,33 @@ final class NettyHttp1Headers extends HttpHeaders {
     private static final ValueValidator<CharSequence> VALUE_VALIDATOR =
             DefaultHttpHeadersFactory.headersFactory().getValueValidator();
 
-    private final RequestHeadersBuilder builder;
+    private final RequestHeadersBuilder delegate;
 
     NettyHttp1Headers() {
-        builder = RequestHeaders.builder();
+        delegate = RequestHeaders.builder();
     }
 
     @Override
     @Nullable
     public String get(String name) {
-        return builder.get(name);
+        return delegate.get(name);
     }
 
     @Override
     @Nullable
     public Integer getInt(CharSequence name) {
-        return builder.getInt(name);
+        return delegate.getInt(name);
     }
 
     @Override
     public int getInt(CharSequence name, int defaultValue) {
-        return builder.getInt(name, defaultValue);
+        return delegate.getInt(name, defaultValue);
     }
 
     @Override
     @Nullable
     public Short getShort(CharSequence name) {
-        final Integer intValue = builder.getInt(name);
+        final Integer intValue = delegate.getInt(name);
         if (intValue == null || intValue < Short.MIN_VALUE || intValue > Short.MAX_VALUE) {
             return null;
         }
@@ -79,7 +78,7 @@ final class NettyHttp1Headers extends HttpHeaders {
 
     @Override
     public short getShort(CharSequence name, short defaultValue) {
-        final Integer intValue = builder.getInt(name);
+        final Integer intValue = delegate.getInt(name);
         if (intValue == null || intValue < Short.MIN_VALUE || intValue > Short.MAX_VALUE) {
             return defaultValue;
         }
@@ -89,120 +88,120 @@ final class NettyHttp1Headers extends HttpHeaders {
     @Override
     @Nullable
     public Long getTimeMillis(CharSequence name) {
-        return builder.getTimeMillis(name);
+        return delegate.getTimeMillis(name);
     }
 
     @Override
     public long getTimeMillis(CharSequence name, long defaultValue) {
-        return builder.getTimeMillis(name, defaultValue);
+        return delegate.getTimeMillis(name, defaultValue);
     }
 
     @Override
     public List<String> getAll(String name) {
-        return builder.getAll(name);
+        return delegate.getAll(name);
     }
 
     @Override
     public List<Entry<String, String>> entries() {
-        return builder.stream()
-                      .map(e -> new AbstractMap.SimpleEntry<>(e.getKey().toString(), e.getValue()))
-                      .collect(Collectors.toList());
+        return delegate.stream()
+                       .map(e -> Maps.immutableEntry(e.getKey().toString(), e.getValue()))
+                       .collect(Collectors.toList());
     }
 
     @Override
     public boolean contains(String name) {
-        return builder.contains(name);
+        return delegate.contains(name);
     }
 
     @Override
     public Iterator<Entry<String, String>> iterator() {
-        return builder.stream().map(e -> Maps.immutableEntry(e.getKey().toString(), e.getValue()))
-                      .iterator();
+        return delegate.stream().map(e -> Maps.immutableEntry(e.getKey().toString(), e.getValue()))
+                       .iterator();
     }
 
     @Override
     public Iterator<Entry<CharSequence, CharSequence>> iteratorCharSequence() {
-        return builder.stream()
-                      .map(e -> Maps.<CharSequence, CharSequence>immutableEntry(e.getKey().toString(),
+        return delegate.stream()
+                       .map(e -> Maps.<CharSequence, CharSequence>immutableEntry(e.getKey().toString(),
                                                                                 e.getValue()))
 
-                      .iterator();
+                       .iterator();
     }
 
     @Override
     public boolean isEmpty() {
-        return builder.isEmpty();
+        return delegate.isEmpty();
     }
 
     @Override
     public int size() {
-        return builder.size();
+        return delegate.size();
     }
 
     @Override
     public Set<String> names() {
-        return builder.names().stream().map(AsciiString::toString).collect(Collectors.toSet());
+        return delegate.names().stream().map(AsciiString::toString).collect(Collectors.toSet());
     }
 
     @Override
     public HttpHeaders add(String name, Object value) {
         final String strValue = validateValue(value);
-        builder.add(validatedName(name), strValue);
+        delegate.add(validatedName(name), strValue);
         return this;
     }
 
     @Override
     public HttpHeaders add(String name, Iterable<?> values) {
-        builder.add(validatedName(name), validateValues(values));
+        delegate.add(validatedName(name), validateValues(values));
         return this;
     }
 
     @Override
     public HttpHeaders addInt(CharSequence name, int value) {
-        builder.addInt(validatedName(name), value);
+        delegate.addInt(validatedName(name), value);
         return this;
     }
 
     @Override
     public HttpHeaders addShort(CharSequence name, short value) {
-        builder.addInt(validatedName(name), value);
+        delegate.addInt(validatedName(name), value);
         return this;
     }
 
     @Override
     public HttpHeaders set(String name, Object value) {
-        builder.set(validatedName(name), validateValue(value));
+        delegate.set(validatedName(name), validateValue(value));
         return this;
     }
 
     @Override
     public HttpHeaders set(String name, Iterable<?> values) {
         final List<String> strValues = validateValues(values);
-        builder.set(validatedName(name), strValues);
+        delegate.set(validatedName(name), strValues);
         return this;
     }
 
     @Override
     public HttpHeaders setInt(CharSequence name, int value) {
-        builder.setInt(validatedName(name), value);
+        delegate.setInt(validatedName(name), value);
         return this;
     }
 
     @Override
     public HttpHeaders setShort(CharSequence name, short value) {
-        builder.setInt(validatedName(name), value);
+        delegate.setInt(validatedName(name), value);
         return this;
     }
 
     @Override
     public HttpHeaders remove(String name) {
-        builder.remove(name);
+        delegate.remove(name);
         return this;
     }
 
     @Override
     public HttpHeaders clear() {
-        builder.clear();
+        delegate.clear();
         return this;
     }
 
@@ -223,7 +222,7 @@ final class NettyHttp1Headers extends HttpHeaders {
         return strValue.toString();
     }
 
-    RequestHeadersBuilder builder() {
-        return builder;
+    RequestHeadersBuilder delegate() {
+        return delegate;
     }
 }
