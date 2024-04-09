@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -188,7 +187,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             }
             closed = true;
 
-            cancelChildSubscribersAndBuffer();
+            cancelChildSubscribersAndBuffer(cause);
             downstream.onError(cause);
             completionFuture.completeExceptionally(cause);
         }
@@ -263,16 +262,19 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             final Subscription upstream = this.upstream;
             assert upstream != null;
             upstream.cancel();
-            cancelChildSubscribersAndBuffer();
-            completionFuture.completeExceptionally(CancelledSubscriptionException.get());
+            final CancelledSubscriptionException cause = CancelledSubscriptionException.get();
+            cancelChildSubscribersAndBuffer(cause);
+            completionFuture.completeExceptionally(cause);
 
             if (notifyCancellation) {
-                downstream.onError(CancelledSubscriptionException.get());
+                downstream.onError(cause);
             }
         }
 
-        private void cancelChildSubscribersAndBuffer() {
-            buffer.forEach(StreamMessageUtil::closeOrAbort);
+        private void cancelChildSubscribersAndBuffer(Throwable cause) {
+            for (U item : buffer) {
+                StreamMessageUtil.closeOrAbort(item, cause);
+            }
             buffer.clear();
             // use a copy of the subscribers to avoid a ConcurrentModificationException from
             // removing a child subscriber at #completeChild
@@ -284,10 +286,9 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return Long.MAX_VALUE;
             }
 
-            final Optional<Long> requested = childSubscribers.stream().map(FlatMapSubscriber::getRequested)
-                                                             .reduce(LongMath::saturatedAdd);
-
-            return maxConcurrency - requested.orElse(0L) - buffer.size();
+            final long requested = childSubscribers.stream().map(FlatMapSubscriber::getRequested)
+                                                   .reduce(0L, LongMath::saturatedAdd);
+            return maxConcurrency - requested - buffer.size();
         }
 
         private void requestAllAvailable() {
@@ -362,7 +363,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         private void publishDownstream(U item) {
             if (closed) {
-                StreamMessageUtil.closeOrAbort(item);
+                StreamMessageUtil.closeOrAbort(item, ClosedStreamException.get());
                 return;
             }
 
