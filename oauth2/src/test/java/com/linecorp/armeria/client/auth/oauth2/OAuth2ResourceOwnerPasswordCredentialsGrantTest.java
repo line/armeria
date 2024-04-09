@@ -24,8 +24,9 @@ import java.util.AbstractMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -35,13 +36,13 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
 import com.linecorp.armeria.internal.client.auth.oauth2.MockOAuth2ResourceOwnerPasswordService;
 import com.linecorp.armeria.internal.server.auth.oauth2.MockOAuth2IntrospectionService;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthService;
@@ -54,8 +55,8 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
     static final String SERVER_CREDENTIALS = "dGVzdF9zZXJ2ZXI6c2VydmVyX3NlY3JldA=="; //test_server:server_secret
 
     static final MockOAuth2AccessToken TOKEN =
-        MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(3L),
-                                       ImmutableMap.of("extension_field", "twenty-seven"), "read", "write");
+            MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(3L),
+                                           ImmutableMap.of("extension_field", "twenty-seven"), "read", "write");
 
     static final HttpService SERVICE = new AbstractHttpService() {
         @Override
@@ -81,109 +82,149 @@ public class OAuth2ResourceOwnerPasswordCredentialsGrantTest {
         }
     };
 
-    private final ServerExtension resourceServer = new ServerExtension(false) {
+    @RegisterExtension
+    final ServerExtension resourceServer = new ServerExtension() {
+
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final WebClient introspectClient = WebClient.of(authServer.httpUri());
             sb.service("/resource-read-write/",
-                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
-                               introspectClient,
-                               "/introspect/token/")
-                               .realm("protected resource read-write")
-                               .accessTokenType("Bearer")
-                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                               .permittedScope("read", "write")
-                               .build()
+                       AuthService.builder().addOAuth2(
+                               OAuth2TokenIntrospectionAuthorizer
+                                       .builder(introspectClient, "/introspect/token/")
+                                       .realm("protected resource read-write")
+                                       .accessTokenType("Bearer")
+                                       .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
+                                       .permittedScope("read", "write")
+                                       .build()
                        ).build(SERVICE));
             sb.service("/resource-read/",
-                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
-                               introspectClient,
-                               "/introspect/token/")
-                               .realm("protected resource read")
-                               .accessTokenType("Bearer")
-                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                               .permittedScope("read")
-                               .build()
+                       AuthService.builder().addOAuth2(
+                               OAuth2TokenIntrospectionAuthorizer
+                                       .builder(introspectClient, "/introspect/token/")
+                                       .realm("protected resource read")
+                                       .accessTokenType("Bearer")
+                                       .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
+                                       .permittedScope("read")
+                                       .build()
                        ).build(SERVICE));
             sb.service("/resource-read-write-update/",
-                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
-                               introspectClient,
-                               "/introspect/token/")
-                               .realm("protected resource read-write-update")
-                               .accessTokenType("Bearer")
-                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                               .permittedScope("read", "write", "update")
-                               .build()
+                       AuthService.builder().addOAuth2(
+                               OAuth2TokenIntrospectionAuthorizer
+                                       .builder(introspectClient, "/introspect/token/")
+                                       .realm("protected resource read-write-update")
+                                       .accessTokenType("Bearer")
+                                       .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
+                                       .permittedScope("read", "write", "update")
+                                       .build()
                        ).build(SERVICE));
         }
     };
 
-    @Test
-    public void testOk() throws Exception {
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    public void testOk(boolean useLegacyApi) throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
-        final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
-                .builder(authClient, "/token/user/")
-                .userCredentials(
-                        () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
-                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-
-        try (Server ignored = resourceServer.start()) {
-            final WebClient client = WebClient.builder(resourceServer.httpUri())
-                                              .decorator(OAuth2Client.newDecorator(grant))
-                                              .build();
-
-            final HttpRequest request1 = HttpRequest.of(HttpMethod.GET, "/resource-read-write/");
-            final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/resource-read/");
-            final HttpRequest request3 = HttpRequest.of(HttpMethod.GET, "/resource-read-write-update/");
-
-            final CompletableFuture<AggregatedHttpResponse> response1 = client.execute(request1).aggregate();
-            final CompletableFuture<AggregatedHttpResponse> response2 = client.execute(request2).aggregate();
-            final CompletableFuture<AggregatedHttpResponse> response3 = client.execute(request3).aggregate();
-
-            assertThat(response1.get().status()).isEqualTo(HttpStatus.OK);
-            assertThat(response2.get().status()).isEqualTo(HttpStatus.OK);
-            assertThat(response3.get().status()).isEqualTo(HttpStatus.FORBIDDEN);
+        final OAuth2AuthorizationGrant grant;
+        if (useLegacyApi) {
+            grant = OAuth2ResourceOwnerPasswordCredentialsGrant
+                    .builder(authClient, "/token/user/")
+                    .userCredentials(
+                            () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
+                    .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
+        } else {
+            final ClientAuthentication clientAuthentication = ClientAuthentication.ofBasic(CLIENT_CREDENTIALS);
+            final AccessTokenRequest accessTokenRequest =
+                    AccessTokenRequest.ofResourceOwnerPassword("test_user", "test_password",
+                                                               clientAuthentication, null);
+            grant = OAuth2AuthorizationGrant.builder(authClient, "/token/user/")
+                                            .accessTokenRequest(() -> accessTokenRequest)
+                                            .build();
         }
+
+        final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                          .decorator(OAuth2Client.newDecorator(grant))
+                                          .build();
+
+        final HttpRequest request1 = HttpRequest.of(HttpMethod.GET, "/resource-read-write/");
+        final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/resource-read/");
+        final HttpRequest request3 = HttpRequest.of(HttpMethod.GET, "/resource-read-write-update/");
+
+        final CompletableFuture<AggregatedHttpResponse> response1 = client.execute(request1).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> response2 = client.execute(request2).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> response3 = client.execute(request3).aggregate();
+
+        assertThat(response1.get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response2.get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response3.get().status()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
-    @Test
-    public void testUnauthorized() {
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    public void testUnauthorized(boolean useLegacyApi) {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
-        final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
-                .builder(authClient, "/token/user/")
-                .userCredentials(
-                        () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
-                .clientBasicAuthorization(() -> SERVER_CREDENTIALS).build();
-        try (Server ignored = resourceServer.start()) {
-            final WebClient client = WebClient.builder(resourceServer.httpUri())
-                                              .decorator(OAuth2Client.newDecorator(grant))
-                                              .build();
+        final OAuth2AuthorizationGrant grant;
 
-            assertThatThrownBy(() -> client.get("/resource-read-write/").aggregate().join())
-                    .isInstanceOf(CompletionException.class)
-                    .cause().isInstanceOf(InvalidClientException.class);
+        if (useLegacyApi) {
+            grant = OAuth2ResourceOwnerPasswordCredentialsGrant
+                    .builder(authClient, "/token/user/")
+                    .userCredentials(
+                            () -> new AbstractMap.SimpleImmutableEntry<>("test_user", "test_password"))
+                    .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
+                    .build();
+        } else {
+            final ClientAuthentication clientAuthentication = ClientAuthentication.ofBasic(SERVER_CREDENTIALS);
+            final AccessTokenRequest accessTokenRequest =
+                    AccessTokenRequest.ofResourceOwnerPassword("test_user", "test_password",
+                                                               clientAuthentication, null);
+            grant = OAuth2AuthorizationGrant
+                    .builder(authClient, "/token/user/")
+                    .accessTokenRequest(accessTokenRequest)
+                    .build();
         }
+        final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                          .decorator(OAuth2Client.newDecorator(grant))
+                                          .build();
+
+        assertThatThrownBy(() -> client.get("/resource-read-write/").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .cause().isInstanceOf(InvalidClientException.class);
     }
 
-    @Test
-    public void testUnauthorized2() {
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    public void testUnauthorized2(boolean useLegacyApi) {
         final WebClient authClient = WebClient.of(authServer.httpUri());
 
-        final OAuth2ResourceOwnerPasswordCredentialsGrant grant = OAuth2ResourceOwnerPasswordCredentialsGrant
-                .builder(authClient, "/token/user/")
-                .userCredentials(
-                        () -> new AbstractMap.SimpleImmutableEntry<>("foo", "bar"))
-                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-        try (Server ignored = resourceServer.start()) {
-            final WebClient client = WebClient.builder(resourceServer.httpUri())
-                                              .decorator(OAuth2Client.newDecorator(grant))
-                                              .build();
-
-            assertThatThrownBy(() -> client.get("/resource-read-write/").aggregate().join())
-                    .isInstanceOf(CompletionException.class)
-                    .cause().isInstanceOf(InvalidClientException.class);
+        final OAuth2AuthorizationGrant grant;
+        if (useLegacyApi) {
+            grant = OAuth2ResourceOwnerPasswordCredentialsGrant
+                    .builder(authClient, "/token/user/")
+                    .userCredentials(
+                            () -> new AbstractMap.SimpleImmutableEntry<>("foo", "bar"))
+                    .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
+        } else {
+            final ClientAuthentication clientAuthentication = ClientAuthentication.ofBasic(CLIENT_CREDENTIALS);
+            final AccessTokenRequest accessTokenRequest =
+                    AccessTokenRequest.ofResourceOwnerPassword("foo", "bar",
+                                                               clientAuthentication, null);
+            grant = OAuth2AuthorizationGrant.builder(authClient, "/token/user/")
+                                            .accessTokenRequest(accessTokenRequest)
+                                            .build();
         }
+        final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                          .decorator(OAuth2Client.newDecorator(grant))
+                                          .build();
+
+        assertThatThrownBy(() -> client.get("/resource-read-write/").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .cause().isInstanceOf(InvalidClientException.class);
     }
 }
