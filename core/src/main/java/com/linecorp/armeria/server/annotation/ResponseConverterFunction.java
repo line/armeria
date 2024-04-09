@@ -78,19 +78,15 @@ public interface ResponseConverterFunction {
      *                unless you specify it with {@link StatusCode} on the method.
      *                The headers also will include a {@link MediaType} if
      *                {@link ServiceRequestContext#negotiatedResponseMediaType()} returns it.
-     *                If the method returns {@link HttpResult}, this headers is the same headers from
-     *                {@link HttpResult#headers()}.
-     *                If the method return {@link ResponseEntity}, this headers is the same headers from
-     *                {@link ResponseEntity#headers()}.
+     *                If the annotated method returns an {@link HttpResult} or a {@link ResponseEntity},
+     *                the headers provided by them will be given as they are.
      *                Please note that the additional headers set by
      *                {@link ServiceRequestContext#mutateAdditionalResponseHeaders(Consumer)}
      *                and {@link AdditionalHeader} are not included in this headers.
      * @param result The result of the service method.
      * @param trailers The HTTP trailers that you might want to use to create the {@link HttpResponse}.
-     *                 If the annotated method returns {@link HttpResult}, this trailers is the same
-     *                 trailers from {@link HttpResult#trailers()}.
-     *                 If the annotated method returns {@link ResponseEntity}, this trailers is the same
-     *                 trailers from {@link ResponseEntity#trailers()}.
+     *                 If the annotated method returns an {@link HttpResult} or a {@link ResponseEntity},
+     *                 the trailers provided by them will be given as they are.
      *                 Please note that the additional trailers set by
      *                 {@link ServiceRequestContext#mutateAdditionalResponseTrailers(Consumer)}
      *                 and {@link AdditionalTrailer} are not included in this trailers.
