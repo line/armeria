@@ -407,14 +407,23 @@ used to retrieve the value from <type://RequestContext>. In the example below, `
 the `ServiceType`.
 
 ```java
+public class MyAttributes {
+    public static final AttributeKey<String> USERNAME =
+            AttributeKey.valueOf(MyAttributes.class, "USERNAME");
+}
+
 public class MyAnnotatedService {
 
+    // Uses `AttributeKey.valueOf(MyAttributes.class, "USERNAME")`
     @Get("/hello1")
-    public HttpResponse hello1(@Attribute(name = "Name", prefix = OtherService.class) String name) { ... }
+    public HttpResponse hello1(@Attribute(prefix = MyAttributes.class,
+                                          value = "USERNAME")
+                               String username) { ... }
 
+    // Uses `AttributeKey.valueOf(MyAnnotatedService.class, "USERNAME")`
+    // if possible. If non-existent, use `AttributeKey.valueOf("USERNAME")`.
     @Post("/hello2")
-    public HttpResponse hello2(@Attribute(age = "Age") int age) { ... }
-
+    public HttpResponse hello2(@Attribute("USERNAME") String username) { ... }
 }
 ```
 
