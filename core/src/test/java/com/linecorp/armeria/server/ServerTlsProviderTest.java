@@ -39,7 +39,7 @@ class ServerTlsProviderTest {
         @Override
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
-                    TlsProvider.builder()
+                    TlsProvider.builderForServer()
                                .set("*", TlsKeyPair.ofSelfSigned("default"))
                                .set("example.com", TlsKeyPair.ofSelfSigned("example.com"))
                                .build();

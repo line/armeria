@@ -21,31 +21,76 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.TlsProviderBuilder;
+import com.linecorp.armeria.common.AbstractTlsProviderBuilder;
+import com.linecorp.armeria.common.TlsKeyPair;
+import com.linecorp.armeria.common.TlsProvider;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
-public final class ClientTlsProviderBuilder extends TlsProviderBuilder {
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+
+public final class ClientTlsProviderBuilder extends AbstractTlsProviderBuilder {
 
     private boolean tlsNoVerifySet;
     private final Set<String> insecureHosts = new HashSet<>();
 
-    public TlsProviderBuilder tlsNoVerify() {
+    public ClientTlsProviderBuilder tlsNoVerify() {
         tlsNoVerifySet = true;
         checkState(insecureHosts.isEmpty(), "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
         return this;
     }
 
-    public TlsProviderBuilder tlsNoVerifyHosts(String... insecureHosts) {
+    public ClientTlsProviderBuilder tlsNoVerifyHosts(String... insecureHosts) {
         requireNonNull(insecureHosts, "insecureHosts");
         return tlsNoVerifyHosts(ImmutableList.copyOf(insecureHosts));
     }
 
-    public TlsProviderBuilder tlsNoVerifyHosts(Iterable<String> insecureHosts) {
+    public ClientTlsProviderBuilder tlsNoVerifyHosts(Iterable<String> insecureHosts) {
         requireNonNull(insecureHosts, "insecureHosts");
         checkState(!tlsNoVerifySet, "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
         insecureHosts.forEach(this.insecureHosts::add);
         return this;
+    }
+
+    @Override
+    public TlsProvider build() {
+        if (tlsNoVerifySet) {
+            tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
+        } else if (!insecureHosts.isEmpty()) {
+            tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
+        }
+        return super.build();
+    }
+
+    // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    public ClientTlsProviderBuilder set(String hostname, TlsKeyPair tlsKeyPair) {
+        return (ClientTlsProviderBuilder) super.set(hostname, tlsKeyPair);
+    }
+
+    @Override
+    public ClientTlsProviderBuilder setDefault(TlsKeyPair tlsKeyPair) {
+        return (ClientTlsProviderBuilder) super.setDefault(tlsKeyPair);
+    }
+
+    @Deprecated
+    @Override
+    public ClientTlsProviderBuilder allowsUnsafeCiphers(boolean allowsUnsafeCiphers) {
+        return (ClientTlsProviderBuilder) super.allowsUnsafeCiphers(allowsUnsafeCiphers);
+    }
+
+    @Override
+    public ClientTlsProviderBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
+        return (ClientTlsProviderBuilder) super.tlsCustomizer(tlsCustomizer);
+    }
+
+    @Override
+    public ClientTlsProviderBuilder meterIdPrefix(MeterIdPrefix meterIdPrefix) {
+        return (ClientTlsProviderBuilder) super.meterIdPrefix(meterIdPrefix);
     }
 }

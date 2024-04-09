@@ -47,17 +47,17 @@ public final class KeyStoreUtil {
     }
 
     public static TlsKeyPair load(InputStream keyStoreStream,
-                               @Nullable String keyStorePassword,
-                               @Nullable String keyPassword,
-                               @Nullable String alias) throws IOException, GeneralSecurityException {
+                                  @Nullable String keyStorePassword,
+                                  @Nullable String keyPassword,
+                                  @Nullable String alias) throws IOException, GeneralSecurityException {
         return load(keyStoreStream, keyStorePassword, keyPassword, alias, null);
     }
 
     private static TlsKeyPair load(InputStream keyStoreStream,
-                                @Nullable String keyStorePassword,
-                                @Nullable String keyPassword,
-                                @Nullable String alias,
-                                @Nullable File keyStoreFile)
+                                   @Nullable String keyStorePassword,
+                                   @Nullable String keyPassword,
+                                   @Nullable String alias,
+                                   @Nullable File keyStoreFile)
             throws IOException, GeneralSecurityException {
 
         try (InputStream in = new BufferedInputStream(keyStoreStream, 8192)) {
@@ -77,7 +77,7 @@ public final class KeyStoreUtil {
             // https://github.com/eclipse-vertx/vert.x/blob/52f95ab88f0165c7c0db2ba48e4c06180a8d6655/src/main/java/io/vertx/core/net/impl/KeyStoreHelper.java
             PrivateKey privateKey = null;
             List<X509Certificate> certificateChain = null;
-            for (final Enumeration<String> e = ks.aliases(); e.hasMoreElements();) {
+            for (final Enumeration<String> e = ks.aliases(); e.hasMoreElements(); ) {
                 final String candidateAlias = e.nextElement();
                 if (alias != null && !alias.equals(candidateAlias)) {
                     continue;

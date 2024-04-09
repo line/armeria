@@ -29,14 +29,15 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.internal.common.StaticTlsProvider;
 import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
 /**
- * Builds a new {@link TlsProvider}.
+ * A skeletal builder implementation for {@link TlsProvider}.
  */
-public class TlsProviderBuilder {
+public abstract class AbstractTlsProviderBuilder {
 
     private static final Consumer<SslContextBuilder> NOOP = b -> {};
 
@@ -46,7 +47,7 @@ public class TlsProviderBuilder {
     @Nullable
     private MeterIdPrefix meterIdPrefix;
 
-    protected TlsProviderBuilder() {}
+    protected AbstractTlsProviderBuilder() {}
 
     /**
      * Set the {@link TlsKeyPair} for the specified (optionally wildcard) {@code hostname}.
@@ -58,7 +59,7 @@ public class TlsProviderBuilder {
      * <p>Note that {@code "*"} is a special hostname which matches any hostname which may be used to find the
      * {@link TlsKeyPair} for the {@linkplain ServerBuilder#defaultVirtualHost() default virtual host}.
      */
-    public TlsProviderBuilder set(String hostname, TlsKeyPair tlsKeyPair) {
+    public AbstractTlsProviderBuilder set(String hostname, TlsKeyPair tlsKeyPair) {
         requireNonNull(hostname, "hostname");
         requireNonNull(tlsKeyPair, "tlsKeyPair");
         tlsKeyPairsBuilder.put(normalizeHostname(hostname), tlsKeyPair);
@@ -68,7 +69,7 @@ public class TlsProviderBuilder {
     /**
      * Set the default {@link TlsKeyPair} which is used when no {@link TlsKeyPair} is specified for a hostname.
      */
-    public TlsProviderBuilder setDefault(TlsKeyPair tlsKeyPair) {
+    public AbstractTlsProviderBuilder setDefault(TlsKeyPair tlsKeyPair) {
         return set("*", tlsKeyPair);
     }
 
@@ -88,7 +89,7 @@ public class TlsProviderBuilder {
      * communicate with an insecure peer than this.
      */
     @Deprecated
-    public TlsProviderBuilder allowsUnsafeCiphers(boolean allowsUnsafeCiphers) {
+    public AbstractTlsProviderBuilder allowsUnsafeCiphers(boolean allowsUnsafeCiphers) {
         this.allowsUnsafeCiphers = allowsUnsafeCiphers;
         return this;
     }
@@ -99,7 +100,7 @@ public class TlsProviderBuilder {
      * to configure a custom server CA or {@link SslContextBuilder#keyManager(KeyManagerFactory)} to configure
      * a client certificate for SSL authorization.
      */
-    public TlsProviderBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
+    public AbstractTlsProviderBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
         if (this.tlsCustomizer == NOOP) {
             //noinspection unchecked
@@ -113,7 +114,7 @@ public class TlsProviderBuilder {
     /**
      * Sets the {@link MeterIdPrefix} for the {@link TlsProvider}.
      */
-    public TlsProviderBuilder meterIdPrefix(MeterIdPrefix meterIdPrefix) {
+    public AbstractTlsProviderBuilder meterIdPrefix(MeterIdPrefix meterIdPrefix) {
         this.meterIdPrefix = requireNonNull(meterIdPrefix, "meterIdPrefix");
         return this;
     }
@@ -121,15 +122,17 @@ public class TlsProviderBuilder {
     /**
      * Returns a newly-created {@link TlsProvider} instance.
      */
-    public TlsProvider build() {
+    protected TlsProvider build() {
         final Map<String, TlsKeyPair> keyPairMappings = tlsKeyPairsBuilder.build();
         if (keyPairMappings.isEmpty()) {
             throw new IllegalStateException("No TLS key pair is set.");
         }
         if (keyPairMappings.size() == 1 && keyPairMappings.containsKey("*")) {
+            return new StaticTlsProvider(keyPairMappings.get("*"), tlsCustomizer, allowsUnsafeCiphers,
+                                         meterIdPrefix);
         }
 
-        return new DefaultTlsProvider(keyPairMappings, tlsCustomizer, allowsUnsafeCiphers,
-                                      meterIdPrefix);
+        return new MappedTlsProvider(keyPairMappings, tlsCustomizer, allowsUnsafeCiphers,
+                                     meterIdPrefix);
     }
 }

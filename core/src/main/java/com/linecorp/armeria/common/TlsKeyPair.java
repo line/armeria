@@ -28,6 +28,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.List;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -165,5 +166,13 @@ public final class TlsKeyPair {
     @Override
     public int hashCode() {
         return privateKey.hashCode() * 31 + certificateChain.hashCode();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("privateKey", "****")
+                          .add("certificateChain", certificateChain)
+                          .toString();
     }
 }

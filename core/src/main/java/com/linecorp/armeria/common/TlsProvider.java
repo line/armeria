@@ -20,10 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Consumer;
 
+import com.linecorp.armeria.client.ClientTlsProviderBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
+import com.linecorp.armeria.internal.common.StaticTlsProvider;
+import com.linecorp.armeria.server.ServerTlsProviderBuilder;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
@@ -35,11 +38,12 @@ import io.netty.handler.ssl.SslContextBuilder;
 public interface TlsProvider {
 
     /**
-     * Returns a newly created {@link TlsProviderBuilder}.
+     * Returns a newly created {@link ServerTlsProviderBuilder}.
      *
+     * <p>Example usage:
      * <pre>{@code
      * TlsProvider
-     *   .builder()
+     *   .builderForServer()
      *   // Set the default key pair.
      *   .setDefault(TlsKeyPair.of(...))
      *   // Set the key pair for "example.com".
@@ -47,8 +51,12 @@ public interface TlsProvider {
      *   .build();
      * }</pre>
      */
-    static TlsProviderBuilder builder() {
-        return new TlsProviderBuilder();
+    static ServerTlsProviderBuilder builderForServer() {
+        return new ServerTlsProviderBuilder();
+    }
+
+    static ClientTlsProviderBuilder builderForClient() {
+        return new ClientTlsProviderBuilder();
     }
 
     /**
@@ -56,14 +64,14 @@ public interface TlsProvider {
      */
     static TlsProvider of(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        return hostname -> tlsKeyPair;
+        return new StaticTlsProvider(tlsKeyPair);
     }
 
     /**
      * Finds a {@link TlsKeyPair} for the specified {@code hostname}.
      *
      * <p>If no matching {@link TlsKeyPair} is found for a hostname, {@code "*"} will be specified to get the
-     * default {@link TlsKeyPair} set by {@link TlsProviderBuilder#setDefault(TlsKeyPair)}.
+     * default {@link TlsKeyPair}.
      * If no default {@link TlsKeyPair} is found, {@code null} will be returned.
      */
     @Nullable
