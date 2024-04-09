@@ -55,7 +55,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
@@ -525,7 +524,8 @@ class AnnotatedServiceResponseConverterTest {
                     final ResponseHeaders responseHeaders = ResponseHeaders.of(
                             HttpStatus.OK,
                             HttpHeaderNames.of("x-custom-header"), "value");
-                    final HttpHeaders trailers = HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value");
+                    final HttpHeaders trailers =
+                            HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value");
                     return ResponseEntity.of(responseHeaders, HTTPFILE, trailers);
                 }
 
@@ -536,7 +536,8 @@ class AnnotatedServiceResponseConverterTest {
                     final ResponseHeaders responseHeaders = ResponseHeaders.of(
                             HttpStatus.UNAUTHORIZED,
                             HttpHeaderNames.of("x-custom-header"), "value");
-                    final HttpHeaders trailers = HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value");
+                    final HttpHeaders trailers =
+                            HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value");
                     return ResponseEntity.of(responseHeaders, HTTPFILE, trailers);
                 }
             });
