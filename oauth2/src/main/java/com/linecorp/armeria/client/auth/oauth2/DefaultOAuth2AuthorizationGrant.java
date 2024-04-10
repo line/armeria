@@ -23,8 +23,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2Request;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2ResponseHandler;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.common.util.AsyncLoader;
 import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Endpoint;
 
 /**
@@ -50,12 +50,6 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultOAuth2AuthorizationGrant.class);
 
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<
-            DefaultOAuth2AuthorizationGrant, CompletableFuture> tokenFutureUpdater =
-            AtomicReferenceFieldUpdater.newUpdater(
-                    DefaultOAuth2AuthorizationGrant.class, CompletableFuture.class, "tokenFuture");
-
     private final OAuth2Endpoint<GrantedOAuth2AccessToken> oAuth2Endpoint;
     private final Supplier<AccessTokenRequest> requestSupplier;
     private final Duration refreshBefore;
@@ -64,8 +58,8 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
     @Nullable
     private final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer;
 
-    private volatile CompletableFuture<GrantedOAuth2AccessToken> tokenFuture =
-            UnmodifiableFuture.completedFuture(null);
+    @Nullable
+    private AsyncLoader<GrantedOAuth2AccessToken> tokenLoader;
 
     DefaultOAuth2AuthorizationGrant(
             WebClient accessTokenEndpoint, String accessTokenEndpointPath,
@@ -100,54 +94,52 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
      */
     @Override
     public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
-        CompletableFuture<GrantedOAuth2AccessToken> future;
-        GrantedOAuth2AccessToken token = null;
-        for (;;) {
-            final CompletableFuture<GrantedOAuth2AccessToken> tokenFuture = this.tokenFuture;
-            if (!tokenFuture.isDone()) {
-                return tokenFuture;
-            }
-            if (!tokenFuture.isCompletedExceptionally()) {
-                token = tokenFuture.join();
-                if (isValidToken(token)) {
-                    return tokenFuture;
+        return tokenLoader().get();
+    }
+
+    private AsyncLoader<GrantedOAuth2AccessToken> tokenLoader() {
+        if (tokenLoader != null) {
+            return tokenLoader;
+        }
+
+        final Function<GrantedOAuth2AccessToken, CompletableFuture<GrantedOAuth2AccessToken>> loader =
+                token -> {
+            final CompletableFuture<GrantedOAuth2AccessToken> newTokenFuture = new CompletableFuture<>();
+
+            if (token == null && fallbackTokenProvider != null) {
+                CompletableFuture<? extends GrantedOAuth2AccessToken> fallbackTokenFuture = null;
+                try {
+                    fallbackTokenFuture = requireNonNull(
+                            fallbackTokenProvider.get(), "fallbackTokenProvider.get() returned null");
+                } catch (Exception e) {
+                    logger.warn("Unexpected exception from fallbackTokenProvider.get()", e);
+                }
+                if (fallbackTokenFuture != null) {
+                    fallbackTokenFuture.handle((storedToken, unused) -> {
+                        if (isValidToken(storedToken)) {
+                            newTokenFuture.complete(storedToken);
+                            return null;
+                        }
+                        obtainAccessToken(newTokenFuture);
+                        return null;
+                    });
+                    return newTokenFuture;
                 }
             }
 
-            // `tokenFuture` got completed with an invalid token; try again.
-            future = new CompletableFuture<>();
-            if (tokenFutureUpdater.compareAndSet(this, tokenFuture, future)) {
-                break;
-            }
-        }
-
-        final CompletableFuture<GrantedOAuth2AccessToken> newTokenFuture = future;
-        if (token == null && fallbackTokenProvider != null) {
-            CompletableFuture<? extends GrantedOAuth2AccessToken> fallbackTokenFuture = null;
-            try {
-                fallbackTokenFuture = requireNonNull(
-                        fallbackTokenProvider.get(), "fallbackTokenProvider.get() returned null");
-            } catch (Exception e) {
-                logger.warn("Unexpected exception from fallbackTokenProvider.get()", e);
-            }
-            if (fallbackTokenFuture != null) {
-                fallbackTokenFuture.handle((storedToken, unused) -> {
-                    if (isValidToken(storedToken)) {
-                        newTokenFuture.complete(storedToken);
-                        return null;
-                    }
-                    obtainAccessToken(newTokenFuture);
-                    return null;
-                });
+            if (token != null && token.isRefreshable()) {
+                refreshAccessToken(token, newTokenFuture);
                 return newTokenFuture;
             }
-        }
-        if (token != null && token.isRefreshable()) {
-            refreshAccessToken(token, newTokenFuture);
+
+            obtainAccessToken(newTokenFuture);
             return newTokenFuture;
-        }
-        obtainAccessToken(newTokenFuture);
-        return newTokenFuture;
+        };
+
+        tokenLoader = AsyncLoader.builder(loader)
+                                 .expireIf(token -> !isValidToken(token))
+                                 .build();
+        return tokenLoader;
     }
 
     private boolean isValidToken(@Nullable GrantedOAuth2AccessToken token) {
