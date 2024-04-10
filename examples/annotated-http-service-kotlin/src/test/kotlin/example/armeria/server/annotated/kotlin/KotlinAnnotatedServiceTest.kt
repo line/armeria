@@ -10,16 +10,15 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 
 class KotlinAnnotatedServiceTest {
-
     companion object {
-
         @JvmField
         @RegisterExtension
-        val server: ServerExtension = object : ServerExtension() {
-            override fun configure(sb: ServerBuilder) {
-                configureServices(sb)
+        val server: ServerExtension =
+            object : ServerExtension() {
+                override fun configure(sb: ServerBuilder) {
+                    configureServices(sb)
+                }
             }
-        }
 
         fun client(): WebClient {
             return WebClient.of(server.httpUri())

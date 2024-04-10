@@ -32,21 +32,21 @@ fun configureService(sb: ServerBuilder) {
         GraphqlService.builder().schema(
             toSchema(
                 config = SchemaGeneratorConfig(listOf("example.armeria.server.graphql.kotlin")),
-                queries = listOf(TopLevelObject(UserQuery()))
-            )
-        ).build()
+                queries = listOf(TopLevelObject(UserQuery())),
+            ),
+        ).build(),
     )
 }
 
 data class User(val id: Int, val name: String)
 
 class UserQuery {
-
-    private val data = mapOf(
-        1 to User(1, "hero"),
-        2 to User(2, "human"),
-        3 to User(3, "droid")
-    )
+    private val data =
+        mapOf(
+            1 to User(1, "hero"),
+            2 to User(2, "human"),
+            3 to User(3, "droid"),
+        )
 
     /**
      * Retrieves a [User] associated with the specified ID. This method is automatically mapped by

@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -109,19 +110,32 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         GrpcClientStubFactory clientStubFactory = options.get(GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY);
         ServiceDescriptor serviceDescriptor = null;
 
+        final List<ServiceDescriptorResolutionException> exceptions = new ArrayList<>();
         if (clientStubFactory == NullGrpcClientStubFactory.INSTANCE) {
             for (GrpcClientStubFactory stubFactory : clientStubFactories) {
-                serviceDescriptor = stubFactory.findServiceDescriptor(clientType);
-                if (serviceDescriptor != null) {
-                    clientStubFactory = stubFactory;
-                    break;
+                try {
+                    serviceDescriptor = stubFactory.findServiceDescriptor(clientType);
+                    if (serviceDescriptor != null) {
+                        clientStubFactory = stubFactory;
+                        break;
+                    }
+                } catch (ServiceDescriptorResolutionException e) {
+                    exceptions.add(e);
                 }
             }
         } else {
             serviceDescriptor = clientStubFactory.findServiceDescriptor(clientType);
         }
         if (serviceDescriptor == null) {
-            throw newUnknownClientTypeException(clientType);
+            if (!exceptions.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Failed to create a gRPC client stub for " + clientType.getName() +
+                        ". Possible reasons: no gRPC client stub class or due to one of the " +
+                        "following exceptions. " + exceptions);
+            }
+            throw new IllegalArgumentException(
+                    "Unknown client type: " + clientType.getName() +
+                    " (expected: a gRPC client stub class, e.g. MyServiceGrpc.MyServiceStub)");
         }
 
         final Map<MethodDescriptor<?, ?>, String> simpleMethodNames =
@@ -210,12 +224,6 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         return ClientBuilderParams.of(
                 params.scheme(), params.endpointGroup(), params.absolutePathRef(),
                 params.clientType(), optionsBuilder.build());
-    }
-
-    private static IllegalArgumentException newUnknownClientTypeException(Class<?> clientType) {
-        return new IllegalArgumentException(
-                "Unknown client type: " + clientType.getName() +
-                " (expected: a gRPC client stub class, e.g. MyServiceGrpc.MyServiceStub)");
     }
 
     @Override

@@ -16,11 +16,14 @@ In this step, we'll add an empty blog service to the server we created in [Step 
 
 ## What you need
 
-No preparation is required for this step.
+You need to have the following file obtained from previous steps.
+You can always [download](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
+
+- `Main.java`
 
 ## 1. Create a service file
 
-Create a service file, BlogService.java. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java). We'll add on service methods in this class in later steps.
+Create a service file, `BlogService.java`. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/BlogService.java). We'll add on service methods in this class in later steps.
 
 ```java filename=BlogService.java
 package example.armeria.server.blog;
@@ -37,7 +40,7 @@ public final class BlogService {
 
 In [Step 1. Create a server](/tutorials/rest/blog/create-server), we added a dummy service just to check that a server is launched. Now, let's remove the dummy service and add an empty blog service, instead.
 
-1. From Main.java, remove the dummy service at line 4.
+1. From `Main.java`, remove the dummy service at line 4.
   ```java filename=Main.java highlight=4 showlineno=true
   static Server newServer(int port) {
     ...
@@ -111,7 +114,7 @@ The server and services are launched successfully if you see this message.
 
 Let's test and call our service operations, using Armeria's Documentation service.
 
-Click the URL `http://127.0.0.1:8080/docs` from the log message or open the URL on a web browser. If you see the Document service page, you've launched the <type://DocService> and server successfully. We're seeing no services on the 
+Click the URL http://127.0.0.1:8080/docs from the log message or open the URL on a web browser. If you see the Document service page, you've launched the <type://DocService> and server successfully. We're seeing no services on the
 page because we're to implement service methods.
 
   ![](../../../../images/tutorial_blogservice_docservice_start.png)

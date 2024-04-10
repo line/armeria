@@ -16,27 +16,38 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.protobuf.Message;
-
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
 
-final class ClusterResourceParser extends ResourceParser {
+final class ClusterResourceParser extends ResourceParser<Cluster, ClusterXdsResource> {
 
     static final ClusterResourceParser INSTANCE = new ClusterResourceParser();
 
     private ClusterResourceParser() {}
 
     @Override
-    String name(Message message) {
-        if (!(message instanceof Cluster)) {
-            throw new IllegalArgumentException("message not type of Cluster");
+    ClusterXdsResource parse(Cluster cluster) {
+        final ClusterXdsResource resource = new ClusterXdsResource(cluster);
+        if (cluster.hasEdsClusterConfig()) {
+            final EdsClusterConfig eds = cluster.getEdsClusterConfig();
+            XdsConverterUtil.validateConfigSource(eds.getEdsConfig());
         }
-        return ((Cluster) message).getName();
+        return resource;
+    }
+
+    @Override
+    String name(Cluster cluster) {
+        return cluster.getName();
     }
 
     @Override
     Class<Cluster> clazz() {
         return Cluster.class;
+    }
+
+    @Override
+    boolean isFullStateOfTheWorld() {
+        return true;
     }
 
     @Override

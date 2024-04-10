@@ -636,7 +636,7 @@ class LoggingServiceTest {
                 LoggingService.builder()
                               .logWriter(LogWriter.builder()
                                                   .logger(logger)
-                                                  .responseCauseFilter(throwable -> true)
+                                                  .responseCauseFilter((unused, throwable) -> true)
                                                   .build())
                               .newDecorator().apply(delegate);
 

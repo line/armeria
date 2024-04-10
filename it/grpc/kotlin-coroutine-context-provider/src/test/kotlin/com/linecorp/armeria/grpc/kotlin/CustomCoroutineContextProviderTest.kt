@@ -28,19 +28,19 @@ import testing.grpc.Hello
 import testing.grpc.TestServiceGrpcKt
 
 class CustomCoroutineContextProviderTest {
-
     companion object {
         @JvmField
         @RegisterExtension
-        val server = object : ServerExtension() {
-            override fun configure(sb: ServerBuilder) {
-                sb.service(
-                    GrpcService.builder()
-                        .addService(TestServiceImpl())
-                        .build()
-                )
+        val server =
+            object : ServerExtension() {
+                override fun configure(sb: ServerBuilder) {
+                    sb.service(
+                        GrpcService.builder()
+                            .addService(TestServiceImpl())
+                            .build(),
+                    )
+                }
             }
-        }
     }
 
     @Test

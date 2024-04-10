@@ -16,15 +16,16 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
-import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.ACCESS_TOKEN;
 import static com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants.REFRESH_TOKEN;
+import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.auth.oauth2.TokenRevocationRequest;
+import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Endpoint;
 
 /**
  * Implements Token Revocation request/response flow,
@@ -40,11 +41,14 @@ public final class TokenRevocation {
         return new TokenRevocationBuilder(revocationEndpoint, revocationEndpointPath);
     }
 
-    private final TokenRevocationRequest request;
+    private final OAuth2Endpoint<Boolean> revocationEndpoint;
+    @Nullable
+    private final Supplier<ClientAuthentication> clientAuthenticationSupplier;
 
-    TokenRevocation(WebClient revocationEndpoint, String revocationEndpointPath,
-                    @Nullable ClientAuthorization clientAuthorization) {
-        request = new TokenRevocationRequest(revocationEndpoint, revocationEndpointPath, clientAuthorization);
+    TokenRevocation(OAuth2Endpoint<Boolean> revocationEndpoint,
+                    @Nullable Supplier<ClientAuthentication> clientAuthenticationSupplier) {
+        this.revocationEndpoint = revocationEndpoint;
+        this.clientAuthenticationSupplier = clientAuthenticationSupplier;
     }
 
     /**
@@ -52,7 +56,10 @@ public final class TokenRevocation {
      * as per <a href="https://datatracker.ietf.org/doc/html/rfc7009#section-2">[RFC7009], Section 2</a>.
      */
     public CompletableFuture<Boolean> revokeRefreshToken(String refreshToken) {
-        return request.make(refreshToken, REFRESH_TOKEN);
+        final ClientAuthentication clientAuthentication = clientAuthentication();
+        final TokenOperationRequest tokenOperationRequest =
+                TokenOperationRequest.of(clientAuthentication, refreshToken, REFRESH_TOKEN);
+        return revocationEndpoint.execute(tokenOperationRequest);
     }
 
     /**
@@ -60,6 +67,18 @@ public final class TokenRevocation {
      * as per <a href="https://datatracker.ietf.org/doc/html/rfc7009#section-2">[RFC7009], Section 2</a>.
      */
     public CompletableFuture<Boolean> revokeAccessToken(String accessToken) {
-        return request.make(accessToken, ACCESS_TOKEN);
+        final ClientAuthentication clientAuthentication = clientAuthentication();
+        final TokenOperationRequest tokenOperationRequest =
+                TokenOperationRequest.of(clientAuthentication, accessToken, REFRESH_TOKEN);
+        return revocationEndpoint.execute(tokenOperationRequest);
+    }
+
+    @Nullable
+    private ClientAuthentication clientAuthentication() {
+        if (clientAuthenticationSupplier != null) {
+            final ClientAuthentication clientAuthentication = clientAuthenticationSupplier.get();
+            return requireNonNull(clientAuthentication, "clientAuthenticationSupplier.get() returned null");
+        }
+        return null;
     }
 }

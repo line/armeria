@@ -5,7 +5,7 @@ plugins {
 dependencies {
     implementation project(':core')
     implementation project(':spring:boot3-starter')
-    implementation project(':jetty11')
+    implementation project(':jetty12')
 
     implementation libs.slf4j2.api
     implementation libs.spring.boot3.starter.jetty

@@ -15,11 +15,12 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.Server.logger;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -35,31 +36,53 @@ interface ShutdownSupport {
         });
     }
 
-    static ShutdownSupport of(ScheduledExecutorService executor) {
+    static ShutdownSupport of(ExecutorService executor) {
         requireNonNull(executor, "executor");
         return () -> {
-            final ScheduledExecutorService e;
-            if (executor instanceof UnstoppableScheduledExecutorService) {
-                e = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
-            } else {
-                e = executor;
-            }
-
-            e.shutdown();
-
+            executor.shutdown();
             boolean interrupted = false;
             try {
-                while (!e.isTerminated()) {
+                while (!executor.isTerminated()) {
                     try {
-                        e.awaitTermination(1, TimeUnit.HOURS);
+                        executor.awaitTermination(1, TimeUnit.HOURS);
                     } catch (InterruptedException ignore) {
                         interrupted = true;
                     }
                 }
             } catch (Exception cause) {
-                logger.warn("Failed to shutdown the {}:", e, cause);
+                logger.warn("Failed to shutdown the {}:", executor, cause);
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
             }
-            if (interrupted) {
+            return UnmodifiableFuture.completedFuture(null);
+        };
+    }
+
+    static ShutdownSupport of(ExecutorService executor, long terminationTimeoutMillis) {
+        requireNonNull(executor, "executor");
+        checkArgument(terminationTimeoutMillis >= 0, "terminationTimeoutMillis: %s (expected: >= 0)",
+                      terminationTimeoutMillis);
+        if (terminationTimeoutMillis == 0 || terminationTimeoutMillis == Long.MAX_VALUE) {
+            return of(executor);
+        }
+        return () -> {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(terminationTimeoutMillis, TimeUnit.MILLISECONDS)) {
+                    logger.warn("Failed to terminate {} in {} millis. Shutdown it forcefully.", executor,
+                                terminationTimeoutMillis);
+                    executor.shutdownNow();
+                    if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                        logger.warn("The forced termination of the {} could not be completed within 60 " +
+                                    "seconds.", executor);
+                    }
+                }
+            } catch (InterruptedException cause) {
+                logger.warn("During the termination wait, an interrupt occurs, attempting to forcefully " +
+                            "terminate the {}:", executor, cause);
+                executor.shutdownNow();
                 Thread.currentThread().interrupt();
             }
             return UnmodifiableFuture.completedFuture(null);

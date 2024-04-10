@@ -153,18 +153,19 @@ final class SamlMessageUtil {
         }
     }
 
-    static void validateSignature(Credential validationCredential, SignableSAMLObject signableObj) {
+    static void validateSignature(Credential validationCredential, SignableSAMLObject signableObj,
+                                  boolean signatureRequired) {
         requireNonNull(validationCredential, "validationCredential");
         requireNonNull(signableObj, "signableObj");
 
-        // Skip signature validation if the object is not signed.
-        if (!signableObj.isSigned()) {
-            return;
-        }
-
+        // Reject the object if signature is missing, unless allowed explicitly.
         final Signature signature = signableObj.getSignature();
-        if (signature == null) {
-            throw new InvalidSamlRequestException("failed to validate a signature because no signature exists");
+        if (signature == null || !signableObj.isSigned()) {
+            if (signatureRequired) {
+                throw new InvalidSamlRequestException("rejecting due to a missing signature");
+            } else {
+                return;
+            }
         }
 
         try {

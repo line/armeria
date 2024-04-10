@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.test.annotation.DirtiesContext;
@@ -36,7 +35,7 @@ import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguratio
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "ssl" })
 @DirtiesContext
-@AutoConfigureMetrics
+@EnableTestMetrics
 @EnableAutoConfiguration
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
 @Timeout(10)

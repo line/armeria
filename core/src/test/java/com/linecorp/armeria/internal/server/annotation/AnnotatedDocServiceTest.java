@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePluginTest.CompositeBean;
 import com.linecorp.armeria.internal.testing.TestUtil;
@@ -72,6 +73,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
+import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.ConsumesBinary;
 import com.linecorp.armeria.server.annotation.ConsumesOctetStream;
 import com.linecorp.armeria.server.annotation.Delete;
@@ -108,6 +110,8 @@ class AnnotatedDocServiceTest {
     private static final HttpHeaders EXAMPLE_HEADERS_ALL = HttpHeaders.of(HttpHeaderNames.of("a"), "b");
     private static final HttpHeaders EXAMPLE_HEADERS_SERVICE = HttpHeaders.of(HttpHeaderNames.of("c"), "d");
     private static final HttpHeaders EXAMPLE_HEADERS_METHOD = HttpHeaders.of(HttpHeaderNames.of("e"), "f");
+    private static final HttpHeaders JSON_LINE_HEADERS =
+            HttpHeaders.of(HttpHeaderNames.CONTENT_TYPE, MediaTypeNames.JSON_LINES);
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -124,6 +128,7 @@ class AnnotatedDocServiceTest {
                                       .exampleHeaders(EXAMPLE_HEADERS_ALL)
                                       .exampleHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
                                       .exampleHeaders(MyService.class, "pathParams", EXAMPLE_HEADERS_METHOD)
+                                      .exampleHeaders(MyService.class, "jsonLines", JSON_LINE_HEADERS)
                                       .examplePaths(MyService.class, "pathParams",
                                                     "/service/hello1/foo/hello3/bar")
                                       .exampleQueries(MyService.class, "foo", "query=10", "query=20")
@@ -167,6 +172,7 @@ class AnnotatedDocServiceTest {
         addMarkdownDescriptionMethodInfo(methodInfos);
         addMermaidDescriptionMethodInfo(methodInfos);
         addImplicitRequestObjectMethodInfo(methodInfos);
+        addJsonLinesMethodInfo(methodInfos);
 
         final Map<Class<?>, DescriptionInfo> serviceDescription = ImmutableMap.of(
                 MyService.class, DescriptionInfo.of("My service class"));
@@ -468,8 +474,25 @@ class AnnotatedDocServiceTest {
                     final ArrayNode exampleQueries = (ArrayNode) method.get("exampleQueries");
                     exampleQueries.add(TextNode.valueOf("hello3=hello4"));
                 }
+
+                if (MyService.class.getName().equals(serviceName) && "jsonLines".equals(methodName)) {
+                    exampleHeaders.add(mapper.valueToTree(JSON_LINE_HEADERS));
+                }
             });
         });
+    }
+
+    private static void addJsonLinesMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/json-lines")
+                                                  .availableMimeTypes(MediaType.JSON_LINES,
+                                                                      MediaType.JSON_UTF_8)
+                                                  .build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of();
+        final MethodInfo methodInfo = new MethodInfo(
+                MyService.class.getName(), "jsonLines", 0,
+                TypeSignature.ofStruct(HttpResponse.class), fieldInfos,
+                ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.POST, DescriptionInfo.empty());
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     @Test
@@ -621,6 +644,13 @@ class AnnotatedDocServiceTest {
         @Put
         public String json(JsonRequest request) {
             return request.bar;
+        }
+
+        @Path("/json-lines")
+        @Post
+        @Consumes(MediaTypeNames.JSON_LINES)
+        public HttpResponse jsonLines(HttpRequest req) {
+            return HttpResponse.of("json-lines is working");
         }
 
         @Order(1) // Use Order to create the MethodInfo in order.
