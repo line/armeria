@@ -70,7 +70,6 @@ class ArmeriaSettingsConfigurationTest {
         assertThat(defaultVirtualHost.requestTimeoutMillis()).isEqualTo(8000);
         assertThat(defaultVirtualHost.maxRequestLength()).isEqualTo(0);
         assertThat(defaultVirtualHost.verboseResponses()).isTrue();
-
-        assertThat(RequestContextPropagationHook.isEnable()).isTrue();
+        assertThat(RequestContextPropagationHook.isEnabled()).isFalse();
     }
 }
