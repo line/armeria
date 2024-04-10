@@ -35,11 +35,11 @@ class SchemeAndAuthorityTest {
     })
     void fromAuthority(String authority, String expectedAuthority, String expectedHost,
                        int expectedPort) {
-        assertThat(SchemeAndAuthority.fromSchemeAndAuthority(null, authority)).satisfies(uri -> {
-            assertThat(uri.getScheme()).isNull();
-            assertThat(uri.getAuthority()).isEqualTo(expectedAuthority);
-            assertThat(uri.getHost()).isEqualTo(expectedHost);
-            assertThat(uri.getPort()).isEqualTo(expectedPort);
+        assertThat(SchemeAndAuthority.of(null, authority)).satisfies(uri -> {
+            assertThat(uri.scheme()).isNull();
+            assertThat(uri.authority()).isEqualTo(expectedAuthority);
+            assertThat(uri.host()).isEqualTo(expectedHost);
+            assertThat(uri.port()).isEqualTo(expectedPort);
         });
     }
 
@@ -49,7 +49,7 @@ class SchemeAndAuthorityTest {
             "[192.168.0.1]", "[::1", "::1]", "[::1]%eth0", "unix:foo.sock"
     })
     void fromBadAuthority(String badAuthority) {
-        assertThatThrownBy(() -> SchemeAndAuthority.fromSchemeAndAuthority(null, badAuthority))
+        assertThatThrownBy(() -> SchemeAndAuthority.of(null, badAuthority))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -58,9 +58,9 @@ class SchemeAndAuthorityTest {
             "http, http", "https, https", "ftp, ftp", "mailto, mailto", "file, file", "tel, tel", "ssh, ssh",
             "htTP, http", "HTTP, http", "http+none, http+none"
     })
-    void fromSchemeAndAuthority(String scheme, String expectedScheme) {
-        assertThat(SchemeAndAuthority.fromSchemeAndAuthority(scheme, "foo")).satisfies(uri -> {
-            assertThat(uri.getScheme()).isEqualTo(expectedScheme);
+    void fromScheme(String scheme, String expectedScheme) {
+        assertThat(SchemeAndAuthority.of(scheme, "foo")).satisfies(uri -> {
+            assertThat(uri.scheme()).isEqualTo(expectedScheme);
         });
     }
 
@@ -68,8 +68,8 @@ class SchemeAndAuthorityTest {
     @CsvSource({
             "1http", "+http", ".http", "-http", "http!", "http$", "http?", "http#", "http ftp"
     })
-    void fromBadSchemeAndAuthority(String badScheme) {
-        assertThatThrownBy(() -> SchemeAndAuthority.fromSchemeAndAuthority(badScheme, "foo"))
+    void fromBadScheme(String badScheme) {
+        assertThatThrownBy(() -> SchemeAndAuthority.of(badScheme, "foo"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

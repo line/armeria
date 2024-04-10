@@ -454,7 +454,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
         try {
             // Normalize scheme and authority.
-            schemeAndAuthority = SchemeAndAuthority.fromSchemeAndAuthority(scheme, authority);
+            schemeAndAuthority = SchemeAndAuthority.of(scheme, authority);
         } catch (Exception ignored) {
             // Invalid scheme or authority.
             return null;
@@ -606,10 +606,10 @@ public final class DefaultRequestTarget implements RequestTarget {
             SchemeAndAuthority schemeAndAuthority, String encodedPath,
             @Nullable String encodedQuery, @Nullable String encodedFragment) {
 
-        final String scheme = schemeAndAuthority.getScheme();
-        final String maybeAuthority = schemeAndAuthority.getAuthority();
-        final String maybeHost = schemeAndAuthority.getHost();
-        final int maybePort = schemeAndAuthority.getPort();
+        final String scheme = schemeAndAuthority.scheme();
+        final String maybeAuthority = schemeAndAuthority.authority();
+        final String maybeHost = schemeAndAuthority.host();
+        final int maybePort = schemeAndAuthority.port();
         final String authority;
         final String host;
         final int port;

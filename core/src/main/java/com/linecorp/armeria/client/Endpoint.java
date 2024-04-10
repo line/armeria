@@ -36,8 +36,6 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -57,6 +55,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.SchemeAndAuthority;
 import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -80,13 +79,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     private static final int DEFAULT_WEIGHT = 1000;
 
-    /**
-     * Validator for the scheme part of the URI, as defined in
-     * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1">the section 3.1 of RFC3986</a>.
-     */
-    private static final Predicate<String> SCHEME_VALIDATOR =
-            scheme -> Pattern.compile("^([a-zA-Z][a-zA-Z0-9+\\-.]*)").matcher(scheme).matches();
-
     private static final Cache<String, Endpoint> cache =
             Caffeine.newBuilder()
                     .maximumSize(8192) // TODO(ikhoon): Add a flag if there is a demand for it.
@@ -105,10 +97,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         requireNonNull(authority, "authority");
         checkArgument(!authority.isEmpty(), "authority is empty");
         return cache.get(authority, key -> {
-            final SchemeAndAuthority schemeAndAuthority = SchemeAndAuthority.fromSchemeAndAuthority(null, key);
+            final SchemeAndAuthority schemeAndAuthority = SchemeAndAuthority.of(null, key);
             // If the port is undefined, set to 0
-            final int port = schemeAndAuthority.getPort() == -1 ? 0 : schemeAndAuthority.getPort();
-            return create(schemeAndAuthority.getHost(), port, true);
+            final int port = schemeAndAuthority.port() == -1 ? 0 : schemeAndAuthority.port();
+            return create(schemeAndAuthority.host(), port, true);
         });
     }
 
@@ -759,12 +751,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public URI toUri(String scheme, @Nullable String path) {
         requireNonNull(scheme, "scheme");
-
-        if (!SCHEME_VALIDATOR.test(scheme)) {
-            throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
-        }
-        scheme = Ascii.toLowerCase(scheme);
-
+        scheme = ArmeriaHttpUtil.schemeValidateAndNormalize(scheme);
         try {
             return new URI(scheme, authority, path, null, null);
         } catch (URISyntaxException e) {
