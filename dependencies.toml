@@ -9,7 +9,8 @@ assertj = "3.25.2"
 awaitility = "4.2.0"
 blockhound = "1.0.8.RELEASE"
 bouncycastle = "1.70"
-brave = "6.0.0"
+brave5 = "5.18.1"
+brave6 = "6.0.0"
 brotli4j = "1.15.0"
 bucket4j = "7.6.0"
 # Don"t upgrade Caffeine to 3.x that requires Java 11.
@@ -165,7 +166,6 @@ zookeeper = "3.9.1"
 zookeeper-junit = "1.2"
 
 [boms]
-brave = { module = "io.zipkin.brave:brave-bom", version.ref = "brave" }
 dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version.ref = "dropwizard-metrics" }
 # Ensure that we use the same Protobuf version as what gRPC depends on.
 # See: https://github.com/grpc/grpc-java/blob/master/gradle/libs.versions.toml
@@ -239,18 +239,34 @@ module = "org.bouncycastle:bcutil-jdk15on"
 version.ref = "bouncycastle"
 relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
 
-[libraries.brave]
+[libraries.brave5]
 module = "io.zipkin.brave:brave"
-# ":site:javadoc" fails when we use a newer version of Javadoc.
-javadocs = [
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave/5.6.3/",
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/5.6.3/"]
-[libraries.brave-context-slf4j]
+version.ref = "brave5"
+[libraries.brave5-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
-[libraries.brave-instrumentation-http]
+version.ref = "brave5"
+[libraries.brave5-instrumentation-http]
 module = "io.zipkin.brave:brave-instrumentation-http"
-[libraries.brave-instrumentation-http-tests]
+version.ref = "brave5"
+[libraries.brave5-instrumentation-http-tests]
 module = "io.zipkin.brave:brave-instrumentation-http-tests"
+version.ref = "brave5"
+
+[libraries.brave6]
+module = "io.zipkin.brave:brave"
+version.ref = "brave6"
+javadocs = [
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave/6.0.0/",
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/6.0.0/"]
+[libraries.brave6-context-slf4j]
+module = 'io.zipkin.brave:brave-context-slf4j'
+version.ref = "brave6"
+[libraries.brave6-instrumentation-http]
+module = "io.zipkin.brave:brave-instrumentation-http"
+version.ref = "brave6"
+[libraries.brave6-instrumentation-http-tests]
+module = "io.zipkin.brave:brave-instrumentation-http-tests"
+version.ref = "brave6"
 
 [libraries.brotli4j]
 module = "com.aayushatharva.brotli4j:brotli4j"
@@ -1175,8 +1191,17 @@ module = "org.slf4j:slf4j-api"
 version.ref = "slf4j2"
 javadocs = "https://www.javadoc.io/doc/org.slf4j/slf4j-api/2.0.7/"
 
+[libraries.spring6-context]
+module = "org.springframework:spring-context"
+version.ref = "spring6"
+[libraries.spring6-test]
+module = "org.springframework:spring-test"
+version.ref = "spring6"
 [libraries.spring6-web]
 module = "org.springframework:spring-web"
+version.ref = "spring6"
+[libraries.spring6-webflux]
+module = "org.springframework:spring-webflux"
 version.ref = "spring6"
 
 [libraries.spring-boot2-actuator-autoconfigure]

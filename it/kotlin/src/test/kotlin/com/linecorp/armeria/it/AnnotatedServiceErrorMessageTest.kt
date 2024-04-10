@@ -31,7 +31,8 @@ class AnnotatedServiceErrorMessageTest {
 
         assertThatThrownBy { serverBuilder.build() }
             .hasMessageContaining(
-                "Kotlin suspending functions are supported only when you added 'armeria-kotlin' as a dependency.",
+                "Kotlin suspending functions are supported" +
+                    " only when you added 'armeria-kotlin' as a dependency.",
             )
     }
 

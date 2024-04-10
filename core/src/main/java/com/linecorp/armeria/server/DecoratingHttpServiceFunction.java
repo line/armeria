@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A functional interface that enables building a {@link SimpleDecoratingHttpService} with
@@ -35,4 +36,12 @@ public interface DecoratingHttpServiceFunction {
      * @return the {@link HttpResponse}
      */
     HttpResponse serve(HttpService delegate, ServiceRequestContext ctx, HttpRequest req) throws Exception;
+
+    /**
+     * Invoked when this service has been added to a {@link Server} with the specified
+     * configuration. Please note that this method can be invoked more than once if this service
+     * has been added more than once.
+     */
+    @UnstableApi
+    default void serviceAdded(ServiceConfig cfg) throws Exception {}
 }

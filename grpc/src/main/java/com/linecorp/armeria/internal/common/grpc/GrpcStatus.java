@@ -137,6 +137,9 @@ public final class GrpcStatus {
         if (t instanceof ClosedStreamException || t instanceof RequestTimeoutException) {
             return Status.CANCELLED.withCause(t);
         }
+        if (t instanceof InvalidProtocolBufferException) {
+            return Status.INVALID_ARGUMENT.withCause(t);
+        }
         if (t instanceof UnprocessedRequestException ||
             t instanceof IOException ||
             t instanceof FailFastException) {

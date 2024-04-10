@@ -64,11 +64,13 @@ import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.ClientAuth;
@@ -166,6 +168,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                meterIdPrefixFunctionOrDefault(),
                                                findBeans(MetricCollectingServiceConfigurator.class),
                                                findBeans(DependencyInjector.class),
+                                               findBeans(ServerErrorHandler.class),
                                                beanFactory);
         }
 

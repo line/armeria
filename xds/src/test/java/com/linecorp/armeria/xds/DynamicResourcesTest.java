@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -77,7 +78,7 @@ class DynamicResourcesTest {
     @BeforeEach
     void beforeEach() {
         final Listener listener = XdsTestResources.exampleListener("listener_0",
-                                                                   "local_route", "bootstrap-cluster");
+                                                                   "local_route", BOOTSTRAP_CLUSTER_NAME);
         final RouteConfiguration routeConfiguration =
                 XdsTestResources.routeConfiguration("local_route", "some_service");
         cache.setSnapshot(
@@ -144,7 +145,7 @@ class DynamicResourcesTest {
                         io.envoyproxy.envoy.config.core.v3.GrpcService
                                 .newBuilder()
                                 .setEnvoyGrpc(EnvoyGrpc.newBuilder()
-                                                       .setClusterName("bootstrap-cluster")))
+                                                       .setClusterName(BOOTSTRAP_CLUSTER_NAME)))
                 .build();
         return Cluster
                 .newBuilder()

@@ -38,10 +38,9 @@ import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.DynamicResources;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap.StaticResources;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.cluster.v3.Cluster.DiscoveryType;
-import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
 import io.envoyproxy.envoy.config.core.v3.ApiConfigSource.ApiType;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.config.core.v3.SelfConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
@@ -80,31 +79,47 @@ class MultiConfigSourceTest {
 
     @BeforeEach
     void beforeEach() {
-        final ConfigSource configSource = XdsTestResources.adsConfigSource();
-        final Cluster cluster = Cluster.newBuilder()
-                                       .setName("cluster1")
-                                       .setType(DiscoveryType.EDS)
-                                       .setEdsClusterConfig(EdsClusterConfig.newBuilder()
-                                                                            .setEdsConfig(configSource))
-                                       .build();
-        final Listener listener = XdsTestResources.exampleListener("listener1", "route1");
+        final ConfigSource adsConfigSource = XdsTestResources.adsConfigSource();
+        final Listener listener = XdsTestResources.exampleListener("listener1", "route1", adsConfigSource);
         final RouteConfiguration route = XdsTestResources.routeConfiguration("route1", "cluster1");
+        final Cluster cluster = XdsTestResources.createCluster("cluster1", adsConfigSource);
+        final ClusterLoadAssignment endpoint = TestResources.createEndpoint("cluster1", "127.0.0.1", 8080);
+
+        final ConfigSource selfConfigSource =
+                ConfigSource.newBuilder().setSelf(SelfConfigSource.getDefaultInstance()).build();
+        final Listener selfListener1 =
+                XdsTestResources.exampleListener("self-listener1", "self-route1", selfConfigSource);
+        final RouteConfiguration selfRoute1 =
+                XdsTestResources.routeConfiguration("self-route1", "self-cluster1");
+        final Cluster selfCluster1 =
+                XdsTestResources.createCluster("self-cluster1", selfConfigSource);
+        final ClusterLoadAssignment selfEndpoint1 =
+                TestResources.createEndpoint("self-cluster1", "127.0.0.1", 8080);
+
+        final Listener selfListener2 =
+                XdsTestResources.exampleListener("self-listener2", "self-route2", selfConfigSource);
+        final RouteConfiguration selfRoute2 =
+                XdsTestResources.routeConfiguration("self-route2", "self-cluster2");
+        final Cluster selfCluster2 =
+                XdsTestResources.createCluster("self-cluster2", selfConfigSource);
+        final ClusterLoadAssignment selfEndpoint2 =
+                TestResources.createEndpoint("self-cluster2", "127.0.0.1", 8080);
         cache1.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(cluster),
-                        ImmutableList.of(),
-                        ImmutableList.of(listener),
-                        ImmutableList.of(),
+                        ImmutableList.of(cluster, selfCluster1),
+                        ImmutableList.of(selfEndpoint1),
+                        ImmutableList.of(listener, selfListener1),
+                        ImmutableList.of(selfRoute1),
                         ImmutableList.of(),
                         "1"));
         cache2.setSnapshot(
                 GROUP,
                 Snapshot.create(
-                        ImmutableList.of(),
-                        ImmutableList.of(TestResources.createEndpoint("cluster1", "127.0.0.1", 8080)),
-                        ImmutableList.of(),
-                        ImmutableList.of(route),
+                        ImmutableList.of(selfCluster2),
+                        ImmutableList.of(endpoint, selfEndpoint2),
+                        ImmutableList.of(selfListener2),
+                        ImmutableList.of(route, selfRoute2),
                         ImmutableList.of(),
                         "1"));
     }
@@ -148,7 +163,51 @@ class MultiConfigSourceTest {
         }
     }
 
+    @Test
+    void basicSelfConfigSource() {
+        final Bootstrap bootstrap = bootstrap(true, false);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("self-listener1");
+            listenerRoot.addSnapshotWatcher(watcher);
+            final ListenerSnapshot listenerSnapshot = watcher.blockingChanged(ListenerSnapshot.class);
+
+            // Updates are propagated for the initial value
+            final ClusterLoadAssignment expected =
+                    cache1.getSnapshot(GROUP).endpoints().resources().get("self-cluster1");
+            assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
+                                       .get(0).endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
+
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
+        }
+    }
+
+    @Test
+    void adsSelfConfigSource() {
+        final Bootstrap bootstrap = bootstrap(false, true);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final TestResourceWatcher watcher = new TestResourceWatcher();
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("self-listener2");
+            listenerRoot.addSnapshotWatcher(watcher);
+            final ListenerSnapshot listenerSnapshot = watcher.blockingChanged(ListenerSnapshot.class);
+
+            // Updates are propagated for the initial value
+            final ClusterLoadAssignment expected =
+                    cache2.getSnapshot(GROUP).endpoints().resources().get("self-cluster2");
+            assertThat(listenerSnapshot.routeSnapshot().clusterSnapshots()
+                                       .get(0).endpointSnapshot().xdsResource().resource()).isEqualTo(expected);
+
+            await().pollDelay(100, TimeUnit.MILLISECONDS)
+                   .untilAsserted(() -> assertThat(watcher.events()).isEmpty());
+        }
+    }
+
     private static Bootstrap bootstrap() {
+        return bootstrap(true, true);
+    }
+
+    private static Bootstrap bootstrap(boolean enableBasic, boolean enableAds) {
         final ClusterLoadAssignment loadAssignment1 =
                 XdsTestResources.loadAssignment(bootstrapClusterName1,
                                                 server1.httpUri().getHost(), server1.httpPort());
@@ -159,17 +218,23 @@ class MultiConfigSourceTest {
                                                                             loadAssignment1);
         final Cluster staticCluster2 = XdsTestResources.createStaticCluster(bootstrapClusterName2,
                                                                             loadAssignment2);
+        final DynamicResources.Builder dynamicResourcesBuilder =
+                DynamicResources.newBuilder();
+        if (enableBasic) {
+            dynamicResourcesBuilder
+                    .setCdsConfig(XdsTestResources.basicConfigSource(bootstrapClusterName1))
+                    .setLdsConfig(XdsTestResources.basicConfigSource(bootstrapClusterName1));
+        }
+        if (enableAds) {
+            dynamicResourcesBuilder.setAdsConfig(XdsTestResources.apiConfigSource(
+                    bootstrapClusterName2, ApiType.AGGREGATED_GRPC));
+        }
         return Bootstrap
                 .newBuilder()
                 .setStaticResources(StaticResources.newBuilder()
                                                    .addClusters(staticCluster1)
                                                    .addClusters(staticCluster2))
-                .setDynamicResources(
-                        DynamicResources.newBuilder()
-                                        .setCdsConfig(XdsTestResources.basicConfigSource(bootstrapClusterName1))
-                                        .setLdsConfig(XdsTestResources.basicConfigSource(bootstrapClusterName1))
-                                        .setAdsConfig(XdsTestResources.apiConfigSource(
-                                                bootstrapClusterName2, ApiType.AGGREGATED_GRPC)))
+                .setDynamicResources(dynamicResourcesBuilder)
                 .build();
     }
 }

@@ -253,6 +253,27 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
+     * Returns the index of the authority part if the specified {@code reqTarget} is an absolute URI.
+     * Returns {@code -1} otherwise.
+     */
+    public static int findAuthority(String reqTarget) {
+        final int firstColonIdx = reqTarget.indexOf(':');
+        if (firstColonIdx <= 0 || reqTarget.length() <= firstColonIdx + 3) {
+            return -1;
+        }
+        final int firstSlashIdx = reqTarget.indexOf('/');
+        if (firstSlashIdx <= 0 || firstSlashIdx < firstColonIdx) {
+            return -1;
+        }
+
+        if (reqTarget.charAt(firstColonIdx + 1) == '/' && reqTarget.charAt(firstColonIdx + 2) == '/') {
+            return firstColonIdx + 3;
+        }
+
+        return -1;
+    }
+
+    /**
      * Concatenates the specified {@code prefix} and {@code path} into an absolute path.
      *
      * @throws IllegalArgumentException if {@code prefix} is not an absolute path prefix

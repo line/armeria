@@ -65,7 +65,8 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final GrpcService grpcService = GrpcService.builder()
+            final GrpcService grpcService = GrpcService
+                    .builder()
                     .addService(new AuthenticatedHttpJsonTranscodingTestService())
                     .enableHttpJsonTranscoding(true)
                     .build();
@@ -86,21 +87,21 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
 
     @Test
     void testAuthenticatedRpcMethod() throws Exception {
-        final Transcoding.GetMessageRequestV1 requestMessage = Transcoding.GetMessageRequestV1.newBuilder()
-                .setName("messages/1").build();
+        final Transcoding.GetMessageRequestV1 requestMessage =
+                Transcoding.GetMessageRequestV1.newBuilder().setName("messages/1").build();
         final Throwable exception = assertThrows(Throwable.class,
-                () -> grpcClient.getMessageV1(requestMessage).getText());
+                                                 () -> grpcClient.getMessageV1(requestMessage).getText());
         assertThat(exception).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) exception).getStatus().getCode())
                 .isEqualTo(Status.UNAUTHENTICATED.getCode());
 
         final Metadata metadata = new Metadata();
         metadata.put(Metadata.Key.of(TEST_CREDENTIAL_KEY, Metadata.ASCII_STRING_MARSHALLER),
-                "some-credential-string");
+                     "some-credential-string");
         final Transcoding.Message result =
                 grpcClient.withInterceptors(
-                MetadataUtils.newAttachHeadersInterceptor(metadata)
-        ).getMessageV1(requestMessage);
+                        MetadataUtils.newAttachHeadersInterceptor(metadata)
+                ).getMessageV1(requestMessage);
         assertThat(result.getText()).isEqualTo("messages/1");
     }
 
@@ -110,11 +111,11 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
         assertThat(failResponse.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
 
         final JsonNode root = webClient.prepare()
-                .get("/v1/messages/1")
-                .header(TEST_CREDENTIAL_KEY, "some-credential-string")
-                .asJson(JsonNode.class)
-                .execute()
-                .content();
+                                       .get("/v1/messages/1")
+                                       .header(TEST_CREDENTIAL_KEY, "some-credential-string")
+                                       .asJson(JsonNode.class)
+                                       .execute()
+                                       .content();
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
     }
 

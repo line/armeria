@@ -61,9 +61,15 @@ tasks.withType(Jar) {
 tasks.trimShadedJar.doLast {
     // outjars is a file, so only one jar generated for sure
     def trimmed = tasks.trimShadedJar.outJarFiles[0].toPath()
-    ant.jar(destfile: trimmed.toString(), update: true) {
+
+    ant.jar(destfile: trimmed.toString(), update: true, duplicate: 'fail') {
         zipfileset(src: tasks.shadedJar.archivePath) {
             include(name: 'META-INF/versions/**')
+        }
+
+        // Do not let Ant put the properties that harm the build reproducibility, such as JDK version.
+        delegate.manifest {
+            attribute(name: 'Created-By', value: "Gradle ${gradle.gradleVersion}")
         }
     }
 }
@@ -71,7 +77,7 @@ tasks.trimShadedJar.doLast {
 tasks.shadedTest.exclude 'META-INF/versions/**'
 
 dependencies {
-    mrJarVersions.each { version->
+    mrJarVersions.each { version ->
         // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
         "java${version}Implementation" files(sourceSets.main.output.classesDirs) { builtBy compileJava }
 
@@ -160,8 +166,8 @@ dependencies {
     testImplementation (libs.micrometer.tracing.integration.test) {
         exclude group: "org.mockito"
     }
-    testImplementation libs.brave.context.slf4j
-    testImplementation libs.brave.instrumentation.http.tests
+    testImplementation libs.brave6.context.slf4j
+    testImplementation libs.brave6.instrumentation.http.tests
 }
 
 if (!rootProject.hasProperty('noWeb')) {
