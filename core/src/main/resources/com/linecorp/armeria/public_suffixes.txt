@@ -107,6 +107,7 @@
 *.pg
 *.platformsh.site
 *.private.repost.aws
+*.privatelink.snowflake.app
 *.quipelements.com
 *.r.appspot.com
 *.rss.my.id
@@ -118,6 +119,7 @@
 *.sch.uk
 *.sendai.jp
 *.sensiosite.cloud
+*.snowflake.app
 *.spectrum.myjino.ru
 *.statics.cloud
 *.stg-builder.code.com
@@ -142,12 +144,18 @@
 *.usercontent.goog
 *.vps.myjino.ru
 *.vultrobjects.com
+*.wadl.top
 *.webhare.dev
 *.webpaas.ovh.net
+*.xmit.co
 *.yokohama.jp
 0.bg
 001www.com
+0am.jp
 0e.vc
+0g0.jp
+0j0.jp
+0t0.jp
 1.azurestaticapps.net
 1.bg
 123hjemmeside.dk
@@ -157,7 +165,6 @@
 123minsida.se
 123miweb.es
 123paginaweb.pt
-123sait.ru
 123siteweb.fr
 123webseite.at
 123webseite.de
@@ -647,6 +654,7 @@ asti.it
 asuke.aichi.jp
 at
 at-band-camp.net
+at.emf.camp
 at.eu.org
 at.it
 at.md
@@ -1216,6 +1224,7 @@ campidanomedio.it
 campinagrande.br
 campinas.br
 campobasso.it
+can.re
 canary.replit.dev
 candypop.jp
 canon
@@ -1328,6 +1337,7 @@ cd.eu.org
 cdn-edges.net
 cdn.prod.atlassian-dev.net
 cdn77-ssl.net
+cdn77-storage.com
 ce.gov.br
 ce.it
 ce.leg.br
@@ -1442,6 +1452,7 @@ clerkstage.app
 cleverapps.io
 click
 clickrising.net
+client.scrypted.io
 clinic
 clinique
 clothing
@@ -1466,13 +1477,19 @@ cloudfront.net
 cloudfunctions.net
 cloudjiffy.net
 cloudns.asia
+cloudns.be
 cloudns.biz
 cloudns.cc
+cloudns.ch
+cloudns.cl
 cloudns.club
+cloudns.cx
 cloudns.eu
 cloudns.in
 cloudns.info
+cloudns.nz
 cloudns.org
+cloudns.ph
 cloudns.pro
 cloudns.pw
 cloudns.us
@@ -1771,6 +1788,7 @@ coop.rw
 coop.tt
 cooperativa.bo
 copro.uk
+corpnet.work
 corsica
 cosenza.it
 couchpotatofries.org
@@ -1808,6 +1826,7 @@ cruises
 cs.in
 cs.it
 cs.keliweb.cloud
+csb.app
 csx.cc
 ct.it
 ct.us
@@ -1856,6 +1875,7 @@ dabur
 dad
 daegu.kr
 daejeon.kr
+daemon.asia
 daemon.panel.gg
 dagestan.ru
 dagestan.su
@@ -1869,6 +1889,7 @@ damnserver.com
 danang.vn
 dance
 daplie.me
+darklang.io
 data
 date
 date.fukushima.jp
@@ -1983,6 +2004,7 @@ diskussionsbereich.de
 ditchyourip.com
 divtasvuodna.no
 divttasvuotna.no
+dix.asia
 diy
 dj
 dk
@@ -1994,6 +2016,9 @@ dnepropetrovsk.ua
 dni.us
 dnipropetrovsk.ua
 dnp
+dns-cloud.net
+dns-dynamic.net
+dnsabr.com
 dnsalias.com
 dnsalias.net
 dnsalias.org
@@ -2713,6 +2738,7 @@ fr-par-2.baremetal.scw.cloud
 fr.eu.org
 fr.it
 fra1-de.cloudjiffy.net
+framer.ai
 framer.app
 framer.media
 framer.photos
@@ -2947,6 +2973,7 @@ gg.ax
 ggee
 ggf.br
 gh
+gh.srv.us
 ghost.io
 gi
 gialai.vn
@@ -2979,6 +3006,7 @@ gjerstad.no
 gjesdal.no
 gjovik.no
 gl
+gl.srv.us
 glass
 gle
 gleeze.com
@@ -3226,6 +3254,7 @@ graphics
 graphox.us
 gratangen.no
 gratis
+grayjayleagues.com
 greater.jp
 green
 greta.fr
@@ -3398,6 +3427,8 @@ healthcare
 heavy.jp
 heguri.nara.jp
 hekinan.aichi.jp
+helioho.st
+heliohost.us
 help
 helsinki
 hemne.no
@@ -3906,6 +3937,7 @@ is-a-student.com
 is-a-teacher.com
 is-a-techie.com
 is-a-therapist.com
+is-a.dev
 is-an-accountant.com
 is-an-actor.com
 is-an-actress.com
@@ -3915,6 +3947,7 @@ is-an-engineer.com
 is-an-entertainer.com
 is-by.us
 is-certified.com
+is-cool.dev
 is-found.org
 is-gone.com
 is-into-anime.com
@@ -3922,7 +3955,9 @@ is-into-cars.com
 is-into-cartoons.com
 is-into-games.com
 is-leet.com
+is-local.org
 is-lost.org
+is-not-a.dev
 is-not-certified.com
 is-saved.org
 is-slick.com
@@ -4335,6 +4370,7 @@ kerrylogistics
 kerryproperties
 ketrzyn.pl
 keymachine.de
+keyword-on.net
 kfh
 kg
 kg.kr
@@ -4767,6 +4803,7 @@ linkyard.cloud
 lipsy
 littlestar.jp
 live
+live-on.net
 living
 livorno.it
 lk
@@ -4778,7 +4815,10 @@ lo.it
 loabat.no
 loan
 loans
+localcert.net
 localhost.daplie.me
+localhostcert.net
+localplayer.dev
 localzone.xyz
 locker
 locus
@@ -5398,6 +5438,10 @@ mydatto.com
 mydatto.net
 myddns.rocks
 mydissent.net
+mydns.bz
+mydns.jp
+mydns.tw
+mydns.vc
 mydobiss.com
 mydrobo.com
 myds.me
@@ -5406,6 +5450,7 @@ myfast.host
 myfast.space
 myfirewall.org
 myforum.community
+myfritz.link
 myfritz.net
 myftp.biz
 myftp.org
@@ -5807,6 +5852,7 @@ nikita.jp
 nikko.tochigi.jp
 nikolaev.ua
 nikon
+nimsite.uk
 ninhbinh.vn
 ninhthuan.vn
 ninja
@@ -6532,6 +6578,7 @@ pg.in
 pg.it
 pgafan.net
 pgfog.com
+pgw.jp
 ph
 pharmacien.fr
 pharmaciens.km
@@ -6667,6 +6714,7 @@ press.se
 presse.ci
 presse.km
 presse.ml
+preview.csb.app
 pri.ee
 prime
 primetel.cloud
@@ -6677,7 +6725,6 @@ priv.instances.scw.cloud
 priv.me
 priv.no
 priv.pl
-privatelink.snowflake.app
 privatizehealthinsurance.net
 pro
 pro.az
@@ -6808,7 +6855,6 @@ ras.ru
 rauma.no
 ravendb.cloud
 ravendb.community
-ravendb.me
 ravendb.run
 ravenna.it
 ravpage.co.il
@@ -6970,6 +7016,7 @@ rs.gov.br
 rs.leg.br
 rs.webaccel.jp
 rsc.cdn77.org
+rsc.contentproxy9.cz
 rsvp
 ru
 ru.com
@@ -6979,6 +7026,7 @@ rugby
 ruhr
 rulez.jp
 run
+runcontainers.dev
 runs.onstackit.cloud
 ruovat.no
 rv.ua
@@ -7537,6 +7585,7 @@ servemp3.com
 servep2p.com
 servepics.com
 servequake.com
+server-on.net
 servername.us
 servers.run
 servesarcasm.com
@@ -7762,7 +7811,6 @@ snasa.no
 sncf
 snillfjord.no
 snoasa.no
-snowflake.app
 so
 so.gov.pl
 so.it
@@ -7844,6 +7892,7 @@ sr.it
 srht.site
 srl
 srv.br
+srv.us
 ss
 ss.it
 ssl.origin.cdn77-secure.org
@@ -8565,6 +8614,7 @@ uni5.net
 unicloud.pl
 unicom
 union.aero
+unison-services.cloud
 univ.bj
 univ.sn
 university
@@ -8827,6 +8877,9 @@ vt.us
 vu
 vv.it
 vxl.sh
+w-corp-staticblitz.com
+w-credentialless-staticblitz.com
+w-staticblitz.com
 w.bg
 w.se
 wa.au
@@ -8985,6 +9038,7 @@ wiw.gov.pl
 wix.run
 wixsite.com
 wixstudio.io
+wjg.jp
 wkz.gov.pl
 wlocl.pl
 wloclawek.pl
