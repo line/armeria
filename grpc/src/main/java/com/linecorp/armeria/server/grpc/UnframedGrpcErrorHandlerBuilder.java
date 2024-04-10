@@ -19,13 +19,13 @@ package com.linecorp.armeria.server.grpc;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Message;
 
@@ -40,9 +40,11 @@ public final class UnframedGrpcErrorHandlerBuilder {
     @Nullable
     private MessageMarshaller jsonMarshaller;
 
-    private final List<Message> messages = new ArrayList<>();
+    @Nullable
+    private List<Message> marshalledMessages;
 
-    private final List<Class<? extends Message>> messageTypes = new ArrayList<>();
+    @Nullable
+    private List<Class<? extends Message>> marshalledMessageTypes;
 
     @Nullable
     private Set<UnframedGrpcErrorResponseType> responseTypes;
@@ -63,13 +65,13 @@ public final class UnframedGrpcErrorHandlerBuilder {
      */
     public UnframedGrpcErrorHandlerBuilder jsonMarshaller(MessageMarshaller jsonMarshaller) {
         requireNonNull(jsonMarshaller, "jsonMarshaller");
-        if (!messages.isEmpty() || !messageTypes.isEmpty()) {
+        if (marshalledMessages != null || marshalledMessageTypes != null) {
             throw new IllegalArgumentException(
                     "Cannot set a custom JSON marshaller because one or more Message or MessageType instances" +
                     " have already been registered. To set a custom marshaller, ensure that no Message or" +
                     " MessageType registrations have been made before calling this method.");
         }
-        this.jsonMarshaller = requireNonNull(jsonMarshaller, "jsonMarshaller");
+        this.jsonMarshaller = jsonMarshaller;
         return this;
     }
 
@@ -91,8 +93,8 @@ public final class UnframedGrpcErrorHandlerBuilder {
      * Specifies the response types that the error handler will support.
      *
      * <p>This method allows specifying one or more response types (e.g., JSON, PLAINTEXT)
-     * that the error handler can produce. If nothing is specified, the error handler will
-     * support JSON and PLAINTEXT.
+     * that the error handler can produce. If nothing is specified or multiple types are specified, the actual
+     * response type is determined by the response's content type.
      *
      * @param responseTypes The response types to support
      */
@@ -121,7 +123,10 @@ public final class UnframedGrpcErrorHandlerBuilder {
                     "Cannot register custom messages because a custom JSON marshaller has already been set. " +
                     "Use the custom marshaller to register custom messages.");
         }
-        this.messages.addAll(ImmutableList.copyOf(messages));
+        if (marshalledMessages == null) {
+            marshalledMessages = new ArrayList<>();
+        }
+        marshalledMessages.addAll(Arrays.asList(messages));
         return this;
     }
 
@@ -143,7 +148,10 @@ public final class UnframedGrpcErrorHandlerBuilder {
                     "Cannot register custom messageTypes because a custom JSON marshaller has already been " +
                     "set. Use the custom marshaller to register custom message types.");
         }
-        this.messageTypes.addAll(ImmutableList.copyOf(messageTypes));
+        if (marshalledMessageTypes == null) {
+            marshalledMessageTypes = new ArrayList<>();
+        }
+        marshalledMessageTypes.addAll(Arrays.asList(messageTypes));
         return this;
     }
 
@@ -170,10 +178,16 @@ public final class UnframedGrpcErrorHandlerBuilder {
         for (final Object messageOrMessageType : messagesOrMessageTypes) {
             requireNonNull(messageOrMessageType, "messagesOrMessageTypes contains null.");
             if (messageOrMessageType instanceof Message) {
-                messages.add((Message) messageOrMessageType);
+                if (marshalledMessages == null) {
+                    marshalledMessages = new ArrayList<>();
+                }
+                marshalledMessages.add((Message) messageOrMessageType);
             } else if (messageOrMessageType instanceof Class &&
                        Message.class.isAssignableFrom((Class<?>) messageOrMessageType)) {
-                messageTypes.add((Class<? extends Message>) messageOrMessageType);
+                if (marshalledMessageTypes == null) {
+                    marshalledMessageTypes = new ArrayList<>();
+                }
+                marshalledMessageTypes.add((Class<? extends Message>) messageOrMessageType);
             } else {
                 final String className =
                         messageOrMessageType instanceof Class ? ((Class<?>) messageOrMessageType).getName()
@@ -187,7 +201,7 @@ public final class UnframedGrpcErrorHandlerBuilder {
     }
 
     /**
-     * Builds and returns an instance of {@link UnframedGrpcErrorHandler}.
+     * Returns a newly created {@link UnframedGrpcErrorHandler}.
      *
      * <p>This method constructs a new {@code UnframedGrpcErrorHandler} with the
      * current configuration of this builder.
@@ -197,12 +211,16 @@ public final class UnframedGrpcErrorHandlerBuilder {
             jsonMarshaller = UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER;
             MessageMarshaller.Builder builder = jsonMarshaller.toBuilder();
 
-            for (final Message message : messages) {
-                builder = builder.register(message);
+            if (marshalledMessages != null) {
+                for (final Message message : marshalledMessages) {
+                    builder = builder.register(message);
+                }
             }
 
-            for (final Class<? extends Message> messageType : messageTypes) {
-                builder = builder.register(messageType);
+            if (marshalledMessageTypes != null) {
+                for (final Class<? extends Message> messageType : marshalledMessageTypes) {
+                    builder = builder.register(messageType);
+                }
             }
 
             jsonMarshaller = builder.build();
@@ -210,10 +228,14 @@ public final class UnframedGrpcErrorHandlerBuilder {
         if (responseTypes == null) {
             return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
         }
-        if (responseTypes.equals(ImmutableSet.of(UnframedGrpcErrorResponseType.JSON))) {
+        if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON)
+            && responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
+            return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
+        }
+        if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON)) {
             return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction, jsonMarshaller);
         }
-        if (responseTypes.equals(ImmutableSet.of(UnframedGrpcErrorResponseType.PLAINTEXT))) {
+        if (responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
             return UnframedGrpcErrorHandlers.ofPlaintext(statusMappingFunction);
         }
         return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);

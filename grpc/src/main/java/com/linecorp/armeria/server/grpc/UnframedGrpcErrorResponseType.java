@@ -18,8 +18,17 @@ package com.linecorp.armeria.server.grpc;
 
 /**
  * The types of responses that can be sent when handling errors in an unframed gRPC service.
+ * <p> When multiple {@code UnframedGrpcErrorResponseType} values are selected, the actual response type
+ * is determined by the response's {@code contentType}.
  */
 public enum UnframedGrpcErrorResponseType {
+    /**
+     * The error response will be formatted as a JSON object.
+     */
     JSON,
+
+    /**
+     * The error response will be sent as plain text.
+     */
     PLAINTEXT,
 }
