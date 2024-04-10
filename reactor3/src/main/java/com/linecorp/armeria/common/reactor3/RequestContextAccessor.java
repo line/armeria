@@ -34,7 +34,7 @@ import reactor.util.context.ContextView;
 /**
  * This class works with the
  * <a href="https://docs.micrometer.io/context-propagation/reference/index.html">
- * Context-propagation </a> library and keep the {@link RequestContext} during
+ * Context-propagation</a> library and keep the {@link RequestContext} during
  * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations.
  */
 public final class RequestContextAccessor implements ThreadLocalAccessor<RequestContext> {

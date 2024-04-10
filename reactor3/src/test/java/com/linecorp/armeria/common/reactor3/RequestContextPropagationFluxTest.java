@@ -39,6 +39,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
+import reactor.test.StepVerifierOptions;
+import reactor.util.context.Context;
 
 @GenerateNativeImageTrace
 class RequestContextPropagationFluxTest {
@@ -53,35 +55,19 @@ class RequestContextPropagationFluxTest {
         RequestContextPropagationHook.disable();
     }
 
-    // No need to be tested.
-    /*
-    @Test
-    void fluxJust() {
-        // FluxJust and FluxEmpty are a scalar type and could be subscribed by multiple requests.
-        // Therefore, Flux.just(...), Flux.empty() and Flux.error(ex) should not return a ContextAwareFlux.
-        final Flux<String> just = Flux.just("foo");
-        final Flux<String> empty = Flux.empty();
-        final Flux<String> error = Flux.error(new IllegalStateException("boom"));
-        assertThat(just).isNotExactlyInstanceOf(ContextAwareMono.class);
-        assertThat(empty).isNotExactlyInstanceOf(ContextAwareMono.class);
-        assertThat(error).isNotExactlyInstanceOf(ContextAwareMono.class);
-    }
-     */
-
     @Test
     void fluxError() {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
+        flux = addCallbacks(Flux.error(() -> {
+            // This is called twice. after publishOn() and verifyErrorMatches()
+            // After publishOn(), ctxExists(ctx) should be false.
+            // On the other hand, it should be True due to ContextPropagation.
+            return new AnticipatedException();
+        }).publishOn(Schedulers.single()), ctx);
 
-            flux = addCallbacks(Flux.error(() -> {
-                assertThat(ctxExists(ctx)).isTrue();
-                return new AnticipatedException();
-            }).publishOn(Schedulers.single()), ctx);
-
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .verifyErrorMatches(t -> ctxExists(ctx) && t instanceof AnticipatedException);
     }
@@ -91,9 +77,6 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.from(s -> {
             assertThat(ctxExists(ctx)).isTrue();
             s.onSubscribe(noopSubscription());
@@ -101,7 +84,7 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -112,16 +95,13 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.create(s -> {
             assertThat(ctxExists(ctx)).isTrue();
             s.next("foo");
             s.complete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -132,15 +112,12 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.create(s -> {
             assertThat(ctxExists(ctx)).isTrue();
             s.error(new AnticipatedException());
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .verifyErrorMatches(t -> ctxExists(ctx) && t instanceof AnticipatedException);
     }
@@ -150,9 +127,6 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.concat(Mono.fromSupplier(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return "foo";
@@ -161,7 +135,7 @@ class RequestContextPropagationFluxTest {
             return "bar";
         })).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .expectNextMatches(s -> ctxExists(ctx) && "bar".equals(s))
@@ -173,15 +147,12 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.defer(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return Flux.just("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -192,15 +163,12 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.fromStream(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return Stream.of("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -211,15 +179,12 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.combineLatest(Mono.just("foo"), Mono.just("bar"), (a, b) -> {
             assertThat(ctxExists(ctx)).isTrue();
             return a;
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -230,16 +195,13 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.generate(s -> {
             assertThat(ctxExists(ctx)).isTrue();
             s.next("foo");
             s.complete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -249,9 +211,6 @@ class RequestContextPropagationFluxTest {
     void fluxMerge() {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
 
         flux = addCallbacks(Flux.mergeSequential(s -> {
             assertThat(ctxExists(ctx)).isTrue();
@@ -265,7 +224,7 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .expectNextMatches(s -> ctxExists(ctx) && "bar".equals(s))
@@ -277,16 +236,13 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.push(s -> {
             assertThat(ctxExists(ctx)).isTrue();
             s.next("foo");
             s.complete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -296,9 +252,6 @@ class RequestContextPropagationFluxTest {
     void fluxSwitchOnNext() {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
 
         flux = addCallbacks(Flux.switchOnNext(s -> {
             assertThat(ctxExists(ctx)).isTrue();
@@ -312,7 +265,7 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -323,15 +276,12 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.zip(Mono.just("foo"), Mono.just("bar"), (foo, bar) -> {
             assertThat(ctxExists(ctx)).isTrue();
             return foo;
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -342,15 +292,12 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.interval(Duration.ofMillis(100)).take(2).concatMap(a -> {
             assertThat(ctxExists(ctx)).isTrue();
             return Mono.just("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
@@ -361,9 +308,6 @@ class RequestContextPropagationFluxTest {
     void fluxConcatDelayError() {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
 
         flux = addCallbacks(Flux.concatDelayError(s -> {
             assertThat(ctxExists(ctx)).isTrue();
@@ -376,7 +320,7 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .expectNextMatches(s -> ctxExists(ctx) && "bar".equals(s))
@@ -388,9 +332,6 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = addCallbacks(Flux.just("foo").transform(fooFlux -> s -> {
             assertThat(ctxExists(ctx)).isTrue();
             s.onSubscribe(noopSubscription());
@@ -398,7 +339,7 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -409,14 +350,11 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         final ConnectableFlux<String> connectableFlux = Flux.just("foo").publish();
         flux = addCallbacks(connectableFlux.autoConnect(2).publishOn(Schedulers.single()), ctx);
 
         flux.subscribe().dispose();
-        StepVerifier.create(flux)
+        StepVerifier.create(flux, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -426,9 +364,6 @@ class RequestContextPropagationFluxTest {
     void connectableFlux_dispose() throws InterruptedException {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
 
         final ConnectableFlux<String> connectableFlux = Flux.just("foo").publish();
         flux = addCallbacks(connectableFlux.autoConnect(2, disposable -> {
@@ -449,16 +384,13 @@ class RequestContextPropagationFluxTest {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         flux = Flux.deferContextual(reactorCtx -> {
             assertThat((String) reactorCtx.get("foo")).isEqualTo("bar");
             return Flux.just("baz");
         });
 
         final Flux<String> flux1 = flux.contextWrite(reactorCtx -> reactorCtx.put("foo", "bar"));
-        StepVerifier.create(flux1)
+        StepVerifier.create(flux1, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))
                     .verifyComplete();
@@ -472,7 +404,13 @@ class RequestContextPropagationFluxTest {
                    .doOnComplete(() -> assertThat(ctxExists(ctx)).isTrue())
                    .doOnEach(s -> assertThat(ctxExists(ctx)).isTrue())
                    .doOnError(t -> assertThat(ctxExists(ctx)).isTrue())
-                   .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue());
+                   .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue())
+                   .contextWrite(Context.of(RequestContextAccessor.getInstance().key(), ctx));
         // doOnCancel and doFinally do not have context because we cannot add a hook to the cancel.
+    }
+
+    private static StepVerifierOptions initialReactorContext(ClientRequestContext ctx) {
+        final Context reactorCtx = Context.of(RequestContextAccessor.getInstance().key(), ctx);
+        return StepVerifierOptions.create().withInitialContext(reactorCtx);
     }
 }

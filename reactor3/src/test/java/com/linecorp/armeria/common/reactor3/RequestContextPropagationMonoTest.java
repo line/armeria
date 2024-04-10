@@ -35,6 +35,8 @@ import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
+import reactor.test.StepVerifierOptions;
+import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 
 @GenerateNativeImageTrace
@@ -50,35 +52,16 @@ class RequestContextPropagationMonoTest {
         RequestContextPropagationHook.disable();
     }
 
-    // No need to be tested.
-    /*
-    @Test
-    void monoJust() {
-        // MonoJust is a scalar type and could be subscribed by multiple requests.
-        // Therefore, Mono.just(...), Mono.empty() and Mono.error(ex) should not return a ContextAwareMono.
-        final Mono<String> mono = Mono.just("foo");
-        final Mono<String> empty = Mono.empty();
-        final Mono<String> error = Mono.error(new IllegalStateException("boom"));
-        assertThat(mono).isNotExactlyInstanceOf(ContextAwareMono.class);
-        assertThat(empty).isNotExactlyInstanceOf(ContextAwareMono.class);
-        assertThat(error).isNotExactlyInstanceOf(ContextAwareMono.class);
-    }
-     */
-
     @Test
     void monoCreate_success() {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = addCallbacks(Mono.create(sink -> {
             assertThat(ctxExists(ctx)).isTrue();
             sink.success("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -88,16 +71,12 @@ class RequestContextPropagationMonoTest {
     void monoCreate_error() {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = addCallbacks(Mono.create(sink -> {
             assertThat(ctxExists(ctx)).isTrue();
             sink.error(new AnticipatedException());
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .verifyErrorMatches(t -> ctxExists(ctx) && t instanceof AnticipatedException);
     }
@@ -106,16 +85,12 @@ class RequestContextPropagationMonoTest {
     void monoCreate_currentContext() {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = addCallbacks(Mono.create(sink -> {
             assertThat(ctxExists(ctx)).isTrue();
             sink.success("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -125,16 +100,12 @@ class RequestContextPropagationMonoTest {
     void monoDefer() {
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = addCallbacks(Mono.defer(() -> Mono.fromSupplier(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return "foo";
         })).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -144,10 +115,6 @@ class RequestContextPropagationMonoTest {
     void monoFromPublisher() {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = addCallbacks(Mono.from(s -> {
             assertThat(ctxExists(ctx)).isTrue();
             s.onSubscribe(noopSubscription());
@@ -155,7 +122,7 @@ class RequestContextPropagationMonoTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -165,16 +132,12 @@ class RequestContextPropagationMonoTest {
     void monoError() {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = addCallbacks(Mono.error(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return new AnticipatedException();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .verifyErrorMatches(t -> ctxExists(ctx) && t instanceof AnticipatedException);
     }
@@ -183,17 +146,13 @@ class RequestContextPropagationMonoTest {
     void monoFirst() {
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = addCallbacks(Mono.firstWithSignal(Mono.delay(Duration.ofMillis(1000)).then(Mono.just("bar")),
                                                  Mono.fromCallable(() -> {
                                                      assertThat(ctxExists(ctx)).isTrue();
                                                      return "foo";
                                                  })).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -203,16 +162,11 @@ class RequestContextPropagationMonoTest {
     void monoFromFuture() {
         final CompletableFuture<String> future = new CompletableFuture<>();
         future.complete("foo");
-
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = addCallbacks(Mono.fromFuture(future).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -224,16 +178,12 @@ class RequestContextPropagationMonoTest {
         future.complete("foo");
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = addCallbacks(Mono.delay(Duration.ofMillis(100)).then(Mono.fromCallable(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return "foo";
         })).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
                     .verifyComplete();
@@ -245,19 +195,15 @@ class RequestContextPropagationMonoTest {
         future.complete("foo");
         final ClientRequestContext ctx = newContext();
         final Mono<Tuple2<String, String>> mono;
+            mono = addCallbacks(Mono.zip(Mono.fromSupplier(() -> {
+                assertThat(ctxExists(ctx)).isTrue();
+                return "foo";
+            }), Mono.fromSupplier(() -> {
+                assertThat(ctxExists(ctx)).isTrue();
+                return "bar";
+            })).publishOn(Schedulers.single()), ctx);
 
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
-        mono = addCallbacks(Mono.zip(Mono.fromSupplier(() -> {
-            assertThat(ctxExists(ctx)).isTrue();
-            return "foo";
-        }), Mono.fromSupplier(() -> {
-            assertThat(ctxExists(ctx)).isTrue();
-            return "bar";
-        })).publishOn(Schedulers.single()), ctx);
-
-        StepVerifier.create(mono)
+        StepVerifier.create(mono, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(t -> ctxExists(ctx) &&
                                             "foo".equals(t.getT1()) && "bar".equals(t.getT2()))
@@ -268,17 +214,13 @@ class RequestContextPropagationMonoTest {
     void subscriberContextIsNotMissing() {
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
-
-        final RequestContextAccessor instance = RequestContextAccessor.getInstance();
-        instance.setValue(ctx);
-
         mono = Mono.deferContextual(Mono::just).handle((reactorCtx, sink) -> {
             assertThat((String) reactorCtx.get("foo")).isEqualTo("bar");
             sink.next("baz");
         });
 
         final Mono<String> mono1 = mono.contextWrite(reactorCtx -> reactorCtx.put("foo", "bar"));
-        StepVerifier.create(mono1)
+        StepVerifier.create(mono1, initialReactorContext(ctx))
                     .expectSubscriptionMatches(s -> ctxExists(ctx))
                     .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))
                     .verifyComplete();
@@ -311,7 +253,13 @@ class RequestContextPropagationMonoTest {
                    .doOnSuccess(t -> assertThat(ctxExists(ctx)).isTrue())
                    .doOnEach(s -> assertThat(ctxExists(ctx)).isTrue())
                    .doOnError(t -> assertThat(ctxExists(ctx)).isTrue())
-                   .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue());
+                   .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue())
+                   .contextWrite(Context.of(RequestContextAccessor.getInstance().key(), ctx));
         // doOnCancel and doFinally do not have context because we cannot add a hook to the cancel.
+    }
+
+    private static StepVerifierOptions initialReactorContext(ClientRequestContext ctx) {
+        final Context reactorCtx = Context.of(RequestContextAccessor.getInstance().key(), ctx);
+        return StepVerifierOptions.create().withInitialContext(reactorCtx);
     }
 }

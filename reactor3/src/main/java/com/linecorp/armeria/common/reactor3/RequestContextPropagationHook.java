@@ -13,44 +13,56 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.common.reactor3;
 
+import com.linecorp.armeria.common.RequestContext;
+
 import io.micrometer.context.ContextRegistry;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
+import reactor.core.publisher.Mono;
 
 /**
- * TBD.
+ * Utility class to keep {@link RequestContext} during
+ * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations
+ * with <a href="https://docs.micrometer.io/context-propagation/reference/index.html">
+ * Context-propagation</a>.
  */
 public final class RequestContextPropagationHook {
 
-    private static boolean enabled;
-
-    private RequestContextPropagationHook() {}
+    private static volatile boolean enabled;
 
     /**
-     * TBD.
+     * Enable <a href="https://docs.micrometer.io/context-propagation/reference/index.html">
+     * Context-propagation</a> to keep {@link RequestContext} during
+     * Reactor operations.
+     * </p>
+     * Please note that enable {@link RequestContextPropagationHook} at the
+     * start of the application. otherwise, {@link RequestContext} may not be keep.
      */
     public static synchronized void enable() {
         if (enabled) {
             return;
         }
-        ContextRegistry
-                .getInstance()
-                .registerThreadLocalAccessor(RequestContextAccessor.getInstance());
-        Hooks.enableAutomaticContextPropagation();
 
+        final RequestContextAccessor accessor = RequestContextAccessor.getInstance();
+        ContextRegistry.getInstance()
+                       .registerThreadLocalAccessor(accessor);
+        Hooks.enableAutomaticContextPropagation();
         enabled = true;
     }
 
     /**
-     * TBD.
+     * It returns whether the {@link RequestContextPropagationHook} is enabled.
      */
-    public static boolean isEnable() {
+    public static boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * TBD.
+     * It disable {@link RequestContextPropagationHook}. {@link RequestContext}
+     * will not be keep during both {@link Mono} and {@link Flux} Operations.
      */
     public static synchronized void disable() {
         if (!enabled) {
@@ -60,4 +72,6 @@ public final class RequestContextPropagationHook {
         Hooks.disableAutomaticContextPropagation();
         enabled = false;
     }
+
+    private RequestContextPropagationHook() {}
 }
