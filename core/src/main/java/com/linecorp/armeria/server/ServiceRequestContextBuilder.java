@@ -176,10 +176,12 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             proxiedAddresses = ProxiedAddresses.of(remoteAddress());
         }
 
+        final EventLoop serviceWorkerGroup = eventLoop();
+
         // Build a fake server which never starts up.
         final ServerBuilder serverBuilder = Server.builder()
                                                   .meterRegistry(meterRegistry())
-                                                  .workerGroup(eventLoop(), false);
+                                                  .workerGroup(serviceWorkerGroup, false);
 
         final ServiceBindingBuilder serviceBindingBuilder;
         if (route != null) {
@@ -233,10 +235,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
             requestCancellationScheduler = CancellationScheduler.ofServer(0);
-            requestCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
+            requestCancellationScheduler.initAndStart(serviceWorkerGroup, noopCancellationTask);
         }
-
-        final EventLoop serviceWorkerGroup = eventLoop();
 
         // Build the context with the properties set by a user and the fake objects.
         final Channel ch = fakeChannel();
