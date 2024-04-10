@@ -31,12 +31,11 @@ import io.grpc.Status;
 @UnstableApi
 public interface UnframedGrpcErrorHandler {
 
+    /**
+     * Returns a new {@link UnframedGrpcErrorHandlerBuilder}.
+     */
     static UnframedGrpcErrorHandlerBuilder builder() {
-        return new UnframedGrpcErrorHandlerBuilder(UnframedGrpcStatusMappingFunction.of());
-    }
-
-    static UnframedGrpcErrorHandlerBuilder builder(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return new UnframedGrpcErrorHandlerBuilder(statusMappingFunction);
+        return new UnframedGrpcErrorHandlerBuilder();
     }
 
     /**

@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.grpc.testing.Error.InternalError;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -76,6 +77,19 @@ public class UnframedGrpcErrorHandlerTest {
         }
     };
 
+    @RegisterExtension
+    static ServerExtension customJsonResServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            configureServer(sb, false,
+                            UnframedGrpcErrorHandler.builder()
+                                                    .registerMarshalledMessages(InternalError.class)
+                                                    .responseTypes(UnframedGrpcErrorResponseType.JSON)
+                                                    .build(),
+                            testServiceWithCustomMessage);
+        }
+    };
+
     private static class TestService extends TestServiceImplBase {
 
         @Override
@@ -105,11 +119,36 @@ public class UnframedGrpcErrorHandlerTest {
         }
     }
 
+    private static class TestServiceWithCustomMessage extends TestServiceImplBase {
+
+        @Override
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            final InternalError internalError = InternalError.newBuilder()
+                                                             .setCode(500)
+                                                             .setMessage("Internal server error.")
+                                                             .build();
+
+            final com.google.rpc.Status
+                    status = com.google.rpc.Status.newBuilder()
+                                                  .setCode(
+                                                          Code.INTERNAL.getNumber())
+                                                  .setMessage("Custom error message test.")
+                                                  .addDetails(
+                                                          Any.pack(internalError))
+                                                  .build();
+
+            responseObserver.onError(StatusProto.toStatusRuntimeException(status));
+        }
+    }
+
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private static final TestService testService = new TestService();
 
     private static final TestServiceGrpcStatus testServiceGrpcStatus = new TestServiceGrpcStatus();
+
+    private static final TestServiceWithCustomMessage testServiceWithCustomMessage =
+            new TestServiceWithCustomMessage();
 
     private static void configureServer(ServerBuilder sb, boolean verboseResponses,
                                         UnframedGrpcErrorHandler errorHandler,
@@ -187,6 +226,32 @@ public class UnframedGrpcErrorHandlerTest {
                         "      \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\"," +
                         "      \"reason\": \"Unknown Exception\"," +
                         "      \"domain\": \"test\"" +
+                        "    }" +
+                        "  ]" +
+                        '}');
+        assertThat(response.trailers()).isEmpty();
+    }
+
+    @Test
+    void customJson() throws JsonProcessingException {
+        final BlockingWebClient client = customJsonResServer.webClient().blocking();
+        final AggregatedHttpResponse response =
+                client.prepare()
+                      .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
+                      .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatJson(mapper.readTree(response.contentUtf8()))
+                .isEqualTo(
+                        '{' +
+                        "  \"code\": 13," +
+                        "  \"grpc-code\": \"INTERNAL\"," +
+                        "  \"message\": \"Custom error message test.\"," +
+                        "  \"details\": [" +
+                        "    {" +
+                        "      \"@type\": \"type.googleapis.com/armeria.grpc.testing.InternalError\"," +
+                        "      \"code\": 500," +
+                        "      \"message\": \"Internal server error.\"" +
                         "    }" +
                         "  ]" +
                         '}');

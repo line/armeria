@@ -95,7 +95,8 @@ final class UnframedGrpcErrorHandlers {
         return of(statusMappingFunction, ERROR_DETAILS_MARSHALLER);
     }
 
-    static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
+    static UnframedGrpcErrorHandler of(
+            UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
         final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
         return (ctx, status, response) -> {
             final MediaType grpcMediaType = response.contentType();
@@ -107,14 +108,14 @@ final class UnframedGrpcErrorHandlers {
         };
     }
 
-
     /**
      * Returns a JSON response based on Google APIs.
      * Please refer to <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
      */
-    static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
+    static UnframedGrpcErrorHandler ofJson(
+            UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
         final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
         return (ctx, status, response) -> {
             final ByteBuf buffer = ctx.alloc().buffer();
@@ -225,7 +226,8 @@ final class UnframedGrpcErrorHandlers {
     }
 
     @VisibleForTesting
-    static void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator, MessageMarshaller jsonMarshaller) throws IOException {
+    static void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator,
+                                  MessageMarshaller jsonMarshaller) throws IOException {
         jsonGenerator.writeStartArray();
         for (Any detail : details) {
             try {

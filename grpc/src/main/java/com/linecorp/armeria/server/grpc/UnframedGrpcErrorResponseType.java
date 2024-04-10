@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server.grpc;
 
+/**
+ * The types of responses that can be sent when handling errors in an unframed gRPC service.
+ */
 public enum UnframedGrpcErrorResponseType {
     JSON,
     PLAINTEXT,

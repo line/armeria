@@ -1,0 +1,182 @@
+/*
+ * Copyright 2024 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.server.grpc;
+
+import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.Mockito.mock;
+
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.grpc.testing.Error.AuthError;
+import com.linecorp.armeria.grpc.testing.Error.InternalError;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
+import io.grpc.Status;
+
+public class UnframedGrpcErrorHandlerBuilderTest {
+    @Test
+    void cannotCallRegisterJsonMarshallersAndJsonMarshallerSimultaneously() {
+        assertThatThrownBy(
+                () -> UnframedGrpcErrorHandler.builder()
+                                              .jsonMarshaller(
+                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
+                                              .registerMarshalledMessages(InternalError.class))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(
+                        "Cannot register custom messageTypes because a custom JSON marshaller has " +
+                        "already been set. Use the custom marshaller to register custom message types.");
+
+        assertThatThrownBy(
+                () -> UnframedGrpcErrorHandler.builder()
+                                              .jsonMarshaller(
+                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
+                                              .registerMarshalledMessages(
+                                                      InternalError.newBuilder().build()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(
+                        "Cannot register custom messages because a custom JSON marshaller has " +
+                        "already been set. Use the custom marshaller to register custom messages.");
+
+        assertThatThrownBy(
+                () -> UnframedGrpcErrorHandler.builder()
+                                              .registerMarshalledMessages(
+                                                      InternalError.newBuilder().build())
+                                              .jsonMarshaller(
+                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(
+                        "Cannot set a custom JSON marshaller because one or more Message or " +
+                        "MessageType instances have already been registered. To set a custom marshaller, " +
+                        "ensure that no Message or MessageType registrations have been made before " +
+                        "calling this method.");
+    }
+
+    @Test
+    void buildWithoutAnyOption() {
+        final UnframedGrpcErrorHandler unframedGrpcErrorHandler = UnframedGrpcErrorHandler.builder().build();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/test")));
+        final AggregatedHttpResponse jsonResponse =
+                AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                          MediaType.JSON_UTF_8,
+                                          "{\"message\":\"Internal Server Error\"}");
+        final HttpResponse httpResponseJson = unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL,
+                                                                              jsonResponse);
+        final AggregatedHttpResponse aggregatedHttpResponse = httpResponseJson.aggregate().join();
+        assertThat(requireNonNull(aggregatedHttpResponse.headers().contentType())
+                           .isJson()).isEqualTo(true);
+
+        final AggregatedHttpResponse plainTextResponse = AggregatedHttpResponse.of(
+                HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8, "Internal Server Error");
+        final HttpResponse httpResponsePlainText = unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL,
+                                                                                   plainTextResponse);
+        assertThat(requireNonNull(httpResponsePlainText.aggregate().join().headers()
+                                                       .contentType()).is(MediaType.PLAIN_TEXT)).isEqualTo(
+                true);
+    }
+
+    @Test
+    void buildWithResponseType() {
+        final UnframedGrpcErrorHandler unframedGrpcErrorHandlerJson =
+                UnframedGrpcErrorHandler.builder()
+                                        .responseTypes(
+                                                UnframedGrpcErrorResponseType.JSON)
+                                        .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(
+                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/test")));
+        final AggregatedHttpResponse response = AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
+        final HttpResponse httpResponseJson = unframedGrpcErrorHandlerJson.handle(ctx, Status.INTERNAL,
+                                                                                  response);
+        assertThat(requireNonNull(httpResponseJson.aggregate().join().headers().contentType())
+                           .isJson()).isEqualTo(true);
+
+        final UnframedGrpcErrorHandler unframedGrpcErrorHandlerPlainText =
+                UnframedGrpcErrorHandler.builder()
+                                        .responseTypes(
+                                                UnframedGrpcErrorResponseType.PLAINTEXT)
+                                        .build();
+        final HttpResponse httpResponsePlainText = unframedGrpcErrorHandlerPlainText.handle(ctx,
+                                                                                            Status.INTERNAL,
+                                                                                            response);
+        assertThat(requireNonNull(httpResponsePlainText.aggregate().join().headers().contentType())
+                           .is(MediaType.PLAIN_TEXT)).isEqualTo(true);
+
+        final UnframedGrpcErrorHandler unframedGrpcErrorHandler =
+                UnframedGrpcErrorHandler.builder()
+                                        .responseTypes(
+                                                UnframedGrpcErrorResponseType.JSON,
+                                                UnframedGrpcErrorResponseType.PLAINTEXT)
+                                        .build();
+        final AggregatedHttpResponse jsonResponse =
+                AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                          MediaType.JSON_UTF_8,
+                                          "{\"message\":\"Internal Server Error\"}");
+
+        final HttpResponse httpResponse = unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL, jsonResponse);
+        assertThat(requireNonNull(httpResponse.aggregate().join().headers().contentType())
+                           .isJson()).isEqualTo(true);
+    }
+
+    @Test
+    void buildWithCustomJsonMarshaller() {
+        final MessageMarshaller messageMarshaller = mock(MessageMarshaller.class);
+        assertDoesNotThrow(() -> UnframedGrpcErrorHandler.builder()
+                                                         .jsonMarshaller(messageMarshaller)
+                                                         .build());
+    }
+
+    @Test
+    void buildWithCustomMessage() {
+        assertDoesNotThrow(() -> UnframedGrpcErrorHandler.builder()
+                                                         .registerMarshalledMessages(InternalError.class,
+                                                                                     AuthError.class)
+                                                         .build());
+        assertDoesNotThrow(() -> UnframedGrpcErrorHandler.builder()
+                                                         .registerMarshalledMessages(
+                                                                 InternalError.newBuilder().build(),
+                                                                 AuthError.newBuilder().build())
+                                                         .build());
+        assertDoesNotThrow(() -> UnframedGrpcErrorHandler.builder()
+                                                         .registerMarshalledMessages(
+                                                                 ImmutableList.of(InternalError.class,
+                                                                                  AuthError.newBuilder()
+                                                                                           .build()))
+                                                         .build());
+        assertThatThrownBy(() -> UnframedGrpcErrorHandler.builder()
+                                                         .registerMarshalledMessages(
+                                                                 ImmutableList.of(HttpStatus.class,
+                                                                                  AuthError.newBuilder()
+                                                                                           .build()))
+                                                         .build())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(HttpStatus.class.getName() +
+                                      " is neither Message class nor Message subclass.");
+    }
+}
