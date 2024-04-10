@@ -151,7 +151,9 @@ public final class UnframedGrpcErrorHandlerBuilder {
      * Registers custom messages or message types to be marshalled by the error handler.
      *
      * <p>This method allows registering either message instances or message types for
-     * custom error responses. If a custom JSON marshaller has already been set,
+     * custom error responses. Each element in {@code messagesOrMessageTypes} must either
+     * be an instance of the {@link Message} class　or a class that extends the {@link Message}
+     * class. If a custom JSON marshaller has already been set,
      * calling this method will result in an {@link IllegalArgumentException}.
      *
      * @param messagesOrMessageTypes The messages or message types to register
