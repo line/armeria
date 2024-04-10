@@ -15,13 +15,27 @@
  */
 package com.linecorp.armeria.common.reactor3;
 
+import org.reactivestreams.Subscription;
+
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
+import io.micrometer.context.ContextRegistry;
+import io.micrometer.context.ContextSnapshot;
+import io.micrometer.context.ContextSnapshot.Scope;
 import io.micrometer.context.ThreadLocalAccessor;
+import reactor.core.CoreSubscriber;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.util.context.Context;
+import reactor.util.context.ContextView;
 
 /**
- * TBD.
+ * This class works with the
+ * <a href="https://docs.micrometer.io/context-propagation/reference/index.html">
+ * Context-propagation </a> library and keep the {@link RequestContext} during
+ * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations.
  */
 public final class RequestContextAccessor implements ThreadLocalAccessor<RequestContext> {
 
@@ -33,7 +47,15 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
     }
 
     /**
-     * TBD.
+     * Get the {@link RequestContextAccessor} to register it to the {@link ContextRegistry}.
+     * Then, {@link ContextRegistry} will use {@link RequestContextAccessor} to
+     * propagate context during the
+     * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations
+     * so that you can get the context using {@link RequestContext#current()}.
+     * </p>
+     * However, please note that you should include {@link Mono#contextWrite(ContextView)} or
+     * {@link Flux#contextWrite(ContextView)} to end of the Reactor codes.
+     * If not, {@link RequestContext} will not be keep during Reactor Operation.
      */
     public static RequestContextAccessor getInstance() {
         return instance;
@@ -42,39 +64,98 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
     private RequestContextAccessor() {
     }
 
+    /**
+     * The value which obtained through {@link RequestContextAccessor},
+     * will be stored in the {@link Context} under this {@code KEY}.
+     */
     @Override
     public Object key() {
         return KEY;
     }
 
+    /**
+     * {@link ContextSnapshot} will call this method during the execution
+     * of lambda functions in {@link ContextSnapshot#wrap(Runnable)},
+     * as well as during {@link Mono#subscribe()}, {@link Flux#subscribe()},
+     * {@link Subscription#request(long)}, and {@link CoreSubscriber#onSubscribe(Subscription)}.
+     * Following these calls, {@link ContextSnapshot#setThreadLocals()} is
+     * invoked to restore the state of {@link RequestContextStorage}.
+     * Furthermore, at the end of these methods, {@link Scope#close()} is executed
+     * to revert the {@link RequestContextStorage} to its original state.
+     */
     @Override
     public RequestContext getValue() {
         return RequestContextUtil.get();
     }
 
+    /**
+     * {@link ContextSnapshot} will call this method during the execution
+     * of lambda functions in {@link ContextSnapshot#wrap(Runnable)},
+     * as well as during {@link Mono#subscribe()}, {@link Flux#subscribe()},
+     * {@link Subscription#request(long)}, and {@link CoreSubscriber#onSubscribe(Subscription)}.
+     * Following these calls, {@link ContextSnapshot#setThreadLocals()} is
+     * invoked to restore the state of {@link RequestContextStorage}.
+     * Furthermore, at the end of these methods, {@link Scope#close()} is executed
+     * to revert the {@link RequestContextStorage} to its original state.
+     */
     @Override
     public void setValue(RequestContext value) {
         RequestContextUtil.getAndSet(value);
     }
 
+    /**
+     * This method will be called at the start of {@link ContextSnapshot.Scope} and
+     * the end of {@link ContextSnapshot.Scope}. If reactor {@link Context} does not
+     * contains {@link RequestContextAccessor#KEY}, {@link ContextSnapshot} will use
+     * this method to remove the value from {@link ThreadLocal}.
+     * </p>
+     * Please note that {@link RequestContextUtil#pop()} return {@link AutoCloseable} instance,
+     * but it is not used in `Try with Resources` syntax. this is because {@link ContextSnapshot.Scope}
+     * will handle the {@link AutoCloseable} instance returned by {@link RequestContextUtil#pop()}.
+     */
     @Override
+    @SuppressWarnings("MustBeClosedChecker")
     public void setValue() {
-        // NO Operation.
-        // This method is called when DefaultScope is closed and no previous value existed in
-        // ThreadLocal State.
+        RequestContextUtil.pop();
     }
 
+    /**
+     * {@link ContextSnapshot} will call this method during the execution
+     * of lambda functions in {@link ContextSnapshot#wrap(Runnable)},
+     * as well as during {@link Mono#subscribe()}, {@link Flux#subscribe()},
+     * {@link Subscription#request(long)}, and {@link CoreSubscriber#onSubscribe(Subscription)}.
+     * Following these calls, {@link ContextSnapshot#setThreadLocals()} is
+     * invoked to restore the state of {@link RequestContextStorage}.
+     * Furthermore, at the end of these methods, {@link Scope#close()} is executed
+     * to revert the {@link RequestContextStorage} to its original state.
+     */
     @Override
     public void restore(RequestContext previousValue) {
         RequestContextUtil.getAndSet(previousValue);
     }
 
-    /*
-    @Override
-    public void restore() {
-        // Use super.restore() instead of implementing on child class.
-        // This method is called when DefaultContextSnapshot.DefaultContextScope
-        // is closed and no previous value existed in ThreadLocal State.
-    }
+    /**
+     * This method will be called at the start of {@link ContextSnapshot.Scope} and
+     * the end of {@link ContextSnapshot.Scope}. If reactor {@link Context} does not
+     * contains {@link RequestContextAccessor#KEY}, {@link ContextSnapshot} will use
+     * this method to remove the value from {@link ThreadLocal}.
+     * </p>
+     * Please note that {@link RequestContextUtil#pop()} return {@link AutoCloseable} instance,
+     * but it is not used in `Try with Resources` syntax. this is because {@link ContextSnapshot.Scope}
+     * will handle the {@link AutoCloseable} instance returned by {@link RequestContextUtil#pop()}.
      */
+    @Override
+    @SuppressWarnings("MustBeClosedChecker")
+    public void restore() {
+        RequestContextUtil.pop();
+    }
+
+    /**
+     * This is a utility method to get a Reactor {@link Context} that contains {@link RequestContext}.
+     * You can use this method for both {@link Mono#contextWrite(ContextView)}
+     * and {@link Flux#contextWrite(ContextView)}.
+     */
+    public Context getReactorContext(RequestContext ctx) {
+        return Context.of(KEY, ctx);
+    }
 }
