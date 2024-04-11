@@ -87,8 +87,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
 
         assertThatThrownBy(
                 () -> UnframedGrpcErrorHandler.builder()
-                                              .registerMarshalledMessages(
-                                                      InternalError.newBuilder().build())
+                                              .registerMarshalledMessages(InternalError.newBuilder().build())
                                               .jsonMarshaller(
                                                       UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER))
                 .isInstanceOf(IllegalStateException.class)
@@ -102,51 +101,48 @@ public class UnframedGrpcErrorHandlerBuilderTest {
     @Test
     void buildWithoutOptions() {
         final UnframedGrpcErrorHandler unframedGrpcErrorHandler = UnframedGrpcErrorHandler.builder().build();
-        final ServiceRequestContext ctx = ServiceRequestContext.of(
-                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/test")));
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/test")));
         final AggregatedHttpResponse jsonResponse =
                 AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                           MediaType.JSON_UTF_8,
                                           "{\"message\":\"Internal Server Error\"}");
-        final HttpResponse httpResponseJson = unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL,
-                                                                              jsonResponse);
+        final HttpResponse httpResponseJson =
+                unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL, jsonResponse);
         final AggregatedHttpResponse aggregatedHttpResponse = httpResponseJson.aggregate().join();
-        assertThat(requireNonNull(aggregatedHttpResponse.headers().contentType())
-                           .isJson()).isEqualTo(true);
+        assertThat(aggregatedHttpResponse.headers().contentType().isJson()).isEqualTo(true);
 
-        final AggregatedHttpResponse plainTextResponse = AggregatedHttpResponse.of(
-                HttpStatus.INTERNAL_SERVER_ERROR, MediaType.PLAIN_TEXT_UTF_8, "Internal Server Error");
-        final HttpResponse httpResponsePlainText = unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL,
-                                                                                   plainTextResponse);
-        assertThat(requireNonNull(httpResponsePlainText.aggregate().join().headers()
-                                                       .contentType()).is(MediaType.PLAIN_TEXT)).isEqualTo(
-                true);
+        final AggregatedHttpResponse plaintextResponse =
+                AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
+                                          MediaType.PLAIN_TEXT_UTF_8,
+                                          "Internal Server Error");
+        final HttpResponse httpResponsePlaintext =
+                unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL, plaintextResponse);
+        assertThat(httpResponsePlaintext.aggregate().join().headers()
+                                        .contentType().is(MediaType.PLAIN_TEXT)).isEqualTo(true);
     }
 
     @Test
     void buildWithResponseType() {
         final UnframedGrpcErrorHandler unframedGrpcErrorHandlerJson =
                 UnframedGrpcErrorHandler.builder()
-                                        .responseTypes(
-                                                UnframedGrpcErrorResponseType.JSON)
+                                        .responseTypes(UnframedGrpcErrorResponseType.JSON)
                                         .build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/test")));
         final AggregatedHttpResponse response = AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
-        final HttpResponse httpResponseJson = unframedGrpcErrorHandlerJson.handle(ctx, Status.INTERNAL,
-                                                                                  response);
+        final HttpResponse httpResponseJson =
+                unframedGrpcErrorHandlerJson.handle(ctx, Status.INTERNAL, response);
         assertThat(requireNonNull(httpResponseJson.aggregate().join().headers().contentType())
                            .isJson()).isEqualTo(true);
 
-        final UnframedGrpcErrorHandler unframedGrpcErrorHandlerPlainText =
+        final UnframedGrpcErrorHandler unframedGrpcErrorHandlerPlaintext =
                 UnframedGrpcErrorHandler.builder()
-                                        .responseTypes(
-                                                UnframedGrpcErrorResponseType.PLAINTEXT)
+                                        .responseTypes(UnframedGrpcErrorResponseType.PLAINTEXT)
                                         .build();
-        final HttpResponse httpResponsePlainText = unframedGrpcErrorHandlerPlainText.handle(ctx,
-                                                                                            Status.INTERNAL,
-                                                                                            response);
-        assertThat(requireNonNull(httpResponsePlainText.aggregate().join().headers().contentType())
+        final HttpResponse httpResponsePlaintext =
+                unframedGrpcErrorHandlerPlaintext.handle(ctx, Status.INTERNAL, response);
+        assertThat(requireNonNull(httpResponsePlaintext.aggregate().join().headers().contentType())
                            .is(MediaType.PLAIN_TEXT)).isEqualTo(true);
 
         final UnframedGrpcErrorHandler unframedGrpcErrorHandler =

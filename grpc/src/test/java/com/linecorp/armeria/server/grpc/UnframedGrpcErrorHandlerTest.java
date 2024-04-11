@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.grpc.testing.Error.AuthError;
 import com.linecorp.armeria.grpc.testing.Error.InternalError;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -55,7 +56,7 @@ public class UnframedGrpcErrorHandlerTest {
     };
 
     @RegisterExtension
-    static ServerExtension verbosePlainTextResServer = new ServerExtension() {
+    static ServerExtension verbosePlaintextResServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             configureServer(sb, true, UnframedGrpcErrorHandler.ofPlainText(), testService);
@@ -79,7 +80,7 @@ public class UnframedGrpcErrorHandlerTest {
     };
 
     @RegisterExtension
-    static ServerExtension plainTextResServerWithBuilder = new ServerExtension() {
+    static ServerExtension plaintextResServerWithBuilder = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             configureServer(sb, false,
@@ -96,6 +97,7 @@ public class UnframedGrpcErrorHandlerTest {
             configureServer(sb, false,
                             UnframedGrpcErrorHandler.builder()
                                                     .registerMarshalledMessageTypes(InternalError.class)
+                                                    .registerMarshalledMessages(AuthError.newBuilder().build())
                                                     .responseTypes(UnframedGrpcErrorResponseType.JSON)
                                                     .build(),
                             testServiceWithCustomMessage);
@@ -106,13 +108,13 @@ public class UnframedGrpcErrorHandlerTest {
     static ServerExtension jsonResServerWithCustomJsonMarshaller = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            final MessageMarshaller jsonMarshaller = MessageMarshaller.builder()
+                                                                      .register(InternalError.class)
+                                                                      .register(AuthError.class)
+                                                                      .build();
             configureServer(sb, false,
                             UnframedGrpcErrorHandler.builder()
-                                                    .jsonMarshaller(
-                                                            MessageMarshaller.builder()
-                                                                             .register(
-                                                                                     InternalError.class)
-                                                                             .build())
+                                                    .jsonMarshaller(jsonMarshaller)
                                                     .responseTypes(UnframedGrpcErrorResponseType.JSON)
                                                     .build(),
                             testServiceWithCustomMessage);
@@ -120,13 +122,13 @@ public class UnframedGrpcErrorHandlerTest {
     };
 
     @RegisterExtension
-    static ServerExtension plainTextResServerWithCustomStatusMapping = new ServerExtension() {
+    static ServerExtension plaintextResServerWithCustomStatusMapping = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            final UnframedGrpcStatusMappingFunction mappingFunction = (ctx, status, response) -> HttpStatus.OK;
             configureServer(sb, false,
                             UnframedGrpcErrorHandler.builder()
-                                                    .statusMappingFunction(
-                                                            (ctx, status, response) -> HttpStatus.OK)
+                                                    .statusMappingFunction(mappingFunction)
                                                     .build(),
                             testService);
         }
@@ -150,11 +152,9 @@ public class UnframedGrpcErrorHandlerTest {
 
             final com.google.rpc.Status
                     status = com.google.rpc.Status.newBuilder()
-                                                  .setCode(
-                                                          Code.UNKNOWN.getNumber())
+                                                  .setCode(Code.UNKNOWN.getNumber())
                                                   .setMessage("Unknown Exceptions Test")
-                                                  .addDetails(
-                                                          Any.pack(errorInfo))
+                                                  .addDetails(Any.pack(errorInfo))
                                                   .build();
 
             responseObserver.onError(StatusProto.toStatusRuntimeException(status));
@@ -170,13 +170,17 @@ public class UnframedGrpcErrorHandlerTest {
                                                              .setMessage("Internal server error.")
                                                              .build();
 
+            final AuthError authError = AuthError.newBuilder()
+                                                 .setCode(500)
+                                                 .setMessage("Auth server error.")
+                                                 .build();
+
             final com.google.rpc.Status
                     status = com.google.rpc.Status.newBuilder()
-                                                  .setCode(
-                                                          Code.INTERNAL.getNumber())
+                                                  .setCode(Code.INTERNAL.getNumber())
                                                   .setMessage("Custom error message test.")
-                                                  .addDetails(
-                                                          Any.pack(internalError))
+                                                  .addDetails(Any.pack(internalError))
+                                                  .addDetails(Any.pack(authError))
                                                   .build();
 
             responseObserver.onError(StatusProto.toStatusRuntimeException(status));
@@ -218,8 +222,8 @@ public class UnframedGrpcErrorHandlerTest {
     }
 
     @Test
-    void plainTextWithStackTrace() {
-        final BlockingWebClient client = verbosePlainTextResServer.webClient().blocking();
+    void plaintextWithStackTrace() {
+        final BlockingWebClient client = verbosePlaintextResServer.webClient().blocking();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
@@ -276,7 +280,7 @@ public class UnframedGrpcErrorHandlerTest {
 
     @Test
     void plainTestUsingBuilder() {
-        final BlockingWebClient client = plainTextResServerWithBuilder.webClient().blocking();
+        final BlockingWebClient client = plaintextResServerWithBuilder.webClient().blocking();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
@@ -308,6 +312,11 @@ public class UnframedGrpcErrorHandlerTest {
                         "      \"@type\": \"type.googleapis.com/armeria.grpc.testing.InternalError\"," +
                         "      \"code\": 500," +
                         "      \"message\": \"Internal server error.\"" +
+                        "    }," +
+                        "    {" +
+                        "      \"@type\": \"type.googleapis.com/armeria.grpc.testing.AuthError\"," +
+                        "      \"code\": 500," +
+                        "      \"message\": \"Auth server error.\"" +
                         "    }" +
                         "  ]" +
                         '}');
@@ -334,6 +343,11 @@ public class UnframedGrpcErrorHandlerTest {
                         "      \"@type\": \"type.googleapis.com/armeria.grpc.testing.InternalError\"," +
                         "      \"code\": 500," +
                         "      \"message\": \"Internal server error.\"" +
+                        "    }," +
+                        "    {" +
+                        "      \"@type\": \"type.googleapis.com/armeria.grpc.testing.AuthError\"," +
+                        "      \"code\": 500," +
+                        "      \"message\": \"Auth server error.\"" +
                         "    }" +
                         "  ]" +
                         '}');
@@ -341,13 +355,15 @@ public class UnframedGrpcErrorHandlerTest {
     }
 
     @Test
-    void plainTextWithCustomStatusMapping() {
-        final BlockingWebClient client = plainTextResServerWithCustomStatusMapping.webClient().blocking();
+    void plaintextWithCustomStatusMapping() {
+        final BlockingWebClient client = plaintextResServerWithCustomStatusMapping.webClient().blocking();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
                       .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
                       .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("grpc-code: UNKNOWN, grpc error message");
+        assertThat(response.trailers()).isEmpty();
     }
 }

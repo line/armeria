@@ -20,15 +20,13 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -101,10 +99,11 @@ public final class UnframedGrpcErrorHandlerBuilder {
      */
     public UnframedGrpcErrorHandlerBuilder responseTypes(UnframedGrpcErrorResponseType... responseTypes) {
         requireNonNull(responseTypes, "responseTypes");
+
         if (this.responseTypes == null) {
             this.responseTypes = EnumSet.noneOf(UnframedGrpcErrorResponseType.class);
         }
-        this.responseTypes.addAll(ImmutableSet.copyOf(responseTypes));
+        Collections.addAll(this.responseTypes, responseTypes);
         return this;
     }
 
@@ -122,10 +121,11 @@ public final class UnframedGrpcErrorHandlerBuilder {
         checkState(jsonMarshaller == null,
                    "Cannot register custom messages because a custom JSON marshaller has already been set. " +
                    "Use the custom marshaller to register custom messages.");
+
         if (marshalledMessages == null) {
             marshalledMessages = new ArrayList<>();
         }
-        marshalledMessages.addAll(Arrays.asList(messages));
+        Collections.addAll(marshalledMessages, messages);
         return this;
     }
 
@@ -143,14 +143,12 @@ public final class UnframedGrpcErrorHandlerBuilder {
         requireNonNull(messages, "messages");
         checkState(jsonMarshaller == null,
                    "Cannot register the collection of messages because a custom JSON marshaller has " +
-                   "already been set. Use the custom marshaller to register custom messages."
-        );
+                   "already been set. Use the custom marshaller to register custom messages.");
+
         if (marshalledMessages == null) {
             marshalledMessages = new ArrayList<>();
         }
-
-        marshalledMessages.addAll(ImmutableList.copyOf(messages));
-
+        messages.forEach(marshalledMessages::add);
         return this;
     }
 
@@ -169,13 +167,12 @@ public final class UnframedGrpcErrorHandlerBuilder {
         requireNonNull(messageTypes, "messageTypes");
         checkState(jsonMarshaller == null,
                    "Cannot register custom messageTypes because a custom JSON marshaller has already been " +
-                   "set. Use the custom marshaller to register custom message types."
-        );
+                   "set. Use the custom marshaller to register custom message types.");
 
         if (marshalledMessageTypes == null) {
             marshalledMessageTypes = new ArrayList<>();
         }
-        marshalledMessageTypes.addAll(Arrays.asList(messageTypes));
+        Collections.addAll(marshalledMessageTypes, messageTypes);
         return this;
     }
 
@@ -193,12 +190,12 @@ public final class UnframedGrpcErrorHandlerBuilder {
         requireNonNull(messageTypes, "messageTypes");
         checkState(jsonMarshaller == null,
                    "Cannot register the collection of messageTypes because a custom JSON marshaller has " +
-                   "already been set. Use the custom marshaller to register custom message types."
-        );
+                   "already been set. Use the custom marshaller to register custom message types.");
+
         if (marshalledMessageTypes == null) {
             marshalledMessageTypes = new ArrayList<>();
         }
-        marshalledMessageTypes.addAll(ImmutableList.copyOf(messageTypes));
+        messageTypes.forEach(marshalledMessageTypes::add);
         return this;
     }
 
@@ -211,35 +208,40 @@ public final class UnframedGrpcErrorHandlerBuilder {
     public UnframedGrpcErrorHandler build() {
         if (jsonMarshaller == null) {
             jsonMarshaller = UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER;
-            MessageMarshaller.Builder builder = jsonMarshaller.toBuilder();
+            final MessageMarshaller.Builder builder = jsonMarshaller.toBuilder();
 
             if (marshalledMessages != null) {
                 for (final Message message : marshalledMessages) {
-                    builder = builder.register(message);
+                    builder.register(message);
                 }
             }
 
             if (marshalledMessageTypes != null) {
                 for (final Class<? extends Message> messageType : marshalledMessageTypes) {
-                    builder = builder.register(messageType);
+                    builder.register(messageType);
                 }
             }
 
             jsonMarshaller = builder.build();
         }
+
         if (responseTypes == null) {
             return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
         }
+
         if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON) &&
             responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
             return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
         }
+
         if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON)) {
             return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction, jsonMarshaller);
         }
+
         if (responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
             return UnframedGrpcErrorHandlers.ofPlaintext(statusMappingFunction);
         }
+
         return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
     }
 }
