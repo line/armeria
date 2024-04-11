@@ -9,4 +9,5 @@ type Query {
 
 type Subscription {
     hello: String
+    bye: String
 }

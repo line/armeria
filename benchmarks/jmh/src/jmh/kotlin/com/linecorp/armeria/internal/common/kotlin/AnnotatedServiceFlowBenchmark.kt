@@ -37,32 +37,33 @@ import java.util.stream.IntStream
 @Warmup(iterations = 1)
 @Suppress("unused")
 open class AnnotatedServiceFlowBenchmark {
-
     lateinit var server: Server
     lateinit var client: WebClient
 
     @Setup
     open fun setup() {
-        server = Server.builder()
-            .annotatedService(
-                "/benchmark",
-                object {
-                    @Get("/flow")
-                    @ProducesJsonSequences
-                    fun flowBm(): Flow<String> = flow {
-                        (0 until 1000).forEach {
-                            emit("$it")
-                        }
-                    }
+        server =
+            Server.builder()
+                .annotatedService(
+                    "/benchmark",
+                    object {
+                        @Get("/flow")
+                        @ProducesJsonSequences
+                        fun flowBm(): Flow<String> =
+                            flow {
+                                (0 until 1000).forEach {
+                                    emit("$it")
+                                }
+                            }
 
-                    @Get("/publisher")
-                    @ProducesJsonSequences
-                    fun publisherBm(): Publisher<String> =
-                        Flux.fromStream(IntStream.range(0, 1000).mapToObj { it.toString() })
-                }
-            )
-            .build()
-            .also { it.start().join() }
+                        @Get("/publisher")
+                        @ProducesJsonSequences
+                        fun publisherBm(): Publisher<String> =
+                            Flux.fromStream(IntStream.range(0, 1000).mapToObj { it.toString() })
+                    },
+                )
+                .build()
+                .also { it.start().join() }
 
         client = WebClient.of("h2c://127.0.0.1:${server.activeLocalPort()}")
     }

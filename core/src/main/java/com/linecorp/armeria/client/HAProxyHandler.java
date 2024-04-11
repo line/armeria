@@ -65,24 +65,21 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                 return;
             }
             try {
-                ctx.write(createMessage(haProxyConfig, ctx.channel(), remoteAddress)).addListener(f0 -> {
-                    if (f0.isSuccess()) {
-                        ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
-                    } else {
-                        ctx.fireExceptionCaught(wrapException(f0.cause()));
-                        ctx.close();
-                    }
-                });
-                reschedule(ctx, () -> {
-                    final ProxyConnectionEvent event = new ProxyConnectionEvent(
-                            PROTOCOL, AUTH, proxyAddress, remoteAddress);
-                    ctx.pipeline().fireUserEventTriggered(event);
-                });
+                ctx.writeAndFlush(createMessage(haProxyConfig, ctx.channel(), remoteAddress))
+                   .addListener(f0 -> {
+                       if (f0.isSuccess()) {
+                           ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
+                           final ProxyConnectionEvent event = new ProxyConnectionEvent(
+                                   PROTOCOL, AUTH, proxyAddress, remoteAddress);
+                           ctx.pipeline().fireUserEventTriggered(event);
+                       } else {
+                           ctx.fireExceptionCaught(wrapException(f0.cause()));
+                           ctx.close();
+                       }
+                   });
             } catch (Exception e) {
-                reschedule(ctx, () -> {
-                    ctx.pipeline().fireUserEventTriggered(wrapException(e));
-                    ctx.close();
-                });
+                ctx.pipeline().fireUserEventTriggered(wrapException(e));
+                ctx.close();
             } finally {
                 ctx.pipeline().remove(this);
             }
@@ -95,12 +92,6 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
             return (ProxyConnectException) e;
         }
         return new ProxyConnectException(e);
-    }
-
-    // Call fireUserEventTriggered success/failure in the executor to execute it after the
-    // HttpSessionHandler is added to the pipeline.
-    private static void reschedule(ChannelHandlerContext ctx, Runnable runnable) {
-        ctx.channel().eventLoop().execute(runnable);
     }
 
     private static HAProxyMessage createMessage(HAProxyConfig haProxyConfig,

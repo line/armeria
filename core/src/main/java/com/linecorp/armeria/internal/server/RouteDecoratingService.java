@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
 import java.util.function.Function;
 
@@ -30,8 +31,10 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.RoutingContext;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
 
 import io.netty.util.AttributeKey;
@@ -77,18 +80,46 @@ public final class RouteDecoratingService implements HttpService {
     private static final AttributeKey<Queue<HttpService>> DECORATOR_KEY =
             AttributeKey.valueOf(RouteDecoratingService.class, "SERVICE_CHAIN");
 
-    public static Function<? super HttpService, InitialDispatcherService> newDecorator(
-            Router<RouteDecoratingService> router) {
-        return delegate -> new InitialDispatcherService(delegate, router);
+    public static Function<? super HttpService, HttpService> newDecorator(
+            Router<RouteDecoratingService> router, List<RouteDecoratingService> routeDecoratingServices) {
+        return delegate -> new InitialDispatcherService(delegate, router, routeDecoratingServices);
     }
 
     private final Route route;
     private final HttpService decorator;
 
-    public RouteDecoratingService(Route route,
+    @Nullable
+    private VirtualHost defaultVirtualHost;
+
+    public RouteDecoratingService(Route route, String contextPath,
                                   Function<? super HttpService, ? extends HttpService> decoratorFunction) {
-        this.route = requireNonNull(route, "route");
+        this.route = requireNonNull(route, "route").withPrefix(contextPath);
         decorator = requireNonNull(decoratorFunction, "decoratorFunction").apply(this);
+    }
+
+    private RouteDecoratingService(Route route, HttpService decorator) {
+        this.route = requireNonNull(route, "route");
+        this.decorator = requireNonNull(decorator, "decorator");
+    }
+
+    /**
+     * Adds the specified {@code prefix} to this {@code decorator}.
+     */
+    public RouteDecoratingService withRoutePrefix(String prefix) {
+        return new RouteDecoratingService(route.withPrefix(prefix), decorator);
+    }
+
+    @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        final VirtualHost defaultVirtualHost = cfg.server().config().defaultVirtualHost();
+        if (this.defaultVirtualHost == defaultVirtualHost) {
+            // This condition is necessary because:
+            // - The same decorator can be added multiple times.
+            // - Avoid infinite loop. The delegate of `decorator` is this.
+            return;
+        }
+        this.defaultVirtualHost = defaultVirtualHost;
+        decorator.serviceAdded(cfg);
     }
 
     @Override
@@ -134,10 +165,21 @@ public final class RouteDecoratingService implements HttpService {
     private static class InitialDispatcherService extends SimpleDecoratingHttpService {
 
         private final Router<RouteDecoratingService> router;
+        private final List<RouteDecoratingService> routeDecoratingServices;
 
-        InitialDispatcherService(HttpService delegate, Router<RouteDecoratingService> router) {
+        InitialDispatcherService(HttpService delegate, Router<RouteDecoratingService> router,
+                                 List<RouteDecoratingService> routeDecoratingServices) {
             super(delegate);
             this.router = router;
+            this.routeDecoratingServices = routeDecoratingServices;
+        }
+
+        @Override
+        public void serviceAdded(ServiceConfig cfg) throws Exception {
+            super.serviceAdded(cfg);
+            for (RouteDecoratingService routeDecoratingService : routeDecoratingServices) {
+                routeDecoratingService.serviceAdded(cfg);
+            }
         }
 
         @Override

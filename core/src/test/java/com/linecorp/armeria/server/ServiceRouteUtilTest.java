@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.channel.Channel;
 
@@ -39,7 +40,7 @@ class ServiceRouteUtilTest {
                                                      .authority("foo.com")
                                                      .build();
         final RoutingContext routingContext = ServiceRouteUtil.newRoutingContext(
-                config, channel, headers, RequestTarget.forServer(headers.path()));
+                config, channel, SessionProtocol.H1C, headers, RequestTarget.forServer(headers.path()));
         assertThat(routingContext.status()).isEqualTo(RoutingStatus.OPTIONS);
     }
 
@@ -49,7 +50,7 @@ class ServiceRouteUtilTest {
                                                      .authority("foo.com")
                                                      .build();
         final RoutingContext routingContext = ServiceRouteUtil.newRoutingContext(
-                config, channel, headers, RequestTarget.forServer(headers.path()));
+                config, channel, SessionProtocol.H1C, headers, RequestTarget.forServer(headers.path()));
         assertThat(routingContext.status()).isEqualTo(RoutingStatus.OK);
     }
 
@@ -64,7 +65,7 @@ class ServiceRouteUtilTest {
                                          "X-PINGOTHER, Content-Type")
                               .build();
         final RoutingContext routingContext = ServiceRouteUtil.newRoutingContext(
-                config, channel, headers, RequestTarget.forServer(headers.path()));
+                config, channel, SessionProtocol.H1C, headers, RequestTarget.forServer(headers.path()));
         assertThat(routingContext.status()).isEqualTo(RoutingStatus.CORS_PREFLIGHT);
     }
 }

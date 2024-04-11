@@ -23,7 +23,6 @@ import java.util.function.BiFunction;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -39,17 +38,13 @@ final class TextLogFormatter implements LogFormatter {
 
     static final LogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders,
-            ? extends @Nullable String> requestHeadersSanitizer;
+    private final HeadersSanitizer<String> requestHeadersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders,
-            ? extends @Nullable String> responseHeadersSanitizer;
+    private final HeadersSanitizer<String> responseHeadersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders,
-            ? extends @Nullable String> requestTrailersSanitizer;
+    private final HeadersSanitizer<String> requestTrailersSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super HttpHeaders,
-            ? extends @Nullable String> responseTrailersSanitizer;
+    private final HeadersSanitizer<String> responseTrailersSanitizer;
 
     private final BiFunction<? super RequestContext, Object,
             ? extends @Nullable String> requestContentSanitizer;
@@ -60,14 +55,10 @@ final class TextLogFormatter implements LogFormatter {
     private final boolean includeContext;
 
     TextLogFormatter(
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable String> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable String> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable String> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable String> responseTrailersSanitizer,
+            HeadersSanitizer<String> requestHeadersSanitizer,
+            HeadersSanitizer<String> responseHeadersSanitizer,
+            HeadersSanitizer<String> requestTrailersSanitizer,
+            HeadersSanitizer<String> responseTrailersSanitizer,
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable String> requestContentSanitizer,
             BiFunction<? super RequestContext, Object,

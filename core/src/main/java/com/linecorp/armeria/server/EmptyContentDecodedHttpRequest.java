@@ -61,7 +61,8 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Nullable
     private HttpResponse response;
-    private boolean isResponseAborted;
+    @Nullable
+    private Throwable abortResponseCause;
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
@@ -81,6 +82,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
+    }
+
+    @Override
+    public boolean isInitialized() {
+        return ctx != null;
     }
 
     @Override
@@ -193,10 +199,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Override
     public void setResponse(HttpResponse response) {
-        if (isResponseAborted) {
+        // TODO(ikhoon): Dedup
+        if (abortResponseCause != null) {
             // This means that we already tried to close the request, so abort the response immediately.
             if (!response.isComplete()) {
-                response.abort();
+                response.abort(abortResponseCause);
             }
         } else {
             this.response = response;
@@ -205,7 +212,10 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Override
     public void abortResponse(Throwable cause, boolean cancel) {
-        isResponseAborted = true;
+        if (abortResponseCause != null) {
+            return;
+        }
+        abortResponseCause = cause;
 
         // Make sure to invoke the ServiceRequestContext.whenRequestCancelling() and whenRequestCancelled()
         // by cancelling a request
@@ -216,6 +226,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         if (response != null && !response.isComplete()) {
             response.abort(cause);
         }
+    }
+
+    @Override
+    public boolean isResponseAborted() {
+        return abortResponseCause != null;
     }
 
     @Override

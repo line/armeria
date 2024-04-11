@@ -30,7 +30,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.auth.AuthToken;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -55,7 +55,7 @@ class AsyncServerInterceptorTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final GrpcStatusFunction statusFunction = (ctx, throwable, metadata) -> {
+            final GrpcExceptionHandlerFunction exceptionHandler = (ctx, throwable, metadata) -> {
                 exceptionCounter.getAndIncrement();
                 if (throwable instanceof AnticipatedException &&
                     "Invalid access".equals(throwable.getMessage())) {
@@ -66,13 +66,13 @@ class AsyncServerInterceptorTest {
             };
             final AuthInterceptor authInterceptor = new AuthInterceptor();
             sb.serviceUnder("/non-blocking", GrpcService.builder()
-                                                        .exceptionMapping(statusFunction)
+                                                        .exceptionHandler(exceptionHandler)
                                                         .intercept(authInterceptor)
                                                         .addService(new TestService())
                                                         .build());
             sb.serviceUnder("/blocking", GrpcService.builder()
                                                     .addService(new TestService())
-                                                    .exceptionMapping(statusFunction)
+                                                    .exceptionHandler(exceptionHandler)
                                                     .intercept(authInterceptor)
                                                     .useBlockingTaskExecutor(true)
                                                     .build());

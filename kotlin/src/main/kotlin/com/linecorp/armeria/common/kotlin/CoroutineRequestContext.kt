@@ -18,9 +18,9 @@ package com.linecorp.armeria.common.kotlin
 
 import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.util.SafeCloseable
+import kotlinx.coroutines.ThreadContextElement
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.ThreadContextElement
 
 /**
  * Converts an instance of [RequestContext] to an implementation of [CoroutineContext] that automatically
@@ -35,16 +35,18 @@ fun RequestContext.asCoroutineContext(): ArmeriaRequestCoroutineContext {
  * Propagates [RequestContext] over coroutines.
  */
 class ArmeriaRequestCoroutineContext internal constructor(
-    private val requestContext: RequestContext
+    private val requestContext: RequestContext,
 ) : ThreadContextElement<SafeCloseable>, AbstractCoroutineContextElement(Key) {
-
     companion object Key : CoroutineContext.Key<ArmeriaRequestCoroutineContext>
 
     override fun updateThreadContext(context: CoroutineContext): SafeCloseable {
         return requestContext.push()
     }
 
-    override fun restoreThreadContext(context: CoroutineContext, oldState: SafeCloseable) {
+    override fun restoreThreadContext(
+        context: CoroutineContext,
+        oldState: SafeCloseable,
+    ) {
         oldState.close()
     }
 }

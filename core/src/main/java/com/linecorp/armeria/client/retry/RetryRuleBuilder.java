@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.retry.RetryRuleUtil.DEFAULT_DECISION;
 import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
@@ -72,13 +73,14 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     private RetryRule build(RetryDecision decision) {
         if (decision != RetryDecision.noRetry() &&
             exceptionFilter() == null && responseHeadersFilter() == null &&
-            responseTrailersFilter() == null && grpcTrailersFilter() == null) {
+            responseTrailersFilter() == null && grpcTrailersFilter() == null &&
+            totalDurationFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
                                                     responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), false);
+                                                    exceptionFilter(), totalDurationFilter(), false);
         return build(ruleFilter, decision, requiresResponseTrailers());
     }
 
@@ -237,5 +239,15 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
     @Override
     public RetryRuleBuilder onUnprocessed() {
         return (RetryRuleBuilder) super.onUnprocessed();
+    }
+
+    /**
+     * Adds the specified {@code totalDurationFilter} for a {@link RetryRule} which will retry
+     * if the {@code totalDurationFilter} returns {@code true}.
+     */
+    @Override
+    public RetryRuleBuilder onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        return (RetryRuleBuilder) super.onTotalDuration(totalDurationFilter);
     }
 }

@@ -23,7 +23,9 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -88,7 +90,7 @@ public abstract class ProxyConfig {
     public static ConnectProxyConfig connect(InetSocketAddress proxyAddress) {
         requireNonNull(proxyAddress, "proxyAddress");
         checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new ConnectProxyConfig(proxyAddress, null, null, false);
+        return new ConnectProxyConfig(proxyAddress, null, null, HttpHeaders.of(), false);
     }
 
     /**
@@ -100,7 +102,7 @@ public abstract class ProxyConfig {
     public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, boolean useTls) {
         requireNonNull(proxyAddress, "proxyAddress");
         checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new ConnectProxyConfig(proxyAddress, null, null, useTls);
+        return new ConnectProxyConfig(proxyAddress, null, null, HttpHeaders.of(), useTls);
     }
 
     /**
@@ -113,10 +115,42 @@ public abstract class ProxyConfig {
      */
     public static ConnectProxyConfig connect(
             InetSocketAddress proxyAddress, String username, String password, boolean useTls) {
+        return connect(proxyAddress, username, password, HttpHeaders.of(), useTls);
+    }
+
+    /**
+     * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
+     *
+     * @param proxyAddress the proxy address
+     * @param headers the {@link HttpHeaders} to send to the proxy
+     * @param useTls whether to use TLS to connect to the proxy
+     */
+    @UnstableApi
+    public static ConnectProxyConfig connect(
+            InetSocketAddress proxyAddress, HttpHeaders headers, boolean useTls) {
         requireNonNull(proxyAddress, "proxyAddress");
         checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
-        return new ConnectProxyConfig(proxyAddress, requireNonNull(username, "username"),
-                                      requireNonNull(password, "password"), useTls);
+        return new ConnectProxyConfig(proxyAddress, null, null, headers, useTls);
+    }
+
+    /**
+     * Creates a {@code ProxyConfig} configuration for CONNECT protocol.
+     *
+     * @param proxyAddress the proxy address
+     * @param username the username
+     * @param password the password
+     * @param headers the {@link HttpHeaders} to send to the proxy
+     * @param useTls whether to use TLS to connect to the proxy
+     */
+    @UnstableApi
+    public static ConnectProxyConfig connect(InetSocketAddress proxyAddress, String username, String password,
+                                             HttpHeaders headers, boolean useTls) {
+        requireNonNull(proxyAddress, "proxyAddress");
+        checkArgument(!proxyAddress.isUnresolved(), "proxyAddress must be resolved");
+        requireNonNull(username, "username");
+        requireNonNull(password, "password");
+        requireNonNull(headers, "headers");
+        return new ConnectProxyConfig(proxyAddress, username, password, headers, useTls);
     }
 
     /**

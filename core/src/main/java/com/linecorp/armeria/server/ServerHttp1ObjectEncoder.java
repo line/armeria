@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -74,7 +75,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     @Override
     public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
-                                        boolean isTrailersEmpty) {
+                                        boolean isTrailersEmpty, HttpMethod method) {
         if (!isWritable(id)) {
             return newClosedSessionFuture();
         }
@@ -88,7 +89,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             return write(id, res, false);
         }
 
-        final HttpResponse converted = convertHeaders(headers, endStream, isTrailersEmpty);
+        final HttpResponse converted = convertHeaders(headers, endStream, isTrailersEmpty, method);
         if (headers.status().isInformational()) {
             return write(id, converted, false);
         }
@@ -96,7 +97,8 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return writeNonInformationalHeaders(id, converted, endStream, channel().newPromise());
     }
 
-    private HttpResponse convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
+    private HttpResponse convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty,
+                                        HttpMethod method) {
         final int statusCode = headers.status().code();
         final HttpResponseStatus nettyStatus = HttpResponseStatus.valueOf(statusCode);
 
@@ -111,6 +113,8 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
             if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
                 maybeRemoveContentLength(statusCode, outHeaders);
+            } else if (method == HttpMethod.HEAD) {
+                // Preserve the 'content-length' header set by a user.
             } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 // NB: Set the 'content-length' only when not set rather than always setting to 0.
                 //     It's because a response to a HEAD request can have empty content while having
@@ -177,7 +181,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
                 // Response headers were written already. This may occur Http1RequestDecoder sends an error
                 // response while HttpResponseSubscriber writes a response headers and then waits for bodies.
                 ReferenceCountUtil.release(obj);
-                return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR);
+                return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR, false);
             }
             if (webSocketUpgraded ||
                 ((HttpResponse) obj).status().codeClass() != HttpStatusClass.INFORMATIONAL) {

@@ -217,4 +217,9 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (ClientOptionsBuilder) super.contextCustomizer(contextCustomizer);
     }
+
+    @Override
+    public ClientOptionsBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (ClientOptionsBuilder) super.contextHook(contextHook);
+    }
 }

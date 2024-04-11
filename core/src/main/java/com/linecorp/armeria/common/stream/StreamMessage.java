@@ -57,6 +57,7 @@ import com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil;
 import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.internal.common.stream.ThreeElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -542,7 +543,27 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      */
     default CompletableFuture<Void> subscribe() {
-        subscribe(NoopSubscriber.get());
+        return subscribe(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Drains and discards all objects in this {@link StreamMessage}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
+     * List<Integer> collected = new ArrayList<>();
+     * CompletableFuture<Void> future = source.peek(collected::add).subscribe();
+     * future.join();
+     * assert collected.equals(List.of(1, 2, 3));
+     * assert future.isDone();
+     * }</pre>
+     *
+     * @param executor the executor to subscribe
+     */
+    @UnstableApi
+    default CompletableFuture<Void> subscribe(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        subscribe(NoopSubscriber.get(), executor);
         return whenComplete();
     }
 
@@ -844,6 +865,55 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified {@link Function} and
+     * emitting the values of the resulting {@link StreamMessage}.
+     * The inner {@link StreamMessage}s are subscribed to eagerly and
+     * publish values as soon as they are received.
+     * It allows inner {@link StreamMessage}s to interleave.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value.
+     *
+     * <p>Example:<pre>{@code
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3);
+     * StreamMessage<Integer> transformed =
+     *     streamMessage.flatMap(x -> StreamMessage.of(x, x + 1));
+     * }</pre>
+     * {@code transformed} will produce {@code 1, 2, 2, 3, 3, 4} (order is not guaranteed).
+     */
+    default <U> StreamMessage<U> flatMap(
+            Function<? super T, ? extends StreamMessage<? extends U>> function) {
+        requireNonNull(function, "function");
+        return flatMap(function, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified {@link Function} and
+     * emitting the values of the resulting {@link StreamMessage}.
+     * The inner {@link StreamMessage}s are subscribed to eagerly, up to a limit of {@code maxConcurrency}, and
+     * publish values as soon as they are received.
+     * It allows inner {@link StreamMessage}s to interleave.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value.
+     *
+     * <p>Example:<pre>{@code
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3);
+     * StreamMessage<Integer> transformed =
+     *     streamMessage.flatMap(x -> StreamMessage.of(x, x + 1));
+     * }</pre>
+     * {@code transformed} will produce {@code 1, 2, 2, 3, 3, 4} (order is not guaranteed).
+     */
+    default <U> StreamMessage<U> flatMap(
+            Function<? super T, ? extends StreamMessage<? extends U>> function, int maxConcurrency) {
+        checkArgument(maxConcurrency > 0, "maxConcurrency: %s (expected: > 0)", maxConcurrency);
+        requireNonNull(function, "function");
+        return new FlatMapStreamMessage<>(this, function, maxConcurrency);
+    }
+
+    /**
      * Transforms an error emitted by this {@link StreamMessage} by applying the specified {@link Function}.
      * As per
      * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
@@ -1081,5 +1151,56 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(httpDataConverter, "httpDataConverter");
         requireNonNull(executor, "executor");
         return new StreamMessageInputStream<>(this, httpDataConverter, executor);
+    }
+
+    /**
+     * Dynamically emits the last value depending on whether this {@link StreamMessage} completes successfully
+     * or exceptionally.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+     * StreamMessage<Integer> aborted = source
+     *     .peek(i -> {
+     *         if (i > 5) {
+     *             source.abort();
+     *         }
+     *     });
+     * StreamMessage<Integer> endWith = aborted
+     *     .endWith(th -> {
+     *          if (th instanceof AbortedStreamException) {
+     *              return 100;
+     *          }
+     *          return -1;
+     *     });
+     * List<Integer> collected = endWith.collect().join();
+     *
+     * assert collected.equals(List.of(1, 2, 3, 4, 5, 100));
+     * }</pre>
+     *
+     * <p>Note that if {@code null} is returned by the {@link Function}, the {@link StreamMessage} will complete
+     * successfully without emitting an additional value when this stream is complete successfully,
+     * or complete exceptionally when this stream is complete exceptionally.
+     */
+    @UnstableApi
+    default StreamMessage<T> endWith(Function<@Nullable Throwable, ? extends @Nullable T> finalizer) {
+        return new SurroundingPublisher<>(null, this, finalizer);
+    }
+
+    /**
+     * Calls {@link #subscribe(Subscriber, EventExecutor)} to the upstream
+     * {@link StreamMessage} using the specified {@link EventExecutor} and relays the stream
+     * transparently downstream. This may be useful if one would like to hide an
+     * {@link EventExecutor} from an upstream {@link Publisher}.
+     *
+     * <p>For example:<pre>{@code
+     * Subscriber<Integer> mySubscriber = null;
+     * StreamMessage<Integer> upstream = ...; // publisher callbacks are invoked by eventLoop1
+     * upstream.subscribeOn(eventLoop1)
+     *         .subscribe(mySubscriber, eventLoop2); // mySubscriber callbacks are invoked with eventLoop2
+     * }</pre>
+     */
+    default StreamMessage<T> subscribeOn(EventExecutor eventExecutor) {
+        requireNonNull(eventExecutor, "eventExecutor");
+        return new SubscribeOnStreamMessage<>(this, eventExecutor);
     }
 }

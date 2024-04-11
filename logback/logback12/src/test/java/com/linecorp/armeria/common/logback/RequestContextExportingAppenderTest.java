@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.mockito.ArgumentCaptor;
+import org.mockito.quality.Strictness;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
@@ -538,6 +539,7 @@ class RequestContextExportingAppenderTest {
         final ClientRequestContext ctx = newClientContext("/bar", null);
         try (SafeCloseable ignored = ctx.push()) {
             final RequestLogBuilder log = ctx.logBuilder();
+            log.authenticatedUser("auth_user");
             log.serializationFormat(ThriftSerializationFormats.BINARY);
             log.requestLength(64);
             log.requestHeaders(RequestHeaders.of(HttpMethod.GET, "/bar",
@@ -580,7 +582,8 @@ class RequestContextExportingAppenderTest {
                            .containsEntry("attrs.my_attr_value", "some-value")
                            .containsKey("req.id")
                            .containsKey("elapsed_nanos")
-                           .hasSize(27);
+                           .containsEntry("authenticated.user", "auth_user")
+                           .hasSize(28);
         }
     }
 
@@ -699,7 +702,7 @@ class RequestContextExportingAppenderTest {
     }
 
     private static SSLSession newSslSession() {
-        final SSLSession sslSession = mock(SSLSession.class, withSettings().lenient());
+        final SSLSession sslSession = mock(SSLSession.class, withSettings().strictness(Strictness.LENIENT));
         when(sslSession.getId()).thenReturn(new byte[] { 1, 1, 2, 3, 5, 8, 13, 21 });
         when(sslSession.getProtocol()).thenReturn("TLSv1.2");
         when(sslSession.getCipherSuite()).thenReturn("some-cipher");

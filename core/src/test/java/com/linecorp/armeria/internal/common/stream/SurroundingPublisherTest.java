@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common.stream;
 
+import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -26,6 +27,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import reactor.core.publisher.Flux;
@@ -37,7 +39,8 @@ class SurroundingPublisherTest {
     @Test
     void zeroElementSurroundingPublisher() {
         // given
-        final StreamMessage<Integer> zeroElement = new SurroundingPublisher<>(null, Mono.empty(), null);
+        final StreamMessage<Integer> zeroElement =
+                new SurroundingPublisher<>(null, Mono.empty(), unused -> null);
 
         // when & then
         StepVerifier.create(zeroElement, 1)
@@ -255,13 +258,203 @@ class SurroundingPublisherTest {
                     .verify();
     }
 
+    @ParameterizedTest
+    @ArgumentsSource(FiveElementsFinalizedSurroundingPublisherProvider.class)
+    void fiveElementsSurroundingPublisher_finalized100(StreamMessage<Integer> surroundingPublisher) {
+        // when & then
+        StepVerifier.create(surroundingPublisher, 5)
+                    .expectNext(1, 2, 3, 4, 100)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(FiveElementsFinalizedSurroundingPublisherProvider.class)
+    void fiveElementsSurroundingPublisher_finalized100_requestAll(
+            StreamMessage<Integer> surroundingPublisher) {
+        // when & then
+        StepVerifier.create(surroundingPublisher)
+                    .expectNext(1, 2, 3, 4, 100)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(FiveElementsFinalizedSurroundingPublisherProvider.class)
+    void fiveElementsSurroundingPublisher_finalized100_request1BeforeAborted(
+            StreamMessage<Integer> surroundingPublisher) {
+        // when & then
+        StepVerifier.create(surroundingPublisher, 4)
+                    .expectNext(1, 2, 3, 4)
+                    .thenRequest(1)
+                    .expectNext(100)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(FiveElementsFinalizedSurroundingPublisherProvider.class)
+    void fiveElementsSurroundingPublisher_finalized100_requestAllBeforeAborted(
+            StreamMessage<Integer> surroundingPublisher) {
+        // when & then
+        StepVerifier.create(surroundingPublisher, 4)
+                    .expectNext(1, 2, 3, 4)
+                    .thenRequest(Integer.MAX_VALUE)
+                    .expectNext(100)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    void finalizer_aborted() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4, 5);
+        final StreamMessage<Integer> aborted = streamMessage
+                .peek(val -> {
+                    if (val == 5) {
+                        streamMessage.abort();
+                    }
+                });
+        final Function<Throwable, Integer> finalizer = th -> {
+            if (th instanceof AbortedStreamException) {
+                return 100;
+            }
+            return -1;
+        };
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, aborted, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4, 100)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    void finalizer_thrown() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4, 5);
+        final StreamMessage<Integer> aborted = streamMessage
+                .peek(val -> {
+                    if (val == 5) {
+                        throw new RuntimeException();
+                    }
+                });
+        final Function<Throwable, Integer> finalizer = th -> {
+            if (th instanceof AbortedStreamException) {
+                return 100;
+            }
+            return -1;
+        };
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, aborted, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4, -1)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    void finalizer_not_thrown() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4);
+        final Function<Throwable, Integer> finalizer = th -> {
+            if (th instanceof AbortedStreamException) {
+                return 999;
+            }
+            if (th == null) {
+                return 100;
+            }
+            return -1;
+        };
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, streamMessage, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4, 100)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    void finalizer_return_null() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4);
+        final Function<Throwable, Integer> finalizer = unused -> null;
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, streamMessage, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4)
+                    .expectComplete()
+                    .verify();
+    }
+
+    @Test
+    void finalizer_return_null_upstream_thrown() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4, 5);
+        final StreamMessage<Integer> aborted = streamMessage
+                .peek(val -> {
+                    if (val == 5) {
+                        throw new RuntimeException();
+                    }
+                });
+        final Function<Throwable, Integer> finalizer = unused -> null;
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, aborted, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4)
+                    .expectError(RuntimeException.class)
+                    .verify();
+    }
+
+    @Test
+    void finalizer_apply_thrown() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4);
+        final Function<Throwable, Integer> finalizer = unused -> {
+            throw new IllegalArgumentException();
+        };
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, streamMessage, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4)
+                    .expectError(IllegalArgumentException.class)
+                    .verify();
+    }
+
+    @Test
+    void finalizer_apply_thrown_upstream_thrown() {
+        // given
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(2, 3, 4, 5);
+        final StreamMessage<Integer> aborted = streamMessage
+                .peek(val -> {
+                    if (val == 5) {
+                        throw new RuntimeException();
+                    }
+                });
+        final Function<Throwable, Integer> finalizer = unused -> {
+            throw new IllegalArgumentException();
+        };
+        final StreamMessage<Integer> publisher = new SurroundingPublisher<>(1, aborted, finalizer);
+
+        // when & then
+        StepVerifier.create(publisher)
+                    .expectNext(1, 2, 3, 4)
+                    .expectError(RuntimeException.class)
+                    .verify();
+    }
+
     private static class OneElementSurroundingPublisherProvider implements ArgumentsProvider {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(new SurroundingPublisher<>(1, Mono.empty(), null),
-                             new SurroundingPublisher<>(null, Mono.just(1), null),
-                             new SurroundingPublisher<>(null, Mono.empty(), 1))
+            return Stream.of(new SurroundingPublisher<>(null, Mono.empty(), unused -> 1),
+                             new SurroundingPublisher<>(null, Mono.empty(), th -> 1))
                          .map(Arguments::of);
         }
     }
@@ -270,10 +463,10 @@ class SurroundingPublisherTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(new SurroundingPublisher<>(1, Mono.just(2), null),
-                             new SurroundingPublisher<>(1, Mono.empty(), 2),
-                             new SurroundingPublisher<>(null, Mono.just(1), 2),
-                             new SurroundingPublisher<>(null, Flux.just(1, 2), null))
+            return Stream.of(new SurroundingPublisher<>(1, Mono.empty(), unused -> 2),
+                             new SurroundingPublisher<>(null, Mono.just(1), unused -> 2),
+                             new SurroundingPublisher<>(1, Mono.empty(), th -> 2),
+                             new SurroundingPublisher<>(null, Mono.just(1), th -> 2))
                          .map(Arguments::of);
         }
     }
@@ -282,10 +475,10 @@ class SurroundingPublisherTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(new SurroundingPublisher<>(1, Flux.just(2, 3), null),
-                             new SurroundingPublisher<>(1, Mono.just(2), 3),
-                             new SurroundingPublisher<>(null, Flux.just(1, 2), 3),
-                             new SurroundingPublisher<>(null, Flux.just(1, 2, 3), null))
+            return Stream.of(new SurroundingPublisher<>(1, Mono.just(2), unused -> 3),
+                             new SurroundingPublisher<>(null, Flux.just(1, 2), unused -> 3),
+                             new SurroundingPublisher<>(1, Mono.just(2), th -> 3),
+                             new SurroundingPublisher<>(null, Flux.just(1, 2), th -> 3))
                          .map(Arguments::of);
         }
     }
@@ -294,15 +487,52 @@ class SurroundingPublisherTest {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            return Stream.of(
-                    new SurroundingPublisher<>(
-                            1, Flux.fromStream(IntStream.range(2, 6).boxed()), null),
-                    new SurroundingPublisher<>(
-                            1, Flux.fromStream(IntStream.range(2, 5).boxed()), 5),
-                    new SurroundingPublisher<>(
-                            null, Flux.fromStream(IntStream.range(1, 5).boxed()), 5),
-                    new SurroundingPublisher<>(
-                            null, Flux.fromStream(IntStream.range(1, 6).boxed()), null))
+            return Stream.of(new SurroundingPublisher<>(
+                                     1, Flux.fromStream(IntStream.range(2, 5).boxed()), unused -> 5),
+                             new SurroundingPublisher<>(
+                                     null, Flux.fromStream(IntStream.range(1, 5).boxed()), unused -> 5),
+                             new SurroundingPublisher<>(
+                                     1, Flux.fromStream(IntStream.range(2, 5).boxed()), th -> 5),
+                             new SurroundingPublisher<>(
+                                     null, Flux.fromStream(IntStream.range(1, 5).boxed()), th -> 5))
+                         .map(Arguments::of);
+        }
+    }
+
+    private static class FiveElementsFinalizedSurroundingPublisherProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            return Stream.of(new SurroundingPublisher<>(
+                                     1,
+                                     Flux.fromStream(IntStream.range(2, 10).boxed())
+                                         .map(i -> {
+                                             if (i >= 5) {
+                                                 throw new RuntimeException();
+                                             }
+                                             return i;
+                                         }),
+                                     th -> {
+                                         if (th instanceof RuntimeException) {
+                                             return 100;
+                                         }
+                                         return -1;
+                                     }),
+                             new SurroundingPublisher<>(
+                                     null,
+                                     Flux.fromStream(IntStream.range(1, 10).boxed())
+                                         .map(i -> {
+                                             if (i >= 5) {
+                                                 throw new RuntimeException();
+                                             }
+                                             return i;
+                                         }),
+                                     th -> {
+                                         if (th instanceof RuntimeException) {
+                                             return 100;
+                                         }
+                                         return -1;
+                                     }))
                          .map(Arguments::of);
         }
     }

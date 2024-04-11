@@ -29,3 +29,9 @@ updates:
           time: "10:00"
           # Use Korea Standard Time (UTC +09:00)
           timezone: "Asia/Seoul"
+
+    - package-ecosystem: "npm"
+      directory: "/"
+      schedule:
+        interval: "monthly"
+      versioning-strategy: increase

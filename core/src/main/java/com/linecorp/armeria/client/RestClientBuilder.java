@@ -249,4 +249,9 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (RestClientBuilder) super.contextCustomizer(contextCustomizer);
     }
+
+    @Override
+    public RestClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (RestClientBuilder) super.contextHook(contextHook);
+    }
 }

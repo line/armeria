@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 
 class RouteTest {
 
@@ -451,23 +452,30 @@ class RouteTest {
         assertThatJson(route).node("patternString").isEqualTo("/foo/:id");
     }
 
+    @Test
+    void prefixWithEmptySlash() {
+        final Route route = Route.builder().pathPrefix("/foo").build();
+        assertThat(route.withPrefix("/")).isSameAs(route);
+    }
+
     private static RoutingContext withMethod(HttpMethod method) {
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        REQ_TARGET, RequestHeaders.of(method, PATH), RoutingStatus.OK);
+                                        REQ_TARGET, RequestHeaders.of(method, PATH), RoutingStatus.OK,
+                                        SessionProtocol.H2C);
     }
 
     private static RoutingContext withConsumeType(HttpMethod method, MediaType contentType) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.CONTENT_TYPE, contentType);
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        REQ_TARGET, headers, RoutingStatus.OK);
+                                        REQ_TARGET, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     private static RoutingContext withAcceptHeader(HttpMethod method, String acceptHeader) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.ACCEPT, acceptHeader);
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        REQ_TARGET, headers, RoutingStatus.OK);
+                                        REQ_TARGET, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     private static RoutingContext withPath(String path) {
@@ -476,13 +484,13 @@ class RouteTest {
 
         return DefaultRoutingContext.of(virtualHost(), "example.com",
                                         reqTarget, RequestHeaders.of(HttpMethod.GET, path),
-                                        RoutingStatus.OK);
+                                        RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     private static RoutingContext withRequestHeaders(RequestHeaders headers) {
         final RequestTarget reqTarget = RequestTarget.forServer(headers.path());
         assertThat(reqTarget).isNotNull();
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        reqTarget, headers, RoutingStatus.OK);
+                                        reqTarget, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 }

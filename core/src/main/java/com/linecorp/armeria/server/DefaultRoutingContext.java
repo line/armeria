@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -41,8 +42,10 @@ final class DefaultRoutingContext implements RoutingContext {
      * Returns a new {@link RoutingContext} instance.
      */
     static RoutingContext of(VirtualHost virtualHost, String hostname, RequestTarget reqTarget,
-                             RequestHeaders headers, RoutingStatus routingStatus) {
-        return new DefaultRoutingContext(virtualHost, hostname, headers, reqTarget, routingStatus);
+                             RequestHeaders headers, RoutingStatus routingStatus,
+                             SessionProtocol sessionProtocol) {
+        return new DefaultRoutingContext(virtualHost, hostname, headers, reqTarget, routingStatus,
+                                         sessionProtocol);
     }
 
     private final VirtualHost virtualHost;
@@ -54,6 +57,7 @@ final class DefaultRoutingContext implements RoutingContext {
     private final MediaType contentType;
     private final List<MediaType> acceptTypes;
     private final RoutingStatus routingStatus;
+    private final SessionProtocol sessionProtocol;
     @Nullable
     private volatile QueryParams queryParams;
     @Nullable
@@ -64,12 +68,14 @@ final class DefaultRoutingContext implements RoutingContext {
     private final int hashCode;
 
     DefaultRoutingContext(VirtualHost virtualHost, String hostname, RequestHeaders headers,
-                          RequestTarget reqTarget, RoutingStatus routingStatus) {
+                          RequestTarget reqTarget, RoutingStatus routingStatus,
+                          SessionProtocol sessionProtocol) {
         this.virtualHost = requireNonNull(virtualHost, "virtualHost");
         this.hostname = requireNonNull(hostname, "hostname");
         this.headers = requireNonNull(headers, "headers");
         this.reqTarget = requireNonNull(reqTarget, "reqTarget");
         this.routingStatus = routingStatus;
+        this.sessionProtocol = sessionProtocol;
         method = headers.method();
         contentType = headers.contentType();
         acceptTypes = headers.accept();
@@ -146,6 +152,11 @@ final class DefaultRoutingContext implements RoutingContext {
     @Override
     public RoutingStatus status() {
         return routingStatus;
+    }
+
+    @Override
+    public SessionProtocol sessionProtocol() {
+        return sessionProtocol;
     }
 
     @Override
