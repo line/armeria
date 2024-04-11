@@ -51,7 +51,6 @@ date: 2024-04-12
         .service("/hc", HealthCheckService.of(HealthChecker.ofCpu(0.5, 0.5), ...));
   ```
 - You can flatten multiple <typeplural://StreamMessage> using <type://StreamMessage#flatMap(Function)>. #3966 #4227
-- <type://ClientFactory> can be closed with a grace period before closing HTTP/2 connections. #5489
 - Armeria's Spring integration now registers <type://ServerErrorHandler> type beans automatically. #5443 #5446
   ```java
   @Bean
