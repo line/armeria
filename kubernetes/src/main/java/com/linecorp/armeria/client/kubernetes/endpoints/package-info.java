@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,12 +15,9 @@
  */
 
 /**
- * Various classes used internally as server-side
- * <a href="https://en.wikipedia.org/wiki/OAuth#OAuth_2.0">OAuth 2.0</a> implementation artifacts.
+ * {@link com.linecorp.armeria.client.endpoint.EndpointGroup} for Kubernetes services.
  */
-@UnstableApi
 @NonNullByDefault
-package com.linecorp.armeria.internal.server.auth.oauth2;
+package com.linecorp.armeria.client.kubernetes.endpoints;
 
 import com.linecorp.armeria.common.annotation.NonNullByDefault;
-import com.linecorp.armeria.common.annotation.UnstableApi;

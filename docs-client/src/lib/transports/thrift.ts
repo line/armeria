@@ -17,6 +17,7 @@
 import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
+import { validateJsonObject } from '../json-util';
 
 export const TTEXT_MIME_TYPE = 'application/x-thrift; protocol=TTEXT';
 
@@ -58,6 +59,9 @@ export default class ThriftTransport extends Transport {
     hdrs.set('content-type', TTEXT_MIME_TYPE);
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
+    }
+    if (bodyJson && bodyJson.trim()) {
+      validateJsonObject(bodyJson, 'request body');
     }
 
     const newPath = pathPrefix + (endpointPath ?? endpoint.pathMapping);
