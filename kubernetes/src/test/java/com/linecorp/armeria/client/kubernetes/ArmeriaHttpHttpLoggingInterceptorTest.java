@@ -15,11 +15,24 @@
  */
 package com.linecorp.armeria.client.kubernetes;
 
+import java.lang.reflect.Field;
+
+import org.junit.jupiter.api.AfterEach;
+
 import io.fabric8.kubernetes.client.http.AbstractHttpLoggingInterceptorTest;
 import io.fabric8.kubernetes.client.http.HttpClient;
 
 @SuppressWarnings("JUnitTestCaseWithNoTests")
 class ArmeriaHttpHttpLoggingInterceptorTest extends AbstractHttpLoggingInterceptorTest {
+
+    @AfterEach
+    void afterEach() throws Exception {
+        final Field field = AbstractHttpLoggingInterceptorTest.class.getDeclaredField("httpClient");
+        field.setAccessible(true);
+        final HttpClient httpClient = (HttpClient) field.get(this);
+        httpClient.close();
+    }
+
     @Override
     protected HttpClient.Factory getHttpClientFactory() {
         return new ArmeriaHttpClientFactory();
