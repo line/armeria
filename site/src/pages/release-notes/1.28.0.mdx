@@ -31,7 +31,7 @@ date: 2024-04-12
                          .orElseJson(EmptyMessage.class, res → res.status().isInformational())
                          .orElseJson(ErrorMessage.class)).join();
   ```
-- You can specify allowed CORS origins via regular expression or predicates. #4982
+- You can specify allowed CORS origins via regular expressions or predicates. #4982
   ```java
   CorsService.builderForOriginRegex(".*example.*")
              .andForOrigin(origin -> origin.contains("armeria"))
@@ -46,7 +46,7 @@ date: 2024-04-12
 - <type://HealthChecker#ofCpu(double,double)> can be used to reflect CPU load in health check status. #4673
   ```java
   Server.builder()
-        .service("/hc", HealthCheckService.of(HealthChecker.ofCpu(0.5, 0.5)));
+        .service("/hc", HealthCheckService.of(HealthChecker.ofCpu(0.5, 0.5), ...));
   ```
 - You can flatten multiple <typeplural://StreamMessage> using <type://StreamMessage#flatMap()>. #3966 #4227
 - <type://ClientFactory> can be closed with a grace period before closing HTTP/2 connections. #5489
@@ -58,16 +58,16 @@ date: 2024-04-12
   }
   ```
 - OAuth 2.0 modules have been refactored #5476
-  - You can now easily implement your own [OAuth 2.0 Extension Grants](https://datatracker.ietf.org/doc/html/rfc6749#section-4.5) by extending `AccessTokenRequest`.
+  - You can now easily implement your own [OAuth 2.0 Extension Grants](https://datatracker.ietf.org/doc/html/rfc6749#section-4.5) by extending <type://AccessTokenRequest>.
   - You can now use [JSON Web Token](https://datatracker.ietf.org/doc/html/rfc7523) to obtain OAuth 2.0 access tokens.
 - Armeria JARs are now compatible with Java modules. #5543
-- <type://ServerBuilder#hostname(String)> returns a cached <type://VirtualHostBuilder> if available. #5418
+- <type://ServerBuilder#virtualHost(String)> returns a cached <type://VirtualHostBuilder> if available. #5418
   ```java
   assert Server.builder().virtualHost("a.com") ==
       Server.builder().virtualHost("a.com");
   ```
-- You can add custom `details` when throwing an `ArmeriaStatusException` in an <type://AbstractUnsafeUnaryGrpcService>. #4306 #4341
 - <type://AuthService> now records metrics for authentication results. #5074 #5017
+- You can add custom `details` when throwing an `ArmeriaStatusException` in an <type://AbstractUnsafeUnaryGrpcService>. #4306 #4341
 - <type://XdsEndpointGroup> now supports [Strict DNS](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/service_discovery#strict-dns)
   and [health checking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/health_checking). #5503
 - <type://XdsBootstrap> now supports `SelfConfigSource`. #5459
@@ -78,19 +78,19 @@ date: 2024-04-12
 
 - Specifying <type://WebClientBuilder#followRedirects()> now correctly throws an exception when a cyclic redirection occurs. #5491 #5548
 - <type://Service#serviceAdded(ServiceConfig)> is now correctly invoked for decorators. #5544
+- Armeria client is now more tolerant to poorly encoded `Location` header values when following redirects. #5477
+- You can now use Kotlin value classes in annotated services. #5294 #5449
 - <type://ExchangeType> is guessed correctly even if it is not set in <type://RequestOptions>. #5517
 - Fixed a bug where Thrift client requests were leaking byte buffers when aborted early. #5535
 - <type://LoggingClient> and <type://LoggingService> now correctly mask default sensitive headers. #5519
 - <type://GrpcService> now correctly handles `InvalidProtocolBufferException`. #5379 #5554
 - Armeria server no longer incorrectly logs a duplicate route warning for routes with arbitrary parameter or header predicates. #5469
 - Annotated services annotated with <type://Param> and <type://Default> now returns sensible values when an empty value is received. #5515 #5534
-- <type://WebsocketFrame#ofPong(byte[])> now correctly sends a `PONG` Frame. #5533
+- <type://WebSocketFrame#ofPong()> now correctly generates a `PONG` Frame. #5533
 - The `Complete` message in the GraphQL over WebSocket Protocol is now constructed securely. #5531
 - <type://ClientFactory> no longer throws an intermittent exception when shutting down. #5494 #5524
-- Fixed a possible memory leak when a custom gRPC marshaller is used. #5523
-- Armeria client is now more tolerant to poorly encoded `Location` header values when following redirects. #5477
-- You can now use Kotlin value classes in annotated services. #5294 #5449
 - <type://DocService> now also supports JSON streaming requests. #5218 #5381
+- Fixed a possible memory leak when a custom gRPC marshaller is used. #5523
 
 ## ☢️ Breaking changes
 
