@@ -23,6 +23,7 @@ import static org.awaitility.Awaitility.await;
 import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -75,6 +76,11 @@ class KubernetesEndpointGroupMockServerTest {
         // A workaround for the issue that the static client is leaked.
         // Remove once https://github.com/fabric8io/kubernetes-client/pull/5854 is released.
         staticClient.close();
+    }
+
+    @AfterEach
+    void afterEach() {
+        client.close();
     }
 
     @Test
@@ -160,7 +166,6 @@ class KubernetesEndpointGroupMockServerTest {
                     Endpoint.of("4.4.4.4", nodePort)
             );
         });
-        client.close();
     }
 
     @Test
@@ -227,7 +232,6 @@ class KubernetesEndpointGroupMockServerTest {
                         Endpoint.of("3.3.3.3", httpNodePort));
             });
         }
-        client.close();
     }
 
     @Test
@@ -270,7 +274,6 @@ class KubernetesEndpointGroupMockServerTest {
             );
         });
         endpointGroup.close();
-        client.close();
     }
 
     private static Node newNode(String ip, String type) {
