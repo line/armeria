@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import java.util.Set;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Message;
 
@@ -57,7 +59,7 @@ public final class UnframedGrpcErrorHandlerBuilder {
      * <p>This method allows the caller to specify a custom JSON marshaller
      * for encoding the error responses. If messages or message types have
      * already been registered, calling this method will result in an
-     * {@link IllegalArgumentException}. If nothing is specified,
+     * {@link IllegalStateException}. If nothing is specified,
      * {@link UnframedGrpcErrorHandlers#ERROR_DETAILS_MARSHALLER} is used as
      * default json marshaller.
      *
@@ -65,12 +67,11 @@ public final class UnframedGrpcErrorHandlerBuilder {
      */
     public UnframedGrpcErrorHandlerBuilder jsonMarshaller(MessageMarshaller jsonMarshaller) {
         requireNonNull(jsonMarshaller, "jsonMarshaller");
-        if (marshalledMessages != null || marshalledMessageTypes != null) {
-            throw new IllegalArgumentException(
-                    "Cannot set a custom JSON marshaller because one or more Message or MessageType instances" +
-                    " have already been registered. To set a custom marshaller, ensure that no Message or" +
-                    " MessageType registrations have been made before calling this method.");
-        }
+        checkState(marshalledMessages == null && marshalledMessageTypes == null,
+                   "Cannot set a custom JSON marshaller because one or more Message or MessageType instances" +
+                   " have already been registered. To set a custom marshaller, ensure that no Message or" +
+                   " MessageType registrations have been made before calling this method."
+        );
         this.jsonMarshaller = jsonMarshaller;
         return this;
     }
@@ -112,17 +113,15 @@ public final class UnframedGrpcErrorHandlerBuilder {
      *
      * <p>This method registers specific message instances for custom error responses.
      * If a custom JSON marshaller has already been set, calling this method will
-     * result in an {@link IllegalArgumentException}.
+     * result in an {@link IllegalStateException}.
      *
      * @param messages The message instances to register
      */
     public UnframedGrpcErrorHandlerBuilder registerMarshalledMessages(Message... messages) {
         requireNonNull(messages, "messages");
-        if (jsonMarshaller != null) {
-            throw new IllegalArgumentException(
-                    "Cannot register custom messages because a custom JSON marshaller has already been set. " +
-                    "Use the custom marshaller to register custom messages.");
-        }
+        checkState(jsonMarshaller == null,
+                   "Cannot register custom messages because a custom JSON marshaller has already been set. " +
+                   "Use the custom marshaller to register custom messages.");
         if (marshalledMessages == null) {
             marshalledMessages = new ArrayList<>();
         }
@@ -131,23 +130,48 @@ public final class UnframedGrpcErrorHandlerBuilder {
     }
 
     /**
+     * Registers custom messages to be marshalled by the error handler.
+     *
+     * <p>This method allows registering message instances for custom error responses.
+     * If a custom JSON marshaller has already been set, calling this method will
+     * result in an {@link IllegalStateException}.
+     *
+     * @param messages The collection of messages to register
+     */
+    public UnframedGrpcErrorHandlerBuilder registerMarshalledMessages(
+            Iterable<? extends Message> messages) {
+        requireNonNull(messages, "messages");
+        checkState(jsonMarshaller == null,
+                   "Cannot register the collection of messages because a custom JSON marshaller has " +
+                   "already been set. Use the custom marshaller to register custom messages."
+        );
+        if (marshalledMessages == null) {
+            marshalledMessages = new ArrayList<>();
+        }
+
+        marshalledMessages.addAll(ImmutableList.copyOf(messages));
+
+        return this;
+    }
+
+    /**
      * Registers custom message types to be marshalled by the error handler.
      *
      * <p>This method registers specific message types for custom error responses.
      * If a custom JSON marshaller has already been set, calling this method will
-     * result in an {@link IllegalArgumentException}.
+     * result in an {@link IllegalStateException}.
      *
      * @param messageTypes The message types to register
      */
     @SafeVarargs
-    public final UnframedGrpcErrorHandlerBuilder registerMarshalledMessages(
+    public final UnframedGrpcErrorHandlerBuilder registerMarshalledMessageTypes(
             Class<? extends Message>... messageTypes) {
         requireNonNull(messageTypes, "messageTypes");
-        if (jsonMarshaller != null) {
-            throw new IllegalArgumentException(
-                    "Cannot register custom messageTypes because a custom JSON marshaller has already been " +
-                    "set. Use the custom marshaller to register custom message types.");
-        }
+        checkState(jsonMarshaller == null,
+                   "Cannot register custom messageTypes because a custom JSON marshaller has already been " +
+                   "set. Use the custom marshaller to register custom message types."
+        );
+
         if (marshalledMessageTypes == null) {
             marshalledMessageTypes = new ArrayList<>();
         }
@@ -156,47 +180,25 @@ public final class UnframedGrpcErrorHandlerBuilder {
     }
 
     /**
-     * Registers custom messages or message types to be marshalled by the error handler.
+     * Registers custom message types to be marshalled by the error handler.
      *
-     * <p>This method allows registering either message instances or message types for
-     * custom error responses. Each element in {@code messagesOrMessageTypes} must either
-     * be an instance of the {@link Message} class　or a class that extends the {@link Message}
-     * class. If a custom JSON marshaller has already been set,
-     * calling this method will result in an {@link IllegalArgumentException}.
+     * <p>This method allows registering message instances for custom error responses.
+     * If a custom JSON marshaller has already been set, calling this method will
+     * result in an {@link IllegalStateException}.
      *
-     * @param messagesOrMessageTypes The messages or message types to register
+     * @param messageTypes The collection of message types to register
      */
-    public UnframedGrpcErrorHandlerBuilder registerMarshalledMessages(Iterable<?> messagesOrMessageTypes) {
-        requireNonNull(messagesOrMessageTypes, "messagesOrMessageTypes");
-        if (jsonMarshaller != null) {
-            throw new IllegalArgumentException(
-                    "Cannot register custom messagesOrMessageTypes because a custom JSON marshaller has " +
-                    "already been set. Use the custom marshaller to register custom messages or message types."
-            );
+    public UnframedGrpcErrorHandlerBuilder registerMarshalledMessageTypes(
+            Iterable<? extends Class<? extends Message>> messageTypes) {
+        requireNonNull(messageTypes, "messageTypes");
+        checkState(jsonMarshaller == null,
+                   "Cannot register the collection of messageTypes because a custom JSON marshaller has " +
+                   "already been set. Use the custom marshaller to register custom message types."
+        );
+        if (marshalledMessageTypes == null) {
+            marshalledMessageTypes = new ArrayList<>();
         }
-
-        for (final Object messageOrMessageType : messagesOrMessageTypes) {
-            requireNonNull(messageOrMessageType, "messagesOrMessageTypes contains null.");
-            if (messageOrMessageType instanceof Message) {
-                if (marshalledMessages == null) {
-                    marshalledMessages = new ArrayList<>();
-                }
-                marshalledMessages.add((Message) messageOrMessageType);
-            } else if (messageOrMessageType instanceof Class &&
-                       Message.class.isAssignableFrom((Class<?>) messageOrMessageType)) {
-                if (marshalledMessageTypes == null) {
-                    marshalledMessageTypes = new ArrayList<>();
-                }
-                marshalledMessageTypes.add((Class<? extends Message>) messageOrMessageType);
-            } else {
-                final String className =
-                        messageOrMessageType instanceof Class ? ((Class<?>) messageOrMessageType).getName()
-                                                              : messageOrMessageType.getClass().getName();
-                throw new IllegalArgumentException(
-                        className + " is neither Message class nor Message subclass.");
-            }
-        }
-
+        marshalledMessageTypes.addAll(ImmutableList.copyOf(messageTypes));
         return this;
     }
 
@@ -228,8 +230,8 @@ public final class UnframedGrpcErrorHandlerBuilder {
         if (responseTypes == null) {
             return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
         }
-        if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON)
-            && responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
+        if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON) &&
+            responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
             return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
         }
         if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON)) {

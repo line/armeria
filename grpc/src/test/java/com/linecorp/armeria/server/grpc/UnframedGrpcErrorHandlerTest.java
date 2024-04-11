@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -78,15 +79,56 @@ public class UnframedGrpcErrorHandlerTest {
     };
 
     @RegisterExtension
-    static ServerExtension customJsonResServer = new ServerExtension() {
+    static ServerExtension plainTextResServerWithBuilder = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             configureServer(sb, false,
                             UnframedGrpcErrorHandler.builder()
-                                                    .registerMarshalledMessages(InternalError.class)
+                                                    .build(),
+                            testService);
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension jsonResServerWithMarshalledMessage = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            configureServer(sb, false,
+                            UnframedGrpcErrorHandler.builder()
+                                                    .registerMarshalledMessageTypes(InternalError.class)
                                                     .responseTypes(UnframedGrpcErrorResponseType.JSON)
                                                     .build(),
                             testServiceWithCustomMessage);
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension jsonResServerWithCustomJsonMarshaller = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            configureServer(sb, false,
+                            UnframedGrpcErrorHandler.builder()
+                                                    .jsonMarshaller(
+                                                            MessageMarshaller.builder()
+                                                                             .register(
+                                                                                     InternalError.class)
+                                                                             .build())
+                                                    .responseTypes(UnframedGrpcErrorResponseType.JSON)
+                                                    .build(),
+                            testServiceWithCustomMessage);
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension plainTextResServerWithCustomStatusMapping = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            configureServer(sb, false,
+                            UnframedGrpcErrorHandler.builder()
+                                                    .statusMappingFunction(
+                                                            (ctx, status, response) -> HttpStatus.OK)
+                                                    .build(),
+                            testService);
         }
     };
 
@@ -233,8 +275,22 @@ public class UnframedGrpcErrorHandlerTest {
     }
 
     @Test
-    void customJson() throws JsonProcessingException {
-        final BlockingWebClient client = customJsonResServer.webClient().blocking();
+    void plainTestUsingBuilder() {
+        final BlockingWebClient client = plainTextResServerWithBuilder.webClient().blocking();
+        final AggregatedHttpResponse response =
+                client.prepare()
+                      .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
+                      .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        final String content = response.contentUtf8();
+        assertThat(content).isEqualTo("grpc-code: UNKNOWN, grpc error message");
+        assertThat(response.trailers()).isEmpty();
+    }
+
+    @Test
+    void jsonWithCustomMessage() throws JsonProcessingException {
+        final BlockingWebClient client = jsonResServerWithMarshalledMessage.webClient().blocking();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
@@ -256,5 +312,42 @@ public class UnframedGrpcErrorHandlerTest {
                         "  ]" +
                         '}');
         assertThat(response.trailers()).isEmpty();
+    }
+
+    @Test
+    void jsonWithCustomJsonMarshaller() throws JsonProcessingException {
+        final BlockingWebClient client = jsonResServerWithCustomJsonMarshaller.webClient().blocking();
+        final AggregatedHttpResponse response =
+                client.prepare()
+                      .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
+                      .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatJson(mapper.readTree(response.contentUtf8()))
+                .isEqualTo(
+                        '{' +
+                        "  \"code\": 13," +
+                        "  \"grpc-code\": \"INTERNAL\"," +
+                        "  \"message\": \"Custom error message test.\"," +
+                        "  \"details\": [" +
+                        "    {" +
+                        "      \"@type\": \"type.googleapis.com/armeria.grpc.testing.InternalError\"," +
+                        "      \"code\": 500," +
+                        "      \"message\": \"Internal server error.\"" +
+                        "    }" +
+                        "  ]" +
+                        '}');
+        assertThat(response.trailers()).isEmpty();
+    }
+
+    @Test
+    void plainTextWithCustomStatusMapping() {
+        final BlockingWebClient client = plainTextResServerWithCustomStatusMapping.webClient().blocking();
+        final AggregatedHttpResponse response =
+                client.prepare()
+                      .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
+                      .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
 }

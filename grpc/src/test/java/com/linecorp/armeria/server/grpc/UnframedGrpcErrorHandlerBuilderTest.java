@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.Mockito.mock;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.junit.jupiter.api.Test;
@@ -47,8 +46,8 @@ public class UnframedGrpcErrorHandlerBuilderTest {
                 () -> UnframedGrpcErrorHandler.builder()
                                               .jsonMarshaller(
                                                       UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
-                                              .registerMarshalledMessages(InternalError.class))
-                .isInstanceOf(IllegalArgumentException.class)
+                                              .registerMarshalledMessageTypes(InternalError.class))
+                .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "Cannot register custom messageTypes because a custom JSON marshaller has " +
                         "already been set. Use the custom marshaller to register custom message types.");
@@ -59,10 +58,32 @@ public class UnframedGrpcErrorHandlerBuilderTest {
                                                       UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
                                               .registerMarshalledMessages(
                                                       InternalError.newBuilder().build()))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "Cannot register custom messages because a custom JSON marshaller has " +
                         "already been set. Use the custom marshaller to register custom messages.");
+
+        assertThatThrownBy(
+                () -> UnframedGrpcErrorHandler.builder()
+                                              .jsonMarshaller(
+                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
+                                              .registerMarshalledMessages(
+                                                      ImmutableList.of(InternalError.newBuilder().build())))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "Cannot register the collection of messages because a custom JSON marshaller has " +
+                        "already been set. Use the custom marshaller to register custom messages.");
+
+        assertThatThrownBy(
+                () -> UnframedGrpcErrorHandler.builder()
+                                              .jsonMarshaller(
+                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
+                                              .registerMarshalledMessageTypes(
+                                                      ImmutableList.of(InternalError.class)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "Cannot register the collection of messageTypes because a custom JSON marshaller has " +
+                        "already been set. Use the custom marshaller to register custom message types.");
 
         assertThatThrownBy(
                 () -> UnframedGrpcErrorHandler.builder()
@@ -70,7 +91,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
                                                       InternalError.newBuilder().build())
                                               .jsonMarshaller(
                                                       UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "Cannot set a custom JSON marshaller because one or more Message or " +
                         "MessageType instances have already been registered. To set a custom marshaller, " +
@@ -79,7 +100,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
     }
 
     @Test
-    void buildWithoutAnyOption() {
+    void buildWithoutOptions() {
         final UnframedGrpcErrorHandler unframedGrpcErrorHandler = UnframedGrpcErrorHandler.builder().build();
         final ServiceRequestContext ctx = ServiceRequestContext.of(
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/test")));
@@ -146,7 +167,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
 
     @Test
     void buildWithCustomJsonMarshaller() {
-        final MessageMarshaller messageMarshaller = mock(MessageMarshaller.class);
+        final MessageMarshaller messageMarshaller = MessageMarshaller.builder().build();
         assertDoesNotThrow(() -> UnframedGrpcErrorHandler.builder()
                                                          .jsonMarshaller(messageMarshaller)
                                                          .build());
@@ -155,8 +176,9 @@ public class UnframedGrpcErrorHandlerBuilderTest {
     @Test
     void buildWithCustomMessage() {
         assertDoesNotThrow(() -> UnframedGrpcErrorHandler.builder()
-                                                         .registerMarshalledMessages(InternalError.class,
-                                                                                     AuthError.class)
+                                                         .registerMarshalledMessageTypes(
+                                                                 InternalError.class,
+                                                                 AuthError.class)
                                                          .build());
         assertDoesNotThrow(() -> UnframedGrpcErrorHandler.builder()
                                                          .registerMarshalledMessages(
@@ -164,19 +186,16 @@ public class UnframedGrpcErrorHandlerBuilderTest {
                                                                  AuthError.newBuilder().build())
                                                          .build());
         assertDoesNotThrow(() -> UnframedGrpcErrorHandler.builder()
-                                                         .registerMarshalledMessages(
+                                                         .registerMarshalledMessageTypes(
                                                                  ImmutableList.of(InternalError.class,
+                                                                                  AuthError.class))
+                                                         .build());
+        assertDoesNotThrow(() -> UnframedGrpcErrorHandler.builder()
+                                                         .registerMarshalledMessages(
+                                                                 ImmutableList.of(InternalError.newBuilder()
+                                                                                               .build(),
                                                                                   AuthError.newBuilder()
                                                                                            .build()))
                                                          .build());
-        assertThatThrownBy(() -> UnframedGrpcErrorHandler.builder()
-                                                         .registerMarshalledMessages(
-                                                                 ImmutableList.of(HttpStatus.class,
-                                                                                  AuthError.newBuilder()
-                                                                                           .build()))
-                                                         .build())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(HttpStatus.class.getName() +
-                                      " is neither Message class nor Message subclass.");
     }
 }
