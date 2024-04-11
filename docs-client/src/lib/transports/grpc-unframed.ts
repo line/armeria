@@ -16,6 +16,7 @@
 import { Method } from '../specification';
 
 import Transport from './transport';
+import { validateJsonObject } from '../json-util';
 
 export const GRPC_UNFRAMED_MIME_TYPE =
   'application/json; charset=utf-8; protocol=gRPC';
@@ -49,6 +50,9 @@ export default class GrpcUnframedTransport extends Transport {
     hdrs.set('content-type', 'application/json; charset=utf-8');
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
+    }
+    if (bodyJson && bodyJson.trim()) {
+      validateJsonObject(bodyJson, 'request body');
     }
 
     const newPath = pathPrefix + (endpointPath ?? endpoint.pathMapping);

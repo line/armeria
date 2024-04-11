@@ -16,27 +16,21 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
-import static java.util.Objects.requireNonNull;
-
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
+import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
-import com.linecorp.armeria.internal.client.auth.oauth2.ClientCredentialsTokenRequest;
-import com.linecorp.armeria.internal.client.auth.oauth2.RefreshAccessTokenRequest;
 
 /**
  * An implementation of OAuth 2.0 Client Credentials Grant flow to obtain Access Token,
  * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-4.4">[RFC6749], Section 4.4</a>.
  * Implements Access Token loading, storing, obtaining and refreshing.
+ *
+ * @deprecated Use {@link OAuth2ClientCredentialsGrantBuilder} with
+ *             {@link AccessTokenRequest#ofClientCredentials(String, String)} instead.
  */
-@UnstableApi
-public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGrant {
+@Deprecated
+public class OAuth2ClientCredentialsGrant implements OAuth2AuthorizationGrant {
 
     /**
      * Creates a new builder for {@link OAuth2ClientCredentialsGrant}.
@@ -49,20 +43,14 @@ public class OAuth2ClientCredentialsGrant extends AbstractOAuth2AuthorizationGra
         return new OAuth2ClientCredentialsGrantBuilder(accessTokenEndpoint, accessTokenEndpointPath);
     }
 
-    private final ClientCredentialsTokenRequest obtainRequest;
+    private final OAuth2AuthorizationGrant delegate;
 
-    OAuth2ClientCredentialsGrant(
-            ClientCredentialsTokenRequest obtainRequest,
-            RefreshAccessTokenRequest refreshRequest, Duration refreshBefore,
-            @Nullable Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider,
-            @Nullable Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer) {
-        super(refreshRequest, refreshBefore, fallbackTokenProvider, newTokenConsumer);
-        this.obtainRequest = requireNonNull(obtainRequest);
+    OAuth2ClientCredentialsGrant(OAuth2AuthorizationGrant delegate) {
+        this.delegate = delegate;
     }
 
     @Override
-    CompletableFuture<GrantedOAuth2AccessToken> obtainAccessToken(
-            @Nullable GrantedOAuth2AccessToken token) {
-        return obtainRequest.make(token == null ? null : token.scope());
+    public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
+        return delegate.getAccessToken();
     }
 }

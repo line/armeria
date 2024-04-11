@@ -22,6 +22,8 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Specifies the default value of an optional parameter.
@@ -35,7 +37,19 @@ public @interface Default {
      * When {@link Default} annotation exists but {@link Default#value()} is not specified, {@code null}
      * value would be set if the parameter is not present in the request.
      *
-     * {@link Default} annotation is not allowed for a path variable. If a user uses {@link Default}
+     * <p>When {@link Default} annotation exists and {@link Default#value()} is not specified, the parameter
+     * may be present in the request without a value (e.g. {@code /foo?bar=}). In this case, the behavior
+     * depends on the java type with which the parameter will be bound to.
+     * <table>
+     * <caption>Actions</caption>
+     * <tr><th>Type</th><th>Action</th></tr>
+     * <tr><td>Primitive types</td><td>An {@link IllegalArgumentException} will be thrown</td></tr>
+     * <tr><td>{@link String}</td><td>An empty string {@code ""} will be set</td></tr>
+     * <tr><td>{@link List} or {@link Set}</td><td>An empty collection will be set</td></tr>
+     * <tr><td>Other</td><td>The {@code null} value will be set</td></tr>
+     * </table>
+     *
+     * <p>{@link Default} annotation is not allowed for a path variable. If a user uses {@link Default}
      * annotation on a path variable, {@link IllegalArgumentException} would be raised.
      */
     String value() default UNSPECIFIED;
