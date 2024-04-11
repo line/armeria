@@ -48,7 +48,7 @@ date: 2024-04-12
   Server.builder()
         .service("/hc", HealthCheckService.of(HealthChecker.ofCpu(0.5, 0.5), ...));
   ```
-- You can flatten multiple <typeplural://StreamMessage> using <type://StreamMessage#flatMap()>. #3966 #4227
+- You can flatten multiple <typeplural://StreamMessage> using <type://StreamMessage#flatMap(Function)>. #3966 #4227
 - <type://ClientFactory> can be closed with a grace period before closing HTTP/2 connections. #5489
 - Armeria's Spring integration now registers <type://ServerErrorHandler> type beans automatically. #5443 #5446
   ```java
@@ -109,7 +109,7 @@ date: 2024-04-12
 
 ## 📃 Documentation
 
-- Armeria's REST, gRPC and Thrift tutorials has been revamped with a new format. #5445
+- Armeria's REST, gRPC and Thrift [tutorials](https://armeria.dev/tutorials) has been revamped with a new format. #5445
 - A wrong import statement in the code examples has been fixed. #5560
 - <type://CircuitBreaker> documentation has been updated to avoid usage of deprecated methods. #5472
 - Broken links in Kotlin and context propagation related documents have been updated. #5437
