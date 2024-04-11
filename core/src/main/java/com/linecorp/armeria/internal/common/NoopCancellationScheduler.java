@@ -45,6 +45,10 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
+    public void start() {
+    }
+
+    @Override
     public void start(CancellationTask task) {
     }
 

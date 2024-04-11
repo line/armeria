@@ -22,6 +22,8 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
+import javax.net.ssl.SSLSession;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,14 +40,16 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2EventAdapter;
@@ -72,11 +76,13 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     private final InboundTrafficController inboundTrafficController;
     private final KeepAliveHandler keepAliveHandler;
     private final Http2GoAwayHandler goAwayHandler;
+    private final HttpRequestDecoderContext decoderContext;
     private final IntObjectMap<@Nullable DecodedHttpRequest> requests = new IntObjectHashMap<>();
     private int nextId;
 
     Http2RequestDecoder(ServerConfig cfg, Channel channel,
-                        AsciiString scheme, KeepAliveHandler keepAliveHandler) {
+                        AsciiString scheme, KeepAliveHandler keepAliveHandler,
+                        @Nullable ProxiedAddresses proxiedAddresses) {
         this.cfg = cfg;
         this.channel = channel;
         this.scheme = scheme;
@@ -84,6 +90,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 InboundTrafficController.ofHttp2(channel, cfg.http2InitialConnectionWindowSize());
         this.keepAliveHandler = keepAliveHandler;
         goAwayHandler = new Http2GoAwayHandler();
+        decoderContext = new HttpRequestDecoderContext(
+                cfg, scheme == SCHEME_HTTP ? SessionProtocol.H2C : SessionProtocol.H2, proxiedAddresses);
     }
 
     Http2GoAwayHandler goAwayHandler() {
@@ -94,6 +102,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         if (this.encoder == null) {
             this.encoder = encoder;
         }
+    }
+
+    void setSslSession(SSLSession session) {
+        decoderContext.setSslSession(session);
     }
 
     @Override
@@ -184,6 +196,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 return;
             }
 
+            final DefaultServiceRequestContext serviceRequestContext;
             final RoutingContext routingCtx =
                     newRoutingContext(cfg, ctx.channel(),
                                       // scheme is http or https
@@ -195,21 +208,34 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                     final Routed<ServiceConfig> routed =
                             routingCtx.virtualHost().findServiceConfig(routingCtx, true);
                     assert routed.isPresent();
+                    final int id = ++nextId;
+                    req = DecodedHttpRequest.of(endOfStream, ctx.channel().eventLoop(), id, streamId, headers,
+                                                true, inboundTrafficController, routingCtx);
+                    serviceRequestContext = decoderContext.newServiceRequestContext(
+                            ctx.channel(), routed, req);
                 } catch (Throwable cause) {
                     logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
                     writeErrorResponse(streamId, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
                     return;
                 }
+            } else {
+                final int id = ++nextId;
+                req = DecodedHttpRequest.of(endOfStream, ctx.channel().eventLoop(), id, streamId, headers,
+                                            true, inboundTrafficController, routingCtx);
+                serviceRequestContext = decoderContext.newOptionsRequestContext(ctx.channel(), req);
             }
 
-            final int id = ++nextId;
-            final EventLoop eventLoop = ctx.channel().eventLoop();
-            req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
-                                        inboundTrafficController, routingCtx);
             requests.put(streamId, req);
             // An aggregating request will be fired later after all objects are collected.
             if (!req.needsAggregation()) {
-                ctx.fireChannelRead(req);
+                req.fireChannelRead(ctx);
+            } else {
+                // AggregatingRequestTimeoutTask is scheduled to fire the aggregating request
+                // if the request is not fully received within the timeout.
+                // The timed out request will be handled by the HttpResponseSubscriber.
+                final CancellationScheduler cancellationScheduler =
+                        serviceRequestContext.requestCancellationScheduler();
+                cancellationScheduler.start(new AggregatingRequestTimeoutTask(ctx, req));
             }
         } else {
             if (!(req instanceof DecodedHttpRequestWriter)) {
@@ -225,9 +251,9 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 // Trailers is received. The decodedReq will be automatically closed.
                 decodedReq.write(trailers);
                 if (req.needsAggregation()) {
-                    assert !req.isInitialized();
+                    assert !req.isFired();
                     // An aggregated request can be fired now.
-                    ctx.fireChannelRead(req);
+                    req.fireChannelRead(ctx);
                 }
             } catch (Throwable t) {
                 decodedReq.close(t);
@@ -319,8 +345,8 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             if (endOfStream) {
                 req.close();
                 if (req.needsAggregation()) {
-                    assert !req.isInitialized();
-                    ctx.fireChannelRead(req);
+                    assert !req.isFired();
+                    req.fireChannelRead(ctx);
                 }
             }
             return padding;
@@ -344,13 +370,13 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
             final HttpStatusException httpStatusException =
                     HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-            if (!decodedReq.isInitialized()) {
+            if (!decodedReq.isFired()) {
                 assert decodedReq.needsAggregation();
                 final StreamingDecodedHttpRequest streamingReq =
                         decodedReq.toAbortedStreaming(inboundTrafficController,
                                                       httpStatusException, shouldReset);
                 requests.put(streamId, streamingReq);
-                ctx.fireChannelRead(streamingReq);
+                streamingReq.fireChannelRead(ctx);
             } else {
                 decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
                 decodedReq.abortResponse(httpStatusException, true);
@@ -359,10 +385,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
-                if (endOfStream && decodedReq.needsAggregation()) {
-                    assert !decodedReq.isInitialized();
+                if (endOfStream && !decodedReq.isFired()) {
+                    assert decodedReq.needsAggregation();
                     // An aggregated request is now ready to be fired.
-                    ctx.fireChannelRead(decodedReq);
+                    decodedReq.fireChannelRead(ctx);
                 }
             } catch (Throwable t) {
                 decodedReq.close(t);
@@ -412,10 +438,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         final ClosedStreamException cause =
                 new ClosedStreamException("received a RST_STREAM frame: " + Http2Error.valueOf(errorCode));
-        if (!req.isInitialized()) {
+        if (!req.isFired()) {
             assert req.needsAggregation();
             // Call fireChannelRead so that the cause is logged by LoggingService.
-            ctx.fireChannelRead(req.toAbortedStreaming(inboundTrafficController, cause, false));
+            req.toAbortedStreaming(inboundTrafficController, cause, false).fireChannelRead(ctx);
         } else {
             req.abortResponse(cause, /* cancel */ true);
         }
@@ -453,6 +479,30 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         keepAliveHandler.onReadOrWrite();
         if (increaseNumRequests) {
             keepAliveHandler.increaseNumRequests();
+        }
+    }
+
+    private class AggregatingRequestTimeoutTask implements CancellationTask {
+
+        private final ChannelHandlerContext ctx;
+        private final DecodedHttpRequest req;
+
+        AggregatingRequestTimeoutTask(ChannelHandlerContext ctx, DecodedHttpRequest req) {
+            this.ctx = ctx;
+            this.req = req;
+        }
+
+        @Override
+        public boolean canSchedule() {
+            return req.isOpen();
+        }
+
+        @Override
+        public void run(Throwable cause) {
+            assert !req.isFired();
+            // Didn't receive end of stream yet so reset.
+            req.toAbortedStreaming(inboundTrafficController, cause, true)
+               .fireChannelRead(ctx);
         }
     }
 }

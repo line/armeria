@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 
 import java.util.concurrent.CompletableFuture;
 
-import javax.annotation.Nonnull;
-
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ExchangeType;
@@ -31,7 +29,9 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.stream.AggregatingStreamMessage;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 
 final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpObject>
@@ -49,7 +49,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private final long requestStartTimeMicros;
 
     @Nullable
-    private ServiceRequestContext ctx;
+    private DefaultServiceRequestContext ctx;
     @Nullable
     private HttpHeaders trailers;
     private long transferredBytes;
@@ -58,6 +58,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private HttpResponse response;
     @Nullable
     private Throwable abortResponseCause;
+    private boolean fired;
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
@@ -78,17 +79,31 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
-    public void init(ServiceRequestContext ctx) {
+    public void setServiceRequestContext(DefaultServiceRequestContext ctx) {
         this.ctx = ctx;
+    }
+
+    @Override
+    public DefaultServiceRequestContext serviceRequestContext() {
+        assert ctx != null;
+        return ctx;
+    }
+
+    @Override
+    public void fireChannelRead(ChannelHandlerContext channelHandlerCtx) {
+        fired = true;
+        assert ctx != null;
         ctx.logBuilder().increaseRequestLength(transferredBytes);
         if (trailers != null) {
             ctx.logBuilder().requestTrailers(trailers);
         }
+        ctx.requestCancellationScheduler().start();
+        channelHandlerCtx.fireChannelRead(this);
     }
 
     @Override
-    public boolean isInitialized() {
-        return ctx != null;
+    public boolean isFired() {
+        return fired;
     }
 
     @SuppressWarnings("unchecked")
@@ -100,12 +115,6 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public RoutingContext routingContext() {
         return routingCtx;
-    }
-
-    @Nonnull
-    @Override
-    public Routed<ServiceConfig> route() {
-        return routingCtx.result();
     }
 
     @Override
@@ -234,6 +243,12 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
                 inboundTrafficController, maxRequestLength, routingCtx,
                 exchangeType, requestStartTimeNanos, requestStartTimeMicros,
                 false, shouldResetOnlyIfRemoteIsOpen);
+        final DefaultServiceRequestContext defaultServiceRequestContext = serviceRequestContext();
+        streamingDecodedHttpRequest.setServiceRequestContext(defaultServiceRequestContext);
+        defaultServiceRequestContext.updateRequest(streamingDecodedHttpRequest);
+        // Call requestCancellationScheduler().start() not to run AggregatingRequestTimeoutTask when the ctx is
+        // cancelled in abortResponse.
+        defaultServiceRequestContext.requestCancellationScheduler().start();
         abort(cause);
         streamingDecodedHttpRequest.abortResponse(cause, true);
         return streamingDecodedHttpRequest;

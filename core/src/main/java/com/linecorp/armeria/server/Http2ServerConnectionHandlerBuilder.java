@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandlerBuilder;
 
 import io.micrometer.core.instrument.Timer;
@@ -32,14 +33,18 @@ final class Http2ServerConnectionHandlerBuilder
     private final Timer keepAliveTimer;
     private final GracefulShutdownSupport gracefulShutdownSupport;
     private final AsciiString scheme;
+    @Nullable
+    private final ProxiedAddresses proxiedAddresses;
 
     Http2ServerConnectionHandlerBuilder(Channel ch, ServerConfig config, Timer keepAliveTimer,
-                                        GracefulShutdownSupport gracefulShutdownSupport, AsciiString scheme) {
+                                        GracefulShutdownSupport gracefulShutdownSupport, AsciiString scheme,
+                                        @Nullable ProxiedAddresses proxiedAddresses) {
         super(ch);
         this.config = config;
         this.keepAliveTimer = keepAliveTimer;
         this.gracefulShutdownSupport = gracefulShutdownSupport;
         this.scheme = scheme;
+        this.proxiedAddresses = proxiedAddresses;
         // Disable graceful shutdown timeout in a super class. Server-side HTTP/2 graceful shutdown is
         // handled by Armeria's HTTP/2 server handler.
         gracefulShutdownTimeoutMillis(-1);
@@ -52,6 +57,7 @@ final class Http2ServerConnectionHandlerBuilder
                                                  Http2ConnectionEncoder encoder,
                                                  Http2Settings initialSettings) throws Exception {
         return new Http2ServerConnectionHandler(decoder, encoder, initialSettings, channel(),
-                                                config, keepAliveTimer, gracefulShutdownSupport, scheme);
+                                                config, keepAliveTimer, gracefulShutdownSupport, scheme,
+                                                proxiedAddresses);
     }
 }

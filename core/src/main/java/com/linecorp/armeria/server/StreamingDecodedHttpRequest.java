@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import javax.annotation.Nonnull;
-
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -27,7 +25,9 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 
 final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements DecodedHttpRequestWriter {
@@ -46,13 +46,14 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private boolean shouldResetOnlyIfRemoteIsOpen;
 
     @Nullable
-    private ServiceRequestContext ctx;
+    private DefaultServiceRequestContext ctx;
     private long transferredBytes;
 
     @Nullable
     private HttpResponse response;
     @Nullable
     private Throwable abortResponseCause;
+    private boolean fired;
 
     StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
@@ -77,24 +78,32 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
-    public void init(ServiceRequestContext ctx) {
+    public void setServiceRequestContext(DefaultServiceRequestContext ctx) {
         this.ctx = ctx;
     }
 
     @Override
-    public boolean isInitialized() {
-        return ctx != null;
+    public DefaultServiceRequestContext serviceRequestContext() {
+        assert ctx != null;
+        return ctx;
+    }
+
+    @Override
+    public void fireChannelRead(ChannelHandlerContext channelHandlerCtx) {
+        fired = true;
+        assert ctx != null;
+        ctx.requestCancellationScheduler().start();
+        channelHandlerCtx.fireChannelRead(this);
+    }
+
+    @Override
+    public boolean isFired() {
+        return fired;
     }
 
     @Override
     public RoutingContext routingContext() {
         return routingCtx;
-    }
-
-    @Nonnull
-    @Override
-    public Routed<ServiceConfig> route() {
-        return routingCtx.result();
     }
 
     @Override

@@ -219,8 +219,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
                                                                           gracefulShutdownSupport,
                                                                           responseEncoder,
-                                                                          H1C, proxiedAddresses);
-        p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder, httpServerHandler));
+                                                                          H1C);
+        p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder, httpServerHandler, proxiedAddresses));
         p.addLast(httpServerHandler);
     }
 
@@ -237,14 +237,15 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         p.addLast(new Http2OrHttpHandler(proxiedAddresses));
     }
 
-    private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
+    private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme,
+                                                             @Nullable ProxiedAddresses proxiedAddresses) {
         final Timer keepAliveTimer = newKeepAliveTimer(scheme == SCHEME_HTTP ? H2C : H2);
 
         final Http2Connection connection = new DefaultHttp2Connection(/* server */ true);
         final Http2ConnectionEncoder encoder = encoder(connection);
         final Http2ConnectionDecoder decoder = decoder(connection, encoder);
         return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config, keepAliveTimer,
-                                                       gracefulShutdownSupport, scheme)
+                                                       gracefulShutdownSupport, scheme, proxiedAddresses)
                 .codec(decoder, encoder)
                 .initialSettings(http2Settings())
                 .build();
@@ -496,10 +497,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
-            p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            p.addLast(new HttpServerHandler(config,
-                                            gracefulShutdownSupport,
-                                            null, H2, proxiedAddresses));
+            p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS, proxiedAddresses));
+            p.addLast(new HttpServerHandler(config, gracefulShutdownSupport, null, H2));
         }
 
         private void addHttpHandlers(ChannelHandlerContext ctx) {
@@ -529,8 +528,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     config.http1MaxChunkSize()));
             final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
                                                                               gracefulShutdownSupport,
-                                                                              encoder, H1, proxiedAddresses);
-            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder, httpServerHandler));
+                                                                              encoder, H1);
+            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder, httpServerHandler,
+                                              proxiedAddresses));
             p.addLast(httpServerHandler);
         }
 
@@ -636,12 +636,16 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         private final KeepAliveHandler keepAliveHandler;
         private final HttpServer httpServer;
         @Nullable
+        private final ProxiedAddresses proxiedAddresses;
+        @Nullable
         private String name;
 
-        Http2PrefaceOrHttpHandler(ServerHttp1ObjectEncoder responseEncoder, HttpServer httpServer) {
+        Http2PrefaceOrHttpHandler(ServerHttp1ObjectEncoder responseEncoder, HttpServer httpServer,
+                                  @Nullable ProxiedAddresses proxiedAddresses) {
             this.responseEncoder = responseEncoder;
             keepAliveHandler = responseEncoder.keepAliveHandler();
             this.httpServer = httpServer;
+            this.proxiedAddresses = proxiedAddresses;
         }
 
         @Override
@@ -688,17 +692,19 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             baseName = addAfter(p, baseName, http1codec);
             baseName = addAfter(p, baseName, new HttpServerUpgradeHandler(
                     http1codec,
-                    () -> new Http2ServerUpgradeCodec(newHttp2ConnectionHandler(p, SCHEME_HTTP))));
+                    () -> new Http2ServerUpgradeCodec(
+                            newHttp2ConnectionHandler(p, SCHEME_HTTP, proxiedAddresses))));
 
             final Http1RequestDecoder handler =
-                    new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder, httpServer);
+                    new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder, httpServer,
+                                            proxiedAddresses);
             addAfter(p, baseName, handler);
         }
 
         private void configureHttp2(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             assert name != null;
-            addAfter(p, name, newHttp2ConnectionHandler(p, SCHEME_HTTP));
+            addAfter(p, name, newHttp2ConnectionHandler(p, SCHEME_HTTP, proxiedAddresses));
         }
 
         private String addAfter(ChannelPipeline p, String baseName, ChannelHandler handler) {

@@ -127,6 +127,12 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
+    public void start() {
+        // The noopCancellationTask will be replaced by the actual task when start(CancellationTask) is called.
+        start(noopCancellationTask);
+    }
+
+    @Override
     public void start(CancellationTask task) {
         assert eventLoop != null;
         assert eventLoop.inEventLoop();
@@ -514,6 +520,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
                 cause = ResponseTimeoutException.get();
             }
         }
+        this.cause = cause;
 
         // Set FINISHING to preclude executing other timeout operations from the callbacks of `whenCancelling()`
         state = State.FINISHING;
@@ -527,7 +534,6 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (task.canSchedule()) {
             task.run(cause);
         }
-        this.cause = cause;
         ((CancellationFuture) whenCancelled()).doComplete(cause);
     }
 

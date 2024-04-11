@@ -20,9 +20,9 @@ import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
@@ -71,18 +71,15 @@ interface DecodedHttpRequest extends HttpRequest {
      */
     boolean isKeepAlive();
 
-    void init(ServiceRequestContext ctx);
+    void setServiceRequestContext(DefaultServiceRequestContext ctx);
 
-    boolean isInitialized();
+    DefaultServiceRequestContext serviceRequestContext();
+
+    void fireChannelRead(ChannelHandlerContext ctx);
+
+    boolean isFired();
 
     RoutingContext routingContext();
-
-    /**
-     * Returns the {@link ServiceConfig} mapped by {@link Routed}. {@code null} if a request path is invalid
-     * or an {@code OPTION * HTTP/1.1} request.
-     */
-    @Nullable
-    Routed<ServiceConfig> route();
 
     void close();
 

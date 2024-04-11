@@ -36,7 +36,9 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -54,7 +56,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private final long requestStartTimeNanos;
     private final long requestStartTimeMicros;
     @Nullable
-    private ServiceRequestContext ctx;
+    private DefaultServiceRequestContext ctx;
 
     @Nullable
     private CompletableFuture<AggregatedHttpRequest> aggregateFuture;
@@ -63,6 +65,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private HttpResponse response;
     @Nullable
     private Throwable abortResponseCause;
+    private boolean fired;
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
@@ -80,26 +83,32 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
-    public void init(ServiceRequestContext ctx) {
+    public void setServiceRequestContext(DefaultServiceRequestContext ctx) {
         this.ctx = ctx;
     }
 
     @Override
-    public boolean isInitialized() {
-        return ctx != null;
+    public DefaultServiceRequestContext serviceRequestContext() {
+        assert ctx != null;
+        return ctx;
+    }
+
+    @Override
+    public void fireChannelRead(ChannelHandlerContext channelHandlerCtx) {
+        fired = true;
+        assert ctx != null;
+        ctx.requestCancellationScheduler().start();
+        channelHandlerCtx.fireChannelRead(this);
+    }
+
+    @Override
+    public boolean isFired() {
+        return fired;
     }
 
     @Override
     public RoutingContext routingContext() {
         return routingContext;
-    }
-
-    @Override
-    public Routed<ServiceConfig> route() {
-        if (routingContext.hasResult()) {
-            return routingContext.result();
-        }
-        return null;
     }
 
     @Override

@@ -21,19 +21,14 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
-import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-
-import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,25 +42,20 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
@@ -76,14 +66,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
-import io.netty.handler.ssl.SslHandler;
-import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 
 final class HttpServerHandler extends ChannelInboundHandlerAdapter implements HttpServer {
 
@@ -91,26 +78,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
-
-    private static final InetSocketAddress UNKNOWN_ADDR;
-
-    static {
-        InetAddress unknownAddr;
-        try {
-            unknownAddr = InetAddress.getByAddress("<unknown>", new byte[] { 0, 0, 0, 0 });
-        } catch (Exception e1) {
-            // Just in case a certain JRE implementation doesn't accept the hostname '<unknown>'
-            try {
-                unknownAddr = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0 });
-            } catch (Exception e2) {
-                // Should never reach here.
-                final Error err = new Error(e2);
-                err.addSuppressed(e1);
-                throw err;
-            }
-        }
-        UNKNOWN_ADDR = new InetSocketAddress(unknownAddr, 1);
-    }
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -138,10 +105,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         logException(ch, cause);
         safeClose(ch);
     };
-
-    private static boolean warnedRequestIdGenerateFailure;
-
-    private static boolean warnedNullRequestId;
 
     private static void logException(Channel ch, Throwable cause) {
         final HttpServer server = HttpServer.get(ch);
@@ -180,18 +143,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private final GracefulShutdownSupport gracefulShutdownSupport;
 
     private SessionProtocol protocol;
-    @Nullable
-    private SSLSession sslSession;
 
     @Nullable
     private ServerHttpObjectEncoder responseEncoder;
-
-    @Nullable
-    private final ProxiedAddresses proxiedAddresses;
-    @Nullable
-    private InetSocketAddress remoteAddress;
-    @Nullable
-    private InetSocketAddress localAddress;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
     private boolean isReading;
@@ -201,8 +155,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     HttpServerHandler(ServerConfig config,
                       GracefulShutdownSupport gracefulShutdownSupport,
                       @Nullable ServerHttpObjectEncoder responseEncoder,
-                      SessionProtocol protocol,
-                      @Nullable ProxiedAddresses proxiedAddresses) {
+                      SessionProtocol protocol) {
 
         assert protocol == H1 || protocol == H1C || protocol == H2;
 
@@ -211,7 +164,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         this.protocol = requireNonNull(protocol, "protocol");
         this.responseEncoder = responseEncoder;
-        this.proxiedAddresses = proxiedAddresses;
         unfinishedRequests = new IdentityHashMap<>();
     }
 
@@ -289,9 +241,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             logger.debug("{} HTTP/2 settings: {}", ctx.channel(), h2settings);
         }
 
-        if (protocol == H1) {
-            protocol = H2;
-        } else if (protocol == H1C) {
+        if (protocol == H1C) {
             protocol = H2C;
         }
 
@@ -339,21 +289,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
 
         final Channel channel = ctx.channel();
-        final RequestHeaders headers = req.headers();
-        final InetSocketAddress remoteAddress = firstNonNull(remoteAddress(channel), UNKNOWN_ADDR);
-        final InetSocketAddress localAddress = firstNonNull(localAddress(channel), UNKNOWN_ADDR);
-        final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(remoteAddress, headers);
-        final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
         final EventLoop channelEventLoop = channel.eventLoop();
 
-        final RoutingContext routingCtx = req.routingContext();
+        final DefaultServiceRequestContext reqCtx = req.serviceRequestContext();
+        final RoutingContext routingCtx = reqCtx.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
-            final ServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
-                    channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx,
-                    channelEventLoop);
-
             // Handle 'OPTIONS * HTTP/1.1'.
+            req.abort();
             if (routingStatus == RoutingStatus.OPTIONS) {
                 handleOptions(ctx, reqCtx);
                 return;
@@ -362,38 +305,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             throw new Error(); // Should never reach here.
         }
 
-        // Find the service that matches the path.
-        final Routed<ServiceConfig> routed = req.route();
-        assert routed != null;
-
-        // Decode the request and create a new invocation context from it to perform an invocation.
-        final RoutingResult routingResult = routed.routingResult();
-        final ServiceConfig serviceCfg = routed.value();
+        final ServiceConfig serviceCfg = reqCtx.config();
         final HttpService service = serviceCfg.service();
-        final EventLoop serviceEventLoop;
-        final boolean needsDirectExecution;
-        final EventLoopGroup serviceWorkerGroup = serviceCfg.serviceWorkerGroup();
-        if (serviceWorkerGroup == config.workerGroup()) {
-            serviceEventLoop = channelEventLoop;
-            needsDirectExecution = true;
-        } else {
-            serviceEventLoop = serviceWorkerGroup.next();
-            needsDirectExecution = serviceEventLoop == channelEventLoop;
-        }
-        final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, serviceEventLoop, config.meterRegistry(), protocol,
-                nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
-                req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
-                req.requestStartTimeNanos(), req.requestStartTimeMicros(), serviceCfg.contextHook());
-
+        final EventLoop eventLoop = reqCtx.eventLoop();
         final HttpResponse res;
-        req.init(reqCtx);
-        if (needsDirectExecution) {
+        if (eventLoop.inEventLoop()) {
             res = serve0(req, serviceCfg, service, reqCtx);
         } else {
-            res = HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx),
-                                  serviceEventLoop)
-                              .subscribeOn(serviceEventLoop);
+            res = HttpResponse.of(() -> serve0(req.subscribeOn(eventLoop), serviceCfg, service, reqCtx),
+                                  eventLoop)
+                              .subscribeOn(eventLoop);
         }
 
         // Keep track of the number of unfinished requests and
@@ -405,7 +326,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
         unfinishedRequests.put(req, res);
 
-        if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routed.route())) {
+        if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routingCtx.result().route())) {
             reqCtx.log().whenComplete().thenAccept(log -> {
                 final int statusCode = log.responseHeaders().status().code();
                 if (statusCode >= 200 && statusCode < 400) {
@@ -445,10 +366,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private HttpResponse serve0(HttpRequest req,
-                                ServiceConfig serviceCfg,
-                                HttpService service,
-                                DefaultServiceRequestContext reqCtx) {
+    private static HttpResponse serve0(HttpRequest req,
+                                       ServiceConfig serviceCfg,
+                                       HttpService service,
+                                       DefaultServiceRequestContext reqCtx) {
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
             try {
@@ -472,41 +393,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ProxiedAddresses determineProxiedAddresses(InetSocketAddress remoteAddress,
-                                                       RequestHeaders headers) {
-        if (config.clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
-            return HttpHeaderUtil.determineProxiedAddresses(
-                    headers, config.clientAddressSources(), proxiedAddresses,
-                    remoteAddress, config.clientAddressFilter());
-        } else {
-            return proxiedAddresses != null ? proxiedAddresses : ProxiedAddresses.of(remoteAddress);
-        }
-    }
-
-    @Nullable
-    private InetSocketAddress remoteAddress(Channel ch) {
-        final InetSocketAddress remoteAddress = this.remoteAddress;
-        if (remoteAddress != null) {
-            return remoteAddress;
-        }
-
-        final InetSocketAddress newRemoteAddress = ChannelUtil.remoteAddress(ch);
-        this.remoteAddress = newRemoteAddress;
-        return newRemoteAddress;
-    }
-
-    @Nullable
-    private InetSocketAddress localAddress(Channel ch) {
-        final InetSocketAddress localAddress = this.localAddress;
-        if (localAddress != null) {
-            return localAddress;
-        }
-
-        final InetSocketAddress newLocalAddress = ChannelUtil.localAddress(ch);
-        this.localAddress = newLocalAddress;
-        return newLocalAddress;
-    }
-
     private void handleOptions(ChannelHandlerContext ctx, ServiceRequestContext reqCtx) {
         respond(ctx, reqCtx,
                 ResponseHeaders.builder(HttpStatus.OK)
@@ -517,10 +403,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
                          ResponseHeadersBuilder resHeaders, HttpData resContent,
                          @Nullable Throwable cause) {
+        final ChannelFuture future = respond(reqCtx, resHeaders, resContent, cause);
         if (!handledLastRequest) {
-            respond(reqCtx, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
+            future.addListener(CLOSE_ON_FAILURE);
         } else {
-            respond(reqCtx, resHeaders, resContent, cause).addListener(CLOSE);
+            future.addListener(CLOSE);
         }
 
         if (!isReading) {
@@ -613,12 +500,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof SslHandshakeCompletionEvent) {
-            final SslHandler sslHandler = ctx.channel().pipeline().get(SslHandler.class);
-            sslSession = sslHandler != null ? sslHandler.engine().getSession() : null;
-            return;
-        }
-
         if (evt instanceof SslCloseCompletionEvent ||
             evt instanceof ChannelInputShutdownReadComplete) {
             // Expected events
@@ -633,47 +514,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         Exceptions.logIfUnexpected(logger, ctx.channel(), protocol, cause);
         if (ctx.channel().isActive()) {
             ctx.close();
-        }
-    }
-
-    private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
-                                                                   ProxiedAddresses proxiedAddresses,
-                                                                   InetAddress clientAddress,
-                                                                   InetSocketAddress remoteAddress,
-                                                                   InetSocketAddress localAddress,
-                                                                   RoutingContext routingCtx,
-                                                                   EventLoop eventLoop) {
-        final ServiceConfig serviceConfig = routingCtx.virtualHost().fallbackServiceConfig();
-        final RoutingResult routingResult = RoutingResult.builder()
-                                                         .path(routingCtx.path())
-                                                         .build();
-        return new DefaultServiceRequestContext(
-                serviceConfig,
-                channel, eventLoop, NoopMeterRegistry.get(), protocol(),
-                nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
-                req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
-                System.nanoTime(), SystemInfo.currentTimeMicros(), NOOP_CONTEXT_HOOK);
-    }
-
-    private static RequestId nextRequestId(RoutingContext routingCtx, ServiceConfig serviceConfig) {
-        try {
-            final RequestId id = serviceConfig.requestIdGenerator().apply(routingCtx);
-            if (id != null) {
-                return id;
-            }
-
-            if (!warnedNullRequestId) {
-                warnedNullRequestId = true;
-                logger.warn("requestIdGenerator.apply(routingCtx) returned null; using RequestId.random()");
-            }
-            return RequestId.random();
-        } catch (Exception e) {
-            if (!warnedRequestIdGenerateFailure) {
-                warnedRequestIdGenerateFailure = true;
-                logger.warn("requestIdGenerator.apply(routingCtx) threw an exception; using RequestId.random()",
-                            e);
-            }
-            return RequestId.random();
         }
     }
 

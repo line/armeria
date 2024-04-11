@@ -67,6 +67,7 @@ abstract class AbstractHttpResponseHandler {
         this.reqCtx = reqCtx;
         this.req = req;
         this.completionFuture = completionFuture;
+        setTimeoutCancellationTask();
     }
 
     /**
@@ -244,10 +245,9 @@ abstract class AbstractHttpResponseHandler {
     }
 
     /**
-     * Schedules a request timeout.
+     * Set timeout cancellation task. The CancellationScheduler already starts in the HttpRequestDecoder.
      */
-    final void scheduleTimeout() {
-        // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
+    final void setTimeoutCancellationTask() {
         reqCtx.requestCancellationScheduler().start(newCancellationTask());
     }
 

@@ -32,6 +32,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2ConnectionDecoder;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2Settings;
+import io.netty.handler.ssl.SslHandler;
+import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.util.AsciiString;
 
 final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler {
@@ -47,7 +49,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig cfg,
                                  Timer keepAliveTimer, GracefulShutdownSupport gracefulShutdownSupport,
-                                 AsciiString scheme) {
+                                 AsciiString scheme, @Nullable ProxiedAddresses proxiedAddresses) {
 
         super(decoder, encoder, initialSettings, newKeepAliveHandler(encoder, channel, cfg, keepAliveTimer));
 
@@ -57,7 +59,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         gracefulConnectionShutdownHandler = new Http2GracefulConnectionShutdownHandler(
                 cfg.connectionDrainDurationMicros());
 
-        requestDecoder = new Http2RequestDecoder(cfg, channel, scheme, keepAliveHandler());
+        requestDecoder = new Http2RequestDecoder(cfg, channel, scheme, keepAliveHandler(), proxiedAddresses);
         connection().addListener(requestDecoder);
         decoder().frameListener(requestDecoder);
     }
@@ -150,6 +152,15 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
                     ctx, (InitiateConnectionShutdown) evt);
             return;
         }
+
+        if (evt instanceof SslHandshakeCompletionEvent) {
+            final SslHandler sslHandler = ctx.channel().pipeline().get(SslHandler.class);
+            if (sslHandler != null) {
+                requestDecoder.setSslSession(sslHandler.engine().getSession());
+            }
+            return;
+        }
+
         super.userEventTriggered(ctx, evt);
     }
 

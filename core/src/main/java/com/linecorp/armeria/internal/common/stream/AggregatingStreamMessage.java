@@ -80,6 +80,18 @@ public class AggregatingStreamMessage<T> extends AbstractFixedStreamMessage<T> i
     }
 
     @Override
+    public void abort() {
+        closed = true;
+        super.abort();
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        closed = true;
+        super.abort(cause);
+    }
+
+    @Override
     T get(int index) {
         return objs.get(index);
     }

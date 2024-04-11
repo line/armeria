@@ -65,6 +65,8 @@ public interface CancellationScheduler {
 
     void init(EventExecutor eventLoop);
 
+    void start();
+
     void start(CancellationTask task);
 
     void clearTimeout();

@@ -52,7 +52,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
                                   DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
                                   CompletableFuture<Void> completionFuture) {
         super(ctx, responseEncoder, reqCtx, req, completionFuture);
-        scheduleTimeout();
     }
 
     @Override

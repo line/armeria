@@ -98,8 +98,6 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
             return;
         }
 
-        scheduleTimeout();
-
         // Start consuming.
         subscription.request(1);
     }

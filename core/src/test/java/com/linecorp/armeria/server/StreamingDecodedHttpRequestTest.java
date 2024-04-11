@@ -28,6 +28,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 
 import reactor.test.StepVerifier;
 
@@ -100,7 +102,9 @@ class StreamingDecodedHttpRequestTest {
 
     private static StreamingDecodedHttpRequest decodedHttpRequest() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
-        final ServiceRequestContext sctx = ServiceRequestContext.of(HttpRequest.of(headers));
+        final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(headers))
+                                                                .eventLoop(ImmediateEventLoop.INSTANCE)
+                                                                .build();
         return decodedHttpRequest(headers, sctx);
     }
 
@@ -112,7 +116,7 @@ class StreamingDecodedHttpRequestTest {
                                                           InboundTrafficController.disabled(),
                                                           sctx.maxRequestLength(), sctx.routingContext(),
                                                           ExchangeType.BIDI_STREAMING, 0, 0, false, false);
-        request.init(sctx);
+        request.setServiceRequestContext((DefaultServiceRequestContext) sctx);
         return request;
     }
 }
