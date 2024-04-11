@@ -5,73 +5,74 @@ date: 2024-04-12
 ## 🌟 New features
 
 - You can now create a Spring HTTP Interface backed by Armeria's <type://WebClient>. #5370
-```java
-WebClient webClient = ...;
-ArmeriaHttpExchangeAdapter adapter = ArmeriaHttpExchangeAdapter.of(webClient);
-MyService myService = HttpServiceProxyFactory.builderFor(adapter)
-.build()
-.createClient(MyService.class);
-myService.hello();
-```
+  ```java
+  WebClient webClient = ...;
+  ArmeriaHttpExchangeAdapter adapter = ArmeriaHttpExchangeAdapter.of(webClient);
+  MyService myService = HttpServiceProxyFactory.builderFor(adapter)
+    .build()
+    .createClient(MyService.class);
+  myService.hello();
+  ```
 - You can use <type://KubernetesEndpointGroup> to perform client-side load-balancing when sending requests to a K8s cluster. #4497 #5001
-```java
-KubernetesClient kubernetesClient = new KubernetesClientBuilder().build();
-EndpointGroup endpointGroup = KubernetesEndpointGroup
-  .builder(kubernetesClient)
-  .namespace("default")
-  .serviceName("my-service")
-  .build();
-WebClient.of(HTTP, endpointGroup).get("/")
-```
+  ```java
+  KubernetesClient kubernetesClient = new KubernetesClientBuilder().build();
+  EndpointGroup endpointGroup = KubernetesEndpointGroup
+    .builder(kubernetesClient)
+    .namespace("default")
+    .serviceName("my-service")
+    .build();
+  WebClient.of(HTTP, endpointGroup).get("/")
+  ```
 - You can now conditionally deserialize a JSON response depending on a predicate. #4382 #5002
-```java
-ResponseEntity<MyResponse> response =
-  RestClient.of(server.httpUri()).get("/")
-    .execute(ResponseAs.<MyResponse>json(SuccessMessage.class, res → res.status().isError())
-                       .orElseJson(EmptyMessage.class, res → res.status().isInformational())
-                       .orElseJson(ErrorMessage.class)).join();
-```
-- You can specify allowed CORS origins via regular expression or `Predicate<String>`. #4982
-```java
-CorsService.builderForOriginRegex(".*example.*")
-           .andForOrigin(origin -> origin.contains("armeria"))
-```
+  ```java
+  ResponseEntity<MyResponse> response =
+    RestClient.of(server.httpUri()).get("/")
+      .execute(ResponseAs.<MyResponse>json(SuccessMessage.class, res → res.status().isError())
+                         .orElseJson(EmptyMessage.class, res → res.status().isInformational())
+                         .orElseJson(ErrorMessage.class)).join();
+  ```
+- You can specify allowed CORS origins via regular expression or predicates. #4982
+  ```java
+  CorsService.builderForOriginRegex(".*example.*")
+             .andForOrigin(origin -> origin.contains("armeria"))
+  ```
 - You can specify a Micrometer `DistributionStatisticConfig` for <type://MetricCollectingClient> and
   <type://MetricCollectingService>. #4781 #4829
-```java
-DistributionStatisticConfig config = ...;
-MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("test"))
-                       .distributionStatisticConfig(config)
-```
+  ```java
+  DistributionStatisticConfig config = ...;
+  MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("test"))
+                         .distributionStatisticConfig(config)
+  ```
 - <type://HealthChecker#ofCpu(double,double)> can be used to reflect CPU load in health check status. #4673
-```java
-Server.builder()
-      .service("/hc", HealthCheckService.of(HealthChecker.ofCpu(0.5, 0.5)));
-```
+  ```java
+  Server.builder()
+        .service("/hc", HealthCheckService.of(HealthChecker.ofCpu(0.5, 0.5)));
+  ```
 - You can flatten multiple <typeplural://StreamMessage> using <type://StreamMessage#flatMap()>. #3966 #4227
 - <type://ClientFactory> can be closed with a grace period before closing HTTP/2 connections. #5489
 - Armeria's Spring integration now registers <type://ServerErrorHandler> type beans automatically. #5443 #5446
-```java
-@Bean
-public ServerErrorHandler serverErrorHandler() {
-  return myServerErrorHandler;
-}
-```
+  ```java
+  @Bean
+  public ServerErrorHandler serverErrorHandler() {
+    return myServerErrorHandler;
+  }
+  ```
 - OAuth 2.0 modules have been refactored #5476
   - You can now easily implement your own [OAuth 2.0 Extension Grants](https://datatracker.ietf.org/doc/html/rfc6749#section-4.5) by extending `AccessTokenRequest`.
   - You can now use [JSON Web Token](https://datatracker.ietf.org/doc/html/rfc7523) to obtain OAuth 2.0 access tokens.
 - Armeria JARs are now compatible with Java modules. #5543
 - <type://ServerBuilder#hostname(String)> returns a cached <type://VirtualHostBuilder> if available. #5418
-```java
-assert Server.builder().virtualHost("a.com") == Server.builder().virtualHost("a.com");
-```
-- You can add custom `details` when throwing an `ArmeriaStatusException` in a <type://AbstractUnsafeUnaryGrpcService>. #4306 #4341
+  ```java
+  assert Server.builder().virtualHost("a.com") ==
+      Server.builder().virtualHost("a.com");
+  ```
+- You can add custom `details` when throwing an `ArmeriaStatusException` in an <type://AbstractUnsafeUnaryGrpcService>. #4306 #4341
 - <type://AuthService> now records metrics for authentication results. #5074 #5017
 - <type://XdsEndpointGroup> now supports [Strict DNS](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/service_discovery#strict-dns)
   and [health checking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/health_checking). #5503
-- <type://XdsBootstraps> now supports `SelfConfigSource`. #5459
-- <type://AccessLogWriter#log> is now called with the `RequestContext` set on the calling thread. #5500
-- You can now pass the <type://RequestOnlyLog#authenticatedUser> to Logback's MDC easily using `authenticated.user`. #5499
+- <type://XdsBootstrap> now supports `SelfConfigSource`. #5459
+- <type://AccessLogWriter#log(RequestLog)> is now called with the <type://ServiceRequestContext> set on the calling thread. #5500
+- You can now pass <type://RequestOnlyLog#authenticatedUser()> to Logback's MDC easily using `authenticated.user`. #5499
 
 ## 🛠️ Bug fixes
 
@@ -81,20 +82,20 @@ assert Server.builder().virtualHost("a.com") == Server.builder().virtualHost("a.
 - Fixed a bug where Thrift client requests were leaking byte buffers when aborted early. #5535
 - <type://LoggingClient> and <type://LoggingService> now correctly mask default sensitive headers. #5519
 - <type://GrpcService> now correctly handles `InvalidProtocolBufferException`. #5379 #5554
-- Armeria server no longer logs a duplicate route warning for routes with arbitrary parameter or header predicates. #5469
+- Armeria server no longer incorrectly logs a duplicate route warning for routes with arbitrary parameter or header predicates. #5469
 - Annotated services annotated with <type://Param> and <type://Default> now returns sensible values when an empty value is received. #5515 #5534
 - <type://WebsocketFrame#ofPong(byte[])> now correctly sends a `PONG` Frame. #5533
 - The `Complete` message in the GraphQL over WebSocket Protocol is now constructed securely. #5531
-- <type://ClientFactory> no longer throws an exception intermittently when shutting down. #5494 #5524
+- <type://ClientFactory> no longer throws an intermittent exception when shutting down. #5494 #5524
 - Fixed a possible memory leak when a custom gRPC marshaller is used. #5523
 - Armeria client is now more tolerant to poorly encoded `Location` header values when following redirects. #5477
 - You can now use Kotlin value classes in annotated services. #5294 #5449
-- DocService now also supports JSON streaming requests. #5218 #5381
+- <type://DocService> now also supports JSON streaming requests. #5218 #5381
 
 ## ☢️ Breaking changes
 
 - The `armeria-brave` module has been fully removed. #5453
-  - See the [brave6 release notes](https://github.com/openzipkin/brave/releases/tag/6.0.0) for more information.
+  - To upgrade to `armeria-brave6`, see the [brave6 release notes](https://github.com/openzipkin/brave/releases/tag/6.0.0).
   - If you wish to retain the previous module functionality, use `armeria-brave5`.
 - <type://LogWriterBuilder#responseCauseFilter(BiPredicate)> now accepts a `BiPredicate`
   with <type://RequestContext> as its first parameter.
@@ -117,7 +118,8 @@ assert Server.builder().virtualHost("a.com") == Server.builder().virtualHost("a.
 
 - <type://Flags#useOpenSsl()> is deprecated in favor of <type://Flags#tlsEngineType()> #5029
 - <type://ServerBuilder#virtualHost(String,String)>, <type://ServerBuilder#withVirtualHost(Consumer)>,
-  <type://VirtualHostBuilder#hostname(String)> have been deprecated as they don't support <type://VirtualHostBuilder> re-usability.
+  <type://VirtualHostBuilder#hostnamePattern(String)> have been deprecated as they don't support <type://VirtualHostBuilder> re-usability.
+- <type://ClientAuthorization> and OAuth2 grant related classes have been deprecated in favor of a newer API. #5476
 
 ## 🙌 Miscellaneous
 
