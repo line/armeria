@@ -35,4 +35,4 @@ jobs:
           gitRepo: https://github.com/line/armeria.git
           gitBranch: main
           tasks: build
-          args: --parallel -Pretry=true -PfailOnPassedAfterRetry=false
+          args: --parallel -PfailIfNotFullyCacheable=true -Pretry=true -PfailOnPassedAfterRetry=false
