@@ -10,7 +10,7 @@ env:
 jobs:
   build-cache-check:
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - id: setup-jdk-19
         name: Set up JDK 19
