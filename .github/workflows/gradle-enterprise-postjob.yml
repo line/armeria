@@ -135,6 +135,6 @@ jobs:
           ./gradlew --no-daemon --stacktrace --build-cache build \
           --max-workers=2 --parallel \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
-          -Pretry=true -PfailOnPassedAfterRetry=false \
+          -Pretry=true \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }}
         shell: bash

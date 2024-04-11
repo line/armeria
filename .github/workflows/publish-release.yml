@@ -30,7 +30,7 @@ jobs:
       - name: Build with Gradle
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=8 --parallel -PflakyTests=false \
-          -Pretry=true -PfailOnPassedAfterRetry=false \
+          -Pretry=true \
           build
         shell: bash
 
