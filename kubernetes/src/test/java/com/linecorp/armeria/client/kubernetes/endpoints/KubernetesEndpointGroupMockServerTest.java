@@ -160,6 +160,7 @@ class KubernetesEndpointGroupMockServerTest {
                     Endpoint.of("4.4.4.4", nodePort)
             );
         });
+        client.close();
     }
 
     @Test
@@ -226,6 +227,7 @@ class KubernetesEndpointGroupMockServerTest {
                         Endpoint.of("3.3.3.3", httpNodePort));
             });
         }
+        client.close();
     }
 
     @Test
@@ -268,6 +270,7 @@ class KubernetesEndpointGroupMockServerTest {
             );
         });
         endpointGroup.close();
+        client.close();
     }
 
     private static Node newNode(String ip, String type) {
