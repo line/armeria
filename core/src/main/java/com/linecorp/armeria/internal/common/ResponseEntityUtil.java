@@ -30,14 +30,16 @@ public final class ResponseEntityUtil {
      * Build {@link ResponseHeaders} from the given {@link ServiceRequestContext} and {@link ResponseEntity}.
      */
     public static ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx, ResponseEntity<?> result) {
-        final ResponseHeadersBuilder builder = result.headers().toBuilder();
+        final ResponseHeaders headers = result.headers();
 
-        if (builder.status().isContentAlwaysEmpty()) {
-            return builder.build();
+        if (headers.status().isContentAlwaysEmpty()) {
+            return headers;
         }
-        if (builder.contentType() != null) {
-            return builder.build();
+        if (headers.contentType() != null) {
+            return headers;
         }
+
+        final ResponseHeadersBuilder builder = headers.toBuilder();
 
         final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
         if (negotiatedResponseMediaType != null) {
