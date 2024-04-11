@@ -43,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.MapMaker;
@@ -98,7 +97,7 @@ public final class AnnotationUtil {
      */
     private static final Set<Class<? extends Annotation>> knownCyclicAnnotationTypes =
             Collections.newSetFromMap(new MapMaker().weakKeys().makeMap());
-    private static final ImmutableSet<FindOption> findOptionsForDescription = ImmutableSet.copyOf(
+    private static final Set<FindOption> FIND_OPTIONS_FOR_DESCRIPTION = ImmutableSet.copyOf(
             EnumSet.of(FindOption.LOOKUP_SUPER_CLASSES,
                        FindOption.LOOKUP_META_ANNOTATIONS,
                        FindOption.LOOKUP_SUPER_METHODS,
@@ -145,19 +144,19 @@ public final class AnnotationUtil {
      */
     @Nullable
     public static Description findFirstDescription(AnnotatedElement element) {
-        final List<Description> found = find(element, Description.class, findOptionsForDescription);
+        final List<Description> found = find(element, Description.class, FIND_OPTIONS_FOR_DESCRIPTION);
         return found.isEmpty() ? null : found.get(0);
     }
 
     /**
-     * Returns a {@link Builder} which has the instances specified by the annotations of the
+     * Returns a {@link ImmutableList.Builder} which has the instances specified by the annotations of the
      * {@code annotationType}. The annotations of the specified {@code method} and {@code clazz} will be
      * collected respectively.
      */
-    public static <T extends Annotation, R> Builder<R> getAnnotatedInstances(
+    public static <T extends Annotation, R> ImmutableList.Builder<R> getAnnotatedInstances(
             AnnotatedElement method, AnnotatedElement clazz, Class<T> annotationType, Class<R> resultType,
             DependencyInjector dependencyInjector) {
-        final Builder<R> builder = new Builder<>();
+        final ImmutableList.Builder<R> builder = ImmutableList.builder();
         Stream.concat(findAll(method, annotationType).stream(), findAll(clazz, annotationType).stream())
               .forEach(annotation -> builder.add(
                       AnnotatedObjectFactory.getInstance(annotation, resultType, dependencyInjector)));
@@ -257,7 +256,7 @@ public final class AnnotationUtil {
         requireNonNull(element, "element");
         requireNonNull(annotationType, "annotationType");
 
-        final Builder<T> builder = new Builder<>();
+        final ImmutableList.Builder<T> builder = ImmutableList.builder();
 
         // Repeatable is not a repeatable. So the length of the returning array is 0 or 1.
         final Repeatable[] repeatableAnnotations = annotationType.getAnnotationsByType(Repeatable.class);
@@ -276,14 +275,14 @@ public final class AnnotationUtil {
     }
 
     private static <T extends Annotation> void findMetaAnnotations(
-            Builder<T> builder, Annotation annotation,
+            ImmutableList.Builder<T> builder, Annotation annotation,
             Class<T> annotationType, @Nullable Class<? extends Annotation> containerType) {
         findMetaAnnotations(builder, annotation, annotationType, containerType,
                             Collections.newSetFromMap(new IdentityHashMap<>()));
     }
 
     private static <T extends Annotation> boolean findMetaAnnotations(
-            Builder<T> builder, Annotation annotation,
+            ImmutableList.Builder<T> builder, Annotation annotation,
             Class<T> annotationType, @Nullable Class<? extends Annotation> containerType,
             Set<Class<? extends Annotation>> visitedAnnotationTypes) {
 
@@ -363,7 +362,7 @@ public final class AnnotationUtil {
         requireNonNull(element, "element");
         requireNonNull(collectingFilter, "collectingFilter");
 
-        final Builder<Annotation> builder = new Builder<>();
+        final ImmutableList.Builder<Annotation> builder = ImmutableList.builder();
 
         for (final AnnotatedElement e : resolveTargetElements(element, findOptions)) {
             for (final Annotation annotation : e.getDeclaredAnnotations()) {
@@ -378,13 +377,13 @@ public final class AnnotationUtil {
         return builder.build();
     }
 
-    private static void getMetaAnnotations(Builder<Annotation> builder, Annotation annotation,
+    private static void getMetaAnnotations(ImmutableList.Builder<Annotation> builder, Annotation annotation,
                                            Predicate<Annotation> collectingFilter) {
         getMetaAnnotations(builder, annotation, collectingFilter,
                            Collections.newSetFromMap(new IdentityHashMap<>()));
     }
 
-    private static boolean getMetaAnnotations(Builder<Annotation> builder, Annotation annotation,
+    private static boolean getMetaAnnotations(ImmutableList.Builder<Annotation> builder, Annotation annotation,
                                               Predicate<Annotation> collectingFilter,
                                               Set<Class<? extends Annotation>> visitedAnnotationTypes) {
 
@@ -478,7 +477,7 @@ public final class AnnotationUtil {
 
     private static List<Parameter> collectParameters(Class<?> clazz, Executable executable,
                                                      Parameter parameter, boolean collectSuperClassesFirst) {
-        final Builder<Parameter> parameterCollector = new Builder<>();
+        final ImmutableList.Builder<Parameter> parameterCollector = ImmutableList.builder();
         for (Method targetMethod : collectMethods(clazz, executable, collectSuperClassesFirst)) {
             Arrays.stream(targetMethod.getParameters())
                   .filter(p -> p.getName().equals(parameter.getName()))
@@ -490,7 +489,7 @@ public final class AnnotationUtil {
 
     private static List<Method> collectMethods(Class<?> clazz, Executable executable,
                                                boolean collectSuperClassesFirst) {
-        final Builder<Method> methodCollector = new Builder<>();
+        final ImmutableList.Builder<Method> methodCollector = ImmutableList.builder();
         for (Class<?> targetClass : collectClasses(clazz, collectSuperClassesFirst)) {
             try {
                 final Method targetMethod = targetClass.getDeclaredMethod(executable.getName(),
@@ -503,12 +502,12 @@ public final class AnnotationUtil {
     }
 
     private static List<Class<?>> collectClasses(Class<?> clazz, boolean collectSuperClassesFirst) {
-        final Builder<Class<?>> classCollector = new Builder<>();
+        final ImmutableList.Builder<Class<?>> classCollector = ImmutableList.builder();
         collectClasses(clazz, classCollector, collectSuperClassesFirst);
         return classCollector.build();
     }
 
-    private static void collectClasses(Class<?> clazz, Builder<Class<?>> collector,
+    private static void collectClasses(Class<?> clazz, ImmutableList.Builder<Class<?>> collector,
                                        boolean collectSuperClassesFirst) {
         final Class<?> superClass = clazz.getSuperclass();
         final Class<?>[] superInterfaces = clazz.getInterfaces();
@@ -530,7 +529,7 @@ public final class AnnotationUtil {
     }
 
     private static <T extends Annotation> void collectAnnotations(
-            Builder<T> builder, Annotation annotation,
+            ImmutableList.Builder<T> builder, Annotation annotation,
             Class<T> annotationType, @Nullable Class<? extends Annotation> containerType) {
         final Class<? extends Annotation> type = annotation.annotationType();
         if (type == annotationType) {
