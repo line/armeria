@@ -311,7 +311,7 @@ final class DefaultRoute implements Route {
     }
 
     @Override
-    public boolean hasDuplicateRouteCondition(Route other) {
+    public boolean hasConflicts(Route other) {
         if (complexity != other.complexity()) {
             return false;
         }

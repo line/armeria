@@ -247,8 +247,8 @@ public interface Route {
      *                    .matchesParams("foo", "bar")
      *                    .matchesHeaders("baz")
      *                    .build();
-     * assert route.hasDuplicateRouteCondition(other);
+     * assert route.hasConflicts(other);
      * }</pre>
      */
-    boolean hasDuplicateRouteCondition(Route other);
+    boolean hasConflicts(Route other);
 }

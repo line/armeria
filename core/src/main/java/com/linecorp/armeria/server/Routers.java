@@ -254,7 +254,7 @@ final class Routers {
             final List<Route> existingRoutes =
                     triePath2Routes.computeIfAbsent(triePath, unused -> new ArrayList<>());
             for (Route existingRoute : existingRoutes) {
-                if (route.hasDuplicateRouteCondition(existingRoute)) {
+                if (route.hasConflicts(existingRoute)) {
                     rejectionHandler.accept(route, existingRoute);
                     return;
                 }
