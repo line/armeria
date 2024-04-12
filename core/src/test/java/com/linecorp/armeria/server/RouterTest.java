@@ -35,8 +35,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
@@ -48,7 +46,6 @@ import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
 
 class RouterTest {
-    private static final Logger logger = LoggerFactory.getLogger(RouterTest.class);
 
     private static final BiConsumer<Route, Route> REJECT = (a, b) -> {
         throw new IllegalStateException("duplicate route: " + a + " vs. " + b);
@@ -217,6 +214,53 @@ class RouterTest {
                                     .path("/foo")
                                     .methods(HttpMethod.POST)
                                     .produces(MediaType.JSON_UTF_8)
+                                    .build());
+    }
+
+    @Test
+    void duplicateWithPredicates() {
+        // Duplicate if matches params overlap.
+        testDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.POST)
+                                 .matchesParams("a!=b||b=a", "foo")
+                                 .build(),
+                            Route.builder().path("/foo").methods(HttpMethod.POST)
+                                 .matchesParams(" a!=b || b=a")
+                                 .build());
+        // Non-duplicate
+        testNonDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.POST)
+                                 .matchesParams("a!=b||b=c")
+                                 .build(),
+                            Route.builder().path("/foo").methods(HttpMethod.POST)
+                                 .matchesParams("a!=b||b=a")
+                                 .build());
+        // Non-duplicate even if matches params overlap when the custom predicate is specified.
+        testNonDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.POST)
+                                    .matchesParams("foo", p -> true)
+                                    .build(),
+                               Route.builder().path("/foo").methods(HttpMethod.POST)
+                                    .matchesParams("foo")
+                                    .build());
+
+        // Duplicate if matches headers overlap.
+        testDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.POST)
+                                 .matchesHeaders("foo", "bar")
+                                 .build(),
+                            Route.builder().path("/foo").methods(HttpMethod.POST)
+                                 .matchesHeaders("foo")
+                                 .build());
+        // Non-duplicate
+        testNonDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.POST)
+                                    .matchesHeaders("foo")
+                                    .build(),
+                               Route.builder().path("/foo").methods(HttpMethod.POST)
+                                    .matchesHeaders("foo1")
+                                    .build());
+        // Non-duplicate even if matches headers overlap when the custom predicate is specified.
+        testNonDuplicateRoutes(Route.builder().path("/foo").methods(HttpMethod.POST)
+                                    .matchesHeaders("foo", p -> true)
+                                    .build(),
+                               Route.builder().path("/foo").methods(HttpMethod.POST)
+                                    .matchesHeaders("foo")
                                     .build());
     }
 
