@@ -62,7 +62,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.reactor3.RequestContextPropagationHook;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
@@ -206,13 +205,7 @@ public final class ArmeriaConfigurationUtil {
         if (settings.isEnableAutoInjection()) {
             server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
         }
-
-        if (settings.isEnableContextPropagation()) {
-            RequestContextPropagationHook.enable();
-        }
-
         serverErrorHandlers.forEach(server::errorHandler);
-
     }
 
     private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,
