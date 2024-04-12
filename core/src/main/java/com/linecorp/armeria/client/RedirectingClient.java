@@ -22,6 +22,8 @@ import static com.linecorp.armeria.internal.client.RedirectingClientUtil.allowSa
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority;
 
 import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
@@ -30,8 +32,6 @@ import java.util.function.Function;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.client.redirect.CyclicRedirectsException;
@@ -263,18 +263,12 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                     newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders,
                                      nextReqTarget.toString(), nextAuthority);
 
-            if (isCyclicRedirects(redirectCtx, nextReqTarget.toString(), newReqDuplicator.headers().method())) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response,
-                                CyclicRedirectsException.of(redirectCtx.originalUri(),
-                                                            redirectCtx.redirectUris().values()));
-                return;
-            }
-
-            final Multimap<HttpMethod, String> redirectUris = redirectCtx.redirectUris();
-            if (redirectUris.size() > maxRedirects) {
-                handleException(ctx, derivedCtx, reqDuplicator, responseFuture,
-                                response, TooManyRedirectsException.of(maxRedirects, redirectCtx.originalUri(),
-                                                                       redirectUris.values()));
+            try {
+                redirectCtx.validateRedirects(nextReqTarget,
+                                              newReqDuplicator.headers().method(),
+                                              maxRedirects);
+            } catch (Throwable t) {
+                handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, t);
                 return;
             }
 
@@ -469,17 +463,6 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         }
     }
 
-    private static boolean isCyclicRedirects(RedirectContext redirectCtx,
-                                             String redirectUri, HttpMethod method) {
-        final boolean added = redirectCtx.addRedirectUri(method, redirectUri);
-        if (!added) {
-            return true;
-        }
-
-        return redirectCtx.originalUri().equals(redirectUri) &&
-               redirectCtx.request().method() == method;
-    }
-
     private static String buildUri(ClientRequestContext ctx, RequestHeaders headers) {
         final String originalUri;
         try (TemporaryThreadLocals threadLocals = TemporaryThreadLocals.acquire()) {
@@ -549,9 +532,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         private final CompletableFuture<Void> responseWhenComplete;
         private final CompletableFuture<HttpResponse> responseFuture;
         @Nullable
-        private Multimap<HttpMethod, String> redirectUris;
-        @Nullable
         private String originalUri;
+        @Nullable
+        private Set<RedirectSignature> redirectSignatures;
 
         RedirectContext(ClientRequestContext ctx, HttpRequest request,
                         HttpResponse response, CompletableFuture<HttpResponse> responseFuture) {
@@ -573,6 +556,32 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return responseFuture;
         }
 
+        void validateRedirects(RequestTarget nextReqTarget, HttpMethod nextMethod, int maxRedirects) {
+            if (redirectSignatures == null) {
+                redirectSignatures = new LinkedHashSet<>();
+
+                final String originalProtocol = ctx.sessionProtocol().isTls() ? "https" : "http";
+                final RedirectSignature originalSignature = new RedirectSignature(originalProtocol,
+                                                                                  ctx.authority(),
+                                                                                  request.headers().path(),
+                                                                                  request.method());
+                redirectSignatures.add(originalSignature);
+            }
+
+            final RedirectSignature signature = new RedirectSignature(nextReqTarget.scheme(),
+                                                                      nextReqTarget.authority(),
+                                                                      nextReqTarget.pathAndQuery(),
+                                                                      nextMethod);
+            if (!redirectSignatures.add(signature)) {
+                throw CyclicRedirectsException.of(originalUri(), redirectUris());
+            }
+
+            // Minus 1 because the original signature is also included.
+            if (redirectSignatures.size() - 1 > maxRedirects) {
+                throw TooManyRedirectsException.of(maxRedirects, originalUri(), redirectUris());
+            }
+        }
+
         String originalUri() {
             if (originalUri == null) {
                 originalUri = buildUri(ctx, request.headers());
@@ -580,17 +589,52 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             return originalUri;
         }
 
-        boolean addRedirectUri(HttpMethod method, String redirectUri) {
-            if (redirectUris == null) {
-                redirectUris = LinkedListMultimap.create();
-            }
-            return redirectUris.put(method, redirectUri);
+        Set<String> redirectUris() {
+            // Always called after addRedirectSignature is called.
+            assert redirectSignatures != null;
+            return redirectSignatures.stream()
+                                     .map(RedirectSignature::uri)
+                                     .collect(ImmutableSet.toImmutableSet());
+        }
+    }
+
+    @VisibleForTesting
+    static class RedirectSignature {
+        private final String protocol;
+        private final String authority;
+        private final String pathAndQuery;
+        private final HttpMethod method;
+
+        RedirectSignature(String protocol, String authority, String pathAndQuery, HttpMethod method) {
+            this.protocol = protocol;
+            this.authority = authority;
+            this.pathAndQuery = pathAndQuery;
+            this.method = method;
         }
 
-        Multimap<HttpMethod, String> redirectUris() {
-            // Always called after addRedirectUri is called.
-            assert redirectUris != null;
-            return redirectUris;
+        @Override
+        public int hashCode() {
+            return Objects.hash(protocol, authority, pathAndQuery, method);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this) {
+                return true;
+            }
+            if (!(obj instanceof RedirectSignature)) {
+                return false;
+            }
+
+            final RedirectSignature that = (RedirectSignature) obj;
+            return pathAndQuery.equals(that.pathAndQuery) &&
+                   authority.equals(that.authority) &&
+                   protocol.equals(that.protocol) &&
+                   method == that.method;
+        }
+
+        String uri() {
+            return protocol + "://" + authority + pathAndQuery;
         }
     }
 }

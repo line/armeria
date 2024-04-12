@@ -84,7 +84,7 @@ final class RoutingPredicate<T> {
                                                    Predicate<? super String> valuePredicate) {
         final AsciiString name = HttpHeaderNames.of(headerName);
         return new RoutingPredicate<>(headerName, headers ->
-                headers.getAll(name).stream().anyMatch(valuePredicate));
+                headers.getAll(name).stream().anyMatch(valuePredicate), true);
     }
 
     @VisibleForTesting
@@ -97,7 +97,7 @@ final class RoutingPredicate<T> {
     static RoutingPredicate<QueryParams> ofParams(String paramName,
                                                   Predicate<? super String> valuePredicate) {
         return new RoutingPredicate<>(paramName, params ->
-                params.getAll(paramName).stream().anyMatch(valuePredicate));
+                params.getAll(paramName).stream().anyMatch(valuePredicate), true);
     }
 
     @VisibleForTesting
@@ -122,7 +122,7 @@ final class RoutingPredicate<T> {
                       "name, !name, name=value, name!=value or any of them concatenated by '||')",
                       predicateExpr);
 
-        return new RoutingPredicate<>(routingPredicate.name, routingPredicate.delegate);
+        return new RoutingPredicate<>(routingPredicate.name, routingPredicate.delegate, false);
     }
 
     @Nullable
@@ -220,14 +220,20 @@ final class RoutingPredicate<T> {
 
     private final CharSequence name;
     private final Predicate<T> delegate;
+    private final boolean customPredicate;
 
-    RoutingPredicate(CharSequence name, Predicate<T> delegate) {
+    RoutingPredicate(CharSequence name, Predicate<T> delegate, boolean customPredicate) {
         this.name = requireNonNull(name, "name");
         this.delegate = requireNonNull(delegate, "delegate");
+        this.customPredicate = customPredicate;
     }
 
     CharSequence name() {
         return name;
+    }
+
+    boolean isCustomPredicate() {
+        return customPredicate;
     }
 
     /**
@@ -279,32 +285,32 @@ final class RoutingPredicate<T> {
     }
 
     private static <T> RoutingPredicate<T> eq(String name, String value, Predicate<T> predicate) {
-        return new RoutingPredicate<>(name + "_eq_" + value, predicate);
+        return new RoutingPredicate<>(name + "_eq_" + value, predicate, false);
     }
 
     private static <T> RoutingPredicate<T> notEq(String name, String value, Predicate<T> predicate) {
-        return new RoutingPredicate<>(name + "_ne_" + value, predicate.negate());
+        return new RoutingPredicate<>(name + "_ne_" + value, predicate.negate(), false);
     }
 
     private static <T> RoutingPredicate<T> negated(String name, Predicate<T> predicate) {
-        return new RoutingPredicate<>("not_" + name, predicate.negate());
+        return new RoutingPredicate<>("not_" + name, predicate.negate(), false);
     }
 
     private static <T> RoutingPredicate<T> from(String name, Predicate<T> predicate) {
-        return new RoutingPredicate<>(name, predicate);
+        return new RoutingPredicate<>(name, predicate, false);
     }
 
     private static <T> RoutingPredicate<T> or(RoutingPredicate<T> current, RoutingPredicate<T> other) {
         final String currentName = String.valueOf(current.name);
         if (currentName.isEmpty()) {
-            return new RoutingPredicate<>(other.name + "_or_", current.delegate.or(other.delegate));
+            return new RoutingPredicate<>(other.name + "_or_", current.delegate.or(other.delegate), false);
         } else {
             if (currentName.endsWith("_or_")) {
                 return new RoutingPredicate<>(currentName + other.name,
-                                              current.delegate.or(other.delegate));
+                                              current.delegate.or(other.delegate), false);
             }
             return new RoutingPredicate<>(currentName + "_or_" + other.name,
-                                          current.delegate.or(other.delegate));
+                                          current.delegate.or(other.delegate), false);
         }
     }
 }

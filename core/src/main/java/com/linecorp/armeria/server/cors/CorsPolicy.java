@@ -17,13 +17,16 @@
 package com.linecorp.armeria.server.cors;
 
 import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
@@ -76,7 +79,29 @@ public final class CorsPolicy {
         return new CorsPolicyBuilder(origins);
     }
 
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code predicate}.
+     */
+    public static CorsPolicyBuilder builder(Predicate<? super String> predicate) {
+        return new CorsPolicyBuilder(predicate);
+    }
+
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code regex}.
+     */
+    public static CorsPolicyBuilder builderForOriginRegex(String regex) {
+        return builderForOriginRegex(Pattern.compile(requireNonNull(regex, "regex")));
+    }
+
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code regex}.
+     */
+    public static CorsPolicyBuilder builderForOriginRegex(Pattern regex) {
+        return builder(requireNonNull(regex, "regex").asPredicate());
+    }
+
     private final Set<String> origins;
+    private final Predicate<String> originPredicate;
     private final List<Route> routes;
     private final boolean credentialsAllowed;
     private final boolean nullOriginAllowed;
@@ -90,12 +115,14 @@ public final class CorsPolicy {
     private final String joinedAllowedRequestMethods;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
-    CorsPolicy(Set<String> origins, List<Route> routes, boolean credentialsAllowed, long maxAge,
+    CorsPolicy(Set<String> origins, Predicate<? super String> originPredicate,
+               List<Route> routes, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
                boolean allowAllRequestHeaders, Set<AsciiString> allowedRequestHeaders,
                EnumSet<HttpMethod> allowedRequestMethods, boolean preflightResponseHeadersDisabled,
                Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         this.origins = ImmutableSet.copyOf(origins);
+        this.originPredicate = (Predicate<String>) originPredicate;
         this.routes = ImmutableList.copyOf(routes);
         this.credentialsAllowed = credentialsAllowed;
         this.maxAge = maxAge;
@@ -124,16 +151,29 @@ public final class CorsPolicy {
      * This method returns the first specified origin if this policy has more than one origin.
      *
      * @return the value that will be used for the CORS response header {@code "Access-Control-Allow-Origin"}
+     *
+     * @deprecated Use {@link #originPredicate()} to check if an origin is allowed.
      */
+    @Deprecated
     public String origin() {
         return Iterables.getFirst(origins, ANY_ORIGIN);
     }
 
     /**
      * Returns the set of allowed origins.
+     *
+     * @deprecated @deprecated Use {@link #originPredicate()} to check if an origin is allowed.
      */
+    @Deprecated
     public Set<String> origins() {
         return origins;
+    }
+
+    /**
+     * Returns predicate to match origins.
+     */
+    public Predicate<String> originPredicate() {
+        return originPredicate;
     }
 
     /**
@@ -299,7 +339,7 @@ public final class CorsPolicy {
         headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
     }
 
-    private void copyCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
+    private static void copyCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
         final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
         if (Strings.isNullOrEmpty(header)) {
             return;

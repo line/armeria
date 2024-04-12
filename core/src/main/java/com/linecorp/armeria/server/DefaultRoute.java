@@ -85,9 +85,7 @@ final class DefaultRoute implements Route {
         if (!headerPredicates.isEmpty()) {
             complexity += 1 << 3;
         }
-        if (!excludedRoutes.isEmpty()) {
-            complexity += 1 << 4;
-        }
+        // Exclude excludedRoutes from the complexity so that it isn't used when finding duplicate route.
         this.complexity = complexity;
     }
 
@@ -310,6 +308,66 @@ final class DefaultRoute implements Route {
     @Override
     public boolean isCacheable() {
         return paramPredicates.isEmpty() && headerPredicates.isEmpty() && excludedRoutes().isEmpty();
+    }
+
+    @Override
+    public boolean hasConflicts(Route other) {
+        if (complexity != other.complexity()) {
+            return false;
+        }
+
+        if (getClass() != other.getClass()) {
+            return false;
+        }
+
+        if (!pathType().hasTriePath() || !other.pathType().hasTriePath()) {
+            return false;
+        }
+
+        if (!paths().get(1).equals(other.paths().get(1))) {
+            // Just compare trie path.
+            return false;
+        }
+
+        if (methods.stream().noneMatch(method -> other.methods().contains(method))) {
+            // No overlap in supported methods.
+            return false;
+        }
+        if (!consumes.isEmpty() &&
+            consumes.stream().noneMatch(mediaType -> other.consumes().contains(mediaType))) {
+            // No overlap in consume types.
+            return false;
+        }
+        if (!produces.isEmpty() && produces.stream().noneMatch(
+                mediaType -> other.produces().contains(mediaType))) {
+            // No overlap in produce types.
+            return false;
+        }
+
+        if (!paramPredicates.isEmpty() &&
+            noneMatchAnyNameOfNonCustomPredicate(paramPredicates, ((DefaultRoute) other).paramPredicates)) {
+            return false;
+        }
+
+        if (!headerPredicates.isEmpty() &&
+            noneMatchAnyNameOfNonCustomPredicate(headerPredicates, ((DefaultRoute) other).headerPredicates)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private static <T> boolean noneMatchAnyNameOfNonCustomPredicate(List<RoutingPredicate<T>> thisPredicates,
+                                                                    List<RoutingPredicate<T>> otherPredicates) {
+        final List<CharSequence> otherNames =
+                otherPredicates.stream()
+                               .filter(routingPredicate -> !routingPredicate.isCustomPredicate())
+                               .map(RoutingPredicate::name)
+                               .collect(toImmutableList());
+        return thisPredicates.stream()
+                             .filter(routingPredicate -> !routingPredicate.isCustomPredicate())
+                             .map(RoutingPredicate::name)
+                             .noneMatch(otherNames::contains);
     }
 
     @Override
