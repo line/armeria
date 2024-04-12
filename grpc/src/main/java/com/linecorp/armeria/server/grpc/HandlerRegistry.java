@@ -474,6 +474,7 @@ final class HandlerRegistry {
             final DependencyInjector dependencyInjector = new ReflectiveDependencyInjector();
 
             // Intercept entries using {@link GrpcInterceptor} annotations and globally added interceptors.
+            // TODO(ikhoon): Use ServerConfig.dependencyInjector() instead of creating ReflectiveDependencyInjector directly.
             interceptEntries(dependencyInjector);
 
             for (Entry entry : entries) {
