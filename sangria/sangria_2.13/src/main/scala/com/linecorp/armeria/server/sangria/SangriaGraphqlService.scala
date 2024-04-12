@@ -50,7 +50,7 @@ final class SangriaGraphqlService[Ctx, Val] private[sangria] (
     queryValidator: QueryValidator,
     deferredResolver: DeferredResolver[Ctx],
     exceptionHandler: ExceptionHandler,
-    deprecationTracker: DeprecationTracker,
+    deprecationTracker: Option[DeprecationTracker],
     middleware: List[Middleware[Ctx]],
     maxQueryDepth: Option[Int],
     queryReducers: List[QueryReducer[Ctx, _]],

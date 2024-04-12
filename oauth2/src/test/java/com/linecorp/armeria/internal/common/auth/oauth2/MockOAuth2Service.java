@@ -42,6 +42,7 @@ public abstract class MockOAuth2Service {
 
     public static final String INVALID_REQUEST = "{\"error\":\"invalid_request\"}";
     public static final String INVALID_CLIENT = "{\"error\":\"invalid_client\"}";
+    public static final String INVALID_GRANT = "{\"error\":\"invalid_grant\"}";
     public static final String NOT_ACTIVE_RESPONSE = "{\"active\":false}";
     public static final String UNSUPPORTED_GRANT_TYPE = "{\"error\":\"unsupported_grant_type\"}";
     public static final String UNAUTHORIZED_CLIENT = "{\"error\":\"unauthorized_client\"}";

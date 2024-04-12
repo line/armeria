@@ -137,7 +137,7 @@ class VirtualHostBuilderTest {
     @Test
     void withVirtualHost() {
         final ServerBuilder sb = Server.builder();
-        final Server server = sb.withVirtualHost(builder -> {
+        final Server server = sb.withVirtualHost("*.foo", builder -> {
             builder.defaultHostname("foo")
                    .service("/test", (ctx, req) -> HttpResponse.of(OK));
         }).build();
@@ -164,38 +164,39 @@ class VirtualHostBuilderTest {
 
     @Test
     void virtualHostWithoutPattern() {
-        final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
-                .defaultHostname("foo.com")
-                .hostnamePattern("foo.com")
-                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
+        final VirtualHost h =
+                Server.builder()
+                      .virtualHost("foo.com")
+                      .defaultHostname("foo.com")
+                      .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h.hostnamePattern()).isEqualTo("foo.com");
         assertThat(h.defaultHostname()).isEqualTo("foo.com");
     }
 
     @Test
     void virtualHostWithPattern() {
-        final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
-                .defaultHostname("bar.foo.com")
-                .hostnamePattern("*.foo.com")
-                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
+        final VirtualHost h =
+                Server.builder().virtualHost("*.foo.com")
+                      .defaultHostname("bar.foo.com")
+                      .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
         assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
     }
 
     @Test
     void accessLoggerCustomization() {
-        final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
-                .defaultHostname("bar.foo.com")
-                .hostnamePattern("*.foo.com")
-                .accessLogger(host -> LoggerFactory.getLogger("customize.test"))
-                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
+        final VirtualHost h1 =
+                Server.builder().virtualHost("*.foo.com")
+                      .defaultHostname("bar.foo.com")
+                      .accessLogger(host -> LoggerFactory.getLogger("customize.test"))
+                      .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h1.accessLogger().getName()).isEqualTo("customize.test");
 
-        final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
-                .defaultHostname("bar.foo.com")
-                .hostnamePattern("*.foo.com")
-                .accessLogger(LoggerFactory.getLogger("com.foo.test"))
-                .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
+        final VirtualHost h2 =
+                Server.builder().virtualHost("*.foo.com")
+                      .defaultHostname("bar.foo.com")
+                      .accessLogger(LoggerFactory.getLogger("com.foo.test"))
+                      .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         assertThat(h2.accessLogger().getName()).isEqualTo("com.foo.test");
     }
 
@@ -301,19 +302,17 @@ class VirtualHostBuilderTest {
     @Test
     void virtualHostWithMismatch() {
         assertThatThrownBy(() -> {
-            new VirtualHostBuilder(Server.builder(), false)
-                    .defaultHostname("bar.com")
-                    .hostnamePattern("foo.com")
-                    .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
+            Server.builder().virtualHost("foo.com")
+                  .defaultHostname("bar.com")
+                  .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void virtualHostWithMismatch2() {
         assertThatThrownBy(() -> {
-            new VirtualHostBuilder(Server.builder(), false)
+            Server.builder().virtualHost("*.foo.com")
                     .defaultHostname("bar.com")
-                    .hostnamePattern("*.foo.com")
                     .build(template, noopDependencyInjector, null, ServerErrorHandler.ofDefault());
         }).isInstanceOf(IllegalArgumentException.class);
     }

@@ -28,14 +28,14 @@ jobs:
           java-version: '19'
 
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build the site
         run: |
           ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
 
       - name: Deploy the site
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: site/public

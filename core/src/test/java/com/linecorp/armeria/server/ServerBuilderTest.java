@@ -361,8 +361,8 @@ class ServerBuilderTest {
                                                           Duration.ofMillis(250),
                                                           ctx.eventLoop())))
                                     .withVirtualHost(
-                                            h -> h.hostnamePattern("foo.com")
-                                                  .service("/custom_virtual_host",
+                                            "foo.com",
+                                            h -> h.service("/custom_virtual_host",
                                                            (ctx, req) -> HttpResponse.delayed(
                                                                    HttpResponse.of(HttpStatus.OK),
                                                                    Duration.ofMillis(150),

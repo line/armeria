@@ -18,11 +18,13 @@ package com.linecorp.armeria.xds;
 
 import java.net.URI;
 import java.util.Arrays;
+import java.util.Collection;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
+import com.google.protobuf.UInt32Value;
 import com.google.protobuf.Value;
 import com.google.protobuf.util.Durations;
 
@@ -42,6 +44,8 @@ import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
 import io.envoyproxy.envoy.config.core.v3.HeaderValue;
+import io.envoyproxy.envoy.config.core.v3.HealthStatus;
+import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
@@ -73,14 +77,26 @@ public final class XdsTestResources {
         return endpoint(address, port, Metadata.getDefaultInstance());
     }
 
+    public static LbEndpoint endpoint(String address, int port, int weight) {
+        return endpoint(address, port, Metadata.getDefaultInstance(), weight,
+                        HealthStatus.HEALTHY);
+    }
+
     public static LbEndpoint endpoint(String address, int port, Metadata metadata) {
+        return endpoint(address, port, metadata, 1, HealthStatus.HEALTHY);
+    }
+
+    public static LbEndpoint endpoint(String address, int port, Metadata metadata, int weight,
+                                      HealthStatus healthStatus) {
         final SocketAddress socketAddress = SocketAddress.newBuilder()
                                                          .setAddress(address)
                                                          .setPortValue(port)
                                                          .build();
         return LbEndpoint
                 .newBuilder()
+                .setLoadBalancingWeight(UInt32Value.of(weight))
                 .setMetadata(metadata)
+                .setHealthStatus(healthStatus)
                 .setEndpoint(Endpoint.newBuilder()
                                      .setAddress(Address.newBuilder()
                                                         .setSocketAddress(socketAddress)
@@ -276,6 +292,10 @@ public final class XdsTestResources {
 
     public static Listener exampleListener(String listenerName, String routeName, String clusterName) {
         final ConfigSource configSource = basicConfigSource(clusterName);
+        return exampleListener(listenerName, routeName, configSource);
+    }
+
+    public static Listener exampleListener(String listenerName, String routeName, ConfigSource configSource) {
         final HttpConnectionManager manager = httpConnectionManager(Rds.newBuilder()
                                                                        .setRouteConfigName(routeName)
                                                                        .setConfigSource(configSource)
@@ -344,5 +364,25 @@ public final class XdsTestResources {
                        .setName("listener")
                        .setApiListener(ApiListener.newBuilder().setApiListener(Any.pack(manager)))
                        .build();
+    }
+
+    public static Bootstrap staticBootstrap(Listener listener, Cluster cluster) {
+        return Bootstrap.newBuilder()
+                        .setStaticResources(StaticResources.newBuilder()
+                                                           .addListeners(listener)
+                                                           .addClusters(cluster)
+                                                           .build()).build();
+    }
+
+    public static LocalityLbEndpoints localityLbEndpoints(Locality locality,
+                                                          Collection<LbEndpoint> endpoints) {
+        return LocalityLbEndpoints.newBuilder()
+                                  .addAllLbEndpoints(endpoints)
+                                  .setLocality(locality)
+                                  .build();
+    }
+
+    public static LocalityLbEndpoints localityLbEndpoints(Locality locality, LbEndpoint... endpoints) {
+        return localityLbEndpoints(locality, Arrays.asList(endpoints));
     }
 }

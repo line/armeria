@@ -93,7 +93,7 @@ final class ArmeriaHttpClient
         return splitResponse.headers().thenApply(responseHeaders -> {
             final AsyncBodySubscriber subscriber = new AsyncBodySubscriber(consumer);
             splitResponse.body().subscribe(subscriber, ctx.eventLoop());
-            return new ArmeriaHttpResponse(responseHeaders, subscriber);
+            return new ArmeriaHttpResponse(request, responseHeaders, subscriber);
         });
     }
 
