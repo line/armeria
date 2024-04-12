@@ -96,7 +96,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             // Just mark trailers as received since a non-OK response may not have trailers.
             trailersReceived = true;
             transportStatusListener.transportReportStatus(
-                    DefaultGrpcExceptionHandlerFunction.httpStatusToGrpcStatus(status.code()));
+                    GrpcStatus.httpStatusToGrpcStatus(status.code()));
             return;
         }
 
@@ -104,8 +104,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
             trailersReceived = true;
-            DefaultGrpcExceptionHandlerFunction.reportStatusLater(headers, deframedStreamMessage,
-                                                                  transportStatusListener);
+            GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
         }
 
         // Headers without grpc-status are the leading headers of a non-failing response, prepare to receive
@@ -144,8 +143,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         if (grpcStatus != null) {
             assert deframedStreamMessage != null;
             trailersReceived = true;
-            DefaultGrpcExceptionHandlerFunction.reportStatusLater(headers, deframedStreamMessage,
-                                                                  transportStatusListener);
+            GrpcStatus.reportStatusLater(headers, deframedStreamMessage, transportStatusListener);
         }
     }
 

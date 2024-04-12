@@ -68,6 +68,7 @@ import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunc
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
+import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
@@ -425,7 +426,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                           new Metadata());
                 } else {
                     GrpcWebTrailers.set(ctx, trailers);
-                    DefaultGrpcExceptionHandlerFunction.reportStatus(trailers, this);
+                    GrpcStatus.reportStatus(trailers, this);
                 }
             } finally {
                 buf.release();

@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
+import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Status;
@@ -37,7 +37,7 @@ public interface UnframedGrpcStatusMappingFunction {
      * code.proto</a>.
      */
     static UnframedGrpcStatusMappingFunction of() {
-        return (ctx, status, response) -> DefaultGrpcExceptionHandlerFunction.grpcStatusToHttpStatus(status);
+        return (ctx, status, response) -> GrpcStatus.grpcStatusToHttpStatus(status);
     }
 
     /**
