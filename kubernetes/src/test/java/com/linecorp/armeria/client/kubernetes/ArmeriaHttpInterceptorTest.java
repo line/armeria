@@ -37,6 +37,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +48,8 @@ import io.fabric8.kubernetes.client.http.HttpRequest;
 import io.fabric8.kubernetes.client.http.Interceptor;
 import io.fabric8.mockwebserver.DefaultMockServer;
 
+// Remove @Disabled when https://github.com/fabric8io/kubernetes-client/pull/5852 is merged and released.
+@Disabled
 class ArmeriaHttpInterceptorTest extends AbstractInterceptorTest {
 
     private static DefaultMockServer mockServer;

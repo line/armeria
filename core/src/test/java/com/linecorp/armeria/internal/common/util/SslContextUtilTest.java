@@ -43,7 +43,6 @@ class SslContextUtilTest {
 
     @Test
     void openSsl() {
-        assumeThat(Flags.useOpenSsl()).isTrue();
         final Set<String> supportedProtocols = SslContextUtil.supportedProtocols(
                 SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL));
         assertThat(supportedProtocols).contains("TLSv1.2", "TLSv1.3");
@@ -88,7 +87,7 @@ class SslContextUtilTest {
             try {
                 final SslContext sslCtx = MinifiedBouncyCastleProvider.call(() -> {
                     final SslContextBuilder builder = SslContextBuilder.forClient();
-                    final SslProvider provider = Flags.useOpenSsl() ? SslProvider.OPENSSL : SslProvider.JDK;
+                    final SslProvider provider = Flags.tlsEngineType().sslProvider();
                     builder.sslProvider(provider);
                     builder.protocols("TLSv1.2").ciphers(ImmutableList.of(cipher));
 
