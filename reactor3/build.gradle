@@ -1,4 +1,3 @@
 dependencies {
     api libs.reactor.core
-    implementation 'io.micrometer:context-propagation:1.1.1'
 }
