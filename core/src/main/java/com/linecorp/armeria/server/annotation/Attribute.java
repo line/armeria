@@ -37,7 +37,7 @@ public @interface Attribute {
      * The name of the {@link AttributeKey} to bind to.
      * You might also want to specify the {@link #prefix()}.
      */
-    String value();
+    String value() default DefaultValues.UNSPECIFIED;;
 
     /**
      * The class of the {@link AttributeKey} to bind to. If you created an {@link AttributeKey} with
