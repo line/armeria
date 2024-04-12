@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.google.api.gax.grpc.GrpcStatusCode;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
 import com.linecorp.armeria.client.circuitbreaker.FailFastException;
@@ -50,5 +51,12 @@ class GrpcStatusTest {
                     .as("gRPC code: {}", code)
                     .isEqualTo(GrpcStatusCode.of(code).getCode().getHttpStatusCode());
         }
+    }
+
+    @Test
+    void invalidProtocolBufferExceptionToInvalidArgumentCode() {
+        assertThat(DefaultGrpcExceptionHandlerFunction.fromThrowable(new InvalidProtocolBufferException("Failed to parse message"))
+                             .getCode())
+                .isEqualTo(Status.Code.INVALID_ARGUMENT);
     }
 }

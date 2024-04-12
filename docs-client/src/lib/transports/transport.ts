@@ -14,7 +14,7 @@
  * under the License.
  */
 import JSONbig from 'json-bigint';
-import jsonPrettify from '../json-prettify';
+import { jsonPrettify } from '../json-util';
 import { docServiceDebug, providers } from '../header-provider';
 
 import { Endpoint, Method } from '../specification';
