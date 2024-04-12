@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -133,8 +132,8 @@ public class UnframedGrpcErrorHandlerBuilderTest {
         final AggregatedHttpResponse response = AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR);
         final HttpResponse httpResponseJson =
                 unframedGrpcErrorHandlerJson.handle(ctx, Status.INTERNAL, response);
-        assertThat(requireNonNull(httpResponseJson.aggregate().join().headers().contentType())
-                           .isJson()).isTrue();
+        assertThat(httpResponseJson.aggregate().join().headers().contentType()
+                                   .isJson()).isTrue();
 
         final UnframedGrpcErrorHandler unframedGrpcErrorHandlerPlaintext =
                 UnframedGrpcErrorHandler.builder()
@@ -142,8 +141,8 @@ public class UnframedGrpcErrorHandlerBuilderTest {
                                         .build();
         final HttpResponse httpResponsePlaintext =
                 unframedGrpcErrorHandlerPlaintext.handle(ctx, Status.INTERNAL, response);
-        assertThat(requireNonNull(httpResponsePlaintext.aggregate().join().headers().contentType())
-                           .is(MediaType.PLAIN_TEXT)).isTrue();
+        assertThat(httpResponsePlaintext.aggregate().join().headers().contentType()
+                                        .is(MediaType.PLAIN_TEXT)).isTrue();
 
         final UnframedGrpcErrorHandler unframedGrpcErrorHandler =
                 UnframedGrpcErrorHandler.builder()
@@ -157,8 +156,8 @@ public class UnframedGrpcErrorHandlerBuilderTest {
                                           "{\"message\":\"Internal Server Error\"}");
 
         final HttpResponse httpResponse = unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL, jsonResponse);
-        assertThat(requireNonNull(httpResponse.aggregate().join().headers().contentType())
-                           .isJson()).isTrue();
+        assertThat(httpResponse.aggregate().join().headers().contentType()
+                               .isJson()).isTrue();
     }
 
     @Test
