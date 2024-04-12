@@ -868,9 +868,7 @@ class HttpServerCorsTest {
     @Test
     void caseInsensitiveOriginCheck() {
         final WebClient client = client();
-        AggregatedHttpResponse res;
-
-        res = preflightRequest(client, "/cors", "http://EXAMPLE.com", "GET");
+        final AggregatedHttpResponse res = preflightRequest(client, "/cors", "http://EXAMPLE.com", "GET");
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
                 .isEqualTo("http://EXAMPLE.com");
     }
