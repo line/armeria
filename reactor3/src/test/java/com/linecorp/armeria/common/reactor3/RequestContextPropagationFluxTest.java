@@ -397,6 +397,31 @@ class RequestContextPropagationFluxTest {
                     .verifyComplete();
     }
 
+    @Test
+    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperation() {
+        // Given
+        final ClientRequestContext ctx = newContext();
+        final Flux<String> flux;
+
+        // When
+        flux = Flux.just("Hello", "Hi")
+                   .delayElements(Duration.ofMillis(1000))
+                   .map(s -> {
+                       if (s.equals("Hello")) {
+                           throw new RuntimeException();
+                       }
+                       return s;
+                   })
+                   .contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
+
+        // Then
+        StepVerifier.create(flux)
+                    .expectError(RuntimeException.class)
+                    .verify();
+
+        assertThat(ctxExists(ctx)).isFalse();
+    }
+
     private static <T> Flux<T> addCallbacks(Flux<T> flux, ClientRequestContext ctx) {
         return flux.doFirst(() -> assertThat(ctxExists(ctx)).isTrue())
                    .doOnSubscribe(s -> assertThat(ctxExists(ctx)).isTrue())

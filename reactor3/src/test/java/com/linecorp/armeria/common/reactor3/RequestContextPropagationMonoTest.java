@@ -227,6 +227,31 @@ class RequestContextPropagationMonoTest {
                     .verifyComplete();
     }
 
+    @Test
+    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperation() {
+        // Given
+        final ClientRequestContext ctx = newContext();
+        final Mono<String> mono;
+
+        // When
+        mono = Mono.just("Hello")
+                   .delayElement(Duration.ofMillis(1000))
+                   .map(s -> {
+                       if (s.equals("Hello")) {
+                           throw new RuntimeException();
+                       }
+                       return s;
+                   })
+                   .contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
+
+        // Then
+        StepVerifier.create(mono)
+                    .expectError(RuntimeException.class)
+                    .verify();
+
+        assertThat(ctxExists(ctx)).isFalse();
+    }
+
     static Subscription noopSubscription() {
         return new Subscription() {
             @Override
