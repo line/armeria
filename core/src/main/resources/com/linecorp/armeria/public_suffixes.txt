@@ -1837,6 +1837,7 @@ cuneo.it
 cupcake.is
 curitiba.br
 curv.dev
+cust.cloudscale.ch
 cust.dev.thingdust.io
 cust.disrec.thingdust.io
 cust.prod.thingdust.io
@@ -6074,6 +6075,8 @@ obanazawa.yamagata.jp
 obi
 obihiro.hokkaido.jp
 obira.hokkaido.jp
+objects.lpg.cloudscale.ch
+objects.rma.cloudscale.ch
 obninsk.su
 observer
 obu.aichi.jp
@@ -7018,6 +7021,7 @@ rs.webaccel.jp
 rsc.cdn77.org
 rsc.contentproxy9.cz
 rsvp
+rt.ht
 ru
 ru.com
 ru.eu.org
