@@ -21,10 +21,7 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import graphql.ExecutionResult;
