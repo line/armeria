@@ -24,5 +24,5 @@ interface UnhandledExceptionsReporter extends ServerListener {
         return new DefaultUnhandledExceptionsReporter(meterRegistry, intervalMillis);
     }
 
-    void report(Throwable cause);
+    void report(ServiceRequestContext ctx, Throwable cause);
 }

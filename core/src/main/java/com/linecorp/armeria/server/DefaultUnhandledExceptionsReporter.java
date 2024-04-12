@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -37,6 +39,7 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
     private static final AtomicIntegerFieldUpdater<DefaultUnhandledExceptionsReporter> scheduledUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultUnhandledExceptionsReporter.class,
                                                  "scheduled");
+    private Map<Throwable, LongAdder> thrownExceptionCounters = new ConcurrentHashMap<>();
 
     private final long intervalMillis;
     // Note: We keep both Micrometer Counter and our own counter because Micrometer Counter
@@ -59,7 +62,7 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
     }
 
     @Override
-    public void report(Throwable cause) {
+    public void report(ServiceRequestContext ctx, Throwable cause) {
         if (reportingTaskFuture == null && scheduledUpdater.compareAndSet(this, 0, 1)) {
             reportingTaskFuture = CommonPools.workerGroup().next().scheduleAtFixedRate(
                     this::reportException, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
@@ -106,6 +109,7 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
                         "detailed error logs. One of the thrown exceptions:",
                         newExceptionsCount,
                         TextFormatter.elapsed(intervalMillis, TimeUnit.MILLISECONDS), exception);
+            thrownExceptionCounters.computeIfAbsent(exception, k -> new LongAdder()).increment();
             thrownException = null;
         } else {
             logger.warn("Observed {} exception(s) that didn't reach a LoggingService in the last {}. " +
