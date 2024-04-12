@@ -34,6 +34,7 @@ public interface UnframedGrpcErrorHandler {
     /**
      * Returns a new {@link UnframedGrpcErrorHandlerBuilder}.
      */
+    @UnstableApi
     static UnframedGrpcErrorHandlerBuilder builder() {
         return new UnframedGrpcErrorHandlerBuilder();
     }

@@ -30,10 +30,12 @@ import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Constructs a {@link UnframedGrpcErrorHandler} to handle unframed gRPC errors.
  */
+@UnstableApi
 public final class UnframedGrpcErrorHandlerBuilder {
     private UnframedGrpcStatusMappingFunction statusMappingFunction = UnframedGrpcStatusMappingFunction.of();
 
