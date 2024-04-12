@@ -66,9 +66,10 @@ public final class UnframedGrpcErrorHandlerBuilder {
     public UnframedGrpcErrorHandlerBuilder jsonMarshaller(MessageMarshaller jsonMarshaller) {
         requireNonNull(jsonMarshaller, "jsonMarshaller");
         checkState(marshalledMessages == null && marshalledMessageTypes == null,
-                   "Cannot set a custom JSON marshaller because one or more Message or MessageType instances" +
-                   " have already been registered. To set a custom marshaller, ensure that no Message or" +
-                   " Message type registrations have been made before calling this method."
+                   "Cannot set a custom JSON marshaller because one or more Message instances or " +
+                   "Message types have already been registered. To set a custom marshaller, " +
+                   "ensure that no Message or Message type registrations have been made before " +
+                   "calling this method."
         );
         this.jsonMarshaller = jsonMarshaller;
         return this;

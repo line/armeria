@@ -92,9 +92,9 @@ public class UnframedGrpcErrorHandlerBuilderTest {
                                                       UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
-                        "Cannot set a custom JSON marshaller because one or more Message or " +
-                        "MessageType instances have already been registered. To set a custom marshaller, " +
-                        "ensure that no Message or MessageType registrations have been made before " +
+                        "Cannot set a custom JSON marshaller because one or more Message instances or " +
+                        "Message types have already been registered. To set a custom marshaller, " +
+                        "ensure that no Message or Message type registrations have been made before " +
                         "calling this method.");
     }
 
