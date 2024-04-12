@@ -59,6 +59,7 @@ class AccessLoggerIntegrationTest {
         assertThat(server.blockingWebClient().get("/").status().code()).isEqualTo(200);
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
         final ServiceRequestContext ctx = server.requestContextCaptor().poll();
-        assertThat(CTX_REF).hasValue(ctx);
+        assertThat(ctx).isNotNull();
+        assertThat(CTX_REF).hasValueSatisfying(ctxRef -> assertThat(ctxRef.id()).isEqualTo(ctx.id()));
     }
 }
