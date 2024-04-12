@@ -43,7 +43,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -54,6 +56,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 
@@ -269,7 +272,8 @@ class AnnotatedValueResolverTest {
             if (failExpectAttrKeys.containsKey(resolver.httpElementName())) {
                 // When + Then
                 assertThatThrownBy(() -> resolver.resolve(resolverContext))
-                        .isInstanceOf(IllegalArgumentException.class);
+                        .isInstanceOfAny(IllegalArgumentException.class,
+                                         ClassCastException.class);
             } else {
                 // When
                 final Object value = resolver.resolve(resolverContext);
@@ -492,7 +496,17 @@ class AnnotatedValueResolverTest {
                 @Attribute(value = "successPrefixNoneValuesOfMineTypeCollection")
                 List<String> successPrefixNoneValuesOfMineTypeCollection,
                 @Attribute(value = "successPrefixNoneValuesOfNoneTypeCollection")
-                List<String> successPrefixNoneValuesOfNoneTypeCollection
+                List<String> successPrefixNoneValuesOfNoneTypeCollection,
+                @Attribute(value = "successImmutableListToList")
+                List<String> successImmutableListToList,
+                @Attribute(value = "successImmutableMapToMap")
+                Map<String, String> successImmutableMapToMap,
+                @Attribute(value = "successImmutableSetToSet")
+                Set<String> successImmutableSetToSet,
+                @Attribute(value = "successQueueToQueue")
+                Queue<String> successQueueToQueue,
+                @Attribute(value = "failCastListToSet")
+                Set<String> failCastListToSet
         ) { }
 
         void time(@Param @Default("PT20.345S") Duration duration,
@@ -538,6 +552,14 @@ class AnnotatedValueResolverTest {
         expectFailAttrs.put(
                 "failPrefixOtherValuesOfMineTypeInt",
                 failPrefixOtherValuesOfMineTypeInt);
+
+        final List<String> list1 = ImmutableList.of("A", "B", "C");
+        final AttributeKey<List<String>> failCastListToSet =
+                AttributeKey.valueOf("failCastListToSet");
+        ctx.setAttr(failCastListToSet, list1);
+        expectFailAttrs.put(
+                "failCastListToSet",
+                failCastListToSet);
 
         return expectFailAttrs;
     }
@@ -595,6 +617,38 @@ class AnnotatedValueResolverTest {
         successAttrs.put(
                 "successPrefixNoneValuesOfNoneTypeCollection",
                 successPrefixNoneValuesOfNoneTypeCollection);
+
+        final List<String> list1 = ImmutableList.of("A", "B", "C");
+        final AttributeKey<List<String>> successImmutableListToList =
+                AttributeKey.valueOf("successImmutableListToList");
+        ctx.setAttr(successImmutableListToList, list1);
+        successAttrs.put(
+                "successImmutableListToList",
+                successImmutableListToList);
+
+        final Map<String, String> map1 = ImmutableMap.of("Key1", "Value1");
+        final AttributeKey<Map<String, String>> successImmutableMapToMap =
+                AttributeKey.valueOf("successImmutableMapToMap");
+        ctx.setAttr(successImmutableMapToMap, map1);
+        successAttrs.put(
+                "successImmutableMapToMap",
+                successImmutableMapToMap);
+
+        final Set<String> set1 = ImmutableSet.of("Value");
+        final AttributeKey<Set<String>> successImmutableSetToSet =
+                AttributeKey.valueOf("successImmutableSetToSet");
+        ctx.setAttr(successImmutableSetToSet, set1);
+        successAttrs.put(
+                "successImmutableSetToSet",
+                successImmutableSetToSet);
+
+        final Queue<String> queue1 = new ConcurrentLinkedQueue<>();
+        final AttributeKey<Queue<String>> successQueueToQueue =
+                AttributeKey.valueOf("successQueueToQueue");
+        ctx.setAttr(successQueueToQueue, queue1);
+        successAttrs.put(
+                "successQueueToQueue",
+                successQueueToQueue);
 
         return successAttrs;
     }

@@ -65,6 +65,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.primitives.Primitives;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
@@ -867,7 +868,20 @@ final class AnnotatedValueResolver {
             for (AttributeKey<?> attrKey : attrKeys) {
                 final Object value = ctx.context.attr(attrKey);
                 if (value != null) {
-                    return value;
+
+                    final Class<?> rawContainerType = resolver.rawContainerType();
+                    final Class<?> elementType = resolver.elementType().isPrimitive() ?
+                                                 Primitives.wrap(resolver.elementType())
+                                                 : resolver.elementType();
+
+                    if ((rawContainerType != null && rawContainerType.isInstance(value)) ||
+                        (rawContainerType == null && elementType.isInstance(value))) {
+                        return value;
+                    }
+
+                    throw new ClassCastException("The value " + value +
+                                                 " cannot be cst to elemntType " +
+                                                 elementType.getSimpleName());
                 }
             }
             return resolver.defaultOrException();
@@ -952,6 +966,8 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private final Class<?> containerType;
+    @Nullable
+    private final Class<?> rawContainerType;
     private final Class<?> elementType;
     @Nullable
     private final ParameterizedType parameterizedElementType;
@@ -976,6 +992,7 @@ final class AnnotatedValueResolver {
                                    boolean isPathVariable, boolean shouldExist,
                                    boolean shouldWrapValueAsOptional,
                                    @Nullable Class<?> containerType, Class<?> elementType,
+                                   @Nullable Class<?> rawContainerType,
                                    @Nullable ParameterizedType parameterizedElementType,
                                    @Nullable String defaultValue,
                                    DescriptionInfo description,
@@ -991,6 +1008,7 @@ final class AnnotatedValueResolver {
         this.parameterizedElementType = parameterizedElementType;
         this.description = requireNonNull(description, "description");
         this.containerType = containerType;
+        this.rawContainerType = rawContainerType;
         this.resolver = requireNonNull(resolver, "resolver");
         this.beanFactoryId = beanFactoryId;
         this.aggregationStrategy = requireNonNull(aggregationStrategy, "aggregationStrategy");
@@ -1034,6 +1052,11 @@ final class AnnotatedValueResolver {
     Class<?> containerType() {
         // 'List' or 'Set'
         return containerType;
+    }
+
+    @Nullable
+    Class<?> rawContainerType() {
+        return rawContainerType;
     }
 
     Class<?> elementType() {
@@ -1297,6 +1320,7 @@ final class AnnotatedValueResolver {
             }
 
             final Class<?> containerType = getContainerType(unwrappedParameterizedType);
+            final Class<?> rawContainerType = getRawContainerType(unwrappedParameterizedType);
             final Class<?> elementType;
             final ParameterizedType parameterizedElementType;
 
@@ -1325,7 +1349,7 @@ final class AnnotatedValueResolver {
             }
 
             return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
-                                              isOptional, containerType, elementType,
+                                              isOptional, containerType, elementType, rawContainerType,
                                               parameterizedElementType, defaultValue, description, resolver,
                                               beanFactoryId, aggregation);
         }
@@ -1404,6 +1428,24 @@ final class AnnotatedValueResolver {
                 }
             }
 
+            return null;
+        }
+
+        @Nullable
+        private Class<?> getRawContainerType(Type parameterizedType) {
+            final Class<?> rawType = toRawType(parameterizedType);
+            if (rawType == Iterable.class ||
+                rawType == List.class ||
+                rawType == Collection.class ||
+                rawType == Set.class ||
+                rawType == Map.class ||
+                Iterable.class.isAssignableFrom(rawType) ||
+                List.class.isAssignableFrom(rawType) ||
+                Collection.class.isAssignableFrom(rawType) ||
+                Set.class.isAssignableFrom(rawType) ||
+                Map.class.isAssignableFrom(rawType)) {
+                return rawType;
+            }
             return null;
         }
 

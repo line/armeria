@@ -20,9 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
-import java.util.function.Function;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.CaseFormat;
 
@@ -45,7 +43,6 @@ final class AnnotatedElementNameUtil {
         }
         return getName(nameRetrievalTarget);
     }
-
 
     /**
      * Returns the name of the specified element or the default name if it can't get.
