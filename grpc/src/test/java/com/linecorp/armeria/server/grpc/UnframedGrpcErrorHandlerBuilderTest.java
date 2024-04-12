@@ -41,7 +41,7 @@ import io.grpc.Status;
 
 public class UnframedGrpcErrorHandlerBuilderTest {
     @Test
-    void cannotCallRegisterJsonMarshallersAndJsonMarshallerSimultaneously() {
+    void cannotCallRegisterMarshalledMessagesAndJsonMarshallerSimultaneously() {
         assertThatThrownBy(
                 () -> UnframedGrpcErrorHandler.builder()
                                               .jsonMarshaller(
@@ -110,7 +110,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
         final HttpResponse httpResponseJson =
                 unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL, jsonResponse);
         final AggregatedHttpResponse aggregatedHttpResponse = httpResponseJson.aggregate().join();
-        assertThat(aggregatedHttpResponse.headers().contentType().isJson()).isEqualTo(true);
+        assertThat(aggregatedHttpResponse.headers().contentType().isJson()).isTrue();
 
         final AggregatedHttpResponse plaintextResponse =
                 AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
@@ -119,7 +119,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
         final HttpResponse httpResponsePlaintext =
                 unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL, plaintextResponse);
         assertThat(httpResponsePlaintext.aggregate().join().headers()
-                                        .contentType().is(MediaType.PLAIN_TEXT)).isEqualTo(true);
+                                        .contentType().is(MediaType.PLAIN_TEXT)).isTrue();
     }
 
     @Test
@@ -134,7 +134,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
         final HttpResponse httpResponseJson =
                 unframedGrpcErrorHandlerJson.handle(ctx, Status.INTERNAL, response);
         assertThat(requireNonNull(httpResponseJson.aggregate().join().headers().contentType())
-                           .isJson()).isEqualTo(true);
+                           .isJson()).isTrue();
 
         final UnframedGrpcErrorHandler unframedGrpcErrorHandlerPlaintext =
                 UnframedGrpcErrorHandler.builder()
@@ -143,7 +143,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
         final HttpResponse httpResponsePlaintext =
                 unframedGrpcErrorHandlerPlaintext.handle(ctx, Status.INTERNAL, response);
         assertThat(requireNonNull(httpResponsePlaintext.aggregate().join().headers().contentType())
-                           .is(MediaType.PLAIN_TEXT)).isEqualTo(true);
+                           .is(MediaType.PLAIN_TEXT)).isTrue();
 
         final UnframedGrpcErrorHandler unframedGrpcErrorHandler =
                 UnframedGrpcErrorHandler.builder()
@@ -158,7 +158,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
 
         final HttpResponse httpResponse = unframedGrpcErrorHandler.handle(ctx, Status.INTERNAL, jsonResponse);
         assertThat(requireNonNull(httpResponse.aggregate().join().headers().contentType())
-                           .isJson()).isEqualTo(true);
+                           .isJson()).isTrue();
     }
 
     @Test
