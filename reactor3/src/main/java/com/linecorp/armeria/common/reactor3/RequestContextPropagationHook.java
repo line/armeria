@@ -36,7 +36,6 @@ public final class RequestContextPropagationHook {
      * Enable <a href="https://docs.micrometer.io/context-propagation/reference/index.html">
      * Context-propagation</a> to keep {@link RequestContext} during
      * Reactor operations.
-     * </p>
      * Please note that enable {@link RequestContextPropagationHook} at the
      * start of the application. otherwise, {@link RequestContext} may not be keep.
      */

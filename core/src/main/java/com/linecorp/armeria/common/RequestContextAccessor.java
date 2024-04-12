@@ -29,13 +29,11 @@ import io.micrometer.context.ThreadLocalAccessor;
  * <a href="https://docs.micrometer.io/context-propagation/reference/index.html">
  * Context-propagation</a> library and keep the {@link RequestContext} during
  * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations.
- * </p>
  * Get the {@link RequestContextAccessor} to register it to the {@link ContextRegistry}.
  * Then, {@link ContextRegistry} will use {@link RequestContextAccessor} to
  * propagate context during the
  * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations
  * so that you can get the context using {@link RequestContext#current()}.
- * </p>
  * However, please note that you should include Mono#contextWrite(ContextView) or
  * Flux#contextWrite(ContextView) to end of the Reactor codes.
  * If not, {@link RequestContext} will not be keep during Reactor Operation.
@@ -100,7 +98,6 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
      * the end of {@link ContextSnapshot.Scope}. If reactor Context does not
      * contains {@link RequestContextAccessor#KEY}, {@link ContextSnapshot} will use
      * this method to remove the value from {@link ThreadLocal}.
-     * </p>
      * Please note that {@link RequestContextUtil#pop()} return {@link AutoCloseable} instance,
      * but it is not used in `Try with Resources` syntax. this is because {@link ContextSnapshot.Scope}
      * will handle the {@link AutoCloseable} instance returned by {@link RequestContextUtil#pop()}.
@@ -131,7 +128,6 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
      * the end of {@link ContextSnapshot.Scope}. If reactor Context does not
      * contains {@link RequestContextAccessor#KEY}, {@link ContextSnapshot} will use
      * this method to remove the value from {@link ThreadLocal}.
-     * </p>
      * Please note that {@link RequestContextUtil#pop()} return {@link AutoCloseable} instance,
      * but it is not used in `Try with Resources` syntax. this is because {@link ContextSnapshot.Scope}
      * will handle the {@link AutoCloseable} instance returned by {@link RequestContextUtil#pop()}.
