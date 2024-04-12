@@ -15,10 +15,17 @@
  */
 package com.linecorp.armeria.client.kubernetes;
 
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 import io.fabric8.kubernetes.client.http.AbstractHttpLoggingInterceptorTest;
 import io.fabric8.kubernetes.client.http.HttpClient;
 
 @SuppressWarnings("JUnitTestCaseWithNoTests")
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class ArmeriaHttpHttpLoggingInterceptorTest extends AbstractHttpLoggingInterceptorTest {
     @Override
     protected HttpClient.Factory getHttpClientFactory() {
