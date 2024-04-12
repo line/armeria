@@ -13,60 +13,41 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common.reactor3;
+package com.linecorp.armeria.common;
 
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ContextSnapshot;
 import io.micrometer.context.ContextSnapshot.Scope;
 import io.micrometer.context.ThreadLocalAccessor;
-import reactor.core.CoreSubscriber;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.util.context.Context;
-import reactor.util.context.ContextView;
 
 /**
  * This class works with the
  * <a href="https://docs.micrometer.io/context-propagation/reference/index.html">
  * Context-propagation</a> library and keep the {@link RequestContext} during
  * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations.
+ * </p>
+ * Get the {@link RequestContextAccessor} to register it to the {@link ContextRegistry}.
+ * Then, {@link ContextRegistry} will use {@link RequestContextAccessor} to
+ * propagate context during the
+ * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations
+ * so that you can get the context using {@link RequestContext#current()}.
+ * </p>
+ * However, please note that you should include Mono#contextWrite(ContextView) or
+ * Flux#contextWrite(ContextView) to end of the Reactor codes.
+ * If not, {@link RequestContext} will not be keep during Reactor Operation.
  */
 public final class RequestContextAccessor implements ThreadLocalAccessor<RequestContext> {
 
-    private static final String KEY = "ARMERIA_REQUEST_CONTEXT";
-    private static final RequestContextAccessor instance = createInstance();
-
-    private static RequestContextAccessor createInstance() {
-        return new RequestContextAccessor();
-    }
-
-    /**
-     * Get the {@link RequestContextAccessor} to register it to the {@link ContextRegistry}.
-     * Then, {@link ContextRegistry} will use {@link RequestContextAccessor} to
-     * propagate context during the
-     * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations
-     * so that you can get the context using {@link RequestContext#current()}.
-     * </p>
-     * However, please note that you should include {@link Mono#contextWrite(ContextView)} or
-     * {@link Flux#contextWrite(ContextView)} to end of the Reactor codes.
-     * If not, {@link RequestContext} will not be keep during Reactor Operation.
-     */
-    public static RequestContextAccessor getInstance() {
-        return instance;
-    }
-
-    private RequestContextAccessor() {
-    }
+    private static final String KEY = RequestContextAccessor.class.getName();
 
     /**
      * The value which obtained through {@link RequestContextAccessor},
-     * will be stored in the {@link Context} under this {@code KEY}.
+     * will be stored in the Context under this {@code KEY}.
+     * This method will be called by {@link ContextSnapshot} internally.
      */
     @Override
     public Object key() {
@@ -74,10 +55,21 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
     }
 
     /**
+     * The value which obtained through {@link RequestContextAccessor},
+     * will be stored in the Context under this {@code KEY}.
+     * User can use this method to register {@link RequestContext} to
+     * Reactor Context.
+     */
+
+    public static String accessorKey() {
+        return KEY;
+    }
+
+    /**
      * {@link ContextSnapshot} will call this method during the execution
      * of lambda functions in {@link ContextSnapshot#wrap(Runnable)},
-     * as well as during {@link Mono#subscribe()}, {@link Flux#subscribe()},
-     * {@link Subscription#request(long)}, and {@link CoreSubscriber#onSubscribe(Subscription)}.
+     * as well as during Mono#subscribe(), Flux#subscribe(),
+     * {@link Subscription#request(long)}, and CoreSubscriber#onSubscribe(Subscription).
      * Following these calls, {@link ContextSnapshot#setThreadLocals()} is
      * invoked to restore the state of {@link RequestContextStorage}.
      * Furthermore, at the end of these methods, {@link Scope#close()} is executed
@@ -91,8 +83,8 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
     /**
      * {@link ContextSnapshot} will call this method during the execution
      * of lambda functions in {@link ContextSnapshot#wrap(Runnable)},
-     * as well as during {@link Mono#subscribe()}, {@link Flux#subscribe()},
-     * {@link Subscription#request(long)}, and {@link CoreSubscriber#onSubscribe(Subscription)}.
+     * as well as during Mono#subscribe(), Flux#subscribe(),
+     * {@link Subscription#request(long)}, and CoreSubscriber#onSubscribe(Subscription).
      * Following these calls, {@link ContextSnapshot#setThreadLocals()} is
      * invoked to restore the state of {@link RequestContextStorage}.
      * Furthermore, at the end of these methods, {@link Scope#close()} is executed
@@ -105,7 +97,7 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
 
     /**
      * This method will be called at the start of {@link ContextSnapshot.Scope} and
-     * the end of {@link ContextSnapshot.Scope}. If reactor {@link Context} does not
+     * the end of {@link ContextSnapshot.Scope}. If reactor Context does not
      * contains {@link RequestContextAccessor#KEY}, {@link ContextSnapshot} will use
      * this method to remove the value from {@link ThreadLocal}.
      * </p>
@@ -122,8 +114,8 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
     /**
      * {@link ContextSnapshot} will call this method during the execution
      * of lambda functions in {@link ContextSnapshot#wrap(Runnable)},
-     * as well as during {@link Mono#subscribe()}, {@link Flux#subscribe()},
-     * {@link Subscription#request(long)}, and {@link CoreSubscriber#onSubscribe(Subscription)}.
+     * as well as during Mono#subscribe(), Flux#subscribe(),
+     * {@link Subscription#request(long)}, and CoreSubscriber#onSubscribe(Subscription).
      * Following these calls, {@link ContextSnapshot#setThreadLocals()} is
      * invoked to restore the state of {@link RequestContextStorage}.
      * Furthermore, at the end of these methods, {@link Scope#close()} is executed
@@ -136,7 +128,7 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
 
     /**
      * This method will be called at the start of {@link ContextSnapshot.Scope} and
-     * the end of {@link ContextSnapshot.Scope}. If reactor {@link Context} does not
+     * the end of {@link ContextSnapshot.Scope}. If reactor Context does not
      * contains {@link RequestContextAccessor#KEY}, {@link ContextSnapshot} will use
      * this method to remove the value from {@link ThreadLocal}.
      * </p>
@@ -148,14 +140,5 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
     @SuppressWarnings("MustBeClosedChecker")
     public void restore() {
         RequestContextUtil.pop();
-    }
-
-    /**
-     * This is a utility method to get a Reactor {@link Context} that contains {@link RequestContext}.
-     * You can use this method for both {@link Mono#contextWrite(ContextView)}
-     * and {@link Flux#contextWrite(ContextView)}.
-     */
-    public Context getReactorContext(RequestContext ctx) {
-        return Context.of(KEY, ctx);
     }
 }

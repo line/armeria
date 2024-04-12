@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.reactor3;
 
 import com.linecorp.armeria.common.RequestContext;
 
-import io.micrometer.context.ContextRegistry;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
@@ -45,10 +44,6 @@ public final class RequestContextPropagationHook {
         if (enabled) {
             return;
         }
-
-        final RequestContextAccessor accessor = RequestContextAccessor.getInstance();
-        ContextRegistry.getInstance()
-                       .registerThreadLocalAccessor(accessor);
         Hooks.enableAutomaticContextPropagation();
         enabled = true;
     }

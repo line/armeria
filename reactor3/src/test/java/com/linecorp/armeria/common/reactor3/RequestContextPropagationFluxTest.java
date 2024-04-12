@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.RequestContextAccessor;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
@@ -405,12 +406,12 @@ class RequestContextPropagationFluxTest {
                    .doOnEach(s -> assertThat(ctxExists(ctx)).isTrue())
                    .doOnError(t -> assertThat(ctxExists(ctx)).isTrue())
                    .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue())
-                   .contextWrite(Context.of(RequestContextAccessor.getInstance().key(), ctx));
+                   .contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
         // doOnCancel and doFinally do not have context because we cannot add a hook to the cancel.
     }
 
     private static StepVerifierOptions initialReactorContext(ClientRequestContext ctx) {
-        final Context reactorCtx = Context.of(RequestContextAccessor.getInstance().key(), ctx);
+        final Context reactorCtx = Context.of(RequestContextAccessor.accessorKey(), ctx);
         return StepVerifierOptions.create().withInitialContext(reactorCtx);
     }
 }

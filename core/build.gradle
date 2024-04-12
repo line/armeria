@@ -108,6 +108,7 @@ dependencies {
     optionalApi libs.micrometer.prometheus
     optionalApi libs.dropwizard.metrics.core
     optionalApi libs.prometheus
+    implementation 'io.micrometer:context-propagation:1.1.1'
 
     // Netty
     api libs.netty.transport
