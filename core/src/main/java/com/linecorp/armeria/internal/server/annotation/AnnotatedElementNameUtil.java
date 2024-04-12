@@ -32,23 +32,20 @@ import com.linecorp.armeria.server.annotation.Param;
 
 final class AnnotatedElementNameUtil {
 
-    static String findName(Object nameRetrievalTarget, String value) {
-        return findName(nameRetrievalTarget, value, Function.identity());
-    }
-
     /**
      * Returns the value of {@link Header}, {@link Param}, {@link Attribute} if the value is not blank.
      * If the value is blank, it returns the name of the specified {@code nameRetrievalTarget} object
      * which is an instance of {@link Header}, {@link Param}, {@link Attribute} or {@link Field}.
      */
-    static String findName(Object nameRetrievalTarget, String value, Function<String, String> delegate) {
+    static String findName(Object nameRetrievalTarget, String value) {
         requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
         if (DefaultValues.isSpecified(value)) {
             checkArgument(!value.isEmpty(), "value is empty.");
             return value;
         }
-        return delegate.apply(getName(nameRetrievalTarget));
+        return getName(nameRetrievalTarget);
     }
+
 
     /**
      * Returns the name of the specified element or the default name if it can't get.
@@ -82,7 +79,6 @@ final class AnnotatedElementNameUtil {
         throw new IllegalArgumentException("cannot find the name: " + element.getClass().getName());
     }
 
-    @VisibleForTesting
     static String toHeaderName(String name) {
         requireNonNull(name, "name");
         checkArgument(!name.isEmpty(), "name is empty.");

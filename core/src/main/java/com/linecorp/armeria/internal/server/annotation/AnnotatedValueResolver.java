@@ -469,7 +469,7 @@ final class AnnotatedValueResolver {
 
         final Header header = annotatedElement.getAnnotation(Header.class);
         if (header != null) {
-            final String name = findName(typeElement, header.value(), v -> toHeaderName(v));
+            final String name = toHeaderName(findName(typeElement, header.value()));
             return ofHeader(name, annotatedElement, typeElement, type, description);
         }
 
