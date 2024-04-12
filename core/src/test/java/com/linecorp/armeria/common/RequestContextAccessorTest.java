@@ -35,14 +35,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ThreadLocalAccessor;
 
 class RequestContextAccessorTest {
+
+    /* Should clean up on RequestContext.
+     * because some test case does not clean up on RequestContext,
+     * and it will affect other tests if test are executed parallely.
+     */
+
+    @AfterEach
+    @SuppressWarnings("MustBeClosedChecker")
+    void cleanUp() {
+        RequestContextUtil.pop();
+    }
 
     @Test
     void should_be_loaded_by_SPI() {
