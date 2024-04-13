@@ -228,7 +228,7 @@ class RequestContextPropagationMonoTest {
     }
 
     @Test
-    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperation() {
+    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperationOnSchedulerThread() {
         // Given
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
@@ -236,6 +236,30 @@ class RequestContextPropagationMonoTest {
         // When
         mono = Mono.just("Hello")
                    .delayElement(Duration.ofMillis(1000))
+                   .map(s -> {
+                       if (s.equals("Hello")) {
+                           throw new RuntimeException();
+                       }
+                       return s;
+                   })
+                   .contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
+
+        // Then
+        StepVerifier.create(mono)
+                    .expectError(RuntimeException.class)
+                    .verify();
+
+        assertThat(ctxExists(ctx)).isFalse();
+    }
+
+    @Test
+    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperationOnMainThread() {
+        // Given
+        final ClientRequestContext ctx = newContext();
+        final Mono<String> mono;
+
+        // When
+        mono = Mono.just("Hello")
                    .map(s -> {
                        if (s.equals("Hello")) {
                            throw new RuntimeException();

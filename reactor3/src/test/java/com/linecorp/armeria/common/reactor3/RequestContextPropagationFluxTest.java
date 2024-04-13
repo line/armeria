@@ -398,7 +398,7 @@ class RequestContextPropagationFluxTest {
     }
 
     @Test
-    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperation() {
+    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperationOnSchedulerThread() {
         // Given
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
@@ -406,6 +406,30 @@ class RequestContextPropagationFluxTest {
         // When
         flux = Flux.just("Hello", "Hi")
                    .delayElements(Duration.ofMillis(1000))
+                   .map(s -> {
+                       if (s.equals("Hello")) {
+                           throw new RuntimeException();
+                       }
+                       return s;
+                   })
+                   .contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
+
+        // Then
+        StepVerifier.create(flux)
+                    .expectError(RuntimeException.class)
+                    .verify();
+
+        assertThat(ctxExists(ctx)).isFalse();
+    }
+
+    @Test
+    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperationOnMainThread() {
+        // Given
+        final ClientRequestContext ctx = newContext();
+        final Flux<String> flux;
+
+        // When
+        flux = Flux.just("Hello", "Hi")
                    .map(s -> {
                        if (s.equals("Hello")) {
                            throw new RuntimeException();
