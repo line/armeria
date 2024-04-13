@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.server.management.AppInfo;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
@@ -121,6 +122,9 @@ final class DefaultServerConfig implements ServerConfig {
     private final Mapping<String, SslContext> sslContexts;
 
     @Nullable
+    private final AppInfo appInfo;
+
+    @Nullable
     private String strVal;
 
     DefaultServerConfig(
@@ -151,7 +155,8 @@ final class DefaultServerConfig implements ServerConfig {
             DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
             long unhandledExceptionsReportIntervalMillis,
-            List<ShutdownSupport> shutdownSupports) {
+            List<ShutdownSupport> shutdownSupports,
+            AppInfo appInfo) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -271,6 +276,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.absoluteUriTransformer = castAbsoluteUriTransformer;
         this.unhandledExceptionsReportIntervalMillis = unhandledExceptionsReportIntervalMillis;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
+        this.appInfo = appInfo;
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -674,6 +680,12 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public long unhandledExceptionsReportIntervalMillis() {
         return unhandledExceptionsReportIntervalMillis;
+    }
+
+    @Override
+    @Nullable
+    public AppInfo appInfo() {
+        return appInfo;
     }
 
     List<ShutdownSupport> shutdownSupports() {

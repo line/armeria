@@ -104,6 +104,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.management.AppInfo;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelHandler;
@@ -237,6 +238,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private int http2MaxResetFramesPerWindow = Flags.defaultServerHttp2MaxResetFramesPerMinute();
     private int http2MaxResetFramesWindowSeconds = 60;
+    @Nullable
+    private AppInfo appInfo;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -452,6 +455,12 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
             port(new ServerPort(new InetSocketAddress(NetUtil.LOCALHOST6, port), protocols, portGroup));
         }
 
+        return this;
+    }
+
+    public ServerBuilder setAppInfo(AppInfo appInfo) {
+        requireNonNull(appInfo, "appInfo");
+        this.appInfo = appInfo;
         return this;
     }
 
@@ -2182,6 +2191,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         final Mapping<String, SslContext> sslContexts;
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
         final Collection<ServerPort> ports;
+        final AppInfo appInfo = this.appInfo;
 
         for (ServerPort port : this.ports) {
             checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
@@ -2283,7 +2293,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
-                unhandledExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
+                unhandledExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports), appInfo);
     }
 
     /**

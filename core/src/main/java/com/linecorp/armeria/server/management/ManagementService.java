@@ -21,9 +21,12 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -60,6 +63,9 @@ public final class ManagementService extends AbstractHttpService {
 
     private static final ManagementService INSTANCE = new ManagementService();
 
+    @Nullable
+    private Server server;
+
     /**
      * Returns a singleton {@link ManagementService}.
      */
@@ -70,6 +76,20 @@ public final class ManagementService extends AbstractHttpService {
     ManagementService() {}
 
     @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        super.serviceAdded(cfg);
+        if (server != null) {
+            if (server != cfg.server()) {
+                throw new IllegalStateException("cannot be added to more than one server");
+            } else {
+                return;
+            }
+        }
+        server = cfg.server();
+        AppInfoService.INSTANCE.setAppInfo(server.config().appInfo());
+    }
+
+    @Override
     public HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final String path = ctx.mappedPath();
         switch (path) {
@@ -77,6 +97,8 @@ public final class ManagementService extends AbstractHttpService {
                 return ThreadDumpService.INSTANCE.serve(ctx, req);
             case "/jvm/heapdump":
                 return HeapDumpService.INSTANCE.serve(ctx, req);
+            case "/info":
+                return AppInfoService.INSTANCE.serve(ctx, req);
             default:
                 return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
