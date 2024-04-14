@@ -58,6 +58,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Ag
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationType;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpServiceOptions;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -66,6 +67,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.HttpResult;
+import com.linecorp.armeria.server.annotation.HttpServiceOption;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ServiceName;
@@ -107,6 +109,9 @@ public final class AnnotatedService implements HttpService {
     private final boolean useBlockingTaskExecutor;
     private final String serviceName;
     private final boolean serviceNameSetByAnnotation;
+
+    @Nullable
+    private final HttpServiceOptions options;
 
     AnnotatedService(Object object, Method method,
                      int overloadId, List<AnnotatedValueResolver> resolvers,
@@ -174,6 +179,18 @@ public final class AnnotatedService implements HttpService {
         this.method.setAccessible(true);
         // following must be called only after method.setAccessible(true)
         methodHandle = asMethodHandle(method, object);
+
+        final HttpServiceOption httpServiceOption = AnnotationUtil.findFirst(method, HttpServiceOption.class);
+        if (httpServiceOption != null) {
+            options = HttpServiceOptions.builder()
+                                        .requestTimeoutMillis(httpServiceOption.requestTimeoutMillis())
+                                        .maxRequestLength(httpServiceOption.maxRequestLength())
+                                        .requestAutoAbortDelayMillis(
+                                                httpServiceOption.requestAutoAbortDelayMillis())
+                                        .build();
+        } else {
+            options = null;
+        }
     }
 
     private static Type getActualReturnType(Method method) {
@@ -473,6 +490,11 @@ public final class AnnotatedService implements HttpService {
         } else {
             return isResponseStreaming ? ExchangeType.RESPONSE_STREAMING : ExchangeType.UNARY;
         }
+    }
+
+    @Override
+    public HttpServiceOptions options() {
+        return options;
     }
 
     /**

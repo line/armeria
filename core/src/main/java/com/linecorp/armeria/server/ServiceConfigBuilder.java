@@ -43,8 +43,6 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
-import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.EventLoopGroup;
@@ -343,33 +341,48 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                                                                      unhandledExceptionsReporter);
         }
 
-        final boolean webSocket = service.as(DefaultWebSocketService.class) != null;
+        final HttpServiceOptions options = service.options();
+        final boolean optionsConfigured = options != null && !options.isDefault();
+        final boolean defaultValuesApplicable = options == null || options == HttpServiceOptions.of();
+
         final long requestTimeoutMillis;
-        if (this.requestTimeoutMillis != null) {
+        if (optionsConfigured && options.requestTimeoutMillis() != -1) {
+            requestTimeoutMillis = options.requestTimeoutMillis();
+        } else if (this.requestTimeoutMillis != null) {
             requestTimeoutMillis = this.requestTimeoutMillis;
-        } else if (!webSocket || defaultRequestTimeoutMillis != Flags.defaultRequestTimeoutMillis()) {
-            requestTimeoutMillis = defaultRequestTimeoutMillis;
         } else {
-            requestTimeoutMillis = WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS;
+            if (defaultValuesApplicable || defaultRequestTimeoutMillis != Flags.defaultRequestTimeoutMillis()) {
+                requestTimeoutMillis = defaultRequestTimeoutMillis;
+            } else {
+                requestTimeoutMillis = options.requestTimeoutMillis();
+            }
         }
 
         final long maxRequestLength;
-        if (this.maxRequestLength != null) {
+        if (optionsConfigured && options.maxRequestLength() != -1) {
+            maxRequestLength = options.maxRequestLength();
+        } else if (this.maxRequestLength != null) {
             maxRequestLength = this.maxRequestLength;
-        } else if (!webSocket || defaultMaxRequestLength != Flags.defaultMaxRequestLength()) {
-            maxRequestLength = defaultMaxRequestLength;
         } else {
-            maxRequestLength = WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH;
+            if (defaultValuesApplicable || defaultMaxRequestLength != Flags.defaultMaxRequestLength()) {
+                maxRequestLength = defaultMaxRequestLength;
+            } else {
+                maxRequestLength = options.maxRequestLength();
+            }
         }
 
         final long requestAutoAbortDelayMillis;
-        if (this.requestAutoAbortDelayMillis != null) {
+        if (optionsConfigured && options.requestAutoAbortDelayMillis() != -1) {
+            requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
+        } else if (this.requestAutoAbortDelayMillis != null) {
             requestAutoAbortDelayMillis = this.requestAutoAbortDelayMillis;
-        } else if (!webSocket ||
-                   defaultRequestAutoAbortDelayMillis != Flags.defaultRequestAutoAbortDelayMillis()) {
-            requestAutoAbortDelayMillis = defaultRequestAutoAbortDelayMillis;
         } else {
-            requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
+            if (defaultValuesApplicable ||
+                defaultRequestAutoAbortDelayMillis != Flags.defaultRequestAutoAbortDelayMillis()) {
+                requestAutoAbortDelayMillis = defaultRequestAutoAbortDelayMillis;
+            } else {
+                requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
+            }
         }
 
         final Supplier<AutoCloseable> mergedContextHook = mergeHooks(contextHook, this.contextHook);

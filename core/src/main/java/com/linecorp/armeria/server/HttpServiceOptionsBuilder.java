@@ -1,0 +1,71 @@
+/*
+ * Copyright 2024 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.server;
+
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
+
+/**
+ * Creates a new {@link HttpServiceOptions} with the specified parameters.
+ */
+public class HttpServiceOptionsBuilder {
+    private long requestTimeoutMillis = -1;
+    private long maxRequestLength = -1;
+    private long requestAutoAbortDelayMillis = -1;
+
+    /**
+     * Returns the server-side timeout of a request in milliseconds.
+     */
+    public HttpServiceOptionsBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+        this.requestTimeoutMillis = requestTimeoutMillis;
+        return this;
+    }
+
+    /**
+     * Returns the server-side maximum length of a request.
+     */
+    public HttpServiceOptionsBuilder maxRequestLength(long maxRequestLength) {
+        this.maxRequestLength = maxRequestLength;
+        return this;
+    }
+
+    /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when its corresponding
+     * {@link HttpResponse} is complete.
+     */
+    public HttpServiceOptionsBuilder requestAutoAbortDelayMillis(long requestAutoAbortDelayMillis) {
+        this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
+        return this;
+    }
+
+    /**
+     * Returns a newly created {@link HttpServiceOptions} based on the properties of this builder.
+     */
+    public HttpServiceOptions build() {
+        return new HttpServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis,
+                                      false);
+    }
+
+    /**
+     * Returns a newly created {@link HttpServiceOptions} based on the properties of this builder. This
+     * method is used internally to build the default {@link HttpServiceOptions}s.
+     */
+    HttpServiceOptions buildDefault() {
+        return new HttpServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis,
+                                      true);
+    }
+}

@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpServiceOptions;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolHandler;
@@ -394,5 +395,10 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     @Override
     public WebSocketProtocolHandler protocolHandler() {
         return this;
+    }
+
+    @Override
+    public HttpServiceOptions options() {
+        return HttpServiceOptions.websocket();
     }
 }
