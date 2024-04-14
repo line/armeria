@@ -74,6 +74,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallCredentials;
@@ -393,9 +394,12 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         if (!clientInterceptors.isEmpty()) {
             option(INTERCEPTORS.newValue(clientInterceptors));
         }
-        if (exceptionHandler != null) {
-            option(EXCEPTION_HANDLER.newValue(exceptionHandler));
+        if (exceptionHandler == null) {
+            exceptionHandler = DefaultGrpcExceptionHandlerFunction.ofDefault();
+        } else {
+            exceptionHandler = exceptionHandler.orElse(DefaultGrpcExceptionHandlerFunction.ofDefault());
         }
+        option(EXCEPTION_HANDLER.newValue(exceptionHandler));
 
         final Object client;
         final ClientOptions options = buildOptions();

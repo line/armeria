@@ -1,3 +1,19 @@
+/*
+ * Copyright 2024 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
 package com.linecorp.armeria.internal.common.grpc;
 
 import static java.util.Objects.requireNonNull;
@@ -6,9 +22,11 @@ import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 
 import com.google.common.base.Strings;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.circuitbreaker.FailFastException;
+import com.linecorp.armeria.client.grpc.GrpcClientBuilder;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.RequestContext;
@@ -23,6 +41,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.RequestTimeoutException;
+import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -30,8 +49,32 @@ import io.grpc.Status.Code;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 
-public class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
-    public static final GrpcExceptionHandlerFunction INSTANCE = new DefaultGrpcExceptionHandlerFunction();
+public final class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
+    private static final GrpcExceptionHandlerFunction INSTANCE = new DefaultGrpcExceptionHandlerFunction();
+
+    /**
+     * Returns the default {@link GrpcExceptionHandlerFunction}. This handler is also used as the final
+     * fallback when the handler customized
+     * with either {@link GrpcClientBuilder#exceptionHandler(GrpcExceptionHandlerFunction)}
+     * or {@link GrpcServiceBuilder#exceptionHandler(GrpcExceptionHandlerFunction)} returns {@code null}.
+     * For example, the following handler basically delegates all error handling to the default handler:
+     * <pre>{@code
+     * // For GrpcClient
+     * GrpcClients
+     *   .builder("http://foo.com")
+     *   .exceptionHandler((ctx, cause, metadata) -> null)
+     *   ...
+     *
+     * // For GrpcServer
+     * GrpcService
+     *   .builder()
+     *   .exceptionHandler((ctx, cause, metadata) -> null)
+     *   ...
+     * }</pre>
+     */
+    public static GrpcExceptionHandlerFunction ofDefault() {
+        return DefaultGrpcExceptionHandlerFunction.INSTANCE;
+    }
 
     @Override
     public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
@@ -94,6 +137,9 @@ public class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandler
         }
         if (t instanceof ClosedStreamException || t instanceof RequestTimeoutException) {
             return Status.CANCELLED.withCause(t);
+        }
+        if (t instanceof InvalidProtocolBufferException) {
+            return Status.INVALID_ARGUMENT.withCause(t);
         }
         if (t instanceof UnprocessedRequestException ||
             t instanceof IOException ||
@@ -162,7 +208,6 @@ public class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandler
         }
         return t;
     }
-
 
     /**
      * Fills the information from the {@link Throwable} into a {@link ThrowableProto} for

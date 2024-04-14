@@ -18,21 +18,39 @@ package com.linecorp.armeria.client.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.concurrent.Executors;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
+import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
 import io.grpc.MethodDescriptor;
+import io.grpc.Status;
+import io.grpc.Status.Code;
+import io.grpc.StatusRuntimeException;
+import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcClientBuilderTest {
@@ -156,13 +174,49 @@ class GrpcClientBuilderTest {
                 .containsExactly(interceptorA, interceptorB);
     }
 
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service(
+                    GrpcService.builder()
+                               .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                               .build());
+        }
+    };
+
     @Test
     void useDefaultGrpcExceptionHandlerFunction() {
-        final TestServiceBlockingStub client = GrpcClients.builder("http://foo.com").build(
-                TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+                                                          .build(TestServiceBlockingStub.class);
 
         final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
         assertThat(clientParams.options().get(GrpcClientOptions.EXCEPTION_HANDLER))
-                .isEqualTo(DefaultGrpcExceptionHandlerFunction.INSTANCE);
+                .isEqualTo(DefaultGrpcExceptionHandlerFunction.ofDefault());
+    }
+
+    @Test
+    void useDefaultGrpcExceptionHandlerFunctionAsFallback() {
+        final GrpcExceptionHandlerFunction mockExceptionHandler = mock(GrpcExceptionHandlerFunction.class);
+        when(mockExceptionHandler.apply(any(), any(), any())).thenReturn(null);
+
+        final GrpcExceptionHandlerFunction exceptionHandler =
+                GrpcExceptionHandlerFunction.builder()
+                                            .on(ContentTooLargeException.class, mockExceptionHandler)
+                                            .build();
+        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+                                                          .maxResponseLength(1)
+                                                          .exceptionHandler(exceptionHandler)
+                                                          .build(TestServiceBlockingStub.class);
+
+        // Fallback exception handler expected to return RESOURCE_EXHAUSTED for the ContentTooLargeException
+        assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
+                .isInstanceOf(StatusRuntimeException.class)
+                .extracting(e -> ((StatusRuntimeException) e).getStatus())
+                .extracting(Status::getCode)
+                .isEqualTo(Code.RESOURCE_EXHAUSTED);
+
+        // mockExceptionHandler is supposed to be called once.
+        verify(mockExceptionHandler, times(1)).apply(any(), any(), any());
     }
 }

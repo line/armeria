@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
-import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -595,7 +594,7 @@ class GrpcExceptionHandlerTest {
         }
     }
 
-    @GrpcExceptionHandler(DefaultGrpcExceptionHandlerFunction.class)
+    // TestServiceIOException has DefaultGRPCExceptionHandlerFunction as fallback exception handler
     private static class TestServiceIOException extends TestServiceImpl {
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {

@@ -173,7 +173,7 @@ public final class GrpcClientOptions {
      * to a gRPC {@link Status}.
      */
     public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
-            ClientOption.define("EXCEPTION_HANDLER", DefaultGrpcExceptionHandlerFunction.INSTANCE);
+            ClientOption.define("EXCEPTION_HANDLER", DefaultGrpcExceptionHandlerFunction.ofDefault());
 
     private GrpcClientOptions() {}
 }
