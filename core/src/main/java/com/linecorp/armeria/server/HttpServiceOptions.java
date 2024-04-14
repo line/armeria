@@ -31,8 +31,8 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
  */
 @UnstableApi
 public final class HttpServiceOptions {
-    private static final HttpServiceOptions DEFAULT = HttpServiceOptions.builder().buildDefault();
-    private static final HttpServiceOptions WEBSOCKET_DEFAULT = HttpServiceOptions
+    private static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions.builder().buildDefault();
+    private static final HttpServiceOptions WEB_SOCKET_DEFAULT_OPTIONS = HttpServiceOptions
             .builder()
             .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
             .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
@@ -43,14 +43,14 @@ public final class HttpServiceOptions {
      * Returns the default {@link HttpServiceOptions}.
      */
     public static HttpServiceOptions of() {
-        return DEFAULT;
+        return DEFAULT_OPTIONS;
     }
 
     /**
      * Returns the default {@link HttpServiceOptions} for a WebSocket service.
      */
     public static HttpServiceOptions websocket() {
-        return WEBSOCKET_DEFAULT;
+        return WEB_SOCKET_DEFAULT_OPTIONS;
     }
 
     /**
