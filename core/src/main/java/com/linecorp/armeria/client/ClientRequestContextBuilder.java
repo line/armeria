@@ -122,21 +122,16 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         } else {
             endpointGroup = Endpoint.parse(authority());
         }
-
-        final CancellationScheduler responseCancellationScheduler;
+        final DefaultClientRequestContext ctx;
         if (timedOut()) {
-            responseCancellationScheduler = CancellationScheduler.finished(false);
+            ctx = getCtx(CancellationScheduler.finished(false));
         } else {
-            responseCancellationScheduler = CancellationScheduler.ofClient(0);
-            responseCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
+            ctx = getCtx(CancellationScheduler.ofClient(0));
+            ctx.whenInitialized().handle((unused1, unused2) -> {
+                ctx.responseCancellationScheduler().initAndStart(eventLoop(), noopCancellationTask);
+                return null;
+            });
         }
-
-        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
-                eventLoop(), meterRegistry(), sessionProtocol(),
-                id(), method(), requestTarget(), options, request(), rpcRequest(),
-                requestOptions, responseCancellationScheduler,
-                isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
-                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
 
         ctx.init(endpointGroup);
         ctx.logBuilder().session(fakeChannel(), sessionProtocol(), sslSession(), connectionTimings);
@@ -204,5 +199,13 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     @Override
     public ClientRequestContextBuilder timedOut(boolean timedOut) {
         return (ClientRequestContextBuilder) super.timedOut(timedOut);
+    }
+
+    private DefaultClientRequestContext getCtx(CancellationScheduler finished) {
+        return new DefaultClientRequestContext(
+                eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(), options,
+                request(), rpcRequest(), requestOptions, finished,
+                isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
+                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
     }
 }

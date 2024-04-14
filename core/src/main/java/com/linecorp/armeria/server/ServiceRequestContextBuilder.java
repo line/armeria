@@ -176,12 +176,9 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             proxiedAddresses = ProxiedAddresses.of(remoteAddress());
         }
 
-        final EventLoop serviceWorkerGroup = eventLoop();
-
         // Build a fake server which never starts up.
         final ServerBuilder serverBuilder = Server.builder()
-                                                  .meterRegistry(meterRegistry())
-                                                  .workerGroup(serviceWorkerGroup, false);
+                                                  .meterRegistry(meterRegistry());
 
         final ServiceBindingBuilder serviceBindingBuilder;
         if (route != null) {
@@ -230,24 +227,32 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
-        final CancellationScheduler requestCancellationScheduler;
-        if (timedOut()) {
-            requestCancellationScheduler = CancellationScheduler.finished(true);
-        } else {
-            requestCancellationScheduler = CancellationScheduler.ofServer(0);
-            requestCancellationScheduler.initAndStart(serviceWorkerGroup, noopCancellationTask);
-        }
-
+        final DefaultServiceRequestContext ctx;
         // Build the context with the properties set by a user and the fake objects.
         final Channel ch = fakeChannel();
-        return new DefaultServiceRequestContext(
-                serviceCfg, ch, serviceWorkerGroup, meterRegistry(), sessionProtocol(), id(), routingCtx,
-                routingResult, exchangeType, req, sslSession(), proxiedAddresses,
-                clientAddress, remoteAddress(), localAddress(),
-                requestCancellationScheduler,
-                isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
-                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
-                HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
+        if (timedOut()) {
+            ctx = new DefaultServiceRequestContext(
+                    serviceCfg, ch, eventLoop(), meterRegistry(), sessionProtocol(), id(), routingCtx,
+                    routingResult, exchangeType, req, sslSession(), proxiedAddresses,
+                    clientAddress, remoteAddress(), localAddress(),
+                    CancellationScheduler.finished(true),
+                    isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
+                    isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
+                    HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
+        } else {
+            ctx = new DefaultServiceRequestContext(
+                    serviceCfg, ch, eventLoop(), meterRegistry(), sessionProtocol(), id(), routingCtx,
+                    routingResult, exchangeType, req, sslSession(), proxiedAddresses,
+                    clientAddress, remoteAddress(), localAddress(),
+                    CancellationScheduler.ofServer(0),
+                    isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
+                    isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
+                    HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
+
+            ctx.requestCancellationScheduler().initAndStart(ctx.eventLoop(), noopCancellationTask);
+        }
+
+        return ctx;
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {
