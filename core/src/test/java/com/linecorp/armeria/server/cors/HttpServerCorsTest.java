@@ -864,4 +864,12 @@ class HttpServerCorsTest {
         res = preflightRequest(client, "/cors19/index3", "http://invalid.com", "DELETE");
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isNull();
     }
+
+    @Test
+    void caseInsensitiveOriginCheck() {
+        final WebClient client = client();
+        final AggregatedHttpResponse res = preflightRequest(client, "/cors", "http://EXAMPLE.com", "GET");
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .isEqualTo("http://EXAMPLE.com");
+    }
 }
