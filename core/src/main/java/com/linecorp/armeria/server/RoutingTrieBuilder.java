@@ -116,7 +116,7 @@ final class RoutingTrieBuilder<V> {
     private NodeBuilder<V> insertAndGetRoot(Entry<V> entry) {
         NodeBuilder<V> node = insertChild(null, entry.path, entry.value, entry.hasHighPrecedence);
         // Only the root node has no parent.
-        for (;;) {
+        for (; ; ) {
             final NodeBuilder<V> parent = node.parent;
             if (parent == null) {
                 return node;
@@ -137,8 +137,10 @@ final class RoutingTrieBuilder<V> {
 
             // Count the number of characters having the same prefix.
             int same = 0;
-            while (same < max && p.charAt(same) == path.charAt(same)) {
+            final PathReader pathReader = new PathReader(path);
+            while (same < max && pathReader.isSameChar(p.charAt(same))) {
                 same++;
+                pathReader.moveIndex();
             }
 
             // We need to split the current node into two in order to ensure that this node has the
@@ -156,16 +158,15 @@ final class RoutingTrieBuilder<V> {
 
             // We need to find a child to be able to consume the next character of the path, or need to
             // make a new sub trie to manage remaining part of the path.
-            final char nextChar = convertKey(path.charAt(same));
-            final NodeBuilder<V> next = current.child(nextChar);
+            final NodeBuilder<V> next = current.child(pathReader.peekAsKey());
             if (next == null) {
                 // Insert node.
-                insertChild(current, path.substring(same), entry.value, entry.hasHighPrecedence);
+                insertChild(current, pathReader.remaining(), entry.value, entry.hasHighPrecedence);
                 return;
             }
 
             current = next;
-            path = path.substring(same);
+            path = pathReader.remaining();
         }
     }
 
@@ -189,35 +190,46 @@ final class RoutingTrieBuilder<V> {
      */
     private NodeBuilder<V> insertChild(@Nullable NodeBuilder<V> node,
                                        String path, V value, boolean highPrecedence) {
-        int pathStart = 0;
-        final int max = path.length();
+        final PathReader pathReader = new PathReader(path);
+        StringBuilder exactPath = null;
 
-        for (int i = 0; i < max; i++) {
-            final char c = path.charAt(i);
-            // Find the prefix until the first wildcard (':' or '*')
-            if (c != '*' && c != ':') {
+        while (pathReader.hasNext()) {
+            // All escaped characters will be treated as an exact path.
+            if (pathReader.isEscaped()) {
+                if (exactPath == null) {
+                    exactPath = new StringBuilder();
+                }
+                exactPath.append(pathReader.read());
                 continue;
             }
-            if (c == '*' && i + 1 < max) {
+
+            final char c = pathReader.read();
+            // Find the prefix until the first wildcard (':' or '*')
+            if (c != '*' && c != ':') {
+                if (exactPath == null) {
+                    exactPath = new StringBuilder();
+                }
+                exactPath.append(c);
+                continue;
+            }
+
+            if (c == '*' && pathReader.hasNext()) {
                 throw new IllegalStateException("Catch-all should be the last in the path: " + path);
             }
 
-            if (i > pathStart) {
-                node = asChild(new NodeBuilder<>(NodeType.EXACT, node, path.substring(pathStart, i)));
+            if (exactPath != null) {
+                node = asChild(new NodeBuilder<>(NodeType.EXACT, node, exactPath.toString()));
+                exactPath = null;
             }
-            // Skip this '*' or ':' character.
-            pathStart = i + 1;
 
             if (c == '*') {
                 node = asChild(new NodeBuilder<>(NodeType.CATCH_ALL, node, "*"));
-            } else {
-                node = asChild(new NodeBuilder<>(NodeType.PARAMETER, node, ":"));
             }
         }
 
         // Make a new child node with the remaining characters of the path.
-        if (pathStart < max) {
-            node = asChild(new NodeBuilder<>(NodeType.EXACT, node, path.substring(pathStart)));
+        if (exactPath != null) {
+            node = asChild(new NodeBuilder<>(NodeType.EXACT, node, exactPath.toString()));
         }
         // Attach the value to the last node.
         assert node != null;
@@ -416,6 +428,59 @@ final class RoutingTrieBuilder<V> {
             }
 
             return new Node<>(type, path, children, parameterChild, catchAllChild, values);
+        }
+    }
+
+    private static class PathReader {
+        private final String path;
+        private final int length;
+        private int index;
+
+        PathReader(String path) {
+            this.path = path;
+            length = path.length();
+        }
+
+        char peekAsKey() {
+            final char c = path.charAt(index);
+            if (isEscapeChar(c)) {
+                return path.charAt(index + 1);
+            } else {
+                return convertKey(c);
+            }
+        }
+
+        char read() {
+            final char c = path.charAt(index++);
+            if (isEscapeChar(c)) {
+                return path.charAt(index++);
+            } else {
+                return c;
+            }
+        }
+
+        boolean isSameChar(char c) {
+            return path.charAt(index) == c;
+        }
+
+        int moveIndex() {
+            return ++index;
+        }
+
+        boolean hasNext() {
+            return index < length;
+        }
+
+        boolean isEscaped() {
+            return isEscapeChar(path.charAt(index));
+        }
+
+        String remaining() {
+            return path.substring(index);
+        }
+
+        private boolean isEscapeChar(char ch) {
+            return ch == '\\';
         }
     }
 }

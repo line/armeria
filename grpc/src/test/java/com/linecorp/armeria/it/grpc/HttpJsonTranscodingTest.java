@@ -153,10 +153,10 @@ public class HttpJsonTranscodingTest {
         @Override
         public void getMessageV5(GetMessageRequestV5 request, StreamObserver<Message> responseObserver) {
             final String text = request.getMessageId() + ':' +
-                    request.getQueryParameter() + ':' +
-                    request.getQueryField1() + ':' +
-                    request.getParentField().getChildField() + ':' +
-                    request.getParentField().getChildField2();
+                                request.getQueryParameter() + ':' +
+                                request.getQueryField1() + ':' +
+                                request.getParentField().getChildField() + ':' +
+                                request.getParentField().getChildField2();
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
         }
@@ -396,6 +396,16 @@ public class HttpJsonTranscodingTest {
     @ValueSource(strings = { "/", "/foo/" })
     void shouldGetMessageV1ByWebClient(String prefix) throws JsonProcessingException {
         final AggregatedHttpResponse response = webClient.get(prefix + "v1/messages/1").aggregate().join();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(root.get("text").asText()).isEqualTo("messages/1");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/", "/foo/" })
+    void shouldPostMessageV1ByWebClient(String prefix) throws JsonProcessingException {
+        final AggregatedHttpResponse response = webClient.post(prefix + "v1/messages/1:get", "").aggregate()
+                                                         .join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
@@ -1013,19 +1023,19 @@ public class HttpJsonTranscodingTest {
     void supportJsonName() {
         final QueryParams query =
                 QueryParams.builder()
-                        .add("query_parameter", "query")
-                        .add("second_query", "query2")
-                        .add("parent.child_field", "childField")
-                        .add("parent.second_field", "childField2")
-                        .build();
+                           .add("query_parameter", "query")
+                           .add("second_query", "query2")
+                           .add("parent.child_field", "childField")
+                           .add("parent.second_field", "childField2")
+                           .build();
 
         final JsonNode response =
                 webClientCamelCaseQueryAndOriginalParameters.prepare()
-                        .get("/v5/messages/1")
-                        .queryParams(query)
-                        .asJson(JsonNode.class)
-                        .execute()
-                        .content();
+                                                            .get("/v5/messages/1")
+                                                            .queryParams(query)
+                                                            .asJson(JsonNode.class)
+                                                            .execute()
+                                                            .content();
         assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
     }
 

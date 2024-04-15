@@ -32,6 +32,11 @@ service HttpJsonTranscodingTestService {
   rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
     option (google.api.http) = {
       get: "/v1/{name=messages/*}"
+
+      additional_bindings {
+        post: "/v1/{name=messages/*}:get"
+        body: "*"
+      }
     };
   }
   rpc GetMessageV2(GetMessageRequestV2) returns (Message) {
@@ -238,8 +243,8 @@ message GetMessageRequestV4 {
   string query_parameter = 2;
   ParentMessage parent_field = 3;
   message ParentMessage {
-     string child_field = 1;
-     string child_field_2 = 2;
+    string child_field = 1;
+    string child_field_2 = 2;
   }
 }
 

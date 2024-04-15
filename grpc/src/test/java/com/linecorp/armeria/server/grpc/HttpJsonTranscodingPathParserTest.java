@@ -103,6 +103,11 @@ class HttpJsonTranscodingPathParserTest {
                               PathMappingType.PARAMETERIZED,
                               ImmutableMap.of("p0", "1", "name3", "2"),
                               ImmutableMap.of("name", "messages/1/foo/2", "name2", "1/foo/2", "name3", "2")),
+                    arguments("/v1/messages/{message_id}:verb",
+                              "/v1/messages/:message_id:verb",
+                              PathMappingType.PARAMETERIZED,
+                              ImmutableMap.of("message_id", "1"),
+                              ImmutableMap.of("message_id", "1")),
                     arguments("/v1/messages/{name=**}",
                               "/v1/messages/**",
                               PathMappingType.GLOB,
@@ -135,6 +140,8 @@ class HttpJsonTranscodingPathParserTest {
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var="))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var=}"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{message_id}:verb:verb"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/***"))
                 .isInstanceOf(IllegalArgumentException.class);
