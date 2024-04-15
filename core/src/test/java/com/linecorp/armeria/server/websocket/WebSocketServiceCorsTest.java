@@ -104,6 +104,15 @@ class WebSocketServiceCorsTest {
     }
 
     @Test
+    void caseInsensitiveOrigin() {
+        final WebClient client = WebClient.builder(server2.uri(SessionProtocol.H1C))
+                                          .responseTimeoutMillis(0)
+                                          .build();
+        assertThat(sendRequestAndRetrieveResponseHeaders(client, "http://ARMERIA.com").status())
+                .isEqualTo(HttpStatus.SWITCHING_PROTOCOLS);
+    }
+
+    @Test
     void testWhenAllowedOriginsAreMatchedByPredicate() {
         final WebClient client = WebClient.builder(server3.uri(SessionProtocol.H1C))
                                           .responseTimeoutMillis(0)
