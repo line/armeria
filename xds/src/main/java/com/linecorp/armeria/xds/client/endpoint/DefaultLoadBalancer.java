@@ -24,19 +24,19 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.client.endpoint.ZoneAwareLbStateFactory.ZoneAwareLbState;
+import com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.DefaultLbState;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
-final class ZoneAwareLoadBalancer implements LoadBalancer {
+final class DefaultLoadBalancer implements LoadBalancer {
 
     @Nullable
-    private ZoneAwareLbState lbState;
+    private DefaultLbStateFactory.DefaultLbState lbState;
 
     @Override
     @Nullable
     public Endpoint selectNow(ClientRequestContext ctx) {
-        final ZoneAwareLbState lbState = this.lbState;
+        final DefaultLbState lbState = this.lbState;
         if (lbState == null) {
             return null;
         }
@@ -81,7 +81,7 @@ final class ZoneAwareLoadBalancer implements LoadBalancer {
     }
 
     @Nullable
-    HostsSource hostSourceToUse(ZoneAwareLbState lbState, int hash) {
+    HostsSource hostSourceToUse(DefaultLbState lbState, int hash) {
         final PriorityAndAvailability priorityAndAvailability = lbState.choosePriority(hash);
         if (priorityAndAvailability == null) {
             return null;
@@ -146,7 +146,7 @@ final class ZoneAwareLoadBalancer implements LoadBalancer {
 
     @Override
     public void prioritySetUpdated(PrioritySet prioritySet) {
-        lbState = ZoneAwareLbStateFactory.newInstance(prioritySet);
+        lbState = DefaultLbStateFactory.newInstance(prioritySet);
     }
 
     static class PriorityAndAvailability {

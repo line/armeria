@@ -28,13 +28,13 @@ import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.xds.client.endpoint.ZoneAwareLoadBalancer.DistributeLoadState;
-import com.linecorp.armeria.xds.client.endpoint.ZoneAwareLoadBalancer.HostAvailability;
-import com.linecorp.armeria.xds.client.endpoint.ZoneAwareLoadBalancer.PriorityAndAvailability;
+import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.DistributeLoadState;
+import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.HostAvailability;
+import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.PriorityAndAvailability;
 
-final class ZoneAwareLbStateFactory {
+final class DefaultLbStateFactory {
 
-    static ZoneAwareLbState newInstance(PrioritySet prioritySet) {
+    static DefaultLbState newInstance(PrioritySet prioritySet) {
         final ImmutableMap.Builder<Integer, Integer> perPriorityHealthBuilder =
                 ImmutableMap.builder();
         final ImmutableMap.Builder<Integer, Integer> perPriorityDegradedBuilder =
@@ -54,7 +54,7 @@ final class ZoneAwareLbStateFactory {
         if (perPriorityPanic.totalPanic()) {
             perPriorityLoad = recalculateLoadInTotalPanic(prioritySet);
         }
-        return new ZoneAwareLbState(prioritySet, perPriorityLoad, perPriorityPanic);
+        return new DefaultLbState(prioritySet, perPriorityLoad, perPriorityPanic);
     }
 
     private static HealthAndDegraded recalculatePerPriorityState(
@@ -289,13 +289,13 @@ final class ZoneAwareLbStateFactory {
         }
     }
 
-    static class ZoneAwareLbState {
+    static class DefaultLbState {
         private final PrioritySet prioritySet;
         private final PerPriorityLoad perPriorityLoad;
         private final PerPriorityPanic perPriorityPanic;
 
-        ZoneAwareLbState(PrioritySet prioritySet,
-                         PerPriorityLoad perPriorityLoad, PerPriorityPanic perPriorityPanic) {
+        DefaultLbState(PrioritySet prioritySet,
+                       PerPriorityLoad perPriorityLoad, PerPriorityPanic perPriorityPanic) {
             this.prioritySet = prioritySet;
             this.perPriorityLoad = perPriorityLoad;
             this.perPriorityPanic = perPriorityPanic;
@@ -347,5 +347,5 @@ final class ZoneAwareLbStateFactory {
         }
     }
 
-    private ZoneAwareLbStateFactory() {}
+    private DefaultLbStateFactory() {}
 }

@@ -49,7 +49,7 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
         if (cluster.hasLbSubsetConfig()) {
             loadBalancer = new SubsetLoadBalancer(clusterSnapshot);
         } else {
-            loadBalancer = new ZoneAwareLoadBalancer();
+            loadBalancer = new DefaultLoadBalancer();
         }
 
         // The order of adding listeners is important
