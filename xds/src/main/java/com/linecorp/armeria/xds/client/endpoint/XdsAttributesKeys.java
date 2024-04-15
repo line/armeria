@@ -26,6 +26,8 @@ final class XdsAttributesKeys {
             AttributeKey.valueOf(XdsAttributesKeys.class, "LB_ENDPOINT_KEY");
     static final AttributeKey<LocalityLbEndpoints> LOCALITY_LB_ENDPOINTS_KEY =
             AttributeKey.valueOf(XdsAttributesKeys.class, "LOCALITY_LB_ENDPOINTS_KEY");
+    static final AttributeKey<Integer> SELECTION_HASH =
+            AttributeKey.valueOf(XdsAttributesKeys.class, "SELECTION_HASH");
 
     private XdsAttributesKeys() {}
 }

@@ -66,6 +66,7 @@ import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.Rds;
 import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext;
+import io.envoyproxy.envoy.type.v3.Percent;
 
 public final class XdsTestResources {
 
@@ -74,12 +75,22 @@ public final class XdsTestResources {
     private XdsTestResources() {}
 
     public static LbEndpoint endpoint(String address, int port) {
-        return endpoint(address, port, Metadata.getDefaultInstance());
+        return endpoint(address, port, Metadata.getDefaultInstance(), 1,
+                        HealthStatus.HEALTHY);
     }
 
     public static LbEndpoint endpoint(String address, int port, int weight) {
         return endpoint(address, port, Metadata.getDefaultInstance(), weight,
                         HealthStatus.HEALTHY);
+    }
+
+    public static LbEndpoint endpoint(String address, int port, HealthStatus healthStatus) {
+        return endpoint(address, port, Metadata.getDefaultInstance(), 1, healthStatus);
+    }
+
+    public static LbEndpoint endpoint(String address, int port, HealthStatus healthStatus,
+                                      int weight) {
+        return endpoint(address, port, Metadata.getDefaultInstance(), weight, healthStatus);
     }
 
     public static LbEndpoint endpoint(String address, int port, Metadata metadata) {
@@ -102,6 +113,16 @@ public final class XdsTestResources {
                                                         .setSocketAddress(socketAddress)
                                                         .build())
                                      .build()).build();
+    }
+
+    public static Locality locality(String region) {
+        return Locality.newBuilder()
+                       .setRegion(region)
+                       .build();
+    }
+
+    public static Percent percent(int percent) {
+        return Percent.newBuilder().setValue(percent).build();
     }
 
     public static ClusterLoadAssignment loadAssignment(String clusterName, URI uri) {
@@ -372,6 +393,16 @@ public final class XdsTestResources {
                                                            .addListeners(listener)
                                                            .addClusters(cluster)
                                                            .build()).build();
+    }
+
+    public static LocalityLbEndpoints localityLbEndpoints(Locality locality,
+                                                          Collection<LbEndpoint> endpoints,
+                                                          Integer priority) {
+        return LocalityLbEndpoints.newBuilder()
+                                  .addAllLbEndpoints(endpoints)
+                                  .setLocality(locality)
+                                  .setPriority(priority)
+                                  .build();
     }
 
     public static LocalityLbEndpoints localityLbEndpoints(Locality locality,

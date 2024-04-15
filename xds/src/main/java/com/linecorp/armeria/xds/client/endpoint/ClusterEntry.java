@@ -30,16 +30,27 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
+import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+
 final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
 
     private final EndpointGroup endpointGroup;
+    private final Cluster cluster;
+    private final ClusterLoadAssignment clusterLoadAssignment;
     private final LoadBalancer loadBalancer;
     private List<Endpoint> endpoints = ImmutableList.of();
 
     ClusterEntry(ClusterSnapshot clusterSnapshot, ClusterManager clusterManager) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         assert endpointSnapshot != null;
-        loadBalancer = new SubsetLoadBalancer(clusterSnapshot);
+        cluster = clusterSnapshot.xdsResource().resource();
+        clusterLoadAssignment = endpointSnapshot.xdsResource().resource();
+        if (cluster.hasLbSubsetConfig()) {
+            loadBalancer = new SubsetLoadBalancer(clusterSnapshot);
+        } else {
+            loadBalancer = new ZoneAwareLoadBalancer();
+        }
 
         // The order of adding listeners is important
         endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterSnapshot);
@@ -55,7 +66,12 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
     @Override
     public void accept(List<Endpoint> endpoints) {
         this.endpoints = ImmutableList.copyOf(endpoints);
-        final PrioritySet prioritySet = new PrioritySet(endpoints);
+        final PriorityStateManager priorityStateManager =
+                new PriorityStateManager(cluster, clusterLoadAssignment, endpoints);
+        for (Endpoint endpoint: endpoints) {
+            priorityStateManager.registerEndpoint(endpoint);
+        }
+        final PrioritySet prioritySet = priorityStateManager.build();
         loadBalancer.prioritySetUpdated(prioritySet);
     }
 
