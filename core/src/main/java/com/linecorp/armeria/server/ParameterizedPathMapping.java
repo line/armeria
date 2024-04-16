@@ -167,7 +167,6 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         pattern = Pattern.compile(patternJoiner.toString());
         normalizedPathPattern = normalizedPatternJoiner.toString();
         skeleton = skeletonJoiner.toString();
-        // Q: Why does this list have same two elements?
         paths = ImmutableList.of(skeleton, skeleton);
         paramNameArray = paramNames.toArray(EMPTY_NAMES);
         this.paramNames = ImmutableSet.copyOf(paramNames);

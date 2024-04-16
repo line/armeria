@@ -550,21 +550,13 @@ public final class RouteBuilder {
         return new ParameterizedPathMapping(pathPattern);
     }
 
-    static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {
-        if ("/".equals(prefix)) {
-            // Every path starts with '/'.
-            return CatchAllPathMapping.INSTANCE;
-        }
-
-        return new PrefixPathMapping(prefix, stripPrefix);
-    }
-
     private static PathMapping getPathMapping(String pathPattern,
                                               Function<String, PathMapping> basePathMappingMapper) {
         requireNonNull(pathPattern, "pathPattern");
         if (pathPattern.startsWith(EXACT) ||
             pathPattern.startsWith(PREFIX) ||
-            pathPattern.startsWith(REGEX)) {
+            pathPattern.startsWith(REGEX) ||
+            pathPattern.startsWith(GLOB)) {
             return basePathMappingMapper.apply(pathPattern);
         }
 
@@ -578,5 +570,14 @@ public final class RouteBuilder {
         final String basePathPattern = pathPattern.substring(0, pathPattern.length() - verb.length() - 1);
         final PathMapping basePathMapping = basePathMappingMapper.apply(basePathPattern);
         return new VerbSuffixPathMapping(basePathMapping, verb);
+    }
+
+    static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {
+        if ("/".equals(prefix)) {
+            // Every path starts with '/'.
+            return CatchAllPathMapping.INSTANCE;
+        }
+
+        return new PrefixPathMapping(prefix, stripPrefix);
     }
 }

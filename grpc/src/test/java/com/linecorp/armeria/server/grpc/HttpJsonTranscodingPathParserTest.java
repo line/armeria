@@ -141,8 +141,6 @@ class HttpJsonTranscodingPathParserTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var=}"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{message_id}:verb:verb"))
-                .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/***"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{}"))

@@ -133,11 +133,13 @@ class RoutingTrieTest {
         //           |                        |                             |
         //          Nil                      Nil               `:`(param, values=[0,1])
         //                                                                  |
-        //                                                        `/`(exact, values=[])
+        //                      +-------------------------------------------+
+        //                      |                                           |
+        //         `:update`(exact, values=[10])                  `/`(exact, values=[])
         //                                                                  |
         //                           +----------------------------------------------+
         //                           |                                              |
-        //           `movies`(exact, values=[2])                     `books`(exact, values=[3])
+        //             `movies`(exact, values=[2])                      `books`(exact, values=[3])
         //                           |                                              |
         //                 `/`(exact, values=[])                          `/`(exact, values=[])
         //                           |                                              |
@@ -151,7 +153,6 @@ class RoutingTrieTest {
         trie.dump(System.err);
 
         testNodeWithCheckingParentPath(trie, "/users/tom", "users/", value0, value1);
-        testNodeWithCheckingParentPath(trie, "/users/tom:update", ":", value10);
         testNodeWithCheckingParentPath(trie, "/users/tom/movies", "/", value2);
         testNodeWithCheckingParentPath(trie, "/users/tom/books", "/", value3);
         testNodeWithCheckingParentPath(trie, "/users/tom/books/harry_potter", "/", value4);
@@ -162,6 +163,8 @@ class RoutingTrieTest {
         testNodeWithCheckingParentPath(trie, "/faq", "/", value8);
         testNodeWithCheckingParentPath(trie, "/events/2017", "/", value9);
         testNodeWithCheckingParentPath(trie, "/", "/", value9);
+        testNodeWithCheckingParentPath(trie, "/users/tom:update", ":", value10);
+        testNodeWithCheckingParentPath(trie, "/users/11:00:update", ":", value10);
     }
 
     @ParameterizedTest
