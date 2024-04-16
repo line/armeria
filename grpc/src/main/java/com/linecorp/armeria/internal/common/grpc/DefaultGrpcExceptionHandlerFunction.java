@@ -187,13 +187,31 @@ public final class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionH
             final Throwable cause = status.getCause();
             if (cause != null) {
                 final Throwable unwrapped = peelAndUnwrap(cause);
-                final Status newStatus = exceptionHandler.apply(ctx, unwrapped, metadata);
+                final Status newStatus = withPossibleMissingDescription(
+                        status, exceptionHandler.apply(ctx, unwrapped, metadata));
                 if (newStatus != null) {
                     return newStatus;
                 }
             }
         }
         return status;
+    }
+
+    private static Status withPossibleMissingDescription(Status status, Status newStatus) {
+        if (newStatus == null) {
+            return null;
+        }
+        if (!status.getCode().equals(newStatus.getCode())) {
+            return newStatus;
+        }
+        if (status.getDescription() == null || status.getDescription().isEmpty()) {
+            return newStatus;
+        }
+        if (newStatus.getDescription() != null && !newStatus.getDescription().isEmpty()) {
+            return newStatus;
+        }
+
+        return newStatus.withDescription(status.getDescription());
     }
 
     private static Throwable peelAndUnwrap(Throwable t) {
