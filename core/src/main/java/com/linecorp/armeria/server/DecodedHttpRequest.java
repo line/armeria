@@ -106,6 +106,7 @@ interface DecodedHttpRequest extends HttpRequest {
      * Tells whether {@link #abortResponse(Throwable, boolean)} was called or not.
      */
     boolean isResponseAborted();
+
     /**
      * Returns a {@link CompletableFuture} that is completed the request is fully aggregated.
      * {@code null} if the request does not need to be aggregated.
