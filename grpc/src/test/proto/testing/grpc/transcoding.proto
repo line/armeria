@@ -78,6 +78,12 @@ service HttpJsonTranscodingTestService {
     };
   }
 
+  rpc EchoTimestamp(EchoTimestampRequest) returns (EchoTimestampResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/{timestamp}"
+    };
+  }
+
   rpc EchoFieldMask(EchoFieldMaskRequest) returns (EchoFieldMaskResponse) {
     option (google.api.http) = {
       get: "/v1/echo/field_mask"
@@ -281,6 +287,14 @@ message EchoTimestampAndDurationRequest {
 message EchoTimestampAndDurationResponse {
   google.protobuf.Timestamp timestamp = 1;
   google.protobuf.Duration duration = 2;
+}
+
+message EchoTimestampRequest {
+  google.protobuf.Timestamp timestamp = 1;
+}
+
+message EchoTimestampResponse {
+  google.protobuf.Timestamp timestamp = 1;
 }
 
 message EchoFieldMaskRequest {

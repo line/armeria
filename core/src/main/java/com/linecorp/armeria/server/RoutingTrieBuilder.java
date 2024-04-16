@@ -81,7 +81,6 @@ final class RoutingTrieBuilder<V> {
         checkArgument(path.indexOf(KEY_CATCH_ALL) < 0,
                       "A path should not contain %s: %s",
                       Integer.toHexString(KEY_CATCH_ALL), path);
-
         routes.add(new Entry<>(path, value, hasHighPrecedence));
         return this;
     }
@@ -171,21 +170,6 @@ final class RoutingTrieBuilder<V> {
     }
 
     /**
-     * Converts the given character to the key of the children map.
-     * This is only used while building a {@link RoutingTrie}.
-     */
-    static char convertKey(char key) {
-        switch (key) {
-            case ':':
-                return KEY_PARAMETER;
-            case '*':
-                return KEY_CATCH_ALL;
-            default:
-                return key;
-        }
-    }
-
-    /**
      * Makes a node and then inserts it to the given node as a child.
      */
     private NodeBuilder<V> insertChild(@Nullable NodeBuilder<V> node,
@@ -224,6 +208,8 @@ final class RoutingTrieBuilder<V> {
 
             if (c == '*') {
                 node = asChild(new NodeBuilder<>(NodeType.CATCH_ALL, node, "*"));
+            } else {
+                node = asChild(new NodeBuilder<>(NodeType.PARAMETER, node, ":"));
             }
         }
 
@@ -289,6 +275,17 @@ final class RoutingTrieBuilder<V> {
             return children == null ? null : children.get(key);
         }
 
+        char extractKey() {
+            switch (type) {
+                case PARAMETER:
+                    return KEY_PARAMETER;
+                case CATCH_ALL:
+                    return KEY_CATCH_ALL;
+                default:
+                    return path.charAt(0);
+            }
+        }
+
         /**
          * Attaches a given {@code value} to the value list. If the list is not empty
          * the {@code value} is added, and sorted by the given {@link Comparator}.
@@ -321,7 +318,7 @@ final class RoutingTrieBuilder<V> {
         NodeBuilder<V> addChild(NodeBuilder<V> child) {
             requireNonNull(child, "child");
 
-            final char key = convertKey(child.path.charAt(0));
+            final char key = child.extractKey();
             if (children == null) {
                 children = new Char2ObjectOpenHashMap<>();
             }
@@ -445,8 +442,14 @@ final class RoutingTrieBuilder<V> {
             final char c = path.charAt(index);
             if (isEscapeChar(c)) {
                 return path.charAt(index + 1);
-            } else {
-                return convertKey(c);
+            }
+            switch (c) {
+                case ':':
+                    return KEY_PARAMETER;
+                case '*':
+                    return KEY_CATCH_ALL;
+                default:
+                    return c;
             }
         }
 

@@ -45,7 +45,7 @@ final class VerbSuffixPathMapping extends AbstractPathMapping {
 
     @Override
     PathMapping doWithPrefix(String prefix) {
-        return new VerbSuffixPathMapping(basePathMapping, verb);
+        return new VerbSuffixPathMapping(basePathMapping.withPrefix(prefix), verb.substring(1));
     }
 
     @Override

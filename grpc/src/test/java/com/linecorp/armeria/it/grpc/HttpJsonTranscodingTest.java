@@ -92,6 +92,8 @@ import testing.grpc.Transcoding.EchoStructRequest;
 import testing.grpc.Transcoding.EchoStructResponse;
 import testing.grpc.Transcoding.EchoTimestampAndDurationRequest;
 import testing.grpc.Transcoding.EchoTimestampAndDurationResponse;
+import testing.grpc.Transcoding.EchoTimestampRequest;
+import testing.grpc.Transcoding.EchoTimestampResponse;
 import testing.grpc.Transcoding.EchoValueRequest;
 import testing.grpc.Transcoding.EchoValueResponse;
 import testing.grpc.Transcoding.EchoWrappersRequest;
@@ -186,6 +188,16 @@ public class HttpJsonTranscodingTest {
                                                                     .setTimestamp(request.getTimestamp())
                                                                     .setDuration(request.getDuration())
                                                                     .build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoTimestamp(
+                EchoTimestampRequest request,
+                StreamObserver<EchoTimestampResponse> responseObserver) {
+            responseObserver.onNext(EchoTimestampResponse.newBuilder()
+                                                         .setTimestamp(request.getTimestamp())
+                                                         .build());
             responseObserver.onCompleted();
         }
 
@@ -539,6 +551,17 @@ public class HttpJsonTranscodingTest {
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
         assertThat(root.get("duration").asText()).isEqualTo(duration);
+    }
+
+    @Test
+    void shouldAcceptRfc3339TimeFormat() throws JsonProcessingException {
+        final String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
+
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/" + timestamp).aggregate().join();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
     }
 
     @Test

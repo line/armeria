@@ -223,16 +223,24 @@ final class RoutingTrie<V> {
                 break;
             case PARAMETER:
                 // Consume characters until the delimiter '/' as a path variable.
-                final int delim = path.indexOf('/', begin);
-                if (delim < 0) {
-                    // No more delimiter.
-                    return node;
+                final int delimSlash = path.indexOf('/', begin);
+                final int lastColon = path.lastIndexOf(':');
+
+                if (delimSlash < 0) {
+                    if (lastColon < 0) {
+                        // No more delimiter.
+                        return node;
+                    } else {
+                        final Node<V> verb = node.children.get(':');
+                        return verb != null ? verb : node;
+                    }
                 }
-                if (path.length() == delim + 1) {
+
+                if (path.length() == delimSlash + 1) {
                     final Node<V> trailingSlashNode = node.children.get('/');
                     return trailingSlashNode != null ? trailingSlashNode : node;
                 }
-                next.value = delim;
+                next.value = delimSlash;
                 break;
             default:
                 throw new Error("Should not reach here");

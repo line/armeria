@@ -108,9 +108,11 @@ class RoutingTrieTest {
         final Object value7 = new Object();
         final Object value8 = new Object();
         final Object value9 = new Object();
+        final Object value10 = new Object();
 
         builder.add("/users/:", value0);
         builder.add("/users/:", value1);
+        builder.add("/users/:\\:update", value10);
         builder.add("/users/:/movies", value2);
         builder.add("/users/:/books", value3);
         builder.add("/users/:/books/harry_potter", value4);
@@ -149,6 +151,7 @@ class RoutingTrieTest {
         trie.dump(System.err);
 
         testNodeWithCheckingParentPath(trie, "/users/tom", "users/", value0, value1);
+        testNodeWithCheckingParentPath(trie, "/users/tom:update", ":", value10);
         testNodeWithCheckingParentPath(trie, "/users/tom/movies", "/", value2);
         testNodeWithCheckingParentPath(trie, "/users/tom/books", "/", value3);
         testNodeWithCheckingParentPath(trie, "/users/tom/books/harry_potter", "/", value4);
