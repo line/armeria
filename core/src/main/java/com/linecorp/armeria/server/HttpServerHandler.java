@@ -389,9 +389,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final HttpResponse res;
         req.init(reqCtx);
         if (needsDirectExecution) {
-            res = serve0(req, serviceCfg, service, reqCtx);
+            res = serve0(req, serviceCfg, service, reqCtx, null);
         } else {
-            res = HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx),
+            res = HttpResponse.of(() -> serve0(req, serviceCfg, service, reqCtx, serviceEventLoop),
                                   serviceEventLoop)
                               .subscribeOn(serviceEventLoop);
         }
@@ -445,10 +445,24 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private HttpResponse serve0(HttpRequest req,
-                                ServiceConfig serviceCfg,
-                                HttpService service,
-                                DefaultServiceRequestContext reqCtx) {
+    private static HttpResponse serve0(DecodedHttpRequest req, ServiceConfig serviceCfg, HttpService service,
+                                       DefaultServiceRequestContext reqCtx, EventLoop serviceEventLoop) {
+        final CompletableFuture<Void> whenAggregated = req.whenAggregated();
+        if (whenAggregated != null) {
+            return HttpResponse.of(whenAggregated.thenApply(ignored -> {
+                return serve1(req, serviceCfg, service, reqCtx, serviceEventLoop);
+            }));
+        } else {
+            return serve1(req, serviceCfg, service, reqCtx, serviceEventLoop);
+        }
+    }
+
+    private static HttpResponse serve1(HttpRequest req, ServiceConfig serviceCfg,
+                                       HttpService service, DefaultServiceRequestContext reqCtx,
+                                       @Nullable EventLoop serviceEventLoop) {
+        if (serviceEventLoop != null) {
+            req = req.subscribeOn(serviceEventLoop);
+        }
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
             try {

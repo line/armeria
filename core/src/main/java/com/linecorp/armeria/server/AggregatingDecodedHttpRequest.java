@@ -50,14 +50,14 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     @Nullable
     private ServiceRequestContext ctx;
-    @Nullable
-    private HttpHeaders trailers;
     private long transferredBytes;
 
     @Nullable
     private HttpResponse response;
     @Nullable
     private Throwable abortResponseCause;
+
+    private final CompletableFuture<Void> aggregationFuture = new CompletableFuture<>();
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
@@ -80,15 +80,6 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
-        ctx.logBuilder().increaseRequestLength(transferredBytes);
-        if (trailers != null) {
-            ctx.logBuilder().requestTrailers(trailers);
-        }
-    }
-
-    @Override
-    public boolean isInitialized() {
-        return ctx != null;
     }
 
     @SuppressWarnings("unchecked")
@@ -149,16 +140,19 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     @Override
     public boolean tryWrite(HttpObject obj) {
+        assert ctx != null : "uninitialized DecodedHttpRequest must be aborted.";
         final boolean published = super.tryWrite(obj);
 
         if (obj instanceof HttpData) {
-            ((HttpData) obj).touch(routingCtx);
+            final HttpData httpData = (HttpData) obj;
+            httpData.touch(ctx);
+            ctx.logBuilder().increaseRequestLength(httpData);
             if (obj.isEndOfStream()) {
                 close();
             }
         }
         if (obj instanceof HttpHeaders) {
-            trailers = (HttpHeaders) obj;
+            ctx.logBuilder().requestTrailers((HttpHeaders) obj);
             close();
         }
         return published;
@@ -184,15 +178,31 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         }
         abortResponseCause = cause;
 
+        super.close(cause);
         // Make sure to invoke the ServiceRequestContext.whenRequestCancelling() and whenRequestCancelled()
         // by cancelling a request
         if (cancel && ctx != null) {
             ctx.cancel(cause);
         }
 
+        // Complete aggregationFuture first to execute the aborted request with the service and decorators and
+        // then abort the response.
+        aggregationFuture.complete(null);
         if (response != null && !response.isComplete()) {
             response.abort(cause);
         }
+    }
+
+    @Override
+    public void close() {
+        super.close();
+        aggregationFuture.complete(null);
+    }
+
+    @Override
+    public void close(Throwable cause) {
+        super.close(cause);
+        aggregationFuture.complete(null);
     }
 
     @Override
@@ -201,8 +211,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
-    public boolean needsAggregation() {
-        return true;
+    public CompletableFuture<Void> whenAggregated() {
+        return aggregationFuture;
     }
 
     @Override

@@ -103,7 +103,9 @@ class ExceedingServiceMaxContentLengthTest {
             sb.service("/unary", new HttpService() {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.of("Hello, world!");
+                    return HttpResponse.of(req.aggregate().thenApply(agg -> {
+                        return HttpResponse.of("Hello, world!");
+                    }));
                 }
 
                 @Override
