@@ -43,7 +43,6 @@ class AggregatingRequestTimeoutTest {
               .service("/timeout/sync", new HttpService() {
                   @Override
                   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      //
                       return HttpResponse.of(200);
                   }
 

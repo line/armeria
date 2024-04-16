@@ -446,7 +446,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private static HttpResponse serve0(DecodedHttpRequest req, ServiceConfig serviceCfg, HttpService service,
-                                       DefaultServiceRequestContext reqCtx, EventLoop serviceEventLoop) {
+                                       DefaultServiceRequestContext reqCtx,
+                                       @Nullable EventLoop serviceEventLoop) {
         final CompletableFuture<Void> whenAggregated = req.whenAggregated();
         if (whenAggregated != null) {
             return HttpResponse.of(whenAggregated.thenApply(ignored -> {

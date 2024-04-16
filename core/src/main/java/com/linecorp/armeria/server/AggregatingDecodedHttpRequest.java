@@ -206,6 +206,18 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
+    public void abort() {
+        super.abort();
+        aggregationFuture.complete(null);
+    }
+
+    @Override
+    public void abort(Throwable cause) {
+        super.abort(cause);
+        aggregationFuture.complete(null);
+    }
+
+    @Override
     public boolean isResponseAborted() {
         return abortResponseCause != null;
     }
