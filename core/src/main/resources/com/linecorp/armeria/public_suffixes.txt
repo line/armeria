@@ -540,7 +540,6 @@ apigee.io
 app
 app.banzaicloud.io
 app.br
-app.gp
 app.lmpm.com
 app.os.fedoraproject.org
 app.os.stg.fedoraproject.org
@@ -657,8 +656,6 @@ at-band-camp.net
 at.emf.camp
 at.eu.org
 at.it
-at.md
-at.vg
 atami.shizuoka.jp
 ath.cx
 athleta
@@ -796,9 +793,6 @@ bando.ibaraki.jp
 bank
 bar
 bar.pro
-bar0.net
-bar1.net
-bar2.net
 barcelona
 barclaycard
 barclays
@@ -862,9 +856,7 @@ bci.dnstrace.pro
 bcn
 bd.se
 be
-be.ax
 be.eu.org
-be.gy
 beagleboard.io
 bearalvahki.no
 beardu.no
@@ -981,8 +973,6 @@ blockbuster
 blog
 blog.bo
 blog.br
-blog.gt
-blog.vu
 blogdns.com
 blogdns.net
 blogdns.org
@@ -1258,7 +1248,6 @@ cash
 casino
 casino.hu
 cat
-cat.ax
 catania.it
 catanzaro.it
 catering
@@ -1287,7 +1276,6 @@ cc.fl.us
 cc.ga.us
 cc.gu.us
 cc.hi.us
-cc.hn
 cc.ia.us
 cc.id.us
 cc.il.us
@@ -1358,7 +1346,6 @@ cg
 ch
 ch.eu.org
 ch.it
-ch.tc
 ch.trendhosting.cloud
 chambagri.fr
 championship.aero
@@ -1837,6 +1824,7 @@ cuneo.it
 cupcake.is
 curitiba.br
 curv.dev
+cust.cloudscale.ch
 cust.dev.thingdust.io
 cust.disrec.thingdust.io
 cust.prod.thingdust.io
@@ -1922,9 +1910,6 @@ de
 de.com
 de.cool
 de.eu.org
-de.gt
-de.ls
-de.md
 de.trendhosting.cloud
 de.us
 deal
@@ -1971,7 +1956,6 @@ dev
 dev-myqnapcloud.com
 dev.br
 dev.static.land
-dev.vu
 development.run
 devices.resinstaging.io
 df.gov.br
@@ -2460,7 +2444,6 @@ erotica.hu
 erotika.hu
 es
 es-1.axarnet.cloud
-es.ax
 es.eu.org
 es.gov.br
 es.kr
@@ -2492,7 +2475,6 @@ eu-south-1.elasticbeanstalk.com
 eu-west-1.elasticbeanstalk.com
 eu-west-2.elasticbeanstalk.com
 eu-west-3.elasticbeanstalk.com
-eu.ax
 eu.com
 eu.encoway.cloud
 eu.int
@@ -2969,7 +2951,6 @@ getmyip.com
 gets-it.net
 gf
 gg
-gg.ax
 ggee
 ggf.br
 gh
@@ -3783,7 +3764,6 @@ independent-inquiry.uk
 independent-panel.uk
 independent-review.uk
 inderoy.no
-indie.porn
 indigena.bo
 industria.bo
 industries
@@ -3873,7 +3853,6 @@ investments
 inzai.chiba.jp
 io
 io.in
-io.kg
 io.vn
 iobb.net
 iopsys.se
@@ -4122,13 +4101,12 @@ jot
 jotelulu.cloud
 journal.aero
 journalist.aero
+jouwweb.site
 joy
 joyo.kyoto.jp
 jozi.biz
 jp
 jp.eu.org
-jp.kg
-jp.md
 jp.net
 jp.ngrok.io
 jpmorgan
@@ -5008,7 +4986,6 @@ mb.ca
 mb.it
 mba
 mc
-mc.ax
 mc.eu.org
 mc.it
 mcdir.me
@@ -5027,11 +5004,9 @@ me.it
 me.ke
 me.so
 me.ss
-me.tc
 me.tz
 me.uk
 me.us
-me.vu
 med
 med.br
 med.ec
@@ -5643,7 +5618,6 @@ ne.us
 neat-url.com
 nec
 nedre-eiker.no
-neko.am
 nemuro.hokkaido.jp
 nerdpol.ovh
 nerima.tokyo.jp
@@ -5893,7 +5867,6 @@ njs.jelastic.vps-host.net
 nl
 nl-ams-1.baremetal.scw.cloud
 nl.ca
-nl.ci
 nl.eu.org
 nl.no
 nm.cn
@@ -6053,8 +6026,6 @@ nx.cn
 ny-1.paas.massivegrid.net
 ny-2.paas.massivegrid.net
 ny.us
-nyaa.am
-nyan.to
 nyanta.jp
 nyc
 nyc.mn
@@ -6074,6 +6045,8 @@ obanazawa.yamagata.jp
 obi
 obihiro.hokkaido.jp
 obira.hokkaido.jp
+objects.lpg.cloudscale.ch
+objects.rma.cloudscale.ch
 obninsk.su
 observer
 obu.aichi.jp
@@ -6860,7 +6833,6 @@ ravenna.it
 ravpage.co.il
 rawa-maz.pl
 rc.it
-rdv.to
 rdy.jp
 re
 re.it
@@ -7018,6 +6990,7 @@ rs.webaccel.jp
 rsc.cdn77.org
 rsc.contentproxy9.cz
 rsvp
+rt.ht
 ru
 ru.com
 ru.eu.org
@@ -8290,10 +8263,8 @@ tn.oxa.cloud
 tn.us
 to
 to.gov.br
-to.gt
 to.it
 to.leg.br
-to.md
 toba.mie.jp
 tobe.ehime.jp
 tobetsu.hokkaido.jp
@@ -8532,7 +8503,6 @@ tv.br
 tv.im
 tv.in
 tv.it
-tv.kg
 tv.na
 tv.sd
 tv.tr
@@ -8589,7 +8559,6 @@ uk
 uk.com
 uk.eu.org
 uk.in
-uk.kg
 uk.net
 uk.oxa.cloud
 uk.primetel.cloud
@@ -8660,7 +8629,6 @@ us-gov-east-1.elasticbeanstalk.com
 us-gov-west-1.elasticbeanstalk.com
 us-west-1.elasticbeanstalk.com
 us-west-2.elasticbeanstalk.com
-us.ax
 us.com
 us.eu.org
 us.gov.pl
@@ -8876,7 +8844,6 @@ vt.it
 vt.us
 vu
 vv.it
-vxl.sh
 w-corp-staticblitz.com
 w-credentialless-staticblitz.com
 w-staticblitz.com
@@ -8917,7 +8884,6 @@ watson.jp
 waw.pl
 wazuka.kyoto.jp
 we.bs
-we.tc
 weather
 weatherchannel
 web.app
@@ -8935,6 +8901,7 @@ web.tj
 web.tr
 web.ve
 web.za
+webadorsite.com
 webcam
 weber
 webflow.io
@@ -9555,9 +9522,7 @@ xn--zf0avx.hk
 xn--zfr164b
 xnbay.com
 xs4all.space
-xx.gl
 xxx
-xy.ax
 xyz
 xz.cn
 y.bg
