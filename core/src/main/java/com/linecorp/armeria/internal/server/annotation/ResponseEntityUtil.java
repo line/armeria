@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.internal.server.annotation;
 
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
@@ -25,11 +25,11 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * Utilities for {@link ResponseEntity}.
  */
-public final class ResponseEntityUtil {
+final class ResponseEntityUtil {
     /**
      * Build {@link ResponseHeaders} from the given {@link ServiceRequestContext} and {@link ResponseEntity}.
      */
-    public static ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx, ResponseEntity<?> result) {
+    static ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx, ResponseEntity<?> result) {
         final ResponseHeaders headers = result.headers();
 
         if (headers.status().isContentAlwaysEmpty()) {
