@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.stream.AggregatingStreamMessage;
 
 import io.netty.channel.EventLoop;
@@ -245,19 +244,5 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public RequestHeaders headers() {
         return headers;
-    }
-
-    @Override
-    public StreamingDecodedHttpRequest toAbortedStreaming(
-            InboundTrafficController inboundTrafficController,
-            Throwable cause, boolean shouldResetOnlyIfRemoteIsOpen) {
-        final StreamingDecodedHttpRequest streamingDecodedHttpRequest = new StreamingDecodedHttpRequest(
-                eventLoop, id, streamId, headers, keepAlive,
-                inboundTrafficController, maxRequestLength, routingCtx,
-                exchangeType, requestStartTimeNanos, requestStartTimeMicros,
-                false, shouldResetOnlyIfRemoteIsOpen);
-        abort(cause);
-        streamingDecodedHttpRequest.abortResponse(cause, true);
-        return streamingDecodedHttpRequest;
     }
 }

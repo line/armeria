@@ -141,17 +141,6 @@ interface DecodedHttpRequest extends HttpRequest {
     }
 
     /**
-     * Returns a new {@link StreamingDecodedHttpRequest} whose corresponding response is aborted using the
-     * specified {@link Throwable}. This is called when an {@link AggregatingDecodedHttpRequest}
-     * needs to be passed to a service before it's closed.
-     */
-    default StreamingDecodedHttpRequest toAbortedStreaming(
-            InboundTrafficController inboundTrafficController,
-            Throwable cause, boolean shouldResetOnlyIfRemoteIsOpen) {
-        throw new UnsupportedOperationException();
-    }
-
-    /**
      * Sets whether to send an RST_STREAM after the response sending response when the peer is open state.
      */
     default void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
