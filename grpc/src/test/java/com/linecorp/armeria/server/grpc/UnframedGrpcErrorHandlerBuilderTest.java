@@ -127,7 +127,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
                 UnframedGrpcErrorHandler.builder()
                                         .responseTypes(UnframedGrpcErrorResponseType.JSON)
                                         .build()
-        ).isInstanceOf(JsonUnframedGrpcErrorHandlerTest.class);
+        ).isInstanceOf(JsonUnframedGrpcErrorHandler.class);
 
         assertThat(
                 UnframedGrpcErrorHandler.builder()
