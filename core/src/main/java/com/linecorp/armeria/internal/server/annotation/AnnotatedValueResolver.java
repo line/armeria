@@ -880,7 +880,7 @@ final class AnnotatedValueResolver {
                     }
 
                     throw new ClassCastException("The value " + value +
-                                                 " cannot be cst to elemntType " +
+                                                 " cannot be cast to elemntType " +
                                                  elementType.getSimpleName());
                 }
             }
