@@ -57,11 +57,11 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
+import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.StatusExceptionConverter;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
@@ -113,7 +113,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     @Nullable
     private final Executor blockingExecutor;
-    @Nullable
     private final GrpcExceptionHandlerFunction exceptionHandler;
 
     // Only set once.
@@ -149,7 +148,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                  @Nullable GrpcJsonMarshaller jsonMarshaller,
                                  boolean unsafeWrapRequestBuffers,
                                  ResponseHeaders defaultHeaders,
-                                 @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                                 GrpcExceptionHandlerFunction exceptionHandler,
                                  @Nullable Executor blockingExecutor,
                                  boolean autoCompression) {
         requireNonNull(req, "req");
@@ -213,8 +212,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Throwable exception, boolean cancelled) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        final Status status = DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx,
-                                                                                exception, metadata);
+        final Status status = exceptionHandler.apply(ctx, exception, metadata);
         close(new ServerStatusAndMetadata(status, metadata, false, cancelled), exception);
     }
 
@@ -222,8 +220,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Status status, Metadata metadata) {
         final ServerStatusAndMetadata statusAndMetadata =
                 new ServerStatusAndMetadata(
-                        DefaultGrpcExceptionHandlerFunction.fromExceptionHandler(exceptionHandler, ctx,
-                                                                                 status, metadata),
+                        exceptionHandler.apply(ctx, status.getCause(), metadata),
                         metadata, false);
         close(statusAndMetadata);
     }
@@ -567,8 +564,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 trailersBuilder, status.getCode().value(), status.getDescription(), null);
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
-            final ThrowableProto proto = DefaultGrpcExceptionHandlerFunction.serializeThrowable(
-                    status.getCause());
+            final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
             trailersBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_THROWABLEPROTO_BIN,
                                 Base64.getEncoder().encodeToString(proto.toByteArray()));
         }

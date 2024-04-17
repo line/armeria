@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.grpc;
+package com.linecorp.armeria.common.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

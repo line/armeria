@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Metadata;
@@ -88,25 +87,21 @@ class GrpcExceptionHandlerFunctionBuilderTest {
                                  B2Exception.class,
                                  B1Exception.class);
 
-        final GrpcExceptionHandlerFunction exceptionHandler = builder.build();
-        Status status = DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx,
-                                                                          new A3Exception(), new Metadata());
+        final GrpcExceptionHandlerFunction exceptionHandler = builder.build().orElse(
+                GrpcExceptionHandlerFunction.ofDefault());
+        Status status = exceptionHandler.apply(ctx, new A3Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNAUTHENTICATED);
 
-        status = DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx, new A2Exception(),
-                                                                   new Metadata());
+        status = exceptionHandler.apply(ctx, new A2Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNIMPLEMENTED);
 
-        status = DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx, new A1Exception(),
-                                                                   new Metadata());
+        status = exceptionHandler.apply(ctx, new A1Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
 
-        status = DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx, new B2Exception(),
-                                                                   new Metadata());
+        status = exceptionHandler.apply(ctx, new B2Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.NOT_FOUND);
 
-        status = DefaultGrpcExceptionHandlerFunction.fromThrowable(exceptionHandler, ctx, new B1Exception(),
-                                                                   new Metadata());
+        status = exceptionHandler.apply(ctx, new B1Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNAUTHENTICATED);
     }
 
@@ -121,18 +116,19 @@ class GrpcExceptionHandlerFunctionBuilderTest {
         for (Throwable ex : ImmutableList.of(new A2Exception(), new A3Exception())) {
             final Status status = Status.UNKNOWN.withCause(ex);
             final Metadata metadata = new Metadata();
-            final Status newStatus = DefaultGrpcExceptionHandlerFunction.fromExceptionHandler(exceptionHandler,
-                                                                                              ctx, status,
-                                                                                              metadata);
+            final Status newStatus = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
+                                                     .apply(ctx, ex, metadata);
             assertThat(newStatus.getCode()).isEqualTo(Code.PERMISSION_DENIED);
             assertThat(newStatus.getCause()).isEqualTo(ex);
             assertThat(metadata.keys()).isEmpty();
         }
 
-        final Status status = Status.DEADLINE_EXCEEDED.withCause(new A1Exception());
+        final A1Exception cause = new A1Exception();
+        final Status status = Status.DEADLINE_EXCEEDED.withCause(cause);
         final Metadata metadata = new Metadata();
-        final Status newStatus = DefaultGrpcExceptionHandlerFunction.fromExceptionHandler(exceptionHandler, ctx,
-                                                                                          status, metadata);
+        final Status newStatus = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
+                                                 .apply(ctx, cause, metadata);
+
         assertThat(newStatus).isSameAs(status);
         assertThat(metadata.keys()).isEmpty();
     }
@@ -148,21 +144,21 @@ class GrpcExceptionHandlerFunctionBuilderTest {
                         })
                         .build();
 
-        final Status status = Status.UNKNOWN.withCause(new B1Exception());
+        final B1Exception cause = new B1Exception();
+        final Status status = Status.UNKNOWN.withCause(cause);
 
         final Metadata metadata1 = new Metadata();
-        final Status newStatus1 = DefaultGrpcExceptionHandlerFunction.fromExceptionHandler(exceptionHandler,
-                                                                                           ctx, status,
-                                                                                           metadata1);
+        final Status newStatus1 = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
+                                                  .apply(ctx, cause, metadata1);
         assertThat(newStatus1.getCode()).isEqualTo(Code.ABORTED);
         assertThat(metadata1.get(TEST_KEY)).isEqualTo("B1Exception");
         assertThat(metadata1.keys()).containsOnly(TEST_KEY.name());
 
         final Metadata metadata2 = new Metadata();
         metadata2.put(TEST_KEY2, "test");
-        final Status newStatus2 = DefaultGrpcExceptionHandlerFunction.fromExceptionHandler(exceptionHandler,
-                                                                                           ctx, status,
-                                                                                           metadata2);
+        final Status newStatus2 = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
+                                                  .apply(ctx, cause, metadata2);
+
         assertThat(newStatus2.getCode()).isEqualTo(Code.ABORTED);
         assertThat(metadata2.get(TEST_KEY)).isEqualTo("B1Exception");
         assertThat(metadata2.keys()).containsOnly(TEST_KEY.name(), TEST_KEY2.name());

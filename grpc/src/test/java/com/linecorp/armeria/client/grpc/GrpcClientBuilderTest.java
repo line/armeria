@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.internal.common.grpc.DefaultGrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -192,7 +191,7 @@ class GrpcClientBuilderTest {
 
         final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
         assertThat(clientParams.options().get(GrpcClientOptions.EXCEPTION_HANDLER))
-                .isEqualTo(DefaultGrpcExceptionHandlerFunction.ofDefault());
+                .isEqualTo(GrpcExceptionHandlerFunction.ofDefault());
     }
 
     @Test

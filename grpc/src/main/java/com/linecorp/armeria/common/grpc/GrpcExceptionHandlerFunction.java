@@ -40,6 +40,13 @@ public interface GrpcExceptionHandlerFunction {
     }
 
     /**
+     * Returns a default implementation for {@link GrpcExceptionHandlerFunction}.
+     */
+    static GrpcExceptionHandlerFunction ofDefault() {
+        return DefaultGrpcExceptionHandlerFunction.INSTANCE;
+    }
+
+    /**
      * Maps the specified {@link Throwable} to a gRPC {@link Status},
      * and mutates the specified {@link Metadata}.
      * If {@code null} is returned, the built-in mapping rule is used by default.

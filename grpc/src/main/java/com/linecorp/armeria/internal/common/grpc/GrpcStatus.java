@@ -37,10 +37,12 @@ import java.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
@@ -162,6 +164,36 @@ public final class GrpcStatus {
     }
 
     /**
+     * Fills the information from the {@link Throwable} into a {@link ThrowableProto} for
+     * returning to a client.
+     */
+    public static ThrowableProto serializeThrowable(Throwable t) {
+        final ThrowableProto.Builder builder = ThrowableProto.newBuilder();
+
+        if (t instanceof StatusCauseException) {
+            final StatusCauseException statusCause = (StatusCauseException) t;
+            builder.setOriginalClassName(statusCause.getOriginalClassName());
+            builder.setOriginalMessage(statusCause.getOriginalMessage());
+        } else {
+            builder.setOriginalClassName(t.getClass().getCanonicalName());
+            builder.setOriginalMessage(Strings.nullToEmpty(t.getMessage()));
+        }
+
+        // In order not to exceed max headers size, max stack trace elements is limited to 10
+        final StackTraceElement[] stackTraceElements = t.getStackTrace();
+        // TODO(ikhoon): Provide a way to configure maxStackTraceElements
+        final int maxStackTraceElements = Math.min(10, stackTraceElements.length);
+        for (int i = 0; i < maxStackTraceElements; i++) {
+            builder.addStackTrace(serializeStackTraceElement(stackTraceElements[i]));
+        }
+
+        if (t.getCause() != null) {
+            builder.setCause(serializeThrowable(t.getCause()));
+        }
+        return builder.build();
+    }
+
+    /**
      * Extracts the gRPC status from the {@link HttpHeaders} and delivers the status
      * to the {@link TransportStatusListener} when the response is completed.
      */
@@ -210,6 +242,18 @@ public final class GrpcStatus {
             return status;
         }
         return status.withCause(new StatusCauseException(grpcThrowableProto));
+    }
+
+    private static StackTraceElementProto serializeStackTraceElement(StackTraceElement element) {
+        final StackTraceElementProto.Builder builder =
+                StackTraceElementProto.newBuilder()
+                                      .setClassName(element.getClassName())
+                                      .setMethodName(element.getMethodName())
+                                      .setLineNumber(element.getLineNumber());
+        if (element.getFileName() != null) {
+            builder.setFileName(element.getFileName());
+        }
+        return builder.build();
     }
 
     private GrpcStatus() {}
