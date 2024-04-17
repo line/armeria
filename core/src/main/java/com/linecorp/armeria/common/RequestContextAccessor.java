@@ -120,7 +120,7 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
      */
     @Override
     public void restore(RequestContext previousValue) {
-        RequestContextUtil.getAndSet(previousValue);
+        previousValue.push();
     }
 
     /**
