@@ -75,7 +75,7 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
      */
     @Override
     public RequestContext getValue() {
-        return RequestContextUtil.get();
+        return RequestContext.currentOrNull();
     }
 
     /**
