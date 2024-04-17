@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -37,7 +36,6 @@ import io.grpc.Status.Code;
 /**
  * Error handler which maps a gRPC response to an {@link HttpResponse} in plaintext format.
  */
-@UnstableApi
 final class TextUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
     private final UnframedGrpcStatusMappingFunction statusMappingFunction;
 

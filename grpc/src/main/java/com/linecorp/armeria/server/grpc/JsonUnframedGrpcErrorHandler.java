@@ -52,7 +52,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -66,7 +65,6 @@ import io.netty.buffer.ByteBufOutputStream;
 /**
  * Error handler which maps a gRPC response to an {@link HttpResponse} in json format.
  */
-@UnstableApi
 final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
     static final MessageMarshaller ERROR_DETAILS_MARSHALLER =
             MessageMarshaller.builder()
