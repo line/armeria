@@ -179,7 +179,8 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
         jsonGenerator.writeEndArray();
     }
 
-    private static com.google.rpc.Status decodeGrpcStatusDetailsBin(String grpcStatusDetailsBin)
+    @VisibleForTesting
+    static com.google.rpc.Status decodeGrpcStatusDetailsBin(String grpcStatusDetailsBin)
             throws InvalidProtocolBufferException {
         final byte[] result = Base64.getDecoder().decode(grpcStatusDetailsBin);
         return com.google.rpc.Status.parseFrom(result);
