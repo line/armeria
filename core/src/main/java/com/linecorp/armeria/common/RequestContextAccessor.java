@@ -89,6 +89,7 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
      * to revert the {@link RequestContextStorage} to its original state.
      */
     @Override
+    @SuppressWarnings("MustBeClosedChecker")
     public void setValue(RequestContext value) {
         value.push();
     }
@@ -119,6 +120,7 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
      * to revert the {@link RequestContextStorage} to its original state.
      */
     @Override
+    @SuppressWarnings("MustBeClosedChecker")
     public void restore(RequestContext previousValue) {
         previousValue.push();
     }

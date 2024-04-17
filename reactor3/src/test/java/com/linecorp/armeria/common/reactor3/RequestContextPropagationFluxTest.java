@@ -405,6 +405,7 @@ class RequestContextPropagationFluxTest {
 
         // When
         flux = Flux.just("Hello", "Hi")
+                   .subscribeOn(Schedulers.single())
                    .delayElements(Duration.ofMillis(1000))
                    .map(s -> {
                        if (s.equals("Hello")) {
@@ -419,7 +420,13 @@ class RequestContextPropagationFluxTest {
                     .expectError(RuntimeException.class)
                     .verify();
 
-        assertThat(ctxExists(ctx)).isFalse();
+        Flux<String> toVerifyFlux = Flux.just("Dummy")
+                                        .subscribeOn(Schedulers.single())
+                                        .doOnNext(s -> assertThat(ctxExists(ctx)).isFalse());
+
+        StepVerifier.create(toVerifyFlux)
+                    .expectNext("Dummy")
+                    .verifyComplete();
     }
 
     @Test
