@@ -41,7 +41,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -794,27 +793,24 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the graceful connection shutdown drain duration. When the client factory is closed, it waits for
-     * the specified {@code duration} to allow pre-existing connections to be closed gracefully.
+     * Sets the graceful connection shutdown timeout in milliseconds.
+     * {@code 0} disables the timeout and closes the connection immediately after sending a GOAWAY frame.
      */
-    public ClientFactoryBuilder connectionDrainDuration(Duration duration) {
+    public ClientFactoryBuilder http2GracefulShutdownTimeout(Duration duration) {
         requireNonNull(duration, "duration");
-        option(ClientFactoryOptions.CONNECTION_DRAIN_DURATION_MICROS,
-               TimeUnit.NANOSECONDS.toMicros(duration.toNanos()));
-        return this;
+        return http2GracefulShutdownTimeoutMillis(duration.toMillis());
     }
 
     /**
-     * Sets the graceful connection shutdown drain duration in microseconds. When the client factory is closed,
-     * it waits for the specified {@code connectionDrainDurationMicros} to allow pre-existing connections
-     * to be closed gracefully.
+     * Sets the graceful connection shutdown timeout in milliseconds.
+     * {@code 0} disables the timeout and closes the connection immediately after sending a GOAWAY frame.
      */
-    public ClientFactoryBuilder connectionDrainDurationMicros(long connectionDrainDurationMicros) {
-        checkArgument(connectionDrainDurationMicros >= 0,
-                      "connectionDrainDurationMicros: %s (expected: >= 0)",
-                      connectionDrainDurationMicros);
-        option(ClientFactoryOptions.CONNECTION_DRAIN_DURATION_MICROS,
-               connectionDrainDurationMicros);
+    public ClientFactoryBuilder http2GracefulShutdownTimeoutMillis(long http2GracefulShutdownTimeoutMillis) {
+        checkArgument(http2GracefulShutdownTimeoutMillis >= 0,
+                      "http2GracefulShutdownTimeoutMillis: %s (expected: >= 0)",
+                      http2GracefulShutdownTimeoutMillis);
+        option(ClientFactoryOptions.HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS,
+               http2GracefulShutdownTimeoutMillis);
         return this;
     }
 

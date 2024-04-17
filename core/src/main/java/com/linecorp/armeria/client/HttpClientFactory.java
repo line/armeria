@@ -120,7 +120,7 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp2WithoutAlpn;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
-    private final long drainDurationMicros;
+    private final long http2GracefulShutdownTimeoutMillis;
     private MeterRegistry meterRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
     private final Http1HeaderNaming http1HeaderNaming;
@@ -201,7 +201,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
-        drainDurationMicros = options.connectionDrainDurationMicros();
+        http2GracefulShutdownTimeoutMillis = options.http2GracefulShutdownTimeoutMillis();
         meterRegistry = options.meterRegistry();
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();
@@ -301,8 +301,8 @@ final class HttpClientFactory implements ClientFactory {
         return connectionPoolListener;
     }
 
-    long drainDurationMicros() {
-        return drainDurationMicros;
+    long http2GracefulShutdownTimeoutMillis() {
+        return http2GracefulShutdownTimeoutMillis;
     }
 
     ProxyConfigSelector proxyConfigSelector() {

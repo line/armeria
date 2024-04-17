@@ -582,19 +582,18 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns the graceful connection shutdown drain duration. When the client factory is closed, it waits for
-     * the specified {@code duration} to allow pre-existing connections to be closed gracefully.
+     * Returns the default client-side graceful connection shutdown timeout in microseconds.
      *
-     * <p></p>Note that this flag has no effect if a user specified the value explicitly via
-     * {@link ClientFactoryBuilder#connectionDrainDurationMicros(long)}.
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#http2GracefulShutdownTimeoutMillis(long)}.
      *
      * <p>The default value of this flag is
-     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_CONNECTION_DRAIN_DURATION_MICROS}.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultClientConnectionDrainDurationMicros=<long>} JVM option
-     * to override the default value. {@code 0} disables the drain duration.
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientHttp2GracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
      */
     @Nullable
-    default Long defaultClientConnectionDrainDurationMicros() {
+    default Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
         return null;
     }
 

@@ -72,7 +72,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS = 0; // Disabled
     static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS = 0; // Disabled
     static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
-    static final long DEFAULT_CLIENT_CONNECTION_DRAIN_DURATION_MICROS = 0; // Disabled
+    // Same as server connection drain duration
+    static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = 1000;
     static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_MAX_FRAME_SIZE = 16384; // From HTTP/2 specification
@@ -308,8 +309,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Long defaultClientConnectionDrainDurationMicros() {
-        return DEFAULT_CLIENT_CONNECTION_DRAIN_DURATION_MICROS;
+    public Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     }
 
     @Override

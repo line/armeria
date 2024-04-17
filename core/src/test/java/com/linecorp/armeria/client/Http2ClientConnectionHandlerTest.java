@@ -39,27 +39,25 @@ import io.netty.util.AttributeMap;
 
 class Http2ClientConnectionHandlerTest {
 
-    private static final long DELAY_RESPONSE_IN_MILLIS = 1000;
+    private static final long DELAY_RESPONSE_IN_MILLIS = 2000;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/delayed", (ctx, req) -> {
-                Thread.sleep(DELAY_RESPONSE_IN_MILLIS);
-                return HttpResponse.of("OK");
-            });
+            sb.service("/delayed", (ctx, req) ->
+                    HttpResponse.delayed(HttpResponse.of("OK"), Duration.ofMillis(DELAY_RESPONSE_IN_MILLIS)));
         }
     };
 
     @Test
-    void requestHandlingSucceedsWhenDrainDurationIsLonger() {
+    void requestHandlingSucceedsWhenGracefulShutdownIsLonger() {
         // Connection drain duration is longer than the response delay so the request is handled successfully
         final AtomicInteger opened = new AtomicInteger();
         final ConnectionPoolListener poolListener = getConnectionPoolListener(opened);
         final ClientFactory factory = ClientFactory.builder()
-                                                   .connectionDrainDuration(
-                                                           Duration.ofMillis(DELAY_RESPONSE_IN_MILLIS + 1000))
+                                                   .http2GracefulShutdownTimeout(
+                                                           Duration.ofMillis(DELAY_RESPONSE_IN_MILLIS + 2000))
                                                    .connectionPoolListener(poolListener)
                                                    .build();
         final HttpResponse res = WebClient.builder(server.httpUri())
@@ -72,17 +70,17 @@ class Http2ClientConnectionHandlerTest {
         // Wait until connection is open, then close the factory before the response is fully received.
         await().until(() -> opened.get() > 0);
         factory.close();
-
         final AggregatedHttpResponse result = res.aggregate().join();
         assertThat(result.contentUtf8()).isEqualTo("OK");
     }
 
     @Test
-    void requestHandlingFailsWhenDrainDurationIsShorter() throws InterruptedException {
+    void requestHandlingFailsWhenGracefulShutdownIsShorter() throws InterruptedException {
         // Connection drain duration is shorter than the response delay so the request handling fails
         final AtomicInteger opened = new AtomicInteger();
         final ConnectionPoolListener poolListener = getConnectionPoolListener(opened);
         final ClientFactory factory = ClientFactory.builder()
+                                                   .http2GracefulShutdownTimeoutMillis(100)
                                                    .connectionPoolListener(poolListener)
                                                    .build();
         final HttpResponse res = WebClient.builder(server.httpUri())
@@ -95,11 +93,10 @@ class Http2ClientConnectionHandlerTest {
         // Wait until connection is open, then close the factory before the response is fully received.
         await().until(() -> opened.get() > 0);
         factory.close();
-
         assertThrows(CompletionException.class, () -> res.aggregate().join());
     }
 
-    private ConnectionPoolListener getConnectionPoolListener(AtomicInteger opened) {
+    private static ConnectionPoolListener getConnectionPoolListener(AtomicInteger opened) {
         return new ConnectionPoolListener() {
             @Override
             public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,

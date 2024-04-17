@@ -242,11 +242,11 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
 
     /**
-     * The client-side maximum allowed duration of a connection drain in microseconds.
+     * The graceful connection shutdown timeout in milliseconds..
      */
-    public static final ClientFactoryOption<Long> CONNECTION_DRAIN_DURATION_MICROS =
-            ClientFactoryOption.define("CONNECTION_DRAIN_DURATION_MICROS",
-                                       Flags.defaultClientConnectionDrainDurationMicros());
+    public static final ClientFactoryOption<Long> HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+            ClientFactoryOption.define("HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
+                                       Flags.defaultClientHttp2GracefulShutdownTimeoutMillis());
 
     /**
      * The {@link MeterRegistry} which collects various stats.
@@ -565,10 +565,10 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the client-side maximum allowed duration of a connection drain in microseconds.
+     * Returns the graceful connection shutdown timeout in milliseconds.
      */
-    public long connectionDrainDurationMicros() {
-        return get(CONNECTION_DRAIN_DURATION_MICROS);
+    public long http2GracefulShutdownTimeoutMillis() {
+        return get(HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
     }
 
     /**

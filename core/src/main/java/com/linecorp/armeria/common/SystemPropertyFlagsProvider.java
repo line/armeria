@@ -292,8 +292,8 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Long defaultClientConnectionDrainDurationMicros() {
-        return getLong("defaultClientConnectionDrainDurationMicros");
+    public Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return getLong("defaultClientHttp2GracefulShutdownTimeoutMillis");
     }
 
     @Override

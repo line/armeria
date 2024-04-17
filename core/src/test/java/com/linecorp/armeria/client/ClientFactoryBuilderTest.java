@@ -299,17 +299,4 @@ class ClientFactoryBuilderTest {
             assertThat(factory.options().keepAliveOnPing()).isTrue();
         }
     }
-
-    @Test
-    void clientConnectionDrainDurationMicros() {
-        try (ClientFactory factory = ClientFactory.builder().build()) {
-            assertThat(factory.options().connectionDrainDurationMicros()).isEqualTo(0);
-        }
-
-        try (ClientFactory factory = ClientFactory.builder()
-                                                  .connectionDrainDurationMicros(500000)
-                                                  .build()) {
-            assertThat(factory.options().connectionDrainDurationMicros()).isEqualTo(500000);
-        }
-    }
 }
