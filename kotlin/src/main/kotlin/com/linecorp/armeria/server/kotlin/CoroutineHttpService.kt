@@ -28,15 +28,22 @@ import kotlinx.coroutines.future.future
  * An Coroutine-based [HttpService]
  */
 fun interface CoroutineHttpService : HttpService {
-
     /**
      * invoke the suspendedServe method within the CoroutineScope
      */
-    override fun serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse {
-        return HttpResponse.of(CoroutineScope(ctx.asCoroutineContext()).future { // Do we also need to add user context?
-            suspendedServe(ctx, req)
-        })
+    override fun serve(
+        ctx: ServiceRequestContext,
+        req: HttpRequest,
+    ): HttpResponse {
+        return HttpResponse.of(
+            CoroutineScope(ctx.asCoroutineContext()).future { // Do we also need to add user context?
+                suspendedServe(ctx, req)
+            },
+        )
     }
 
-    suspend fun suspendedServe(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse
+    suspend fun suspendedServe(
+        ctx: ServiceRequestContext,
+        req: HttpRequest,
+    ): HttpResponse
 }

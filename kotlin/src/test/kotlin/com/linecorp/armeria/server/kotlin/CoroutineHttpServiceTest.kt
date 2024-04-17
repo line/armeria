@@ -28,30 +28,33 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 
 class CoroutineHttpServiceTest {
-
     companion object {
         @JvmField
         @RegisterExtension
         val server =
-                object : ServerExtension() {
-                    override fun configure(sb: ServerBuilder) {
-                        sb.service(
-                                "/hello",
-                                object : CoroutineHttpService {
-                                    override suspend fun suspendedServe(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse {
-                                        return HttpResponse.of("hello world")
-                                    }
-                                }
-                        )
-                    }
+            object : ServerExtension() {
+                override fun configure(sb: ServerBuilder) {
+                    sb.service(
+                        "/hello",
+                        object : CoroutineHttpService {
+                            override suspend fun suspendedServe(
+                                ctx: ServiceRequestContext,
+                                req: HttpRequest,
+                            ): HttpResponse {
+                                return HttpResponse.of("hello world")
+                            }
+                        },
+                    )
                 }
+            }
     }
 
     @Test
-    fun `Should return hello world when call hello coroutine service`() = runTest {
-        val response = server.blockingWebClient().get("/hello")
+    fun `Should return hello world when call hello coroutine service`() =
+        runTest {
+            val response = server.blockingWebClient().get("/hello")
 
-        Assertions.assertThat(response.status()).isEqualTo(HttpStatus.OK)
-        Assertions.assertThat(response.contentUtf8()).isEqualTo("hello world")
-    }
+            Assertions.assertThat(response.status()).isEqualTo(HttpStatus.OK)
+            Assertions.assertThat(response.contentUtf8()).isEqualTo("hello world")
+        }
 }
