@@ -391,9 +391,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (needsDirectExecution) {
             res = serve0(req, serviceCfg, service, reqCtx, null);
         } else {
-            res = HttpResponse.of(() -> serve0(req, serviceCfg, service, reqCtx, serviceEventLoop),
-                                  serviceEventLoop)
-                              .subscribeOn(serviceEventLoop);
+            res = serve0(req, serviceCfg, service, reqCtx, serviceEventLoop);
         }
 
         // Keep track of the number of unfinished requests and
@@ -450,10 +448,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                        @Nullable EventLoop serviceEventLoop) {
         final CompletableFuture<Void> whenAggregated = req.whenAggregated();
         if (whenAggregated != null) {
+            // Wait until the request is fully aggregated.
             return HttpResponse.of(whenAggregated.thenApply(ignored -> {
                 return serve1(req, serviceCfg, service, reqCtx, serviceEventLoop);
             }));
         } else {
+            // A streaming request or an empty body request.
             return serve1(req, serviceCfg, service, reqCtx, serviceEventLoop);
         }
     }
@@ -462,8 +462,19 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                        HttpService service, DefaultServiceRequestContext reqCtx,
                                        @Nullable EventLoop serviceEventLoop) {
         if (serviceEventLoop != null) {
-            req = req.subscribeOn(serviceEventLoop);
+            // Execute the service on the specified event loop.
+            final HttpRequest req0 = req.subscribeOn(serviceEventLoop);
+            return HttpResponse.of(() -> serve2(req0, serviceCfg, service, reqCtx),
+                                   serviceEventLoop)
+                               .subscribeOn(serviceEventLoop);
+        } else {
+            // Directly execute the service on the current event loop.
+            return serve2(req, serviceCfg, service, reqCtx);
         }
+    }
+
+    private static HttpResponse serve2(HttpRequest req, ServiceConfig serviceCfg,
+                                       HttpService service, DefaultServiceRequestContext reqCtx) {
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
             try {
