@@ -371,14 +371,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
         final EventLoop serviceEventLoop;
-        final boolean needsDirectExecution;
         final EventLoopGroup serviceWorkerGroup = serviceCfg.serviceWorkerGroup();
         if (serviceWorkerGroup == config.workerGroup()) {
             serviceEventLoop = channelEventLoop;
-            needsDirectExecution = true;
         } else {
             serviceEventLoop = serviceWorkerGroup.next();
-            needsDirectExecution = serviceEventLoop == channelEventLoop;
         }
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, serviceEventLoop, config.meterRegistry(), protocol,
@@ -388,12 +385,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final HttpResponse res;
         req.init(reqCtx);
-        if (needsDirectExecution) {
-            res = serve0(req, serviceCfg, service, reqCtx, null);
+        final CompletableFuture<Void> whenAggregated = req.whenAggregated();
+        if (whenAggregated != null) {
+            res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
+                if (serviceEventLoop.inEventLoop()) {
+                    return serve0(req, serviceCfg, service, reqCtx);
+                }
+                return serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop);
+            }));
         } else {
-            res = serve0(req, serviceCfg, service, reqCtx, serviceEventLoop);
+            if (serviceEventLoop.inEventLoop()) {
+                res = serve0(req, serviceCfg, service, reqCtx);
+            } else {
+                res = serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop);
+            }
         }
-
         // Keep track of the number of unfinished requests and
         // clean up the request stream when response stream ends.
         final boolean isTransientService =
@@ -443,38 +449,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private static HttpResponse serve0(DecodedHttpRequest req, ServiceConfig serviceCfg, HttpService service,
-                                       DefaultServiceRequestContext reqCtx,
-                                       @Nullable EventLoop serviceEventLoop) {
-        final CompletableFuture<Void> whenAggregated = req.whenAggregated();
-        if (whenAggregated != null) {
-            // Wait until the request is fully aggregated.
-            return HttpResponse.of(whenAggregated.thenApply(ignored -> {
-                return serve1(req, serviceCfg, service, reqCtx, serviceEventLoop);
-            }));
-        } else {
-            // A streaming request or an empty body request.
-            return serve1(req, serviceCfg, service, reqCtx, serviceEventLoop);
-        }
-    }
-
-    private static HttpResponse serve1(HttpRequest req, ServiceConfig serviceCfg,
-                                       HttpService service, DefaultServiceRequestContext reqCtx,
-                                       @Nullable EventLoop serviceEventLoop) {
-        if (serviceEventLoop != null) {
-            // Execute the service on the specified event loop.
-            final HttpRequest req0 = req.subscribeOn(serviceEventLoop);
-            return HttpResponse.of(() -> serve2(req0, serviceCfg, service, reqCtx),
-                                   serviceEventLoop)
-                               .subscribeOn(serviceEventLoop);
-        } else {
-            // Directly execute the service on the current event loop.
-            return serve2(req, serviceCfg, service, reqCtx);
-        }
-    }
-
-    private static HttpResponse serve2(HttpRequest req, ServiceConfig serviceCfg,
-                                       HttpService service, DefaultServiceRequestContext reqCtx) {
+    private static HttpResponse serve0(HttpRequest req,
+                                       ServiceConfig serviceCfg,
+                                       HttpService service,
+                                       DefaultServiceRequestContext reqCtx) {
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
             try {
@@ -496,6 +474,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             });
             return serviceResponse;
         }
+    }
+
+    private static HttpResponse serveInServiceEventLoop(DecodedHttpRequest req,
+                                                        ServiceConfig serviceCfg,
+                                                        HttpService service,
+                                                        DefaultServiceRequestContext reqCtx,
+                                                        EventLoop serviceEventLoop) {
+        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx),
+                               serviceEventLoop)
+                           .subscribeOn(serviceEventLoop);
     }
 
     private ProxiedAddresses determineProxiedAddresses(InetSocketAddress remoteAddress,
