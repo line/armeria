@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil.messageBuf;
+import static com.linecorp.armeria.internal.common.grpc.GrpcStatus.peelAndUnwrap;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -247,7 +248,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(compressor, metadata, remainingNanos);
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
-                (unused, cause) -> HttpResponse.ofFailure(exceptionHandler.apply(ctx, cause, metadata)
+                (unused, cause) -> HttpResponse.ofFailure(exceptionHandler.apply(ctx, peelAndUnwrap(cause),
+                                                                                 metadata)
                                                                           .withDescription(cause.getMessage())
                                                                           .asRuntimeException());
         final HttpResponse res = initContextAndExecuteWithFallback(
@@ -453,7 +455,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             });
         } catch (Throwable t) {
             final Metadata metadata = new Metadata();
-            close(exceptionHandler.apply(ctx, t, metadata), metadata);
+            close(exceptionHandler.apply(ctx, peelAndUnwrap(t), metadata), metadata);
         }
     }
 
@@ -510,7 +512,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private void closeWhenListenerThrows(Throwable t) {
         final Metadata metadata = new Metadata();
-        closeWhenEos(exceptionHandler.apply(ctx, t, metadata), metadata);
+        closeWhenEos(exceptionHandler.apply(ctx, peelAndUnwrap(t), metadata), metadata);
     }
 
     private void closeWhenEos(Status status, Metadata metadata) {

@@ -111,10 +111,10 @@ class GrpcExceptionHandlerFunctionBuilderTest {
                 GrpcExceptionHandlerFunction
                         .builder()
                         .on(A2Exception.class, (ctx, throwable, metadata) -> Status.PERMISSION_DENIED)
+                        .on(A1Exception.class, (ctx1, cause, metadata) -> Status.DEADLINE_EXCEEDED)
                         .build();
 
         for (Throwable ex : ImmutableList.of(new A2Exception(), new A3Exception())) {
-            final Status status = Status.UNKNOWN.withCause(ex);
             final Metadata metadata = new Metadata();
             final Status newStatus = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
                                                      .apply(ctx, ex, metadata);
@@ -124,12 +124,12 @@ class GrpcExceptionHandlerFunctionBuilderTest {
         }
 
         final A1Exception cause = new A1Exception();
-        final Status status = Status.DEADLINE_EXCEEDED.withCause(cause);
         final Metadata metadata = new Metadata();
         final Status newStatus = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
                                                  .apply(ctx, cause, metadata);
 
-        assertThat(newStatus).isSameAs(status);
+        assertThat(newStatus.getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+        assertThat(newStatus.getCause()).isEqualTo(cause);
         assertThat(metadata.keys()).isEmpty();
     }
 
@@ -145,8 +145,6 @@ class GrpcExceptionHandlerFunctionBuilderTest {
                         .build();
 
         final B1Exception cause = new B1Exception();
-        final Status status = Status.UNKNOWN.withCause(cause);
-
         final Metadata metadata1 = new Metadata();
         final Status newStatus1 = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
                                                   .apply(ctx, cause, metadata1);

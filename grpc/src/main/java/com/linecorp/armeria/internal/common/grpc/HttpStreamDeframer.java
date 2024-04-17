@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.common.grpc;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.grpc.GrpcStatus.peelAndUnwrap;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -120,8 +121,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
                 final Metadata metadata = new Metadata();
-                transportStatusListener.transportReportStatus(exceptionHandler.apply(ctx, t, metadata),
-                                                              metadata);
+                transportStatusListener.transportReportStatus(
+                        exceptionHandler.apply(ctx, peelAndUnwrap(t), metadata), metadata);
                 return;
             }
         }
@@ -148,7 +149,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     @Override
     public void processOnError(Throwable cause) {
         final Metadata metadata = new Metadata();
-        transportStatusListener.transportReportStatus(exceptionHandler.apply(ctx, cause, metadata), metadata);
+        transportStatusListener.transportReportStatus(
+                exceptionHandler.apply(ctx, peelAndUnwrap(cause), metadata), metadata);
     }
 
     @Override

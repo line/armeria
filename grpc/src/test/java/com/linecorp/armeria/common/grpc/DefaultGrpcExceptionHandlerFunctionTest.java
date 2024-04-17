@@ -31,17 +31,17 @@ class DefaultGrpcExceptionHandlerFunctionTest {
 
     @Test
     void failFastExceptionToUnavailableCode() {
-        assertThat(DefaultGrpcExceptionHandlerFunction
-                           .fromThrowable(new FailFastException(CircuitBreaker.ofDefaultName()))
-                           .getCode())
-                .isEqualTo(Status.Code.UNAVAILABLE);
+        assertThat(GrpcExceptionHandlerFunction
+                           .ofDefault()
+                           .apply(null, new FailFastException(CircuitBreaker.ofDefaultName()), null)
+                           .getCode()).isEqualTo(Status.Code.UNAVAILABLE);
     }
 
     @Test
     void invalidProtocolBufferExceptionToInvalidArgumentCode() {
-        assertThat(DefaultGrpcExceptionHandlerFunction
-                           .fromThrowable(new InvalidProtocolBufferException("Failed to parse message"))
-                           .getCode())
-                .isEqualTo(Status.Code.INVALID_ARGUMENT);
+        assertThat(GrpcExceptionHandlerFunction
+                           .ofDefault()
+                           .apply(null, new InvalidProtocolBufferException("Failed to parse message"), null)
+                           .getCode()).isEqualTo(Status.Code.INVALID_ARGUMENT);
     }
 }

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.common.grpc;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
 
@@ -29,11 +27,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
-import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.grpc.StatusExceptionConverter;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
 import io.grpc.Metadata;
@@ -47,18 +41,13 @@ final class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerF
 
     @Override
     public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
-        return fromThrowable(cause);
+        return statusFromThrowable(cause);
     }
 
     /**
      * Converts the {@link Throwable} to a {@link Status}, taking into account exceptions specific to Armeria as
      * well and the protocol package.
      */
-    static Status fromThrowable(Throwable t) {
-        t = peelAndUnwrap(requireNonNull(t, "t"));
-        return statusFromThrowable(t);
-    }
-
     private static Status statusFromThrowable(Throwable t) {
         final Status s = Status.fromThrowable(t);
         if (s.getCode() != Code.UNKNOWN) {
@@ -96,19 +85,6 @@ final class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerF
             return Status.RESOURCE_EXHAUSTED.withCause(t);
         }
         return s;
-    }
-
-    private static Throwable peelAndUnwrap(Throwable t) {
-        t = Exceptions.peel(t);
-        Throwable cause = t;
-        while (cause != null) {
-            if (cause instanceof ArmeriaStatusException) {
-                t = StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
-                break;
-            }
-            cause = cause.getCause();
-        }
-        return t;
     }
 
     private DefaultGrpcExceptionHandlerFunction() {}
