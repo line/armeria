@@ -29,6 +29,8 @@ public interface AsyncLoader<T> {
 
     /**
      * Returns a newly created {@link AsyncLoaderBuilder} with the specified loader.
+     * @param loader function to load value. {@code T} is previously cached value
+     *               or {@code null} when nothing is cached.
      */
     static <T> AsyncLoaderBuilder<T> builder(Function<@Nullable T, CompletableFuture<T>> loader) {
         return new AsyncLoaderBuilder<>(loader);

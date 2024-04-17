@@ -45,7 +45,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     @Nullable
     private final Predicate<@Nullable T> expireIf;
 
-    private volatile CompletableFuture<LoadEntry<T>> loadFuture = UnmodifiableFuture.completedFuture(null);
+    private volatile CompletableFuture<CacheEntry<T>> loadFuture = UnmodifiableFuture.completedFuture(null);
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
                        @Nullable Duration expireAfterLoad,
@@ -61,18 +61,18 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         return get0().thenApply(f -> f.loadVal);
     }
 
-    private CompletableFuture<LoadEntry<T>> get0() {
-        CompletableFuture<LoadEntry<T>> future;
-        LoadEntry<T> loadEntry = null;
+    private CompletableFuture<CacheEntry<T>> get0() {
+        CompletableFuture<CacheEntry<T>> future;
+        CacheEntry<T> cacheEntry = null;
         for (;;) {
-            final CompletableFuture<LoadEntry<T>> loadFuture = this.loadFuture;
+            final CompletableFuture<CacheEntry<T>> loadFuture = this.loadFuture;
             if (!loadFuture.isDone()) {
                 return loadFuture;
             }
 
             if (!loadFuture.isCompletedExceptionally()) {
-                loadEntry = loadFuture.join();
-                if (isValid(loadEntry)) {
+                cacheEntry = loadFuture.join();
+                if (isValid(cacheEntry)) {
                     return loadFuture;
                 }
             }
@@ -83,15 +83,17 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             }
         }
 
-        final CompletableFuture<LoadEntry<T>> newLoadfuture = future;
+        final CompletableFuture<CacheEntry<T>> newLoadfuture = future;
         try {
-            requireNonNull(loader.apply(loadEntry != null ? loadEntry.loadVal : null),
-                           "loader.apply() returned null")
+            final T cache = cacheEntry != null ? cacheEntry.loadVal : null;
+            requireNonNull(loader.apply(cache), "loader.apply() returned null")
                     .handle((val, cause) -> {
                         if (cause != null) {
+                            logger.warn("Failed to load a new value from loader: {}. the previous value: {}",
+                                        loader, cache, cause);
                             newLoadfuture.completeExceptionally(cause);
                         } else {
-                            newLoadfuture.complete(new LoadEntry<>(val));
+                            newLoadfuture.complete(new CacheEntry<>(val));
                         }
                         return null;
                     });
@@ -103,34 +105,33 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         return newLoadfuture;
     }
 
-    private boolean isValid(@Nullable LoadEntry<T> loadEntry) {
-        if (loadEntry == null) {
+    private boolean isValid(@Nullable CacheEntry<T> cacheEntry) {
+        if (cacheEntry == null) {
             return false;
         }
 
         if (expireAfterLoad != null) {
-            final Instant expiration = loadEntry.loadWhen.plusMillis(expireAfterLoad.toMillis());
+            final Instant expiration = cacheEntry.loadWhen.plusMillis(expireAfterLoad.toMillis());
             if (Instant.now().isAfter(expiration)) {
                 return false;
             }
         }
 
-        if (expireIf != null && expireIf.test(loadEntry.loadVal)) {
+        if (expireIf != null && expireIf.test(cacheEntry.loadVal)) {
             return false;
         }
 
         return true;
     }
 
-    private static class LoadEntry<T> {
+    private static class CacheEntry<T> {
 
         private final T loadVal;
-        private final Instant loadWhen;
+        private final Instant loadWhen = Instant.now();
 
-        LoadEntry(T loadVal) {
+        CacheEntry(T loadVal) {
             requireNonNull(loadVal, "loadVal");
             this.loadVal = loadVal;
-            this.loadWhen = Instant.now();
         }
     }
 }
