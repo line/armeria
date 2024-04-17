@@ -29,14 +29,14 @@ import io.grpc.Status;
 @UnstableApi
 public interface TextUnframedGrpcErrorHandler extends UnframedGrpcErrorHandler {
     /**
-     * Returns a plain text response.
+     * Returns a plaintext response.
      */
     static TextUnframedGrpcErrorHandler of() {
         return UnframedGrpcErrorHandlers.ofPlaintext(UnframedGrpcStatusMappingFunction.of());
     }
 
     /**
-     * Returns a plain text response.
+     * Returns a plaintext response.
      *
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
