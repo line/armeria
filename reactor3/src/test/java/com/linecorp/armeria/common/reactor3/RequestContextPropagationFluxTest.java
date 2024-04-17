@@ -420,7 +420,7 @@ class RequestContextPropagationFluxTest {
                     .expectError(RuntimeException.class)
                     .verify();
 
-        Flux<String> toVerifyFlux = Flux.just("Dummy")
+        final Flux<String> toVerifyFlux = Flux.just("Dummy")
                                         .subscribeOn(Schedulers.single())
                                         .doOnNext(s -> assertThat(ctxExists(ctx)).isFalse());
 
