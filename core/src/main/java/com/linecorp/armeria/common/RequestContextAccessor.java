@@ -90,7 +90,7 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
      */
     @Override
     public void setValue(RequestContext value) {
-        RequestContextUtil.getAndSet(value);
+        value.push();
     }
 
     /**
