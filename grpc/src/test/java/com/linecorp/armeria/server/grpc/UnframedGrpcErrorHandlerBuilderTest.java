@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.JsonUnframedGrpcErrorHandler.ERROR_DETAILS_MARSHALLER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -43,8 +44,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
     void cannotCallRegisterMarshalledMessagesAndJsonMarshallerSimultaneously() {
         assertThatThrownBy(
                 () -> UnframedGrpcErrorHandler.builder()
-                                              .jsonMarshaller(
-                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
+                                              .jsonMarshaller(ERROR_DETAILS_MARSHALLER)
                                               .registerMarshalledMessageTypes(InternalError.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
@@ -53,8 +53,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
 
         assertThatThrownBy(
                 () -> UnframedGrpcErrorHandler.builder()
-                                              .jsonMarshaller(
-                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
+                                              .jsonMarshaller(ERROR_DETAILS_MARSHALLER)
                                               .registerMarshalledMessages(
                                                       InternalError.newBuilder().build()))
                 .isInstanceOf(IllegalStateException.class)
@@ -64,8 +63,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
 
         assertThatThrownBy(
                 () -> UnframedGrpcErrorHandler.builder()
-                                              .jsonMarshaller(
-                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
+                                              .jsonMarshaller(ERROR_DETAILS_MARSHALLER)
                                               .registerMarshalledMessages(
                                                       ImmutableList.of(InternalError.newBuilder().build())))
                 .isInstanceOf(IllegalStateException.class)
@@ -75,8 +73,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
 
         assertThatThrownBy(
                 () -> UnframedGrpcErrorHandler.builder()
-                                              .jsonMarshaller(
-                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER)
+                                              .jsonMarshaller(ERROR_DETAILS_MARSHALLER)
                                               .registerMarshalledMessageTypes(
                                                       ImmutableList.of(InternalError.class)))
                 .isInstanceOf(IllegalStateException.class)
@@ -87,8 +84,7 @@ public class UnframedGrpcErrorHandlerBuilderTest {
         assertThatThrownBy(
                 () -> UnframedGrpcErrorHandler.builder()
                                               .registerMarshalledMessages(InternalError.newBuilder().build())
-                                              .jsonMarshaller(
-                                                      UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER))
+                                              .jsonMarshaller(ERROR_DETAILS_MARSHALLER))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "Cannot set a custom JSON marshaller because one or more Message instances or " +

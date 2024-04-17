@@ -49,7 +49,9 @@ public class JsonUnframedGrpcErrorHandlerTest {
     static ServerExtension jsonResServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            configureServer(sb, false, JsonUnframedGrpcErrorHandler.of(), testServiceGrpcStatus);
+            configureServer(sb, false,
+                            new JsonUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction.of()),
+                            testServiceGrpcStatus);
         }
     };
 
@@ -59,7 +61,7 @@ public class JsonUnframedGrpcErrorHandlerTest {
         protected void configure(ServerBuilder sb) {
             final UnframedGrpcStatusMappingFunction mappingFunction = (ctx, status, response) -> HttpStatus.OK;
             configureServer(sb, false,
-                            JsonUnframedGrpcErrorHandler.of(mappingFunction),
+                            new JsonUnframedGrpcErrorHandler(mappingFunction),
                             testServiceGrpcStatus);
         }
     };

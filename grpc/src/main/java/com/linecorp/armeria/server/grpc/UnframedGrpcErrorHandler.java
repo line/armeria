@@ -62,7 +62,7 @@ public interface UnframedGrpcErrorHandler {
      * for more information.
      */
     static UnframedGrpcErrorHandler ofJson() {
-        return UnframedGrpcErrorHandlers.ofJson(UnframedGrpcStatusMappingFunction.of());
+        return new JsonUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction.of());
     }
 
     /**
@@ -74,14 +74,14 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction);
+        return new JsonUnframedGrpcErrorHandler(statusMappingFunction);
     }
 
     /**
      * Returns a plain text response.
      */
     static UnframedGrpcErrorHandler ofPlainText() {
-        return UnframedGrpcErrorHandlers.ofPlaintext(UnframedGrpcStatusMappingFunction.of());
+        return new TextUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction.of());
     }
 
     /**
@@ -91,7 +91,7 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofPlainText(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return UnframedGrpcErrorHandlers.ofPlaintext(statusMappingFunction);
+        return new TextUnframedGrpcErrorHandler(statusMappingFunction);
     }
 
     /**

@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.server.grpc.UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER;
+import static com.linecorp.armeria.server.grpc.JsonUnframedGrpcErrorHandler.ERROR_DETAILS_MARSHALLER;
+import static com.linecorp.armeria.server.grpc.JsonUnframedGrpcErrorHandler.writeErrorDetails;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -122,7 +123,7 @@ class ErrorDetailsMarshallerTest {
 
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
-        UnframedGrpcErrorHandlers.writeErrorDetails(
+        writeErrorDetails(
                 status.getDetailsList(), jsonGenerator, ERROR_DETAILS_MARSHALLER);
         jsonGenerator.flush();
         final String expectedJsonString =
@@ -211,7 +212,7 @@ class ErrorDetailsMarshallerTest {
         final MessageMarshaller jsonMarshaller = ERROR_DETAILS_MARSHALLER.toBuilder()
                                                                          .register(authError)
                                                                          .build();
-        UnframedGrpcErrorHandlers.writeErrorDetails(
+        writeErrorDetails(
                 status.getDetailsList(), jsonGenerator, jsonMarshaller);
         jsonGenerator.flush();
         final String expectedJsonString =
@@ -232,7 +233,7 @@ class ErrorDetailsMarshallerTest {
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
 
-        assertThatThrownBy(() -> UnframedGrpcErrorHandlers.writeErrorDetails(
+        assertThatThrownBy(() -> writeErrorDetails(
                 status.getDetailsList(), jsonGenerator, ERROR_DETAILS_MARSHALLER)).isInstanceOf(
                 IOException.class);
     }
