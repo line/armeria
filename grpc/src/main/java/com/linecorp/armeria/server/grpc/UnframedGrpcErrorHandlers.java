@@ -114,7 +114,7 @@ final class UnframedGrpcErrorHandlers {
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
      */
-    static UnframedGrpcErrorHandler ofJson(
+    static JsonUnframedGrpcErrorHandler ofJson(
             UnframedGrpcStatusMappingFunction statusMappingFunction, MessageMarshaller jsonMarshaller) {
         final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
         return (ctx, status, response) -> {
@@ -174,7 +174,7 @@ final class UnframedGrpcErrorHandlers {
         };
     }
 
-    static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+    static JsonUnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         return ofJson(statusMappingFunction, ERROR_DETAILS_MARSHALLER);
     }
 
@@ -184,7 +184,7 @@ final class UnframedGrpcErrorHandlers {
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
      */
-    static UnframedGrpcErrorHandler ofPlaintext(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+    static TextUnframedGrpcErrorHandler ofPlaintext(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();

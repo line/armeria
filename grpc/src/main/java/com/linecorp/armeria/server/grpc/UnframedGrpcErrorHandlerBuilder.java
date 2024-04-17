@@ -96,7 +96,9 @@ public final class UnframedGrpcErrorHandlerBuilder {
      *
      * <p>This method allows specifying one or more response types (e.g., JSON, PLAINTEXT)
      * that the error handler can produce. If nothing is specified or multiple types are specified, the actual
-     * response type is determined by the response's content type.
+     * response type is determined by the response's content type. If only JSON is specified, {@link #build()}
+     * returns a {@link JsonUnframedGrpcErrorHandler} instance. If only PLAINTEXT is specified, {@link #build()}
+     * returns a {@link TextUnframedGrpcErrorHandler} instance.
      *
      * @param responseTypes The response types to support
      */
