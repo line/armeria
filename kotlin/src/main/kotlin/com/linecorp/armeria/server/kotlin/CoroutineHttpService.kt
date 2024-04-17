@@ -18,30 +18,38 @@ package com.linecorp.armeria.server.kotlin
 
 import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
+import com.linecorp.armeria.common.kotlin.CoroutineContexts
 import com.linecorp.armeria.common.kotlin.asCoroutineContext
 import com.linecorp.armeria.server.HttpService
 import com.linecorp.armeria.server.ServiceRequestContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.future.future
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * An Coroutine-based [HttpService]
  */
 fun interface CoroutineHttpService : HttpService {
     /**
-     * invoke the suspendedServe method within the CoroutineScope
+     * Invoke the suspendedServe method within the CoroutineScope, supports [CoroutineContextService] newDecorator
      */
     override fun serve(
         ctx: ServiceRequestContext,
         req: HttpRequest,
     ): HttpResponse {
+        val userContext = CoroutineContexts.get(ctx) ?: EmptyCoroutineContext
         return HttpResponse.of(
-            CoroutineScope(ctx.asCoroutineContext()).future { // Do we also need to add user context?
+            CoroutineScope(
+                ctx.asCoroutineContext() + userContext,
+            ).future { // Do we also need to add user context?
                 suspendedServe(ctx, req)
             },
         )
     }
 
+    /**
+     * Async serves in a coroutine suspend
+     */
     suspend fun suspendedServe(
         ctx: ServiceRequestContext,
         req: HttpRequest,

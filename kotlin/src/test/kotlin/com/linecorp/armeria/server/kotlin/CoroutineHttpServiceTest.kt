@@ -16,14 +16,15 @@
 
 package com.linecorp.armeria.server.kotlin
 
-import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.test.runTest
-import org.assertj.core.api.Assertions
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 
@@ -36,25 +37,29 @@ class CoroutineHttpServiceTest {
                 override fun configure(sb: ServerBuilder) {
                     sb.service(
                         "/hello",
-                        object : CoroutineHttpService {
-                            override suspend fun suspendedServe(
-                                ctx: ServiceRequestContext,
-                                req: HttpRequest,
-                            ): HttpResponse {
-                                return HttpResponse.of("hello world")
-                            }
+                        CoroutineHttpService { ctx, req ->
+                            assertContextPropagation()
+                            HttpResponse.of("hello world")
+                        },
+                    ).decorator(
+                        CoroutineContextService.newDecorator { ctx ->
+                            CoroutineName("my-coroutine-name")
                         },
                     )
                 }
             }
+
+        private suspend fun assertContextPropagation() {
+            assertThat(ServiceRequestContext.currentOrNull()).isNotNull()
+            assertThat(currentCoroutineContext()[CoroutineName]?.name).isEqualTo("my-coroutine-name")
+        }
     }
 
     @Test
     fun `Should return hello world when call hello coroutine service`() =
         runTest {
             val response = server.blockingWebClient().get("/hello")
-
-            Assertions.assertThat(response.status()).isEqualTo(HttpStatus.OK)
-            Assertions.assertThat(response.contentUtf8()).isEqualTo("hello world")
+            assertThat(response.status()).isEqualTo(HttpStatus.OK)
+            assertThat(response.contentUtf8()).isEqualTo("hello world")
         }
 }
