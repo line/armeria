@@ -103,6 +103,7 @@ import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.AttributeKey;
+import io.netty.util.internal.StringUtil;
 import scala.concurrent.ExecutionContext;
 
 final class AnnotatedValueResolver {
@@ -865,26 +866,52 @@ final class AnnotatedValueResolver {
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
     attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
         return (resolver, ctx) -> {
+            final StringBuilder errorMsgBuilder = new StringBuilder();
             for (AttributeKey<?> attrKey : attrKeys) {
                 final Object value = ctx.context.attr(attrKey);
                 if (value != null) {
+                    final boolean isValidType;
 
                     final Class<?> rawContainerType = resolver.rawContainerType();
-                    final Class<?> elementType = resolver.elementType().isPrimitive() ?
-                                                 Primitives.wrap(resolver.elementType())
-                                                 : resolver.elementType();
+                    if (rawContainerType != null) {
+                        isValidType = rawContainerType.isInstance(value);
+                        if (!isValidType) {
+                            errorMsgBuilder.append("The value ");
+                            errorMsgBuilder.append(value);
+                            errorMsgBuilder.append(" cannot be cast to rawContainerType ");
+                            errorMsgBuilder.append(rawContainerType);
+                        }
+                    } else {
+                        final Class<?> elementType = resolver.elementType().isPrimitive() ?
+                                                     Primitives.wrap(resolver.elementType())
+                                                     : resolver.elementType();
 
-                    if ((rawContainerType != null && rawContainerType.isInstance(value)) ||
-                        (rawContainerType == null && elementType.isInstance(value))) {
-                        return value;
+                        isValidType = elementType.isInstance(value);
+                        if (!isValidType) {
+                            errorMsgBuilder.append("The value ");
+                            errorMsgBuilder.append(value);
+                            errorMsgBuilder.append(" cannot be cast to elementType ");
+                            errorMsgBuilder.append(elementType);
+                        }
                     }
 
-                    throw new ClassCastException("The value " + value +
-                                                 " cannot be cast to elemntType " +
-                                                 elementType.getSimpleName());
+                    if (isValidType) {
+                        return value;
+                    } else {
+                        errorMsgBuilder.append(". For your information, attrKey Name is ");
+                        errorMsgBuilder.append(attrKey.name());
+                        errorMsgBuilder.append(", httpElementName is ");
+                        errorMsgBuilder.append(resolver.httpElementName());
+                        errorMsgBuilder.append(". ");
+                    }
                 }
             }
-            return resolver.defaultOrException();
+
+            if (!StringUtil.isNullOrEmpty(errorMsgBuilder.toString())) {
+                throw new ClassCastException(errorMsgBuilder.toString());
+            } else {
+                return resolver.defaultOrException();
+            }
         };
     }
 
