@@ -867,11 +867,9 @@ final class AnnotatedValueResolver {
         return (resolver, ctx) -> {
             Object lastInvalidValue = null;
             Object lastAttrKeyName = null;
-            Class<?> targetType = resolver.rawContainerType();
-            if (targetType == null) {
-                targetType = resolver.elementType().isPrimitive() ?
-                              Primitives.wrap(resolver.elementType())
-                              : resolver.elementType();
+            Class<?> targetType = resolver.rawType();
+            if (targetType.isPrimitive()) {
+                targetType = Primitives.wrap(targetType);
             }
 
             for (AttributeKey<?> attrKey : attrKeys) {
@@ -889,7 +887,7 @@ final class AnnotatedValueResolver {
 
             if (lastInvalidValue != null && lastAttrKeyName != null) {
                 throw new IllegalStateException(
-                        String.format("(%s) which from AttributeKey (%s) is not an instance of (%s).",
+                        String.format("(%s) which is from AttributeKey (%s) is not an instance of (%s).",
                                       targetType.getSimpleName(),
                                       lastAttrKeyName,
                                       lastInvalidValue.getClass().getSimpleName()));
@@ -977,8 +975,7 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private final Class<?> containerType;
-    @Nullable
-    private final Class<?> rawContainerType;
+    private final Class<?> rawType;
     private final Class<?> elementType;
     @Nullable
     private final ParameterizedType parameterizedElementType;
@@ -1003,7 +1000,7 @@ final class AnnotatedValueResolver {
                                    boolean isPathVariable, boolean shouldExist,
                                    boolean shouldWrapValueAsOptional,
                                    @Nullable Class<?> containerType, Class<?> elementType,
-                                   @Nullable Class<?> rawContainerType,
+                                   Class<?> rawType,
                                    @Nullable ParameterizedType parameterizedElementType,
                                    @Nullable String defaultValue,
                                    DescriptionInfo description,
@@ -1019,7 +1016,7 @@ final class AnnotatedValueResolver {
         this.parameterizedElementType = parameterizedElementType;
         this.description = requireNonNull(description, "description");
         this.containerType = containerType;
-        this.rawContainerType = rawContainerType;
+        this.rawType = rawType;
         this.resolver = requireNonNull(resolver, "resolver");
         this.beanFactoryId = beanFactoryId;
         this.aggregationStrategy = requireNonNull(aggregationStrategy, "aggregationStrategy");
@@ -1065,9 +1062,8 @@ final class AnnotatedValueResolver {
         return containerType;
     }
 
-    @Nullable
-    Class<?> rawContainerType() {
-        return rawContainerType;
+    Class<?> rawType() {
+        return rawType;
     }
 
     Class<?> elementType() {
@@ -1332,7 +1328,7 @@ final class AnnotatedValueResolver {
             }
 
             final Class<?> containerType = getContainerType(unwrappedParameterizedType);
-            final Class<?> rawContainerType = getRawContainerType(unwrappedParameterizedType);
+            final Class<?> rawType = toRawType(unwrappedParameterizedType);
             final Class<?> elementType;
             final ParameterizedType parameterizedElementType;
 
@@ -1361,7 +1357,7 @@ final class AnnotatedValueResolver {
             }
 
             return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
-                                              isOptional, containerType, elementType, rawContainerType,
+                                              isOptional, containerType, elementType, rawType,
                                               parameterizedElementType, defaultValue, description, resolver,
                                               beanFactoryId, aggregation);
         }

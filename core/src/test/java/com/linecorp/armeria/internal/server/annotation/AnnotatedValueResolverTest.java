@@ -477,35 +477,35 @@ class AnnotatedValueResolverTest {
 
                 @Attribute(value = "successPrefixOtherValuesOfOtherTypeInt", prefix = AttrDummyService.class)
                 int successPrefixOtherValuesOfOtherTypeInt,
-                @Attribute(value = "failPrefixNoneValuesOfOtherTypeInt")
+                @Attribute("failPrefixNoneValuesOfOtherTypeInt")
                 int failPrefixNoneValuesOfOtherTypeInt,
                 @Attribute(value = "successPrefixMineValuesOfMineTypeInt", prefix = Service.class)
                 int successPrefixMineValuesOfMineTypeInt,
-                @Attribute(value = "successPrefixNoneValuesOfMineTypeInt")
+                @Attribute("successPrefixNoneValuesOfMineTypeInt")
                 int successPrefixNoneValuesOfMineTypeInt,
-                @Attribute(value = "successPrefixNoneValuesOfNoneTypeInt")
+                @Attribute("successPrefixNoneValuesOfNoneTypeInt")
                 int successPrefixNoneValuesOfNoneTypeInt,
-                @Attribute(value = "failPrefixNoneValuesOfNoneTypeInt")
+                @Attribute("failPrefixNoneValuesOfNoneTypeInt")
                 int failPrefixNoneValuesOfNoneTypeInt,
-                @Attribute(value = "failPrefixOtherValuesOfMineTypeInt")
+                @Attribute("failPrefixOtherValuesOfMineTypeInt")
                 int failPrefixOtherValuesOfMineTypeInt,
                 @Attribute(value = "failPrefixMineValuesOfNoneTypeInt", prefix = Service.class)
                 int failPrefixMineValuesOfNoneTypeInt,
                 @Attribute(value = "successPrefixMineValuesOfMineTypeCollection", prefix = Service.class)
                 List<String> successPrefixMineValuesOfMineTypeCollection,
-                @Attribute(value = "successPrefixNoneValuesOfMineTypeCollection")
+                @Attribute("successPrefixNoneValuesOfMineTypeCollection")
                 List<String> successPrefixNoneValuesOfMineTypeCollection,
-                @Attribute(value = "successPrefixNoneValuesOfNoneTypeCollection")
+                @Attribute("successPrefixNoneValuesOfNoneTypeCollection")
                 List<String> successPrefixNoneValuesOfNoneTypeCollection,
-                @Attribute(value = "successImmutableListToList")
+                @Attribute("successImmutableListToList")
                 List<String> successImmutableListToList,
-                @Attribute(value = "successImmutableMapToMap")
+                @Attribute("successImmutableMapToMap")
                 Map<String, String> successImmutableMapToMap,
-                @Attribute(value = "successImmutableSetToSet")
+                @Attribute("successImmutableSetToSet")
                 Set<String> successImmutableSetToSet,
-                @Attribute(value = "successQueueToQueue")
+                @Attribute("successQueueToQueue")
                 Queue<String> successQueueToQueue,
-                @Attribute(value = "failCastListToSet")
+                @Attribute("failCastListToSet")
                 Set<String> failCastListToSet
         ) { }
 
@@ -522,7 +522,7 @@ class AnnotatedValueResolverTest {
                   @Param @Default("+01:00:00") ZoneOffset zoneOffset) {}
     }
 
-    private Map<String, AttributeKey<?>> injectFailCaseOfAttrKeyToServiceContextForAttributeTest() {
+    private static Map<String, AttributeKey<?>> injectFailCaseOfAttrKeyToServiceContextForAttributeTest() {
         final ServiceRequestContext ctx = resolverContext.context();
         final Map<String, AttributeKey<?>> expectFailAttrs = new HashMap<>();
 
@@ -564,7 +564,7 @@ class AnnotatedValueResolverTest {
         return expectFailAttrs;
     }
 
-    private Map<String, AttributeKey<?>> injectAttrKeyToServiceContextForAttributeTest() {
+    private static Map<String, AttributeKey<?>> injectAttrKeyToServiceContextForAttributeTest() {
 
         final ServiceRequestContext ctx = resolverContext.context();
         final HashMap<String, AttributeKey<?>> successAttrs = new HashMap<>();
