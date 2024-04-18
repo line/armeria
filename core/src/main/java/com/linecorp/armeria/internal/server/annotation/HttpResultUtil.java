@@ -38,7 +38,9 @@ final class HttpResultUtil {
             builder.add(customHeaders);
 
             if (!builder.contains(HttpHeaderNames.STATUS)) {
-                final AnnotatedService service = ctx.config().service().as(AnnotatedService.class);
+                final DefaultAnnotatedService service = ctx.config()
+                                                           .service()
+                                                           .as(DefaultAnnotatedService.class);
                 if (service != null) {
                     builder.status(service.defaultStatus());
                 } else {

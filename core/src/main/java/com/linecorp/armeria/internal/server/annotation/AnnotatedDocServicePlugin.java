@@ -86,7 +86,7 @@ import com.linecorp.armeria.server.docs.TypeSignatureType;
 import io.netty.buffer.ByteBuf;
 
 /**
- * A {@link DocServicePlugin} implementation that supports the {@link AnnotatedService}.
+ * A {@link DocServicePlugin} implementation that supports the {@link DefaultAnnotatedService}.
  */
 public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
@@ -128,7 +128,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
     @Override
     public Set<Class<? extends Service<?, ?>>> supportedServiceTypes() {
-        return ImmutableSet.of(AnnotatedService.class);
+        return ImmutableSet.of(DefaultAnnotatedService.class);
     }
 
     @Override
@@ -142,7 +142,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, DescriptionInfo> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
-            final AnnotatedService service = sc.service().as(AnnotatedService.class);
+            final DefaultAnnotatedService service = sc.service().as(DefaultAnnotatedService.class);
             if (service != null) {
                 final Class<?> serviceClass = ClassUtil.getUserClass(service.object().getClass());
                 final String className = serviceClass.getName();
@@ -164,7 +164,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
-                                      String hostnamePattern, AnnotatedService service,
+                                      String hostnamePattern, DefaultAnnotatedService service,
                                       Class<?> serviceClass) {
         final Route route = service.route();
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);

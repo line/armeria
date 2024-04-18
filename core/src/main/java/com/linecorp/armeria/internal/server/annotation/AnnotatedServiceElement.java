@@ -32,12 +32,12 @@ public final class AnnotatedServiceElement {
 
     private final Route route;
 
-    private final AnnotatedService service;
+    private final DefaultAnnotatedService service;
 
     private final Function<? super HttpService, ? extends HttpService> decorator;
 
     AnnotatedServiceElement(Route route,
-                            AnnotatedService service,
+                            DefaultAnnotatedService service,
                             Function<? super HttpService, ? extends HttpService> decorator) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -52,14 +52,14 @@ public final class AnnotatedServiceElement {
     }
 
     /**
-     * Returns the {@link AnnotatedService} that will handle the request.
+     * Returns the {@link DefaultAnnotatedService} that will handle the request.
      */
-    public AnnotatedService service() {
+    public DefaultAnnotatedService service() {
         return service;
     }
 
     /**
-     * Returns the decorator of the {@link AnnotatedService} which will be evaluated at service
+     * Returns the decorator of the {@link DefaultAnnotatedService} which will be evaluated at service
      * registration time.
      */
     public Function<? super HttpService, ? extends HttpService> decorator() {
