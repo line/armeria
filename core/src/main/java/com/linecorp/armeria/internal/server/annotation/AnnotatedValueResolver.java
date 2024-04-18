@@ -866,27 +866,18 @@ final class AnnotatedValueResolver {
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
     attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
         return (resolver, ctx) -> {
-            final Class<?> rawContainerType = resolver.rawContainerType();
-            final Class<?> elementType;
             StringBuilder errorMsgBuilder = null;
-
-            if (rawContainerType == null) {
-                elementType = resolver.elementType().isPrimitive() ?
+            Class<?> targetType = resolver.rawContainerType();
+            if (targetType == null) {
+                targetType = resolver.elementType().isPrimitive() ?
                               Primitives.wrap(resolver.elementType())
                               : resolver.elementType();
-            } else {
-                elementType = null;
             }
 
             for (AttributeKey<?> attrKey : attrKeys) {
                 final Object value = ctx.context.attr(attrKey);
                 if (value != null) {
-                    final boolean isValidType;
-                    if (rawContainerType != null) {
-                        isValidType = rawContainerType.isInstance(value);
-                    } else {
-                        isValidType = elementType.isInstance(value);
-                    }
+                    final boolean isValidType = targetType.isInstance(value);
 
                     if (isValidType) {
                         return value;
