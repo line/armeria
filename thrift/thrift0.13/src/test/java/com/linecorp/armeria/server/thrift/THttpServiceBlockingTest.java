@@ -34,9 +34,9 @@ import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import testing.thrift.debug.TestService;
-import testing.thrift.debug.TestServiceRequest;
-import testing.thrift.debug.TestServiceResponse;
+import testing.thrift.test.TestService;
+import testing.thrift.test.TestServiceRequest;
+import testing.thrift.test.TestServiceResponse;
 
 class THttpServiceBlockingTest {
     private static final AtomicBoolean blocking = new AtomicBoolean();
@@ -101,7 +101,7 @@ class THttpServiceBlockingTest {
     static class TestServiceImpl implements TestService.AsyncIface {
         @Override
         public void get(TestServiceRequest request,
-                        AsyncMethodCallback<TestServiceResponse> resultHandler) throws TException {
+                        AsyncMethodCallback resultHandler) throws TException {
             resultHandler.onComplete(new TestServiceResponse(request.getMessage()));
         }
     }
