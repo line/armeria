@@ -103,7 +103,6 @@ import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 import io.netty.handler.codec.http.HttpConstants;
 import io.netty.util.AttributeKey;
-import io.netty.util.internal.StringUtil;
 import scala.concurrent.ExecutionContext;
 
 final class AnnotatedValueResolver {
@@ -866,7 +865,8 @@ final class AnnotatedValueResolver {
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
     attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
         return (resolver, ctx) -> {
-            StringBuilder errorMsgBuilder = null;
+            Object lastInvalidValue = null;
+            Object lastAttrKeyName = null;
             Class<?> targetType = resolver.rawContainerType();
             if (targetType == null) {
                 targetType = resolver.elementType().isPrimitive() ?
@@ -878,26 +878,21 @@ final class AnnotatedValueResolver {
                 final Object value = ctx.context.attr(attrKey);
                 if (value != null) {
                     final boolean isValidType = targetType.isInstance(value);
-
                     if (isValidType) {
                         return value;
                     } else {
-                        if (errorMsgBuilder == null) {
-                            errorMsgBuilder = new StringBuilder(
-                                    String.format("No matching value for '%s' in the attributes: [",
-                                                  resolver.httpElementName()));
-                            errorMsgBuilder.append(String.format("{key=%s, value=%s}", attrKey.name(), value));
-                        } else {
-                            errorMsgBuilder.append(", ");
-                            errorMsgBuilder.append(String.format("{key=%s, value=%s}", attrKey.name(), value));
-                        }
+                        lastInvalidValue = value;
+                        lastAttrKeyName = attrKey.name();
                     }
                 }
             }
 
-            if (errorMsgBuilder != null && !StringUtil.isNullOrEmpty(errorMsgBuilder.toString())) {
-                errorMsgBuilder.append("].");
-                throw new IllegalStateException(errorMsgBuilder.toString());
+            if (lastInvalidValue != null && lastAttrKeyName != null) {
+                throw new IllegalStateException(
+                        String.format("(%s) which from AttributeKey (%s) is not an instance of (%s).",
+                                      targetType.getSimpleName(),
+                                      lastAttrKeyName,
+                                      lastInvalidValue.getClass().getSimpleName()));
             } else {
                 return resolver.defaultOrException();
             }
