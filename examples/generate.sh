@@ -1,7 +1,13 @@
-# todo regenerate pom.xml in each module
+#!/bin/bash -x
+# todo  pom.xml in root
 
-filename="1.xml"
+filename="pom.xml"
 dirlist=`find . -name build.gradle | perl -p -e  's#\.\/##'| perl -p  -e 's#/build.gradle##'`
+dirlist2=`find . -name build.gradle.kts | perl -p -e  's#\.\/##'| perl -p  -e 's#/build.gradle.kts##'`
+
+>$filename
+
+# generate head
 cat >>$filename<<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -12,14 +18,22 @@ cat >>$filename<<EOF
   <artifactId>examples</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
+
 EOF
-echo "<modules>" >>$filename
+
+# generate module
+echo "  <modules>" >>$filename
 for tmp1 in `echo $dirlist | tr " " "\n"`
 do
-  echo "<module>"$tmp1"</module>" >>$filename
+  echo "    <module>"$tmp1"</module>" >>$filename
 done
-echo "</modules>" >>$filename
+for tmp2 in `echo $dirlist2 | tr " " "\n"`
+do
+  echo "    <module>"$tmp2"</module>" >>$filename
+done
+echo "  </modules>" >>$filename
 
+# generate  properties, dependencyManagement, dependencies and build
 cat >>$filename<<'EOF'
 
   <properties>

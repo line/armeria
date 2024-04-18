@@ -33,6 +33,12 @@
     <module>dropwizard</module>
     <module>grpc-reactor</module>
     <module>resilience4j-spring</module>
+    <module>context-propagation/kotlin</module>
+    <module>annotated-http-service-kotlin</module>
+    <module>grpc-krotodc</module>
+    <module>grpc-kotlin</module>
+    <module>spring-boot-minimal-kotlin</module>
+    <module>graphql-kotlin</module>
   </modules>
 
   <properties>
@@ -202,7 +208,8 @@
     </dependency>
   </dependencies>
   <build>
-    <plugins>
+    <pluginManagement>
+      <plugins>
       <plugin>
         <groupId>org.xolstice.maven.plugins</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
@@ -228,7 +235,8 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.0.0-M7</version>
       </plugin>
-    </plugins>
+      </plugins>
+    </pluginManagement>
     <extensions>
       <extension>
         <groupId>kr.motd.maven</groupId>
@@ -239,4 +247,3 @@
   </build>
 
 </project>
-
