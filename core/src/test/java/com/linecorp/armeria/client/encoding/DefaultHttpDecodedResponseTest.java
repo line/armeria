@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.UnexpectedDecodeException;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -65,6 +66,7 @@ import com.linecorp.armeria.internal.common.encoding.DefaultHttpDecodedResponse;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.DecompressionException;
 import reactor.test.StepVerifier;
 
@@ -309,6 +311,21 @@ class DefaultHttpDecodedResponseTest {
         assertThatThrownBy(() -> decoded.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(CompositeException.class);
+    }
+
+    @Test
+    void shouldExposeReasonWhenEncounterUnexpectedDecodeException() {
+        final ByteBuf mockByteBuf = mock(ByteBuf.class);
+        final HttpData mockData = mock(HttpData.class);
+        when(mockData.byteBuf()).thenReturn(mockByteBuf);
+
+        final EmbeddedChannel channel = new TestEmbeddedChannel(false);
+
+        final StreamDecoder decoder = new TestStreamDecoder(channel, mock(ByteBufAllocator.class), 100);
+
+        assertThatThrownBy(() -> decoder.decode(mockData))
+                .isInstanceOf(UnexpectedDecodeException.class)
+                .hasMessageContaining("Unexpected exception has occurred");
     }
 
     private static HttpResponse newFailingDecodedResponse() {
