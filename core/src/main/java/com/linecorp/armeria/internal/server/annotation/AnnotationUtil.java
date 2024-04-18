@@ -472,7 +472,7 @@ public final class AnnotationUtil {
 
     private static <T extends AnnotatedElement> List<AnnotatedElement> convertToAnnotatedElements(
             List<T> elements) {
-        return elements.stream().map(element -> (AnnotatedElement) element).collect(toImmutableList());
+        return (List<AnnotatedElement>) elements;
     }
 
     private static List<Parameter> collectParameters(Class<?> clazz, Executable executable,
