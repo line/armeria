@@ -149,6 +149,6 @@ class ExceedingServiceMaxContentLengthTest {
         await().untilAsserted(
                 () -> assertThat(responseCause.get()).isExactlyInstanceOf(ContentTooLargeException.class));
 
-        assertThat(byteBufs).allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
+        await().untilAsserted(() -> assertThat(byteBufs).allSatisfy(buf -> assertThat(buf.refCnt()).isZero()));
     }
 }
