@@ -287,6 +287,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
     private int maxRequestStringLength;
     private int maxRequestContainerLength;
+    private boolean useBlockingTaskExecutor;
     private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
     private Map<ThriftFunction, HttpService> decoratedTHttpServices;
@@ -297,6 +298,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> supportedSerializationFormats,
                  int maxRequestStringLength, int maxRequestContainerLength,
+                 boolean useBlockingTaskExecutor,
                  BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
                          exceptionHandler) {
         super(delegate);
@@ -305,6 +307,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         this.supportedSerializationFormats = ImmutableSet.copyOf(supportedSerializationFormats);
         this.maxRequestStringLength = maxRequestStringLength;
         this.maxRequestContainerLength = maxRequestContainerLength;
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.exceptionHandler = exceptionHandler;
         responseProtocolFactories = supportedSerializationFormats
                 .stream()
@@ -397,8 +400,16 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final DecodedRequest decodedRequest = ctx.attr(DECODED_REQUEST);
         if (decodedRequest != null) {
             final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            invoke(ctx, decodedRequest.serializationFormat, decodedRequest.seqId,
-                   decodedRequest.thriftFunction, decodedRequest.decodedReq, responseFuture);
+            if (useBlockingTaskExecutor) {
+                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, decodedRequest.serializationFormat,
+                                                                decodedRequest.seqId,
+                                                                decodedRequest.thriftFunction,
+                                                                decodedRequest.decodedReq,
+                                                                responseFuture));
+            } else {
+                invoke(ctx, decodedRequest.serializationFormat, decodedRequest.seqId,
+                       decodedRequest.thriftFunction, decodedRequest.decodedReq, responseFuture);
+            }
             return HttpResponse.of(responseFuture);
         }
 
@@ -607,7 +618,13 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             return;
         }
 
-        invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
+        if (useBlockingTaskExecutor) {
+            ctx.blockingTaskExecutor().execute(
+                    () -> invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes)
+            );
+        } else {
+            invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
+        }
     }
 
     private static String typeString(byte typeValue) {
