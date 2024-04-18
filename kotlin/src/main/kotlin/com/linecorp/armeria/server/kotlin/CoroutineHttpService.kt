@@ -41,7 +41,7 @@ fun interface CoroutineHttpService : HttpService {
         return HttpResponse.of(
             CoroutineScope(
                 ctx.asCoroutineContext() + userContext,
-            ).future { // Do we also need to add user context?
+            ).future {
                 suspendedServe(ctx, req)
             },
         )
