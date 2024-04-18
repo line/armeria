@@ -22,7 +22,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.server.annotation.DefaultValues;
 
 import io.netty.util.AttributeKey;
 
@@ -38,7 +37,7 @@ public @interface Attribute {
      * The name of the {@link AttributeKey} to bind to.
      * You might also want to specify the {@link #prefix()}.
      */
-    String value() default DefaultValues.UNSPECIFIED;
+    String value();
 
     /**
      * The class of the {@link AttributeKey} to bind to. If you created an {@link AttributeKey} with
@@ -46,5 +45,5 @@ public @interface Attribute {
      * the {@link #prefix} should be {@code MyAttributeKeys.class}.
      * See <a href="https://armeria.dev/docs/advanced-custom-attributes/">advanced-customer-attributes</a>.
      */
-    Class<?> prefix() default Default.class;
+    Class<?> prefix() default Attribute.class;
 }

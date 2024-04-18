@@ -642,7 +642,7 @@ final class AnnotatedValueResolver {
 
         final ImmutableList.Builder<AttributeKey<?>> builder = ImmutableList.builder();
 
-        if (attr.prefix() != Default.class) {
+        if (attr.prefix() != Attribute.class) {
             builder.add(AttributeKey.valueOf(attr.prefix(), name));
         } else {
             final Class<?> serviceClass = ((Parameter) annotatedElement).getDeclaringExecutable()
@@ -866,49 +866,47 @@ final class AnnotatedValueResolver {
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
     attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
         return (resolver, ctx) -> {
-            final StringBuilder errorMsgBuilder = new StringBuilder();
+            final Class<?> rawContainerType = resolver.rawContainerType();
+            final Class<?> elementType;
+            StringBuilder errorMsgBuilder = null;
+
+            if (rawContainerType == null) {
+                elementType = resolver.elementType().isPrimitive() ?
+                              Primitives.wrap(resolver.elementType())
+                              : resolver.elementType();
+            } else {
+                elementType = null;
+            }
+
             for (AttributeKey<?> attrKey : attrKeys) {
                 final Object value = ctx.context.attr(attrKey);
                 if (value != null) {
                     final boolean isValidType;
-
-                    final Class<?> rawContainerType = resolver.rawContainerType();
                     if (rawContainerType != null) {
                         isValidType = rawContainerType.isInstance(value);
-                        if (!isValidType) {
-                            errorMsgBuilder.append("The value ");
-                            errorMsgBuilder.append(value);
-                            errorMsgBuilder.append(" cannot be cast to rawContainerType ");
-                            errorMsgBuilder.append(rawContainerType);
-                        }
                     } else {
-                        final Class<?> elementType = resolver.elementType().isPrimitive() ?
-                                                     Primitives.wrap(resolver.elementType())
-                                                     : resolver.elementType();
-
                         isValidType = elementType.isInstance(value);
-                        if (!isValidType) {
-                            errorMsgBuilder.append("The value ");
-                            errorMsgBuilder.append(value);
-                            errorMsgBuilder.append(" cannot be cast to elementType ");
-                            errorMsgBuilder.append(elementType);
-                        }
                     }
 
                     if (isValidType) {
                         return value;
                     } else {
-                        errorMsgBuilder.append(". For your information, attrKey Name is ");
-                        errorMsgBuilder.append(attrKey.name());
-                        errorMsgBuilder.append(", httpElementName is ");
-                        errorMsgBuilder.append(resolver.httpElementName());
-                        errorMsgBuilder.append(". ");
+                        if (errorMsgBuilder == null) {
+                            errorMsgBuilder = new StringBuilder(
+                                    String.format("No matching value for '%s' in the attributes: [",
+                                                  resolver.httpElementName()));
+                            errorMsgBuilder.append(String.format("{key=%s, value=%s}", attrKey.name(), value));
+                        } else {
+                            errorMsgBuilder.append(", ");
+                            errorMsgBuilder.append(String.format("{key=%s, value=%s}", attrKey.name(), value));
+                        }
                     }
                 }
             }
 
-            if (!StringUtil.isNullOrEmpty(errorMsgBuilder.toString())) {
-                throw new ClassCastException(errorMsgBuilder.toString());
+            if (errorMsgBuilder != null && !StringUtil.isNullOrEmpty(errorMsgBuilder.toString())) {
+                errorMsgBuilder.append("].");
+                throw new IllegalStateException(errorMsgBuilder.toString());
             } else {
                 return resolver.defaultOrException();
             }
@@ -1158,7 +1156,8 @@ final class AnnotatedValueResolver {
             }
             return defaultValue;
         }
-        throw new IllegalArgumentException("Mandatory parameter/header is missing: " + httpElementName);
+        throw new IllegalArgumentException("Mandatory parameter/header/attribute is missing: " +
+                                           httpElementName);
     }
 
     @Override

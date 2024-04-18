@@ -273,7 +273,7 @@ class AnnotatedValueResolverTest {
                 // When + Then
                 assertThatThrownBy(() -> resolver.resolve(resolverContext))
                         .isInstanceOfAny(IllegalArgumentException.class,
-                                         ClassCastException.class);
+                                         IllegalStateException.class);
             } else {
                 // When
                 final Object value = resolver.resolve(resolverContext);
