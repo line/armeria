@@ -36,7 +36,7 @@ public interface AnnotatedService extends HttpService {
     Method method();
 
     /**
-     * Return AnnotatedService's method.
+     * Should return overloadId of AnnotatedService.
      */
     int overloadId();
 
