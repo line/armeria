@@ -40,7 +40,7 @@ public interface GrpcExceptionHandlerFunction {
     }
 
     /**
-     * Returns a default implementation for {@link GrpcExceptionHandlerFunction}.
+     * Returns the default {@link GrpcExceptionHandlerFunction}.
      */
     static GrpcExceptionHandlerFunction ofDefault() {
         return DefaultGrpcExceptionHandlerFunction.INSTANCE;

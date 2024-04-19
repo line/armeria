@@ -39,50 +39,46 @@ import io.netty.handler.codec.http2.Http2Exception;
 final class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
     static final GrpcExceptionHandlerFunction INSTANCE = new DefaultGrpcExceptionHandlerFunction();
 
-    @Override
-    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
-        return statusFromThrowable(cause);
-    }
-
     /**
      * Converts the {@link Throwable} to a {@link Status}, taking into account exceptions specific to Armeria as
      * well and the protocol package.
      */
-    private static Status statusFromThrowable(Throwable t) {
-        final Status s = Status.fromThrowable(t);
+    @Override
+    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        final Status s = Status.fromThrowable(cause);
         if (s.getCode() != Code.UNKNOWN) {
             return s;
         }
 
-        if (t instanceof ClosedSessionException || t instanceof ClosedChannelException) {
+        if (cause instanceof ClosedSessionException || cause instanceof ClosedChannelException) {
             // ClosedChannelException is used any time the Netty channel is closed. Proper error
             // processing requires remembering the error that occurred before this one and using it
             // instead.
             return s;
         }
-        if (t instanceof ClosedStreamException || t instanceof RequestTimeoutException) {
-            return Status.CANCELLED.withCause(t);
+        if (cause instanceof ClosedStreamException || cause instanceof RequestTimeoutException) {
+            return Status.CANCELLED.withCause(cause);
         }
-        if (t instanceof InvalidProtocolBufferException) {
-            return Status.INVALID_ARGUMENT.withCause(t);
+        if (cause instanceof InvalidProtocolBufferException) {
+            return Status.INVALID_ARGUMENT.withCause(cause);
         }
-        if (t instanceof UnprocessedRequestException ||
-            t instanceof IOException ||
-            t instanceof FailFastException) {
-            return Status.UNAVAILABLE.withCause(t);
+        if (cause instanceof UnprocessedRequestException ||
+            cause instanceof IOException ||
+            cause instanceof FailFastException) {
+            return Status.UNAVAILABLE.withCause(cause);
         }
-        if (t instanceof Http2Exception) {
-            if (t instanceof Http2Exception.StreamException &&
-                ((Http2Exception.StreamException) t).error() == Http2Error.CANCEL) {
+        if (cause instanceof Http2Exception) {
+            if (cause instanceof Http2Exception.StreamException &&
+                ((Http2Exception.StreamException) cause).error() == Http2Error.CANCEL) {
                 return Status.CANCELLED;
             }
-            return Status.INTERNAL.withCause(t);
+            return Status.INTERNAL.withCause(cause);
         }
-        if (t instanceof TimeoutException) {
-            return Status.DEADLINE_EXCEEDED.withCause(t);
+        if (cause instanceof TimeoutException) {
+            return Status.DEADLINE_EXCEEDED.withCause(cause);
         }
-        if (t instanceof ContentTooLargeException) {
-            return Status.RESOURCE_EXHAUSTED.withCause(t);
+        if (cause instanceof ContentTooLargeException) {
+            return Status.RESOURCE_EXHAUSTED.withCause(cause);
         }
         return s;
     }

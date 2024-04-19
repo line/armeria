@@ -31,8 +31,6 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.HttpURLConnection;
 import java.util.Base64;
 
@@ -47,12 +45,10 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -64,20 +60,6 @@ import io.grpc.Status.Code;
 public final class GrpcStatus {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcStatus.class);
-
-    public static Throwable peelAndUnwrap(Throwable t) {
-        requireNonNull(t, "t");
-        t = Exceptions.peel(t);
-        Throwable cause = t;
-        while (cause != null) {
-            if (cause instanceof ArmeriaStatusException) {
-                t = StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
-                break;
-            }
-            cause = cause.getCause();
-        }
-        return t;
-    }
 
     /**
      * Maps gRPC {@link Status} to {@link HttpStatus}. If there is no matched rule for the specified

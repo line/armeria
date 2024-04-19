@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
@@ -979,12 +980,13 @@ public final class GrpcServiceBuilder {
         } else {
             exceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault());
         }
-        final GrpcExceptionHandlerFunction grpcExceptionHandler;
+        GrpcExceptionHandlerFunction grpcExceptionHandler;
         if (exceptionMappingsBuilder != null) {
             grpcExceptionHandler = exceptionMappingsBuilder.build();
         } else {
             grpcExceptionHandler = exceptionHandler;
         }
+        grpcExceptionHandler = new UnwrappingGrpcExceptionHandleFunction(grpcExceptionHandler);
 
         if (grpcExceptionHandler != null) {
             registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
