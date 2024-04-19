@@ -217,14 +217,17 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         }
     }
 
+    @Override
     public String serviceName() {
         return serviceName;
     }
 
+    @Override
     public boolean serviceNameSetByAnnotation() {
         return serviceNameSetByAnnotation;
     }
 
+    @Override
     public String methodName() {
         return method.getName();
     }
