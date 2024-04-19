@@ -18,11 +18,12 @@ package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.server.HttpStatusException;
 
 /**
  * A {@link RuntimeException} raised when the length of request or response content exceeds its limit.
  */
-public final class ContentTooLargeException extends RuntimeException {
+public final class ContentTooLargeException extends HttpStatusException {
 
     private static final long serialVersionUID = 4901614315474105954L;
 
@@ -56,7 +57,7 @@ public final class ContentTooLargeException extends RuntimeException {
     }
 
     private ContentTooLargeException(boolean neverSample) {
-        super(null, null, !neverSample, !neverSample);
+        super(HttpStatus.REQUEST_ENTITY_TOO_LARGE, !neverSample, null);
 
         this.neverSample = neverSample;
         maxContentLength = -1;
@@ -66,7 +67,8 @@ public final class ContentTooLargeException extends RuntimeException {
 
     ContentTooLargeException(long maxContentLength, long contentLength, long transferred,
                              @Nullable Throwable cause) {
-        super(toString(maxContentLength, contentLength, transferred), cause);
+        super(HttpStatus.REQUEST_ENTITY_TOO_LARGE,
+              toString(maxContentLength, contentLength, transferred), cause);
 
         neverSample = false;
         this.transferred = transferred;

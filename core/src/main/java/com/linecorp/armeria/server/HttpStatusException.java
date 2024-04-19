@@ -59,7 +59,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  *
  * @see HttpResponseException
  */
-public final class HttpStatusException extends RuntimeException {
+public class HttpStatusException extends RuntimeException {
 
     private static final HttpStatusException[] EXCEPTIONS = new HttpStatusException[1000];
 
@@ -120,9 +120,17 @@ public final class HttpStatusException extends RuntimeException {
     /**
      * Creates a new instance.
      */
-    private HttpStatusException(HttpStatus httpStatus, boolean withStackTrace, @Nullable Throwable cause) {
+    protected HttpStatusException(HttpStatus httpStatus, boolean withStackTrace, @Nullable Throwable cause) {
         super(requireNonNull(httpStatus, "httpStatus").toString(), cause, withStackTrace, withStackTrace);
         this.httpStatus = httpStatus;
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    protected HttpStatusException(HttpStatus httpStatus, @Nullable String message, @Nullable Throwable cause) {
+        super(message == null ? requireNonNull(httpStatus, "httpStatus").toString() : message, cause);
+        this.httpStatus = requireNonNull(httpStatus, "httpStatus");
     }
 
     /**
