@@ -75,7 +75,7 @@ class TestStreamDecoder implements StreamDecoder {
     // Mostly copied from netty's HttpContentDecoder.
     protected HttpData fetchDecoderOutput() {
         ByteBuf decoded = null;
-        for (; ; ) {
+        for (;;) {
             final ByteBuf buf = decoder.readInbound();
             if (buf == null) {
                 break;
