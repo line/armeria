@@ -20,47 +20,33 @@ import java.lang.reflect.Method;
 import com.linecorp.armeria.common.HttpStatus;
 
 /**
- * hello.
+ * AnnotatedService has specific value on their private fields. User may want to access
+ * them. This interface is to expose specific values of AnnotatedService to public.
  */
 public interface AnnotatedService extends HttpService {
 
     /**
-     * hello.
-     */
-    String serviceName();
-
-    /**
-     * hello.
-     */
-    boolean serviceNameSetByAnnotation();
-
-    /**
-     * hello.
-     */
-    String methodName();
-
-    /**
-     * hello.
+     * Should return Object of AnnotationService.
      */
     Object object();
 
     /**
-     * hello.
+     * Should return {@link Method} of AnnotationService.
      */
     Method method();
 
     /**
-     * hello.
+     * Return AnnotatedService's method.
      */
     int overloadId();
 
     /**
-     * hello.
+     * Should return {@link Route} of AnnotationService.
      */
     Route route();
 
     /**
-     * hello.
+     * Should return DefaultStatus code of AnnotationService.
      */
     HttpStatus defaultStatus();
 }
