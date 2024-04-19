@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.internal.server.annotation.DefaultAnnotatedService;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.EventLoopGroup;
@@ -324,9 +324,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         final ServiceConfigBuilder serviceConfigBuilder =
                 new ServiceConfigBuilder(route, contextPath, service);
 
-        final DefaultAnnotatedService annotatedService;
+        final AnnotatedService annotatedService;
         if (defaultServiceNaming == null || defaultLogName == null) {
-            annotatedService = service.as(DefaultAnnotatedService.class);
+            annotatedService = service.as(AnnotatedService.class);
         } else {
             annotatedService = null;
         }

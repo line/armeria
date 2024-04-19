@@ -13,6 +13,7 @@
  *  License for the specific language governing permissions and limitations
  *  under the License.
  */
+
 package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -108,10 +109,10 @@ import com.linecorp.armeria.server.annotation.Trace;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 /**
- * Builds a list of {@link DefaultAnnotatedService}s from an {@link Object}.
+ * Builds a list of {@link AnnotatedService}s from an {@link Object}.
  * This class is not supposed to be used by a user. Please check out the documentation
  * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a>
- * to use {@link DefaultAnnotatedService}.
+ * to use {@link AnnotatedService}.
  */
 public final class AnnotatedServiceFactory {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedServiceFactory.class);
@@ -148,7 +149,7 @@ public final class AnnotatedServiceFactory {
                         .build();
 
     /**
-     * Returns the list of {@link DefaultAnnotatedService} defined by {@link Path} and HTTP method annotations
+     * Returns the list of {@link AnnotatedService} defined by {@link Path} and HTTP method annotations
      * from the specified {@code object}, {@link RequestConverterFunction}s, {@link ResponseConverterFunction}s,
      * {@link ExceptionHandlerFunction}s and {@link AnnotatedServiceExtensions}.
      */
@@ -233,7 +234,7 @@ public final class AnnotatedServiceFactory {
     }
 
     /**
-     * Returns a list of {@link DefaultAnnotatedService} instances. A single {@link DefaultAnnotatedService} is
+     * Returns a list of {@link AnnotatedService} instances. A single {@link AnnotatedService} is
      * created per each {@link Route} associated with the {@code method}.
      */
     @VisibleForTesting
@@ -290,9 +291,8 @@ public final class AnnotatedServiceFactory {
                                                queryDelimiter);
             return new AnnotatedServiceElement(
                     route,
-                    new DefaultAnnotatedService(object, method, overloadId, resolvers, eh,
-                                                res, route, defaultStatus, responseHeaders,
-                                                responseTrailers, needToUseBlockingTaskExecutor),
+                    new AnnotatedService(object, method, overloadId, resolvers, eh, res, route, defaultStatus,
+                                         responseHeaders, responseTrailers, needToUseBlockingTaskExecutor),
                     decorator(method, clazz, dependencyInjector));
         }).collect(toImmutableList());
     }

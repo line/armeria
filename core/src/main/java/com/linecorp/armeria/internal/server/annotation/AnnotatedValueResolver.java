@@ -140,7 +140,7 @@ final class AnnotatedValueResolver {
 
     static final List<RequestConverterFunctionProvider> requestConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(RequestConverterFunctionProvider.class,
-                                                    DefaultAnnotatedService.class.getClassLoader()));
+                                                    AnnotatedService.class.getClassLoader()));
 
     static {
         if (!requestConverterFunctionProviders.isEmpty()) {
@@ -411,7 +411,7 @@ final class AnnotatedValueResolver {
 
     /**
      * Creates a new {@link AnnotatedValueResolver} instance if the specified {@code annotatedElement} is
-     * a component of {@link DefaultAnnotatedService}.
+     * a component of {@link AnnotatedService}.
      *
      * @param annotatedElement an element which is annotated with a value specifier such as {@link Param} and
      *                         {@link Header}.

@@ -57,7 +57,6 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Ag
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationType;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
-import com.linecorp.armeria.server.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
@@ -76,8 +75,8 @@ import com.linecorp.armeria.server.annotation.ServiceName;
  * This class is not supposed to be instantiated by a user. Please check out the documentation
  * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
-public final class DefaultAnnotatedService implements AnnotatedService {
-    private static final Logger logger = LoggerFactory.getLogger(DefaultAnnotatedService.class);
+public final class AnnotatedService implements HttpService {
+    private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
@@ -109,7 +108,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
     private final String serviceName;
     private final boolean serviceNameSetByAnnotation;
 
-    DefaultAnnotatedService(Object object, Method method,
+    AnnotatedService(Object object, Method method,
                      int overloadId, List<AnnotatedValueResolver> resolvers,
                      List<ExceptionHandlerFunction> exceptionHandlers,
                      List<ResponseConverterFunction> responseConverters,
@@ -217,33 +216,27 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         }
     }
 
-    @Override
     public String serviceName() {
         return serviceName;
     }
 
-    @Override
     public boolean serviceNameSetByAnnotation() {
         return serviceNameSetByAnnotation;
     }
 
-    @Override
     public String methodName() {
         return method.getName();
     }
 
-    @Override
-    public Object object() {
+    Object object() {
         return object;
     }
 
-    @Override
-    public Method method() {
+    Method method() {
         return method;
     }
 
-    @Override
-    public int overloadId() {
+    int overloadId() {
         return overloadId;
     }
 
@@ -251,13 +244,12 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         return resolvers;
     }
 
-    @Override
-    public Route route() {
+    Route route() {
         return route;
     }
 
-    @Override
-    public HttpStatus defaultStatus() {
+    // TODO: Expose through `AnnotatedServiceConfig`, see #5382.
+    HttpStatus defaultStatus() {
         return defaultStatus;
     }
 

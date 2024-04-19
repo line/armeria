@@ -16,7 +16,7 @@
 package com.linecorp.armeria.internal.common.util;
 
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.internal.server.annotation.DefaultAnnotatedService;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
 
 public final class ServiceNamingUtil {
@@ -31,8 +31,8 @@ public final class ServiceNamingUtil {
                 unwrappable = delegate;
                 continue;
             }
-            if (delegate instanceof DefaultAnnotatedService) {
-                return ((DefaultAnnotatedService) delegate).serviceName();
+            if (delegate instanceof AnnotatedService) {
+                return ((AnnotatedService) delegate).serviceName();
             } else {
                 return delegate.getClass().getName();
             }

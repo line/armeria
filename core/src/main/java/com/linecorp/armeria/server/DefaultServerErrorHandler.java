@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
-import com.linecorp.armeria.internal.server.annotation.DefaultAnnotatedService;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 
 /**
  * The default {@link ServerErrorHandler} that is used when a user didn't specify one.
@@ -61,7 +61,7 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         //                when we reach v2.0. Currently, an IllegalArgumentException is handled only for
         //                annotated services.
         final ServiceConfig serviceConfig = ctx.config();
-        final boolean isAnnotatedService = serviceConfig.service().as(DefaultAnnotatedService.class) != null;
+        final boolean isAnnotatedService = serviceConfig.service().as(AnnotatedService.class) != null;
         if (isAnnotatedService) {
             if (cause instanceof IllegalArgumentException) {
                 return internalRenderStatus(serviceConfig, ctx.request().headers(),

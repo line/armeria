@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.server.annotation.DefaultAnnotatedService;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.kotlin.CoroutineContextService;
 
 import io.netty.util.AttributeKey;
@@ -34,7 +34,7 @@ import kotlin.coroutines.CoroutineContext;
 public final class CoroutineContexts {
 
     /**
-     * {@link DefaultAnnotatedService} uses a coroutine context associated with this attribute
+     * {@link AnnotatedService} uses a coroutine context associated with this attribute
      * when calling suspending functions.
      */
     private static final AttributeKey<CoroutineContext> COROUTINE_CONTEXT_KEY =
