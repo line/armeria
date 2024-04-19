@@ -56,8 +56,9 @@ class AbstractStreamDecoder implements StreamDecoder {
                                               .build();
             }
             throw new UnexpectedDecodeException(
-                    "Unexpected exception has occurred. This exception is not caused by the buffer reaching max size. Exception message: "
-                    + message);
+                    "Unexpected exception has occurred. " +
+                    "This exception is not caused by the buffer reaching max size. Exception message: " +
+                    message);
         }
         return fetchDecoderOutput();
     }
