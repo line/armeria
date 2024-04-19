@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -60,6 +61,6 @@ class AccessLoggerIntegrationTest {
         assertThat(server.requestContextCaptor().size()).isEqualTo(1);
         final ServiceRequestContext ctx = server.requestContextCaptor().poll();
         assertThat(ctx).isNotNull();
-        assertThat(CTX_REF).hasValueSatisfying(ctxRef -> assertThat(ctxRef.id()).isEqualTo(ctx.id()));
+        await().untilAsserted(() -> assertThat(CTX_REF).hasValue(ctx));
     }
 }
