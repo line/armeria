@@ -144,7 +144,9 @@ public final class Server implements ListenableAsyncCloseable {
 
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
-        config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+        for (ServiceConfig cfg : config.serviceConfigs()) {
+            ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service());
+        }
         hasWebSocketService = hasWebSocketService(config);
     }
 

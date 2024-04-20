@@ -82,11 +82,6 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
-    public boolean isInitialized() {
-        return ctx != null;
-    }
-
-    @Override
     public RoutingContext routingContext() {
         return routingCtx;
     }
@@ -203,11 +198,6 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public boolean isResponseAborted() {
         return abortResponseCause != null;
-    }
-
-    @Override
-    public boolean needsAggregation() {
-        return false;
     }
 
     @Override

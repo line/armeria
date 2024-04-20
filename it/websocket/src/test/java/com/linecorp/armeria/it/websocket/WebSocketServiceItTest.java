@@ -32,6 +32,7 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.framing.BinaryFrame;
 import org.java_websocket.framing.ContinuousFrame;
 import org.java_websocket.framing.Framedata;
+import org.java_websocket.framing.PingFrame;
 import org.java_websocket.framing.TextFrame;
 import org.java_websocket.handshake.ServerHandshake;
 import org.junit.jupiter.api.BeforeEach;
@@ -94,6 +95,19 @@ class WebSocketServiceItTest {
         assertThat(client.receivedMessages()).isEmpty();
         client.close();
         await().until(() -> client.closeStatus().get() == WebSocketCloseStatus.NORMAL_CLOSURE.code());
+    }
+
+    @Test
+    void testPing() throws Exception {
+        final String pingContent = "pingContent";
+        final PingFrame pingFrame = new PingFrame();
+        pingFrame.setPayload(ByteBuffer.wrap(pingContent.getBytes(StandardCharsets.UTF_8)));
+
+        client.sendFrame(pingFrame);
+
+        await().untilAsserted(() -> assertThat(client.receivedMessages()).isNotEmpty());
+        final String pongContent = client.receivedMessages().poll();
+        assertThat(pongContent).isEqualTo(pingContent);
     }
 
     @Test
@@ -240,8 +254,9 @@ class WebSocketServiceItTest {
 
                 @Override
                 public void onNext(WebSocketFrame webSocketFrame) {
-                    if (webSocketFrame.type() != WebSocketFrameType.PING &&
-                        webSocketFrame.type() != WebSocketFrameType.PONG) {
+                    if (webSocketFrame.type() == WebSocketFrameType.PING) {
+                        writer.writePong(webSocketFrame.array());
+                    } else if (webSocketFrame.type() != WebSocketFrameType.PONG) {
                         writer.write(webSocketFrame);
                     }
                 }

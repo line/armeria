@@ -82,6 +82,11 @@ service HttpJsonTranscodingTestService {
   rpc EchoWrappers(EchoWrappersRequest) returns (EchoWrappersResponse) {
     option (google.api.http) = {
       get: "/v1/echo/wrappers"
+
+      additional_bindings {
+        post: "/v1/echo/wrappers"
+        body: "value"
+      }
     };
   }
 

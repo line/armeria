@@ -24,7 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 
 /**
@@ -65,11 +68,19 @@ public final class CorsServiceBuilder {
 
     /**
      * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing {@code origins}.
-     *
      */
     CorsServiceBuilder(List<String> origins) {
         anyOriginSupported = false;
         firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, origins);
+    }
+
+    /**
+     * Creates a new instance for a {@link CorsService} with a {@link CorsPolicy} allowing origins matched by
+     * {@code originPredicate}.
+     */
+    CorsServiceBuilder(Predicate<? super String> originPredicate) {
+        anyOriginSupported = false;
+        firstPolicyBuilder = new ChainedCorsPolicyBuilder(this, originPredicate);
     }
 
     /**
@@ -154,7 +165,7 @@ public final class CorsServiceBuilder {
      *
      * <p>CORS headers are set after a request is processed. This may not always be desired
      * and this setting will check that the Origin is valid and if it is not valid no
-     * further processing will take place, and a error will be returned to the calling client.
+     * further processing will take place, and an error will be returned to the calling client.
      *
      * @return {@link CorsServiceBuilder} to support method chaining.
      * @throws IllegalStateException if {@link #anyOriginSupported} is {@code true}.
@@ -445,7 +456,37 @@ public final class CorsServiceBuilder {
      * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
      */
     public ChainedCorsPolicyBuilder andForOrigin(String origin) {
+        requireNonNull(origin, "origin");
         return andForOrigins(ImmutableList.of(origin));
+    }
+
+    /**
+     * Creates a new builder instance for a new {@link CorsPolicy}.
+     * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
+     */
+    @UnstableApi
+    public ChainedCorsPolicyBuilder andForOrigin(Predicate<String> originPredicate) {
+        requireNonNull(originPredicate, "originPredicate");
+        return new ChainedCorsPolicyBuilder(this, originPredicate);
+    }
+
+    /**
+     * Creates a new builder instance for a new {@link CorsPolicy}.
+     * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
+     */
+    @UnstableApi
+    public ChainedCorsPolicyBuilder andForOriginRegex(String regex) {
+        requireNonNull(regex, "regex");
+        return andForOriginRegex(Pattern.compile(regex));
+    }
+
+    /**
+     * Creates a new builder instance for a new {@link CorsPolicy}.
+     * @return {@link ChainedCorsPolicyBuilder} to support method chaining.
+     */
+    @UnstableApi
+    public ChainedCorsPolicyBuilder andForOriginRegex(Pattern regex) {
+        return andForOrigin(requireNonNull(regex, "regex").asPredicate());
     }
 
     @Override

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
@@ -203,6 +204,21 @@ public final class VirtualHost {
         }
 
         return Ascii.toLowerCase(hostnamePattern);
+    }
+
+    static void validateHostnamePattern(String hostnamePattern) {
+        final boolean validHostnamePattern;
+        if (hostnamePattern.charAt(0) == '*') {
+            validHostnamePattern =
+                    hostnamePattern.length() >= 3 &&
+                    hostnamePattern.charAt(1) == '.' &&
+                    HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern.substring(2)).matches();
+        } else {
+            validHostnamePattern = HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern).matches();
+        }
+
+        checkArgument(validHostnamePattern,
+                      "hostnamePattern: %s (expected: *.<hostname> or <hostname>)", hostnamePattern);
     }
 
     /**

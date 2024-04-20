@@ -77,11 +77,11 @@ final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXd
         } else if (cluster.hasEdsClusterConfig()) {
             final EdsClusterConfig edsClusterConfig = cluster.getEdsClusterConfig();
             final String serviceName = edsClusterConfig.getServiceName();
-            final ConfigSource configSource = edsClusterConfig.getEdsConfig();
+            final String clusterName = !isNullOrEmpty(serviceName) ? serviceName : cluster.getName();
+            final ConfigSource configSource = configSourceMapper()
+                    .edsConfigSource(cluster.getEdsClusterConfig().getEdsConfig(), clusterName);
             final EndpointResourceNode node =
-                    new EndpointResourceNode(configSource, !isNullOrEmpty(serviceName) ? serviceName
-                                                                                       : cluster.getName(),
-                                             xdsBootstrap(), resource,
+                    new EndpointResourceNode(configSource, clusterName, xdsBootstrap(), resource,
                                              snapshotWatcher, ResourceNodeType.DYNAMIC);
             children().add(node);
             xdsBootstrap().subscribe(node);
