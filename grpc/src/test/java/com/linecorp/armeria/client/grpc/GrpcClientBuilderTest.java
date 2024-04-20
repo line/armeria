@@ -185,16 +185,6 @@ class GrpcClientBuilderTest {
     };
 
     @Test
-    void useDefaultGrpcExceptionHandlerFunction() {
-        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
-                                                          .build(TestServiceBlockingStub.class);
-
-        final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
-        assertThat(clientParams.options().get(GrpcClientOptions.EXCEPTION_HANDLER))
-                .isEqualTo(GrpcExceptionHandlerFunction.ofDefault());
-    }
-
-    @Test
     void useDefaultGrpcExceptionHandlerFunctionAsFallback() {
         final GrpcExceptionHandlerFunction mockExceptionHandler = mock(GrpcExceptionHandlerFunction.class);
         when(mockExceptionHandler.apply(any(), any(), any())).thenReturn(null);

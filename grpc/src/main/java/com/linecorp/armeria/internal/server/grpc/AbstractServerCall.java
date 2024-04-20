@@ -220,6 +220,10 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     @Override
     public final void close(Status status, Metadata metadata) {
+        if (status.getCause() == null) {
+            close(new ServerStatusAndMetadata(status, metadata, false));
+            return;
+        }
         Status newStatus = exceptionHandler.apply(ctx, status.getCause(), metadata);
         if (status.getDescription() != null) {
             newStatus = newStatus.withDescription(status.getDescription());
