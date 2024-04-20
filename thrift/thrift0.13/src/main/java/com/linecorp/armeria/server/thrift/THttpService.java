@@ -85,6 +85,7 @@ import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.VirtualHost;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeKey;
@@ -290,6 +291,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
     private Map<ThriftFunction, HttpService> decoratedTHttpServices;
 
+    @Nullable
+    private VirtualHost defaultVirtualHost;
+
     THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> supportedSerializationFormats,
                  int maxRequestStringLength, int maxRequestContainerLength,
@@ -346,6 +350,13 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
+        final VirtualHost defaultVirtualHost = cfg.server().config().defaultVirtualHost();
+        if (this.defaultVirtualHost == defaultVirtualHost) {
+            // Avoid infinite loop. The delegate of annotated decorators is this.
+            return;
+        }
+        this.defaultVirtualHost = defaultVirtualHost;
+
         if (maxRequestStringLength == -1) {
             maxRequestStringLength = Ints.saturatedCast(cfg.maxRequestLength());
         }
@@ -372,7 +383,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                         final DecoratorAndOrder d = decorators.get(i);
                         decorator = decorator.andThen(d.decorator(dependencyInjector));
                     }
-                    decoratedTHttpServices.put(thriftFunction, decorator.apply(this));
+                    final HttpService decorated = decorator.apply(this);
+                    decorated.serviceAdded(cfg);
+                    decoratedTHttpServices.put(thriftFunction, decorated);
                 }
             }
         }
@@ -411,6 +424,10 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
            .handle((aReq, cause) -> {
                if (cause != null) {
+                   cause = Exceptions.peel(cause);
+                   if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+                       return HttpResponse.ofFailure(cause);
+                   }
                    final HttpResponse errorRes;
                    if (ctx.config().verboseResponses()) {
                        errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,

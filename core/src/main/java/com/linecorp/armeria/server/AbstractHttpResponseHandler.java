@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
@@ -234,7 +235,11 @@ abstract class AbstractHttpResponseHandler {
     final void maybeWriteAccessLog() {
         final ServiceConfig config = reqCtx.config();
         if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
-            reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
+            reqCtx.log().whenComplete().thenAccept(log -> {
+                try (SafeCloseable ignored = reqCtx.push()) {
+                    config.accessLogWriter().log(log);
+                }
+            });
         }
     }
 
@@ -269,6 +274,7 @@ abstract class AbstractHttpResponseHandler {
                     // A stream or connection was already closed by a client
                     fail(cause);
                 } else {
+                    req.setShouldResetOnlyIfRemoteIsOpen(true);
                     req.abortResponse(cause, false);
                 }
             }

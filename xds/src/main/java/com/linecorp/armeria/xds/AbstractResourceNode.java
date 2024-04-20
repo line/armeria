@@ -125,4 +125,8 @@ abstract class AbstractResourceNode<T extends XdsResource> implements ResourceNo
     public String name() {
         return resourceName;
     }
+
+    ConfigSourceMapper configSourceMapper() {
+        return xdsBootstrap.configSourceMapper().withParentConfigSource(configSource);
+    }
 }
