@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.linecorp.armeria</groupId>
-  <artifactId>example-grpc</artifactId>
+  <artifactId>example-grpc-scala</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <properties>
     <maven.compiler.source>17</maven.compiler.source>
@@ -11,22 +11,19 @@
   </properties>
   <dependencies>
     <dependency>
-      <groupId>javax.annotation</groupId>
-      <artifactId>javax.annotation-api</artifactId>
-      <version>1.3.2</version>
-      <scope>test</scope>
+      <groupId>com.linecorp.armeria</groupId>
+      <artifactId>armeria-scalapb_2.13</artifactId>
+      <version>1.27.2</version>
     </dependency>
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java-util</artifactId>
-      <version>3.25.1</version>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>com.google.errorprone</groupId>
-          <artifactId>error_prone_annotations</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>com.thesamet.scalapb</groupId>
+      <artifactId>scalapb-runtime_2.13</artifactId>
+      <version>0.11.15</version>
+    </dependency>
+    <dependency>
+      <groupId>io.monix</groupId>
+      <artifactId>monix-reactive_2.13</artifactId>
+      <version>3.4.1</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -46,15 +43,14 @@
       <version>1.27.2</version>
     </dependency>
     <dependency>
-      <groupId>com.linecorp.armeria</groupId>
-      <artifactId>armeria-core</artifactId>
-      <version>1.27.2</version>
+      <groupId>com.thesamet.scalapb</groupId>
+      <artifactId>scalapb-runtime-grpc_2.13</artifactId>
+      <version>0.11.15</version>
     </dependency>
     <dependency>
       <groupId>com.linecorp.armeria</groupId>
-      <artifactId>armeria-junit5</artifactId>
+      <artifactId>armeria-core</artifactId>
       <version>1.27.2</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.assertj</groupId>
@@ -63,21 +59,15 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>com.thesamet.scalapb</groupId>
+      <artifactId>scalapb-json4s_2.13</artifactId>
+      <version>0.12.1</version>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <version>5.10.1</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>net.javacrumbs.json-unit</groupId>
-      <artifactId>json-unit-fluent</artifactId>
-      <version>2.38.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.projectreactor</groupId>
-      <artifactId>reactor-core</artifactId>
-      <version>3.6.2</version>
     </dependency>
   </dependencies>
 </project>

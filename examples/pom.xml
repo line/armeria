@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
   <groupId>com.linecorp.armeria</groupId>
   <artifactId>examples</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-
   <modules>
     <module>spring-boot-webflux</module>
     <module>context-propagation/dagger</module>
@@ -40,7 +37,6 @@
     <module>spring-boot-minimal-kotlin</module>
     <module>graphql-kotlin</module>
   </modules>
-
   <properties>
     <maven.compiler.target>17</maven.compiler.target>
     <maven.compiler.source>17</maven.compiler.source>
@@ -63,12 +59,9 @@
     <dep.awaitility.version>4.2.0</dep.awaitility.version>
     <dep.json-unit-fluent.version>2.38.0</dep.json-unit-fluent.version>
     <!-- todo add more -->
-
     <!-- plugin -->
     <plug.protobuf-maven-plugin.version>0.6.1</plug.protobuf-maven-plugin.version>
-
   </properties>
-
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -106,7 +99,6 @@
         <scope>import</scope>
         <type>pom</type>
       </dependency>
-
       <dependency>
         <groupId>com.google.code.findbugs</groupId>
         <artifactId>jsr305</artifactId>
@@ -153,12 +145,9 @@
         <version>${dep.json-unit-fluent.version}</version>
         <scope>test</scope>
       </dependency>
-
       <!-- todo add more -->
     </dependencies>
   </dependencyManagement>
-
-
   <dependencies>
     <!--- test dependency -->
     <dependency>
@@ -181,7 +170,6 @@
       <artifactId>junit-jupiter-params</artifactId>
       <scope>test</scope>
     </dependency>
-
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-commons</artifactId>
@@ -210,31 +198,31 @@
   <build>
     <pluginManagement>
       <plugins>
-      <plugin>
-        <groupId>org.xolstice.maven.plugins</groupId>
-        <artifactId>protobuf-maven-plugin</artifactId>
-        <version>${plug.protobuf-maven-plugin.version}</version>
-        <configuration>
-          <protocArtifact>com.google.protobuf:protoc:${dep.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
-          <pluginId>grpc-java</pluginId>
-          <pluginArtifact>io.grpc:protoc-gen-grpc-java:${dep.grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
-        </configuration>
-        <executions>
-          <execution>
-            <id>gen-grpc</id>
-            <goals>
-              <goal>compile</goal>
-              <goal>compile-custom</goal>
-            </goals>
-            <phase>generate-resources</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0-M7</version>
-      </plugin>
+        <plugin>
+          <groupId>org.xolstice.maven.plugins</groupId>
+          <artifactId>protobuf-maven-plugin</artifactId>
+          <version>${plug.protobuf-maven-plugin.version}</version>
+          <configuration>
+            <protocArtifact>com.google.protobuf:protoc:${dep.protobuf.version}:exe:${os.detected.classifier}</protocArtifact>
+            <pluginId>grpc-java</pluginId>
+            <pluginArtifact>io.grpc:protoc-gen-grpc-java:${dep.grpc.version}:exe:${os.detected.classifier}</pluginArtifact>
+          </configuration>
+          <executions>
+            <execution>
+              <id>gen-grpc</id>
+              <goals>
+                <goal>compile</goal>
+                <goal>compile-custom</goal>
+              </goals>
+              <phase>generate-resources</phase>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>3.0.0-M7</version>
+        </plugin>
       </plugins>
     </pluginManagement>
     <extensions>
@@ -245,5 +233,4 @@
       </extension>
     </extensions>
   </build>
-
 </project>
