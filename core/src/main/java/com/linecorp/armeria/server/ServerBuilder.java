@@ -105,6 +105,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.server.management.AppInfo;
+import com.linecorp.armeria.server.management.ManagementService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelHandler;
@@ -458,6 +459,15 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         return this;
     }
 
+    /**
+     * Adds the specified {@link AppInfo} that represents information about a deployed application via
+     * {@link ManagementService}.
+     * <pre>{@code
+     * ServerBuilder sb = Server.builder();
+     * sb.setAppInfo(new AppInfo("1.0.0", "name", "description"));
+     * }
+     * </pre>
+     */
     public ServerBuilder setAppInfo(AppInfo appInfo) {
         requireNonNull(appInfo, "appInfo");
         this.appInfo = appInfo;

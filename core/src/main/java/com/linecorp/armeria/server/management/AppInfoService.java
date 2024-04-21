@@ -26,16 +26,18 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+/**
+ * An {@link HttpService} that provides additional information about configured server.
+ * This functionality is can be used by binding {@link ManagementService}
+ * It provides information about not only deployed application information, which can be specified by user,
+ * but also one about Armeria artifact itself.
+ */
 public enum AppInfoService implements HttpService {
 
     INSTANCE;
 
     @Nullable
     private AppInfo appInfo;
-
-    public static AppInfoService of() {
-        return INSTANCE;
-    }
 
     void setAppInfo(@Nullable AppInfo appInfo) {
         this.appInfo = appInfo;

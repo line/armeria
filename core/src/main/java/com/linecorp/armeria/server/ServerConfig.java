@@ -342,6 +342,9 @@ public interface ServerConfig {
      */
     long unhandledExceptionsReportIntervalMillis();
 
+    /**
+     * Returns the {@link AppInfo} that represents application information.
+     */
     @Nullable
     AppInfo appInfo();
 }

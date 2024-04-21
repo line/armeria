@@ -16,11 +16,24 @@
 
 package com.linecorp.armeria.server.management;
 
-public class AppInfo {
-    String version;
-    String name;
-    String description;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.ServerBuilder;
 
+/**
+ * A class that represents application information, which can be configured through
+ * {@link ServerBuilder#setAppInfo(AppInfo)}.
+ */
+public class AppInfo {
+    @Nullable final String version;
+    @Nullable final String name;
+    @Nullable final String description;
+
+    /**
+     * Creates a new {@link AppInfo} that holds information about an application.
+     * @param version A version of an application e.g. "1.0.0"
+     * @param name A name of an application
+     * @param description A description of application
+     */
     public AppInfo(String version, String name, String description) {
         this.version = version;
         this.name = name;
