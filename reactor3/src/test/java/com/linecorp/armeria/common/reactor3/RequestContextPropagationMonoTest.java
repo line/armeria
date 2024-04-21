@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.reactor3;
 
+import static com.linecorp.armeria.common.reactor3.ContextAwareMonoTest.ctxExists;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -88,6 +89,7 @@ class RequestContextPropagationMonoTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -110,6 +112,7 @@ class RequestContextPropagationMonoTest {
             StepVerifier.create(mono)
                         .verifyErrorMatches(t -> t instanceof AnticipatedException);
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -134,6 +137,7 @@ class RequestContextPropagationMonoTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -158,6 +162,7 @@ class RequestContextPropagationMonoTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -184,6 +189,7 @@ class RequestContextPropagationMonoTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -206,6 +212,7 @@ class RequestContextPropagationMonoTest {
             StepVerifier.create(mono)
                         .verifyErrorMatches(t -> t instanceof AnticipatedException);
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -232,6 +239,7 @@ class RequestContextPropagationMonoTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -256,6 +264,7 @@ class RequestContextPropagationMonoTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -282,6 +291,7 @@ class RequestContextPropagationMonoTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -311,6 +321,7 @@ class RequestContextPropagationMonoTest {
                         .expectNextMatches(t -> "foo".equals(t.getT1()) && "bar".equals(t.getT2()))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @Test
@@ -326,6 +337,7 @@ class RequestContextPropagationMonoTest {
         StepVerifier.create(mono1)
                     .expectNextMatches(s -> "baz".equals(s))
                     .verifyComplete();
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @Test

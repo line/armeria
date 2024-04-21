@@ -91,6 +91,7 @@ class RequestContextPropagationFluxTest {
             StepVerifier.create(flux)
                         .verifyErrorMatches(t -> t instanceof AnticipatedException);
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -118,6 +119,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -144,6 +146,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -167,6 +170,7 @@ class RequestContextPropagationFluxTest {
             StepVerifier.create(flux)
                         .verifyErrorMatches(t -> t instanceof AnticipatedException);
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -197,6 +201,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "bar".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -222,6 +227,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -247,6 +253,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -272,6 +279,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -298,6 +306,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -332,6 +341,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "bar".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -358,6 +368,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -390,6 +401,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -415,6 +427,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -442,6 +455,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -502,6 +516,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -530,6 +545,7 @@ class RequestContextPropagationFluxTest {
                         .expectNextMatches(s -> "foo".equals(s))
                         .verifyComplete();
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
@@ -563,6 +579,7 @@ class RequestContextPropagationFluxTest {
                 assertThat(disposable2.isDisposed()).isTrue();
             });
         }
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @Test
@@ -579,6 +596,7 @@ class RequestContextPropagationFluxTest {
         StepVerifier.create(flux1)
                     .expectNextMatches(s -> "baz".equals(s))
                     .verifyComplete();
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @Test
@@ -611,6 +629,7 @@ class RequestContextPropagationFluxTest {
         StepVerifier.create(toVerifyFlux)
                     .expectNext("Dummy")
                     .verifyComplete();
+        assertThat(ctxExists(ctx)).isFalse();
     }
 
     @Test
@@ -634,6 +653,7 @@ class RequestContextPropagationFluxTest {
                     .expectError(RuntimeException.class)
                     .verify();
 
+        assertThat(ctxExists(ctx)).isFalse();
         assertThat(ctxExists(ctx)).isFalse();
     }
 
