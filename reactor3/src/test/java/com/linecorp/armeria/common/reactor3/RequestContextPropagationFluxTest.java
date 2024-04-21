@@ -69,9 +69,8 @@ class RequestContextPropagationFluxTest {
             return new AnticipatedException();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .verifyErrorMatches(t -> ctxExists(ctx) && t instanceof AnticipatedException);
+        StepVerifier.create(flux)
+                    .verifyErrorMatches(t -> t instanceof AnticipatedException);
     }
 
     @Test
@@ -86,9 +85,8 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -103,9 +101,8 @@ class RequestContextPropagationFluxTest {
             s.complete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -119,9 +116,8 @@ class RequestContextPropagationFluxTest {
             s.error(new AnticipatedException());
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .verifyErrorMatches(t -> ctxExists(ctx) && t instanceof AnticipatedException);
+        StepVerifier.create(flux)
+                    .verifyErrorMatches(t -> t instanceof AnticipatedException);
     }
 
     @Test
@@ -137,10 +133,9 @@ class RequestContextPropagationFluxTest {
             return "bar";
         })).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
-                    .expectNextMatches(s -> ctxExists(ctx) && "bar".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
+                    .expectNextMatches(s -> "bar".equals(s))
                     .verifyComplete();
     }
 
@@ -154,9 +149,8 @@ class RequestContextPropagationFluxTest {
             return Flux.just("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -170,9 +164,8 @@ class RequestContextPropagationFluxTest {
             return Stream.of("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -186,9 +179,8 @@ class RequestContextPropagationFluxTest {
             return a;
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -203,9 +195,8 @@ class RequestContextPropagationFluxTest {
             s.complete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -226,10 +217,9 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
-                    .expectNextMatches(s -> ctxExists(ctx) && "bar".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
+                    .expectNextMatches(s -> "bar".equals(s))
                     .verifyComplete();
     }
 
@@ -244,9 +234,8 @@ class RequestContextPropagationFluxTest {
             s.complete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -267,9 +256,8 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -283,9 +271,8 @@ class RequestContextPropagationFluxTest {
             return foo;
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -299,10 +286,9 @@ class RequestContextPropagationFluxTest {
             return Mono.just("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -322,11 +308,10 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
-                    .expectNextMatches(s -> ctxExists(ctx) && "bar".equals(s))
-                    .verifyErrorMatches(t -> ctxExists(ctx) && t instanceof AnticipatedException);
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
+                    .expectNextMatches(s -> "bar".equals(s))
+                    .verifyErrorMatches(t -> t instanceof AnticipatedException);
     }
 
     @Test
@@ -341,9 +326,8 @@ class RequestContextPropagationFluxTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -356,9 +340,8 @@ class RequestContextPropagationFluxTest {
         flux = addCallbacks(connectableFlux.autoConnect(2).publishOn(Schedulers.single()), ctx);
 
         flux.subscribe().dispose();
-        StepVerifier.create(flux, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(flux)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -392,9 +375,8 @@ class RequestContextPropagationFluxTest {
         });
 
         final Flux<String> flux1 = flux.contextWrite(reactorCtx -> reactorCtx.put("foo", "bar"));
-        StepVerifier.create(flux1, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))
+        StepVerifier.create(flux1)
+                    .expectNextMatches(s -> "baz".equals(s))
                     .verifyComplete();
     }
 

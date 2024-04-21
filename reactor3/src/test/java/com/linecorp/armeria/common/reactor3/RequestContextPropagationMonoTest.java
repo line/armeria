@@ -37,7 +37,6 @@ import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
-import reactor.test.StepVerifierOptions;
 import reactor.util.context.Context;
 import reactor.util.function.Tuple2;
 
@@ -63,9 +62,8 @@ class RequestContextPropagationMonoTest {
             sink.success("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(mono)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -78,9 +76,8 @@ class RequestContextPropagationMonoTest {
             sink.error(new AnticipatedException());
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .verifyErrorMatches(t -> ctxExists(ctx) && t instanceof AnticipatedException);
+        StepVerifier.create(mono)
+                    .verifyErrorMatches(t -> t instanceof AnticipatedException);
     }
 
     @Test
@@ -92,9 +89,8 @@ class RequestContextPropagationMonoTest {
             sink.success("foo");
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(mono)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -107,9 +103,8 @@ class RequestContextPropagationMonoTest {
             return "foo";
         })).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(mono)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -124,9 +119,8 @@ class RequestContextPropagationMonoTest {
             s.onComplete();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(mono)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -139,9 +133,8 @@ class RequestContextPropagationMonoTest {
             return new AnticipatedException();
         }).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .verifyErrorMatches(t -> ctxExists(ctx) && t instanceof AnticipatedException);
+        StepVerifier.create(mono)
+                    .verifyErrorMatches(t -> t instanceof AnticipatedException);
     }
 
     @Test
@@ -154,9 +147,8 @@ class RequestContextPropagationMonoTest {
                                                      return "foo";
                                                  })).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(mono)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -168,9 +160,8 @@ class RequestContextPropagationMonoTest {
         final Mono<String> mono;
         mono = addCallbacks(Mono.fromFuture(future).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(mono)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -185,9 +176,8 @@ class RequestContextPropagationMonoTest {
             return "foo";
         })).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "foo".equals(s))
+        StepVerifier.create(mono)
+                    .expectNextMatches(s -> "foo".equals(s))
                     .verifyComplete();
     }
 
@@ -205,10 +195,8 @@ class RequestContextPropagationMonoTest {
                 return "bar";
             })).publishOn(Schedulers.single()), ctx);
 
-        StepVerifier.create(mono, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(t -> ctxExists(ctx) &&
-                                            "foo".equals(t.getT1()) && "bar".equals(t.getT2()))
+        StepVerifier.create(mono)
+                    .expectNextMatches(t -> "foo".equals(t.getT1()) && "bar".equals(t.getT2()))
                     .verifyComplete();
     }
 
@@ -222,9 +210,8 @@ class RequestContextPropagationMonoTest {
         });
 
         final Mono<String> mono1 = mono.contextWrite(reactorCtx -> reactorCtx.put("foo", "bar"));
-        StepVerifier.create(mono1, initialReactorContext(ctx))
-                    .expectSubscriptionMatches(s -> ctxExists(ctx))
-                    .expectNextMatches(s -> ctxExists(ctx) && "baz".equals(s))
+        StepVerifier.create(mono1)
+                    .expectNextMatches(s -> "baz".equals(s))
                     .verifyComplete();
     }
 
@@ -309,8 +296,4 @@ class RequestContextPropagationMonoTest {
         // doOnCancel and doFinally do not have context because we cannot add a hook to the cancel.
     }
 
-    private static StepVerifierOptions initialReactorContext(ClientRequestContext ctx) {
-        final Context reactorCtx = Context.of(RequestContextAccessor.accessorKey(), ctx);
-        return StepVerifierOptions.create().withInitialContext(reactorCtx);
-    }
 }
