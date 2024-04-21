@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.RequestContextAccessor;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
@@ -45,12 +46,12 @@ class RequestContextPropagationMonoTest {
 
     @BeforeAll
     static void setUp() {
-        RequestContextPropagationHook.enable();
+        Hooks.enableAutomaticContextPropagation();
     }
 
     @AfterAll
     static void tearDown() {
-        RequestContextPropagationHook.disable();
+        Hooks.disableAutomaticContextPropagation();
     }
 
     @Test

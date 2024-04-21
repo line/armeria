@@ -37,6 +37,7 @@ import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import reactor.core.Disposable;
 import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
@@ -48,12 +49,12 @@ class RequestContextPropagationFluxTest {
 
     @BeforeAll
     static void setUp() {
-        RequestContextPropagationHook.enable();
+        Hooks.enableAutomaticContextPropagation();
     }
 
     @AfterAll
     static void tearDown() {
-        RequestContextPropagationHook.disable();
+        Hooks.disableAutomaticContextPropagation();
     }
 
     @Test
