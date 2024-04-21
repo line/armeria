@@ -19,10 +19,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -30,6 +34,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextAccessor;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 
@@ -43,6 +48,14 @@ import reactor.util.function.Tuple2;
 @GenerateNativeImageTrace
 class RequestContextPropagationMonoTest {
 
+    static Stream<Arguments> provideContextWriteAndCaptureTestCase() {
+        return Stream.of(
+                // shouldContextWrite, shouldContextCapture.
+                Arguments.of(true, false),
+                Arguments.of(false, true)
+        );
+    }
+
     @BeforeAll
     static void setUp() {
         Hooks.enableAutomaticContextPropagation();
@@ -53,63 +66,104 @@ class RequestContextPropagationMonoTest {
         Hooks.disableAutomaticContextPropagation();
     }
 
-    @Test
-    void monoCreate_success() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoCreate_success(boolean shouldContextWrite,
+                            boolean shouldContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
         mono = addCallbacks(Mono.create(sink -> {
             assertThat(ctxExists(ctx)).isTrue();
             sink.success("foo");
-        }).publishOn(Schedulers.single()), ctx);
+        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .expectNextMatches(s -> "foo".equals(s))
-                    .verifyComplete();
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .expectNextMatches(s -> "foo".equals(s))
+                            .verifyComplete();
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .expectNextMatches(s -> "foo".equals(s))
+                        .verifyComplete();
+        }
     }
 
-    @Test
-    void monoCreate_error() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoCreate_error(boolean shouldContextWrite,
+                          boolean shouldContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
         mono = addCallbacks(Mono.create(sink -> {
             assertThat(ctxExists(ctx)).isTrue();
             sink.error(new AnticipatedException());
-        }).publishOn(Schedulers.single()), ctx);
+        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .verifyErrorMatches(t -> t instanceof AnticipatedException);
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .verifyErrorMatches(t -> t instanceof AnticipatedException);
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .verifyErrorMatches(t -> t instanceof AnticipatedException);
+        }
     }
 
-    @Test
-    void monoCreate_currentContext() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoCreate_currentContext(boolean shouldContextWrite,
+                                   boolean shouldContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
         mono = addCallbacks(Mono.create(sink -> {
             assertThat(ctxExists(ctx)).isTrue();
             sink.success("foo");
-        }).publishOn(Schedulers.single()), ctx);
+        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .expectNextMatches(s -> "foo".equals(s))
-                    .verifyComplete();
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .expectNextMatches(s -> "foo".equals(s))
+                            .verifyComplete();
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .expectNextMatches(s -> "foo".equals(s))
+                        .verifyComplete();
+        }
     }
 
-    @Test
-    void monoDefer() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoDefer(boolean shouldContextWrite,
+                   boolean shouldContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
         mono = addCallbacks(Mono.defer(() -> Mono.fromSupplier(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return "foo";
-        })).publishOn(Schedulers.single()), ctx);
+        })).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .expectNextMatches(s -> "foo".equals(s))
-                    .verifyComplete();
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .expectNextMatches(s -> "foo".equals(s))
+                            .verifyComplete();
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .expectNextMatches(s -> "foo".equals(s))
+                        .verifyComplete();
+        }
     }
 
-    @Test
-    void monoFromPublisher() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoFromPublisher(boolean shouldContextWrite,
+                           boolean shouldContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
         mono = addCallbacks(Mono.from(s -> {
@@ -117,56 +171,97 @@ class RequestContextPropagationMonoTest {
             s.onSubscribe(noopSubscription());
             s.onNext("foo");
             s.onComplete();
-        }).publishOn(Schedulers.single()), ctx);
+        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .expectNextMatches(s -> "foo".equals(s))
-                    .verifyComplete();
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .expectNextMatches(s -> "foo".equals(s))
+                            .verifyComplete();
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .expectNextMatches(s -> "foo".equals(s))
+                        .verifyComplete();
+        }
     }
 
-    @Test
-    void monoError() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoError(boolean shouldContextWrite,
+                   boolean shouldContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Mono<Object> mono;
         mono = addCallbacks(Mono.error(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return new AnticipatedException();
-        }).publishOn(Schedulers.single()), ctx);
+        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .verifyErrorMatches(t -> t instanceof AnticipatedException);
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .verifyErrorMatches(t -> t instanceof AnticipatedException);
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .verifyErrorMatches(t -> t instanceof AnticipatedException);
+        }
     }
 
-    @Test
-    void monoFirst() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoFirst(boolean shouldContextWrite,
+                   boolean shouldContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
         mono = addCallbacks(Mono.firstWithSignal(Mono.delay(Duration.ofMillis(1000)).then(Mono.just("bar")),
                                                  Mono.fromCallable(() -> {
                                                      assertThat(ctxExists(ctx)).isTrue();
                                                      return "foo";
-                                                 })).publishOn(Schedulers.single()), ctx);
+                                                 }))
+                                .publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .expectNextMatches(s -> "foo".equals(s))
-                    .verifyComplete();
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .expectNextMatches(s -> "foo".equals(s))
+                            .verifyComplete();
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .expectNextMatches(s -> "foo".equals(s))
+                        .verifyComplete();
+        }
     }
 
-    @Test
-    void monoFromFuture() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoFromFuture(boolean shouldContextWrite,
+                        boolean shouldContextCapture) {
         final CompletableFuture<String> future = new CompletableFuture<>();
         future.complete("foo");
         final ClientRequestContext ctx = newContext();
         final Mono<String> mono;
-        mono = addCallbacks(Mono.fromFuture(future).publishOn(Schedulers.single()), ctx);
+        mono = addCallbacks(Mono.fromFuture(future)
+                                .publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .expectNextMatches(s -> "foo".equals(s))
-                    .verifyComplete();
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .expectNextMatches(s -> "foo".equals(s))
+                            .verifyComplete();
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .expectNextMatches(s -> "foo".equals(s))
+                        .verifyComplete();
+        }
     }
 
-    @Test
-    void monoDelay() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoDelay(boolean shouldContextWrite,
+                   boolean shouldContextCapture) {
         final CompletableFuture<String> future = new CompletableFuture<>();
         future.complete("foo");
         final ClientRequestContext ctx = newContext();
@@ -174,15 +269,25 @@ class RequestContextPropagationMonoTest {
         mono = addCallbacks(Mono.delay(Duration.ofMillis(100)).then(Mono.fromCallable(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return "foo";
-        })).publishOn(Schedulers.single()), ctx);
+        })).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .expectNextMatches(s -> "foo".equals(s))
-                    .verifyComplete();
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .expectNextMatches(s -> "foo".equals(s))
+                            .verifyComplete();
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .expectNextMatches(s -> "foo".equals(s))
+                        .verifyComplete();
+        }
     }
 
-    @Test
-    void monoZip() {
+    @ParameterizedTest
+    @MethodSource("provideContextWriteAndCaptureTestCase")
+    void monoZip(boolean shouldContextWrite,
+                 boolean shouldContextCapture) {
         final CompletableFuture<String> future = new CompletableFuture<>();
         future.complete("foo");
         final ClientRequestContext ctx = newContext();
@@ -193,11 +298,19 @@ class RequestContextPropagationMonoTest {
             }), Mono.fromSupplier(() -> {
                 assertThat(ctxExists(ctx)).isTrue();
                 return "bar";
-            })).publishOn(Schedulers.single()), ctx);
+            })).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
 
-        StepVerifier.create(mono)
-                    .expectNextMatches(t -> "foo".equals(t.getT1()) && "bar".equals(t.getT2()))
-                    .verifyComplete();
+        if (shouldContextCapture) {
+            try (SafeCloseable ignored = ctx.push()) {
+                StepVerifier.create(mono)
+                            .expectNextMatches(t -> "foo".equals(t.getT1()) && "bar".equals(t.getT2()))
+                            .verifyComplete();
+            }
+        } else {
+            StepVerifier.create(mono)
+                        .expectNextMatches(t -> "foo".equals(t.getT1()) && "bar".equals(t.getT2()))
+                        .verifyComplete();
+        }
     }
 
     @Test
@@ -283,17 +396,27 @@ class RequestContextPropagationMonoTest {
                                    .build();
     }
 
-    private static <T> Mono<T> addCallbacks(Mono<T> mono, ClientRequestContext ctx) {
-        return mono.doFirst(() -> assertThat(ctxExists(ctx)).isTrue())
-                   .doOnSubscribe(s -> assertThat(ctxExists(ctx)).isTrue())
-                   .doOnRequest(l -> assertThat(ctxExists(ctx)).isTrue())
-                   .doOnNext(foo -> assertThat(ctxExists(ctx)).isTrue())
-                   .doOnSuccess(t -> assertThat(ctxExists(ctx)).isTrue())
-                   .doOnEach(s -> assertThat(ctxExists(ctx)).isTrue())
-                   .doOnError(t -> assertThat(ctxExists(ctx)).isTrue())
-                   .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue())
-                   .contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
+    private static <T> Mono<T> addCallbacks(Mono<T> mono0, ClientRequestContext ctx,
+                                            boolean shouldContextWrite,
+                                            boolean shouldContextCapture) {
         // doOnCancel and doFinally do not have context because we cannot add a hook to the cancel.
-    }
+        final Mono<T> mono = mono0.doFirst(() -> assertThat(ctxExists(ctx)).isTrue())
+                                  .doOnSubscribe(s -> assertThat(ctxExists(ctx)).isTrue())
+                                  .doOnRequest(l -> assertThat(ctxExists(ctx)).isTrue())
+                                  .doOnNext(foo -> assertThat(ctxExists(ctx)).isTrue())
+                                  .doOnSuccess(t -> assertThat(ctxExists(ctx)).isTrue())
+                                  .doOnEach(s -> assertThat(ctxExists(ctx)).isTrue())
+                                  .doOnError(t -> assertThat(ctxExists(ctx)).isTrue())
+                                  .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue());
 
+        if (shouldContextWrite) {
+            return mono.contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
+        }
+
+        if (shouldContextCapture) {
+            return mono.contextCapture();
+        }
+
+        return mono;
+    }
 }
