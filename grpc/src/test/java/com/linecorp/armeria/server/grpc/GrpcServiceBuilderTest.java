@@ -260,6 +260,13 @@ class GrpcServiceBuilderTest {
                 .hasMessageContaining("enableHttpJsonTranscoding");
     }
 
+    @Test
+    void setUseMethodMarshaller() {
+        assertDoesNotThrow(() -> GrpcService.builder()
+                                            .useMethodMarshaller(true)
+                                            .build());
+    }
+
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
 
     private static class ReconnectServiceImpl extends ReconnectServiceImplBase {}

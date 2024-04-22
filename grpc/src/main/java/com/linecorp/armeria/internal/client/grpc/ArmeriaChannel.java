@@ -99,6 +99,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private final DecompressorRegistry decompressorRegistry;
     private final CallCredentials credentials0;
     private final GrpcExceptionHandlerFunction exceptionHandler;
+    private final boolean useMethodMarshaller;
 
     ArmeriaChannel(ClientBuilderParams params,
                    HttpClient httpClient,
@@ -106,7 +107,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                    SessionProtocol sessionProtocol,
                    SerializationFormat serializationFormat,
                    @Nullable GrpcJsonMarshaller jsonMarshaller,
-                   Map<MethodDescriptor<?, ?>, String> simpleMethodNames) {
+                   Map<MethodDescriptor<?, ?>, String> simpleMethodNames,
+                   boolean useMethodMarshaller) {
         this.params = params;
         this.httpClient = httpClient;
         this.meterRegistry = meterRegistry;
@@ -114,6 +116,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         this.serializationFormat = serializationFormat;
         this.jsonMarshaller = jsonMarshaller;
         this.simpleMethodNames = simpleMethodNames;
+        this.useMethodMarshaller = useMethodMarshaller;
 
         final ClientOptions options = options();
         maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);
@@ -180,7 +183,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 serializationFormat,
                 jsonMarshaller,
                 unsafeWrapResponseBuffers,
-                exceptionHandler);
+                exceptionHandler,
+                useMethodMarshaller);
     }
 
     @Override

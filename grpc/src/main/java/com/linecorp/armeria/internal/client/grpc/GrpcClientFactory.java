@@ -162,10 +162,11 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         } else {
             jsonMarshaller = null;
         }
+        final boolean useMethodMarshaller = options.get(GrpcClientOptions.USE_METHOD_MARSHALLER);
 
         final ArmeriaChannel armeriaChannel =
                 new ArmeriaChannel(newParams, httpClient, meterRegistry(), scheme.sessionProtocol(),
-                                   serializationFormat, jsonMarshaller, simpleMethodNames);
+                                   serializationFormat, jsonMarshaller, simpleMethodNames, useMethodMarshaller);
         final Iterable<? extends ClientInterceptor> interceptors = options.get(GrpcClientOptions.INTERCEPTORS);
         final Channel channel;
         if (!Iterables.isEmpty(interceptors)) {

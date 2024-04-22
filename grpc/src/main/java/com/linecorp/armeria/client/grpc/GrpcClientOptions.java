@@ -45,6 +45,7 @@ import io.grpc.ClientInterceptor;
 import io.grpc.Codec;
 import io.grpc.Compressor;
 import io.grpc.DecompressorRegistry;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 
@@ -175,6 +176,13 @@ public final class GrpcClientOptions {
     public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
             ClientOption.define("EXCEPTION_HANDLER",
                                 (ctx, cause, metadata) -> GrpcStatus.fromThrowable(cause));
+
+    /**
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}
+     * If not set, will use the default(false), which use more efficient way that reduce copy operation.
+     */
+    public static final ClientOption<Boolean> USE_METHOD_MARSHALLER =
+            ClientOption.define("USE_METHOD_MARSHALLER", false);
 
     private GrpcClientOptions() {}
 }

@@ -147,6 +147,8 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
+    private boolean useMethodMarshaller;
+
     private boolean enableHealthCheckService;
 
     private boolean autoCompression;
@@ -825,6 +827,16 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}
+     * If not set, will use the default(false), which use more efficient way that reduce copy operation.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder useMethodMarshaller(boolean useMethodMarshaller) {
+        this.useMethodMarshaller = useMethodMarshaller;
+        return this;
+    }
+
+    /**
      * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
      * to a gRPC {@link Status}.
      *
@@ -1016,7 +1028,8 @@ public final class GrpcServiceBuilder {
                 useClientTimeoutHeader,
                 enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
                 grpcHealthCheckService,
-                autoCompression);
+                autoCompression,
+                useMethodMarshaller);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,

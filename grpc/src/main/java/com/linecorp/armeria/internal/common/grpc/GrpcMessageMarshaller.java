@@ -67,12 +67,14 @@ public final class GrpcMessageMarshaller<I, O> {
     private final MessageType responseType;
     private final boolean unsafeWrapDeserializedBuffer;
     private final boolean isProto;
+    private final boolean useMethodMarshaller;
 
     public GrpcMessageMarshaller(ByteBufAllocator alloc,
                                  SerializationFormat serializationFormat,
                                  MethodDescriptor<I, O> method,
                                  @Nullable GrpcJsonMarshaller jsonMarshaller,
-                                 boolean unsafeWrapDeserializedBuffer) {
+                                 boolean unsafeWrapDeserializedBuffer,
+                                 boolean useMethodMarshaller) {
         this.alloc = requireNonNull(alloc, "alloc");
         this.method = requireNonNull(method, "method");
         this.unsafeWrapDeserializedBuffer = unsafeWrapDeserializedBuffer;
@@ -84,6 +86,7 @@ public final class GrpcMessageMarshaller<I, O> {
         responseMarshaller = method.getResponseMarshaller();
         requestType = marshallerType(requestMarshaller);
         responseType = marshallerType(responseMarshaller);
+        this.useMethodMarshaller = useMethodMarshaller;
     }
 
     public ByteBuf serializeRequest(I message) throws IOException {
@@ -203,8 +206,17 @@ public final class GrpcMessageMarshaller<I, O> {
             final ByteBuf buf = alloc.buffer(serializedSize);
             boolean success = false;
             try {
-                message.writeTo(CodedOutputStream.newInstance(buf.nioBuffer(0, serializedSize)));
-                buf.writerIndex(serializedSize);
+                if (useMethodMarshaller) {
+                    final InputStream is = marshaller.stream((T) message);
+                    try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
+                        ByteStreams.copy(is, os);
+                    } finally {
+                        is.close();
+                    }
+                } else {
+                    message.writeTo(CodedOutputStream.newInstance(buf.nioBuffer(0, serializedSize)));
+                    buf.writerIndex(serializedSize);
+                }
                 success = true;
             } finally {
                 if (!success) {

@@ -27,6 +27,7 @@ import static com.linecorp.armeria.client.grpc.GrpcClientOptions.INTERCEPTORS;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.USE_METHOD_MARSHALLER;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -81,6 +82,7 @@ import io.grpc.ClientInterceptor;
 import io.grpc.Codec;
 import io.grpc.Compressor;
 import io.grpc.DecompressorRegistry;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 
@@ -285,6 +287,15 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @UnstableApi
     public GrpcClientBuilder enableUnsafeWrapResponseBuffers(boolean enableUnsafeWrapResponseBuffers) {
         return option(UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(enableUnsafeWrapResponseBuffers));
+    }
+
+    /**
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}
+     * If not set, will use the default(false), which use more efficient way that reduce copy operation.
+     */
+    @UnstableApi
+    public GrpcClientBuilder useMethodMarshaller(boolean useMethodMarshaller) {
+        return option(USE_METHOD_MARSHALLER.newValue(useMethodMarshaller));
     }
 
     /**

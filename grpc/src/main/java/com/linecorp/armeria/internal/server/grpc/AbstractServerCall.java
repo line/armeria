@@ -151,7 +151,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                  ResponseHeaders defaultHeaders,
                                  @Nullable GrpcExceptionHandlerFunction exceptionHandler,
                                  @Nullable Executor blockingExecutor,
-                                 boolean autoCompression) {
+                                 boolean autoCompression,
+                                 boolean useMethodMarshaller) {
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.simpleMethodName = requireNonNull(simpleMethodName, "simpleMethodName");
@@ -170,7 +171,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         clientAcceptEncoding = req.headers().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "");
         this.autoCompression = autoCompression;
         marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
-                                                 unsafeWrapRequestBuffers);
+                                                 unsafeWrapRequestBuffers, useMethodMarshaller);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.blockingExecutor = blockingExecutor;
         defaultResponseHeaders = defaultHeaders;
