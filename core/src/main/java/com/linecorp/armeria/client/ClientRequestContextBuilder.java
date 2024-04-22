@@ -211,5 +211,4 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
     public ClientRequestContextBuilder timedOut(boolean timedOut) {
         return (ClientRequestContextBuilder) super.timedOut(timedOut);
     }
-
 }

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.CancellationScheduler.noopCancellationTask;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -237,11 +238,12 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
             requestCancellationScheduler = CancellationScheduler.ofServer(0);
+            requestCancellationScheduler.initAndStart(eventLoop, noopCancellationTask);
         }
 
         // Build the context with the properties set by a user and the fake objects.
         final Channel ch = fakeChannel();
-        final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
+        return new DefaultServiceRequestContext(
                 serviceCfg, ch, eventLoop, meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, exchangeType, req, sslSession(), proxiedAddresses,
                 clientAddress, remoteAddress(), localAddress(),
@@ -249,8 +251,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
                 HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
-
-        return ctx;
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {
