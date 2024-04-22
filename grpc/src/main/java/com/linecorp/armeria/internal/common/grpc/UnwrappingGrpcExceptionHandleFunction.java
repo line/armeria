@@ -28,7 +28,7 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 
 public class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptionHandlerFunction {
-    private final GrpcExceptionHandlerFunction inner;
+    private final GrpcExceptionHandlerFunction delegate;
 
     public UnwrappingGrpcExceptionHandleFunction(GrpcExceptionHandlerFunction handlerFunction) {
         this.inner = handlerFunction;
