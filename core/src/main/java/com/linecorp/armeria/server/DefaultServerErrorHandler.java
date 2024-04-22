@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 
 /**
  * The default {@link ServerErrorHandler} that is used when a user didn't specify one.

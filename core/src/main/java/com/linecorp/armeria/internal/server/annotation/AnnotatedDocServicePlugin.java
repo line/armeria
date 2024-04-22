@@ -62,6 +62,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
@@ -144,7 +145,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         serviceConfigs.forEach(sc -> {
             final AnnotatedService service = sc.service().as(AnnotatedService.class);
             if (service != null) {
-                final Class<?> serviceClass = ClassUtil.getUserClass(service.object().getClass());
+                final Class<?> serviceClass = ClassUtil.getUserClass(service.serviceObject().getClass());
                 final String className = serviceClass.getName();
                 final String methodName = service.method().getName();
                 if (!filter.test(name(), className, methodName)) {
@@ -171,7 +172,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Method method = service.method();
         final int overloadId = service.overloadId();
         final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
-        final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers());
+        final List<FieldInfo> fieldInfos = fieldInfos(service.as(DefaultAnnotatedService.class)
+                                                             .annotatedValueResolvers());
         route.methods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(

@@ -24,6 +24,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 
 /**
  * Details of an annotated HTTP service method.
@@ -78,7 +79,8 @@ public final class AnnotatedServiceElement {
         HttpService decoratedService = decorator.apply(service);
         // Apply localDecorator passed in through method parameter
         decoratedService = decoratedService.decorate(localDecorator);
-        return service.withExceptionHandler(decoratedService);
+        return service.as(DefaultAnnotatedService.class)
+                      .withExceptionHandler(decoratedService);
     }
 
     @Override

@@ -291,8 +291,10 @@ public final class AnnotatedServiceFactory {
                                                queryDelimiter);
             return new AnnotatedServiceElement(
                     route,
-                    new AnnotatedService(object, method, overloadId, resolvers, eh, res, route, defaultStatus,
-                                         responseHeaders, responseTrailers, needToUseBlockingTaskExecutor),
+                    new DefaultAnnotatedService(object, method, overloadId,
+                                                resolvers, eh, res, route, defaultStatus,
+                                                responseHeaders, responseTrailers,
+                                                needToUseBlockingTaskExecutor),
                     decorator(method, clazz, dependencyInjector));
         }).collect(toImmutableList());
     }

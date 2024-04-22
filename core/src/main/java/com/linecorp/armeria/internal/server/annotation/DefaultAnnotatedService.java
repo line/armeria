@@ -63,6 +63,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
@@ -76,8 +77,8 @@ import com.linecorp.armeria.server.annotation.ServiceName;
  * This class is not supposed to be instantiated by a user. Please check out the documentation
  * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
-public final class AnnotatedService implements HttpService {
-    private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
+public final class DefaultAnnotatedService implements AnnotatedService {
+    private static final Logger logger = LoggerFactory.getLogger(DefaultAnnotatedService.class);
 
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
@@ -106,18 +107,19 @@ public final class AnnotatedService implements HttpService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
-    private final String serviceName;
+    @Nullable
+    private String serviceName;
     private final boolean serviceNameSetByAnnotation;
 
-    AnnotatedService(Object object, Method method,
-                     int overloadId, List<AnnotatedValueResolver> resolvers,
-                     List<ExceptionHandlerFunction> exceptionHandlers,
-                     List<ResponseConverterFunction> responseConverters,
-                     Route route,
-                     HttpStatus defaultStatus,
-                     HttpHeaders defaultHttpHeaders,
-                     HttpHeaders defaultHttpTrailers,
-                     boolean useBlockingTaskExecutor) {
+    DefaultAnnotatedService(Object object, Method method,
+                            int overloadId, List<AnnotatedValueResolver> resolvers,
+                            List<ExceptionHandlerFunction> exceptionHandlers,
+                            List<ResponseConverterFunction> responseConverters,
+                            Route route,
+                            HttpStatus defaultStatus,
+                            HttpHeaders defaultHttpHeaders,
+                            HttpHeaders defaultHttpTrailers,
+                            boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         checkArgument(overloadId >= 0, "overloadId: %s (expected: >= 0)", overloadId);
@@ -168,7 +170,6 @@ public final class AnnotatedService implements HttpService {
             this.serviceName = serviceName.value();
             serviceNameSetByAnnotation = true;
         } else {
-            this.serviceName = ClassUtil.getUserClass(object.getClass()).getName();
             serviceNameSetByAnnotation = false;
         }
 
@@ -221,6 +222,9 @@ public final class AnnotatedService implements HttpService {
     }
 
     public String serviceName() {
+        if (serviceName == null) {
+            return serviceClass().getName();
+        }
         return serviceName;
     }
 
@@ -228,19 +232,28 @@ public final class AnnotatedService implements HttpService {
         return serviceNameSetByAnnotation;
     }
 
+    @Override
     public String methodName() {
         return method.getName();
     }
 
-    Object object() {
+    @Override
+    public Object serviceObject() {
         return object;
     }
 
-    Method method() {
+    @Override
+    public Class<?> serviceClass() {
+        return ClassUtil.getUserClass(object.getClass());
+    }
+
+    @Override
+    public Method method() {
         return method;
     }
 
-    int overloadId() {
+    @Override
+    public int overloadId() {
         return overloadId;
     }
 
@@ -248,12 +261,13 @@ public final class AnnotatedService implements HttpService {
         return resolvers;
     }
 
-    Route route() {
+    @Override
+    public Route route() {
         return route;
     }
 
-    // TODO: Expose through `AnnotatedServiceConfig`, see #5382.
-    HttpStatus defaultStatus() {
+    @Override
+    public HttpStatus defaultStatus() {
         return defaultStatus;
     }
 
