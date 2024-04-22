@@ -28,11 +28,14 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ascii;
+
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -50,6 +53,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.proxy.ProxyConnectException;
 
@@ -61,6 +65,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         NEEDS_TO_WRITE_FIRST_HEADER,
         NEEDS_DATA,
         NEEDS_DATA_OR_TRAILERS,
+        NEEDS_100_CONTINUE,
         DONE
     }
 
@@ -176,7 +181,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
 
         this.session = session;
-        responseWrapper = responseDecoder.addResponse(id, originalRes, ctx, ch.eventLoop());
+        responseWrapper = responseDecoder.addResponse(this, id, originalRes, ctx, ch.eventLoop());
 
         if (timeoutMillis > 0) {
             // The timer would be executed if the first message has not been sent out within the timeout.
@@ -197,7 +202,9 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     final void writeHeaders(RequestHeaders headers) {
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        if (headersOnly) {
+        if (handleExpect100ContinueHeader(headers)) {
+            state = State.NEEDS_100_CONTINUE;
+        } else if (headersOnly) {
             state = State.DONE;
         } else if (allowTrailers) {
             state = State.NEEDS_DATA_OR_TRAILERS;
@@ -231,6 +238,34 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         // before any other callbacks like `onStreamClosed()` are invoked.
         promise.addListener(this);
         encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
+    }
+
+    private static boolean handleExpect100ContinueHeader(RequestHeaders headers) {
+        // Skip checking protocol version since Armeria is not fully compatible with HTTP/1.0.
+        // We can assume that the version is always HTTP/1.1 or later.
+        final String expectValue = headers.get(HttpHeaderNames.EXPECT);
+        if (expectValue == null) {
+            return false;
+        }
+
+        if (!Ascii.equalsIgnoreCase(HttpHeaderValues.CONTINUE, expectValue)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    final void handle100Continue(HttpStatus status) {
+        if (state != State.NEEDS_100_CONTINUE) {
+            return;
+        }
+
+        if (status != HttpStatus.CONTINUE) {
+            failAndReset(new IllegalStateException("Unexpected informational status: " + status));
+            return;
+        }
+
+        state = State.NEEDS_TO_WRITE_FIRST_HEADER;
     }
 
     /**

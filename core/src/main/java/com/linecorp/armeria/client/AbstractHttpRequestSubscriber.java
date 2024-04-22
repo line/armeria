@@ -111,6 +111,12 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
 
     @Override
     void onWriteSuccess() {
+        // Don't call request(1) if Expect: 100-continue header is set.
+        // Because we need to wait for the 100-continue response and then request more messages.
+        if (state() == State.NEEDS_100_CONTINUE) {
+            return;
+        }
+
         // Request more messages regardless whether the state is DONE. It makes the producer have
         // a chance to produce the last call such as 'onComplete' and 'onError' when there are
         // no more messages it can produce.

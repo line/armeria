@@ -28,7 +28,7 @@ final class WebSocketHttp1ResponseWrapper extends HttpResponseWrapper {
     WebSocketHttp1ResponseWrapper(DecodedHttpResponse delegate,
                                   EventLoop eventLoop, ClientRequestContext ctx,
                                   long responseTimeoutMillis, long maxContentLength) {
-        super(delegate, eventLoop, ctx, responseTimeoutMillis, maxContentLength);
+        super(null, delegate, eventLoop, ctx, responseTimeoutMillis, maxContentLength);
         WebSocketClientUtil.setClosingResponseTask(ctx, cause -> {
             super.close(cause, false);
         });

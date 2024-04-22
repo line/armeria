@@ -29,6 +29,7 @@ import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -206,7 +207,9 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
         if (converted instanceof ResponseHeaders) {
             res.startResponse();
             final ResponseHeaders responseHeaders = (ResponseHeaders) converted;
-            if (responseHeaders.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
+            final HttpStatus status = responseHeaders.status();
+            if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+                res.requestHandler().handle100Continue(status);
                 written = res.tryWrite(converted);
             } else {
                 written = res.tryWriteResponseHeaders(responseHeaders);

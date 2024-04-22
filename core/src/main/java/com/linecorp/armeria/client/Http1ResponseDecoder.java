@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -51,6 +52,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 
@@ -197,9 +199,11 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                         res.startResponse();
                         final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                         final boolean written;
-                        if (responseHeaders.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
-                            state = State.NEED_INFORMATIONAL_DATA;
+                        final HttpStatus status = responseHeaders.status();
+                        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+                            handle100Continue(nettyRes, status);
                             written = res.tryWrite(responseHeaders);
+                            state = State.NEED_INFORMATIONAL_DATA;
                         } else {
                             state = State.NEED_DATA_OR_TRAILERS;
                             written = res.tryWriteResponseHeaders(responseHeaders);
@@ -276,6 +280,15 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
         } finally {
             ReferenceCountUtil.release(msg);
         }
+    }
+
+    private void handle100Continue(HttpResponse nettyRes, HttpStatus status) {
+        // Ignore HTTP/1.0
+        if (nettyRes.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
+            return;
+        }
+
+        res.requestHandler().handle100Continue(status);
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {

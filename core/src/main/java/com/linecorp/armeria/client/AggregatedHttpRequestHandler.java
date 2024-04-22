@@ -70,18 +70,20 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
             return;
         }
 
-        HttpData content = request.content();
-        final boolean contentEmpty = content.isEmpty();
-        final HttpHeaders trailers = request.trailers();
-        final boolean trailersEmpty = trailers.isEmpty();
-        if (!contentEmpty) {
-            if (trailersEmpty) {
-                content = content.withEndOfStream();
+        if (state() != State.NEEDS_100_CONTINUE) {
+            HttpData content = request.content();
+            final boolean contentEmpty = content.isEmpty();
+            final HttpHeaders trailers = request.trailers();
+            final boolean trailersEmpty = trailers.isEmpty();
+            if (!contentEmpty) {
+                if (trailersEmpty) {
+                    content = content.withEndOfStream();
+                }
+                writeData(content);
             }
-            writeData(content);
-        }
-        if (!trailersEmpty) {
-            writeTrailers(trailers);
+            if (!trailersEmpty) {
+                writeTrailers(trailers);
+            }
         }
         channel().flush();
     }
