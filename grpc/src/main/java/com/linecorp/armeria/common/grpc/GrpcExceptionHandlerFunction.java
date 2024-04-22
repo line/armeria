@@ -42,6 +42,7 @@ public interface GrpcExceptionHandlerFunction {
     /**
      * Returns the default {@link GrpcExceptionHandlerFunction}.
      */
+    @UnstableApi
     static GrpcExceptionHandlerFunction ofDefault() {
         return DefaultGrpcExceptionHandlerFunction.INSTANCE;
     }
