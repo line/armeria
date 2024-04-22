@@ -22,7 +22,7 @@
     </dependency>
     <dependency>
       <groupId>com.linecorp.armeria</groupId>
-      <artifactId>armeria-core</artifactId>
+      <artifactId>armeria</artifactId>
       <version>1.27.2</version>
     </dependency>
     <dependency>
