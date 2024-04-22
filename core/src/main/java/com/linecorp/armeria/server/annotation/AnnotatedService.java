@@ -32,29 +32,6 @@ import com.linecorp.armeria.server.ServerBuilder;
 public interface AnnotatedService extends HttpService {
 
     /**
-     * Returns the annotated service object specified with {@link ServerBuilder#annotatedService(Object)}.
-     */
-    Object object();
-
-    /**
-     * Returns the target {@link Method} invoked when the request is received.
-     */
-    Method method();
-
-    /**
-     * Returns {@link Route} for this {@link AnnotatedService}.
-     */
-    Route route();
-
-    /**
-     * Returns the default {@link HttpStatus} specified with {@link StatusCode}.
-     * If {@link StatusCode} is not given, {@link HttpStatus#OK} is returned by default.
-     * If the method returns a void type such as {@link Void} or Kotlin Unit, {@link HttpStatus#NO_CONTENT} is
-     * returned.
-     */
-    HttpStatus defaultStatus();
-
-    /**
      * Returns service name for this {@link AnnotatedService}.
      */
     String serviceName();
@@ -71,8 +48,31 @@ public interface AnnotatedService extends HttpService {
     String methodName();
 
     /**
+     * Returns the annotated service object specified with {@link ServerBuilder#annotatedService(Object)}.
+     */
+    Object object();
+
+    /**
+     * Returns the target {@link Method} invoked when the request is received.
+     */
+    Method method();
+
+    /**
      * Returns a unique ID to distinguish overloaded methods.
      * If the method is not overloaded, it should return 0.
      */
     int overloadId();
+
+    /**
+     * Returns {@link Route} for this {@link AnnotatedService}.
+     */
+    Route route();
+
+    /**
+     * Returns the default {@link HttpStatus} specified with {@link StatusCode}.
+     * If {@link StatusCode} is not given, {@link HttpStatus#OK} is returned by default.
+     * If the method returns a void type such as {@link Void} or Kotlin Unit, {@link HttpStatus#NO_CONTENT} is
+     * returned.
+     */
+    HttpStatus defaultStatus();
 }
