@@ -31,13 +31,13 @@ public class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptionHandl
     private final GrpcExceptionHandlerFunction delegate;
 
     public UnwrappingGrpcExceptionHandleFunction(GrpcExceptionHandlerFunction handlerFunction) {
-        this.inner = handlerFunction;
+        this.delegate = handlerFunction;
     }
 
     @Override
     public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
         final Throwable t = peelAndUnwrap(cause);
-        return inner.apply(ctx, t, metadata);
+        return delegate.apply(ctx, t, metadata);
     }
 
     private Throwable peelAndUnwrap(Throwable t) {

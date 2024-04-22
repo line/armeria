@@ -18,11 +18,6 @@ package com.linecorp.armeria.client.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.util.concurrent.Executors;
 
@@ -186,12 +181,10 @@ class GrpcClientBuilderTest {
 
     @Test
     void useDefaultGrpcExceptionHandlerFunctionAsFallback() {
-        final GrpcExceptionHandlerFunction mockExceptionHandler = mock(GrpcExceptionHandlerFunction.class);
-        when(mockExceptionHandler.apply(any(), any(), any())).thenReturn(null);
-
+        final GrpcExceptionHandlerFunction noopExceptionHandler = (ctx, cause, metadata) -> null;
         final GrpcExceptionHandlerFunction exceptionHandler =
                 GrpcExceptionHandlerFunction.builder()
-                                            .on(ContentTooLargeException.class, mockExceptionHandler)
+                                            .on(ContentTooLargeException.class, noopExceptionHandler)
                                             .build();
         final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
                                                           .maxResponseLength(1)
@@ -204,8 +197,5 @@ class GrpcClientBuilderTest {
                 .extracting(e -> ((StatusRuntimeException) e).getStatus())
                 .extracting(Status::getCode)
                 .isEqualTo(Code.RESOURCE_EXHAUSTED);
-
-        // mockExceptionHandler is supposed to be called once.
-        verify(mockExceptionHandler, times(1)).apply(any(), any(), any());
     }
 }

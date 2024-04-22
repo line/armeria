@@ -212,9 +212,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Throwable exception, boolean cancelled) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        final Status status = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault()).apply(ctx,
-                                                                                                      exception,
-                                                                                                      metadata);
+        final Status status = exceptionHandler.apply(ctx, exception, metadata);
         close(new ServerStatusAndMetadata(status, metadata, false, cancelled), exception);
     }
 

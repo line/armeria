@@ -982,7 +982,8 @@ public final class GrpcServiceBuilder {
         }
         GrpcExceptionHandlerFunction grpcExceptionHandler;
         if (exceptionMappingsBuilder != null) {
-            grpcExceptionHandler = exceptionMappingsBuilder.build();
+            grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(
+                    GrpcExceptionHandlerFunction.ofDefault());
         } else {
             grpcExceptionHandler = exceptionHandler;
         }
