@@ -158,7 +158,7 @@ public final class DefaultServiceRequestContext
     }
 
     public DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, @Nullable EventLoop eventLoop, MeterRegistry meterRegistry,
+            ServiceConfig cfg, Channel ch, EventLoop eventLoop, MeterRegistry meterRegistry,
             SessionProtocol sessionProtocol, RequestId id, RoutingContext routingContext,
             RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
@@ -174,7 +174,7 @@ public final class DefaultServiceRequestContext
               requireNonNull(req, "req"), null, null, contextHook);
 
         this.ch = requireNonNull(ch, "ch");
-        this.eventLoop = eventLoop;
+        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;

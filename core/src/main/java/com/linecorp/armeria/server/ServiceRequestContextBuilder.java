@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.common.CancellationScheduler.noopCancellationTask;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -27,6 +26,7 @@ import java.util.function.Consumer;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -227,30 +227,28 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
-        final DefaultServiceRequestContext ctx;
+        EventLoop eventLoop = eventLoop();
+        if (eventLoop == null) {
+            eventLoop = CommonPools.workerGroup().next();
+        }
+
+        final CancellationScheduler requestCancellationScheduler;
+        if (timedOut()) {
+            requestCancellationScheduler = CancellationScheduler.finished(true);
+        } else {
+            requestCancellationScheduler = CancellationScheduler.ofServer(0);
+        }
+
         // Build the context with the properties set by a user and the fake objects.
         final Channel ch = fakeChannel();
-        if (timedOut()) {
-            ctx = new DefaultServiceRequestContext(
-                    serviceCfg, ch, eventLoop(), meterRegistry(), sessionProtocol(), id(), routingCtx,
-                    routingResult, exchangeType, req, sslSession(), proxiedAddresses,
-                    clientAddress, remoteAddress(), localAddress(),
-                    CancellationScheduler.finished(true),
-                    isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
-                    isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
-                    HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
-        } else {
-            ctx = new DefaultServiceRequestContext(
-                    serviceCfg, ch, eventLoop(), meterRegistry(), sessionProtocol(), id(), routingCtx,
-                    routingResult, exchangeType, req, sslSession(), proxiedAddresses,
-                    clientAddress, remoteAddress(), localAddress(),
-                    CancellationScheduler.ofServer(0),
-                    isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
-                    isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
-                    HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
-
-            ctx.requestCancellationScheduler().initAndStart(ctx.eventLoop(), noopCancellationTask);
-        }
+        final DefaultServiceRequestContext ctx = new DefaultServiceRequestContext(
+                serviceCfg, ch, eventLoop, meterRegistry(), sessionProtocol(), id(), routingCtx,
+                routingResult, exchangeType, req, sslSession(), proxiedAddresses,
+                clientAddress, remoteAddress(), localAddress(),
+                requestCancellationScheduler,
+                isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
+                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
+                HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
 
         return ctx;
     }

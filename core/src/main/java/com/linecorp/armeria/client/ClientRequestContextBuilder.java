@@ -124,16 +124,27 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         }
         final DefaultClientRequestContext ctx;
         if (timedOut()) {
-            ctx = getCtx(CancellationScheduler.finished(false));
+            ctx = new DefaultClientRequestContext(
+                    eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(), options,
+                    request(), rpcRequest(), requestOptions, CancellationScheduler.finished(false),
+                    isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
+                    isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
         } else {
-            ctx = getCtx(CancellationScheduler.ofClient(0));
+            ctx = new DefaultClientRequestContext(
+                    eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(), options,
+                    request(), rpcRequest(), requestOptions, CancellationScheduler.ofClient(0),
+                    isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
+                    isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
             ctx.whenInitialized().handle((unused1, unused2) -> {
                 ctx.responseCancellationScheduler().initAndStart(eventLoop(), noopCancellationTask);
                 return null;
             });
         }
 
-        ctx.init(endpointGroup);
+        ctx.init(endpointGroup).handle((unused, cause) -> {
+            ctx.finishInitialization(cause == null);
+            return null;
+        });
         ctx.logBuilder().session(fakeChannel(), sessionProtocol(), sslSession(), connectionTimings);
 
         if (request() != null) {
@@ -201,11 +212,4 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         return (ClientRequestContextBuilder) super.timedOut(timedOut);
     }
 
-    private DefaultClientRequestContext getCtx(CancellationScheduler finished) {
-        return new DefaultClientRequestContext(
-                eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(), options,
-                request(), rpcRequest(), requestOptions, finished,
-                isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
-                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
-    }
 }
