@@ -119,6 +119,7 @@ final class DefaultServerConfig implements ServerConfig {
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
+    private final ServerMetrics serverMetrics = new ServerMetrics();
 
     @Nullable
     private String strVal;
@@ -676,6 +677,11 @@ final class DefaultServerConfig implements ServerConfig {
         return unhandledExceptionsReportIntervalMillis;
     }
 
+    @Override
+    public ServerMetrics serverMetrics() {
+        return serverMetrics;
+    }
+
     List<ShutdownSupport> shutdownSupports() {
         return shutdownSupports;
     }
@@ -697,7 +703,8 @@ final class DefaultServerConfig implements ServerConfig {
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
                     isServerHeaderEnabled(), isDateHeaderEnabled(),
-                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportIntervalMillis());
+                    dependencyInjector(), absoluteUriTransformer(), unhandledExceptionsReportIntervalMillis(),
+                    serverMetrics());
         }
 
         return strVal;
@@ -722,7 +729,8 @@ final class DefaultServerConfig implements ServerConfig {
             boolean serverHeaderEnabled, boolean dateHeaderEnabled,
             @Nullable DependencyInjector dependencyInjector,
             Function<? super String, String> absoluteUriTransformer,
-            long unhandledExceptionsReportIntervalMillis) {
+            long unhandledExceptionsReportIntervalMillis,
+            ServerMetrics serverMetrics) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -823,6 +831,8 @@ final class DefaultServerConfig implements ServerConfig {
         buf.append(absoluteUriTransformer);
         buf.append(", unhandledExceptionsReportIntervalMillis: ");
         buf.append(unhandledExceptionsReportIntervalMillis);
+        buf.append(", serverMetrics: ");
+        buf.append(serverMetrics);
         buf.append(')');
 
         return buf.toString();

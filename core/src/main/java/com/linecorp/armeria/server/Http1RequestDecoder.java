@@ -270,6 +270,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
                                 pipeline.remove(HttpServerUpgradeHandler.class);
                             }
+                            cfg.serverMetrics().increasePendingRequests();
                             ctx.fireChannelRead(webSocketRequest);
                             return;
                         }
@@ -279,6 +280,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx);
 
+                    cfg.serverMetrics().increasePendingRequests();
                     ctx.fireChannelRead(req);
                 } else {
                     fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);

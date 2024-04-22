@@ -385,19 +385,22 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final HttpResponse res;
         req.init(reqCtx);
+        final ServerMetrics serverMetrics = config.serverMetrics();
         final CompletableFuture<Void> whenAggregated = req.whenAggregated();
         if (whenAggregated != null) {
             res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
                 if (serviceEventLoop.inEventLoop()) {
-                    return serve0(req, serviceCfg, service, reqCtx);
+                    return serve0(req, serviceCfg, service, reqCtx, serverMetrics);
                 }
-                return serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop);
+                return serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop,
+                                               serverMetrics);
             }));
         } else {
             if (serviceEventLoop.inEventLoop()) {
-                res = serve0(req, serviceCfg, service, reqCtx);
+                res = serve0(req, serviceCfg, service, reqCtx, serverMetrics);
             } else {
-                res = serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop);
+                res = serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop,
+                                              serverMetrics);
             }
         }
         // Keep track of the number of unfinished requests and
@@ -435,15 +438,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (req.isHttp1WebSocket()) {
             assert responseEncoder instanceof Http1ObjectEncoder;
             final WebSocketHttp1ResponseSubscriber resSubscriber =
-                    new WebSocketHttp1ResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+                    new WebSocketHttp1ResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture,
+                                                         serverMetrics);
             res.subscribe(resSubscriber, channelEventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
         } else if (reqCtx.exchangeType().isResponseStreaming()) {
             final AbstractHttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture,
+                                               serverMetrics);
             res.subscribe(resSubscriber, channelEventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
         } else {
             final AggregatedHttpResponseHandler resHandler =
-                    new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+                    new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture,
+                                                      serverMetrics);
             res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), channelEventLoop))
                .handle(resHandler);
         }
@@ -452,10 +458,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private static HttpResponse serve0(HttpRequest req,
                                        ServiceConfig serviceCfg,
                                        HttpService service,
-                                       DefaultServiceRequestContext reqCtx) {
+                                       DefaultServiceRequestContext reqCtx,
+                                       ServerMetrics serverMetrics) {
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
             try {
+                serverMetrics.decreasePendingRequests();
+                serverMetrics.increaseActiveRequests();
                 serviceResponse = service.serve(reqCtx, req);
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.
@@ -480,8 +489,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                                         ServiceConfig serviceCfg,
                                                         HttpService service,
                                                         DefaultServiceRequestContext reqCtx,
-                                                        EventLoop serviceEventLoop) {
-        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx),
+                                                        EventLoop serviceEventLoop,
+                                                        ServerMetrics serverMetrics) {
+        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx,
+                                            serverMetrics),
                                serviceEventLoop)
                            .subscribeOn(serviceEventLoop);
     }

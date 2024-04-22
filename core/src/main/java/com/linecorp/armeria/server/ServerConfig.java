@@ -339,4 +339,9 @@ public interface ServerConfig {
      * Returns the interval between reporting unhandled exceptions in milliseconds.
      */
     long unhandledExceptionsReportIntervalMillis();
+
+    /**
+     * Returns the {@link ServerMetrics} that collects metrics related server.
+     */
+    ServerMetrics serverMetrics();
 }

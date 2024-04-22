@@ -31,8 +31,8 @@ final class WebSocketHttp1ResponseSubscriber extends AbstractHttpResponseSubscri
                                      ServerHttpObjectEncoder responseEncoder,
                                      DefaultServiceRequestContext reqCtx,
                                      DecodedHttpRequest req,
-                                     CompletableFuture<Void> completionFuture) {
-        super(ctx, responseEncoder, reqCtx, req, completionFuture);
+                                     CompletableFuture<Void> completionFuture, ServerMetrics serverMetrics) {
+        super(ctx, responseEncoder, reqCtx, req, completionFuture, serverMetrics);
         responseEncoder.keepAliveHandler().disconnectWhenFinished();
     }
 

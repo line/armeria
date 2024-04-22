@@ -20,13 +20,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.HttpResponse;
+
 import io.netty.channel.embedded.EmbeddedChannel;
 
 class ConnectionLimitingHandlerTest {
 
     @Test
     void testExceedMaxNumConnections() {
-        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(1);
+        final Server server = Server.builder()
+                                    .service("/", (ctx, req) -> HttpResponse.of(200))
+                                    .build();
+        final ConnectionLimitingHandler handler =
+                new ConnectionLimitingHandler(1, server.config().serverMetrics());
 
         final EmbeddedChannel ch1 = new EmbeddedChannel(handler);
         ch1.writeInbound(ch1);
@@ -44,13 +50,18 @@ class ConnectionLimitingHandlerTest {
 
     @Test
     void testMaxNumConnectionsRange() {
-        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE);
+        final Server server = Server.builder()
+                                    .service("/", (ctx, req) -> HttpResponse.of(200))
+                                    .build();
+        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE,
+                                                                                server.config()
+                                                                                      .serverMetrics());
         assertThat(handler.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(0))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(0, server.config().serverMetrics()))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1, server.config().serverMetrics()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }
