@@ -80,21 +80,37 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
                              .register(Help.getDefaultInstance())
                              .register(LocalizedMessage.getDefaultInstance())
                              .build();
+    private static final UnframedGrpcStatusMappingFunction DEFAULT_STATUS_MAPPING_FUNCTION =
+            UnframedGrpcStatusMappingFunction.of();
+    private static final JsonUnframedGrpcErrorHandler DEFAULT =
+            new JsonUnframedGrpcErrorHandler(DEFAULT_STATUS_MAPPING_FUNCTION, ERROR_DETAILS_MARSHALLER);
+
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
     private static final Logger logger = LoggerFactory.getLogger(JsonUnframedGrpcErrorHandler.class);
-
     private final UnframedGrpcStatusMappingFunction statusMappingFunction;
     private final MessageMarshaller jsonMarshaller;
 
-    JsonUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        this.statusMappingFunction = withDefault(statusMappingFunction);
-        jsonMarshaller = ERROR_DETAILS_MARSHALLER;
-    }
-
-    JsonUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction statusMappingFunction,
+    private JsonUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction statusMappingFunction,
                                  MessageMarshaller jsonMarshaller) {
         this.statusMappingFunction = withDefault(statusMappingFunction);
         this.jsonMarshaller = jsonMarshaller;
+    }
+
+    static JsonUnframedGrpcErrorHandler of() {
+        return DEFAULT;
+    }
+
+    static JsonUnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        return of(statusMappingFunction, ERROR_DETAILS_MARSHALLER);
+    }
+
+    static JsonUnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction,
+                                           MessageMarshaller jsonMarshaller) {
+        if (DEFAULT_STATUS_MAPPING_FUNCTION.equals(statusMappingFunction) &&
+            ERROR_DETAILS_MARSHALLER.equals(jsonMarshaller)) {
+            return DEFAULT;
+        }
+        return new JsonUnframedGrpcErrorHandler(statusMappingFunction, jsonMarshaller);
     }
 
     /**
@@ -144,7 +160,7 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
                 }
                 if (rpcStatus != null) {
                     jsonGenerator.writeFieldName("details");
-                    writeErrorDetails(rpcStatus.getDetailsList(), jsonGenerator, jsonMarshaller);
+                    writeErrorDetails(rpcStatus.getDetailsList(), jsonGenerator);
                 }
             }
             jsonGenerator.writeEndObject();
@@ -165,8 +181,7 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
     }
 
     @VisibleForTesting
-    static void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator,
-                                  MessageMarshaller jsonMarshaller) throws IOException {
+    void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator) throws IOException {
         jsonGenerator.writeStartArray();
         for (Any detail : details) {
             try {

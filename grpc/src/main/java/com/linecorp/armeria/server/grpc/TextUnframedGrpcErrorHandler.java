@@ -38,9 +38,24 @@ import io.grpc.Status.Code;
  */
 final class TextUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
     private final UnframedGrpcStatusMappingFunction statusMappingFunction;
+    private static final UnframedGrpcStatusMappingFunction DEFAULT_STATUS_MAPPING_FUNCTION =
+            UnframedGrpcStatusMappingFunction.of();
+    private static final TextUnframedGrpcErrorHandler DEFAULT =
+            new TextUnframedGrpcErrorHandler(DEFAULT_STATUS_MAPPING_FUNCTION);
 
-    TextUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+    private TextUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         this.statusMappingFunction = withDefault(statusMappingFunction);
+    }
+
+    static TextUnframedGrpcErrorHandler of() {
+        return DEFAULT;
+    }
+
+    static TextUnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        if (DEFAULT_STATUS_MAPPING_FUNCTION.equals(statusMappingFunction)) {
+            return DEFAULT;
+        }
+        return new TextUnframedGrpcErrorHandler(statusMappingFunction);
     }
 
     /**

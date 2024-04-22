@@ -41,7 +41,7 @@ public class TextUnframedGrpcErrorHandlerTest {
         @Override
         protected void configure(ServerBuilder sb) {
             configureServer(sb, false,
-                            new TextUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction.of()),
+                            TextUnframedGrpcErrorHandler.of(),
                             testService);
         }
     };
@@ -52,7 +52,7 @@ public class TextUnframedGrpcErrorHandlerTest {
         protected void configure(ServerBuilder sb) {
             final UnframedGrpcStatusMappingFunction mappingFunction = (ctx, status, response) -> HttpStatus.OK;
             configureServer(sb, false,
-                            new TextUnframedGrpcErrorHandler(mappingFunction),
+                            TextUnframedGrpcErrorHandler.of(mappingFunction),
                             testService);
         }
     };

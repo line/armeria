@@ -60,8 +60,7 @@ public final class UnframedGrpcErrorHandlerBuilder {
      * for encoding the error responses. If messages or message types have
      * already been registered, calling this method will result in an
      * {@link IllegalStateException}. If nothing is specified,
-     * {@link JsonUnframedGrpcErrorHandler#ERROR_DETAILS_MARSHALLER} is used as
-     * default json marshaller.
+     * the default JSON marshaller is used.
      *
      * @param jsonMarshaller The custom JSON marshaller to use
      */
@@ -96,9 +95,7 @@ public final class UnframedGrpcErrorHandlerBuilder {
      *
      * <p>This method allows specifying one or more response types (e.g., JSON, PLAINTEXT)
      * that the error handler can produce. If nothing is specified or multiple types are specified, the actual
-     * response type is determined by the response's content type. If only JSON is specified, {@link #build()}
-     * returns a {@link JsonUnframedGrpcErrorHandler} instance. If only PLAINTEXT is specified, {@link #build()}
-     * returns a {@link TextUnframedGrpcErrorHandler} instance.
+     * response type is determined by the response's content type.
      *
      * @param responseTypes The response types to support
      */
@@ -240,11 +237,11 @@ public final class UnframedGrpcErrorHandlerBuilder {
         }
 
         if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON)) {
-            return new JsonUnframedGrpcErrorHandler(statusMappingFunction, jsonMarshaller);
+            return JsonUnframedGrpcErrorHandler.of(statusMappingFunction, jsonMarshaller);
         }
 
         if (responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
-            return new TextUnframedGrpcErrorHandler(statusMappingFunction);
+            return TextUnframedGrpcErrorHandler.of(statusMappingFunction);
         }
 
         return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);

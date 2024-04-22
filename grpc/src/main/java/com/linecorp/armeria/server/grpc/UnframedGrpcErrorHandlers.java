@@ -43,10 +43,10 @@ final class UnframedGrpcErrorHandlers {
         return (ctx, status, response) -> {
             final MediaType grpcMediaType = response.contentType();
             if (grpcMediaType != null && grpcMediaType.isJson()) {
-                return new JsonUnframedGrpcErrorHandler(mappingFunction, jsonMarshaller)
+                return JsonUnframedGrpcErrorHandler.of(mappingFunction, jsonMarshaller)
                         .handle(ctx, status, response);
             } else {
-                return new TextUnframedGrpcErrorHandler(mappingFunction).handle(ctx, status, response);
+                return TextUnframedGrpcErrorHandler.of(mappingFunction).handle(ctx, status, response);
             }
         };
     }

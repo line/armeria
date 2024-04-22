@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.linecorp.armeria.server.grpc.JsonUnframedGrpcErrorHandler.ERROR_DETAILS_MARSHALLER;
-import static com.linecorp.armeria.server.grpc.JsonUnframedGrpcErrorHandler.writeErrorDetails;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -123,8 +122,8 @@ class ErrorDetailsMarshallerTest {
 
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
-        writeErrorDetails(
-                status.getDetailsList(), jsonGenerator, ERROR_DETAILS_MARSHALLER);
+        final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of();
+        jsonUnframedGrpcErrorHandler.writeErrorDetails(status.getDetailsList(), jsonGenerator);
         jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
@@ -212,8 +211,9 @@ class ErrorDetailsMarshallerTest {
         final MessageMarshaller jsonMarshaller = ERROR_DETAILS_MARSHALLER.toBuilder()
                                                                          .register(authError)
                                                                          .build();
-        writeErrorDetails(
-                status.getDetailsList(), jsonGenerator, jsonMarshaller);
+        final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of(
+                UnframedGrpcStatusMappingFunction.of(), jsonMarshaller);
+        jsonUnframedGrpcErrorHandler.writeErrorDetails(status.getDetailsList(), jsonGenerator);
         jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
@@ -233,8 +233,9 @@ class ErrorDetailsMarshallerTest {
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
 
-        assertThatThrownBy(() -> writeErrorDetails(
-                status.getDetailsList(), jsonGenerator, ERROR_DETAILS_MARSHALLER)).isInstanceOf(
-                IOException.class);
+        final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of();
+
+        assertThatThrownBy(() -> jsonUnframedGrpcErrorHandler.writeErrorDetails(
+                status.getDetailsList(), jsonGenerator)).isInstanceOf(IOException.class);
     }
 }
