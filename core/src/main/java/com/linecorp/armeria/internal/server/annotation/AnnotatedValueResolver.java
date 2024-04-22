@@ -866,7 +866,7 @@ final class AnnotatedValueResolver {
     attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
         return (resolver, ctx) -> {
             Object lastInvalidValue = null;
-            Object lastAttrKeyName = null;
+            String lastAttrKeyName = null;
             Class<?> targetType = resolver.rawType();
             if (targetType.isPrimitive()) {
                 targetType = Primitives.wrap(targetType);
@@ -887,10 +887,10 @@ final class AnnotatedValueResolver {
 
             if (lastInvalidValue != null && lastAttrKeyName != null) {
                 throw new IllegalStateException(
-                        String.format("(%s) which is from AttributeKey (%s) is not an instance of (%s).",
-                                      targetType.getSimpleName(),
+                        String.format("'%s' which is from AttributeKey(%s) is not an instance of '%s'.",
+                                      targetType.getName(),
                                       lastAttrKeyName,
-                                      lastInvalidValue.getClass().getSimpleName()));
+                                      lastInvalidValue.getClass().getName()));
             } else {
                 return resolver.defaultOrException();
             }
@@ -1436,24 +1436,6 @@ final class AnnotatedValueResolver {
                 }
             }
 
-            return null;
-        }
-
-        @Nullable
-        private Class<?> getRawContainerType(Type parameterizedType) {
-            final Class<?> rawType = toRawType(parameterizedType);
-            if (rawType == Iterable.class ||
-                rawType == List.class ||
-                rawType == Collection.class ||
-                rawType == Set.class ||
-                rawType == Map.class ||
-                Iterable.class.isAssignableFrom(rawType) ||
-                List.class.isAssignableFrom(rawType) ||
-                Collection.class.isAssignableFrom(rawType) ||
-                Set.class.isAssignableFrom(rawType) ||
-                Map.class.isAssignableFrom(rawType)) {
-                return rawType;
-            }
             return null;
         }
 
