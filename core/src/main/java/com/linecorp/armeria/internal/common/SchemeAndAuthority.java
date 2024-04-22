@@ -95,7 +95,7 @@ public final class SchemeAndAuthority {
      * Returns the port number of this authority.
      *
      * @return The port component of this URI,
-     *          or {@code -1} if the port is undefined
+     *         or {@code -1} if the port is undefined
      */
     public int port() {
         return port;
