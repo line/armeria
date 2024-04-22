@@ -20,7 +20,6 @@ import static com.linecorp.armeria.client.endpoint.dns.TestDnsServer.newAddressR
 import static io.netty.handler.codec.dns.DnsRecordType.A;
 import static io.netty.handler.codec.dns.DnsRecordType.AAAA;
 import static io.netty.handler.codec.dns.DnsRecordType.CNAME;
-import static io.netty.handler.codec.dns.DnsRecordType.SRV;
 import static io.netty.handler.codec.dns.DnsSection.ANSWER;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -209,12 +208,14 @@ class DnsMetricsTest {
                         "cause=others,name=bar.com.,result=failure}";
 
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
-                        .hasRootCauseInstanceOf(UnknownHostException.class);
+                        .cause()
+                        .isInstanceOf(UnprocessedRequestException.class)
+                        .hasCauseInstanceOf(UnknownHostException.class);
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
-                            .containsEntry(writtenMeterId, 2.0)
-                            .containsEntry(nxDomainMeterId, 2.0)
+                            .containsEntry(writtenMeterId, 1.0)
+                            .containsEntry(nxDomainMeterId, 1.0)
                             .doesNotContainKey(otherExceptionId);
                 });
             }
@@ -254,23 +255,21 @@ class DnsMetricsTest {
                         getHostAddress(server) + '}';
                 final String noAnswerMeterId =
                         "armeria.client.dns.queries.noanswer#count{code=10,name=bar.com.}";
-                final String nxDomainMeterId =
-                        "armeria.client.dns.queries#count{" +
-                        "cause=nx_domain,name=bar.com.,result=failure}";
                 final String otherExceptionId =
                         "armeria.client.dns.queries#count{" +
                         "cause=others,name=bar.com.,result=failure}";
                 assertThat(MoreMeters.measureAll(meterRegistry)).doesNotContainKeys(
-                        writtenMeterId, noAnswerMeterId, nxDomainMeterId, nxDomainMeterId);
+                        writtenMeterId, noAnswerMeterId);
 
                 assertThatThrownBy(() -> client.get("http://bar.com").aggregate().join())
-                        .hasRootCauseInstanceOf(UnknownHostException.class);
+                        .cause()
+                        .isInstanceOf(UnprocessedRequestException.class)
+                        .hasCauseInstanceOf(UnknownHostException.class);
 
                 await().untilAsserted(() -> {
                     assertThat(MoreMeters.measureAll(meterRegistry))
-                            .containsEntry(writtenMeterId, 2.0)
+                            .containsEntry(writtenMeterId, 1.0)
                             .containsEntry(noAnswerMeterId, 1.0)
-                            .containsEntry(nxDomainMeterId, 1.0)
                             .doesNotContainKey(otherExceptionId);
                 });
             }
@@ -390,14 +389,5 @@ class DnsMetricsTest {
         final ByteBuf content = Unpooled.buffer();
         DnsNameEncoder.encodeName(actualName, content);
         return new DefaultDnsRawRecord(name, CNAME, 60, content);
-    }
-
-    static DnsRecord newSrvRecord(String hostname, int weight, int port, String target) {
-        final ByteBuf content = Unpooled.buffer();
-        content.writeShort(1); // priority unused
-        content.writeShort(weight);
-        content.writeShort(port);
-        DnsNameEncoder.encodeName(target, content);
-        return new DefaultDnsRawRecord(hostname, SRV, 60, content);
     }
 }

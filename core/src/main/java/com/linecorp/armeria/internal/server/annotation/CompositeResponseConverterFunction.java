@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -63,7 +64,13 @@ final class CompositeResponseConverterFunction implements ResponseConverterFunct
         if (result instanceof HttpResponse) {
             return (HttpResponse) result;
         }
-        if (result instanceof HttpResult) {
+
+        if (result instanceof ResponseEntity) {
+            final ResponseEntity<?> responseEntity = (ResponseEntity<?>) result;
+            headers = ResponseEntityUtil.buildResponseHeaders(ctx, responseEntity);
+            result = responseEntity.hasContent() ? responseEntity.content() : null;
+            trailers = responseEntity.trailers();
+        } else if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
             headers = HttpResultUtil.buildResponseHeaders(ctx, httpResult);
             result = httpResult.content();

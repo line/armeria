@@ -930,7 +930,7 @@ more response types which can be used in the annotated service.
     being sent, exception handlers will handle it. If no message has been sent to the client yet,
     the exception handler can send an <type://HttpResponse> instead.
 
-- <type://HttpResult>
+- <type://ResponseEntity>
 
   - It contains the <type://HttpHeaders> and the object which can be converted into HTTP response body by
     response converters. A user can customize the HTTP status and headers including the trailers, with this type.
@@ -938,7 +938,7 @@ more response types which can be used in the annotated service.
   ```java
   public class MyAnnotatedService {
       @Get("/users")
-      public HttpResult<List<User>> getUsers(@Param int start) {
+      public ResponseEntity<List<User>> getUsers(@Param int start) {
           List<User> users = ...;
           ResponseHeaders headers = ResponseHeaders.builder()
               .status(HttpStatus.OK)
@@ -946,7 +946,7 @@ more response types which can be used in the annotated service.
                    String.format("<https://example.com/users?from=%s>; rel=\"next\"",
                                  start + 10))
               .build();
-          return HttpResult.of(headers, users);
+          return ResponseEntity.of(headers, users);
       }
   }
   ```
