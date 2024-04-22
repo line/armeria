@@ -37,12 +37,6 @@ public interface AnnotatedService extends HttpService {
     String serviceName();
 
     /**
-     * Returns a boolean value indicating whether the
-     * serviceName is specified by the {@link ServiceName}.
-     */
-    boolean serviceNameSetByAnnotation();
-
-    /**
      * Returns method name which is annotated in {@link AnnotatedService}.
      */
     String methodName();
@@ -50,7 +44,12 @@ public interface AnnotatedService extends HttpService {
     /**
      * Returns the annotated service object specified with {@link ServerBuilder#annotatedService(Object)}.
      */
-    Object object();
+    Object serviceObject();
+
+    /**
+     * Returns the annotated service object specified with {@link ServerBuilder#annotatedService(Object)}.
+     */
+    Class<?> serviceClass();
 
     /**
      * Returns the target {@link Method} invoked when the request is received.
