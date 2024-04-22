@@ -115,7 +115,7 @@ final class RoutingTrieBuilder<V> {
     private NodeBuilder<V> insertAndGetRoot(Entry<V> entry) {
         NodeBuilder<V> node = insertChild(null, entry.path, entry.value, entry.hasHighPrecedence);
         // Only the root node has no parent.
-        for (; ; ) {
+        for (;;) {
             final NodeBuilder<V> parent = node.parent;
             if (parent == null) {
                 return node;

@@ -21,23 +21,24 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class VerbSuffixPathMapping extends AbstractPathMapping {
-    static final Pattern VERB_PATTERN = Pattern.compile("[^/]+:([a-zA-Z0-9-_]+)$");
+    private static final Pattern VERB_PATTERN = Pattern.compile("[^/]+:([a-zA-Z0-9-_]+)$");
 
     private final PathMapping basePathMapping;
     private final String verb;
-    private final int verbLength;
+    private final int colonAndVerbLength;
     private final String patternString;
     private final List<String> paths;
 
     VerbSuffixPathMapping(PathMapping basePathMapping, String verb) {
         this.basePathMapping = requireNonNull(basePathMapping, "basePathMapping");
         this.verb = ':' + requireNonNull(verb, "verb");
-        verbLength = this.verb.length();
+        colonAndVerbLength = this.verb.length();
         patternString = basePathMapping.patternString() + this.verb;
         // Add escape character '\' to mark ':' as a plain character, not a parameter marker.
         paths = basePathMapping.paths().stream().map(p -> p + '\\' + this.verb).collect(toImmutableList());
@@ -57,13 +58,24 @@ final class VerbSuffixPathMapping extends AbstractPathMapping {
             return null;
         }
 
-        final int basePathLength = path.length() - verbLength;
+        final int basePathLength = path.length() - colonAndVerbLength;
         if (basePathLength <= 0 || path.charAt(basePathLength - 1) == '/') {
             return null;
         }
 
-        final String basePath = path.substring(0, path.length() - verbLength);
+        final String basePath = path.substring(0, path.length() - colonAndVerbLength);
         return basePathMapping.apply(routingCtx.overridePath(basePath));
+    }
+
+    @Nullable
+    static String findVerb(String pathPattern) {
+        final Matcher matcher = VERB_PATTERN.matcher(pathPattern);
+
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+
+        return null;
     }
 
     @Override

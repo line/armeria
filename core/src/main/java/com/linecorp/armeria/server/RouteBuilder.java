@@ -32,7 +32,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.base.MoreObjects;
@@ -561,12 +560,10 @@ public final class RouteBuilder {
         }
 
         // Parameterized, glob or no prefix.
-        final Matcher m = VerbSuffixPathMapping.VERB_PATTERN.matcher(pathPattern);
-        if (!m.find()) {
+        final String verb = VerbSuffixPathMapping.findVerb(pathPattern);
+        if (verb == null) {
             return basePathMappingMapper.apply(pathPattern);
         }
-
-        final String verb = m.group(1);
         final String basePathPattern = pathPattern.substring(0, pathPattern.length() - verb.length() - 1);
         final PathMapping basePathMapping = basePathMappingMapper.apply(basePathPattern);
         return new VerbSuffixPathMapping(basePathMapping, verb);

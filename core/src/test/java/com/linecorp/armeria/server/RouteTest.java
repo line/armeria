@@ -66,10 +66,11 @@ class RouteTest {
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo/:", "/prefix/foo/:");
 
-        // Q: Should this be allowed?
         route = Route.builder().path("/foo/{bar:biz}").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/foo/:", "/foo/:");
+        assertThat(route.paramNames()).hasSize(1);
+        assertThat(route.paramNames()).containsExactly("bar");
 
         route = Route.builder().path("/bar/:baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
@@ -82,6 +83,8 @@ class RouteTest {
         route = Route.builder().path("/bar/:baz:").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/:", "/bar/:");
+        assertThat(route.paramNames()).hasSize(1);
+        assertThat(route.paramNames()).containsExactly("baz");
 
         route = Route.builder().path("/bar/:baz:verb").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
@@ -91,9 +94,11 @@ class RouteTest {
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/bar/:\\:verb", "/prefix/bar/:\\:verb");
 
         // Q: Should this be allowed?
-        route = Route.builder().path("/bar/:baz:fake:verb").build();
+        route = Route.builder().path("/bar/:baz:foo:verb").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/:\\:verb", "/bar/:\\:verb");
+        assertThat(route.paramNames()).hasSize(1);
+        assertThat(route.paramNames()).containsExactly("baz");
 
         route = Route.builder().path("exact:/:foo/bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
