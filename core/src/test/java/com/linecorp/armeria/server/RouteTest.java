@@ -79,7 +79,6 @@ class RouteTest {
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/bar/:", "/prefix/bar/:");
 
-        // Q: Should this be allowed?
         route = Route.builder().path("/bar/:baz:").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/:", "/bar/:");
@@ -93,7 +92,6 @@ class RouteTest {
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/bar/:\\:verb", "/prefix/bar/:\\:verb");
 
-        // Q: Should this be allowed?
         route = Route.builder().path("/bar/:baz:foo:verb").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/:\\:verb", "/bar/:\\:verb");
