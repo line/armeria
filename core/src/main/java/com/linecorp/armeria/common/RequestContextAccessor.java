@@ -17,6 +17,7 @@ package com.linecorp.armeria.common;
 
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.context.ContextRegistry;
@@ -38,6 +39,7 @@ import io.micrometer.context.ThreadLocalAccessor;
  * Flux#contextWrite(ContextView) to end of the Reactor codes.
  * If not, {@link RequestContext} will not be keep during Reactor Operation.
  */
+@UnstableApi
 public final class RequestContextAccessor implements ThreadLocalAccessor<RequestContext> {
 
     private static final String KEY = RequestContextAccessor.class.getName();
@@ -58,7 +60,6 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
      * User can use this method to register {@link RequestContext} to
      * Reactor Context.
      */
-
     public static String accessorKey() {
         return KEY;
     }
