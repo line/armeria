@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -35,6 +36,8 @@ public final class AsyncLoaderBuilder<T> {
     private Duration expireAfterLoad;
     @Nullable
     private Predicate<@Nullable T> expireIf;
+    @Nullable
+    private BiFunction<Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler;
 
     AsyncLoaderBuilder(Function<@Nullable T, CompletableFuture<T>> loader) {
         requireNonNull(loader, "loader");
@@ -62,9 +65,20 @@ public final class AsyncLoaderBuilder<T> {
     }
 
     /**
+     * Handles exception thrown by loader.
+     * If exception handler returns {@code null}, complete {@link AsyncLoader#get()} exceptionally.
+     */
+    public AsyncLoaderBuilder<T> exceptionHandler(BiFunction<
+            Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler) {
+        requireNonNull(exceptionHandler, "exceptionHandler");
+        this.exceptionHandler = exceptionHandler;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
      */
     public AsyncLoader<T> build() {
-        return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf);
+        return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, exceptionHandler);
     }
 }

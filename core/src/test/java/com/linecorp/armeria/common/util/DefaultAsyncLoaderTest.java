@@ -83,7 +83,7 @@ class DefaultAsyncLoaderTest {
             assertThat(loadCounter.get()).isOne();
         }
 
-        Thread.sleep(3000);
+        Thread.sleep(3500);
 
         for (int i = 0; i < 5; i++) {
             assertThat(loader.get().join()).isEqualTo(2);
@@ -113,7 +113,7 @@ class DefaultAsyncLoaderTest {
         }
         latch.await();
 
-        Thread.sleep(3000);
+        Thread.sleep(3500);
 
         final CountDownLatch latch2 = new CountDownLatch(5);
         for (int i = 0; i < 5; i++) {
@@ -215,7 +215,7 @@ class DefaultAsyncLoaderTest {
             assertThat(loadCounter.get()).isOne();
         }
 
-        Thread.sleep(3000);
+        Thread.sleep(3500);
 
         for (int i = 0; i < 5; i++) {
             assertThat(loader.get().join()).isEqualTo(2);
@@ -232,7 +232,7 @@ class DefaultAsyncLoaderTest {
         assertThat(loader.get().join()).isEqualTo(4);
         assertThat(loadCounter.get()).isEqualTo(4);
 
-        Thread.sleep(3000);
+        Thread.sleep(3500);
 
         for (int i = 0; i < 5; i++) {
             assertThat(loader.get().join()).isEqualTo(5);
@@ -274,7 +274,7 @@ class DefaultAsyncLoaderTest {
         assertThat(loader.get().join()).isEqualTo(3);
         assertThat(loadCounter.get()).isEqualTo(3);
 
-        Thread.sleep(3000);
+        Thread.sleep(3500);
 
         final CountDownLatch latch2 = new CountDownLatch(5);
         for (int i = 0; i < 5; i++) {
@@ -317,6 +317,125 @@ class DefaultAsyncLoaderTest {
     void loader_null() {
         final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> null;
         final AsyncLoader<Integer> loader = AsyncLoader.builder(loadFunc).build();
+
+        assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
+                CompletionException.class,
+                ex -> assertThat(ex.getCause()).isInstanceOf(NullPointerException.class));
+    }
+
+    @Test
+    void exceptionHandler_loader_thrown() {
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> {
+            throw new IllegalStateException();
+        };
+        final AtomicInteger handleExceptionCounter = new AtomicInteger();
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .exceptionHandler((cause, cache) -> {
+                    assertThat(cause).isInstanceOf(IllegalStateException.class);
+                    return UnmodifiableFuture.completedFuture(handleExceptionCounter.incrementAndGet());
+                })
+                .build();
+
+        assertThat(handleExceptionCounter.get()).isZero();
+        for (int i = 0; i <= 5; i++) {
+            assertThat(loader.get().join()).isOne();
+            assertThat(handleExceptionCounter.get()).isOne();
+        }
+    }
+
+    @Test
+    void exceptionHandler_loader_future_exception() {
+        final Function<Object, CompletableFuture<Object>> loadFunc = obj -> {
+            final CompletableFuture<Object> future = new CompletableFuture<>();
+            future.completeExceptionally(new IllegalStateException());
+            return future;
+        };
+        final AtomicInteger handleExceptionCounter = new AtomicInteger();
+        final AsyncLoader<Object> loader = AsyncLoader
+                .builder(loadFunc)
+                .exceptionHandler((cause, cache) -> {
+                    assertThat(cause).isInstanceOf(IllegalStateException.class);
+                    return UnmodifiableFuture.completedFuture(handleExceptionCounter.incrementAndGet());
+                })
+                .build();
+
+        assertThat(handleExceptionCounter.get()).isZero();
+        for (int i = 0; i <= 5; i++) {
+            assertThat(loader.get().join()).isEqualTo(1);
+            assertThat(handleExceptionCounter.get()).isOne();
+        }
+    }
+
+    @Test
+    void exceptionHandler_loader_null() {
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> null;
+        final AtomicInteger handleExceptionCounter = new AtomicInteger();
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .exceptionHandler((cause, cache) -> {
+                    assertThat(cause).isInstanceOf(NullPointerException.class);
+                    return UnmodifiableFuture.completedFuture(handleExceptionCounter.incrementAndGet());
+                })
+                .build();
+
+        assertThat(handleExceptionCounter.get()).isZero();
+        for (int i = 0; i <= 5; i++) {
+            assertThat(loader.get().join()).isOne();
+            assertThat(handleExceptionCounter.get()).isOne();
+        }
+    }
+
+    @Test
+    void exceptionHandler_thrown() {
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> {
+            throw new IllegalStateException();
+        };
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .exceptionHandler((cause, cache) -> {
+                    assertThat(cause).isInstanceOf(IllegalStateException.class);
+                    throw new IllegalStateException();
+                })
+                .build();
+
+        assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
+                CompletionException.class,
+                ex -> assertThat(ex.getCause()).isInstanceOf(IllegalStateException.class));
+    }
+
+    @Test
+    void exceptionHandler_future_exception() {
+        final Function<Object, CompletableFuture<Object>> loadFunc = obj -> {
+            final CompletableFuture<Object> future = new CompletableFuture<>();
+            future.completeExceptionally(new IllegalStateException());
+            return future;
+        };
+        final AsyncLoader<Object> loader = AsyncLoader
+                .builder(loadFunc)
+                .exceptionHandler((cause, cache) -> {
+                    assertThat(cause).isInstanceOf(IllegalStateException.class);
+                    final CompletableFuture<Object> future = new CompletableFuture<>();
+                    future.completeExceptionally(new IllegalStateException());
+                    return future;
+                })
+                .build();
+
+        assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
+                CompletionException.class,
+                ex -> assertThat(ex.getCause()).isInstanceOf(IllegalStateException.class));
+    }
+
+    @Test
+    void exceptionHandler_null() {
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> null;
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .exceptionHandler((cause, cache) -> {
+                    assertThat(cause).isInstanceOf(NullPointerException.class);
+                    return null;
+                })
+                .build();
 
         assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
                 CompletionException.class,
