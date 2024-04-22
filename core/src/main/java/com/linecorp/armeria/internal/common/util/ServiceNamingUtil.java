@@ -16,8 +16,8 @@
 package com.linecorp.armeria.internal.common.util;
 
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 
 public final class ServiceNamingUtil {
 

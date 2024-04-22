@@ -62,6 +62,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
@@ -246,8 +247,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         return overloadId;
     }
 
-    @Override
-    public List<AnnotatedValueResolver> annotatedValueResolvers() {
+    List<AnnotatedValueResolver> annotatedValueResolvers() {
         return resolvers;
     }
 
@@ -261,8 +261,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         return defaultStatus;
     }
 
-    @Override
-    public HttpService withExceptionHandler(HttpService service) {
+    HttpService withExceptionHandler(HttpService service) {
         if (exceptionHandler == null) {
             return service;
         }
