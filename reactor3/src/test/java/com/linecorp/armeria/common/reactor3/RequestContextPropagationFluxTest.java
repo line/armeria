@@ -22,14 +22,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -43,20 +44,13 @@ import reactor.core.publisher.ConnectableFlux;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Hooks;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 import reactor.util.context.Context;
 
 @GenerateNativeImageTrace
 class RequestContextPropagationFluxTest {
-
-    static Stream<Arguments> provideContextWriteAndCaptureTestCase() {
-        return Stream.of(
-                // shouldContextWrite, shouldContextCapture.
-                Arguments.of(true, false),
-                Arguments.of(false, true)
-        );
-    }
 
     @BeforeAll
     static void setUp() {
@@ -69,20 +63,24 @@ class RequestContextPropagationFluxTest {
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxError(boolean shouldContextWrite,
-                   boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxError(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
+        final AtomicBoolean atomicBoolean = new AtomicBoolean();
         flux = addCallbacks(Flux.error(() -> {
-            // This is called twice. after publishOn() and verifyErrorMatches()
-            // After publishOn(), ctxExists(ctx) should be false.
-            // On the other hand, it should be True due to ContextPropagation.
+            if (!atomicBoolean.getAndSet(true)) {
+                // Flux.error().publishOn() calls this error supplier immediately to see if it can retrieve
+                // the value via Callable.call() without ctx.
+                assertThat(ctxExists(ctx)).isFalse();
+            } else {
+                assertThat(ctxExists(ctx)).isTrue();
+            }
             return new AnticipatedException();
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
                             .verifyErrorMatches(t -> t instanceof AnticipatedException);
@@ -95,9 +93,8 @@ class RequestContextPropagationFluxTest {
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxFromPublisher(boolean shouldContextWrite,
-                           boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxFromPublisher(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
@@ -106,26 +103,25 @@ class RequestContextPropagationFluxTest {
             s.onSubscribe(noopSubscription());
             s.onNext("foo");
             s.onComplete();
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxCreate(boolean shouldContextWrite,
-                    boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxCreate(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
@@ -133,35 +129,34 @@ class RequestContextPropagationFluxTest {
             assertThat(ctxExists(ctx)).isTrue();
             s.next("foo");
             s.complete();
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxCreate_error(boolean shouldContextWrite,
-                          boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxCreate_error(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
         flux = addCallbacks(Flux.create(s -> {
             assertThat(ctxExists(ctx)).isTrue();
             s.error(new AnticipatedException());
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
                             .verifyErrorMatches(t -> t instanceof AnticipatedException);
@@ -174,9 +169,8 @@ class RequestContextPropagationFluxTest {
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxConcat(boolean shouldContextWrite,
-                    boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxConcat(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
@@ -186,106 +180,102 @@ class RequestContextPropagationFluxTest {
         }), Mono.fromCallable(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return "bar";
-        })).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        })).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
-                            .expectNextMatches(s -> "bar".equals(s))
+                            .expectNextMatches("foo"::equals)
+                            .expectNextMatches("bar"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
-                        .expectNextMatches(s -> "bar".equals(s))
+                        .expectNextMatches("foo"::equals)
+                        .expectNextMatches("bar"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxDefer(boolean shouldContextWrite,
-                   boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxDefer(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
         flux = addCallbacks(Flux.defer(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return Flux.just("foo");
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxFromStream(boolean shouldContextWrite,
-                        boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxFromStream(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
         flux = addCallbacks(Flux.fromStream(() -> {
             assertThat(ctxExists(ctx)).isTrue();
             return Stream.of("foo");
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxCombineLatest(boolean shouldContextWrite,
-                           boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxCombineLatest(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
         flux = addCallbacks(Flux.combineLatest(Mono.just("foo"), Mono.just("bar"), (a, b) -> {
             assertThat(ctxExists(ctx)).isTrue();
             return a;
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxGenerate(boolean shouldContextWrite,
-                      boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxGenerate(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
@@ -293,26 +283,25 @@ class RequestContextPropagationFluxTest {
             assertThat(ctxExists(ctx)).isTrue();
             s.next("foo");
             s.complete();
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxMerge(boolean shouldContextWrite,
-                   boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxMerge(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
@@ -326,28 +315,27 @@ class RequestContextPropagationFluxTest {
             s.onSubscribe(noopSubscription());
             s.onNext("bar");
             s.onComplete();
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
-                            .expectNextMatches(s -> "bar".equals(s))
+                            .expectNextMatches("foo"::equals)
+                            .expectNextMatches("bar"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
-                        .expectNextMatches(s -> "bar".equals(s))
+                        .expectNextMatches("foo"::equals)
+                        .expectNextMatches("bar"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxPush(boolean shouldContextWrite,
-                  boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxPush(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
@@ -355,26 +343,25 @@ class RequestContextPropagationFluxTest {
             assertThat(ctxExists(ctx)).isTrue();
             s.next("foo");
             s.complete();
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxSwitchOnNext(boolean shouldContextWrite,
-                          boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxSwitchOnNext(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
@@ -388,80 +375,77 @@ class RequestContextPropagationFluxTest {
                 s1.onComplete();
             });
             s.onComplete();
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxZip(boolean shouldContextWrite,
-                 boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxZip(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
         flux = addCallbacks(Flux.zip(Mono.just("foo"), Mono.just("bar"), (foo, bar) -> {
             assertThat(ctxExists(ctx)).isTrue();
             return foo;
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxInterval(boolean shouldContextWrite,
-                      boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxInterval(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
         flux = addCallbacks(Flux.interval(Duration.ofMillis(100)).take(2).concatMap(a -> {
             assertThat(ctxExists(ctx)).isTrue();
             return Mono.just("foo");
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxConcatDelayError(boolean shouldContextWrite,
-                              boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxConcatDelayError(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
@@ -474,27 +458,26 @@ class RequestContextPropagationFluxTest {
             s.onSubscribe(noopSubscription());
             s.onNext("bar");
             s.onComplete();
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
-                            .expectNextMatches(s -> "bar".equals(s))
+                            .expectNextMatches("foo"::equals)
+                            .expectNextMatches("bar"::equals)
                             .verifyErrorMatches(t -> t instanceof AnticipatedException);
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
-                        .expectNextMatches(s -> "bar".equals(s))
+                        .expectNextMatches("foo"::equals)
+                        .expectNextMatches("bar"::equals)
                         .verifyErrorMatches(t -> t instanceof AnticipatedException);
         }
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void fluxTransform(boolean shouldContextWrite,
-                       boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void fluxTransform(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<Object> flux;
 
@@ -503,64 +486,61 @@ class RequestContextPropagationFluxTest {
             s.onSubscribe(noopSubscription());
             s.onNext(fooFlux.blockFirst());
             s.onComplete();
-        }).publishOn(Schedulers.single()), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.single()), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void connectableFlux(boolean shouldContextWrite,
-                         boolean shouldContextCapture) {
+    @CsvSource({ "true", "false" })
+    void connectableFlux(boolean useContextCapture) {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
         final ConnectableFlux<String> connectableFlux = Flux.just("foo").publish();
         flux = addCallbacks(connectableFlux.autoConnect(2).publishOn(Schedulers.single()),
                             ctx,
-                            shouldContextWrite,
-                            shouldContextCapture);
+                            useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 flux.subscribe().dispose();
                 StepVerifier.create(flux)
-                            .expectNextMatches(s -> "foo".equals(s))
+                            .expectNextMatches("foo"::equals)
                             .verifyComplete();
             }
         } else {
             flux.subscribe().dispose();
             StepVerifier.create(flux)
-                        .expectNextMatches(s -> "foo".equals(s))
+                        .expectNextMatches("foo"::equals)
                         .verifyComplete();
         }
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @ParameterizedTest
-    @MethodSource("provideContextWriteAndCaptureTestCase")
-    void connectableFlux_dispose(boolean shouldContextWrite,
-                                 boolean shouldContextCapture) throws InterruptedException {
+    @CsvSource({ "true", "false" })
+    void connectableFlux_dispose(boolean useContextCapture) throws InterruptedException {
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
 
         final ConnectableFlux<String> connectableFlux = Flux.just("foo").publish();
         flux = addCallbacks(connectableFlux.autoConnect(2, disposable -> {
             assertThat(ctxExists(ctx)).isTrue();
-        }).publishOn(Schedulers.newSingle("aaa")), ctx, shouldContextWrite, shouldContextCapture);
+        }).publishOn(Schedulers.newSingle("aaa")), ctx, useContextCapture);
 
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             try (SafeCloseable ignored = ctx.push()) {
                 final Disposable disposable1 = flux.subscribe();
                 await().pollDelay(Duration.ofMillis(200)).until(() -> !disposable1.isDisposed());
@@ -594,23 +574,25 @@ class RequestContextPropagationFluxTest {
 
         final Flux<String> flux1 = flux.contextWrite(reactorCtx -> reactorCtx.put("foo", "bar"));
         StepVerifier.create(flux1)
-                    .expectNextMatches(s -> "baz".equals(s))
+                    .expectNextMatches("baz"::equals)
                     .verifyComplete();
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     @Test
-    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperationOnSchedulerThread() {
+    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperationOnSchedulerThread()
+            throws InterruptedException {
         // Given
         final ClientRequestContext ctx = newContext();
         final Flux<String> flux;
+        final Scheduler single = Schedulers.single();
 
         // When
         flux = Flux.just("Hello", "Hi")
-                   .subscribeOn(Schedulers.single())
+                   .subscribeOn(single)
                    .delayElements(Duration.ofMillis(1000))
                    .map(s -> {
-                       if (s.equals("Hello")) {
+                       if ("Hello".equals(s)) {
                            throw new RuntimeException();
                        }
                        return s;
@@ -622,45 +604,19 @@ class RequestContextPropagationFluxTest {
                     .expectError(RuntimeException.class)
                     .verify();
 
-        final Flux<String> toVerifyFlux = Flux.just("Dummy")
-                                        .subscribeOn(Schedulers.single())
-                                        .doOnNext(s -> assertThat(ctxExists(ctx)).isFalse());
+        final CountDownLatch latch = new CountDownLatch(1);
+        single.schedule(() -> {
+            assertThat(ctxExists(ctx)).isFalse();
+            latch.countDown();
+        });
+        latch.await();
 
-        StepVerifier.create(toVerifyFlux)
-                    .expectNext("Dummy")
-                    .verifyComplete();
-        assertThat(ctxExists(ctx)).isFalse();
-    }
-
-    @Test
-    void ctxShouldBeCleanUpEvenIfErrorOccursDuringReactorOperationOnMainThread() {
-        // Given
-        final ClientRequestContext ctx = newContext();
-        final Flux<String> flux;
-
-        // When
-        flux = Flux.just("Hello", "Hi")
-                   .map(s -> {
-                       if (s.equals("Hello")) {
-                           throw new RuntimeException();
-                       }
-                       return s;
-                   })
-                   .contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
-
-        // Then
-        StepVerifier.create(flux)
-                    .expectError(RuntimeException.class)
-                    .verify();
-
-        assertThat(ctxExists(ctx)).isFalse();
         assertThat(ctxExists(ctx)).isFalse();
     }
 
     private static <T> Flux<T> addCallbacks(Flux<T> flux0,
                                             ClientRequestContext ctx,
-                                            boolean shouldContextWrite,
-                                            boolean shouldContextCapture) {
+                                            boolean useContextCapture) {
         // doOnCancel and doFinally do not have context because we cannot add a hook to the cancel.
         final Flux<T> flux = flux0.doFirst(() -> assertThat(ctxExists(ctx)).isTrue())
                                   .doOnSubscribe(s -> assertThat(ctxExists(ctx)).isTrue())
@@ -671,14 +627,9 @@ class RequestContextPropagationFluxTest {
                                   .doOnError(t -> assertThat(ctxExists(ctx)).isTrue())
                                   .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue());
 
-        if (shouldContextWrite) {
-            return flux.contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
-        }
-
-        if (shouldContextCapture) {
+        if (useContextCapture) {
             return flux.contextCapture();
         }
-
-        return flux;
+        return flux.contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
     }
 }
