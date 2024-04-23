@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TextFormatter;
 
+import akka.japi.Pair;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -39,7 +40,6 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
     private static final AtomicIntegerFieldUpdater<DefaultUnhandledExceptionsReporter> scheduledUpdater =
             AtomicIntegerFieldUpdater.newUpdater(DefaultUnhandledExceptionsReporter.class,
                                                  "scheduled");
-    private Map<Throwable, LongAdder> thrownExceptionCounters = new ConcurrentHashMap<>();
 
     private final long intervalMillis;
     // Note: We keep both Micrometer Counter and our own counter because Micrometer Counter
@@ -53,7 +53,7 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
     @Nullable
     private ScheduledFuture<?> reportingTaskFuture;
     @Nullable
-    private Throwable thrownException;
+    private Map<Throwable, Pair<LongAdder, ServiceRequestContext>> thrownExceptions;
 
     DefaultUnhandledExceptionsReporter(MeterRegistry meterRegistry, long intervalMillis) {
         this.intervalMillis = intervalMillis;
@@ -68,9 +68,20 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
                     this::reportException, intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
         }
 
-        if (thrownException == null) {
-            thrownException = cause;
+        if (thrownExceptions == null) {
+            thrownExceptions = new HashMap<>();
         }
+
+        thrownExceptions.compute(cause, (k, v) -> {
+            if (v == null) {
+                final LongAdder adder = new LongAdder();
+                adder.increment();
+                return new Pair(adder, ctx);
+            } else {
+                v.first().increment();
+                return v;
+            }
+        });
 
         micrometerCounter.increment();
         counter.increment();
@@ -102,15 +113,14 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
             return;
         }
 
-        final Throwable exception = thrownException;
-        if (exception != null) {
+        Map<Throwable, Pair<LongAdder, ServiceRequestContext>> exceptions = thrownExceptions;
+        if (exceptions != null) {
             logger.warn("Observed {} exception(s) that didn't reach a LoggingService in the last {}. " +
                         "Please consider adding a LoggingService as the outermost decorator to get " +
-                        "detailed error logs. One of the thrown exceptions:",
+                        "detailed error logs. Thrown exceptions: {}",
                         newExceptionsCount,
-                        TextFormatter.elapsed(intervalMillis, TimeUnit.MILLISECONDS), exception);
-            thrownExceptionCounters.computeIfAbsent(exception, k -> new LongAdder()).increment();
-            thrownException = null;
+                        TextFormatter.elapsed(intervalMillis, TimeUnit.MILLISECONDS), exceptions.toString());
+            thrownExceptions = null;
         } else {
             logger.warn("Observed {} exception(s) that didn't reach a LoggingService in the last {}. " +
                         "Please consider adding a LoggingService as the outermost decorator to get " +
