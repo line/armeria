@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
@@ -440,5 +441,76 @@ class DefaultAsyncLoaderTest {
         assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
                 CompletionException.class,
                 ex -> assertThat(ex.getCause()).isInstanceOf(NullPointerException.class));
+    }
+
+    @Test
+    void refreshIf() {
+        final AtomicInteger loadCounter = new AtomicInteger();
+        final AtomicBoolean refresh = new AtomicBoolean();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
+                UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .refreshIf(i -> refresh.get())
+                .build();
+
+        assertThat(loadCounter.get()).isZero();
+        for (int i = 0; i < 5; i++) {
+            assertThat(loader.get().join()).isOne();
+            assertThat(loadCounter.get()).isOne();
+        }
+
+        // refresh 1
+        refresh.set(true);
+        await().untilAsserted(() -> {
+            final int val = loader.get().join();
+            refresh.set(false);
+            assertThat(val).isEqualTo(2);
+        });
+
+        for (int i = 0; i < 5; i++) {
+            assertThat(loader.get().join()).isEqualTo(2);
+            assertThat(loadCounter.get()).isEqualTo(2);
+        }
+
+        // refresh 2
+        refresh.set(true);
+        await().untilAsserted(() -> {
+            final int val = loader.get().join();
+            refresh.set(false);
+            assertThat(val).isEqualTo(3);
+        });
+
+        for (int i = 0; i < 5; i++) {
+            assertThat(loader.get().join()).isEqualTo(3);
+            assertThat(loadCounter.get()).isEqualTo(3);
+        }
+    }
+
+    @Test
+    void refreshIf_thrown() throws InterruptedException {
+        final AtomicInteger loadCounter = new AtomicInteger();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
+                UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .expireAfterLoad(Duration.ofSeconds(3))
+                .refreshIf(i -> {
+                    throw new IllegalStateException();
+                })
+                .build();
+
+        assertThat(loadCounter.get()).isZero();
+        for (int i = 0; i < 5; i++) {
+            assertThat(loader.get().join()).isOne();
+            assertThat(loadCounter.get()).isOne();
+        }
+
+        Thread.sleep(3500);
+
+        for (int i = 0; i < 5; i++) {
+            assertThat(loader.get().join()).isEqualTo(2);
+            assertThat(loadCounter.get()).isEqualTo(2);
+        }
     }
 }

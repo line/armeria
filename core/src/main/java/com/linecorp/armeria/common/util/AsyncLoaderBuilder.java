@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -37,6 +38,10 @@ public final class AsyncLoaderBuilder<T> {
     @Nullable
     private Predicate<@Nullable T> expireIf;
     @Nullable
+    private Predicate<@Nullable T> refreshIf;
+    @Nullable
+    private ExecutorService refreshExecutor;
+    @Nullable
     private BiFunction<Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler;
 
     AsyncLoaderBuilder(Function<@Nullable T, CompletableFuture<T>> loader) {
@@ -48,9 +53,9 @@ public final class AsyncLoaderBuilder<T> {
      * Expires loaded value after duration since it was loaded.
      * New value will be loaded by loader on next {@link AsyncLoader#get()}.
      */
-    public AsyncLoaderBuilder<T> expireAfterLoad(Duration duration) {
-        requireNonNull(duration, "duration");
-        this.expireAfterLoad = duration;
+    public AsyncLoaderBuilder<T> expireAfterLoad(Duration expireAfterLoad) {
+        requireNonNull(expireAfterLoad, "expireAfterLoad");
+        this.expireAfterLoad = expireAfterLoad;
         return this;
     }
 
@@ -58,9 +63,32 @@ public final class AsyncLoaderBuilder<T> {
      * Expires loaded value if predicate matches.
      * New value will be loaded by loader on next {@link AsyncLoader#get()}.
      */
-    public AsyncLoaderBuilder<T> expireIf(Predicate<@Nullable T> predicate) {
-        requireNonNull(predicate, "predicate");
-        this.expireIf = predicate;
+    public AsyncLoaderBuilder<T> expireIf(Predicate<@Nullable T> expireIf) {
+        requireNonNull(expireIf, "expireIf");
+        this.expireIf = expireIf;
+        return this;
+    }
+
+    /**
+     * Refreshes loaded value which is not expired yet asynchronously if predicate matches.
+     * This pre-fetch strategy can remove an additional loading time on a cache miss.
+     *
+     * <p>Note that if 1 refresh is in progress, other refreshes will be bypassed.
+     * Only 1 refresh is executed at the same time.
+     */
+    public AsyncLoaderBuilder<T> refreshIf(Predicate<@Nullable T> refreshIf) {
+        requireNonNull(refreshIf, "refreshIf");
+        this.refreshIf = refreshIf;
+        return this;
+    }
+
+    /**
+     * Set executor service to execute refresh.
+     * @see AsyncLoaderBuilder#refreshIf(Predicate)
+     */
+    public AsyncLoaderBuilder<T> refreshExecutor(ExecutorService refreshExecutor) {
+        requireNonNull(refreshExecutor, "refreshExecutor");
+        this.refreshExecutor = refreshExecutor;
         return this;
     }
 
@@ -79,6 +107,7 @@ public final class AsyncLoaderBuilder<T> {
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
      */
     public AsyncLoader<T> build() {
-        return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, exceptionHandler);
+        return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, refreshIf,
+                                        refreshExecutor, exceptionHandler);
     }
 }

@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -39,6 +41,11 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private static final AtomicReferenceFieldUpdater<
             DefaultAsyncLoader, CompletableFuture> loadFutureUpdater = AtomicReferenceFieldUpdater
             .newUpdater(DefaultAsyncLoader.class, CompletableFuture.class, "loadFuture");
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<
+            DefaultAsyncLoader, CompletableFuture> refreshFutureUpdater = AtomicReferenceFieldUpdater
+            .newUpdater(DefaultAsyncLoader.class, CompletableFuture.class, "refreshFuture");
+    private static final ExecutorService DEFAULT_REFRESH_EXECUTOR = Executors.newSingleThreadExecutor();
 
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     @Nullable
@@ -46,19 +53,28 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     @Nullable
     private final Predicate<@Nullable T> expireIf;
     @Nullable
+    private final Predicate<@Nullable T> refreshIf;
+    @Nullable
+    private final ExecutorService refreshExecutor;
+    @Nullable
     private final BiFunction<Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler;
 
     private volatile CompletableFuture<CacheEntry<T>> loadFuture = UnmodifiableFuture.completedFuture(null);
+    private volatile CompletableFuture<CacheEntry<T>> refreshFuture = UnmodifiableFuture.completedFuture(null);
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
                        @Nullable Duration expireAfterLoad,
                        @Nullable Predicate<@Nullable T> expireIf,
+                       @Nullable Predicate<@Nullable T> refreshIf,
+                       @Nullable ExecutorService refreshExecutor,
                        @Nullable BiFunction<
                                Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler) {
         requireNonNull(loader, "loader");
         this.loader = loader;
         this.expireAfterLoad = expireAfterLoad;
         this.expireIf = expireIf;
+        this.refreshIf = refreshIf;
+        this.refreshExecutor = refreshExecutor;
         this.exceptionHandler = exceptionHandler;
     }
 
@@ -79,6 +95,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             if (!loadFuture.isCompletedExceptionally()) {
                 cacheEntry = loadFuture.join();
                 if (isValid(cacheEntry)) {
+                    maybeRefresh(cacheEntry.loadVal);
                     return loadFuture;
                 }
             }
@@ -89,26 +106,58 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             }
         }
 
-        final T cache = cacheEntry != null ? cacheEntry.loadVal : null;
-        final CompletableFuture<CacheEntry<T>> newLoadfuture = future;
+        load(cacheEntry != null ? cacheEntry.loadVal : null, future);
+        return future;
+    }
+
+    private void maybeRefresh(@Nullable T cache) {
+        boolean refresh = false;
+        try {
+            refresh = refreshIf != null && refreshIf.test(cache);
+        } catch (Exception e) {
+            logger.warn("Unexpected exception from refreshIf.test()", e);
+        }
+
+        if (!refresh) {
+            return;
+        }
+
+        CompletableFuture<CacheEntry<T>> future;
+        for (;;) {
+            final CompletableFuture<CacheEntry<T>> refreshFuture = this.refreshFuture;
+            if (!refreshFuture.isDone()) {
+                return;
+            }
+
+            future = new CompletableFuture<>();
+            if (refreshFutureUpdater.compareAndSet(this, refreshFuture, future)) {
+                break;
+            }
+        }
+
+        final CompletableFuture<CacheEntry<T>> newRefreshFuture = future;
+        newRefreshFuture.thenAccept(val -> loadFuture = UnmodifiableFuture.completedFuture(val));
+        CompletableFuture.runAsync(() -> load(cache, newRefreshFuture),
+                                   refreshExecutor != null ? refreshExecutor : DEFAULT_REFRESH_EXECUTOR);
+    }
+
+    private void load(@Nullable T cache, CompletableFuture<CacheEntry<T>> future) {
         try {
             requireNonNull(loader.apply(cache), "loader.apply() returned null")
                     .handle((val, cause) -> {
                         if (cause != null) {
                             logger.warn("Failed to load a new value from loader: {}. the previous value: {}",
                                         loader, cache, cause);
-                            handleException(cause, cache, newLoadfuture);
+                            handleException(cause, cache, future);
                         } else {
-                            newLoadfuture.complete(new CacheEntry<>(val));
+                            future.complete(new CacheEntry<>(val));
                         }
                         return null;
                     });
         } catch (Exception e) {
             logger.warn("Unexpected exception from loader.apply()", e);
-            handleException(e, cache, newLoadfuture);
+            handleException(e, cache, future);
         }
-
-        return newLoadfuture;
     }
 
     private void handleException(Throwable cause, @Nullable T cache,
