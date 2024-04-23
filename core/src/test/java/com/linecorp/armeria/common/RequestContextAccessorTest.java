@@ -145,7 +145,6 @@ class RequestContextAccessorTest {
     }
 
     static ClientRequestContext newContext() {
-        return ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                   .build();
+        return ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
     }
 }
