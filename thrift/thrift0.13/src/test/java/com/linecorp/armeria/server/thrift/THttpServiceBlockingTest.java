@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.thrift.ThriftClients;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -85,12 +84,7 @@ class THttpServiceBlockingTest {
     void blocking() throws Exception {
         final HelloService.Iface client =
                 ThriftClients.builder(server.httpUri())
-                             .decorator((delegate, ctx, req) -> {
-                                 final HttpRequest newReq = req.mapHeaders(
-                                         headers -> headers.toBuilder().path("/blocking").build());
-                                 ctx.updateRequest(newReq);
-                                 return delegate.execute(ctx, newReq);
-                             })
+                             .path("/blocking")
                              .build(HelloService.Iface.class);
         final String message = "blockingTest";
         final String response = client.hello(message);
@@ -103,12 +97,7 @@ class THttpServiceBlockingTest {
     void blockingIface() throws Exception {
         final HelloService.Iface client =
                 ThriftClients.builder(server.httpUri())
-                             .decorator((delegate, ctx, req) -> {
-                                 final HttpRequest newReq = req.mapHeaders(
-                                         headers -> headers.toBuilder().path("/blocking-iface").build());
-                                 ctx.updateRequest(newReq);
-                                 return delegate.execute(ctx, newReq);
-                             })
+                             .path("/blocking-iface")
                              .build(HelloService.Iface.class);
         final String message = "blockingTest";
         final String response = client.hello(message);

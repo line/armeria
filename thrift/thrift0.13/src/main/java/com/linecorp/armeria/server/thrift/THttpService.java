@@ -400,16 +400,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final DecodedRequest decodedRequest = ctx.attr(DECODED_REQUEST);
         if (decodedRequest != null) {
             final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-            if (useBlockingTaskExecutor) {
-                ctx.blockingTaskExecutor().execute(() -> invoke(ctx, decodedRequest.serializationFormat,
-                                                                decodedRequest.seqId,
-                                                                decodedRequest.thriftFunction,
-                                                                decodedRequest.decodedReq,
-                                                                responseFuture));
-            } else {
-                invoke(ctx, decodedRequest.serializationFormat, decodedRequest.seqId,
-                       decodedRequest.thriftFunction, decodedRequest.decodedReq, responseFuture);
-            }
+            invoke(ctx, decodedRequest.serializationFormat, decodedRequest.seqId,
+                   decodedRequest.thriftFunction, decodedRequest.decodedReq, responseFuture);
             return HttpResponse.of(responseFuture);
         }
 
@@ -618,13 +610,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             return;
         }
 
-        if (useBlockingTaskExecutor) {
-            ctx.blockingTaskExecutor().execute(
-                    () -> invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes)
-            );
-        } else {
-            invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
-        }
+        invoke(ctx, serializationFormat, seqId, f, decodedReq, httpRes);
     }
 
     private static String typeString(byte typeValue) {
@@ -641,8 +627,23 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 return "UNKNOWN(" + (typeValue & 0xFF) + ')';
         }
     }
-
     private void invoke(
+            ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId,
+            ThriftFunction func, RpcRequest call, CompletableFuture<HttpResponse> res) {
+        if (useBlockingTaskExecutor) {
+            ctx.blockingTaskExecutor().execute(() -> invoke0(ctx, serializationFormat,
+                                                            seqId,
+                                                            func,
+                                                            call,
+                                                            res));
+        } else {
+            invoke0(ctx, serializationFormat, seqId, func, call, res);
+        }
+
+
+    }
+
+    private void invoke0(
             ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId,
             ThriftFunction func, RpcRequest call, CompletableFuture<HttpResponse> res) {
 
