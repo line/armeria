@@ -64,9 +64,12 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -390,8 +393,11 @@ public abstract class TomcatService implements HttpService {
         req.aggregate().handle((aReq, cause) -> {
             try {
                 if (cause != null) {
+                    cause = Exceptions.peel(cause);
                     logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                    if (res.tryWrite(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR))) {
+                    if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+                        res.close(cause);
+                    } else if (res.tryWrite(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR))) {
                         res.close();
                     }
                     return null;

@@ -37,7 +37,7 @@ final class SangriaGraphqlServiceBuilder[Ctx, Val] private[sangria] (
   private var queryValidator: QueryValidator = QueryValidator.default
   private var deferredResolver: DeferredResolver[Ctx] = DeferredResolver.empty
   private var exceptionHandler: ExceptionHandler = ExceptionHandler.empty
-  private var deprecationTracker: DeprecationTracker = DeprecationTracker.empty
+  private var deprecationTracker: Option[DeprecationTracker] = Option.empty
   private var middleware: List[Middleware[Ctx]] = Nil
   private var maxQueryDepth: Option[Int] = None
   private var queryReducers: List[QueryReducer[Ctx, _]] = Nil
@@ -72,7 +72,7 @@ final class SangriaGraphqlServiceBuilder[Ctx, Val] private[sangria] (
    * Sets the specified [[sangria.execution.DeprecationTracker]].
    */
   def deprecationTracker(deprecationTracker: DeprecationTracker): SangriaGraphqlServiceBuilder[Ctx, Val] = {
-    this.deprecationTracker = deprecationTracker
+    this.deprecationTracker = Option(deprecationTracker)
     this
   }
 

@@ -79,6 +79,17 @@ class EndpointTest {
         assertThat(barWithUserInfo.hasIpAddr()).isFalse();
         assertThat(barWithUserInfo.hasPort()).isTrue();
         assertThat(barWithUserInfo.toUri("none+http").toString()).isEqualTo("none+http://bar:80");
+
+        final Endpoint barWithoutPort = Endpoint.parse("foo@bar:");
+        assertThat(barWithoutPort).isEqualTo(Endpoint.of("bar"));
+        assertThat(barWithoutPort.type()).isSameAs(Type.HOSTNAME_ONLY);
+        assertThatThrownBy(barWithoutPort::port).isInstanceOf(IllegalStateException.class);
+        assertThat(barWithoutPort.weight()).isEqualTo(1000);
+        assertThat(barWithoutPort.ipAddr()).isNull();
+        assertThat(barWithoutPort.ipFamily()).isNull();
+        assertThat(barWithoutPort.hasIpAddr()).isFalse();
+        assertThat(barWithoutPort.hasPort()).isFalse();
+        assertThat(barWithoutPort.toUri("none+http").toString()).isEqualTo("none+http://bar");
     }
 
     @Test

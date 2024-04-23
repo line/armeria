@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,13 +14,22 @@
  * under the License.
  */
 
-/**
- * Various classes used internally as server-side
- * <a href="https://en.wikipedia.org/wiki/OAuth#OAuth_2.0">OAuth 2.0</a> implementation artifacts.
- */
-@UnstableApi
-@NonNullByDefault
-package com.linecorp.armeria.internal.server.auth.oauth2;
+package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.annotation.NonNullByDefault;
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpHeadersFactory;
+
+enum ArmeriaHttpHeadersFactory implements HttpHeadersFactory {
+
+    INSTANCE;
+
+    @Override
+    public HttpHeaders newHeaders() {
+        return new NettyHttp1Headers();
+    }
+
+    @Override
+    public HttpHeaders newEmptyHeaders() {
+        return new NettyHttp1Headers();
+    }
+}
