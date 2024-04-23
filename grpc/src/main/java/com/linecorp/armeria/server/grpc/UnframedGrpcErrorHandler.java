@@ -43,7 +43,7 @@ public interface UnframedGrpcErrorHandler {
      * Returns a plain text or json response based on the content type.
      */
     static UnframedGrpcErrorHandler of() {
-        return UnframedGrpcErrorHandlers.of(UnframedGrpcStatusMappingFunction.of());
+        return DefaultUnframedGrpcErrorHandler.of();
     }
 
     /**
@@ -53,7 +53,7 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return UnframedGrpcErrorHandlers.of(statusMappingFunction);
+        return DefaultUnframedGrpcErrorHandler.of(statusMappingFunction);
     }
 
     /**

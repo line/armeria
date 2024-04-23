@@ -52,7 +52,7 @@ final class TextUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
     }
 
     static TextUnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        if (DEFAULT_STATUS_MAPPING_FUNCTION.equals(statusMappingFunction)) {
+        if (DEFAULT_STATUS_MAPPING_FUNCTION == statusMappingFunction) {
             return DEFAULT;
         }
         return new TextUnframedGrpcErrorHandler(statusMappingFunction);

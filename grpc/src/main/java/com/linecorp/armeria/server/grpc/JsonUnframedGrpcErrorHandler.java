@@ -106,8 +106,8 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
 
     static JsonUnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction,
                                            MessageMarshaller jsonMarshaller) {
-        if (DEFAULT_STATUS_MAPPING_FUNCTION.equals(statusMappingFunction) &&
-            ERROR_DETAILS_MARSHALLER.equals(jsonMarshaller)) {
+        if (DEFAULT_STATUS_MAPPING_FUNCTION == statusMappingFunction &&
+            ERROR_DETAILS_MARSHALLER == jsonMarshaller) {
             return DEFAULT;
         }
         return new JsonUnframedGrpcErrorHandler(statusMappingFunction, jsonMarshaller);

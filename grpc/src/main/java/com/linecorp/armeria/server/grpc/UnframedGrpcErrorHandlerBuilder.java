@@ -228,12 +228,12 @@ public final class UnframedGrpcErrorHandlerBuilder {
         }
 
         if (responseTypes == null) {
-            return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
+            return DefaultUnframedGrpcErrorHandler.of(statusMappingFunction, jsonMarshaller);
         }
 
         if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON) &&
             responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
-            return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
+            return DefaultUnframedGrpcErrorHandler.of(statusMappingFunction, jsonMarshaller);
         }
 
         if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON)) {
@@ -244,6 +244,6 @@ public final class UnframedGrpcErrorHandlerBuilder {
             return TextUnframedGrpcErrorHandler.of(statusMappingFunction);
         }
 
-        return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
+        return DefaultUnframedGrpcErrorHandler.of(statusMappingFunction, jsonMarshaller);
     }
 }
