@@ -274,6 +274,7 @@ abstract class AbstractHttpResponseHandler {
                     // A stream or connection was already closed by a client
                     fail(cause);
                 } else {
+                    req.setShouldResetOnlyIfRemoteIsOpen(true);
                     req.abortResponse(cause, false);
                 }
             }
