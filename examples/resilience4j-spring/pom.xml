@@ -58,4 +58,6 @@
       <version>1.12.2</version>
     </dependency>
   </dependencies>
+  <build>
+</build>
 </project>

@@ -27,4 +27,6 @@
       <version>0.3.6</version>
     </dependency>
   </dependencies>
+  <build>
+</build>
 </project>

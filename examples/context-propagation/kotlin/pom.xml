@@ -42,4 +42,6 @@
       <version>1.27.2</version>
     </dependency>
   </dependencies>
+  <build>
+</build>
 </project>

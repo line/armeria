@@ -36,5 +36,13 @@
       <artifactId>dagger-producers</artifactId>
       <version>2.50</version>
     </dependency>
+    <dependency>
+      <groupId>com.google.dagger</groupId>
+      <artifactId>dagger-compiler</artifactId>
+      <version>2.50</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
+  <build>
+</build>
 </project>

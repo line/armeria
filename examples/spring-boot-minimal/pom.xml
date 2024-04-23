@@ -51,4 +51,6 @@
       <scope>compile</scope>
     </dependency>
   </dependencies>
+  <build>
+</build>
 </project>
