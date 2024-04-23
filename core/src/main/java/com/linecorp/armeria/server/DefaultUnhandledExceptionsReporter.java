@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.LongAdder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TextFormatter;
@@ -129,6 +131,11 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
         }
 
         lastExceptionsCount = totalExceptionsCount;
+    }
+
+    @VisibleForTesting
+    Map<Throwable, Pair<LongAdder, ServiceRequestContext>> getThrownExceptions() {
+        return thrownExceptions;
     }
 }
 
