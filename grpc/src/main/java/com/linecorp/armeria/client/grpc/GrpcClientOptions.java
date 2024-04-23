@@ -178,8 +178,9 @@ public final class GrpcClientOptions {
                                 (ctx, cause, metadata) -> GrpcStatus.fromThrowable(cause));
 
     /**
-     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}
-     * If not set, will use the default(false), which use more efficient way that reduce copy operation.
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}.
+     * If disabled, the default marshaller will be used, which is more efficient.
+     * This option is disabled by default.
      */
     public static final ClientOption<Boolean> USE_METHOD_MARSHALLER =
             ClientOption.define("USE_METHOD_MARSHALLER", false);
