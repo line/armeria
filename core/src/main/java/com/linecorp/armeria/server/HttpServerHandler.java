@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.common.Flags;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -781,8 +782,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         handledLastRequest = true;
                         if (unfinishedRequests.isEmpty()) {
                             ctx.executor().schedule(() ->
-                                            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE),
-                                            1000, TimeUnit.MILLISECONDS);
+                                        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE),
+                                        Flags.defaultHttp1ConnectionCloseDelayMillis(), TimeUnit.MILLISECONDS);
                         }
                     }
                 }
