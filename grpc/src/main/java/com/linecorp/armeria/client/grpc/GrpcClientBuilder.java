@@ -290,8 +290,9 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}
-     * If not set, will use the default(false), which use more efficient way that reduce copy operation.
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}.
+     * If disabled, the default marshaller will be used, which is more efficient.
+     * This property is disabled by default.
      */
     @UnstableApi
     public GrpcClientBuilder useMethodMarshaller(boolean useMethodMarshaller) {
