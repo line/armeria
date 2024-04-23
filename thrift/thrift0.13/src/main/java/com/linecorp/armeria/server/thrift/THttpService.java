@@ -287,7 +287,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
     private int maxRequestStringLength;
     private int maxRequestContainerLength;
-    private boolean useBlockingTaskExecutor;
+    private final boolean useBlockingTaskExecutor;
     private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
     private Map<ThriftFunction, HttpService> decoratedTHttpServices;

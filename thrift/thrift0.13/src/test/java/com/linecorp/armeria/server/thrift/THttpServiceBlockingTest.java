@@ -34,9 +34,7 @@ import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import testing.thrift.test.TestService;
-import testing.thrift.test.TestServiceRequest;
-import testing.thrift.test.TestServiceResponse;
+import testing.thrift.main.HelloService;
 
 class THttpServiceBlockingTest {
     private static final AtomicBoolean blocking = new AtomicBoolean();
@@ -60,29 +58,32 @@ class THttpServiceBlockingTest {
         protected void configure(ServerBuilder sb) throws Exception {
 
             sb.service("/",
-                       THttpService.builder().addService(new TestServiceImpl()).build());
+                       THttpService.builder().addService(new HelloServiceAsyncImpl()).build());
             sb.service("/blocking", THttpService.builder()
                                                 .useBlockingTaskExecutor(true)
-                                                .addService(new TestServiceImpl())
+                                                .addService(new HelloServiceAsyncImpl())
                                                 .build());
+            sb.service("/blocking-iface",
+                       THttpService.builder().addService(new HelloServiceImpl()).build());
+
             sb.blockingTaskExecutor(executor, true);
         }
     };
 
     @Test
     void nonBlocking() throws Exception {
-        final TestService.Iface client = ThriftClients.newClient(server.httpUri(), TestService.Iface.class);
+        final HelloService.Iface client = ThriftClients.newClient(server.httpUri(), HelloService.Iface.class);
 
         final String message = "nonBlockingTest";
-        final TestServiceResponse response = client.get(new TestServiceRequest(message));
+        final String response = client.hello(message);
 
-        assertThat(response.response).isEqualTo(message);
+        assertThat(response).isEqualTo(message);
         assertThat(blocking).isFalse();
     }
 
     @Test
     void blocking() throws Exception {
-        final TestService.Iface client =
+        final HelloService.Iface client =
                 ThriftClients.builder(server.httpUri())
                              .decorator((delegate, ctx, req) -> {
                                  final HttpRequest newReq = req.mapHeaders(
@@ -90,19 +91,43 @@ class THttpServiceBlockingTest {
                                  ctx.updateRequest(newReq);
                                  return delegate.execute(ctx, newReq);
                              })
-                             .build(TestService.Iface.class);
+                             .build(HelloService.Iface.class);
         final String message = "blockingTest";
-        final TestServiceResponse response = client.get(new TestServiceRequest(message));
+        final String response = client.hello(message);
 
-        assertThat(response.response).isEqualTo(message);
+        assertThat(response).isEqualTo(message);
         assertThat(blocking).isTrue();
     }
 
-    static class TestServiceImpl implements TestService.AsyncIface {
+    @Test
+    void blockingIface() throws Exception {
+        final HelloService.Iface client =
+                ThriftClients.builder(server.httpUri())
+                             .decorator((delegate, ctx, req) -> {
+                                 final HttpRequest newReq = req.mapHeaders(
+                                         headers -> headers.toBuilder().path("/blocking-iface").build());
+                                 ctx.updateRequest(newReq);
+                                 return delegate.execute(ctx, newReq);
+                             })
+                             .build(HelloService.Iface.class);
+        final String message = "blockingTest";
+        final String response = client.hello(message);
+
+        assertThat(response).isEqualTo(message);
+        assertThat(blocking).isTrue();
+    }
+
+    static class HelloServiceAsyncImpl implements HelloService.AsyncIface {
         @Override
-        public void get(TestServiceRequest request,
-                        AsyncMethodCallback resultHandler) throws TException {
-            resultHandler.onComplete(new TestServiceResponse(request.getMessage()));
+        public void hello(String name, AsyncMethodCallback resultHandler) throws TException {
+            resultHandler.onComplete(name);
+        }
+    }
+
+    static class HelloServiceImpl implements HelloService.Iface {
+        @Override
+        public String hello(String name) throws TException {
+            return name;
         }
     }
 }
