@@ -55,12 +55,12 @@ final class DefaultUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler 
     static DefaultUnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction mappingFunction,
                                               @Nullable MessageMarshaller jsonMarshaller) {
         final JsonUnframedGrpcErrorHandler jsonHandler =
-                (jsonMarshaller == null) ? JsonUnframedGrpcErrorHandler.of(mappingFunction)
-                                         : JsonUnframedGrpcErrorHandler.of(mappingFunction, jsonMarshaller);
+                jsonMarshaller == null ? JsonUnframedGrpcErrorHandler.of(mappingFunction)
+                                       : JsonUnframedGrpcErrorHandler.of(mappingFunction, jsonMarshaller);
         final TextUnframedGrpcErrorHandler textHandler = TextUnframedGrpcErrorHandler.of(mappingFunction);
 
         if (jsonHandler == DEFAULT_JSON_UNFRAMED_GRPC_ERROR_HANDLER &&
-           textHandler == DEFAULT_TEXT_UNFRAMED_GRPC_ERROR_HANDLER) {
+            textHandler == DEFAULT_TEXT_UNFRAMED_GRPC_ERROR_HANDLER) {
             return DEFAULT;
         }
 
