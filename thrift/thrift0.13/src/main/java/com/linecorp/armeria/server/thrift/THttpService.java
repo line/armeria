@@ -627,20 +627,16 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 return "UNKNOWN(" + (typeValue & 0xFF) + ')';
         }
     }
+
     private void invoke(
             ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId,
             ThriftFunction func, RpcRequest call, CompletableFuture<HttpResponse> res) {
         if (useBlockingTaskExecutor) {
             ctx.blockingTaskExecutor().execute(() -> invoke0(ctx, serializationFormat,
-                                                            seqId,
-                                                            func,
-                                                            call,
-                                                            res));
+                                                            seqId, func, call, res));
         } else {
             invoke0(ctx, serializationFormat, seqId, func, call, res);
         }
-
-
     }
 
     private void invoke0(
