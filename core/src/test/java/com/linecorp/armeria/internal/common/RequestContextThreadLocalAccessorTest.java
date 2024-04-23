@@ -26,10 +26,11 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.common.RequestContextThreadLocalAccessor;
-import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.context.ContextRegistry;
+import io.micrometer.context.ContextSnapshot;
+import io.micrometer.context.ContextSnapshot.Scope;
+import io.micrometer.context.ContextSnapshotFactory;
 import io.micrometer.context.ThreadLocalAccessor;
 
 class RequestContextThreadLocalAccessorTest {
@@ -131,6 +132,34 @@ class RequestContextThreadLocalAccessorTest {
         // Then
         final RequestContext reqCtx = RequestContext.currentOrNull();
         assertThat(reqCtx).isNull();
+    }
+
+    @Test
+    void requestContext_should_exist_inside_scope_and_not_outside() {
+        // Given
+        final RequestContextThreadLocalAccessor reqCtxAccessor = new RequestContextThreadLocalAccessor();
+        final ClientRequestContext currentCtx = newContext();
+        final ClientRequestContext expectedCtx = currentCtx;
+        reqCtxAccessor.setValue(currentCtx);
+
+        final ContextSnapshotFactory factory = ContextSnapshotFactory.builder()
+                                                                     .clearMissing(true)
+                                                                     .build();
+        final ContextSnapshot contextSnapshot = factory.captureAll();
+        reqCtxAccessor.setValue();
+
+        // When : contextSnapshot.setThreadLocals()
+        try (Scope ignored = contextSnapshot.setThreadLocals()) {
+
+            // Then : should not
+            final RequestContext reqCtxInScope = RequestContext.currentOrNull();
+            assertThat(reqCtxInScope).isNotNull();
+            assertThat(reqCtxInScope).isEqualTo(expectedCtx);
+        }
+
+        // Then
+        final RequestContext reqCtxOutOfScope = RequestContext.currentOrNull();
+        assertThat(reqCtxOutOfScope).isNull();
     }
 
     static ClientRequestContext newContext() {
