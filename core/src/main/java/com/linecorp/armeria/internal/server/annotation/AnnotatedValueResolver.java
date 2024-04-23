@@ -865,8 +865,6 @@ final class AnnotatedValueResolver {
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
     attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
         return (resolver, ctx) -> {
-            Object lastInvalidValue = null;
-            String lastAttrKeyName = null;
             Class<?> targetType = resolver.rawType();
             if (targetType.isPrimitive()) {
                 targetType = Primitives.wrap(targetType);
@@ -876,24 +874,18 @@ final class AnnotatedValueResolver {
                 final Object value = ctx.context.attr(attrKey);
                 if (value != null) {
                     final boolean isValidType = targetType.isInstance(value);
-                    if (isValidType) {
-                        return value;
-                    } else {
-                        lastInvalidValue = value;
-                        lastAttrKeyName = attrKey.name();
+
+                    if (!isValidType) {
+                        throw new IllegalStateException(
+                                String.format("'%s' which is from AttributeKey(%s) is not an instance of '%s'.",
+                                              targetType.getName(),
+                                              attrKey.name(),
+                                              value.getClass().getName()));
                     }
+                    return value;
                 }
             }
-
-            if (lastInvalidValue != null && lastAttrKeyName != null) {
-                throw new IllegalStateException(
-                        String.format("'%s' which is from AttributeKey(%s) is not an instance of '%s'.",
-                                      targetType.getName(),
-                                      lastAttrKeyName,
-                                      lastInvalidValue.getClass().getName()));
-            } else {
-                return resolver.defaultOrException();
-            }
+            return resolver.defaultOrException();
         };
     }
 
