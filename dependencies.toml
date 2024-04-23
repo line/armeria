@@ -10,7 +10,7 @@ awaitility = "4.2.1"
 blockhound = "1.0.8.RELEASE"
 bouncycastle = "1.70"
 brave5 = "5.18.1"
-brave6 = "6.0.2"
+brave6 = "6.0.3"
 brotli4j = "1.16.0"
 bucket4j = "7.6.0"
 # Don"t upgrade Caffeine to 3.x that requires Java 11.
@@ -258,8 +258,8 @@ version.ref = "brave5"
 module = "io.zipkin.brave:brave"
 version.ref = "brave6"
 javadocs = [
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave/6.0.0/",
-    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/6.0.0/"]
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave/6.0.3/",
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/6.0.3/"]
 [libraries.brave6-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
 version.ref = "brave6"
