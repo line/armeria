@@ -13,12 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ContextSnapshot;
@@ -30,8 +31,8 @@ import io.micrometer.context.ThreadLocalAccessor;
  * <a href="https://docs.micrometer.io/context-propagation/reference/index.html">
  * Context-propagation</a> library and keep the {@link RequestContext} during
  * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations.
- * Get the {@link RequestContextAccessor} to register it to the {@link ContextRegistry}.
- * Then, {@link ContextRegistry} will use {@link RequestContextAccessor} to
+ * Get the {@link RequestContextThreadLocalAccessor} to register it to the {@link ContextRegistry}.
+ * Then, {@link ContextRegistry} will use {@link RequestContextThreadLocalAccessor} to
  * propagate context during the
  * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations
  * so that you can get the context using {@link RequestContext#current()}.
@@ -40,27 +41,17 @@ import io.micrometer.context.ThreadLocalAccessor;
  * If not, {@link RequestContext} will not be keep during Reactor Operation.
  */
 @UnstableApi
-public final class RequestContextAccessor implements ThreadLocalAccessor<RequestContext> {
+public final class RequestContextThreadLocalAccessor implements ThreadLocalAccessor<RequestContext> {
 
-    private static final String KEY = RequestContextAccessor.class.getName();
+    private static final Object KEY = RequestContext.class;
 
     /**
-     * The value which obtained through {@link RequestContextAccessor},
+     * The value which obtained through {@link RequestContextThreadLocalAccessor},
      * will be stored in the Context under this {@code KEY}.
      * This method will be called by {@link ContextSnapshot} internally.
      */
     @Override
     public Object key() {
-        return KEY;
-    }
-
-    /**
-     * The value which obtained through {@link RequestContextAccessor},
-     * will be stored in the Context under this {@code KEY}.
-     * User can use this method to register {@link RequestContext} to
-     * Reactor Context.
-     */
-    public static String accessorKey() {
         return KEY;
     }
 
@@ -98,7 +89,7 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
     /**
      * This method will be called at the start of {@link ContextSnapshot.Scope} and
      * the end of {@link ContextSnapshot.Scope}. If reactor Context does not
-     * contains {@link RequestContextAccessor#KEY}, {@link ContextSnapshot} will use
+     * contains {@link RequestContextThreadLocalAccessor#KEY}, {@link ContextSnapshot} will use
      * this method to remove the value from {@link ThreadLocal}.
      * Please note that {@link RequestContextUtil#pop()} return {@link AutoCloseable} instance,
      * but it is not used in `Try with Resources` syntax. this is because {@link ContextSnapshot.Scope}
@@ -129,7 +120,7 @@ public final class RequestContextAccessor implements ThreadLocalAccessor<Request
     /**
      * This method will be called at the start of {@link ContextSnapshot.Scope} and
      * the end of {@link ContextSnapshot.Scope}. If reactor Context does not
-     * contains {@link RequestContextAccessor#KEY}, {@link ContextSnapshot} will use
+     * contains {@link RequestContextThreadLocalAccessor#KEY}, {@link ContextSnapshot} will use
      * this method to remove the value from {@link ThreadLocal}.
      * Please note that {@link RequestContextUtil#pop()} return {@link AutoCloseable} instance,
      * but it is not used in `Try with Resources` syntax. this is because {@link ContextSnapshot.Scope}

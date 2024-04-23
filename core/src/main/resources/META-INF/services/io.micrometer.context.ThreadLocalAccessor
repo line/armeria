@@ -1,1 +1,1 @@
-com.linecorp.armeria.common.RequestContextAccessor
+com.linecorp.armeria.internal.common.RequestContextThreadLocalAccessor

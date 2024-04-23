@@ -32,7 +32,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestContextAccessor;
+import com.linecorp.armeria.internal.common.RequestContextThreadLocalAccessor;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
@@ -339,7 +339,7 @@ class RequestContextPropagationMonoTest {
                        }
                        return s;
                    })
-                   .contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
+                   .contextWrite(Context.of(RequestContext.class, ctx));
 
         // Then
         StepVerifier.create(mono)
@@ -389,6 +389,6 @@ class RequestContextPropagationMonoTest {
         if (useContextCapture) {
             return mono.contextCapture();
         }
-        return mono.contextWrite(Context.of(RequestContextAccessor.accessorKey(), ctx));
+        return mono.contextWrite(Context.of(RequestContext.class, ctx));
     }
 }

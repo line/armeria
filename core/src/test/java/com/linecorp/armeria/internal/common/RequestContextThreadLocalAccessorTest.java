@@ -13,23 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.internal.common.RequestContextThreadLocalAccessor;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ThreadLocalAccessor;
 
-class RequestContextAccessorTest {
+class RequestContextThreadLocalAccessorTest {
 
     @Test
     void should_be_loaded_by_SPI() {
@@ -37,14 +40,14 @@ class RequestContextAccessorTest {
         final List<ThreadLocalAccessor<?>> threadLocalAccessors = ctxRegistry.getThreadLocalAccessors();
 
         assertThat(threadLocalAccessors.size()).isGreaterThan(1);
-        assertThat(threadLocalAccessors).hasAtLeastOneElementOfType(RequestContextAccessor.class);
+        assertThat(threadLocalAccessors).hasAtLeastOneElementOfType(RequestContextThreadLocalAccessor.class);
     }
 
     @Test
     void should_return_expected_key() {
         // Given
-        final RequestContextAccessor reqCtxAccessor = new RequestContextAccessor();
-        final String expectedValue = RequestContextAccessor.class.getName();
+        final RequestContextThreadLocalAccessor reqCtxAccessor = new RequestContextThreadLocalAccessor();
+        final Object expectedValue = RequestContext.class;
 
         // When
         final Object result = reqCtxAccessor.key();
@@ -58,7 +61,7 @@ class RequestContextAccessorTest {
     void should_success_set() {
         // Given
         final ClientRequestContext ctx = newContext();
-        final RequestContextAccessor reqCtxAccessor = new RequestContextAccessor();
+        final RequestContextThreadLocalAccessor reqCtxAccessor = new RequestContextThreadLocalAccessor();
 
         // When
         reqCtxAccessor.setValue(ctx);
@@ -73,7 +76,7 @@ class RequestContextAccessorTest {
     @Test
     void should_throw_NPE_when_set_null() {
         // Given
-        final RequestContextAccessor reqCtxAccessor = new RequestContextAccessor();
+        final RequestContextThreadLocalAccessor reqCtxAccessor = new RequestContextThreadLocalAccessor();
 
         // When + Then
         assertThatThrownBy(() -> reqCtxAccessor.setValue(null))
@@ -84,7 +87,7 @@ class RequestContextAccessorTest {
     void should_be_null_when_setValue() {
         // Given
         final ClientRequestContext ctx = newContext();
-        final RequestContextAccessor reqCtxAccessor = new RequestContextAccessor();
+        final RequestContextThreadLocalAccessor reqCtxAccessor = new RequestContextThreadLocalAccessor();
         reqCtxAccessor.setValue(ctx);
 
         // When
@@ -99,7 +102,7 @@ class RequestContextAccessorTest {
     @SuppressWarnings("MustBeClosedChecker")
     void should_be_restore_original_state_when_restore() {
         // Given
-        final RequestContextAccessor reqCtxAccessor = new RequestContextAccessor();
+        final RequestContextThreadLocalAccessor reqCtxAccessor = new RequestContextThreadLocalAccessor();
         final ClientRequestContext previousCtx = newContext();
         final ClientRequestContext currentCtx = newContext();
         reqCtxAccessor.setValue(currentCtx);
@@ -118,7 +121,7 @@ class RequestContextAccessorTest {
     @Test
     void should_be_null_when_restore() {
         // Given
-        final RequestContextAccessor reqCtxAccessor = new RequestContextAccessor();
+        final RequestContextThreadLocalAccessor reqCtxAccessor = new RequestContextThreadLocalAccessor();
         final ClientRequestContext currentCtx = newContext();
         reqCtxAccessor.setValue(currentCtx);
 
