@@ -110,7 +110,6 @@ public final class DefaultAnnotatedService implements AnnotatedService {
     private final boolean useBlockingTaskExecutor;
     @Nullable
     private String name;
-    private final boolean serviceNameSetByAnnotation;
 
     DefaultAnnotatedService(Object object, Method method,
                             int overloadId, List<AnnotatedValueResolver> resolvers,
@@ -170,9 +169,6 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         }
         if (serviceName != null) {
             this.name = serviceName.value();
-            serviceNameSetByAnnotation = true;
-        } else {
-            serviceNameSetByAnnotation = false;
         }
 
         this.method.setAccessible(true);
@@ -225,14 +221,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
 
     @Override
     public String name() {
-        if (name == null) {
-            return serviceClass().getName();
-        }
         return name;
-    }
-
-    public boolean serviceNameSetByAnnotation() {
-        return serviceNameSetByAnnotation;
     }
 
     @Override

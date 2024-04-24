@@ -32,7 +32,11 @@ public final class ServiceNamingUtil {
                 continue;
             }
             if (delegate instanceof AnnotatedService) {
-                return ((AnnotatedService) delegate).name();
+                final AnnotatedService annotatedService = (AnnotatedService) delegate;
+                if (annotatedService.name() != null) {
+                    return annotatedService.name();
+                }
+                return annotatedService.serviceClass().getName();
             } else {
                 return delegate.getClass().getName();
             }
