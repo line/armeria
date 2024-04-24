@@ -160,14 +160,14 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
                 }
                 if (rpcStatus != null) {
                     jsonGenerator.writeFieldName("details");
-                    writeErrorDetails(rpcStatus.getDetailsList(), jsonGenerator);
+                    writeErrorDetails(ctx, rpcStatus.getDetailsList(), jsonGenerator);
                 }
             }
             jsonGenerator.writeEndObject();
             jsonGenerator.flush();
             success = true;
         } catch (IOException e) {
-            logger.warn("Unexpected exception while generating a JSON response", e);
+            logger.warn("{} Unexpected exception while generating a JSON response", ctx, e);
         } finally {
             if (!success) {
                 buffer.release();
@@ -181,14 +181,14 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
     }
 
     @VisibleForTesting
-    void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator) throws IOException {
+    void writeErrorDetails(ServiceRequestContext ctx, List<Any> details, JsonGenerator jsonGenerator) throws IOException {
         jsonGenerator.writeStartArray();
         for (Any detail : details) {
             try {
                 jsonMarshaller.writeValue(detail, jsonGenerator);
             } catch (IOException e) {
-                logger.warn("Unexpected exception while writing an error detail to JSON. detail: {}",
-                            detail, e);
+                logger.warn("{} Unexpected exception while writing an error detail to JSON. detail: {}",
+                            ctx, detail, e);
             }
         }
         jsonGenerator.writeEndArray();

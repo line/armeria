@@ -34,7 +34,7 @@ import testing.grpc.EmptyProtos.Empty;
 import testing.grpc.TestServiceGrpc;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
-public class TextUnframedGrpcErrorHandlerTest {
+class TextUnframedGrpcErrorHandlerTest {
 
     @RegisterExtension
     static ServerExtension textResServer = new ServerExtension() {

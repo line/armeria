@@ -47,8 +47,11 @@ import com.google.rpc.ResourceInfo;
 import com.google.rpc.RetryInfo;
 import com.google.rpc.Status;
 
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.grpc.testing.Error.AuthError;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 class ErrorDetailsMarshallerTest {
 
@@ -123,7 +126,8 @@ class ErrorDetailsMarshallerTest {
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
         final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of();
-        jsonUnframedGrpcErrorHandler.writeErrorDetails(status.getDetailsList(), jsonGenerator);
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
+        jsonUnframedGrpcErrorHandler.writeErrorDetails(ctx, status.getDetailsList(), jsonGenerator);
         jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
@@ -213,7 +217,8 @@ class ErrorDetailsMarshallerTest {
                                                                          .build();
         final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of(
                 UnframedGrpcStatusMappingFunction.of(), jsonMarshaller);
-        jsonUnframedGrpcErrorHandler.writeErrorDetails(status.getDetailsList(), jsonGenerator);
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
+        jsonUnframedGrpcErrorHandler.writeErrorDetails(ctx, status.getDetailsList(), jsonGenerator);
         jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
@@ -234,8 +239,9 @@ class ErrorDetailsMarshallerTest {
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
 
         final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
 
         assertThatThrownBy(() -> jsonUnframedGrpcErrorHandler.writeErrorDetails(
-                status.getDetailsList(), jsonGenerator)).isInstanceOf(IOException.class);
+                ctx, status.getDetailsList(), jsonGenerator)).isInstanceOf(IOException.class);
     }
 }

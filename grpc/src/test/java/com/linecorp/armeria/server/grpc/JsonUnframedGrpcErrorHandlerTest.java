@@ -43,7 +43,7 @@ import testing.grpc.EmptyProtos.Empty;
 import testing.grpc.TestServiceGrpc;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
-public class JsonUnframedGrpcErrorHandlerTest {
+class JsonUnframedGrpcErrorHandlerTest {
 
     @RegisterExtension
     static ServerExtension jsonResServer = new ServerExtension() {
