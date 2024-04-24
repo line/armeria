@@ -146,7 +146,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         }
 
         final CompletableFuture<CacheEntry<T>> newRefreshFuture = future;
-        newRefreshFuture.thenAccept(val -> loadFuture = UnmodifiableFuture.completedFuture(val));
+        newRefreshFuture.whenComplete((val, cause) -> {
+            if (cause != null) {
+                logger.warn("Failed to refresh a new value from loader: {}. the previous value: {}",
+                            loader, cache, cause);
+            } else {
+                loadFuture = UnmodifiableFuture.completedFuture(val);
+            }
+        });
         CompletableFuture.runAsync(() -> load(cache, newRefreshFuture),
                                    refreshExecutor != null ? refreshExecutor : DEFAULT_REFRESH_EXECUTOR);
 

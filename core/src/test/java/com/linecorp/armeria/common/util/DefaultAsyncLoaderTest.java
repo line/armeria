@@ -513,4 +513,72 @@ class DefaultAsyncLoaderTest {
             assertThat(loadCounter.get()).isEqualTo(2);
         }
     }
+
+    @Test
+    void refreshIf_loader_future_exception() {
+        final AtomicInteger loadCounter = new AtomicInteger();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = obj -> {
+            final int loadCount = loadCounter.incrementAndGet();
+            final CompletableFuture<Integer> future = new CompletableFuture<>();
+            if (loadCount == 2) {
+                future.completeExceptionally(new IllegalStateException());
+            } else {
+                future.complete(loadCount);
+            }
+            return future;
+        };
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .refreshIf(i -> i == 1)
+                .build();
+
+        assertThat(loadCounter.get()).isZero();
+        assertThat(loader.get().join()).isOne();
+        assertThat(loadCounter.get()).isOne();
+
+        // refresh 1 failed
+        assertThat(loader.get().join()).isOne();
+        await().untilAsserted(() -> assertThat(loadCounter.get()).isEqualTo(2));
+
+        // refresh 2 success
+        await().untilAsserted(() -> assertThat(loader.get().join()).isEqualTo(3));
+        assertThat(loadCounter.get()).isEqualTo(3);
+
+        for (int i = 0; i < 5; i++) {
+            assertThat(loader.get().join()).isEqualTo(3);
+            assertThat(loadCounter.get()).isEqualTo(3);
+        }
+    }
+
+    @Test
+    void refreshIf_expired_wait_refresh() {
+        final AtomicInteger loadCounter = new AtomicInteger();
+        final AtomicBoolean refresh = new AtomicBoolean();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> {
+            final int loadCount = loadCounter.incrementAndGet();
+            if (refresh.get()) {
+                return UnmodifiableFuture.completedFuture(100);
+            }
+            return UnmodifiableFuture.completedFuture(loadCount);
+        };
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .expireIf(i -> i == 1)
+                .refreshIf(i -> refresh.get())
+                .build();
+
+        assertThat(loadCounter.get()).isZero();
+        assertThat(loader.get().join()).isOne();
+        assertThat(loadCounter.get()).isOne();
+
+        refresh.set(true);
+        assertThat(loader.get().join()).isEqualTo(100);
+        assertThat(loadCounter.get()).isEqualTo(2);
+
+        refresh.set(false);
+        for (int i = 0; i < 5; i++) {
+            assertThat(loader.get().join()).isEqualTo(100);
+            assertThat(loadCounter.get()).isEqualTo(2);
+        }
+    }
 }
