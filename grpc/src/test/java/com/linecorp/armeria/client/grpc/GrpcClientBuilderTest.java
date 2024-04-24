@@ -127,6 +127,16 @@ class GrpcClientBuilderTest {
     }
 
     @Test
+    void useMethodMarshaller() {
+        final TestServiceBlockingStub client =
+                GrpcClients.builder("http://foo.com")
+                           .useMethodMarshaller(true)
+                           .build(TestServiceBlockingStub.class);
+        final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
+        assertThat(clientParams.options().get(GrpcClientOptions.USE_METHOD_MARSHALLER)).isTrue();
+    }
+
+    @Test
     void intercept() {
         final ClientInterceptor interceptorA = new ClientInterceptor() {
             @Override
