@@ -31,22 +31,24 @@ final class VerbSuffixPathMapping extends AbstractPathMapping {
 
     private final PathMapping basePathMapping;
     private final String verb;
+    private final String colonAndVerb;
     private final int colonAndVerbLength;
     private final String patternString;
     private final List<String> paths;
 
     VerbSuffixPathMapping(PathMapping basePathMapping, String verb) {
         this.basePathMapping = requireNonNull(basePathMapping, "basePathMapping");
-        this.verb = ':' + requireNonNull(verb, "verb");
-        colonAndVerbLength = this.verb.length();
-        patternString = basePathMapping.patternString() + this.verb;
+        this.verb = requireNonNull(verb, "verb");
+        colonAndVerb = ':' + this.verb;
+        colonAndVerbLength = colonAndVerb.length();
+        patternString = basePathMapping.patternString() + colonAndVerb;
         // Add escape character '\' to mark ':' as a plain character, not a parameter marker.
-        paths = basePathMapping.paths().stream().map(p -> p + '\\' + this.verb).collect(toImmutableList());
+        paths = basePathMapping.paths().stream().map(p -> p + '\\' + colonAndVerb).collect(toImmutableList());
     }
 
     @Override
     PathMapping doWithPrefix(String prefix) {
-        return new VerbSuffixPathMapping(basePathMapping.withPrefix(prefix), verb.substring(1));
+        return new VerbSuffixPathMapping(basePathMapping.withPrefix(prefix), verb);
     }
 
     @Override
@@ -54,7 +56,7 @@ final class VerbSuffixPathMapping extends AbstractPathMapping {
     RoutingResultBuilder doApply(RoutingContext routingCtx) {
         final String path = routingCtx.path();
 
-        if (!path.endsWith(verb)) {
+        if (!path.endsWith(colonAndVerb)) {
             return null;
         }
 
