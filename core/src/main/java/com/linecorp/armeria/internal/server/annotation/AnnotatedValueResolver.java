@@ -877,9 +877,9 @@ final class AnnotatedValueResolver {
 
                     if (!isValidType) {
                         throw new IllegalStateException(
-                                String.format("'%s' which is from AttributeKey(%s) is not an instance of '%s'.",
-                                              targetType.getName(),
+                                String.format("Cannot inject the attribute '%s' due to mismatching type (expected: %s, actual: %s)",
                                               attrKey.name(),
+                                              targetType.getName(),
                                               value.getClass().getName()));
                     }
                     return value;
