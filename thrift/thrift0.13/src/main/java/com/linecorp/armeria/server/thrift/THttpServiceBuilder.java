@@ -241,7 +241,7 @@ public final class THttpServiceBuilder {
         @SuppressWarnings("UnstableApiUsage")
         final Map<String, List<Object>> implementations = Multimaps.asMap(implementationsBuilder.build());
 
-        final ThriftCallService tcs = ThriftCallService.of(implementations);
+        final ThriftCallService tcs = ThriftCallService.of(implementations, useBlockingTaskExecutor);
         return build0(tcs);
     }
 
@@ -259,7 +259,7 @@ public final class THttpServiceBuilder {
 
         return new THttpService(
                 decorate(tcs), defaultSerializationFormat, builder.build(),
-                maxRequestStringLength, maxRequestContainerLength, useBlockingTaskExecutor, exceptionHandler
+                maxRequestStringLength, maxRequestContainerLength, exceptionHandler
         );
     }
 }

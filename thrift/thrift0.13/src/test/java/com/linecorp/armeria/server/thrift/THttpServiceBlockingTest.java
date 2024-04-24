@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -47,8 +48,13 @@ class THttpServiceBlockingTest {
             };
 
     @BeforeEach
-    void clear() {
+    void clearDetector() {
         blocking.set(false);
+    }
+
+    @AfterAll
+    public static void clearExecutor() {
+        executor.shutdown();
     }
 
     @RegisterExtension

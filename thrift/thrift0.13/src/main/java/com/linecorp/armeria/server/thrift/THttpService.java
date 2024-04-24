@@ -287,7 +287,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
     private int maxRequestStringLength;
     private int maxRequestContainerLength;
-    private final boolean useBlockingTaskExecutor;
     private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
     private Map<ThriftFunction, HttpService> decoratedTHttpServices;
@@ -298,7 +297,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> supportedSerializationFormats,
                  int maxRequestStringLength, int maxRequestContainerLength,
-                 boolean useBlockingTaskExecutor,
                  BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
                          exceptionHandler) {
         super(delegate);
@@ -307,7 +305,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         this.supportedSerializationFormats = ImmutableSet.copyOf(supportedSerializationFormats);
         this.maxRequestStringLength = maxRequestStringLength;
         this.maxRequestContainerLength = maxRequestContainerLength;
-        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.exceptionHandler = exceptionHandler;
         responseProtocolFactories = supportedSerializationFormats
                 .stream()
@@ -629,17 +626,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     }
 
     private void invoke(
-            ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId,
-            ThriftFunction func, RpcRequest call, CompletableFuture<HttpResponse> res) {
-        if (useBlockingTaskExecutor) {
-            ctx.blockingTaskExecutor().execute(() -> invoke0(ctx, serializationFormat,
-                                                            seqId, func, call, res));
-        } else {
-            invoke0(ctx, serializationFormat, seqId, func, call, res);
-        }
-    }
-
-    private void invoke0(
             ServiceRequestContext ctx, SerializationFormat serializationFormat, int seqId,
             ThriftFunction func, RpcRequest call, CompletableFuture<HttpResponse> res) {
 
