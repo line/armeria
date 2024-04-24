@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.io.ByteStreams;
 
@@ -36,6 +37,8 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.util.NetUtil;
 
+// Allow the server to close the socket immediately, without waiting for the client to close
+@SetSystemProperty(key = "com.linecorp.armeria.defaultHttp1ConnectionCloseDelayMillis", value = "0")
 class HttpServerPathTest {
 
     @RegisterExtension
