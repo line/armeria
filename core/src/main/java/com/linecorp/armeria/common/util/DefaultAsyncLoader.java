@@ -94,9 +94,13 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
             if (!loadFuture.isCompletedExceptionally()) {
                 cacheEntry = loadFuture.join();
-                if (isValid(cacheEntry)) {
-                    maybeRefresh(cacheEntry.loadVal);
+                final boolean isValid = isValid(cacheEntry);
+                final CompletableFuture<CacheEntry<T>> refreshFuture = maybeRefresh(cacheEntry);
+                if (isValid) {
                     return loadFuture;
+                }
+                if (refreshFuture != null) {
+                    return refreshFuture;
                 }
             }
 
@@ -110,8 +114,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         return future;
     }
 
-    private void maybeRefresh(@Nullable T cache) {
+    @Nullable
+    private CompletableFuture<CacheEntry<T>> maybeRefresh(@Nullable CacheEntry<T> cacheEntry) {
+        if (cacheEntry == null) {
+            return null;
+        }
+
         boolean refresh = false;
+        final T cache = cacheEntry.loadVal;
         try {
             refresh = refreshIf != null && refreshIf.test(cache);
         } catch (Exception e) {
@@ -119,14 +129,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         }
 
         if (!refresh) {
-            return;
+            return null;
         }
 
         CompletableFuture<CacheEntry<T>> future;
         for (;;) {
             final CompletableFuture<CacheEntry<T>> refreshFuture = this.refreshFuture;
             if (!refreshFuture.isDone()) {
-                return;
+                return refreshFuture;
             }
 
             future = new CompletableFuture<>();
@@ -139,6 +149,8 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         newRefreshFuture.thenAccept(val -> loadFuture = UnmodifiableFuture.completedFuture(val));
         CompletableFuture.runAsync(() -> load(cache, newRefreshFuture),
                                    refreshExecutor != null ? refreshExecutor : DEFAULT_REFRESH_EXECUTOR);
+
+        return newRefreshFuture;
     }
 
     private void load(@Nullable T cache, CompletableFuture<CacheEntry<T>> future) {
