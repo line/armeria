@@ -873,9 +873,7 @@ final class AnnotatedValueResolver {
             for (AttributeKey<?> attrKey : attrKeys) {
                 final Object value = ctx.context.attr(attrKey);
                 if (value != null) {
-                    final boolean isValidType = targetType.isInstance(value);
-
-                    if (!isValidType) {
+                    if (!targetType.isInstance(value)) {
                         throw new IllegalStateException(
                                 String.format("Cannot inject the attribute '%s' due to mismatching type (expected: %s, actual: %s)",
                                               attrKey.name(),
