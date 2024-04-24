@@ -48,11 +48,11 @@ public class ThrottlingRpcServiceTest {
     public final ServerRule server = new ServerRule(false) {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/thrift-never", ThriftCallService.of(serviceHandler)
+            sb.service("/thrift-never", ThriftCallService.builder().implementation(serviceHandler).build()
                                                          .decorate(ThrottlingRpcService.newDecorator(never()))
                                                          .decorate(THttpService.newDecorator()));
 
-            sb.service("/thrift-always", ThriftCallService.of(serviceHandler)
+            sb.service("/thrift-always", ThriftCallService.builder().implementation(serviceHandler).build()
                                                           .decorate(ThrottlingRpcService.newDecorator(always()))
                                                           .decorate(THttpService.newDecorator()));
         }

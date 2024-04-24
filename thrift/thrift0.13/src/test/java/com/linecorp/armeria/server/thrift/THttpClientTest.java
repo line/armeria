@@ -22,6 +22,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -38,19 +41,24 @@ class THttpClientTest {
     void serviceAddedIsCalled() {
         final AtomicReference<ServiceConfig> cfgHolder = new AtomicReference<>();
         final THttpService tHttpService =
-                ThriftCallService.of((AsyncIface) (name, cb) -> cb.onComplete("name"))
-                                 .decorate(delegate -> new SimpleDecoratingRpcService(delegate) {
-                                     @Override
-                                     public void serviceAdded(ServiceConfig cfg) throws Exception {
-                                         cfgHolder.set(cfg);
-                                     }
+                ThriftCallService
+                        .builder()
+                        .implementations(ImmutableMap.of("", ImmutableList.of(
+                                                        (AsyncIface) (name, cb) -> cb.onComplete("name")
+                                         )))
+                        .build()
+                        .decorate(delegate -> new SimpleDecoratingRpcService(delegate) {
+                            @Override
+                            public void serviceAdded(ServiceConfig cfg) throws Exception {
+                                cfgHolder.set(cfg);
+                            }
 
-                                     @Override
-                                     public RpcResponse serve(
-                                             ServiceRequestContext ctx, RpcRequest req) throws Exception {
-                                         return new CompletableRpcResponse();
-                                     }
-                                 }).decorate(THttpService.newDecorator());
+                            @Override
+                            public RpcResponse serve(
+                                    ServiceRequestContext ctx, RpcRequest req) throws Exception {
+                                return new CompletableRpcResponse();
+                            }
+                        }).decorate(THttpService.newDecorator());
         Server.builder().service("/", tHttpService).build();
 
         final ServiceConfig serviceConfig = cfgHolder.get();

@@ -53,7 +53,7 @@ class THttpServiceBlockingTest {
     }
 
     @AfterAll
-    public static void clearExecutor() {
+    public static void shutdownExecutor() {
         executor.shutdown();
     }
 

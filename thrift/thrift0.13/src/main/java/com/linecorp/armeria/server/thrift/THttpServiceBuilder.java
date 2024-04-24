@@ -241,7 +241,10 @@ public final class THttpServiceBuilder {
         @SuppressWarnings("UnstableApiUsage")
         final Map<String, List<Object>> implementations = Multimaps.asMap(implementationsBuilder.build());
 
-        final ThriftCallService tcs = ThriftCallService.of(implementations, useBlockingTaskExecutor);
+        final ThriftCallService tcs = new ThriftCallServiceBuilder()
+                .implementations(implementations)
+                .useBlockingTaskExecutor(useBlockingTaskExecutor)
+                .build();
         return build0(tcs);
     }
 
