@@ -109,7 +109,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
     @Nullable
-    private String serviceName;
+    private String name;
     private final boolean serviceNameSetByAnnotation;
 
     DefaultAnnotatedService(Object object, Method method,
@@ -169,7 +169,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
             serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
         if (serviceName != null) {
-            this.serviceName = serviceName.value();
+            this.name = serviceName.value();
             serviceNameSetByAnnotation = true;
         } else {
             serviceNameSetByAnnotation = false;
@@ -225,10 +225,10 @@ public final class DefaultAnnotatedService implements AnnotatedService {
 
     @Override
     public String name() {
-        if (serviceName == null) {
+        if (name == null) {
             return serviceClass().getName();
         }
-        return serviceName;
+        return name;
     }
 
     public boolean serviceNameSetByAnnotation() {
