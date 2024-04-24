@@ -131,10 +131,10 @@ public final class CorsPolicy {
         this.allowedRequestMethods = ImmutableSet.copyOf(allowedRequestMethods);
         this.allowAllRequestHeaders = allowAllRequestHeaders;
         this.allowedRequestHeaders = ImmutableSet.copyOf(allowedRequestHeaders);
-        joinedExposedHeaders = HEADER_JOINER.join(this.exposedHeaders);
+        joinedExposedHeaders = joinExposedHeaders();
         joinedAllowedRequestMethods = this.allowedRequestMethods
                 .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
-        joinedAllowedRequestHeaders = HEADER_JOINER.join(this.allowedRequestHeaders);
+        joinedAllowedRequestHeaders = joinAllowedRequestHeaders();
         if (preflightResponseHeadersDisabled) {
             this.preflightResponseHeaders = Collections.emptyMap();
         } else if (preflightResponseHeaders.isEmpty()) {
@@ -310,6 +310,31 @@ public final class CorsPolicy {
         }
     }
 
+    public Set<AsciiString> getExposedHeaders() {
+        return exposedHeaders;
+    }
+
+    public boolean isAllowAllRequestHeaders() {
+        return allowAllRequestHeaders;
+    }
+
+    public Set<AsciiString> getAllowedRequestHeaders() {
+        return allowedRequestHeaders;
+    }
+
+    public String joinHeaders(Set<AsciiString> headers){
+        String joinedExposedHeaders = HEADER_JOINER.join(headers);
+        return joinedExposedHeaders;
+    }
+
+    public String joinExposedHeaders(){
+        return joinHeaders(this.exposedHeaders);
+    }
+
+    public String joinAllowedRequestHeaders(){
+        return joinHeaders(this.allowedRequestHeaders);
+    }
+
     void setCorsExposeHeaders(ResponseHeadersBuilder headers) {
         if (exposedHeaders.isEmpty()) {
             return;
@@ -347,6 +372,7 @@ public final class CorsPolicy {
 
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
     }
+
 
     @Override
     public String toString() {
