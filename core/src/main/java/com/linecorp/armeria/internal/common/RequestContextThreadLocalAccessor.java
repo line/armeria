@@ -19,7 +19,6 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.micrometer.context.ContextRegistry;
 import io.micrometer.context.ContextSnapshot;

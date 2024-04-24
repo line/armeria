@@ -108,7 +108,7 @@ dependencies {
     optionalApi libs.micrometer.prometheus
     optionalApi libs.dropwizard.metrics.core
     optionalApi libs.prometheus
-    api libs.context.propagation
+    implementation libs.context.propagation
 
     // Netty
     api libs.netty.transport

@@ -314,6 +314,10 @@ version.ref = "checkerframework"
 module = "com.puppycrawl.tools:checkstyle"
 version.ref = "checkstyle"
 
+[libraries.context-propagation]
+module = "io.micrometer:context-propagation"
+version.ref = "context-propagation"
+
 [libraries.controlplane-api]
 module = "io.envoyproxy.controlplane:api"
 version.ref = "controlplane"
@@ -982,9 +986,6 @@ javadocs = "https://developers.curioswitch.org/apidocs/java/"
 module = "io.projectreactor:reactor-core"
 version.ref = "reactor"
 javadocs = "https://projectreactor.io/docs/core/release/api/"
-[libraries.context-propagation]
-module = "io.micrometer:context-propagation"
-version.ref = "context-propagation"
 [libraries.reactor-test]
 module = "io.projectreactor:reactor-test"
 version.ref = "reactor"
