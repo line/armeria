@@ -154,7 +154,7 @@ class RequestContextThreadLocalAccessorTest {
             // Then : should not
             final RequestContext reqCtxInScope = RequestContext.currentOrNull();
             assertThat(reqCtxInScope).isNotNull();
-            assertThat(reqCtxInScope).isEqualTo(expectedCtx);
+            assertThat(reqCtxInScope).isSameAs(expectedCtx);
         }
 
         // Then
