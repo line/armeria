@@ -137,8 +137,8 @@ public class UnframedGrpcErrorHandlerBuilderTest {
                                                 UnframedGrpcErrorResponseType.JSON,
                                                 UnframedGrpcErrorResponseType.PLAINTEXT)
                                         .build();
-        final ServiceRequestContext ctx = ServiceRequestContext.of(
-                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/test")));
+        final ServiceRequestContext ctx =
+                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
         final AggregatedHttpResponse jsonResponse =
                 AggregatedHttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,
                                           MediaType.JSON_UTF_8,
