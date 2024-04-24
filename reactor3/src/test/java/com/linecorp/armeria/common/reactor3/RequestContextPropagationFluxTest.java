@@ -35,7 +35,6 @@ import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.internal.common.RequestContextThreadLocalAccessor;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
