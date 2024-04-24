@@ -436,7 +436,7 @@ class AnnotatedValueResolverTest {
         VALUE1, VALUE2, VALUE3
     }
 
-    static class AttrDummyService {}
+    static class AttrPrefix {}
 
     static class Service {
         void method1(@Param String var1,
@@ -475,11 +475,11 @@ class AnnotatedValueResolverTest {
         @Get("/attribute-test")
         void attributeTest(
 
-                @Attribute(prefix = AttrDummyService.class, value = "successPrefixOtherValuesOfOtherTypeInt")
+                @Attribute(prefix = AttrPrefix.class, value = "successPrefixOtherValuesOfOtherTypeInt")
                 int successPrefixOtherValuesOfOtherTypeInt,
                 @Attribute("failPrefixNoneValuesOfOtherTypeInt")
                 int failPrefixNoneValuesOfOtherTypeInt,
-                @Attribute(value = "successPrefixMineValuesOfMineTypeInt", prefix = Service.class)
+                @Attribute( prefix = Service.class, value = "successPrefixMineValuesOfMineTypeInt")
                 int successPrefixMineValuesOfMineTypeInt,
                 @Attribute("successPrefixNoneValuesOfMineTypeInt")
                 int successPrefixNoneValuesOfMineTypeInt,
@@ -489,9 +489,9 @@ class AnnotatedValueResolverTest {
                 int failPrefixNoneValuesOfNoneTypeInt,
                 @Attribute("failPrefixOtherValuesOfMineTypeInt")
                 int failPrefixOtherValuesOfMineTypeInt,
-                @Attribute(value = "failPrefixMineValuesOfNoneTypeInt", prefix = Service.class)
+                @Attribute(prefix = Service.class, value = "failPrefixMineValuesOfNoneTypeInt")
                 int failPrefixMineValuesOfNoneTypeInt,
-                @Attribute(value = "successPrefixMineValuesOfMineTypeCollection", prefix = Service.class)
+                @Attribute(prefix = Service.class, value = "successPrefixMineValuesOfMineTypeCollection")
                 List<String> successPrefixMineValuesOfMineTypeCollection,
                 @Attribute("successPrefixNoneValuesOfMineTypeCollection")
                 List<String> successPrefixNoneValuesOfMineTypeCollection,
@@ -527,14 +527,14 @@ class AnnotatedValueResolverTest {
         final Map<String, AttributeKey<?>> expectFailAttrs = new HashMap<>();
 
         final AttributeKey<Integer> failPrefixNoneValuesOfOtherTypeInt =
-                AttributeKey.valueOf(AttrDummyService.class, "failPrefixNoneValuesOfOtherTypeInt");
+                AttributeKey.valueOf(AttrPrefix.class, "failPrefixNoneValuesOfOtherTypeInt");
         ctx.setAttr(failPrefixNoneValuesOfOtherTypeInt, 10);
         expectFailAttrs.put(
                 "failPrefixNoneValuesOfOtherTypeInt",
                 failPrefixNoneValuesOfOtherTypeInt);
 
         final AttributeKey<Integer> failPrefixNoneValuesOfNoneTypeInt =
-                AttributeKey.valueOf(AttrDummyService.class, "failPrefixNoneValuesOfNoneTypeInt");
+                AttributeKey.valueOf(AttrPrefix.class, "failPrefixNoneValuesOfNoneTypeInt");
         expectFailAttrs.put(
                 "failPrefixNoneValuesOfNoneTypeInt",
                 failPrefixNoneValuesOfNoneTypeInt);
@@ -547,7 +547,7 @@ class AnnotatedValueResolverTest {
                 failPrefixMineValuesOfNoneTypeInt);
 
         final AttributeKey<Integer> failPrefixOtherValuesOfMineTypeInt =
-                AttributeKey.valueOf(AttrDummyService.class, "failPrefixOtherValuesOfMineTypeInt");
+                AttributeKey.valueOf(AttrPrefix.class, "failPrefixOtherValuesOfMineTypeInt");
         ctx.setAttr(failPrefixOtherValuesOfMineTypeInt, 10);
         expectFailAttrs.put(
                 "failPrefixOtherValuesOfMineTypeInt",
@@ -570,7 +570,7 @@ class AnnotatedValueResolverTest {
         final HashMap<String, AttributeKey<?>> successAttrs = new HashMap<>();
 
         final AttributeKey<Integer> successPrefixOtherValuesOfOtherTypeInt =
-                AttributeKey.valueOf(AttrDummyService.class, "successPrefixOtherValuesOfOtherTypeInt");
+                AttributeKey.valueOf(AttrPrefix.class, "successPrefixOtherValuesOfOtherTypeInt");
         ctx.setAttr(successPrefixOtherValuesOfOtherTypeInt, 10);
         successAttrs.put(
                 "successPrefixOtherValuesOfOtherTypeInt",

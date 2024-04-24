@@ -34,16 +34,16 @@ import io.netty.util.AttributeKey;
 public @interface Attribute {
 
     /**
-     * The name of the {@link AttributeKey} to bind to.
-     * You might also want to specify the {@link #prefix()}.
-     */
-    String value();
-
-    /**
      * The class of the {@link AttributeKey} to bind to. If you created an {@link AttributeKey} with
      * {@code AttributeKey.valueOf(MyAttributeKeys.class, "INT_ATTR")},
      * the {@link #prefix()} should be {@code MyAttributeKeys.class}.
      * See <a href="https://armeria.dev/docs/advanced-custom-attributes/">advanced-customer-attributes</a>.
      */
     Class<?> prefix() default Attribute.class;
+
+    /**
+     * The name of the {@link AttributeKey} to bind to.
+     * You might also want to specify the {@link #prefix()}.
+     */
+    String value();
 }
