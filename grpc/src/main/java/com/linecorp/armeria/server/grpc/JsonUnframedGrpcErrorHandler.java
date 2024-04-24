@@ -181,7 +181,8 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
     }
 
     @VisibleForTesting
-    void writeErrorDetails(ServiceRequestContext ctx, List<Any> details, JsonGenerator jsonGenerator) throws IOException {
+    void writeErrorDetails(
+            ServiceRequestContext ctx, List<Any> details, JsonGenerator jsonGenerator) throws IOException {
         jsonGenerator.writeStartArray();
         for (Any detail : details) {
             try {
