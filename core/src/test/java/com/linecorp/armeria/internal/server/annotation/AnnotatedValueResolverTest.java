@@ -479,7 +479,7 @@ class AnnotatedValueResolverTest {
                 int successPrefixOtherValuesOfOtherTypeInt,
                 @Attribute("failPrefixNoneValuesOfOtherTypeInt")
                 int failPrefixNoneValuesOfOtherTypeInt,
-                @Attribute( prefix = Service.class, value = "successPrefixMineValuesOfMineTypeInt")
+                @Attribute(prefix = Service.class, value = "successPrefixMineValuesOfMineTypeInt")
                 int successPrefixMineValuesOfMineTypeInt,
                 @Attribute("successPrefixNoneValuesOfMineTypeInt")
                 int successPrefixNoneValuesOfMineTypeInt,
