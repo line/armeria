@@ -475,7 +475,7 @@ class AnnotatedValueResolverTest {
         @Get("/attribute-test")
         void attributeTest(
 
-                @Attribute(value = "successPrefixOtherValuesOfOtherTypeInt", prefix = AttrDummyService.class)
+                @Attribute(prefix = AttrDummyService.class, value = "successPrefixOtherValuesOfOtherTypeInt")
                 int successPrefixOtherValuesOfOtherTypeInt,
                 @Attribute("failPrefixNoneValuesOfOtherTypeInt")
                 int failPrefixNoneValuesOfOtherTypeInt,
