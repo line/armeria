@@ -33,12 +33,12 @@ public final class AnnotatedServiceElement {
 
     private final Route route;
 
-    private final AnnotatedService service;
+    private final DefaultAnnotatedService service;
 
     private final Function<? super HttpService, ? extends HttpService> decorator;
 
     AnnotatedServiceElement(Route route,
-                            AnnotatedService service,
+                            DefaultAnnotatedService service,
                             Function<? super HttpService, ? extends HttpService> decorator) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
@@ -79,8 +79,7 @@ public final class AnnotatedServiceElement {
         HttpService decoratedService = decorator.apply(service);
         // Apply localDecorator passed in through method parameter
         decoratedService = decoratedService.decorate(localDecorator);
-        return service.as(DefaultAnnotatedService.class)
-                      .withExceptionHandler(decoratedService);
+        return service.withExceptionHandler(decoratedService);
     }
 
     @Override

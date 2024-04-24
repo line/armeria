@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.server.annotation.DefaultAnnotatedService;
-import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.EventLoopGroup;
@@ -325,9 +324,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         final ServiceConfigBuilder serviceConfigBuilder =
                 new ServiceConfigBuilder(route, contextPath, service);
 
-        final AnnotatedService annotatedService;
+        final DefaultAnnotatedService annotatedService;
         if (defaultServiceNaming == null || defaultLogName == null) {
-            annotatedService = service.as(AnnotatedService.class);
+            annotatedService = service.as(DefaultAnnotatedService.class);
         } else {
             annotatedService = null;
         }
@@ -339,9 +338,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         } else {
             // Set the default service name only when the service name is set using @ServiceName.
             // If it's not, the global defaultServiceNaming is used.
-            if (annotatedService != null && annotatedService.as(DefaultAnnotatedService.class)
-                                                            .serviceNameSetByAnnotation()) {
-                serviceConfigBuilder.defaultServiceName(annotatedService.serviceName());
+            if (annotatedService != null && annotatedService.serviceNameSetByAnnotation()) {
+                serviceConfigBuilder.defaultServiceName(annotatedService.name());
             }
         }
 

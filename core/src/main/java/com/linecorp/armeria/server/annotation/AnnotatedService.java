@@ -34,12 +34,7 @@ public interface AnnotatedService extends HttpService {
     /**
      * Returns service name for this {@link AnnotatedService}.
      */
-    String serviceName();
-
-    /**
-     * Returns method name which is annotated in {@link AnnotatedService}.
-     */
-    String methodName();
+    String name();
 
     /**
      * Returns the annotated service object specified with {@link ServerBuilder#annotatedService(Object)}.
@@ -57,10 +52,11 @@ public interface AnnotatedService extends HttpService {
     Method method();
 
     /**
-     * Returns a unique ID to distinguish overloaded methods.
-     * If the method is not overloaded, it should return 0.
+     * Returns method name which is annotated in {@link AnnotatedService}.
      */
-    int overloadId();
+    default String methodName() {
+        return method().getName();
+    }
 
     /**
      * Returns {@link Route} for this {@link AnnotatedService}.

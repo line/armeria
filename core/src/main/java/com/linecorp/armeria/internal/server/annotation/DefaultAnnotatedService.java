@@ -86,6 +86,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
             NO_AGGREGATION_FUTURE = UnmodifiableFuture.completedFuture(AggregatedResult.EMPTY);
 
     private final Object object;
+    private final Class<?> serviceClass;
     private final Method method;
     private final int overloadId;
     private final MethodHandle methodHandle;
@@ -124,6 +125,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         this.method = requireNonNull(method, "method");
         checkArgument(overloadId >= 0, "overloadId: %s (expected: >= 0)", overloadId);
         this.overloadId = overloadId;
+        this.serviceClass = ClassUtil.getUserClass(object.getClass());
 
         checkArgument(!method.isVarArgs(), "%s#%s declared to take a variable number of arguments",
                       method.getDeclaringClass().getSimpleName(), method.getName());
@@ -221,7 +223,8 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         }
     }
 
-    public String serviceName() {
+    @Override
+    public String name() {
         if (serviceName == null) {
             return serviceClass().getName();
         }
@@ -233,18 +236,13 @@ public final class DefaultAnnotatedService implements AnnotatedService {
     }
 
     @Override
-    public String methodName() {
-        return method.getName();
-    }
-
-    @Override
     public Object serviceObject() {
         return object;
     }
 
     @Override
     public Class<?> serviceClass() {
-        return ClassUtil.getUserClass(object.getClass());
+        return this.serviceClass;
     }
 
     @Override
@@ -253,6 +251,10 @@ public final class DefaultAnnotatedService implements AnnotatedService {
     }
 
     @Override
+    public String methodName() {
+        return method.getName();
+    }
+
     public int overloadId() {
         return overloadId;
     }
