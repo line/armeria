@@ -124,8 +124,7 @@ class GrpcExceptionHandlerFunctionBuilderTest {
 
         final A1Exception cause = new A1Exception();
         final Metadata metadata = new Metadata();
-        final Status newStatus = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
-                                                 .apply(ctx, cause, metadata);
+        final Status newStatus = exceptionHandler.apply(ctx, cause, metadata);
 
         assertThat(newStatus.getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
         assertThat(newStatus.getCause()).isEqualTo(cause);
