@@ -19,7 +19,6 @@ import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
-import java.net.URI;
 import java.util.BitSet;
 import java.util.Objects;
 
@@ -436,7 +435,7 @@ public final class DefaultRequestTarget implements RequestTarget {
     @Nullable
     private static RequestTarget slowAbsoluteFormForClient(String reqTarget, int authorityPos) {
         // Extract scheme and authority while looking for path.
-        final URI schemeAndAuthority;
+        final SchemeAndAuthority schemeAndAuthority;
         final String scheme = reqTarget.substring(0, authorityPos - 3);
         final int nextPos = findNextComponent(reqTarget, authorityPos);
         final String authority;
@@ -453,9 +452,10 @@ public final class DefaultRequestTarget implements RequestTarget {
             return null;
         }
 
-        // Normalize scheme and authority.
-        schemeAndAuthority = normalizeSchemeAndAuthority(scheme, authority);
-        if (schemeAndAuthority == null) {
+        try {
+            // Normalize scheme and authority.
+            schemeAndAuthority = SchemeAndAuthority.of(scheme, authority);
+        } catch (Exception ignored) {
             // Invalid scheme or authority.
             return null;
         }
@@ -482,7 +482,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
     @Nullable
     private static RequestTarget slowForClient(String reqTarget,
-                                               @Nullable URI schemeAndAuthority,
+                                               @Nullable SchemeAndAuthority schemeAndAuthority,
                                                int pathPos) {
         final Bytes fragment;
         final Bytes path;
@@ -603,13 +603,13 @@ public final class DefaultRequestTarget implements RequestTarget {
     }
 
     private static DefaultRequestTarget newAbsoluteTarget(
-            URI schemeAndAuthority, String encodedPath,
+            SchemeAndAuthority schemeAndAuthority, String encodedPath,
             @Nullable String encodedQuery, @Nullable String encodedFragment) {
 
-        final String scheme = schemeAndAuthority.getScheme();
-        final String maybeAuthority = schemeAndAuthority.getRawAuthority();
-        final String maybeHost = schemeAndAuthority.getHost();
-        final int maybePort = schemeAndAuthority.getPort();
+        final String scheme = schemeAndAuthority.scheme();
+        final String maybeAuthority = schemeAndAuthority.authority();
+        final String maybeHost = schemeAndAuthority.host();
+        final int maybePort = schemeAndAuthority.port();
         final String authority;
         final String host;
         final int port;
@@ -646,15 +646,6 @@ public final class DefaultRequestTarget implements RequestTarget {
                                         encodedPath,
                                         encodedQuery,
                                         encodedFragment);
-    }
-
-    @Nullable
-    private static URI normalizeSchemeAndAuthority(String scheme, String authority) {
-        try {
-            return new URI(scheme + "://" + authority);
-        } catch (Exception unused) {
-            return null;
-        }
     }
 
     private static boolean isRelativePath(Bytes path) {

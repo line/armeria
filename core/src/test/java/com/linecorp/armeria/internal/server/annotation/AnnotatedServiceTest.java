@@ -68,6 +68,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -86,7 +87,6 @@ import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Delimiter;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
@@ -166,6 +166,9 @@ class AnnotatedServiceTest {
               .queryDelimiter(":")
               .decorator(LoggingService.newDecorator())
               .build(new MyAnnotatedService14());
+
+            sb.annotatedService("/17", new MyAnnotatedService15(),
+                                LoggingService.newDecorator());
         }
     };
 
@@ -209,10 +212,10 @@ class AnnotatedServiceTest {
 
         // Wrapped content is handled by a custom String -> HttpResponse converter.
         @Get
-        @Path("/string-result-async/:var")
+        @Path("/string-response-entity-async/:var")
         @ResponseConverter(NaiveStringConverterFunction.class)
-        public CompletableFuture<HttpResult<String>> returnStringResultAsync(@Param String var) {
-            return CompletableFuture.supplyAsync(() -> HttpResult.of(var));
+        public CompletableFuture<ResponseEntity<String>> returnStringResultAsync(@Param String var) {
+            return CompletableFuture.supplyAsync(() -> ResponseEntity.of(var));
         }
 
         @Get
@@ -850,6 +853,38 @@ class AnnotatedServiceTest {
         }
     }
 
+    @ResponseConverter(NaiveStringConverterFunction.class)
+    public static class MyAnnotatedService15 {
+        @Get
+        @Path("/response-entity-void")
+        public ResponseEntity<Void> responseEntityVoid(RequestContext ctx) {
+            validateContext(ctx);
+            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK));
+        }
+
+        @Get
+        @Path("/response-entity-string/{name}")
+        public ResponseEntity<String> responseEntityString(RequestContext ctx, @Param("name") String name) {
+            validateContext(ctx);
+            return ResponseEntity.of(name);
+        }
+
+        @Get
+        @Path("/response-entity-status")
+        public ResponseEntity<Void> responseEntityResponseData(RequestContext ctx) {
+            validateContext(ctx);
+            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.MOVED_PERMANENTLY));
+        }
+
+        @Get
+        @Path("/response-entity-http-response")
+        public ResponseEntity<HttpResponse> responseEntityHttpResponse(RequestContext ctx) {
+            validateContext(ctx);
+            return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK),
+                                     HttpResponse.of(HttpStatus.UNAUTHORIZED));
+        }
+    }
+
     @Test
     void testAnnotatedService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -860,9 +895,9 @@ class AnnotatedServiceTest {
             testBody(hc, get("/1/string/%F0%90%8D%88"), "String: \uD800\uDF48", // 𐍈
                      StandardCharsets.UTF_8);
 
-            // Deferred HttpResponse and HttpResult.
+            // Deferred HttpResponse and ResponseEntity.
             testBody(hc, get("/1/string-response-async/blah"), "blah");
-            testBody(hc, get("/1/string-result-async/blah"), "String: blah");
+            testBody(hc, get("/1/string-response-entity-async/blah"), "String: blah");
 
             // Get a requested path as typed string from ServiceRequestContext or HttpRequest
             testBody(hc, get("/1/path/ctx/async/1"), "String[/1/path/ctx/async/1]");
@@ -1252,6 +1287,16 @@ class AnnotatedServiceTest {
             testBody(hc, get("/14/param/multiWithDelimiter?params=a$b$c&params=d$e$f"), "a$b$c/d$e$f");
             testBody(hc, get("/15/param/multiWithDelimiter?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
             testBody(hc, get("/15/param/multiWithDelimiter?params=a$b$c&params=d$e$f"), "a$b$c/d$e$f");
+        }
+    }
+
+    @Test
+    void testResponseEntity() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testBody(hc, get("/17/response-entity-void"), null);
+            testBody(hc, get("/17/response-entity-string/test"), "String: test");
+            testStatusCode(hc, get("/17/response-entity-status"), 301);
+            testStatusCode(hc, get("/17/response-entity-http-response"), 401);
         }
     }
 

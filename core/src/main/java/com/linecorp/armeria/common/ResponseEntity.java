@@ -44,6 +44,15 @@ public interface ResponseEntity<T> extends HttpEntity<T> {
     }
 
     /**
+     * Returns a newly created {@link ResponseEntity} with the specified {@code content} and
+     * {@link HttpStatus#OK} status.
+     */
+    static <T> ResponseEntity<T> of(T content) {
+        requireNonNull(content, "content");
+        return of(ResponseHeaders.of(HttpStatus.OK), content, HttpHeaders.of());
+    }
+
+    /**
      * Returns a newly created {@link ResponseEntity} with the specified {@link ResponseHeaders},
      * {@code content} and {@linkplain HttpHeaders trailers}.
      */

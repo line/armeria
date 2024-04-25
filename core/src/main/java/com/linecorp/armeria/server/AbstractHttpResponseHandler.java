@@ -212,7 +212,7 @@ abstract class AbstractHttpResponseHandler {
         final Throwable cause0 = firstNonNull(cause.getCause(), cause);
         final ServiceConfig serviceConfig = reqCtx.config();
         final AggregatedHttpResponse response = serviceConfig.errorHandler()
-                                                             .renderStatus(serviceConfig, req.headers(), status,
+                                                             .renderStatus(reqCtx, req.headers(), status,
                                                                            null, cause0);
         assert response != null;
         return response;
