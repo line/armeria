@@ -116,8 +116,7 @@ class GrpcExceptionHandlerFunctionBuilderTest {
 
         for (Throwable ex : ImmutableList.of(new A2Exception(), new A3Exception())) {
             final Metadata metadata = new Metadata();
-            final Status newStatus = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
-                                                     .apply(ctx, ex, metadata);
+            final Status newStatus = exceptionHandler.apply(ctx, ex, metadata);
             assertThat(newStatus.getCode()).isEqualTo(Code.PERMISSION_DENIED);
             assertThat(newStatus.getCause()).isEqualTo(ex);
             assertThat(metadata.keys()).isEmpty();
