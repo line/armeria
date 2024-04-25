@@ -97,4 +97,9 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     void cancel() {
         cancelled = true;
     }
+
+    @Override
+    void resume() {
+        // Do nothing because this method is only for streaming request.
+    }
 }

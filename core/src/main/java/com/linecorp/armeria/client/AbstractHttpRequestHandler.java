@@ -255,18 +255,22 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         return true;
     }
 
-    final void handle100Continue(HttpStatus status) {
+    final boolean handle100Continue(HttpStatus status) {
         if (state != State.NEEDS_100_CONTINUE) {
-            return;
+            return true;
         }
 
         if (status != HttpStatus.CONTINUE) {
-            failAndReset(new IllegalStateException("Unexpected informational status: " + status));
-            return;
+            failAndReset(ResponseCompleteException.get());
+            return false;
         }
 
-        state = State.NEEDS_TO_WRITE_FIRST_HEADER;
+        state = State.NEEDS_DATA_OR_TRAILERS;
+        resume();
+        return true;
     }
+
+    abstract void resume();
 
     /**
      * Writes the {@link HttpData} to the {@link Channel}.

@@ -132,4 +132,10 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         assert subscription != null;
         subscription.cancel();
     }
+
+    @Override
+    final void resume() {
+        assert subscription != null;
+        subscription.request(1);
+    }
 }

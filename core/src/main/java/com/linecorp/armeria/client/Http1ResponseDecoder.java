@@ -200,8 +200,12 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                         final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                         final boolean written;
                         final HttpStatus status = responseHeaders.status();
-                        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-                            handle100Continue(nettyRes, status);
+
+                        final boolean hasInvalid100ContinueResponse = !handle100Continue(nettyRes, status);
+                        if (hasInvalid100ContinueResponse) {
+                            written = res.tryWriteResponseHeaders(responseHeaders);
+                            state = State.DISCARD;
+                        } else if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                             written = res.tryWrite(responseHeaders);
                             state = State.NEED_INFORMATIONAL_DATA;
                         } else {
@@ -282,13 +286,13 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
         }
     }
 
-    private void handle100Continue(HttpResponse nettyRes, HttpStatus status) {
+    private boolean handle100Continue(HttpResponse nettyRes, HttpStatus status) {
         // Ignore HTTP/1.0
         if (nettyRes.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
-            return;
+            return true;
         }
 
-        res.requestHandler().handle100Continue(status);
+        return res.requestHandler().handle100Continue(status);
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {
