@@ -332,7 +332,7 @@ class UnaryServerCallTest {
                         /* exceptionMappings */ null,
                         /* blockingExecutor */ null,
                         /* autoCompress */ false,
-                        /* useMethodMarshaller */false);
+                        /* useMethodMarshaller */ false);
 
         final AtomicReference<SimpleRequest> requestCaptor = new AtomicReference<>();
         final AtomicBoolean completed = new AtomicBoolean();
