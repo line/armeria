@@ -13,31 +13,30 @@ public class CorsServerErrorHandler implements ServerErrorHandler {
     }
 
     @Override
-    public @Nullable AggregatedHttpResponse renderStatus(ServiceConfig config, @Nullable RequestHeaders headers, HttpStatus status, @Nullable String description, @Nullable Throwable cause) {
+    public @Nullable AggregatedHttpResponse renderStatus(@Nullable ServiceRequestContext ctx, ServiceConfig config, @Nullable RequestHeaders headers, HttpStatus status, @Nullable String description, @Nullable Throwable cause) {
 
         CorsService corsService = config.service().as(CorsService.class);
 
         if (corsService != null) {
 
-            AggregatedHttpResponse res = serverErrorHandler.renderStatus(config, headers, status, description, cause);
+            AggregatedHttpResponse res = serverErrorHandler.renderStatus(ctx, config, headers, status, description, cause);
 
-            ResponseHeaders updatedResponseHeaders = addCorsHeaders(corsService, res.headers());
+            ResponseHeaders updatedResponseHeaders = addCorsHeaders(ctx, corsService, res.headers());
 
             AggregatedHttpResponse updatedRes = AggregatedHttpResponse.of(updatedResponseHeaders, res.content());
 
             return updatedRes;
         } else {
-            return serverErrorHandler.renderStatus(config, headers, status, description, cause);
+            return serverErrorHandler.renderStatus(ctx, config, headers, status, description, cause);
         }
     }
 
-    private ResponseHeaders addCorsHeaders(CorsService corsService, ResponseHeaders responseHeaders) {
-        ServiceRequestContext ctx = ServiceRequestContext.current();
+    private ResponseHeaders addCorsHeaders(ServiceRequestContext ctx,  CorsService corsService, ResponseHeaders responseHeaders) {
         HttpRequest httpRequest = ctx.request();
         ResponseHeadersBuilder responseHeadersBuilder = responseHeaders.toBuilder();
 
         CorsHeaderUtil corsHeaderUtil = new CorsHeaderUtil(corsService);
-        corsHeaderUtil.setCorsResponseHeaders(ctx, httpRequest, responseHeaders.toBuilder());
+        corsHeaderUtil.setCorsResponseHeaders(ctx, httpRequest, responseHeadersBuilder);
 
         return responseHeadersBuilder.build();
     }
