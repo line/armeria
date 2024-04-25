@@ -19,22 +19,72 @@ package com.linecorp.armeria.client.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.InputStream;
+import java.util.concurrent.Executors;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
 import io.grpc.MethodDescriptor;
+import io.grpc.MethodDescriptor.Marshaller;
+import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcClientBuilderTest {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service(GrpcService.builder()
+                                  .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                                  .build());
+        }
+    };
+
+    private static class CustomMarshallerInterceptor implements ClientInterceptor {
+        private int spiedMarshallerCallCnt;
+
+        CustomMarshallerInterceptor(int spiedMarshallCallCnt) {
+            this.spiedMarshallerCallCnt = spiedMarshallCallCnt;
+        }
+
+        int getSpiedMarshallerCallCnt() {
+            return spiedMarshallerCallCnt;
+        }
+
+        @Override
+        public <I, O> ClientCall<I, O> interceptCall(MethodDescriptor<I, O> method, CallOptions callOptions,
+                                                     Channel next) {
+            final MethodDescriptor<I, O> methodDescriptor = method.toBuilder().setRequestMarshaller(
+                    new Marshaller<I>() {
+                        @Override
+                        public InputStream stream(I value) {
+                            spiedMarshallerCallCnt++;
+                            return method.getRequestMarshaller().stream(value);
+                        }
+
+                        @Override
+                        public I parse(InputStream inputStream) {
+                            return method.parseRequest(inputStream);
+                        }
+                    }).build();
+            return next.newCall(methodDescriptor, callOptions);
+        }
+    }
 
     @Test
     void defaultSerializationFormat() {
@@ -128,12 +178,16 @@ class GrpcClientBuilderTest {
 
     @Test
     void useMethodMarshaller() {
-        final TestServiceBlockingStub client =
-                GrpcClients.builder("http://foo.com")
-                           .useMethodMarshaller(true)
-                           .build(TestServiceBlockingStub.class);
-        final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
-        assertThat(clientParams.options().get(GrpcClientOptions.USE_METHOD_MARSHALLER)).isTrue();
+        final CustomMarshallerInterceptor customMarshallerInterceptor = new CustomMarshallerInterceptor(0);
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerCallCnt()).isEqualTo(0);
+
+        final TestServiceBlockingStub stub = GrpcClients.builder(server.httpUri())
+                                                        .intercept(customMarshallerInterceptor)
+                                                        .useMethodMarshaller(true)
+                                                        .build(TestServiceBlockingStub.class);
+
+        stub.unaryCall(SimpleRequest.getDefaultInstance());
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerCallCnt()).isEqualTo(1);
     }
 
     @Test
