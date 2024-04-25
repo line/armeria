@@ -144,8 +144,7 @@ class GrpcExceptionHandlerFunctionBuilderTest {
 
         final B1Exception cause = new B1Exception();
         final Metadata metadata1 = new Metadata();
-        final Status newStatus1 = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault())
-                                                  .apply(ctx, cause, metadata1);
+        final Status newStatus1 = exceptionHandler.apply(ctx, cause, metadata1);
         assertThat(newStatus1.getCode()).isEqualTo(Code.ABORTED);
         assertThat(metadata1.get(TEST_KEY)).isEqualTo("B1Exception");
         assertThat(metadata1.keys()).containsOnly(TEST_KEY.name());
