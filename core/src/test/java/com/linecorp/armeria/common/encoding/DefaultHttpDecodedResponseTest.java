@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.encoding;
+package com.linecorp.armeria.common.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,6 +46,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
@@ -58,7 +59,6 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.UnexpectedDecodeException;
-import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompositeException;
@@ -68,6 +68,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.DecompressionException;
+import io.netty.handler.codec.compression.SnappyFrameDecoder;
 import reactor.test.StepVerifier;
 
 class DefaultHttpDecodedResponseTest {
@@ -319,9 +320,8 @@ class DefaultHttpDecodedResponseTest {
         final HttpData mockData = mock(HttpData.class);
         when(mockData.byteBuf()).thenReturn(mockByteBuf);
 
-        final EmbeddedChannel channel = new TestEmbeddedChannel(false);
-
-        final StreamDecoder decoder = new TestStreamDecoder(channel, mock(ByteBufAllocator.class), 100);
+        final EmbeddedChannel channel = new AlwaysFailureEmbeddedChannel(false);
+        final StreamDecoder decoder = new TestStreamDecoder(channel, new SnappyFrameDecoder(), mock(ByteBufAllocator.class), 100);
 
         assertThatThrownBy(() -> decoder.decode(mockData))
                 .isInstanceOf(UnexpectedDecodeException.class)

@@ -14,14 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.encoding;
+package com.linecorp.armeria.common.encoding;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.DecompressionException;
 
-class TestEmbeddedChannel extends EmbeddedChannel {
+class AlwaysFailureEmbeddedChannel extends EmbeddedChannel {
 
-    TestEmbeddedChannel(boolean hasInbound) {
+    AlwaysFailureEmbeddedChannel(boolean hasInbound) {
         super(hasInbound);
     }
 
