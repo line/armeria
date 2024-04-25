@@ -49,6 +49,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.BiConsumer;
+import java.util.regex.Pattern;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -248,8 +249,29 @@ public final class ArmeriaHttpUtil {
     private static final Set<AsciiString> CACHED_HEADERS = Flags.cachedHeaders().stream().map(AsciiString::of)
                                                                 .collect(toImmutableSet());
 
+    /**
+     * Validator for the scheme part of the URI, as defined in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1">the section 3.1 of RFC3986</a>.
+     */
+    private static final Pattern SCHEME_PATTERN = Pattern.compile("^([a-zA-Z][a-zA-Z0-9+\\-.]*)");
+
     private static LoadingCache<AsciiString, String> buildCache(String spec) {
         return Caffeine.from(spec).build(AsciiString::toString);
+    }
+
+    /**
+     * Returns normalized scheme.
+     *
+     * @throws IllegalArgumentException if the provided {@code scheme} does not conform to the criteria
+     *                                  specified in RFC 3986.
+     */
+    public static String schemeValidateAndNormalize(String scheme) {
+        final boolean isValidScheme = SCHEME_PATTERN.matcher(scheme).matches();
+        if (isValidScheme) {
+            return Ascii.toLowerCase(scheme);
+        } else {
+            throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
+        }
     }
 
     /**
