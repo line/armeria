@@ -29,6 +29,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A builder for creating a new {@link AsyncLoader}.
+ *
+ * <p>Expiration should be set by {@link #expireAfterLoad(Duration)} or {@link #expireIf(Predicate)}.
+ * If expiration is not set, {@link #build()} will throw {@link IllegalStateException}.
  */
 public final class AsyncLoaderBuilder<T> {
 
@@ -105,8 +108,13 @@ public final class AsyncLoaderBuilder<T> {
 
     /**
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
+     *
+     * @throws IllegalStateException if expiration is not set.
      */
     public AsyncLoader<T> build() {
+        if (expireAfterLoad == null && expireIf == null) {
+            throw new IllegalStateException("Must set AsyncLoader's expiration.");
+        }
         return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, refreshIf,
                                         refreshExecutor, exceptionHandler);
     }

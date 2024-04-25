@@ -39,7 +39,10 @@ class DefaultAsyncLoaderTest {
         final AtomicInteger loadCounter = new AtomicInteger();
         final Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
                 UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
-        final AsyncLoader<Integer> loader = AsyncLoader.builder(loadFunc).build();
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .expireIf(i -> false)
+                .build();
 
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
@@ -53,7 +56,10 @@ class DefaultAsyncLoaderTest {
         final AtomicInteger loadCounter = new AtomicInteger();
         final Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
                 UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
-        final AsyncLoader<Integer> loader = AsyncLoader.builder(loadFunc).build();
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .expireIf(i -> false)
+                .build();
         final ExecutorService service = Executors.newFixedThreadPool(5);
         final CountDownLatch latch = new CountDownLatch(5);
 
@@ -293,7 +299,10 @@ class DefaultAsyncLoaderTest {
         final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> {
             throw new IllegalStateException();
         };
-        final AsyncLoader<Integer> loader = AsyncLoader.builder(loadFunc).build();
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .expireIf(i -> false)
+                .build();
 
         assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
                 CompletionException.class,
@@ -307,7 +316,10 @@ class DefaultAsyncLoaderTest {
             future.completeExceptionally(new IllegalStateException());
             return future;
         };
-        final AsyncLoader<Object> loader = AsyncLoader.builder(loadFunc).build();
+        final AsyncLoader<Object> loader = AsyncLoader
+                .builder(loadFunc)
+                .expireIf(i -> false)
+                .build();
 
         assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
                 CompletionException.class,
@@ -317,7 +329,10 @@ class DefaultAsyncLoaderTest {
     @Test
     void loader_null() {
         final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> null;
-        final AsyncLoader<Integer> loader = AsyncLoader.builder(loadFunc).build();
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .expireIf(i -> false)
+                .build();
 
         assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
                 CompletionException.class,
@@ -336,6 +351,7 @@ class DefaultAsyncLoaderTest {
                     assertThat(cause).isInstanceOf(IllegalStateException.class);
                     return UnmodifiableFuture.completedFuture(handleExceptionCounter.incrementAndGet());
                 })
+                .expireIf(i -> false)
                 .build();
 
         assertThat(handleExceptionCounter.get()).isZero();
@@ -359,6 +375,7 @@ class DefaultAsyncLoaderTest {
                     assertThat(cause).isInstanceOf(IllegalStateException.class);
                     return UnmodifiableFuture.completedFuture(handleExceptionCounter.incrementAndGet());
                 })
+                .expireIf(i -> false)
                 .build();
 
         assertThat(handleExceptionCounter.get()).isZero();
@@ -378,6 +395,7 @@ class DefaultAsyncLoaderTest {
                     assertThat(cause).isInstanceOf(NullPointerException.class);
                     return UnmodifiableFuture.completedFuture(handleExceptionCounter.incrementAndGet());
                 })
+                .expireIf(i -> false)
                 .build();
 
         assertThat(handleExceptionCounter.get()).isZero();
@@ -398,6 +416,7 @@ class DefaultAsyncLoaderTest {
                     assertThat(cause).isInstanceOf(IllegalStateException.class);
                     throw new IllegalStateException();
                 })
+                .expireIf(i -> false)
                 .build();
 
         assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
@@ -420,6 +439,7 @@ class DefaultAsyncLoaderTest {
                     future.completeExceptionally(new IllegalStateException());
                     return future;
                 })
+                .expireIf(i -> false)
                 .build();
 
         assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
@@ -436,6 +456,7 @@ class DefaultAsyncLoaderTest {
                     assertThat(cause).isInstanceOf(NullPointerException.class);
                     return null;
                 })
+                .expireIf(i -> false)
                 .build();
 
         assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
@@ -452,6 +473,7 @@ class DefaultAsyncLoaderTest {
         final AsyncLoader<Integer> loader = AsyncLoader
                 .builder(loadFunc)
                 .refreshIf(i -> refresh.get())
+                .expireIf(i -> false)
                 .build();
 
         assertThat(loadCounter.get()).isZero();
@@ -530,6 +552,7 @@ class DefaultAsyncLoaderTest {
         final AsyncLoader<Integer> loader = AsyncLoader
                 .builder(loadFunc)
                 .refreshIf(i -> i == 1)
+                .expireIf(i -> false)
                 .build();
 
         assertThat(loadCounter.get()).isZero();
@@ -580,5 +603,13 @@ class DefaultAsyncLoaderTest {
             assertThat(loader.get().join()).isEqualTo(100);
             assertThat(loadCounter.get()).isEqualTo(2);
         }
+    }
+
+    @Test
+    void build_thrown_expiration_not_set() {
+        assertThatThrownBy(() -> AsyncLoader
+                .builder(i -> UnmodifiableFuture.completedFuture(1))
+                .build()
+        ).isInstanceOf(IllegalStateException.class);
     }
 }
