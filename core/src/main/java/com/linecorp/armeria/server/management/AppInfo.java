@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.server.management;
 
+import java.util.Objects;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -55,5 +58,35 @@ public final class AppInfo {
     @JsonProperty
     public String getDescription() {
         return description;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                .add("version", version)
+                .add("name", name)
+                .add("description", description)
+                .toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        final AppInfo appInfo = (AppInfo) o;
+        return Objects.equals(version, appInfo.version) &&
+               Objects.equals(name, appInfo.name) &&
+               Objects.equals(description, appInfo.description);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(version, name, description);
     }
 }
