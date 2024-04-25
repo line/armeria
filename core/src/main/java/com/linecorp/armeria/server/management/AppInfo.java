@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.management;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 
@@ -23,7 +25,7 @@ import com.linecorp.armeria.server.ServerBuilder;
  * A class that represents application information, which can be configured through
  * {@link ServerBuilder#setAppInfo(AppInfo)}.
  */
-public class AppInfo {
+public final class AppInfo {
     @Nullable final String version;
     @Nullable final String name;
     @Nullable final String description;
@@ -34,9 +36,24 @@ public class AppInfo {
      * @param name A name of an application
      * @param description A description of application
      */
-    public AppInfo(String version, String name, String description) {
+    public AppInfo(@Nullable String version, @Nullable String name, @Nullable String description) {
         this.version = version;
         this.name = name;
         this.description = description;
+    }
+
+    @JsonProperty
+    public String getVersion() {
+        return version;
+    }
+
+    @JsonProperty
+    public String getName() {
+        return name;
+    }
+
+    @JsonProperty
+    public String getDescription() {
+        return description;
     }
 }
