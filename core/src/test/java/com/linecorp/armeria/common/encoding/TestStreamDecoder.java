@@ -30,7 +30,8 @@ public class TestStreamDecoder extends AbstractStreamDecoder {
     private final EmbeddedChannel childDecoder;
     private final int childMaxLength;
 
-    protected TestStreamDecoder(EmbeddedChannel embeddedChannel, ChannelHandler handler, ByteBufAllocator alloc, int maxLength) {
+    protected TestStreamDecoder(EmbeddedChannel embeddedChannel, ChannelHandler handler,
+                                ByteBufAllocator alloc, int maxLength) {
         super(handler, alloc, maxLength);
         childDecoder = embeddedChannel;
         childDecoder.config().setAllocator(alloc);
