@@ -16,17 +16,16 @@
 
 package com.linecorp.armeria.server.management;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -63,9 +62,6 @@ public final class ManagementService extends AbstractHttpService {
 
     private static final ManagementService INSTANCE = new ManagementService();
 
-    @Nullable
-    private Server server;
-
     /**
      * Returns a singleton {@link ManagementService}.
      */
@@ -73,21 +69,16 @@ public final class ManagementService extends AbstractHttpService {
         return INSTANCE;
     }
 
-    ManagementService() {}
-
-    @Override
-    public void serviceAdded(ServiceConfig cfg) throws Exception {
-        super.serviceAdded(cfg);
-        if (server != null) {
-            if (server != cfg.server()) {
-                throw new IllegalStateException("cannot be added to more than one server");
-            } else {
-                return;
-            }
-        }
-        server = cfg.server();
-        AppInfoService.INSTANCE.setAppInfo(server.config().appInfo());
+    /**
+     * Returns a singleton {@link ManagementService} with specified {@link AppInfo}.
+     */
+    public static ManagementService of(AppInfo appInfo) {
+        requireNonNull(appInfo, "appInfo");
+        AppInfoService.INSTANCE.setAppInfo(appInfo);
+        return INSTANCE;
     }
+
+    ManagementService() {}
 
     @Override
     public HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {

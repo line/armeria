@@ -22,11 +22,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.ServerBuilder;
 
 /**
  * A class that represents application information, which can be configured through
- * {@link ServerBuilder#setAppInfo(AppInfo)}.
+ * {@link ManagementService#of(AppInfo)}.
  */
 public final class AppInfo {
     @Nullable final String version;
@@ -45,16 +44,25 @@ public final class AppInfo {
         this.description = description;
     }
 
+    /**
+     * Returns the artifact version of the deployed application, such as {@code "1.0.0"}.
+     */
     @JsonProperty
     public String getVersion() {
         return version;
     }
 
+    /**
+     * Returns the name of the deployed application.
+     */
     @JsonProperty
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns the description of the deployed application.
+     */
     @JsonProperty
     public String getDescription() {
         return description;

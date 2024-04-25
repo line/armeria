@@ -54,8 +54,7 @@ class ManagementServiceTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.requestTimeout(Duration.ofSeconds(45)); // Heap dump can take time.
-            sb.serviceUnder("/internal/management", ManagementService.of());
-            sb.setAppInfo(TEST_APP_INFO);
+            sb.serviceUnder("/internal/management", ManagementService.of(TEST_APP_INFO));
         }
     };
 

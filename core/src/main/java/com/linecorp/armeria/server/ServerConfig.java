@@ -30,10 +30,8 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.server.management.AppInfo;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -341,10 +339,4 @@ public interface ServerConfig {
      * Returns the interval between reporting unhandled exceptions in milliseconds.
      */
     long unhandledExceptionsReportIntervalMillis();
-
-    /**
-     * Returns the {@link AppInfo} that represents application information.
-     */
-    @Nullable
-    AppInfo appInfo();
 }

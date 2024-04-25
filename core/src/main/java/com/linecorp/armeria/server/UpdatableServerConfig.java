@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.server.management.AppInfo;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -314,11 +313,6 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public long unhandledExceptionsReportIntervalMillis() {
         return delegate.unhandledExceptionsReportIntervalMillis();
-    }
-
-    @Override
-    public AppInfo appInfo() {
-        return delegate.appInfo();
     }
 
     @Override
