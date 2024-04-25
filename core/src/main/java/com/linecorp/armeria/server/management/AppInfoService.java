@@ -16,12 +16,19 @@
 
 package com.linecorp.armeria.server.management;
 
+import static java.util.Objects.requireNonNull;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Version;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -36,42 +43,59 @@ public enum AppInfoService implements HttpService {
 
     INSTANCE;
 
+    private static final Version armeriaVersionInfo = Version.get("armeria", Server.class.getClassLoader());
+
     @Nullable
-    private AppInfo appInfo;
+    private AggregatedHttpResponse infoAggregatedResponse;
 
     void setAppInfo(@Nullable AppInfo appInfo) {
-        this.appInfo = appInfo;
+        final byte[] data;
+
+        try {
+            if (appInfo == null) {
+                data = JacksonUtil.writeValueAsBytes(buildArmeriaInfoMap());
+            } else {
+                data = JacksonUtil.writeValueAsBytes(buildInfoMap(appInfo));
+            }
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException(e.toString(), e);
+        }
+
+        infoAggregatedResponse = AggregatedHttpResponse.of(HttpStatus.OK, MediaType.JSON, data);
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Version versionInfo = Version.get("armeria", Server.class.getClassLoader());
+        assert infoAggregatedResponse != null;
+        return infoAggregatedResponse.toHttpResponse();
+    }
 
-        final ImmutableMap<String, ImmutableMap<String, String>> appInfoMap;
-        if (appInfo != null) {
-            appInfoMap = ImmutableMap.of(
-                    "app", ImmutableMap.of(
-                            "version", appInfo.version,
-                            "name", appInfo.name,
-                            "description", appInfo.description
-                    )
-            );
-        } else {
-            appInfoMap = ImmutableMap.of();
-        }
+    private static ImmutableMap<Object, Object> buildInfoMap(AppInfo appInfo) {
+        requireNonNull(appInfo, "appInfo");
+        return ImmutableMap.builder()
+                    .putAll(buildArmeriaInfoMap())
+                    .putAll(buildAppInfoMap(appInfo))
+                    .build();
+    }
 
-        final ImmutableMap<String, ImmutableMap<String, String>> armeriaInfoMap = ImmutableMap.of(
+    private static ImmutableMap<String, ImmutableMap<String, String>> buildArmeriaInfoMap() {
+        return ImmutableMap.of(
                 "armeria", ImmutableMap.of(
-                        "version", versionInfo.artifactVersion(),
-                        "commit", versionInfo.longCommitHash(),
-                        "repositoryStatus", versionInfo.repositoryStatus()
+                        "version", armeriaVersionInfo.artifactVersion(),
+                        "commit", armeriaVersionInfo.longCommitHash(),
+                        "repositoryStatus", armeriaVersionInfo.repositoryStatus()
                 )
         );
+    }
 
-        final ImmutableMap<Object, Object> infoMap = ImmutableMap.builder()
-                                                                 .putAll(appInfoMap)
-                                                                 .putAll(armeriaInfoMap)
-                                                                 .build();
-        return HttpResponse.ofJson(infoMap);
+    private static ImmutableMap<String, ImmutableMap<String, String>> buildAppInfoMap(AppInfo appInfo) {
+        requireNonNull(appInfo, "appInfo");
+        return ImmutableMap.of(
+                "app", ImmutableMap.of(
+                        "version", appInfo.version,
+                        "name", appInfo.name,
+                        "description", appInfo.description
+                )
+        );
     }
 }

@@ -66,6 +66,7 @@ public final class ManagementService extends AbstractHttpService {
      * Returns a singleton {@link ManagementService}.
      */
     public static ManagementService of() {
+        AppInfoService.INSTANCE.setAppInfo(null);
         return INSTANCE;
     }
 
