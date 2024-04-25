@@ -321,7 +321,8 @@ class DefaultHttpDecodedResponseTest {
         when(mockData.byteBuf()).thenReturn(mockByteBuf);
 
         final EmbeddedChannel channel = new AlwaysFailureEmbeddedChannel(false);
-        final StreamDecoder decoder = new TestStreamDecoder(channel, new SnappyFrameDecoder(), mock(ByteBufAllocator.class), 100);
+        final StreamDecoder decoder = new TestStreamDecoder(channel, new SnappyFrameDecoder(),
+                                                            mock(ByteBufAllocator.class), 100);
 
         assertThatThrownBy(() -> decoder.decode(mockData))
                 .isInstanceOf(UnexpectedDecodeException.class)
