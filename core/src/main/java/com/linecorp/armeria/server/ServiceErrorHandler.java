@@ -88,7 +88,7 @@ public interface ServiceErrorHandler {
      * in the invocation chain will be used as a fallback (See {@link #orElse(ServiceErrorHandler)}
      * for more information).
      *
-     * @param config the {@link ServiceConfig} that provides the configuration properties.
+     * @param ctx the {@link ServiceRequestContext} of the request being handled.
      * @param headers the received {@link RequestHeaders}.
      * @param status the desired {@link HttpStatus} of the error response.
      * @param description an optional human-readable description of the error.
@@ -99,7 +99,7 @@ public interface ServiceErrorHandler {
      *         {@link #orElse(ServiceErrorHandler)} handle the event.
      */
     @Nullable
-    default AggregatedHttpResponse renderStatus(ServiceConfig config,
+    default AggregatedHttpResponse renderStatus(ServiceRequestContext ctx,
                                                 RequestHeaders headers,
                                                 HttpStatus status,
                                                 @Nullable String description,

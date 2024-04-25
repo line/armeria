@@ -103,7 +103,9 @@ class ExceedingServiceMaxContentLengthTest {
             sb.service("/unary", new HttpService() {
                 @Override
                 public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                    return HttpResponse.of("Hello, world!");
+                    return HttpResponse.of(req.aggregate().thenApply(agg -> {
+                        return HttpResponse.of("Hello, world!");
+                    }));
                 }
 
                 @Override
@@ -147,6 +149,6 @@ class ExceedingServiceMaxContentLengthTest {
         await().untilAsserted(
                 () -> assertThat(responseCause.get()).isExactlyInstanceOf(ContentTooLargeException.class));
 
-        assertThat(byteBufs).allSatisfy(buf -> assertThat(buf.refCnt()).isZero());
+        await().untilAsserted(() -> assertThat(byteBufs).allSatisfy(buf -> assertThat(buf.refCnt()).isZero()));
     }
 }

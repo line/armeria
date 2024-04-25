@@ -31,6 +31,8 @@ import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.google.common.collect.ImmutableMap;
 import com.spotify.futures.CompletableFutures;
@@ -41,13 +43,13 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.InvalidClientException;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
 import com.linecorp.armeria.internal.client.auth.oauth2.MockOAuth2ClientCredentialsService;
 import com.linecorp.armeria.internal.server.auth.oauth2.MockOAuth2IntrospectionService;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthService;
@@ -61,8 +63,8 @@ class OAuth2ClientCredentialsGrantTest {
     static final long EXPIRES_IN_HOURS = 3L;
 
     static final MockOAuth2AccessToken TOKEN =
-        MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(EXPIRES_IN_HOURS),
-                                       ImmutableMap.of("extension_field", "twenty-seven"), "read", "write");
+            MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(EXPIRES_IN_HOURS),
+                                           ImmutableMap.of("extension_field", "twenty-seven"), "read", "write");
 
     static final HttpService SERVICE = new AbstractHttpService() {
         @Override
@@ -87,130 +89,150 @@ class OAuth2ClientCredentialsGrantTest {
         }
     };
 
-    private final ServerExtension resourceServer = new ServerExtension(false) {
+    @RegisterExtension
+    final ServerExtension resourceServer = new ServerExtension() {
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final WebClient introspectClient = WebClient.of(authServer.httpUri());
-            sb.service("/resource-read-write/",
-                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
-                               introspectClient,
-                               "/introspect/token/")
-                               .realm("protected resource read-write")
-                               .accessTokenType("Bearer")
-                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                               .permittedScope("read", "write")
-                               .build()
-                       ).build(SERVICE));
+            sb.service("/resource-read-write/", AuthService.builder().addOAuth2(
+                    OAuth2TokenIntrospectionAuthorizer
+                            .builder(introspectClient, "/introspect/token/")
+                            .realm("protected resource read-write")
+                            .accessTokenType("Bearer")
+                            .clientAuthentication(
+                                    ClientAuthentication.ofClientPassword("test_server", "server_secret"))
+                            .permittedScope("read", "write")
+                            .build()
+            ).build(SERVICE));
             sb.service("/resource-read/",
-                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
-                               introspectClient,
-                               "/introspect/token/")
-                               .realm("protected resource read")
-                               .accessTokenType("Bearer")
-                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                               .permittedScope("read")
-                               .build()
+                       AuthService.builder().addOAuth2(
+                               OAuth2TokenIntrospectionAuthorizer
+                                       .builder(introspectClient, "/introspect/token/")
+                                       .realm("protected resource read")
+                                       .accessTokenType("Bearer")
+                                       .clientAuthentication(ClientAuthentication.ofBasic(SERVER_CREDENTIALS))
+                                       .permittedScope("read")
+                                       .build()
                        ).build(SERVICE));
             sb.service("/resource-read-write-update/",
-                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
-                               introspectClient,
-                               "/introspect/token/")
-                               .realm("protected resource read-write-update")
-                               .accessTokenType("Bearer")
-                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                               .permittedScope("read", "write", "update")
-                               .build()
+                       AuthService.builder().addOAuth2(
+                               OAuth2TokenIntrospectionAuthorizer
+                                       .builder(introspectClient, "/introspect/token/")
+                                       .realm("protected resource read-write-update")
+                                       .accessTokenType("Bearer")
+                                       .clientAuthentication(() -> {
+                                           return ClientAuthentication.ofBasic(SERVER_CREDENTIALS);
+                                       })
+                                       .permittedScope("read", "write", "update")
+                                       .build()
                        ).build(SERVICE));
         }
     };
 
-    @Test
-    void testOk() throws Exception {
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    void testOk(boolean useLegacyApi) throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
-        final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
-                .builder(authClient, "/token/client/")
-                .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
-        try (Server ignored = resourceServer.start()) {
-            final WebClient client = WebClient.builder(resourceServer.httpUri())
-                                              .decorator(OAuth2Client.newDecorator(grant))
-                                              .build();
-
-            final HttpRequest request1 = HttpRequest.of(HttpMethod.GET, "/resource-read-write/");
-            final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/resource-read/");
-            final HttpRequest request3 = HttpRequest.of(HttpMethod.GET, "/resource-read-write-update/");
-
-            final CompletableFuture<AggregatedHttpResponse> response1 = client.execute(request1).aggregate();
-            final CompletableFuture<AggregatedHttpResponse> response2 = client.execute(request2).aggregate();
-            final CompletableFuture<AggregatedHttpResponse> response3 = client.execute(request3).aggregate();
-
-            assertThat(response1.get().status()).isEqualTo(HttpStatus.OK);
-            assertThat(response2.get().status()).isEqualTo(HttpStatus.OK);
-            assertThat(response3.get().status()).isEqualTo(HttpStatus.FORBIDDEN);
+        final OAuth2AuthorizationGrant grant;
+        if (useLegacyApi) {
+            grant = OAuth2ClientCredentialsGrant
+                    .builder(authClient, "/token/client/")
+                    .clientBasicAuthorization(() -> CLIENT_CREDENTIALS).build();
+        } else {
+            final AccessTokenRequest accessTokenRequest =
+                    AccessTokenRequest.ofClientCredentials("test_client", "client_secret");
+            grant = OAuth2AuthorizationGrant
+                    .builder(authClient, "/token/client/")
+                    .accessTokenRequest(accessTokenRequest)
+                    .build();
         }
+
+        final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                          .decorator(OAuth2Client.newDecorator(grant))
+                                          .build();
+
+        final HttpRequest request1 = HttpRequest.of(HttpMethod.GET, "/resource-read-write/");
+        final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/resource-read/");
+        final HttpRequest request3 = HttpRequest.of(HttpMethod.GET, "/resource-read-write-update/");
+
+        final CompletableFuture<AggregatedHttpResponse> response1 = client.execute(request1).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> response2 = client.execute(request2).aggregate();
+        final CompletableFuture<AggregatedHttpResponse> response3 = client.execute(request3).aggregate();
+
+        assertThat(response1.get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response2.get().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response3.get().status()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
     void testConcurrent() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
-        final OAuth2ClientCredentialsGrant grant = spy(
-                OAuth2ClientCredentialsGrant
+        final ClientAuthentication clientAuthentication =
+                ClientAuthentication.ofAuthorization("Basic", CLIENT_CREDENTIALS);
+        final AccessTokenRequest accessTokenRequest =
+                AccessTokenRequest.ofClientCredentials(clientAuthentication);
+        final DefaultOAuth2AuthorizationGrant grant = (DefaultOAuth2AuthorizationGrant) spy(
+                OAuth2AuthorizationGrant
                         .builder(authClient, "/token/client/")
-                        .clientBasicAuthorization(() -> CLIENT_CREDENTIALS)
+                        .accessTokenRequest(() -> accessTokenRequest)
                         .build());
 
-        try (Server ignored = resourceServer.start()) {
-            final WebClient client = WebClient.builder(resourceServer.httpUri())
-                                              .decorator(OAuth2Client.newDecorator(grant))
-                                              .build();
+        final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                          .decorator(OAuth2Client.newDecorator(grant))
+                                          .build();
 
-            final int count = 10;
-            final List<AggregatedHttpResponse> responses1 =
-                    getConcurrently(client, "/resource-read-write/", count).join();
-            validateResponses(responses1, HttpStatus.OK);
-            verify(grant, times(1)).obtainAccessToken(any());
-            verify(grant, times(0)).refreshAccessToken(any(), any());
+        final int count = 10;
+        final List<AggregatedHttpResponse> responses1 =
+                getConcurrently(client, "/resource-read-write/", count).join();
+        validateResponses(responses1, HttpStatus.OK);
+        verify(grant, times(1)).obtainAccessToken(any());
+        verify(grant, times(0)).refreshAccessToken(any(), any());
 
-            final List<AggregatedHttpResponse> responses2 =
-                    getConcurrently(client, "/resource-read/", count).join();
-            validateResponses(responses2, HttpStatus.OK);
-            verify(grant, times(1)).obtainAccessToken(any());
-            verify(grant, times(0)).refreshAccessToken(any(), any());
+        final List<AggregatedHttpResponse> responses2 =
+                getConcurrently(client, "/resource-read/", count).join();
+        validateResponses(responses2, HttpStatus.OK);
+        verify(grant, times(1)).obtainAccessToken(any());
+        verify(grant, times(0)).refreshAccessToken(any(), any());
 
-            final List<AggregatedHttpResponse> responses3 =
-                    getConcurrently(client, "/resource-read-write-update/", count).join();
-            validateResponses(responses3, HttpStatus.FORBIDDEN);
-            verify(grant, times(1)).obtainAccessToken(any());
-            verify(grant, times(0)).refreshAccessToken(any(), any());
-        }
+        final List<AggregatedHttpResponse> responses3 =
+                getConcurrently(client, "/resource-read-write-update/", count).join();
+        validateResponses(responses3, HttpStatus.FORBIDDEN);
+        verify(grant, times(1)).obtainAccessToken(any());
+        verify(grant, times(0)).refreshAccessToken(any(), any());
     }
 
     @Test
     void testConcurrent_refresh() throws Exception {
         final WebClient authClient = WebClient.of(authServer.httpUri());
-        final OAuth2ClientCredentialsGrant grant = spy(
-                OAuth2ClientCredentialsGrant
+        final AccessTokenRequest accessTokenRequest =
+                AccessTokenRequest.ofClientCredentials("test_client", "client_secret");
+        final DefaultOAuth2AuthorizationGrant grant = (DefaultOAuth2AuthorizationGrant) spy(
+                OAuth2AuthorizationGrant
                         .builder(authClient, "/token/client/")
-                        .clientBasicAuthorization(() -> CLIENT_CREDENTIALS)
+                        .accessTokenRequest(accessTokenRequest)
                         // Token is considered expired after 3 seconds
                         .refreshBefore(Duration.ofSeconds(EXPIRES_IN_HOURS * 3600 - 3))
                         .build());
 
-        try (Server ignored = resourceServer.start()) {
-            final WebClient client = WebClient.builder(resourceServer.httpUri())
-                                              .decorator(OAuth2Client.newDecorator(grant))
-                                              .build();
-            final AggregatedHttpResponse response = client.get("/resource-read/").aggregate().join();
-            assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            verify(grant, times(1)).obtainAccessToken(any());
-            verify(grant, times(0)).refreshAccessToken(any(), any());
+        final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                          .decorator(OAuth2Client.newDecorator(grant))
+                                          .build();
+        final AggregatedHttpResponse response = client.get("/resource-read/").aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        verify(grant, times(1)).obtainAccessToken(any());
+        verify(grant, times(0)).refreshAccessToken(any(), any());
 
-            Thread.sleep(3000L); // Wait until token expires.
-            final List<AggregatedHttpResponse> responses =
-                    getConcurrently(client, "/resource-read/", 10).join();
-            validateResponses(responses, HttpStatus.OK);
-            verify(grant, times(1)).obtainAccessToken(any());
-            verify(grant, times(1)).refreshAccessToken(any(), any());
-        }
+        Thread.sleep(3000L); // Wait until token expires.
+        final List<AggregatedHttpResponse> responses =
+                getConcurrently(client, "/resource-read/", 10).join();
+        validateResponses(responses, HttpStatus.OK);
+        verify(grant, times(1)).obtainAccessToken(any());
+        verify(grant, times(1)).refreshAccessToken(any(), any());
     }
 
     private static CompletableFuture<List<AggregatedHttpResponse>> getConcurrently(
@@ -228,21 +250,32 @@ class OAuth2ClientCredentialsGrantTest {
         }
     }
 
-    @Test
-    void testUnauthorized() {
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    void testUnauthorized(boolean useLegacyApi) {
         final WebClient authClient = WebClient.of(authServer.httpUri());
-
-        final OAuth2ClientCredentialsGrant grant = OAuth2ClientCredentialsGrant
-                .builder(authClient, "/token/client/")
-                .clientBasicAuthorization(() -> SERVER_CREDENTIALS).build();
-        try (Server ignored = resourceServer.start()) {
-            final WebClient client = WebClient.builder(resourceServer.httpUri())
-                                              .decorator(OAuth2Client.newDecorator(grant))
-                                              .build();
-
-            assertThatThrownBy(() -> client.get("/resource-read-write/").aggregate().join())
-                    .isInstanceOf(CompletionException.class)
-                    .cause().isInstanceOf(InvalidClientException.class);
+        final OAuth2AuthorizationGrant grant;
+        if (useLegacyApi) {
+            grant = OAuth2ClientCredentialsGrant
+                    .builder(authClient, "/token/client/")
+                    .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
+                    .build();
+        } else {
+            final ClientAuthentication clientAuthentication =
+                    ClientAuthentication.ofAuthorization("Basic", SERVER_CREDENTIALS);
+            final AccessTokenRequest accessTokenRequest =
+                    AccessTokenRequest.ofClientCredentials(clientAuthentication);
+            grant = OAuth2AuthorizationGrant
+                    .builder(authClient, "/token/client/")
+                    .accessTokenRequest(() -> accessTokenRequest)
+                    .build();
         }
+        final WebClient client = WebClient.builder(resourceServer.httpUri())
+                                          .decorator(OAuth2Client.newDecorator(grant))
+                                          .build();
+
+        assertThatThrownBy(() -> client.get("/resource-read-write/").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .cause().isInstanceOf(InvalidClientException.class);
     }
 }

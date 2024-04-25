@@ -32,6 +32,14 @@ import io.grpc.Status;
 public interface UnframedGrpcErrorHandler {
 
     /**
+     * Returns a new {@link UnframedGrpcErrorHandlerBuilder}.
+     */
+    @UnstableApi
+    static UnframedGrpcErrorHandlerBuilder builder() {
+        return new UnframedGrpcErrorHandlerBuilder();
+    }
+
+    /**
      * Returns a plain text or json response based on the content type.
      */
     static UnframedGrpcErrorHandler of() {
