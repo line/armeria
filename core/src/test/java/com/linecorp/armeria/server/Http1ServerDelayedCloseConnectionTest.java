@@ -66,6 +66,7 @@ class Http1ServerDelayedCloseConnectionTest {
         final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
         try (Socket socket = new Socket("127.0.0.1", server.httpPort(),  null, localPort)) {
             socket.setSoTimeout(100000);
+            socket.setReuseAddress(false);
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close" + " HTTP/1.1\r\n");
             writer.print("\r\n");
@@ -113,7 +114,8 @@ class Http1ServerDelayedCloseConnectionTest {
         final Random random = new Random();
         final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
         try (Socket socket = new Socket("127.0.0.1", server.httpPort(),  null, localPort)) {
-            socket.setSoTimeout(1000);
+            socket.setSoTimeout(100000);
+            socket.setReuseAddress(false);
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close" + " HTTP/1.1\r\n");
             writer.print("\r\n");
