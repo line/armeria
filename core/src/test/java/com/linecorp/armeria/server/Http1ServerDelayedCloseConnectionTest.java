@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,13 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpResponse;
-
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -35,8 +30,13 @@ import java.net.Socket;
 import java.time.Duration;
 import java.util.Random;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class Http1ServerDelayedCloseConnectionTest {
 
@@ -58,11 +58,10 @@ class Http1ServerDelayedCloseConnectionTest {
         }
     };
 
-
     @Test
     void shouldDelayDisconnectByServerSideIfClientDoesNotHandleConnectionClose() throws IOException {
-        Random random = new Random();
-        short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
+        final Random random = new Random();
+        final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
         try (Socket socket = new Socket("127.0.0.1", server.httpPort(),  null, localPort)) {
             socket.setReuseAddress(true);
             socket.setSoTimeout(100000);
@@ -87,21 +86,21 @@ class Http1ServerDelayedCloseConnectionTest {
                     break;
                 }
             }
-            long readStartTimestamp = System.nanoTime();
-            int readResult = in.read();
-            long readDurationMillis = Duration.ofNanos(System.nanoTime() - readStartTimestamp).toMillis();
+            final long readStartTimestamp = System.nanoTime();
+            final int readResult = in.read();
+            final long readDurationMillis = Duration.ofNanos(System.nanoTime() - readStartTimestamp).toMillis();
 
             assertThat(hasConnectionClose).isTrue();
             assertThat(readResult).isEqualTo(-1);
 
-            long defaultHttp1ConnectionCloseDelayMillis = Flags.defaultHttp1ConnectionCloseDelayMillis();
+            final long defaultHttp1ConnectionCloseDelayMillis = Flags.defaultHttp1ConnectionCloseDelayMillis();
             assertThat(readDurationMillis).isBetween(
                     defaultHttp1ConnectionCloseDelayMillis - 100,
                     defaultHttp1ConnectionCloseDelayMillis + 1000
             );
 
             socket.close();
-            Socket reuseSock = new Socket();
+            final Socket reuseSock = new Socket();
             reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort));
             reuseSock.close();
         }
@@ -109,8 +108,8 @@ class Http1ServerDelayedCloseConnectionTest {
 
     @Test
     void shouldWaitForDisconnectByClientSideFirst() throws IOException {
-        Random random = new Random();
-        short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
+        final Random random = new Random();
+        final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
         try (Socket socket = new Socket("127.0.0.1", server.httpPort(),  null, localPort)) {
             socket.setReuseAddress(true);
             socket.setSoTimeout(1000);
@@ -139,7 +138,7 @@ class Http1ServerDelayedCloseConnectionTest {
             assertThat(server.server().numConnections()).isEqualTo(1);
 
             socket.close();
-            Socket reuseSock = new Socket();
+            final Socket reuseSock = new Socket();
             assertThatThrownBy(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
                     .isInstanceOf(BindException.class)
                     .hasMessageContaining("Address already in use");
