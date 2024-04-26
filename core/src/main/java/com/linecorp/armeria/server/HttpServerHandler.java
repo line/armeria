@@ -383,7 +383,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros(), serviceCfg.contextHook());
 
-        final HttpResponse res;
+        HttpResponse res;
         req.init(reqCtx);
         final CompletableFuture<Void> whenAggregated = req.whenAggregated();
         if (whenAggregated != null) {
@@ -400,6 +400,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 res = serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop);
             }
         }
+        res = res.recover(cause -> {
+            reqCtx.logBuilder().responseCause(cause);
+            // Recover the failed response with the error handler.
+            return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+        });
+
         // Keep track of the number of unfinished requests and
         // clean up the request stream when response stream ends.
         final boolean isTransientService =
@@ -467,11 +473,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceResponse = HttpResponse.ofFailure(cause);
             }
 
-            serviceResponse = serviceResponse.recover(cause -> {
-                reqCtx.logBuilder().responseCause(cause);
-                // Recover the failed response with the error handler.
-                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
-            });
             return serviceResponse;
         }
     }

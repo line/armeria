@@ -195,6 +195,10 @@ abstract class CancellableStreamMessage<T> extends AggregationSupport implements
             return withPooledObjects;
         }
 
+        boolean notifyCancellation() {
+            return notifyCancellation;
+        }
+
         boolean cancelRequested() {
             return cancelRequested;
         }

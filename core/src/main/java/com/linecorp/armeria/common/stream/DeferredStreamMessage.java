@@ -34,6 +34,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
@@ -366,15 +367,31 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             return;
         }
 
-        final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
-        downstreamSubscriptionUpdater.compareAndSet(this, null, newSubscription);
-
-        final StreamMessage<T> upstream = this.upstream;
-        if (upstream != null) {
+        if (!subscribedToUpstreamUpdater.compareAndSet(this, 0, 1)) {
+            // Already subscribed to upstream so just abort upstream.
+            // upstream.abort(cause) might be as well in delegate(StreamMessage<T> upstream) method which is
+            // perfectly fine.
+            final StreamMessage<T> upstream = this.upstream;
+            assert upstream != null;
             upstream.abort(cause);
             return;
         }
+
+        // Abort upstream if it's set.
+        final StreamMessage<T> upstream = this.upstream;
+        if (upstream != null) {
+            upstream.abort(cause);
+        }
+
+        final SubscriptionImpl newSubscription = new SubscriptionImpl(
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
+        if (downstreamSubscriptionUpdater.compareAndSet(this, null, newSubscription)) {
+            // Downstream wasn't set yet.
+            whenComplete().completeExceptionally(cause);
+            return;
+        }
+
+        // Downstream was already subscribed but upstream wasn't set yet.
 
         //noinspection unchecked
         final CompletableFuture<List<?>> collectingFuture =
@@ -383,15 +400,30 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             collectingFuture.completeExceptionally(cause);
         }
 
-        final CloseEvent closeEvent = newCloseEvent(cause);
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
         assert downstreamSubscription != null;
         if (downstreamSubscription.needsDirectInvocation()) {
-            closeEvent.notifySubscriber(downstreamSubscription, whenComplete());
+            downstreamOnError(cause, downstreamSubscription);
         } else {
             downstreamSubscription.executor().execute(
-                    () -> closeEvent.notifySubscriber(downstreamSubscription, whenComplete()));
+                    () -> downstreamOnError(cause, downstreamSubscription));
         }
+    }
+
+    private void downstreamOnError(Throwable cause, SubscriptionImpl downstreamSubscription) {
+        final Subscriber<Object> subscriber = downstreamSubscription.subscriber();
+        try {
+            if (downstreamSubscription.notifyCancellation() ||
+                !(cause instanceof CancelledSubscriptionException)) {
+                subscriber.onError(cause);
+            }
+        } catch (Throwable t) {
+            final Exception composite = new CompositeException(t, cause);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                        subscriber, composite);
+        }
+        whenComplete().completeExceptionally(cause);
     }
 
     @Override
