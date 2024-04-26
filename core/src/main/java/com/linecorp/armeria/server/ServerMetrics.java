@@ -43,7 +43,7 @@ public final class ServerMetrics {
      * Returns the number of all pending requests.
      */
     public long pendingRequests() {
-        return pendingRequests.longValue();
+        return pendingHttp1Requests.longValue() + pendingHttp2Requests.longValue();
     }
 
     /**

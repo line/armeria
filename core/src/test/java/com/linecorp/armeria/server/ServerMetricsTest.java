@@ -180,7 +180,8 @@ class ServerMetricsTest {
 
     @CsvSource({ "H1C, /ok/http1, 1, 0", "H2C, /ok/http2, 0, 1" })
     @ParameterizedTest
-    void checkWhenOk(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request, long expectedPendingHttp2Request) throws InterruptedException {
+    void checkWhenOk(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request,
+                     long expectedPendingHttp2Request) throws InterruptedException {
         // maxConnectionAgeMillis() method is for testing whether activeConnections is decreased.
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .maxConnectionAgeMillis(1000)
@@ -214,7 +215,8 @@ class ServerMetricsTest {
 
     @CsvSource({ "H1C, /server-error/http1, 1, 0", "H2C, /server-error/http2, 0, 1" })
     @ParameterizedTest
-    void checkWhenServerError(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request, long expectedPendingHttp2Request) throws InterruptedException {
+    void checkWhenServerError(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request,
+                              long expectedPendingHttp2Request) throws InterruptedException {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .maxConnectionAgeMillis(1000)
                                                          .build();
@@ -247,7 +249,8 @@ class ServerMetricsTest {
 
     @CsvSource({ "H1C, /request-timeout/http1, 1, 0", "H2C, /request-timeout/http2, 0, 1" })
     @ParameterizedTest
-    void checkWhenRequestTimeout(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request, long expectedPendingHttp2Request) throws InterruptedException {
+    void checkWhenRequestTimeout(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request,
+                                 long expectedPendingHttp2Request) throws InterruptedException {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .maxConnectionAgeMillis(1000)
                                                          .build();
