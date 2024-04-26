@@ -1,21 +1,47 @@
+/*
+ * Copyright 2024 LY Corporation
+ *
+ *         LY Corporation licenses this file to you under the Apache License,
+ *         version 2.0 (the "License"); you may not use this file except in compliance
+ *         with the License. You may obtain a copy of the License at:
+ *
+ *         https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *         Unless required by applicable law or agreed to in writing, software
+ *         distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *         WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ *         License for the specific language governing permissions and limitations
+ *         under the License.
+ */
 package com.linecorp.armeria.internal.server;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Strings;
-import com.linecorp.armeria.common.*;
+
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.cors.CorsConfig;
 import com.linecorp.armeria.server.cors.CorsPolicy;
 import com.linecorp.armeria.server.cors.CorsService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+/**
+ * utility class related to CORS headers.
+ */
 public final class CorsHeaderUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(CorsHeaderUtil.class);
 
     public static final String ANY_ORIGIN = "*";
     public static final String NULL_ORIGIN = "null";
+
+    private CorsHeaderUtil() {
+    }
 
     /**
      * Emit CORS headers if origin was found.
@@ -37,7 +63,7 @@ public final class CorsHeaderUtil {
         // The string "*" cannot be used for a resource that supports credentials.
         // https://www.w3.org/TR/cors/#resource-requests
         if (policy.isCredentialsAllowed() &&
-                !ANY_ORIGIN.equals(headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))) {
+            !ANY_ORIGIN.equals(headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))) {
             headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
         }
     }
@@ -59,7 +85,8 @@ public final class CorsHeaderUtil {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
     }
 
-    public static void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers, CorsPolicy corsPolicy) {
+    public static void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers,
+                                           CorsPolicy corsPolicy) {
         if (corsPolicy.isAllowAllRequestHeaders()) {
             copyCorsAllowHeaders(requestHeaders, headers);
             return;
@@ -70,14 +97,6 @@ public final class CorsHeaderUtil {
         }
 
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, corsPolicy.joinAllowedRequestHeaders());
-    }
-
-
-    /**
-     * Return a "forbidden" response.
-     */
-    private static HttpResponse forbidden() {
-        return HttpResponse.of(HttpStatus.FORBIDDEN);
     }
 
     /**
@@ -142,5 +161,4 @@ public final class CorsHeaderUtil {
     private static void setCorsNullOrigin(ResponseHeadersBuilder headers) {
         setCorsOrigin(headers, NULL_ORIGIN);
     }
-
 }

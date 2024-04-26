@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -111,8 +110,7 @@ public final class CorsPolicy {
     private final Set<HttpMethod> allowedRequestMethods;
     private final boolean allowAllRequestHeaders;
     private final Set<AsciiString> allowedRequestHeaders;
-    private final String joinedExposedHeaders;
-    private final String joinedAllowedRequestHeaders;
+
     private final String joinedAllowedRequestMethods;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
@@ -132,10 +130,8 @@ public final class CorsPolicy {
         this.allowedRequestMethods = ImmutableSet.copyOf(allowedRequestMethods);
         this.allowAllRequestHeaders = allowAllRequestHeaders;
         this.allowedRequestHeaders = ImmutableSet.copyOf(allowedRequestHeaders);
-        joinedExposedHeaders = joinExposedHeaders();
         joinedAllowedRequestMethods = this.allowedRequestMethods
                 .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
-        joinedAllowedRequestHeaders = joinAllowedRequestHeaders();
         if (preflightResponseHeadersDisabled) {
             this.preflightResponseHeaders = Collections.emptyMap();
         } else if (preflightResponseHeaders.isEmpty()) {
@@ -305,37 +301,64 @@ public final class CorsPolicy {
         CorsHeaderUtil.setCorsAllowCredentials(headers, this);
     }
 
+    /**
+     * Retrieves the set of headers that are exposed to the client.
+     *
+     * @return A set of {@link AsciiString} representing the headers that can be safely exposed to the client.
+     */
     public Set<AsciiString> getExposedHeaders() {
         return exposedHeaders;
     }
 
+    /**
+     * Determines whether all request headers are allowed.
+     *
+     * @return true if all request headers are allowed,
+     *         false if only specific request headers are allowed.
+     */
     public boolean isAllowAllRequestHeaders() {
         return allowAllRequestHeaders;
     }
 
+    /**
+     * Retrieves the set of request headers that are allowed.
+     *
+     * @return A set of {@link AsciiString} representing the request headers that are permitted.
+     */
     public Set<AsciiString> getAllowedRequestHeaders() {
         return allowedRequestHeaders;
     }
 
+    /**
+     * Joins the given set of headers into a single string.
+     * This can be useful for creating a comma-separated list of headers.
+     *
+     * @param headers The set of headers to be joined.
+     * @return A {@link String} representing the joined headers.
+     */
     public String joinHeaders(Set<AsciiString> headers) {
-        String joinedExposedHeaders = HEADER_JOINER.join(headers);
-        return joinedExposedHeaders;
+        return HEADER_JOINER.join(headers);
     }
 
+    /**
+     * Joins the set of exposed headers into a single string.
+     * This method utilizes {@link #joinHeaders(Set)} to create a comma-separated list of exposed headers.
+     *
+     * @return A {@link String} representing the joined exposed headers.
+     */
     public String joinExposedHeaders() {
-        return joinHeaders(this.exposedHeaders);
+        return joinHeaders(exposedHeaders);
     }
 
+    /**
+     * Joins the set of allowed request headers into a single string.
+     * This method utilizes {@link #joinHeaders(Set)}
+     * to create a comma-separated list of allowed request headers.
+     *
+     * @return A {@link String} representing the joined allowed request headers.
+     */
     public String joinAllowedRequestHeaders() {
-        return joinHeaders(this.allowedRequestHeaders);
-    }
-
-    void setCorsExposeHeaders(ResponseHeadersBuilder headers) {
-        if (exposedHeaders.isEmpty()) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, joinedExposedHeaders);
+        return joinHeaders(allowedRequestHeaders);
     }
 
     void setCorsAllowMethods(ResponseHeadersBuilder headers) {
@@ -353,8 +376,8 @@ public final class CorsPolicy {
     @Override
     public String toString() {
         return toString(this, origins, routes, nullOriginAllowed, credentialsAllowed, maxAge,
-                exposedHeaders, allowedRequestMethods, allowAllRequestHeaders, allowedRequestHeaders,
-                preflightResponseHeaders);
+                        exposedHeaders, allowedRequestMethods, allowAllRequestHeaders, allowedRequestHeaders,
+                        preflightResponseHeaders);
     }
 
     static String toString(Object obj, @Nullable Set<String> origins, List<Route> routes,
@@ -365,17 +388,17 @@ public final class CorsPolicy {
                            @Nullable Set<AsciiString> allowedRequestHeaders,
                            @Nullable Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         return MoreObjects.toStringHelper(obj)
-                .omitNullValues()
-                .add("origins", origins)
-                .add("routes", routes)
-                .add("nullOriginAllowed", nullOriginAllowed)
-                .add("credentialsAllowed", credentialsAllowed)
-                .add("maxAge", maxAge)
-                .add("exposedHeaders", exposedHeaders)
-                .add("allowedRequestMethods", allowedRequestMethods)
-                .add("allowAllRequestHeaders", allowAllRequestHeaders)
-                .add("allowedRequestHeaders", allowedRequestHeaders)
-                .add("preflightResponseHeaders", preflightResponseHeaders).toString();
+                          .omitNullValues()
+                          .add("origins", origins)
+                          .add("routes", routes)
+                          .add("nullOriginAllowed", nullOriginAllowed)
+                          .add("credentialsAllowed", credentialsAllowed)
+                          .add("maxAge", maxAge)
+                          .add("exposedHeaders", exposedHeaders)
+                          .add("allowedRequestMethods", allowedRequestMethods)
+                          .add("allowAllRequestHeaders", allowAllRequestHeaders)
+                          .add("allowedRequestHeaders", allowedRequestHeaders)
+                          .add("preflightResponseHeaders", preflightResponseHeaders).toString();
     }
 
     private static <T> T getValue(Supplier<T> callable) {

@@ -24,7 +24,6 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +37,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -78,9 +78,9 @@ public final class CorsService extends SimpleDecoratingHttpService {
         if (copied.contains(ANY_ORIGIN)) {
             if (copied.size() > 1) {
                 logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
-                        copied.stream()
-                                .filter(c -> !ANY_ORIGIN.equals(c))
-                                .collect(Collectors.joining(",")));
+                            copied.stream()
+                                  .filter(c -> !ANY_ORIGIN.equals(c))
+                                  .collect(Collectors.joining(",")));
             }
             return builderForAnyOrigin();
         }
@@ -135,7 +135,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
             return handleCorsPreflight(ctx, req);
         }
         if (config.isShortCircuit() &&
-                config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN), ctx.routingContext()) == null) {
+            config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN), ctx.routingContext()) == null) {
             return forbidden();
         }
 
