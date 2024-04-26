@@ -44,27 +44,8 @@ public class CorsServerErrorHanderTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final HttpService myService = new AbstractHttpService() {
-                @Override
-                protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
+            final HttpService myService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
 
-                @Override
-                protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-
-                @Override
-                protected HttpResponse doHead(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-
-                @Override
-                protected HttpResponse doOptions(ServiceRequestContext ctx, HttpRequest req) {
-                    return HttpResponse.of(HttpStatus.OK);
-                }
-            };
             addCorsServiceWithException(sb, myService, "/cors_status_exception",
                                         HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR));
             addCorsServiceWithException(sb, myService, "/cors_response_exception",
