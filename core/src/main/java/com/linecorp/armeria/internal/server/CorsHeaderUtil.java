@@ -50,8 +50,8 @@ public final class CorsHeaderUtil {
      * @param headers the headers to modify
      */
     public static void setCorsResponseHeaders(ServiceRequestContext ctx, HttpRequest req,
-                                              ResponseHeadersBuilder headers, CorsService corsService) {
-        final CorsPolicy policy = setCorsOrigin(ctx, req, headers, corsService.config(), logger);
+                                              ResponseHeadersBuilder headers, CorsConfig config) {
+        final CorsPolicy policy = setCorsOrigin(ctx, req, headers, config, logger);
         if (policy != null) {
             setCorsAllowCredentials(headers, policy);
             setCorsAllowHeaders(req.headers(), headers, policy);

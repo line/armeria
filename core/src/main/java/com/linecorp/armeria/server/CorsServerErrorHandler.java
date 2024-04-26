@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.CorsHeaderUtil;
+import com.linecorp.armeria.server.cors.CorsConfig;
 import com.linecorp.armeria.server.cors.CorsService;
 
 /**
@@ -44,21 +45,21 @@ public class CorsServerErrorHandler implements ServerErrorHandler {
 
     @Override
     public @Nullable AggregatedHttpResponse renderStatus(@Nullable ServiceRequestContext ctx,
-                                                         ServiceConfig config, @Nullable RequestHeaders headers,
+                                                         ServiceConfig serviceConfig, @Nullable RequestHeaders headers,
                                                          HttpStatus status, @Nullable String description,
                                                          @Nullable Throwable cause) {
 
-        final CorsService corsService = config.service().as(CorsService.class);
+        final CorsService corsService = serviceConfig.service().as(CorsService.class);
 
         if (corsService == null || ctx == null) {
-            return serverErrorHandler.renderStatus(ctx, config, headers, status, description, cause);
+            return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
         }
 
-        final AggregatedHttpResponse res = serverErrorHandler.renderStatus(ctx, config, headers, status,
+        final AggregatedHttpResponse res = serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status,
                                                                            description, cause);
 
         if (res == null) {
-            return serverErrorHandler.renderStatus(ctx, config, headers, status, description, cause);
+            return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
         }
 
         final ResponseHeaders updatedResponseHeaders = addCorsHeaders(ctx, corsService, res.headers());
