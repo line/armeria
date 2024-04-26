@@ -60,11 +60,10 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         // TODO(minwoox): Add more specific conditions such as returning 400 for IllegalArgumentException
         //                when we reach v2.0. Currently, an IllegalArgumentException is handled only for
         //                annotated services.
-        final ServiceConfig serviceConfig = ctx.config();
-        final boolean isAnnotatedService = serviceConfig.service().as(AnnotatedService.class) != null;
+        final boolean isAnnotatedService = ctx.config().service().as(AnnotatedService.class) != null;
         if (isAnnotatedService) {
             if (cause instanceof IllegalArgumentException) {
-                return internalRenderStatus(serviceConfig, ctx.request().headers(),
+                return internalRenderStatus(ctx, ctx.request().headers(),
                                             HttpStatus.BAD_REQUEST, cause);
             }
         }
@@ -77,7 +76,7 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         }
 
         if (cause instanceof ContentTooLargeException) {
-            return internalRenderStatus(serviceConfig, ctx.request().headers(),
+            return internalRenderStatus(ctx, ctx.request().headers(),
                                         HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
         }
 
@@ -87,28 +86,30 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         }
 
         if (cause instanceof RequestTimeoutException) {
-            return internalRenderStatus(serviceConfig, ctx.request().headers(),
+            return internalRenderStatus(ctx, ctx.request().headers(),
                                         HttpStatus.SERVICE_UNAVAILABLE, cause);
         }
 
-        return internalRenderStatus(serviceConfig, ctx.request().headers(),
+        return internalRenderStatus(ctx, ctx.request().headers(),
                                     HttpStatus.INTERNAL_SERVER_ERROR, cause);
     }
 
-    private static HttpResponse internalRenderStatus(ServiceConfig serviceConfig,
+    private static HttpResponse internalRenderStatus(ServiceRequestContext ctx,
                                                      RequestHeaders headers,
                                                      HttpStatus status,
                                                      @Nullable Throwable cause) {
+        final ServiceConfig serviceConfig = ctx.config();
         final AggregatedHttpResponse res =
                 serviceConfig.server().config().errorHandler()
-                             .renderStatus(serviceConfig, headers, status, null, cause);
+                             .renderStatus(ctx, serviceConfig, headers, status, null, cause);
         assert res != null;
         return res.toHttpResponse();
     }
 
     @Nonnull
     @Override
-    public AggregatedHttpResponse renderStatus(ServiceConfig config,
+    public AggregatedHttpResponse renderStatus(@Nullable ServiceRequestContext ctx,
+                                               ServiceConfig config,
                                                @Nullable RequestHeaders headers,
                                                HttpStatus status,
                                                @Nullable String description,

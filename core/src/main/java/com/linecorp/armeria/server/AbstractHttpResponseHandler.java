@@ -205,7 +205,7 @@ abstract class AbstractHttpResponseHandler {
         final Throwable cause0 = firstNonNull(cause.getCause(), cause);
         final ServiceConfig serviceConfig = reqCtx.config();
         final AggregatedHttpResponse response = serviceConfig.errorHandler()
-                                                             .renderStatus(serviceConfig, req.headers(), status,
+                                                             .renderStatus(reqCtx, req.headers(), status,
                                                                            null, cause0);
         assert response != null;
         return response;
@@ -267,6 +267,7 @@ abstract class AbstractHttpResponseHandler {
                     // A stream or connection was already closed by a client
                     fail(cause);
                 } else {
+                    req.setShouldResetOnlyIfRemoteIsOpen(true);
                     req.abortResponse(cause, false);
                 }
             }
