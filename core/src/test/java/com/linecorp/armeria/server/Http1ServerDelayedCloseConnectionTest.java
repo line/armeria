@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.BufferedReader;
@@ -63,7 +64,6 @@ class Http1ServerDelayedCloseConnectionTest {
         final Random random = new Random();
         final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
         try (Socket socket = new Socket("127.0.0.1", server.httpPort(),  null, localPort)) {
-            socket.setReuseAddress(true);
             socket.setSoTimeout(100000);
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close" + " HTTP/1.1\r\n");
@@ -101,7 +101,8 @@ class Http1ServerDelayedCloseConnectionTest {
 
             socket.close();
             final Socket reuseSock = new Socket();
-            reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort));
+            assertThatCode(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
+                    .doesNotThrowAnyException();
             reuseSock.close();
         }
     }
@@ -111,7 +112,6 @@ class Http1ServerDelayedCloseConnectionTest {
         final Random random = new Random();
         final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
         try (Socket socket = new Socket("127.0.0.1", server.httpPort(),  null, localPort)) {
-            socket.setReuseAddress(true);
             socket.setSoTimeout(1000);
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close" + " HTTP/1.1\r\n");
