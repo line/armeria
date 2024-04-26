@@ -18,12 +18,18 @@ package com.linecorp.armeria.client.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static testing.grpc.Messages.PayloadType.COMPRESSABLE;
 
 import java.io.InputStream;
 import java.util.concurrent.Executors;
 
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
@@ -40,7 +46,8 @@ import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
 import io.grpc.MethodDescriptor;
-import io.grpc.MethodDescriptor.Marshaller;
+import io.grpc.MethodDescriptor.PrototypeMarshaller;
+import testing.grpc.Messages.Payload;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
@@ -58,8 +65,7 @@ class GrpcClientBuilderTest {
     private static class CustomMarshallerInterceptor implements ClientInterceptor {
         private int spiedMarshallerCallCnt;
 
-        CustomMarshallerInterceptor(int spiedMarshallCallCnt) {
-            this.spiedMarshallerCallCnt = spiedMarshallCallCnt;
+        CustomMarshallerInterceptor() {
         }
 
         int getSpiedMarshallerCallCnt() {
@@ -70,7 +76,18 @@ class GrpcClientBuilderTest {
         public <I, O> ClientCall<I, O> interceptCall(MethodDescriptor<I, O> method, CallOptions callOptions,
                                                      Channel next) {
             final MethodDescriptor<I, O> methodDescriptor = method.toBuilder().setRequestMarshaller(
-                    new Marshaller<I>() {
+                    new PrototypeMarshaller<I>() {
+                        @Nullable
+                        @Override
+                        public I getMessagePrototype() {
+                            return null;
+                        }
+
+                        @Override
+                        public Class<I> getMessageClass() {
+                            return null;
+                        }
+
                         @Override
                         public InputStream stream(I value) {
                             spiedMarshallerCallCnt++;
@@ -79,9 +96,10 @@ class GrpcClientBuilderTest {
 
                         @Override
                         public I parse(InputStream inputStream) {
-                            return method.parseRequest(inputStream);
+                            return null;
                         }
-                    }).build();
+                    }
+            ).build();
             return next.newCall(methodDescriptor, callOptions);
         }
     }
@@ -176,18 +194,25 @@ class GrpcClientBuilderTest {
         assertThat(clientParams.options().get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS)).isTrue();
     }
 
-    @Test
-    void useMethodMarshaller() {
-        final CustomMarshallerInterceptor customMarshallerInterceptor = new CustomMarshallerInterceptor(0);
+    @ParameterizedTest
+    @CsvSource({"true, 1", "false, 0"})
+    void useMethodMarshaller(boolean useMethodMarshaller, int expectedCallCnt) {
+        final CustomMarshallerInterceptor customMarshallerInterceptor = new CustomMarshallerInterceptor();
         assertThat(customMarshallerInterceptor.getSpiedMarshallerCallCnt()).isEqualTo(0);
 
         final TestServiceBlockingStub stub = GrpcClients.builder(server.httpUri())
                                                         .intercept(customMarshallerInterceptor)
-                                                        .useMethodMarshaller(true)
+                                                        .useMethodMarshaller(useMethodMarshaller)
                                                         .build(TestServiceBlockingStub.class);
-
-        stub.unaryCall(SimpleRequest.getDefaultInstance());
-        assertThat(customMarshallerInterceptor.getSpiedMarshallerCallCnt()).isEqualTo(1);
+        final SimpleRequest request = SimpleRequest.newBuilder()
+                                                   .setResponseSize(1)
+                                                   .setResponseType(COMPRESSABLE)
+                                                   .setPayload(Payload.newBuilder()
+                                                                      .setBody(ByteString.copyFrom(
+                                                                              new byte[1])))
+                                                   .build();
+        stub.unaryCall(request);
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerCallCnt()).isEqualTo(expectedCallCnt);
     }
 
     @Test

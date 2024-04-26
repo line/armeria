@@ -20,21 +20,31 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static testing.grpc.Messages.PayloadType.COMPRESSABLE;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ByteString;
 
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
@@ -44,19 +54,25 @@ import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A1Exception;
 
 import io.grpc.BindableService;
 import io.grpc.Metadata;
+import io.grpc.MethodDescriptor.Marshaller;
+import io.grpc.MethodDescriptor.PrototypeMarshaller;
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerMethodDefinition;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages.Payload;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.MetricsServiceGrpc.MetricsServiceImplBase;
 import testing.grpc.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class GrpcServiceBuilderTest {
@@ -260,11 +276,88 @@ class GrpcServiceBuilderTest {
                 .hasMessageContaining("enableHttpJsonTranscoding");
     }
 
-    @Test
-    void setUseMethodMarshaller() {
-        assertDoesNotThrow(() -> GrpcService.builder()
-                                            .useMethodMarshaller(true)
-                                            .build());
+    static int spiedMarshallerCallCnt;
+
+    @ParameterizedTest
+    @CsvSource({ "true, 1", "false, 0" })
+    void setUseMethodMarshaller(boolean useMethodMarshaller, int expectedCallCnt) {
+        spiedMarshallerCallCnt = -1; // one stream(SimpleRequest) call must happen in MethodDescriptor
+        final Marshaller<SimpleRequest> customRequestMarshaller = new PrototypeMarshaller<SimpleRequest>() {
+            @Override
+            public Class<SimpleRequest> getMessageClass() {
+                return null;
+            }
+
+            @Nullable
+            @Override
+            public SimpleRequest getMessagePrototype() {
+                return SimpleRequest.getDefaultInstance();
+            }
+
+            @Override
+            public InputStream stream(SimpleRequest value) {
+                spiedMarshallerCallCnt++;
+                return TestServiceGrpc.getUnaryCallMethod().getRequestMarshaller().stream(value);
+            }
+
+            @Override
+            public SimpleRequest parse(InputStream stream) {
+                return TestServiceGrpc.getUnaryCallMethod().getRequestMarshaller().parse(stream);
+            }
+        };
+
+        final Marshaller<SimpleResponse> customResponseMarshaller = new PrototypeMarshaller<SimpleResponse>() {
+            @Override
+            public Class<SimpleResponse> getMessageClass() {
+                return null;
+            }
+
+            @Nullable
+            @Override
+            public SimpleResponse getMessagePrototype() {
+                return SimpleResponse.getDefaultInstance();
+            }
+
+            @Override
+            public InputStream stream(SimpleResponse value) {
+                spiedMarshallerCallCnt++;
+                return TestServiceGrpc.getUnaryCallMethod().getResponseMarshaller().stream(value);
+            }
+
+            @Override
+            public SimpleResponse parse(InputStream stream) {
+                return TestServiceGrpc.getUnaryCallMethod().getResponseMarshaller().parse(stream);
+            }
+        };
+
+        final TestServiceImplBase testService = new TestServiceImpl(
+                Executors.newSingleThreadScheduledExecutor());
+        final ServerServiceDefinition serviceDefinition = ServerInterceptors.useMarshalledMessages(
+                testService.bindService(), customRequestMarshaller, customResponseMarshaller);
+
+        final GrpcService service = GrpcService.builder()
+                                         .addService(serviceDefinition)
+                                         .useMethodMarshaller(useMethodMarshaller)
+                                         .build();
+
+        try (Server server = Server.builder()
+                                   .service(service)
+                                   .build()) {
+            server.start().join();
+            final String uri = String.format("http://127.0.0.1:%d/", server.activeLocalPort());
+            final TestServiceBlockingStub stub = GrpcClients.builder(uri)
+                                                            .build(TestServiceBlockingStub.class);
+            final SimpleRequest request = SimpleRequest.newBuilder()
+                                                       .setResponseSize(1)
+                                                       .setResponseType(COMPRESSABLE)
+                                                       .setPayload(Payload.newBuilder()
+                                                                          .setBody(ByteString.copyFrom(
+                                                                                  new byte[1])))
+                                                       .build();
+            stub.unaryCall(request);
+        }
+
+        assertThat(spiedMarshallerCallCnt).isEqualTo(expectedCallCnt);
     }
 
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
