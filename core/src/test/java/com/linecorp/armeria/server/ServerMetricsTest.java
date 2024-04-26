@@ -266,6 +266,7 @@ class ServerMetricsTest {
         final ServerMetrics serverMetrics = server.server()
                                                   .config()
                                                   .serverMetrics();
+        await().until(() -> serverMetrics.pendingRequests() == 1);
         assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
         assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
         assertThat(serverMetrics.activeConnections()).isOne();
