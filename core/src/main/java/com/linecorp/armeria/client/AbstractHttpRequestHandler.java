@@ -261,7 +261,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
 
         if (status != HttpStatus.CONTINUE) {
-            failAndReset(ResponseCompleteException.get());
+            abort();
             return false;
         }
 
@@ -269,6 +269,8 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         resume();
         return true;
     }
+
+    abstract void abort();
 
     abstract void resume();
 

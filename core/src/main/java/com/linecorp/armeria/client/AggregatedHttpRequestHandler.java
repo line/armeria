@@ -31,6 +31,8 @@ import io.netty.channel.EventLoop;
 final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         implements BiFunction<AggregatedHttpRequest, Throwable, Void> {
 
+    @Nullable
+    private AggregatedHttpRequest aReq;
     private boolean cancelled;
 
     AggregatedHttpRequestHandler(Channel ch, ClientHttpObjectEncoder encoder,
@@ -70,22 +72,29 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
             return;
         }
 
+        aReq = request;
         if (state() != State.NEEDS_100_CONTINUE) {
-            HttpData content = request.content();
-            final boolean contentEmpty = content.isEmpty();
-            final HttpHeaders trailers = request.trailers();
-            final boolean trailersEmpty = trailers.isEmpty();
-            if (!contentEmpty) {
-                if (trailersEmpty) {
-                    content = content.withEndOfStream();
-                }
-                writeData(content);
-            }
-            if (!trailersEmpty) {
-                writeTrailers(trailers);
-            }
+            writeDataOrTrailers();
         }
         channel().flush();
+    }
+
+    private void writeDataOrTrailers() {
+        assert aReq != null;
+        final HttpData content = aReq.content();
+        final boolean contentEmpty = content.isEmpty();
+        final HttpHeaders trailers = aReq.trailers();
+        final boolean trailersEmpty = trailers.isEmpty();
+        if (!contentEmpty) {
+            if (trailersEmpty) {
+                writeData(content.withEndOfStream());
+            } else {
+                writeData(content);
+            }
+        }
+        if (!trailersEmpty) {
+            writeTrailers(trailers);
+        }
     }
 
     @Override
@@ -99,7 +108,13 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     }
 
     @Override
+    void abort() {
+        assert aReq != null;
+        aReq.content().close();
+    }
+
+    @Override
     void resume() {
-        // Do nothing because this method is only for streaming request.
+        writeDataOrTrailers();
     }
 }

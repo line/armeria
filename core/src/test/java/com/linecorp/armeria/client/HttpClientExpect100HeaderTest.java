@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.Http2ClientSettingsTest.readBytes;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -27,6 +28,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
@@ -42,6 +44,7 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2CodecUtil;
@@ -79,7 +82,6 @@ final class HttpClientExpect100HeaderTest {
 
                     out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
 
-                    // TODO: Check the client sends the request body after receiving the 100 Continue response.
                     assertThat(in.readLine()).isEqualTo("foo");
 
                     out.write(("HTTP/1.1 201 Created\r\n" +
@@ -227,7 +229,6 @@ final class HttpClientExpect100HeaderTest {
                 final CompletableFuture<AggregatedHttpResponse> future = client.execute(req).aggregate();
 
                 req.write(HttpData.ofUtf8("foo"));
-                req.close();
 
                 try (Socket s = ss.accept()) {
                     final BufferedReader in = new BufferedReader(
@@ -243,9 +244,8 @@ final class HttpClientExpect100HeaderTest {
 
                     out.write("HTTP/1.1 417 Expectation Failed\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
 
-                    // TODO: Check the client closes the connection after receiving the 417 Expectation Failed response.
-                    final AggregatedHttpResponse res = future.join();
-                    assertThat(res.status()).isEqualTo(HttpStatus.EXPECTATION_FAILED);
+                    assertThatThrownBy(future::join)
+                            .hasCauseInstanceOf(AbortedStreamException.class);
                 }
             }
         }
