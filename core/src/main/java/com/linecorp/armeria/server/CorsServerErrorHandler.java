@@ -57,7 +57,7 @@ public class CorsServerErrorHandler implements ServerErrorHandler {
         final AggregatedHttpResponse res = serverErrorHandler.renderStatus(ctx, config, headers, status,
                                                                            description, cause);
 
-        if (res == null){
+        if (res == null) {
             return serverErrorHandler.renderStatus(ctx, config, headers, status, description, cause);
         }
 
