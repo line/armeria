@@ -66,7 +66,6 @@ class Http1ServerDelayedCloseConnectionTest {
         final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
         try (Socket socket = new Socket("127.0.0.1", server.httpPort(),  null, localPort)) {
             socket.setSoTimeout(100000);
-            socket.setReuseAddress(false);
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close" + " HTTP/1.1\r\n");
             writer.print("\r\n");
@@ -103,6 +102,7 @@ class Http1ServerDelayedCloseConnectionTest {
 
             socket.close();
             final Socket reuseSock = new Socket();
+            reuseSock.setReuseAddress(false);
             assertThatCode(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
                     .doesNotThrowAnyException();
             reuseSock.close();
@@ -115,7 +115,6 @@ class Http1ServerDelayedCloseConnectionTest {
         final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
         try (Socket socket = new Socket("127.0.0.1", server.httpPort(),  null, localPort)) {
             socket.setSoTimeout(100000);
-            socket.setReuseAddress(false);
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close" + " HTTP/1.1\r\n");
             writer.print("\r\n");
@@ -142,6 +141,7 @@ class Http1ServerDelayedCloseConnectionTest {
 
             socket.close();
             final Socket reuseSock = new Socket();
+            reuseSock.setReuseAddress(false);
             assertThatThrownBy(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
                     .isInstanceOf(BindException.class)
                     .hasMessageContaining("Address already in use");
