@@ -49,7 +49,7 @@ class ServerMetricsTest {
               .service("/ok/http1", new HttpService() {
                   @Override
                   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      ServerMetrics serverMetrics = server.server().config().serverMetrics();
+                      final ServerMetrics serverMetrics = server.server().config().serverMetrics();
                       assertThat(serverMetrics.pendingRequests()).isZero();
                       assertThat(serverMetrics.activeHttp1Requests()).isOne();
                       assertThat(serverMetrics.activeRequests()).isOne();
@@ -64,7 +64,7 @@ class ServerMetricsTest {
               .service("/ok/http2", new HttpService() {
                   @Override
                   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      ServerMetrics serverMetrics = server.server().config().serverMetrics();
+                      final ServerMetrics serverMetrics = server.server().config().serverMetrics();
                       assertThat(serverMetrics.pendingRequests()).isZero();
                       assertThat(serverMetrics.activeHttp2Requests()).isOne();
                       assertThat(serverMetrics.activeRequests()).isOne();
@@ -79,7 +79,7 @@ class ServerMetricsTest {
               .service("/server-error/http1", new HttpService() {
                   @Override
                   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      ServerMetrics serverMetrics = server.server().config().serverMetrics();
+                      final ServerMetrics serverMetrics = server.server().config().serverMetrics();
                       assertThat(serverMetrics.pendingRequests()).isZero();
                       assertThat(serverMetrics.activeHttp1Requests()).isOne();
                       assertThat(serverMetrics.activeRequests()).isOne();
@@ -93,7 +93,7 @@ class ServerMetricsTest {
               }).service("/server-error/http2", new HttpService() {
                   @Override
                   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      ServerMetrics serverMetrics = server.server().config().serverMetrics();
+                      final ServerMetrics serverMetrics = server.server().config().serverMetrics();
                       assertThat(serverMetrics.pendingRequests()).isZero();
                       assertThat(serverMetrics.activeHttp2Requests()).isOne();
                       assertThat(serverMetrics.activeRequests()).isOne();
@@ -107,7 +107,7 @@ class ServerMetricsTest {
               }).service("/request-timeout/http1", new HttpService() {
                   @Override
                   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      ServerMetrics serverMetrics = server.server().config().serverMetrics();
+                      final ServerMetrics serverMetrics = server.server().config().serverMetrics();
                       assertThat(serverMetrics.pendingRequests()).isZero();
                       assertThat(serverMetrics.activeHttp1Requests()).isOne();
                       assertThat(serverMetrics.activeRequests()).isOne();
@@ -122,7 +122,7 @@ class ServerMetricsTest {
               }).service("/request-timeout/http2", new HttpService() {
                   @Override
                   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      ServerMetrics serverMetrics = server.server().config().serverMetrics();
+                      final ServerMetrics serverMetrics = server.server().config().serverMetrics();
                       assertThat(serverMetrics.pendingRequests()).isZero();
                       assertThat(serverMetrics.activeHttp2Requests()).isOne();
                       assertThat(serverMetrics.activeRequests()).isOne();
@@ -266,7 +266,6 @@ class ServerMetricsTest {
         final ServerMetrics serverMetrics = server.server()
                                                   .config()
                                                   .serverMetrics();
-        await().until(() -> serverMetrics.pendingRequests() == 1);
         assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
         assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
         assertThat(serverMetrics.activeConnections()).isOne();
