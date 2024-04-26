@@ -148,6 +148,7 @@ public final class CorsPolicy {
      * This method returns the first specified origin if this policy has more than one origin.
      *
      * @return the value that will be used for the CORS response header {@code "Access-Control-Allow-Origin"}
+     *
      * @deprecated Use {@link #originPredicate()} to check if an origin is allowed.
      */
     @Deprecated

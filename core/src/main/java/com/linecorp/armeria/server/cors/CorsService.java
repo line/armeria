@@ -52,6 +52,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 public final class CorsService extends SimpleDecoratingHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(CorsService.class);
+
     static final String ANY_ORIGIN = CorsHeaderUtil.ANY_ORIGIN;
     static final String NULL_ORIGIN = CorsHeaderUtil.NULL_ORIGIN;
 
@@ -168,7 +169,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
     /**
      * Emit CORS headers if origin was found.
      *
-     * @param req     the HTTP request with the CORS info
+     * @param req the HTTP request with the CORS info
      * @param headers the headers to modify
      */
     private void setCorsResponseHeaders(ServiceRequestContext ctx, HttpRequest req,
@@ -188,6 +189,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
      *
      * @param request the HTTP request
      * @param headers the HTTP headers to modify
+     *
      * @return {@code policy} if CORS configuration matches, otherwise {@code null}
      */
     @Nullable

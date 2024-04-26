@@ -2170,7 +2170,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
             // Ensure that ServerErrorHandler never returns null by falling back to the default.
             errorHandler = new CorsServerErrorHandler(this.errorHandler.orElse(ServerErrorHandler.ofDefault()));
         }
-
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
                                                 unhandledExceptionsReporter, errorHandler);
