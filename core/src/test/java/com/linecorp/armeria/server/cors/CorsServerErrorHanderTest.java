@@ -1,18 +1,19 @@
 /*
- * Copyright 2024 LY Corporation
+ * Copyright 2024 LINE Corporation
  *
- *         LY Corporation licenses this file to you under the Apache License,
- *         version 2.0 (the "License"); you may not use this file except in compliance
- *         with the License. You may obtain a copy of the License at:
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
  *
- *         https://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
- *         Unless required by applicable law or agreed to in writing, software
- *         distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *         WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- *         License for the specific language governing permissions and limitations
- *         under the License.
-*/
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License
+ */
+
 package com.linecorp.armeria.server.cors;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,25 +57,21 @@ public class CorsServerErrorHanderTest {
                                                     Exception exception) {
         sb.service(pathPattern, myService.decorate(
         CorsService.builder("http://example.com")
-        .allowRequestMethods(HttpMethod.POST,
-                           HttpMethod.GET)
+        .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
         .allowRequestHeaders("allow_request_header")
-        .exposeHeaders("expose_header_1",
-                     "expose_header_2")
-        .preflightResponseHeader("x-preflight-cors",
-                               "Hello CORS")
+        .exposeHeaders("expose_header_1", "expose_header_2")
+        .preflightResponseHeader("x-preflight-cors", "Hello CORS")
         .newDecorator())
         .decorate((delegate, ctx, req) -> {
-            throw exception;
-        }));
+            throw exception; }));
     }
 
     private static WebClient client() {
         return WebClient.builder(server.httpUri()).factory(clientFactory).build();
     }
 
-    private static AggregatedHttpResponse request(WebClient client, HttpMethod method, String path, String origin,
-                                          String requestMethod) {
+    private static AggregatedHttpResponse request(WebClient client, HttpMethod method, String path,
+                                                  String origin, String requestMethod) {
         return client.execute(RequestHeaders.of(
                 method, path, HttpHeaderNames.ACCEPT, "utf-8", HttpHeaderNames.ORIGIN, origin,
                 HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, requestMethod)).aggregate().join();
