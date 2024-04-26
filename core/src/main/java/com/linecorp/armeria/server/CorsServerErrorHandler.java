@@ -62,17 +62,18 @@ public class CorsServerErrorHandler implements ServerErrorHandler {
             return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
         }
 
-        final ResponseHeaders updatedResponseHeaders = addCorsHeaders(ctx, corsService, res.headers());
+        final CorsConfig corsConfig = corsService.config();
+        final ResponseHeaders updatedResponseHeaders = addCorsHeaders(ctx, corsConfig, res.headers());
 
         return AggregatedHttpResponse.of(updatedResponseHeaders, res.content());
     }
 
-    private static ResponseHeaders addCorsHeaders(ServiceRequestContext ctx, CorsService corsService,
+    private static ResponseHeaders addCorsHeaders(ServiceRequestContext ctx, CorsConfig corsConfig,
                                                   ResponseHeaders responseHeaders) {
         final HttpRequest httpRequest = ctx.request();
         final ResponseHeadersBuilder responseHeadersBuilder = responseHeaders.toBuilder();
 
-        CorsHeaderUtil.setCorsResponseHeaders(ctx, httpRequest, responseHeadersBuilder, corsService);
+        CorsHeaderUtil.setCorsResponseHeaders(ctx, httpRequest, responseHeadersBuilder, corsConfig);
 
         return responseHeadersBuilder.build();
     }
