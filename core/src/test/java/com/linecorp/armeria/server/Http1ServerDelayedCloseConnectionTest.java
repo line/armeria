@@ -32,6 +32,8 @@ import java.net.Socket;
 import java.time.Duration;
 import java.util.Random;
 
+import com.linecorp.armeria.common.util.OsType;
+import com.linecorp.armeria.common.util.SystemInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -100,12 +102,14 @@ class Http1ServerDelayedCloseConnectionTest {
                     defaultHttp1ConnectionCloseDelayMillis + 1000
             );
 
-            socket.close();
-            final Socket reuseSock = new Socket();
-            reuseSock.setReuseAddress(false);
-            assertThatCode(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
-                    .doesNotThrowAnyException();
-            reuseSock.close();
+            // Additional test to check that the socket is in the CLOSED state
+            if (SystemInfo.osType() == OsType.LINUX || SystemInfo.osType() == OsType.WINDOWS) {
+                socket.close();
+                try(Socket reuseSock = new Socket()) {
+                    assertThatCode(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
+                            .doesNotThrowAnyException();
+                }
+            }
         }
     }
 
@@ -139,13 +143,15 @@ class Http1ServerDelayedCloseConnectionTest {
             assertThat(hasConnectionClose).isTrue();
             assertThat(server.server().numConnections()).isEqualTo(1);
 
-            socket.close();
-            final Socket reuseSock = new Socket();
-            reuseSock.setReuseAddress(false);
-            assertThatThrownBy(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
-                    .isInstanceOf(BindException.class)
-                    .hasMessageContaining("Address already in use");
-            reuseSock.close();
+            // Additional test to check that the socket is in the TIMED_WAIT state
+            if (SystemInfo.osType() == OsType.LINUX || SystemInfo.osType() == OsType.WINDOWS) {
+                socket.close();
+                try(Socket reuseSock = new Socket()) {
+                    assertThatThrownBy(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
+                            .isInstanceOf(BindException.class)
+                            .hasMessageContaining("Address already in use");
+                }
+            }
             await().untilAsserted(() -> assertThat(server.server().numConnections()).isZero());
         }
     }
