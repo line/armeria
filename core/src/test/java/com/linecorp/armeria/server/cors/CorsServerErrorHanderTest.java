@@ -87,7 +87,9 @@ public class CorsServerErrorHanderTest {
         return request(client, HttpMethod.OPTIONS, path, origin, requestMethod);
     }
 
-    private static void testCorsHeaderWithException(String path) {
+    @ParameterizedTest
+    @CsvSource({ "/cors_status_exception", "/cors_response_exception" })
+    void testCorsHeaderWithException(String path) {
         final WebClient client = client();
         final AggregatedHttpResponse response = preflightRequest(client, path,
                                                                  "http://example.com", "GET");
@@ -96,15 +98,5 @@ public class CorsServerErrorHanderTest {
                 "allow_request_header");
         assertThat(response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN)).isEqualTo(
                 "http://example.com");
-    }
-
-    @Test
-    void testCorsHeaderWhenStatusException() {
-        testCorsHeaderWithException("/cors_status_exception");
-    }
-
-    @Test
-    void testCorsHeaderWhenResponseException() {
-        testCorsHeaderWithException("/cors_response_exception");
     }
 }
