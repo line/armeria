@@ -139,6 +139,23 @@ class ServerMetricsTest {
     };
 
     @Test
+    void pendingRequests() {
+        final ServerMetrics serverMetrics = new ServerMetrics();
+
+        serverMetrics.increasePendingHttp1Requests();
+        assertThat(serverMetrics.pendingRequests()).isEqualTo(1);
+
+        serverMetrics.increasePendingHttp2Requests();
+        assertThat(serverMetrics.pendingRequests()).isEqualTo(2);
+
+        serverMetrics.decreasePendingHttp1Requests();
+        assertThat(serverMetrics.pendingRequests()).isEqualTo(1);
+
+        serverMetrics.decreasePendingHttp2Requests();
+        assertThat(serverMetrics.pendingRequests()).isZero();
+    }
+
+    @Test
     void activeRequests() {
         final ServerMetrics serverMetrics = new ServerMetrics();
 
@@ -161,9 +178,9 @@ class ServerMetricsTest {
         assertThat(serverMetrics.activeRequests()).isZero();
     }
 
-    @CsvSource({ "H1C, /ok/http1", "H2C, /ok/http2" })
+    @CsvSource({ "H1C, /ok/http1, 1, 0", "H2C, /ok/http2, 0, 1" })
     @ParameterizedTest
-    void checkWhenOk(SessionProtocol sessionProtocol, String path) throws InterruptedException {
+    void checkWhenOk(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request, long expectedPendingHttp2Request) throws InterruptedException {
         // maxConnectionAgeMillis() method is for testing whether activeConnections is decreased.
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .maxConnectionAgeMillis(1000)
@@ -180,6 +197,8 @@ class ServerMetricsTest {
                                                   .config()
                                                   .serverMetrics();
         await().until(() -> serverMetrics.pendingRequests() == 1);
+        assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
+        assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
         assertThat(serverMetrics.activeConnections()).isOne();
         request.close();
 
@@ -193,9 +212,9 @@ class ServerMetricsTest {
         clientFactory.close();
     }
 
-    @CsvSource({ "H1C, /server-error/http1", "H2C, /server-error/http2" })
+    @CsvSource({ "H1C, /server-error/http1, 1, 0", "H2C, /server-error/http2, 0, 1" })
     @ParameterizedTest
-    void checkWhenServerError(SessionProtocol sessionProtocol, String path) throws InterruptedException {
+    void checkWhenServerError(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request, long expectedPendingHttp2Request) throws InterruptedException {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .maxConnectionAgeMillis(1000)
                                                          .build();
@@ -211,6 +230,8 @@ class ServerMetricsTest {
                                                   .config()
                                                   .serverMetrics();
         await().until(() -> serverMetrics.pendingRequests() == 1);
+        assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
+        assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
         assertThat(serverMetrics.activeConnections()).isOne();
         request.close();
 
@@ -224,9 +245,9 @@ class ServerMetricsTest {
         clientFactory.close();
     }
 
-    @CsvSource({ "H1C, /request-timeout/http1", "H2C, /request-timeout/http2" })
+    @CsvSource({ "H1C, /request-timeout/http1, 1, 0", "H2C, /request-timeout/http2, 0, 1" })
     @ParameterizedTest
-    void checkWhenRequestTimeout(SessionProtocol sessionProtocol, String path) throws InterruptedException {
+    void checkWhenRequestTimeout(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request, long expectedPendingHttp2Request) throws InterruptedException {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .maxConnectionAgeMillis(1000)
                                                          .build();
@@ -243,6 +264,8 @@ class ServerMetricsTest {
                                                   .config()
                                                   .serverMetrics();
         await().until(() -> serverMetrics.pendingRequests() == 1);
+        assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
+        assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
         assertThat(serverMetrics.activeConnections()).isOne();
         request.close();
 

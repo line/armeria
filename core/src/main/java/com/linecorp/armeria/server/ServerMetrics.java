@@ -25,6 +25,8 @@ import java.util.concurrent.atomic.LongAdder;
 public final class ServerMetrics {
 
     private final LongAdder pendingRequests = new LongAdder();
+    private final LongAdder pendingHttp1Requests = new LongAdder();
+    private final LongAdder pendingHttp2Requests = new LongAdder();
     private final LongAdder activeHttp1WebSocketRequests = new LongAdder();
     private final LongAdder activeHttp1Requests = new LongAdder();
     private final LongAdder activeHttp2Requests = new LongAdder();
@@ -38,10 +40,24 @@ public final class ServerMetrics {
     }
 
     /**
-     * Returns the number of pending requests.
+     * Returns the number of all pending requests.
      */
     public long pendingRequests() {
         return pendingRequests.longValue();
+    }
+
+    /**
+     * Returns the number of pending http1 requests.
+     */
+    public long pendingHttp1Requests() {
+        return pendingHttp1Requests.longValue();
+    }
+
+    /**
+     * Returns the number of pending http2 requests.
+     */
+    public long pendingHttp2Requests() {
+        return pendingHttp2Requests.longValue();
     }
 
     /**
@@ -81,12 +97,20 @@ public final class ServerMetrics {
         return activeConnections.get();
     }
 
-    void increasePendingRequests() {
-        pendingRequests.increment();
+    void increasePendingHttp1Requests() {
+        pendingHttp1Requests.increment();
     }
 
-    void decreasePendingRequests() {
-        pendingRequests.decrement();
+    void decreasePendingHttp1Requests() {
+        pendingHttp1Requests.decrement();
+    }
+
+    void increasePendingHttp2Requests() {
+        pendingHttp2Requests.increment();
+    }
+
+    void decreasePendingHttp2Requests() {
+        pendingHttp2Requests.decrement();
     }
 
     void increaseActiveHttp1Requests() {

@@ -464,14 +464,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
             try {
-                serverMetrics.decreasePendingRequests();
-
                 if (isHttp1WebSocket) {
                     serverMetrics.increaseActiveHttp1WebSocketRequests();
+                    serverMetrics.decreasePendingHttp1Requests();
                 } else if (reqCtx.sessionProtocol().isExplicitHttp1()) {
                     serverMetrics.increaseActiveHttp1Requests();
+                    serverMetrics.decreasePendingHttp1Requests();
                 } else if (reqCtx.sessionProtocol().isExplicitHttp2()) {
                     serverMetrics.increaseActiveHttp2Requests();
+                    serverMetrics.decreasePendingHttp2Requests();
                 }
 
                 serviceResponse = service.serve(reqCtx, req);

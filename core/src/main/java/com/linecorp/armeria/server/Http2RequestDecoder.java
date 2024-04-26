@@ -207,7 +207,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
                                         inboundTrafficController, routingCtx);
             requests.put(streamId, req);
-            cfg.serverMetrics().increasePendingRequests();
+            cfg.serverMetrics().increasePendingHttp2Requests();
             ctx.fireChannelRead(req);
         } else {
             if (!(req instanceof DecodedHttpRequestWriter)) {
