@@ -27,22 +27,16 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.grpc.Status;
 
 final class DefaultUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
+
     private static final JsonUnframedGrpcErrorHandler DEFAULT_JSON_UNFRAMED_GRPC_ERROR_HANDLER =
             JsonUnframedGrpcErrorHandler.of();
+
     private static final TextUnframedGrpcErrorHandler DEFAULT_TEXT_UNFRAMED_GRPC_ERROR_HANDLER =
             TextUnframedGrpcErrorHandler.of();
+
     private static final DefaultUnframedGrpcErrorHandler DEFAULT =
         new DefaultUnframedGrpcErrorHandler(
                 DEFAULT_JSON_UNFRAMED_GRPC_ERROR_HANDLER, DEFAULT_TEXT_UNFRAMED_GRPC_ERROR_HANDLER);
-
-    private final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler;
-    private final TextUnframedGrpcErrorHandler textUnframedGrpcErrorHandler;
-
-    DefaultUnframedGrpcErrorHandler(JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler,
-                                    TextUnframedGrpcErrorHandler textUnframedGrpcErrorHandler) {
-        this.jsonUnframedGrpcErrorHandler = jsonUnframedGrpcErrorHandler;
-        this.textUnframedGrpcErrorHandler = textUnframedGrpcErrorHandler;
-    }
 
     static DefaultUnframedGrpcErrorHandler of() {
         return DEFAULT;
@@ -67,8 +61,17 @@ final class DefaultUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler 
         return new DefaultUnframedGrpcErrorHandler(jsonHandler, textHandler);
     }
 
+    private final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler;
+    private final TextUnframedGrpcErrorHandler textUnframedGrpcErrorHandler;
+
+    DefaultUnframedGrpcErrorHandler(JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler,
+                                    TextUnframedGrpcErrorHandler textUnframedGrpcErrorHandler) {
+        this.jsonUnframedGrpcErrorHandler = jsonUnframedGrpcErrorHandler;
+        this.textUnframedGrpcErrorHandler = textUnframedGrpcErrorHandler;
+    }
+
     /**
-     * Returns a http response based on its content type.
+     * Returns an HTTP response based on its content type.
      * If the content type of the response is JSON, this method delegates the handling to a JSON-specific
      * unframed gRPC error handler. Otherwise, it delegates to a text-based unframed gRPC error handler.
      *

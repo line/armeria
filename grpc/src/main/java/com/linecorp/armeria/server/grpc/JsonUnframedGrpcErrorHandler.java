@@ -66,6 +66,9 @@ import io.netty.buffer.ByteBufOutputStream;
  * Error handler which maps a gRPC response to an {@link HttpResponse} in json format.
  */
 final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(JsonUnframedGrpcErrorHandler.class);
+
     static final MessageMarshaller ERROR_DETAILS_MARSHALLER =
             MessageMarshaller.builder()
                              .omittingInsignificantWhitespace(true)
@@ -80,21 +83,14 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
                              .register(Help.getDefaultInstance())
                              .register(LocalizedMessage.getDefaultInstance())
                              .build();
+
     private static final UnframedGrpcStatusMappingFunction DEFAULT_STATUS_MAPPING_FUNCTION =
             UnframedGrpcStatusMappingFunction.of();
+
     private static final JsonUnframedGrpcErrorHandler DEFAULT =
             new JsonUnframedGrpcErrorHandler(DEFAULT_STATUS_MAPPING_FUNCTION, ERROR_DETAILS_MARSHALLER);
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
-    private static final Logger logger = LoggerFactory.getLogger(JsonUnframedGrpcErrorHandler.class);
-    private final UnframedGrpcStatusMappingFunction statusMappingFunction;
-    private final MessageMarshaller jsonMarshaller;
-
-    private JsonUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction statusMappingFunction,
-                                 MessageMarshaller jsonMarshaller) {
-        this.statusMappingFunction = withDefault(statusMappingFunction);
-        this.jsonMarshaller = jsonMarshaller;
-    }
 
     static JsonUnframedGrpcErrorHandler of() {
         return DEFAULT;
@@ -111,6 +107,15 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
             return DEFAULT;
         }
         return new JsonUnframedGrpcErrorHandler(statusMappingFunction, jsonMarshaller);
+    }
+
+    private final UnframedGrpcStatusMappingFunction statusMappingFunction;
+    private final MessageMarshaller jsonMarshaller;
+
+    private JsonUnframedGrpcErrorHandler(UnframedGrpcStatusMappingFunction statusMappingFunction,
+                                         MessageMarshaller jsonMarshaller) {
+        this.statusMappingFunction = withDefault(statusMappingFunction);
+        this.jsonMarshaller = jsonMarshaller;
     }
 
     /**
