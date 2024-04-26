@@ -96,35 +96,33 @@ private fun toArgMap(
     kFunction: KFunction<*>,
     target: Any,
     args: Array<Any?>,
-): Map<KParameter, Any> {
-    val argMap = HashMap<KParameter, Any>(args.size + 1)
+): Map<KParameter, Any?> {
+    val argMap = HashMap<KParameter, Any?>(args.size + 1)
     var index = 0
     for (parameter in kFunction.parameters) {
         when (parameter.kind) {
             KParameter.Kind.INSTANCE -> argMap[parameter] = target
             KParameter.Kind.VALUE -> {
-                if (!parameter.isOptional) {
-                    args[index]?.let { arg ->
-                        val classifier = parameter.type.classifier
-                        if (classifier is KClass<*> && classifier.isValue) {
-                            val methods =
-                                ReflectionUtils.getAllMethods(
-                                    classifier.java,
-                                    Predicate {
-                                        it.isSynthetic && Modifier.isStatic(it.modifiers) &&
-                                            it.name == "box-impl"
-                                    },
-                                )
-                            checkState(
-                                methods.size == 1,
-                                "Unable to find a single box-impl synthetic static method in %s",
-                                classifier.java.name,
+                if (!parameter.isOptional || args[index] != null) {
+                    val classifier = parameter.type.classifier
+                    if (classifier is KClass<*> && classifier.isValue) {
+                        val methods =
+                            ReflectionUtils.getAllMethods(
+                                classifier.java,
+                                Predicate {
+                                    it.isSynthetic && Modifier.isStatic(it.modifiers) &&
+                                        it.name == "box-impl"
+                                },
                             )
-                            // Convert value class to its boxed type.
-                            argMap[parameter] = methods.first().invoke(null, arg)
-                        } else {
-                            argMap[parameter] = arg
-                        }
+                        checkState(
+                            methods.size == 1,
+                            "Unable to find a single box-impl synthetic static method in %s",
+                            classifier.java.name,
+                        )
+                        // Convert value class to its boxed type.
+                        argMap[parameter] = methods.first().invoke(null, args[index])
+                    } else {
+                        argMap[parameter] = args[index]
                     }
                 }
                 index++
