@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
+import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 
@@ -151,7 +152,6 @@ public final class CorsPolicy {
      * This method returns the first specified origin if this policy has more than one origin.
      *
      * @return the value that will be used for the CORS response header {@code "Access-Control-Allow-Origin"}
-     *
      * @deprecated Use {@link #originPredicate()} to check if an origin is allowed.
      */
     @Deprecated
@@ -302,12 +302,7 @@ public final class CorsPolicy {
     }
 
     void setCorsAllowCredentials(ResponseHeadersBuilder headers) {
-        // The string "*" cannot be used for a resource that supports credentials.
-        // https://www.w3.org/TR/cors/#resource-requests
-        if (credentialsAllowed &&
-            !ANY_ORIGIN.equals(headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))) {
-            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
-        }
+        CorsHeaderUtil.setCorsAllowCredentials(headers, this);
     }
 
     public Set<AsciiString> getExposedHeaders() {
@@ -322,16 +317,16 @@ public final class CorsPolicy {
         return allowedRequestHeaders;
     }
 
-    public String joinHeaders(Set<AsciiString> headers){
+    public String joinHeaders(Set<AsciiString> headers) {
         String joinedExposedHeaders = HEADER_JOINER.join(headers);
         return joinedExposedHeaders;
     }
 
-    public String joinExposedHeaders(){
+    public String joinExposedHeaders() {
         return joinHeaders(this.exposedHeaders);
     }
 
-    public String joinAllowedRequestHeaders(){
+    public String joinAllowedRequestHeaders() {
         return joinHeaders(this.allowedRequestHeaders);
     }
 
@@ -348,37 +343,18 @@ public final class CorsPolicy {
     }
 
     void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
-        if (allowAllRequestHeaders) {
-            copyCorsAllowHeaders(requestHeaders, headers);
-            return;
-        }
-
-        if (allowedRequestHeaders.isEmpty()) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, joinedAllowedRequestHeaders);
+        CorsHeaderUtil.setCorsAllowHeaders(requestHeaders, headers, this);
     }
 
     void setCorsMaxAge(ResponseHeadersBuilder headers) {
         headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
     }
 
-    private static void copyCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
-        final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
-        if (Strings.isNullOrEmpty(header)) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
-    }
-
-
     @Override
     public String toString() {
         return toString(this, origins, routes, nullOriginAllowed, credentialsAllowed, maxAge,
-                        exposedHeaders, allowedRequestMethods, allowAllRequestHeaders, allowedRequestHeaders,
-                        preflightResponseHeaders);
+                exposedHeaders, allowedRequestMethods, allowAllRequestHeaders, allowedRequestHeaders,
+                preflightResponseHeaders);
     }
 
     static String toString(Object obj, @Nullable Set<String> origins, List<Route> routes,
@@ -389,17 +365,17 @@ public final class CorsPolicy {
                            @Nullable Set<AsciiString> allowedRequestHeaders,
                            @Nullable Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         return MoreObjects.toStringHelper(obj)
-                          .omitNullValues()
-                          .add("origins", origins)
-                          .add("routes", routes)
-                          .add("nullOriginAllowed", nullOriginAllowed)
-                          .add("credentialsAllowed", credentialsAllowed)
-                          .add("maxAge", maxAge)
-                          .add("exposedHeaders", exposedHeaders)
-                          .add("allowedRequestMethods", allowedRequestMethods)
-                          .add("allowAllRequestHeaders", allowAllRequestHeaders)
-                          .add("allowedRequestHeaders", allowedRequestHeaders)
-                          .add("preflightResponseHeaders", preflightResponseHeaders).toString();
+                .omitNullValues()
+                .add("origins", origins)
+                .add("routes", routes)
+                .add("nullOriginAllowed", nullOriginAllowed)
+                .add("credentialsAllowed", credentialsAllowed)
+                .add("maxAge", maxAge)
+                .add("exposedHeaders", exposedHeaders)
+                .add("allowedRequestMethods", allowedRequestMethods)
+                .add("allowAllRequestHeaders", allowAllRequestHeaders)
+                .add("allowedRequestHeaders", allowedRequestHeaders)
+                .add("preflightResponseHeaders", preflightResponseHeaders).toString();
     }
 
     private static <T> T getValue(Supplier<T> callable) {

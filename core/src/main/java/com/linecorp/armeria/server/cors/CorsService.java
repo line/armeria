@@ -24,6 +24,7 @@ import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,9 +52,8 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 public final class CorsService extends SimpleDecoratingHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(CorsService.class);
-
-    static final String ANY_ORIGIN = "*";
-    static final String NULL_ORIGIN = "null";
+    static final String ANY_ORIGIN = CorsHeaderUtil.ANY_ORIGIN;
+    static final String NULL_ORIGIN = CorsHeaderUtil.NULL_ORIGIN;
 
     /**
      * Returns a new {@link CorsServiceBuilder} with its origin set with {@code "*"} (any origin).
@@ -78,9 +78,9 @@ public final class CorsService extends SimpleDecoratingHttpService {
         if (copied.contains(ANY_ORIGIN)) {
             if (copied.size() > 1) {
                 logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
-                            copied.stream()
-                                  .filter(c -> !ANY_ORIGIN.equals(c))
-                                  .collect(Collectors.joining(",")));
+                        copied.stream()
+                                .filter(c -> !ANY_ORIGIN.equals(c))
+                                .collect(Collectors.joining(",")));
             }
             return builderForAnyOrigin();
         }
@@ -135,7 +135,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
             return handleCorsPreflight(ctx, req);
         }
         if (config.isShortCircuit() &&
-            config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN), ctx.routingContext()) == null) {
+                config.getPolicy(req.headers().get(HttpHeaderNames.ORIGIN), ctx.routingContext()) == null) {
             return forbidden();
         }
 
@@ -168,17 +168,12 @@ public final class CorsService extends SimpleDecoratingHttpService {
     /**
      * Emit CORS headers if origin was found.
      *
-     * @param req the HTTP request with the CORS info
+     * @param req     the HTTP request with the CORS info
      * @param headers the headers to modify
      */
     private void setCorsResponseHeaders(ServiceRequestContext ctx, HttpRequest req,
                                         ResponseHeadersBuilder headers) {
-        final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
-        if (policy != null) {
-            policy.setCorsAllowCredentials(headers);
-            policy.setCorsAllowHeaders(req.headers(), headers);
-            policy.setCorsExposeHeaders(headers);
-        }
+        CorsHeaderUtil.setCorsResponseHeaders(ctx, req, headers, this);
     }
 
     /**
@@ -193,62 +188,12 @@ public final class CorsService extends SimpleDecoratingHttpService {
      *
      * @param request the HTTP request
      * @param headers the HTTP headers to modify
-     *
      * @return {@code policy} if CORS configuration matches, otherwise {@code null}
      */
     @Nullable
     private CorsPolicy setCorsOrigin(ServiceRequestContext ctx, HttpRequest request,
                                      ResponseHeadersBuilder headers) {
 
-        final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
-        if (origin != null) {
-            final CorsPolicy policy = config.getPolicy(origin, ctx.routingContext());
-            if (policy == null) {
-                logger.debug(
-                        "{} There is no CORS policy configured for the request origin '{}' and the path '{}'.",
-                        ctx, origin, ctx.path());
-                return null;
-            }
-            if (NULL_ORIGIN.equals(origin)) {
-                setCorsNullOrigin(headers);
-                return policy;
-            }
-            if (config.isAnyOriginSupported()) {
-                if (policy.isCredentialsAllowed()) {
-                    echoCorsRequestOrigin(request, headers);
-                    setCorsVaryHeader(headers);
-                } else {
-                    setCorsAnyOrigin(headers);
-                }
-                return policy;
-            }
-            setCorsOrigin(headers, origin);
-            setCorsVaryHeader(headers);
-            return policy;
-        }
-        return null;
-    }
-
-    private static void setCorsOrigin(ResponseHeadersBuilder headers, String origin) {
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN, origin);
-    }
-
-    private static void echoCorsRequestOrigin(HttpRequest request, ResponseHeadersBuilder headers) {
-        final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
-        if (origin != null) {
-            setCorsOrigin(headers, origin);
-        }
-    }
-
-    private static void setCorsVaryHeader(ResponseHeadersBuilder headers) {
-        headers.set(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN.toString());
-    }
-
-    private static void setCorsAnyOrigin(ResponseHeadersBuilder headers) {
-        setCorsOrigin(headers, ANY_ORIGIN);
-    }
-
-    private static void setCorsNullOrigin(ResponseHeadersBuilder headers) {
-        setCorsOrigin(headers, NULL_ORIGIN);
+        return CorsHeaderUtil.setCorsOrigin(ctx, request, headers, config, logger);
     }
 }

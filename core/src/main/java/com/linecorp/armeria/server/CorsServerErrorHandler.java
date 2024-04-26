@@ -31,12 +31,11 @@ public class CorsServerErrorHandler implements ServerErrorHandler {
         }
     }
 
-    private ResponseHeaders addCorsHeaders(ServiceRequestContext ctx,  CorsService corsService, ResponseHeaders responseHeaders) {
+    private ResponseHeaders addCorsHeaders(ServiceRequestContext ctx, CorsService corsService, ResponseHeaders responseHeaders) {
         HttpRequest httpRequest = ctx.request();
         ResponseHeadersBuilder responseHeadersBuilder = responseHeaders.toBuilder();
 
-        CorsHeaderUtil corsHeaderUtil = new CorsHeaderUtil(corsService);
-        corsHeaderUtil.setCorsResponseHeaders(ctx, httpRequest, responseHeadersBuilder);
+        CorsHeaderUtil.setCorsResponseHeaders(ctx, httpRequest, responseHeadersBuilder, corsService);
 
         return responseHeadersBuilder.build();
     }
