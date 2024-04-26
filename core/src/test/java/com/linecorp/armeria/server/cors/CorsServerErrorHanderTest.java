@@ -71,18 +71,18 @@ public class CorsServerErrorHanderTest {
         }));
     }
 
-    static WebClient client() {
+    private static WebClient client() {
         return WebClient.builder(server.httpUri()).factory(clientFactory).build();
     }
 
-    static AggregatedHttpResponse request(WebClient client, HttpMethod method, String path, String origin,
+    private static AggregatedHttpResponse request(WebClient client, HttpMethod method, String path, String origin,
                                           String requestMethod) {
         return client.execute(RequestHeaders.of(
                 method, path, HttpHeaderNames.ACCEPT, "utf-8", HttpHeaderNames.ORIGIN, origin,
                 HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, requestMethod)).aggregate().join();
     }
 
-    static AggregatedHttpResponse preflightRequest(WebClient client, String path, String origin,
+    private static AggregatedHttpResponse preflightRequest(WebClient client, String path, String origin,
                                                    String requestMethod) {
         return request(client, HttpMethod.OPTIONS, path, origin, requestMethod);
     }
