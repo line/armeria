@@ -17,24 +17,22 @@ package com.linecorp.armeria.server.cors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 public class CorsServerErrorHanderTest {
