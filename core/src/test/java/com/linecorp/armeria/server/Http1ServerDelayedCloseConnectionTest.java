@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -143,7 +144,7 @@ class Http1ServerDelayedCloseConnectionTest {
                     .isInstanceOf(BindException.class)
                     .hasMessageContaining("Address already in use");
             reuseSock.close();
-            assertThat(server.server().numConnections()).isZero();
+            await().untilAsserted(() -> assertThat(server.server().numConnections()).isZero());
         }
     }
 }
