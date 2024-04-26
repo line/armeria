@@ -25,7 +25,9 @@ import java.util.concurrent.atomic.LongAdder;
 public final class ServerMetrics {
 
     private final LongAdder pendingRequests = new LongAdder();
-    private final LongAdder activeRequests = new LongAdder();
+    private final LongAdder activeHttp1WebSocketRequests = new LongAdder();
+    private final LongAdder activeHttp1Requests = new LongAdder();
+    private final LongAdder activeHttp2Requests = new LongAdder();
 
     /**
      * AtomicInteger is used to read the number of active connections frequently.
@@ -43,10 +45,33 @@ public final class ServerMetrics {
     }
 
     /**
-     * Returns the number of active requests.
+     * Returns the number of all active requests.
      */
     public long activeRequests() {
-        return activeRequests.longValue();
+        return activeHttp1WebSocketRequests.longValue() +
+               activeHttp1Requests.longValue() +
+               activeHttp2Requests.longValue();
+    }
+
+    /**
+     * Returns the number of active http1 web socket requests.
+     */
+    public long activeHttp1WebSocketRequests() {
+        return activeHttp1WebSocketRequests.longValue();
+    }
+
+    /**
+     * Returns the number of active http1 requests.
+     */
+    public long activeHttp1Requests() {
+        return activeHttp1Requests.longValue();
+    }
+
+    /**
+     * Returns the number of active http2 requests.
+     */
+    public long activeHttp2Requests() {
+        return activeHttp2Requests.longValue();
     }
 
     /**
@@ -64,12 +89,28 @@ public final class ServerMetrics {
         pendingRequests.decrement();
     }
 
-    void increaseActiveRequests() {
-        activeRequests.increment();
+    void increaseActiveHttp1Requests() {
+        activeHttp1Requests.increment();
     }
 
-    void decreaseActiveRequests() {
-        activeRequests.decrement();
+    void decreaseActiveHttp1Requests() {
+        activeHttp1Requests.decrement();
+    }
+
+    void increaseActiveHttp1WebSocketRequests() {
+        activeHttp1WebSocketRequests.increment();
+    }
+
+    void decreaseActiveHttp1WebSocketRequests() {
+        activeHttp1WebSocketRequests.decrement();
+    }
+
+    void increaseActiveHttp2Requests() {
+        activeHttp2Requests.increment();
+    }
+
+    void decreaseActiveHttp2Requests() {
+        activeHttp2Requests.decrement();
     }
 
     int increaseActiveConnectionsAndGet() {

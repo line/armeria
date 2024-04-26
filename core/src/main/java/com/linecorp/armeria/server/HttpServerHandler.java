@@ -390,14 +390,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (whenAggregated != null) {
             res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
                 if (serviceEventLoop.inEventLoop()) {
-                    return serve0(req, serviceCfg, service, reqCtx, serverMetrics);
+                    return serve0(req, serviceCfg, service, reqCtx, serverMetrics, req.isHttp1WebSocket());
                 }
                 return serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop,
                                                serverMetrics);
             }));
         } else {
             if (serviceEventLoop.inEventLoop()) {
-                res = serve0(req, serviceCfg, service, reqCtx, serverMetrics);
+                res = serve0(req, serviceCfg, service, reqCtx, serverMetrics, req.isHttp1WebSocket());
             } else {
                 res = serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop,
                                               serverMetrics);
@@ -459,12 +459,21 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                        ServiceConfig serviceCfg,
                                        HttpService service,
                                        DefaultServiceRequestContext reqCtx,
-                                       ServerMetrics serverMetrics) {
+                                       ServerMetrics serverMetrics,
+                                       boolean isHttp1WebSocket) {
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
             try {
                 serverMetrics.decreasePendingRequests();
-                serverMetrics.increaseActiveRequests();
+
+                if (isHttp1WebSocket) {
+                    serverMetrics.increaseActiveHttp1WebSocketRequests();
+                } else if (reqCtx.sessionProtocol().isExplicitHttp1()) {
+                    serverMetrics.increaseActiveHttp1Requests();
+                } else if (reqCtx.sessionProtocol().isExplicitHttp2()) {
+                    serverMetrics.increaseActiveHttp2Requests();
+                }
+
                 serviceResponse = service.serve(reqCtx, req);
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.
@@ -492,7 +501,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                                         EventLoop serviceEventLoop,
                                                         ServerMetrics serverMetrics) {
         return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx,
-                                            serverMetrics),
+                                            serverMetrics, req.isHttp1WebSocket()),
                                serviceEventLoop)
                            .subscribeOn(serviceEventLoop);
     }

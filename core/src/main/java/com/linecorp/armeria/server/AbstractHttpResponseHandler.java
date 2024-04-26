@@ -85,7 +85,14 @@ abstract class AbstractHttpResponseHandler {
     }
 
     final boolean tryComplete(@Nullable Throwable cause) {
-        serverMetrics.decreaseActiveRequests();
+        if (req.isHttp1WebSocket()) {
+            serverMetrics.decreaseActiveHttp1WebSocketRequests();
+        } else if (reqCtx.sessionProtocol().isExplicitHttp1()) {
+            serverMetrics.decreaseActiveHttp1Requests();
+        } else if (reqCtx.sessionProtocol().isExplicitHttp2()) {
+            serverMetrics.decreaseActiveHttp2Requests();
+        }
+
         if (isComplete) {
             return false;
         }
