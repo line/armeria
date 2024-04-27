@@ -63,6 +63,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
 
     private final SamlRequestIdManager requestIdManager;
     private final SamlSingleLogoutHandler sloHandler;
+    private final boolean signatureRequired;
 
     SamlSingleLogoutFunction(SamlEndpoint endpoint, String entityId,
                              Credential signingCredential,
@@ -70,7 +71,8 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
                              Map<String, SamlIdentityProviderConfig> idpConfigs,
                              @Nullable SamlIdentityProviderConfig defaultIdpConfig,
                              SamlRequestIdManager requestIdManager,
-                             SamlSingleLogoutHandler sloHandler) {
+                             SamlSingleLogoutHandler sloHandler,
+                             boolean signatureRequired) {
         this.endpoint = endpoint;
         this.entityId = entityId;
         this.signingCredential = signingCredential;
@@ -79,6 +81,7 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
         this.defaultIdpConfig = defaultIdpConfig;
         this.requestIdManager = requestIdManager;
         this.sloHandler = sloHandler;
+        this.signatureRequired = signatureRequired;
     }
 
     @Override
@@ -88,7 +91,8 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
             final MessageContext<LogoutRequest> messageContext;
             if (endpoint.bindingProtocol() == SamlBindingProtocol.HTTP_REDIRECT) {
                 messageContext = HttpRedirectBindingUtil.toSamlObject(req, SAML_REQUEST,
-                                                                      idpConfigs, defaultIdpConfig);
+                                                                      idpConfigs, defaultIdpConfig,
+                                                                      signatureRequired);
             } else {
                 messageContext = HttpPostBindingUtil.toSamlObject(req, SAML_REQUEST);
             }
@@ -98,28 +102,30 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
             final LogoutRequest logoutRequest = messageContext.getMessage();
             final SamlIdentityProviderConfig idp = validateAndGetIdPConfig(logoutRequest, endpointUri);
 
-            if (endpoint.bindingProtocol() == SamlBindingProtocol.HTTP_POST) {
-                validateSignature(idp.signingCredential(), logoutRequest);
+            if (endpoint.bindingProtocol() != SamlBindingProtocol.HTTP_REDIRECT) {
+                validateSignature(idp.signingCredential(), logoutRequest, signatureRequired);
+            } else {
+                // The above `HttpRedirectBindingUtil.toSamlObject()` call performed the validation already.
             }
 
             final SamlEndpoint sloResEndpoint = idp.sloResEndpoint();
             if (sloResEndpoint == null) {
                 // No response URL. Just return 200 OK.
-                return HttpResponse.from(sloHandler.logoutSucceeded(ctx, req, messageContext)
-                                                   .thenApply(unused -> HttpResponse.of(HttpStatus.OK)));
+                return HttpResponse.of(sloHandler.logoutSucceeded(ctx, req, messageContext)
+                                                 .thenApply(unused -> HttpResponse.of(HttpStatus.OK)));
             }
 
             final LogoutResponse logoutResponse = createLogoutResponse(logoutRequest, StatusCode.SUCCESS);
             try {
                 final HttpResponse response = respond(logoutResponse, sloResEndpoint);
-                return HttpResponse.from(sloHandler.logoutSucceeded(ctx, req, messageContext)
-                                                   .thenApply(unused -> response));
+                return HttpResponse.of(sloHandler.logoutSucceeded(ctx, req, messageContext)
+                                                 .thenApply(unused -> response));
             } catch (SamlException e) {
                 logger.warn("{} Cannot respond a logout response in response to {}",
                             ctx, logoutRequest.getID(), e);
                 final HttpResponse response = fail(ctx, logoutRequest, sloResEndpoint);
-                return HttpResponse.from(sloHandler.logoutFailed(ctx, req, e)
-                                                   .thenApply(unused -> response));
+                return HttpResponse.of(sloHandler.logoutFailed(ctx, req, e)
+                                                 .thenApply(unused -> response));
             }
         } catch (SamlException e) {
             return fail(ctx, e);
@@ -128,7 +134,13 @@ final class SamlSingleLogoutFunction implements SamlServiceFunction {
 
     private static HttpResponse fail(ServiceRequestContext ctx, Throwable cause) {
         logger.warn("{} Cannot handle a logout request", ctx, cause);
-        return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
+        final HttpStatus status;
+        if (cause instanceof InvalidSamlRequestException) {
+            status = HttpStatus.BAD_REQUEST;
+        } else {
+            status = HttpStatus.SERVICE_UNAVAILABLE;
+        }
+        return HttpResponse.of(status);
     }
 
     private HttpResponse fail(ServiceRequestContext ctx,

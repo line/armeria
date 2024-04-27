@@ -88,9 +88,9 @@ Make sure your change does not break the build.
 All source files must begin with the following copyright header:
 
 ```
-Copyright $today.year LINE Corporation
+Copyright $today.year LY Corporation
 
-LINE Corporation licenses this file to you under the Apache License,
+LY Corporation licenses this file to you under the Apache License,
 version 2.0 (the "License"); you may not use this file except in compliance
 with the License. You may obtain a copy of the License at:
 
@@ -436,4 +436,19 @@ our [release notes](https://armeria.dev/release-notes/), e.g.
 ```java
 Server.builder()
       .serviceUnder("/internal/management/", ManagementService.of());
+```
+
+## Integrating with Gradle Enterprise
+
+You may want to integrate your local development environment with [Gradle Enterprise](https://gradle.com/).
+By doing so, you may:
+
+1. Visualize and troubleshoot build issues more easily.
+2. Experience faster builds due to build caches.
+
+Let us know at the [Armeria Discord](/s/discord) channel, and we'll create an account
+for you. Afterwards, you may integrate your local environment with the following command:
+
+```shell
+./gradlew provisionGradleEnterpriseAccessKey
 ```

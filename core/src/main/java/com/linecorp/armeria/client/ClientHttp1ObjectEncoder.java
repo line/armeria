@@ -42,12 +42,14 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
 
     private final Http1HeaderNaming http1HeaderNaming;
     private final KeepAliveHandler keepAliveHandler;
+    private final boolean webSocket;
 
     ClientHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, Http1HeaderNaming http1HeaderNaming,
-                             KeepAliveHandler keepAliveHandler) {
+                             KeepAliveHandler keepAliveHandler, boolean webSocket) {
         super(ch, protocol);
         this.http1HeaderNaming = http1HeaderNaming;
         this.keepAliveHandler = keepAliveHandler;
+        this.webSocket = webSocket;
     }
 
     @Override
@@ -65,9 +67,16 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
 
         if (!nettyHeaders.contains(HttpHeaderNames.HOST)) {
             final InetSocketAddress remoteAddress = (InetSocketAddress) channel().remoteAddress();
-            nettyHeaders.add(HttpHeaderNames.HOST, ArmeriaHttpUtil.authorityHeader(remoteAddress.getHostName(),
-                                                                                   remoteAddress.getPort(),
-                                                                                   protocol().defaultPort()));
+            nettyHeaders.add(HttpHeaderNames.HOST,
+                             ArmeriaHttpUtil.authorityHeader(remoteAddress.getHostString(),
+                                                             remoteAddress.getPort(),
+                                                             protocol().defaultPort()));
+        }
+
+        if (webSocket) {
+            nettyHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
+            nettyHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+            return req;
         }
 
         if (endStream) {
@@ -100,6 +109,11 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
             nettyHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
         }
         return req;
+    }
+
+    @Override
+    protected ChannelFuture write(HttpObject obj, ChannelPromise promise) {
+        return channel().write(obj, promise);
     }
 
     @Override

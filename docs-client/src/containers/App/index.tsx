@@ -256,7 +256,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                           </ListItemText>
                           {method.endpoints.map((endpoint) => (
                             <ListItemText
-                              key={`${method.id}`}
+                              key={`${endpoint.pathMapping}`}
                               primaryTypographyProps={{
                                 variant: 'caption',
                               }}
@@ -439,6 +439,7 @@ const dummySpecification = new Specification({
   exceptions: [],
   services: [],
   structs: [],
+  docServiceRoute: undefined,
 });
 
 const App: React.FunctionComponent<Props> = (props) => {
@@ -473,12 +474,13 @@ const App: React.FunctionComponent<Props> = (props) => {
         });
         setSpecification(initialSpecification);
       } catch (e) {
+        console.log(e);
         setSpecLoadingStatus(SpecLoadingStatus.FAILED);
         return;
       }
 
       try {
-        const schemaData: any[] = await fetch(`/docs/schemas.json`).then((r) =>
+        const schemaData: any[] = await fetch(`schemas.json`).then((r) =>
           r.json(),
         );
         setJsonSchemas(schemaData);

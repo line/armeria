@@ -21,6 +21,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 
 final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler {
 
@@ -42,15 +43,18 @@ final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler
     }
 
     private static boolean isIgnorableException(Throwable cause) {
+        if (Exceptions.isExpected(cause)) {
+            return true;
+        }
         return (cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
                cause.getCause() == null;
     }
 
     @Nullable
     @Override
-    public AggregatedHttpResponse renderStatus(ServiceConfig config, @Nullable RequestHeaders headers,
+    public AggregatedHttpResponse renderStatus(ServiceRequestContext ctx, RequestHeaders headers,
                                                HttpStatus status, @Nullable String description,
                                                @Nullable Throwable cause) {
-        return delegate.renderStatus(config, headers, status, description, cause);
+        return delegate.renderStatus(ctx, headers, status, description, cause);
     }
 }

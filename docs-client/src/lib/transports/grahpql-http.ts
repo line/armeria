@@ -16,6 +16,7 @@
 
 import Transport from './transport';
 import { Method } from '../specification';
+import { validateJsonObject } from '../json-util';
 
 export const GRAPHQL_HTTP_MIME_TYPE = 'application/graphql+json';
 
@@ -31,6 +32,7 @@ export default class GraphqlHttpTransport extends Transport {
   protected async doSend(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
@@ -43,6 +45,9 @@ export default class GraphqlHttpTransport extends Transport {
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
     }
+    if (bodyJson && bodyJson.trim()) {
+      validateJsonObject(bodyJson, 'request body');
+    }
 
     let newPath =
       endpointPath || endpoint.pathMapping.substring('exact:'.length);
@@ -52,6 +57,7 @@ export default class GraphqlHttpTransport extends Transport {
           ? `${newPath}&${queries}`
           : `${newPath}?${queries}`;
     }
+    newPath = pathPrefix + newPath;
 
     return fetch(encodeURI(newPath), {
       headers: hdrs,

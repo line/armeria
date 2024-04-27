@@ -173,7 +173,7 @@ public class MockWebServerExtension extends ServerExtension implements BeforeTes
     private class MockWebService implements HttpService {
         @Override
         public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-            return HttpResponse.from(req.aggregate().thenApply(aggReq -> {
+            return HttpResponse.of(req.aggregate().thenApply(aggReq -> {
                 recordedRequests.add(new RecordedRequest(ctx, aggReq));
 
                 final HttpResponse response = mockResponses.poll();

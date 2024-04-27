@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -87,7 +88,8 @@ final class ArmeriaServerHttpResponse extends AbstractServerHttpResponseVersionS
                     HttpResponse.of(armeriaHeaders.build(),
                                     publisher.map(factoryWrapper::toHttpData)
                                              .contextWrite(contextView)
-                                             .doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release));
+                                             .doOnDiscard(PooledDataBuffer.class, DataBufferUtils::release)
+                    );
             future.complete(response);
             return Mono.fromFuture(response.whenComplete())
                        .onErrorResume(cause -> cause instanceof CancelledSubscriptionException ||

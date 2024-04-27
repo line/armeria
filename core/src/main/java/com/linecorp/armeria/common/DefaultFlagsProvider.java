@@ -27,11 +27,13 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 
 /**
  * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
@@ -51,7 +53,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     // Use slightly greater value than the client-side default so that clients close the connection more often.
     static final long DEFAULT_SERVER_IDLE_TIMEOUT_MILLIS = 15000; // 15 seconds
+    static final boolean DEFAULT_SERVER_KEEP_ALIVE_ON_PING = false;
     static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS = 10000; // 10 seconds
+    static final boolean DEFAULT_CLIENT_KEEP_ALIVE_ON_PING = false;
     static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     static final long DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
 
@@ -76,8 +80,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     // parameter values, thus anything greater than 0x7FFFFFFF will break them or make them unhappy.
     static final long DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
     static final long DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE = 8192L; // from Netty default maxHeaderSize
+    // Netty default is 200 for 30 seconds
+    static final int DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE = 400;
     static final String DEFAULT_BACKOFF_SPEC = "exponential=200:10000,jitter=0.2";
     static final int DEFAULT_MAX_TOTAL_ATTEMPTS = 10;
+    static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS = 0; // No delay.
     static final String ROUTE_CACHE_SPEC = "maximumSize=4096";
     static final String ROUTE_DECORATOR_CACHE_SPEC = "maximumSize=4096";
     static final String PARSED_PATH_CACHE_SPEC = "maximumSize=4096";
@@ -140,12 +147,23 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public TransportType transportType() {
-        return TransportType.EPOLL.isAvailable() ? TransportType.EPOLL : TransportType.NIO;
+        if (TransportType.EPOLL.isAvailable()) {
+            return TransportType.EPOLL;
+        }
+        if (TransportType.KQUEUE.isAvailable()) {
+            return TransportType.KQUEUE;
+        }
+        return TransportType.NIO;
     }
 
     @Override
     public Boolean useOpenSsl() {
         return true;
+    }
+
+    @Override
+    public TlsEngineType tlsEngineType() {
+        return TlsEngineType.OPENSSL;
     }
 
     @Override
@@ -159,9 +177,13 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Integer numCommonWorkers() {
-        final int defaultNumCpuCores = Runtime.getRuntime().availableProcessors();
-        return defaultNumCpuCores * 2;
+    public Integer numCommonWorkers(TransportType transportType) {
+        final int numCpuCores = Runtime.getRuntime().availableProcessors();
+        if (transportType == TransportType.IO_URING) {
+            return numCpuCores;
+        } else {
+            return numCpuCores * 2;
+        }
     }
 
     @Override
@@ -205,6 +227,16 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean defaultServerKeepAliveOnPing() {
+        return DEFAULT_SERVER_KEEP_ALIVE_ON_PING;
+    }
+
+    @Override
+    public Boolean defaultClientKeepAliveOnPing() {
+        return DEFAULT_CLIENT_KEEP_ALIVE_ON_PING;
+    }
+
+    @Override
     public Long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
     }
@@ -227,6 +259,16 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean defaultUseHttp2Preface() {
         return true;
+    }
+
+    @Override
+    public Boolean defaultPreferHttp1() {
+        return false;
+    }
+
+    @Override
+    public Boolean defaultUseHttp2WithoutAlpn() {
+        return false;
     }
 
     @Override
@@ -290,6 +332,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Integer defaultServerHttp2MaxResetFramesPerMinute() {
+        return DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
+    }
+
+    @Override
     public String defaultBackoffSpec() {
         return DEFAULT_BACKOFF_SPEC;
     }
@@ -297,6 +344,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Integer defaultMaxTotalAttempts() {
         return DEFAULT_MAX_TOTAL_ATTEMPTS;
+    }
+
+    @Override
+    public Long defaultRequestAutoAbortDelayMillis() {
+        return DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
     }
 
     @Override
@@ -397,6 +449,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean allowSemicolonInPathComponent() {
+        return false;
+    }
+
+    @Override
     public Path defaultMultipartUploadsLocation() {
         return Paths.get(System.getProperty("java.io.tmpdir") +
                          File.separatorChar + "armeria" +
@@ -416,5 +473,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultUnhandledExceptionsReportIntervalMillis() {
         return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    @Override
+    public DistributionStatisticConfig distributionStatisticConfig() {
+        return DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG;
     }
 }

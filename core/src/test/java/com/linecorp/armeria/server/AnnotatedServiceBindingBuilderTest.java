@@ -149,7 +149,7 @@ class AnnotatedServiceBindingBuilderTest {
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
         // serviceErrorHandler is composed with ServerErrorHandler so we cannot do the equality check.
-        assertThat(homeFoo.errorHandler().onServiceException(sctx, null)
+        assertThat(homeFoo.errorHandler().onServiceException(sctx, new IllegalArgumentException("cause"))
                           .aggregate()
                           .join()
                           .status()).isSameAs(HttpStatus.OK);
@@ -162,7 +162,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.verboseResponses()).isTrue();
         assertThat(homeBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         // serviceErrorHandler is composed with ServerErrorHandler so we cannot do the equality check.
-        assertThat(homeBar.errorHandler().onServiceException(sctx, null)
+        assertThat(homeBar.errorHandler().onServiceException(sctx, new IllegalArgumentException("cause"))
                           .aggregate()
                           .join()
                           .status()).isSameAs(HttpStatus.OK);

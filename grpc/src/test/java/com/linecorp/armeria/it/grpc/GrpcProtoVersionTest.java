@@ -30,17 +30,17 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import example.armeria.grpc.Proto2.Foo2;
-import example.armeria.grpc.Proto2.Proto2Message;
-import example.armeria.grpc.Proto2ServiceGrpc.Proto2ServiceBlockingStub;
-import example.armeria.grpc.Proto2ServiceGrpc.Proto2ServiceImplBase;
-import example.armeria.grpc.Proto3.Foo3;
-import example.armeria.grpc.Proto3.Proto3Message;
-import example.armeria.grpc.Proto3ServiceGrpc.Proto3ServiceBlockingStub;
-import example.armeria.grpc.Proto3ServiceGrpc.Proto3ServiceImplBase;
-import example.armeria.grpc.Proto3WithProto2ServiceGrpc.Proto3WithProto2ServiceBlockingStub;
-import example.armeria.grpc.Proto3WithProto2ServiceGrpc.Proto3WithProto2ServiceImplBase;
 import io.grpc.stub.StreamObserver;
+import testing.grpc.Proto2.Foo2;
+import testing.grpc.Proto2.Proto2Message;
+import testing.grpc.Proto2ServiceGrpc.Proto2ServiceBlockingStub;
+import testing.grpc.Proto2ServiceGrpc.Proto2ServiceImplBase;
+import testing.grpc.Proto3.Foo3;
+import testing.grpc.Proto3.Proto3Message;
+import testing.grpc.Proto3ServiceGrpc.Proto3ServiceBlockingStub;
+import testing.grpc.Proto3ServiceGrpc.Proto3ServiceImplBase;
+import testing.grpc.Proto3WithProto2ServiceGrpc.Proto3WithProto2ServiceBlockingStub;
+import testing.grpc.Proto3WithProto2ServiceGrpc.Proto3WithProto2ServiceImplBase;
 
 class GrpcProtoVersionTest {
 

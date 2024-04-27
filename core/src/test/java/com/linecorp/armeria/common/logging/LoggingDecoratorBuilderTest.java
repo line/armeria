@@ -17,14 +17,24 @@ package com.linecorp.armeria.common.logging;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.function.BiFunction;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 
+import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -33,7 +43,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.Functions;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class LoggingDecoratorBuilderTest {
@@ -42,17 +52,20 @@ class LoggingDecoratorBuilderTest {
     @SuppressWarnings("rawtypes")
     private static final BiFunction nullBiFunction = null;
 
+    private static final String SANITIZED_HEADERS = "dummy header sanitizer";
+    private static final String SANITIZED_CONTENT = "dummy content sanitizer";
+
     private static final BiFunction<? super RequestContext, ? super HttpHeaders, ?> HEADER_SANITIZER =
             (ctx, headers) -> {
                 assertThat(ctx).isNotNull();
                 assertThat(headers).isNotNull();
-                return "dummy header sanitizer";
+                return SANITIZED_HEADERS;
             };
     private static final BiFunction<? super RequestContext, Object, ?> CONTENT_SANITIZER =
             (ctx, content) -> {
                 assertThat(ctx).isNotNull();
                 assertThat(content).isNotNull();
-                return "dummy content sanitizer";
+                return SANITIZED_CONTENT;
             };
     private static final BiFunction<? super RequestContext, ? super Throwable, ?> CAUSE_SANITIZER =
             (ctx, cause) -> {
@@ -62,10 +75,14 @@ class LoggingDecoratorBuilderTest {
             };
 
     private Builder builder;
+    private ServiceRequestContext ctx;
+    private Throwable testCause;
 
     @BeforeEach
     void setUp() {
         builder = new Builder();
+        ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        testCause = new AnticipatedException("test");
     }
 
     @Test
@@ -103,7 +120,10 @@ class LoggingDecoratorBuilderTest {
     @Test
     void requestLogShouldBeDebugByDefault() {
         final RequestLogLevelMapper mapper = builder.requestLogLevelMapper();
-        assertThat(mapper.apply(newRequestOnlyLog())).isEqualTo(LogLevel.DEBUG);
+        assertThat(mapper).isNull();
+
+        assertThat(LogWriter.builder().requestLogLevelMapper().apply(newRequestOnlyLog()))
+                .isEqualTo(LogLevel.DEBUG);
     }
 
     @Test
@@ -152,7 +172,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void successfulResponseLogLevelShouldBeDebugByDefault() {
-        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
+        final ResponseLogLevelMapper mapper = LogWriter.builder().responseLogLevelMapper();
         assertThat(mapper.apply(newRequestLog(HttpStatus.OK))).isEqualTo(LogLevel.DEBUG);
     }
 
@@ -170,7 +190,7 @@ class LoggingDecoratorBuilderTest {
 
     @Test
     void failureResponseLogLevelShouldBeWarnByDefault() {
-        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
+        final ResponseLogLevelMapper mapper = LogWriter.builder().responseLogLevelMapper();
         assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST, new RuntimeException())))
                 .isEqualTo(LogLevel.WARN);
     }
@@ -239,40 +259,43 @@ class LoggingDecoratorBuilderTest {
     void requestHeadersSanitizer() {
         assertThatThrownBy(() -> builder.requestHeadersSanitizer(nullBiFunction))
                 .isInstanceOf(NullPointerException.class);
-        assertThat(builder.requestHeadersSanitizer()).isEqualTo(Functions.second());
+        assertThat(builder.requestHeadersSanitizer()).isNull();
 
         builder.requestHeadersSanitizer(HEADER_SANITIZER);
-        assertThat(builder.requestHeadersSanitizer()).isEqualTo(HEADER_SANITIZER);
+        assertThat(builder.requestHeadersSanitizer().apply(ctx, HttpHeaders.of())).isEqualTo(SANITIZED_HEADERS);
     }
 
     @Test
     void responseHeadersSanitizer() {
         assertThatThrownBy(() -> builder.responseHeadersSanitizer(nullBiFunction))
                 .isInstanceOf(NullPointerException.class);
-        assertThat(builder.responseHeadersSanitizer()).isEqualTo(Functions.second());
+        assertThat(builder.responseHeadersSanitizer()).isNull();
 
         builder.responseHeadersSanitizer(HEADER_SANITIZER);
-        assertThat(builder.responseHeadersSanitizer()).isEqualTo(HEADER_SANITIZER);
+        assertThat(builder.responseHeadersSanitizer().apply(ctx, HttpHeaders.of())).isEqualTo(
+                SANITIZED_HEADERS);
     }
 
     @Test
     void requestTrailersSanitizer() {
         assertThatThrownBy(() -> builder.requestTrailersSanitizer(nullBiFunction))
                 .isInstanceOf(NullPointerException.class);
-        assertThat(builder.requestTrailersSanitizer()).isEqualTo(Functions.second());
+        assertThat(builder.requestTrailersSanitizer()).isNull();
 
         builder.requestTrailersSanitizer(HEADER_SANITIZER);
-        assertThat(builder.requestTrailersSanitizer()).isEqualTo(HEADER_SANITIZER);
+        assertThat(builder.requestTrailersSanitizer().apply(ctx, HttpHeaders.of())).isEqualTo(
+                SANITIZED_HEADERS);
     }
 
     @Test
     void responseTrailersSanitizer() {
         assertThatThrownBy(() -> builder.responseTrailersSanitizer(nullBiFunction))
                 .isInstanceOf(NullPointerException.class);
-        assertThat(builder.responseTrailersSanitizer()).isEqualTo(Functions.second());
+        assertThat(builder.responseTrailersSanitizer()).isNull();
 
         builder.responseTrailersSanitizer(HEADER_SANITIZER);
-        assertThat(builder.responseTrailersSanitizer()).isEqualTo(HEADER_SANITIZER);
+        assertThat(builder.responseTrailersSanitizer().apply(ctx, HttpHeaders.of())).isEqualTo(
+                SANITIZED_HEADERS);
     }
 
     @Test
@@ -281,30 +304,33 @@ class LoggingDecoratorBuilderTest {
                 .isInstanceOf(NullPointerException.class);
 
         builder.headersSanitizer(HEADER_SANITIZER);
-        assertThat(builder.requestHeadersSanitizer()).isEqualTo(HEADER_SANITIZER);
-        assertThat(builder.responseHeadersSanitizer()).isEqualTo(HEADER_SANITIZER);
-        assertThat(builder.requestTrailersSanitizer()).isEqualTo(HEADER_SANITIZER);
-        assertThat(builder.responseTrailersSanitizer()).isEqualTo(HEADER_SANITIZER);
+        assertThat(builder.requestHeadersSanitizer().apply(ctx, HttpHeaders.of())).isEqualTo(SANITIZED_HEADERS);
+        assertThat(builder.responseHeadersSanitizer().apply(ctx, HttpHeaders.of())).isEqualTo(
+                SANITIZED_HEADERS);
+        assertThat(builder.requestTrailersSanitizer().apply(ctx, HttpHeaders.of())).isEqualTo(
+                SANITIZED_HEADERS);
+        assertThat(builder.responseTrailersSanitizer().apply(ctx, HttpHeaders.of())).isEqualTo(
+                SANITIZED_HEADERS);
     }
 
     @Test
     void requestContentSanitizer() {
         assertThatThrownBy(() -> builder.requestContentSanitizer(nullBiFunction))
                 .isInstanceOf(NullPointerException.class);
-        assertThat(builder.requestContentSanitizer()).isEqualTo(Functions.second());
+        assertThat(builder.requestContentSanitizer()).isNull();
 
         builder.requestContentSanitizer(CONTENT_SANITIZER);
-        assertThat(builder.requestContentSanitizer()).isEqualTo(CONTENT_SANITIZER);
+        assertThat(builder.requestContentSanitizer().apply(ctx, "")).isEqualTo(SANITIZED_CONTENT);
     }
 
     @Test
     void responseContentSanitizer() {
         assertThatThrownBy(() -> builder.responseContentSanitizer(nullBiFunction))
                 .isInstanceOf(NullPointerException.class);
-        assertThat(builder.responseContentSanitizer()).isEqualTo(Functions.second());
+        assertThat(builder.responseContentSanitizer()).isNull();
 
         builder.responseContentSanitizer(CONTENT_SANITIZER);
-        assertThat(builder.responseContentSanitizer()).isEqualTo(CONTENT_SANITIZER);
+        assertThat(builder.responseContentSanitizer().apply(ctx, "")).isEqualTo(SANITIZED_CONTENT);
     }
 
     @Test
@@ -313,18 +339,95 @@ class LoggingDecoratorBuilderTest {
                 .isInstanceOf(NullPointerException.class);
 
         builder.contentSanitizer(CONTENT_SANITIZER);
-        assertThat(builder.requestContentSanitizer()).isEqualTo(CONTENT_SANITIZER);
-        assertThat(builder.responseContentSanitizer()).isEqualTo(CONTENT_SANITIZER);
+        assertThat(builder.requestContentSanitizer().apply(ctx, "")).isEqualTo(SANITIZED_CONTENT);
+        assertThat(builder.responseContentSanitizer().apply(ctx, "")).isEqualTo(SANITIZED_CONTENT);
+    }
+
+    @ValueSource(booleans = { true, false })
+    @ParameterizedTest
+    void responseCauseSanitizer(boolean filterCause) {
+        assertThatThrownBy(() -> builder.responseCauseFilter(null))
+                .isInstanceOf(NullPointerException.class);
+        final Logger logger = mock(Logger.class);
+        when(logger.isWarnEnabled()).thenReturn(true);
+        builder.responseCauseFilter(cause -> filterCause);
+        builder.logger(logger)
+               .requestLogLevel(LogLevel.OFF)
+               .logWriter().logResponse(newRequestLog(HttpStatus.OK, testCause));
+
+        if (filterCause) {
+            verify(logger, times(2)).warn(anyString());
+        } else {
+            // Log for the request
+            verify(logger, times(1)).warn(anyString());
+            // Log for the response
+            verify(logger, times(1)).warn(anyString(), eq(testCause));
+        }
     }
 
     @Test
-    void responseCauseSanitizer() {
-        assertThatThrownBy(() -> builder.responseCauseSanitizer(nullBiFunction))
-                .isInstanceOf(NullPointerException.class);
-        assertThat(builder.responseCauseSanitizer()).isEqualTo(Functions.second());
+    void buildLogWriter() {
+        final LogWriter logWriter = LogWriter.of();
+        builder.logWriter(logWriter);
+        assertThat(builder.logWriter()).isEqualTo(logWriter);
+    }
 
-        builder.responseCauseSanitizer(CAUSE_SANITIZER);
-        assertThat(builder.responseCauseSanitizer()).isEqualTo(CAUSE_SANITIZER);
+    @Test
+    void buildLogWriterWithoutLogWriter() {
+        builder.responseContentSanitizer(CONTENT_SANITIZER)
+               .requestHeadersSanitizer(HEADER_SANITIZER);
+        final LogWriter logWriter = builder.logWriter();
+        assertThat(logWriter).isNotNull();
+        assertThat(logWriter).isInstanceOf(DefaultLogWriter.class);
+    }
+
+    @Test
+    void buildLogWriterThrowsException() {
+        final LogWriter logWriter = LogWriter.of();
+        builder.logWriter(logWriter);
+        assertThatThrownBy(() -> builder.responseContentSanitizer(CONTENT_SANITIZER))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void shouldMaskSensitiveHeadersByDefault() {
+        final HttpRequest request = HttpRequest.builder()
+                                               .header(HttpHeaderNames.AUTHORIZATION, "Bearer secret")
+                                               .method(HttpMethod.GET)
+                                               .path("/")
+                                               .build();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
+        final RequestLogBuilder requestLogBuilder =
+                RequestLog.builder(ctx);
+        requestLogBuilder.endRequest();
+        requestLogBuilder.responseHeaders(ResponseHeaders.builder()
+                                                         .status(HttpStatus.OK)
+                                                         .cookie(Cookie.ofSecure("session-id", "abcd"))
+                                                         .build());
+        requestLogBuilder.endResponse();
+        final RequestLog requestLog = requestLogBuilder.whenComplete().join();
+
+        final Logger logger0 = mock(Logger.class);
+        when(logger0.isDebugEnabled()).thenReturn(true);
+        // A LoggerWriter created with the default (empty) properties should mask sensitive headers.
+        final LogWriter logWriter0 = builder.defaultLogger(logger0)
+                                            .logWriter();
+        logWriter0.logRequest(requestLog);
+        verify(logger0).debug(contains("authorization=***"));
+        logWriter0.logResponse(requestLog);
+        verify(logger0).debug(contains("set-cookie=****"));
+
+        final Logger logger1 = mock(Logger.class);
+        // A LoggerWriter internally created with the properties should mask sensitive headers.
+        when(logger1.isInfoEnabled()).thenReturn(true);
+        final LogWriter logWriter1 = new Builder().logger(logger1)
+                                                  .requestLogLevel(LogLevel.INFO)
+                                                  .successfulResponseLogLevel(LogLevel.INFO)
+                                                  .logWriter();
+        logWriter1.logRequest(requestLog);
+        verify(logger1).info(contains("authorization=***"));
+        logWriter1.logResponse(requestLog);
+        verify(logger1).info(contains("set-cookie=****"));
     }
 
     private static final class Builder extends LoggingDecoratorBuilder {

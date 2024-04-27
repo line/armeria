@@ -32,8 +32,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Stream;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -53,6 +55,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
@@ -73,13 +76,13 @@ import com.linecorp.armeria.server.annotation.ProducesText;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.file.HttpFile;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-public class AnnotatedServiceResponseConverterTest {
+class AnnotatedServiceResponseConverterTest {
 
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final String STRING = "₩";
@@ -96,8 +99,8 @@ public class AnnotatedServiceResponseConverterTest {
         }
     }
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.annotatedService("/type", new Object() {
@@ -205,6 +208,24 @@ public class AnnotatedServiceResponseConverterTest {
                 }
             });
 
+            sb.annotatedService("/publish/response-entity", new Object() {
+                @Get("/mono/json-node")
+                public ResponseEntity<Publisher<JsonNode>> monoJsonNode() throws IOException {
+                    return ResponseEntity.of(Mono.just(JSONNODE));
+                }
+
+                @Get("/json-node")
+                @ProducesJson
+                public ResponseEntity<Publisher<JsonNode>> jsonNode() throws IOException {
+                    return ResponseEntity.of(new ObjectPublisher<>(JSONNODE));
+                }
+
+                @Get("/defer")
+                public ResponseEntity<Publisher<String>> defer() {
+                    return ResponseEntity.of(exceptionRaisingPublisher());
+                }
+            });
+
             sb.annotatedService("/produce", new Object() {
                 @Get("/string")
                 @ProducesText
@@ -276,6 +297,22 @@ public class AnnotatedServiceResponseConverterTest {
                     return null;
                 }
 
+                @Get("/header")
+                @AdditionalHeader(name = "header_name_1", value = "header_value_1")
+                @AdditionalHeader(name = "header_name_2", value = "header_value_2")
+                @AdditionalHeader(name = "header_name_1", value = "header_value_3")
+                public void header() {}
+
+                @Get("/header-overwrite")
+                @AdditionalHeader(name = "header_name_1", value = "header_value_changed")
+                public HttpResponse headerOverwrite() {
+                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK,
+                                                              HttpHeaderNames.of("header_name_1"),
+                                                              "header_value_unchanged"));
+                }
+            });
+
+            sb.annotatedService("/custom-response/http-result", new Object() {
                 @Get("/expect-specified-no-content")
                 @StatusCode(204)
                 public HttpResult<Object> expectSpecifiedNoContent() {
@@ -364,46 +401,144 @@ public class AnnotatedServiceResponseConverterTest {
                 public <T> HttpResult<T> generic() {
                     return (HttpResult<T>) HttpResult.of(ImmutableList.of("a", "b"));
                 }
+            });
 
-                @Get("/header")
-                @AdditionalHeader(name = "header_name_1", value = "header_value_1")
-                @AdditionalHeader(name = "header_name_2", value = "header_value_2")
-                @AdditionalHeader(name = "header_name_1", value = "header_value_3")
-                public void header() {}
+            sb.annotatedService("/custom-response/response-entity", new Object() {
+                @Get("/expect-specified-no-content")
+                @StatusCode(204)
+                public ResponseEntity<Void> expectSpecifiedNoContent() {
+                    // Will send '204 No Content' because it is specified with @StatusCode annotation.
+                    return null;
+                }
 
-                @Get("/header-overwrite")
-                @AdditionalHeader(name = "header_name_1", value = "header_value_changed")
-                public HttpResponse headerOverwrite() {
-                    return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK,
-                                                              HttpHeaderNames.of("header_name_1"),
-                                                              "header_value_unchanged"));
+                @Get("/expect-not-modified")
+                @StatusCode(204)
+                public ResponseEntity<Void> expectNotModified() {
+                    // Will send '304 Not Modified' because ResponseEntity overrides the @StatusCode
+                    // annotation.
+                    return ResponseEntity.of(ResponseHeaders.of(HttpStatus.NOT_MODIFIED));
+                }
+
+                @Get("/expect-unauthorized")
+                public ResponseEntity<HttpResponse> expectUnauthorized() {
+                    // Will send '401 Unauthorized' because the content of ResponseEntity is HttpResponse.
+                    return ResponseEntity.of(
+                            ResponseHeaders.of(HttpStatus.OK),
+                            HttpResponse.of(HttpStatus.UNAUTHORIZED));
+                }
+
+                @Get("/expect-no-content-from-converter")
+                @ResponseConverter(NullToNoContentResponseConverterFunction.class)
+                public ResponseEntity<Object> expectNoContentFromConverter() {
+                    // Will send '204 No Content' which is converted by
+                    // NullToNoContentResponseConverterFunction.
+                    return null;
+                }
+
+                @Get("/expect-custom-header")
+                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
+                @ProducesJson
+                public ResponseEntity<Map<String, String>> expectCustomHeader() {
+                    final ResponseHeaders responseHeaders = ResponseHeaders.of(
+                            HttpStatus.OK,
+                            HttpHeaderNames.of("x-custom-header"), "value");
+                    final Map<String, String> content = ImmutableMap.of("a", "b");
+                    return ResponseEntity.of(responseHeaders, content);
+                }
+
+                @Get("/async/expect-custom-header")
+                @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
+                @ProducesJson
+                public ResponseEntity<CompletionStage<Map<String, String>>> asyncExpectCustomHeader() {
+                    final ResponseHeaders responseHeaders = ResponseHeaders.of(
+                            HttpStatus.OK,
+                            HttpHeaderNames.of("x-custom-header"), "value");
+                    final CompletionStage<Map<String, String>> content =
+                            UnmodifiableFuture.completedFuture(ImmutableMap.of("a", "b"));
+                    return ResponseEntity.of(responseHeaders, content);
+                }
+
+                @Get("/expect-custom-trailers")
+                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
+                @ProducesJson
+                public ResponseEntity<List<String>> expectCustomTrailers() {
+                    final ResponseHeaders responseHeaders = ResponseHeaders.of(
+                            HttpStatus.OK,
+                            HttpHeaderNames.of("x-custom-header"), "value");
+                    final List<String> content = ImmutableList.of("a", "b");
+                    final HttpHeaders trailers =
+                            HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value");
+                    return ResponseEntity.of(responseHeaders, content, trailers);
+                }
+
+                @Get("/async/expect-custom-trailers")
+                @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
+                @ProducesJson
+                public ResponseEntity<CompletionStage<List<String>>> asyncExpectCustomTrailers(
+                        ServiceRequestContext ctx) {
+                    final ResponseHeaders responseHeaders = ResponseHeaders.of(
+                            HttpStatus.OK,
+                            HttpHeaderNames.of("x-custom-header"), "value");
+                    final CompletableFuture<List<String>> future = new CompletableFuture<>();
+                    ctx.eventLoop().schedule(() -> future.complete(ImmutableList.of("a", "b")),
+                                             1, TimeUnit.SECONDS);
+                    final HttpHeaders trailers =
+                            HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value");
+                    return ResponseEntity.of(responseHeaders, future, trailers);
+                }
+
+                @Get("/async/expect-bad-request")
+                public ResponseEntity<CompletionStage<Object>> asyncExpectBadRequest() {
+                    final CompletableFuture<Object> future = new CompletableFuture<>();
+                    future.completeExceptionally(new IllegalArgumentException("Bad arguments"));
+                    return ResponseEntity.of(ResponseHeaders.of(HttpStatus.OK), future);
+                }
+
+                @Get("/wildcard")
+                @ProducesJson
+                public ResponseEntity<?> wildcard() {
+                    return ResponseEntity.of(ImmutableList.of("a", "b"));
+                }
+
+                @Get("/generic")
+                @ProducesJson
+                @SuppressWarnings("unchecked")
+                public <T> ResponseEntity<T> generic() {
+                    return (ResponseEntity<T>) ResponseEntity.of(ImmutableList.of("a", "b"));
                 }
             });
 
             sb.annotatedService("/http-file", new Object() {
                 @Get("/expect-custom-header")
                 @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
-                public HttpResult<HttpFile> httpFileExpectCustomHeader() {
-                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
-                                         HTTPFILE);
+                public ResponseEntity<HttpFile> httpFileExpectCustomHeader() {
+                    final ResponseHeaders responseHeaders = ResponseHeaders.of(
+                            HttpStatus.OK,
+                            HttpHeaderNames.of("x-custom-header"), "value");
+                    return ResponseEntity.of(responseHeaders, HTTPFILE);
                 }
 
                 @Get("/expect-custom-trailers")
                 @AdditionalTrailer(name = "x-custom-annotated-trailers", value = "annotated-value")
-                public HttpResult<HttpFile> httpFileExpectCustomTrailers() {
-                    return HttpResult.of(HttpHeaders.of(HttpHeaderNames.of("x-custom-header"), "value"),
-                                         HTTPFILE,
-                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
+                public ResponseEntity<HttpFile> httpFileExpectCustomTrailers() {
+                    final ResponseHeaders responseHeaders = ResponseHeaders.of(
+                            HttpStatus.OK,
+                            HttpHeaderNames.of("x-custom-header"), "value");
+                    final HttpHeaders trailers =
+                            HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value");
+                    return ResponseEntity.of(responseHeaders, HTTPFILE, trailers);
                 }
 
                 @Get("/expect-http-file-service-headers-not-overwritten")
                 @StatusCode(400)
                 @AdditionalHeader(name = "x-custom-annotated-header", value = "annotated-value")
-                public HttpResult<HttpFile> httpFileExpectHeadersNotOverwritten() {
-                    return HttpResult.of(ResponseHeaders.of(HttpStatus.UNAUTHORIZED,
-                                                            HttpHeaderNames.of("x-custom-header"), "value"),
-                                         HTTPFILE,
-                                         HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value"));
+                public ResponseEntity<HttpFile> httpFileExpectHeadersNotOverwritten() {
+                    final ResponseHeaders responseHeaders = ResponseHeaders.of(
+                            HttpStatus.UNAUTHORIZED,
+                            HttpHeaderNames.of("x-custom-header"), "value");
+                    final HttpHeaders trailers =
+                            HttpHeaders.of(HttpHeaderNames.of("x-custom-trailers"), "value");
+                    return ResponseEntity.of(responseHeaders, HTTPFILE, trailers);
                 }
             });
 
@@ -508,7 +643,7 @@ public class AnnotatedServiceResponseConverterTest {
                 @Override
                 public void request(long n) {
                     final int size = objects.size();
-                    assert n >= size;
+                    assertThat(n).isGreaterThanOrEqualTo(size);
                     for (int i = 0; i < size; i++) {
                         s.onNext(objects.get(i));
                     }
@@ -524,8 +659,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void customizedClassLevelResponse() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/custom-classlevel");
+    void customizedClassLevelResponse() {
+        final WebClient client = WebClient.of(server.httpUri() + "/custom-classlevel");
         AggregatedHttpResponse res;
 
         res = aggregated(client.get("/expect-class"));
@@ -569,13 +704,13 @@ public class AnnotatedServiceResponseConverterTest {
     @interface UserProduceBinary {}
 
     @Test
-    public void typeBasedDefaultResponseConverter() throws Exception {
-        shouldBeConvertedByDefaultResponseConverter(WebClient.of(rule.httpUri() + "/type"));
+    void typeBasedDefaultResponseConverter() throws Exception {
+        shouldBeConvertedByDefaultResponseConverter(WebClient.of(server.httpUri() + "/type"));
     }
 
     @Test
-    public void publisherBasedResponseConverter() throws Exception {
-        shouldBeConvertedByDefaultResponseConverter(WebClient.of(rule.httpUri() + "/publish/single"));
+    void publisherBasedResponseConverter() throws Exception {
+        shouldBeConvertedByDefaultResponseConverter(WebClient.of(server.httpUri() + "/publish/single"));
     }
 
     private static void shouldBeConvertedByDefaultResponseConverter(WebClient client) throws Exception {
@@ -604,8 +739,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void multipleObjectPublisherBasedResponseConverter() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri() + "/publish/multi");
+    void multipleObjectPublisherBasedResponseConverter() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri() + "/publish/multi");
 
         AggregatedHttpResponse res;
 
@@ -622,8 +757,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void publisherBasedResponseConversionFailure() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri() + "/publish/failure");
+    void publisherBasedResponseConversionFailure() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri() + "/publish/failure");
 
         AggregatedHttpResponse res;
 
@@ -635,8 +770,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void produceTypeAnnotationBasedDefaultResponseConverter() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri() + "/produce");
+    void produceTypeAnnotationBasedDefaultResponseConverter() throws Exception {
+        final WebClient client = WebClient.of(server.httpUri() + "/produce");
 
         AggregatedHttpResponse res;
 
@@ -674,8 +809,8 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void customizedHttpResponse() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/custom-response");
+    void customizedHttpResponse() {
+        final WebClient client = WebClient.of(server.httpUri() + "/custom-response");
 
         AggregatedHttpResponse res;
 
@@ -687,6 +822,22 @@ public class AnnotatedServiceResponseConverterTest {
 
         res = aggregated(client.get("/expect-ok"));
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
+
+        res = aggregated(client.get("/header"));
+        assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
+        assertThat(res.headers().getAll(HttpHeaderNames.of("header_name_1")).toString()).isEqualTo(
+                "[header_value_1]");
+
+        res = aggregated(client.get("/header-overwrite"));
+        assertThat(res.headers().get(HttpHeaderNames.of("header_name_1"))).isEqualTo("header_value_changed");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "/http-result", "/response-entity" })
+    void customizedHttpResponseWithMultiInterfaces(String pathPrefix) {
+        final WebClient client = WebClient.of(server.httpUri() + "/custom-response" + pathPrefix);
+
+        AggregatedHttpResponse res;
 
         res = aggregated(client.get("/expect-specified-no-content"));
         assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
@@ -730,19 +881,11 @@ public class AnnotatedServiceResponseConverterTest {
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThatJson(response.contentUtf8()).isEqualTo(ImmutableList.of("a", "b"));
         });
-
-        res = aggregated(client.get("/header"));
-        assertThat(res.status()).isEqualTo(HttpStatus.NO_CONTENT);
-        assertThat(res.headers().getAll(HttpHeaderNames.of("header_name_1")).toString()).isEqualTo(
-                "[header_value_1]");
-
-        res = aggregated(client.get("/header-overwrite"));
-        assertThat(res.headers().get(HttpHeaderNames.of("header_name_1"))).isEqualTo("header_value_changed");
     }
 
     @Test
-    public void httpResultWithPublisher() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/publish/http-result");
+    void httpResultWithPublisher() {
+        final WebClient client = WebClient.of(server.httpUri() + "/publish/http-result");
 
         AggregatedHttpResponse res;
 
@@ -761,8 +904,28 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void httpFileResponseConverter() {
-        final WebClient client = WebClient.of(rule.httpUri() + "/http-file");
+    void responseEntityWithPublisher() {
+        final WebClient client = WebClient.of(server.httpUri() + "/publish/response-entity");
+
+        AggregatedHttpResponse res;
+
+        res = aggregated(client.get("/mono/json-node"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8()).isEqualTo(ImmutableMap.of("a", STRING));
+
+        res = aggregated(client.get("/json-node"));
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThatJson(res.contentUtf8()).isEqualTo(ImmutableList.of(ImmutableMap.of("a", STRING)));
+
+        res = aggregated(client.get("/defer"));
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void httpFileResponseConverter() {
+        final WebClient client = WebClient.of(server.httpUri() + "/http-file");
 
         AggregatedHttpResponse res;
 
@@ -795,7 +958,7 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void charset() {
+    void charset() {
         assertThat(StandardCharsets.UTF_8.contains(StandardCharsets.UTF_8)).isTrue();
         assertThat(StandardCharsets.UTF_8.contains(StandardCharsets.UTF_16)).isTrue();
         assertThat(StandardCharsets.UTF_16.contains(StandardCharsets.UTF_8)).isTrue();
@@ -807,17 +970,17 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void defaultNullHandling() throws JsonProcessingException {
+    void defaultNullHandling() throws JsonProcessingException {
         assertThat(new ObjectMapper().writeValueAsString(null)).isEqualTo("null");
     }
 
     @Test
-    public void jsonTextSequences_stream() {
+    void jsonTextSequences_stream() {
         testJsonTextSequences("/stream");
     }
 
     @Test
-    public void jsonTextSequences_publisher() {
+    void jsonTextSequences_publisher() {
         testJsonTextSequences("/publisher");
     }
 
@@ -834,7 +997,7 @@ public class AnnotatedServiceResponseConverterTest {
             }
         };
 
-        StepVerifier.create(WebClient.of(rule.httpUri() + "/json-seq").get(path))
+        StepVerifier.create(WebClient.of(server.httpUri() + "/json-seq").get(path))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_SEQ))
                     .assertNext(o -> ensureExpectedHttpData.accept(o, "foo"))
@@ -847,17 +1010,17 @@ public class AnnotatedServiceResponseConverterTest {
     }
 
     @Test
-    public void eventStream_stream() {
+    void eventStream_stream() {
         testEventStream("/stream");
     }
 
     @Test
-    public void eventStream_publisher() {
+    void eventStream_publisher() {
         testEventStream("/publisher");
     }
 
     private static void testEventStream(String path) {
-        StepVerifier.create(WebClient.of(rule.httpUri() + "/event-stream").get(path))
+        StepVerifier.create(WebClient.of(server.httpUri() + "/event-stream").get(path))
                     .expectNext(ResponseHeaders.of(HttpStatus.OK,
                                                    HttpHeaderNames.CONTENT_TYPE, MediaType.EVENT_STREAM))
                     .expectNext(HttpData.ofUtf8("data:foo\n\n"))

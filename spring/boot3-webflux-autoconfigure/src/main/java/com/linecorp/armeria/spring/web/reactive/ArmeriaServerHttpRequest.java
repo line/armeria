@@ -29,7 +29,6 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpCookie;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.server.reactive.AbstractServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.SslInfo;
 import org.springframework.util.LinkedMultiValueMap;
@@ -41,8 +40,10 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import reactor.core.publisher.Flux;
@@ -51,16 +52,15 @@ import reactor.core.scheduler.Schedulers;
 /**
  * A {@link ServerHttpRequest} implementation for the Armeria HTTP server.
  */
-final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
+final class ArmeriaServerHttpRequest extends AbstractServerHttpRequestVersionSpecific {
 
     private final ServiceRequestContext ctx;
     private final HttpRequest req;
     private final Flux<DataBuffer> body;
 
-    ArmeriaServerHttpRequest(ServiceRequestContext ctx,
-                             HttpRequest req,
+    ArmeriaServerHttpRequest(ServiceRequestContext ctx, HttpRequest req,
                              DataBufferFactoryWrapper<?> factoryWrapper) {
-        super(uri(req), null, springHeaders(req.headers()));
+        super(HttpMethod.valueOf(ctx.method().name()), uri(ctx, req), null, springHeaders(req.headers()));
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = req;
 
@@ -76,13 +76,18 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
         return springHeaders;
     }
 
-    private static URI uri(HttpRequest req) {
+    private static URI uri(ServiceRequestContext ctx, HttpRequest req) {
         final String scheme = req.scheme();
         final String authority = req.authority();
         // Server side Armeria HTTP request always has the scheme and authority.
         assert scheme != null;
         assert authority != null;
-        return URI.create(scheme + "://" + authority + req.path());
+        final RequestTarget requestTarget = ctx.routingContext().requestTarget();
+        String path = requestTarget.maybePathWithMatrixVariables();
+        if (requestTarget.query() != null) {
+            path = path + '?' + requestTarget.query();
+        }
+        return URI.create(scheme + "://" + authority + path);
     }
 
     @Override
@@ -121,7 +126,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
         return HttpMethod.valueOf(req.method().name());
     }
 
-    @Override
+    // This method exists only for Spring 5 and 6.0.x compatibility.
     public String getMethodValue() {
         return req.method().name();
     }

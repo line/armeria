@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 
 import net.bytebuddy.dynamic.ClassFileLocator.ForClassLoader;
 
-import com.linecorp.armeria.service.test.thrift.main.FooStruct;
+import testing.thrift.main.FooStruct;
 
 class ThriftClassLoadingTest {
 

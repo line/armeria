@@ -68,7 +68,7 @@ public class ThreadFactoryTest {
                                                          .build()
                                                          .newThread(() -> {});
 
-        assertThat(nonEventLoopThread.getClass()).isSameAs(FastThreadLocalThread.class);
+        assertThat(nonEventLoopThread).isInstanceOf(FastThreadLocalThread.class);
         assertThat(nonEventLoopThread.getName()).startsWith("normal-thread");
         assertThat(nonEventLoopThread.getPriority()).isEqualTo(Thread.NORM_PRIORITY);
         assertThat(nonEventLoopThread.isDaemon()).isFalse();
@@ -82,7 +82,7 @@ public class ThreadFactoryTest {
                                                                .build()
                                                                .newThread(() -> {});
 
-        assertThat(nonEventLoopCustomThread.getClass()).isSameAs(FastThreadLocalThread.class);
+        assertThat(nonEventLoopCustomThread).isInstanceOf(FastThreadLocalThread.class);
         assertThat(nonEventLoopCustomThread.getName()).startsWith("custom-thread");
         assertThat(nonEventLoopCustomThread.getPriority()).isEqualTo(Thread.MAX_PRIORITY);
         assertThat(nonEventLoopCustomThread.isDaemon()).isTrue();

@@ -56,27 +56,37 @@ final class AnnotatedBeanFactory<T> {
     }
 
     T create(ResolverContext resolverContext) {
+        final Object[] constructorArgs = AnnotatedValueResolver.toArguments(
+                constructor.getValue(), resolverContext);
+        final T instance;
         try {
-            final Object[] constructorArgs = AnnotatedValueResolver.toArguments(
-                    constructor.getValue(), resolverContext);
-            final T instance = constructor.getKey().newInstance(constructorArgs);
-
-            for (final Entry<Method, List<AnnotatedValueResolver>> method : methods.entrySet()) {
-                final Object[] methodArgs = AnnotatedValueResolver.toArguments(
-                        method.getValue(), resolverContext);
-                method.getKey().invoke(instance, methodArgs);
-            }
-
-            for (final Entry<Field, AnnotatedValueResolver> field : fields.entrySet()) {
-                final Object fieldArg = field.getValue().resolve(resolverContext);
-                field.getKey().set(instance, fieldArg);
-            }
-
-            return instance;
-        } catch (Throwable cause) {
+            instance = constructor.getKey().newInstance(constructorArgs);
+        } catch (Exception e) {
             throw new IllegalArgumentException(
-                    "cannot instantiate a new object: " + beanFactoryId, cause);
+                    "cannot instantiate a new object: " + beanFactoryId, e);
         }
+
+        for (final Entry<Method, List<AnnotatedValueResolver>> method : methods.entrySet()) {
+            final Object[] methodArgs = AnnotatedValueResolver.toArguments(
+                    method.getValue(), resolverContext);
+            try {
+                method.getKey().invoke(instance, methodArgs);
+            } catch (Exception e) {
+                throw new IllegalArgumentException(
+                        "cannot invoke method: " + beanFactoryId + '.' + method.getKey().getName(), e);
+            }
+        }
+
+        for (final Entry<Field, AnnotatedValueResolver> field : fields.entrySet()) {
+            final Object fieldArg = field.getValue().resolve(resolverContext);
+            try {
+                field.getKey().set(instance, fieldArg);
+            } catch (Exception e) {
+                throw new IllegalArgumentException(
+                        "cannot set field: " + beanFactoryId + '.' + field.getKey().getName(), e);
+            }
+        }
+        return instance;
     }
 
     Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor() {

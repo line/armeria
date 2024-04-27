@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.logging;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 
@@ -28,6 +29,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -46,19 +48,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
      * this builder.
      */
     public LoggingClient build(HttpClient delegate) {
-        return new LoggingClient(delegate,
-                                 logger(),
-                                 requestLogLevelMapper(),
-                                 responseLogLevelMapper(),
-                                 requestHeadersSanitizer(),
-                                 requestContentSanitizer(),
-                                 requestTrailersSanitizer(),
-                                 responseHeadersSanitizer(),
-                                 responseContentSanitizer(),
-                                 responseTrailersSanitizer(),
-                                 responseCauseSanitizer(),
-                                 successSampler(),
-                                 failureSampler());
+        return new LoggingClient(delegate, logWriter(), successSampler(), failureSampler());
     }
 
     /**
@@ -69,6 +59,11 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
     }
 
     // Override the return type of the chaining methods in the superclass.
+
+    @Override
+    protected LoggingClientBuilder defaultLogger(Logger defaultLogger) {
+        return (LoggingClientBuilder) super.defaultLogger(defaultLogger);
+    }
 
     @Override
     public LoggingClientBuilder samplingRate(float samplingRate) {
@@ -100,23 +95,33 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.failureSamplingRate(samplingRate);
     }
 
-    // Override the return type of the chaining methods in the super-superclass.
+    @Override
+    public LoggingClientBuilder logWriter(LogWriter logWriter) {
+        return (LoggingClientBuilder) super.logWriter(logWriter);
+    }
 
+    // Override the return type of the chaining methods in the super-superclass.
+    // All methods below are deprecated.
+
+    @Deprecated
     @Override
     public LoggingClientBuilder logger(Logger logger) {
         return (LoggingClientBuilder) super.logger(logger);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder logger(String loggerName) {
         return (LoggingClientBuilder) super.logger(loggerName);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder requestLogLevel(LogLevel requestLogLevel) {
         return (LoggingClientBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
         return (LoggingClientBuilder) super.requestLogLevel(clazz, requestLogLevel);
@@ -129,31 +134,37 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         return (LoggingClientBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
         return (LoggingClientBuilder) super.responseLogLevel(status, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return (LoggingClientBuilder) super.responseLogLevel(statusClass, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
         return (LoggingClientBuilder) super.responseLogLevel(clazz, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         return (LoggingClientBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder failureResponseLogLevel(LogLevel failureResponseLogLevel) {
         return (LoggingClientBuilder) super.failureResponseLogLevel(failureResponseLogLevel);
@@ -166,11 +177,13 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -178,6 +191,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -185,6 +199,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -192,6 +207,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -199,6 +215,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder headersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -206,6 +223,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.headersSanitizer(headersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder requestContentSanitizer(
             BiFunction<? super RequestContext, Object,
@@ -213,6 +231,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.requestContentSanitizer(requestContentSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder responseContentSanitizer(
             BiFunction<? super RequestContext, Object,
@@ -220,6 +239,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.responseContentSanitizer(responseContentSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder contentSanitizer(
             BiFunction<? super RequestContext, Object,
@@ -227,10 +247,17 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
         return (LoggingClientBuilder) super.contentSanitizer(contentSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingClientBuilder responseCauseSanitizer(
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
         return (LoggingClientBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
+    }
+
+    @Deprecated
+    @Override
+    public LoggingClientBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
+        return (LoggingClientBuilder) super.responseCauseFilter(responseCauseFilter);
     }
 }

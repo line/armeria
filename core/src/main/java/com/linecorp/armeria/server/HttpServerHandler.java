@@ -21,6 +21,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -29,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -45,8 +47,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseCompleteException;
@@ -65,6 +65,7 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
@@ -75,6 +76,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -87,14 +89,28 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static final Logger logger = LoggerFactory.getLogger(HttpServerHandler.class);
 
-    private static final MediaType ERROR_CONTENT_TYPE = MediaType.PLAIN_TEXT_UTF_8;
-
     private static final String ALLOWED_METHODS_STRING =
             HttpMethod.knownMethods().stream().map(HttpMethod::name).collect(Collectors.joining(","));
 
-    private static final String MSG_INVALID_REQUEST_PATH = HttpStatus.BAD_REQUEST + "\nInvalid request path";
+    private static final InetSocketAddress UNKNOWN_ADDR;
 
-    private static final HttpData DATA_INVALID_REQUEST_PATH = HttpData.ofUtf8(MSG_INVALID_REQUEST_PATH);
+    static {
+        InetAddress unknownAddr;
+        try {
+            unknownAddr = InetAddress.getByAddress("<unknown>", new byte[] { 0, 0, 0, 0 });
+        } catch (Exception e1) {
+            // Just in case a certain JRE implementation doesn't accept the hostname '<unknown>'
+            try {
+                unknownAddr = InetAddress.getByAddress(new byte[] { 0, 0, 0, 0 });
+            } catch (Exception e2) {
+                // Should never reach here.
+                final Error err = new Error(e2);
+                err.addSuppressed(e1);
+                throw err;
+            }
+        }
+        UNKNOWN_ADDR = new InetSocketAddress(unknownAddr, 1);
+    }
 
     private static final ChannelFutureListener CLOSE = future -> {
         final Throwable cause = future.cause();
@@ -172,6 +188,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Nullable
     private final ProxiedAddresses proxiedAddresses;
+    @Nullable
+    private InetSocketAddress remoteAddress;
+    @Nullable
+    private InetSocketAddress localAddress;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
     private boolean isReading;
@@ -320,14 +340,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final Channel channel = ctx.channel();
         final RequestHeaders headers = req.headers();
-        final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
+        final InetSocketAddress remoteAddress = firstNonNull(remoteAddress(channel), UNKNOWN_ADDR);
+        final InetSocketAddress localAddress = firstNonNull(localAddress(channel), UNKNOWN_ADDR);
+        final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(remoteAddress, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
+        final EventLoop channelEventLoop = channel.eventLoop();
 
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
-            final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
+            final ServiceRequestContext reqCtx = newEarlyRespondingRequestContext(
+                    channel, req, proxiedAddresses, clientAddress, remoteAddress, localAddress, routingCtx,
+                    channelEventLoop);
 
             // Handle 'OPTIONS * HTTP/1.1'.
             if (routingStatus == RoutingStatus.OPTIONS) {
@@ -346,18 +370,92 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RoutingResult routingResult = routed.routingResult();
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
-
+        final EventLoop serviceEventLoop;
+        final EventLoopGroup serviceWorkerGroup = serviceCfg.serviceWorkerGroup();
+        if (serviceWorkerGroup == config.workerGroup()) {
+            serviceEventLoop = channelEventLoop;
+        } else {
+            serviceEventLoop = serviceWorkerGroup.next();
+        }
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, config.meterRegistry(), protocol,
+                serviceCfg, channel, serviceEventLoop, config.meterRegistry(), protocol,
                 nextRequestId(routingCtx, serviceCfg), routingCtx, routingResult, req.exchangeType(),
-                req, sslSession, proxiedAddresses, clientAddress,
-                req.requestStartTimeNanos(), req.requestStartTimeMicros());
+                req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
+                req.requestStartTimeNanos(), req.requestStartTimeMicros(), serviceCfg.contextHook());
 
+        final HttpResponse res;
+        req.init(reqCtx);
+        final CompletableFuture<Void> whenAggregated = req.whenAggregated();
+        if (whenAggregated != null) {
+            res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
+                if (serviceEventLoop.inEventLoop()) {
+                    return serve0(req, serviceCfg, service, reqCtx);
+                }
+                return serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop);
+            }));
+        } else {
+            if (serviceEventLoop.inEventLoop()) {
+                res = serve0(req, serviceCfg, service, reqCtx);
+            } else {
+                res = serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop);
+            }
+        }
+        // Keep track of the number of unfinished requests and
+        // clean up the request stream when response stream ends.
+        final boolean isTransientService =
+                serviceCfg.service().as(TransientService.class) != null;
+        if (!isTransientService) {
+            gracefulShutdownSupport.inc();
+        }
+        unfinishedRequests.put(req, res);
+
+        if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routed.route())) {
+            reqCtx.log().whenComplete().thenAccept(log -> {
+                final int statusCode = log.responseHeaders().status().code();
+                if (statusCode >= 200 && statusCode < 400) {
+                    RequestTargetCache.putForServer(req.path(), routingCtx.requestTarget());
+                }
+            });
+        }
+
+        final RequestAndResponseCompleteHandler handler =
+                new RequestAndResponseCompleteHandler(channelEventLoop, ctx, reqCtx, req,
+                                                      isTransientService);
+        req.whenComplete().handle(handler.requestCompleteHandler);
+
+        // A future which is completed when the all response objects are written to channel and
+        // the returned promises are done.
+        final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
+        resWriteFuture.handle(handler.responseCompleteHandler);
+
+        // Set the response to the request in order to be able to immediately abort the response
+        // when the peer cancels the stream.
+        req.setResponse(res);
+
+        if (req.isHttp1WebSocket()) {
+            assert responseEncoder instanceof Http1ObjectEncoder;
+            final WebSocketHttp1ResponseSubscriber resSubscriber =
+                    new WebSocketHttp1ResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+            res.subscribe(resSubscriber, channelEventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
+        } else if (reqCtx.exchangeType().isResponseStreaming()) {
+            final AbstractHttpResponseSubscriber resSubscriber =
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+            res.subscribe(resSubscriber, channelEventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
+        } else {
+            final AggregatedHttpResponseHandler resHandler =
+                    new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+            res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), channelEventLoop))
+               .handle(resHandler);
+        }
+    }
+
+    private static HttpResponse serve0(HttpRequest req,
+                                       ServiceConfig serviceCfg,
+                                       HttpService service,
+                                       DefaultServiceRequestContext reqCtx) {
         try (SafeCloseable ignored = reqCtx.push()) {
-            final RequestLogBuilder logBuilder = reqCtx.logBuilder();
             HttpResponse serviceResponse;
             try {
-                req.init(reqCtx);
                 serviceResponse = service.serve(reqCtx, req);
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.
@@ -370,112 +468,26 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             }
 
             serviceResponse = serviceResponse.recover(cause -> {
-                // Store the cause to set as the log.responseCause().
-                CapturedServiceException.set(reqCtx, cause);
+                reqCtx.logBuilder().responseCause(cause);
                 // Recover the failed response with the error handler.
                 return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
             });
-            final HttpResponse res = serviceResponse;
-            final EventLoop eventLoop = channel.eventLoop();
-
-            // Keep track of the number of unfinished requests and
-            // clean up the request stream when response stream ends.
-            final boolean isTransientService =
-                    serviceCfg.service().as(TransientService.class) != null;
-            if (!isTransientService) {
-                gracefulShutdownSupport.inc();
-            }
-            unfinishedRequests.put(req, res);
-
-            if (service.shouldCachePath(routingCtx.path(), routingCtx.query(), routed.route())) {
-                reqCtx.log().whenComplete().thenAccept(log -> {
-                    final int statusCode = log.responseHeaders().status().code();
-                    if (statusCode >= 200 && statusCode < 400) {
-                        RequestTargetCache.putForServer(req.path(), routingCtx.requestTarget());
-                    }
-                });
-            }
-
-            req.whenComplete().handle((ret, cause) -> {
-                try {
-                    if (cause == null) {
-                        logBuilder.endRequest();
-                    } else {
-                        logBuilder.endRequest(cause);
-                        // NB: logBuilder.endResponse(cause) will be called by HttpResponseSubscriber below.
-                    }
-                } catch (Throwable t) {
-                    logger.warn("Unexpected exception:", t);
-                }
-                return null;
-            });
-
-            // A future which is completed when the all response objects are written to channel and
-            // the returned promises are done.
-            final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
-            resWriteFuture.handle((ret, cause) -> {
-                try {
-                    assert eventLoop.inEventLoop();
-                    if (cause == null || !req.isOpen()) {
-                        req.abort(ResponseCompleteException.get());
-                    } else {
-                        req.abort(cause);
-                    }
-                    // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
-                    if (!isTransientService) {
-                        gracefulShutdownSupport.dec();
-                    }
-
-                    // This callback could be called by `req.abortResponse(cause, cancel)` in `cleanup()`.
-                    // As `unfinishedRequests` is being iterated, `unfinishedRequests` should not be removed.
-                    if (!isCleaning) {
-                        unfinishedRequests.remove(req);
-                    }
-
-                    final boolean needsDisconnection =
-                            ctx.channel().isActive() &&
-                            (handledLastRequest || responseEncoder.keepAliveHandler().needsDisconnection());
-                    if (needsDisconnection) {
-                        // Graceful shutdown mode: If a connection needs to be closed by `KeepAliveHandler`
-                        // such as a max connection age or `ServiceRequestContext.initiateConnectionShutdown()`,
-                        // new requests will be ignored and the connection is closed after completing all
-                        // unfinished requests.
-                        if (protocol.isMultiplex()) {
-                            // Initiates channel close, connection will be closed after all streams are closed.
-                            ctx.channel().close();
-                        } else {
-                            // Stop receiving new requests.
-                            handledLastRequest = true;
-                            if (unfinishedRequests.isEmpty()) {
-                                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
-                            }
-                        }
-                    }
-                } catch (Throwable t) {
-                    logger.warn("Unexpected exception:", t);
-                }
-                return null;
-            });
-
-            // Set the response to the request in order to be able to immediately abort the response
-            // when the peer cancels the stream.
-            req.setResponse(res);
-
-            if (reqCtx.exchangeType().isResponseStreaming()) {
-                final HttpResponseSubscriber resSubscriber =
-                        new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
-                res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
-            } else {
-                final AggregatedHttpResponseHandler resHandler =
-                        new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture);
-                res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), eventLoop))
-                   .handle(resHandler);
-            }
+            return serviceResponse;
         }
     }
 
-    private ProxiedAddresses determineProxiedAddresses(Channel channel, RequestHeaders headers) {
-        final InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
+    private static HttpResponse serveInServiceEventLoop(DecodedHttpRequest req,
+                                                        ServiceConfig serviceCfg,
+                                                        HttpService service,
+                                                        DefaultServiceRequestContext reqCtx,
+                                                        EventLoop serviceEventLoop) {
+        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx),
+                               serviceEventLoop)
+                           .subscribeOn(serviceEventLoop);
+    }
+
+    private ProxiedAddresses determineProxiedAddresses(InetSocketAddress remoteAddress,
+                                                       RequestHeaders headers) {
         if (config.clientAddressTrustedProxyFilter().test(remoteAddress.getAddress())) {
             return HttpHeaderUtil.determineProxiedAddresses(
                     headers, config.clientAddressSources(), proxiedAddresses,
@@ -485,36 +497,35 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
+    @Nullable
+    private InetSocketAddress remoteAddress(Channel ch) {
+        final InetSocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress != null) {
+            return remoteAddress;
+        }
+
+        final InetSocketAddress newRemoteAddress = ChannelUtil.remoteAddress(ch);
+        this.remoteAddress = newRemoteAddress;
+        return newRemoteAddress;
+    }
+
+    @Nullable
+    private InetSocketAddress localAddress(Channel ch) {
+        final InetSocketAddress localAddress = this.localAddress;
+        if (localAddress != null) {
+            return localAddress;
+        }
+
+        final InetSocketAddress newLocalAddress = ChannelUtil.localAddress(ch);
+        this.localAddress = newLocalAddress;
+        return newLocalAddress;
+    }
+
     private void handleOptions(ChannelHandlerContext ctx, ServiceRequestContext reqCtx) {
         respond(ctx, reqCtx,
                 ResponseHeaders.builder(HttpStatus.OK)
                                .add(HttpHeaderNames.ALLOW, ALLOWED_METHODS_STRING),
                 HttpData.empty(), null);
-    }
-
-    private void rejectInvalidPath(ChannelHandlerContext ctx, ServiceRequestContext reqCtx) {
-        // Reject requests without a valid path.
-        respond(ctx, reqCtx,
-                HttpStatus.BAD_REQUEST, DATA_INVALID_REQUEST_PATH,
-                new ProtocolViolationException(MSG_INVALID_REQUEST_PATH));
-    }
-
-    private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
-                         HttpStatus status, HttpData resContent, @Nullable Throwable cause) {
-        if (status.code() < 400) {
-            respond(ctx, reqCtx, ResponseHeaders.builder(status), HttpData.empty(), cause);
-            return;
-        }
-
-        if (reqCtx.method() == HttpMethod.HEAD || status.isContentAlwaysEmpty()) {
-            resContent = HttpData.empty();
-        } else if (resContent.isEmpty()) {
-            resContent = status.toHttpData();
-        }
-
-        respond(ctx, reqCtx,
-                ResponseHeaders.builder(status).contentType(ERROR_CONTENT_TYPE),
-                resContent, cause);
     }
 
     private void respond(ChannelHandlerContext ctx, ServiceRequestContext reqCtx,
@@ -560,7 +571,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final ResponseHeaders immutableResHeaders = resHeaders.build();
         ChannelFuture future = responseEncoder.writeHeaders(
-                req.id(), req.streamId(), immutableResHeaders, !hasContent);
+                req.id(), req.streamId(), immutableResHeaders, !hasContent, reqCtx.method());
         logBuilder.responseHeaders(immutableResHeaders);
         if (hasContent) {
             logBuilder.increaseResponseLength(resContent);
@@ -575,8 +586,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     // Respect the first specified cause.
                     logBuilder.endResponse(firstNonNull(cause, f.cause()));
                 }
-                reqCtx.log().whenComplete().thenAccept(reqCtx.config().accessLogWriter()::log);
             }
+            reqCtx.log().whenComplete().thenAccept(log -> {
+                try (SafeCloseable ignored = reqCtx.push()) {
+                    reqCtx.config().accessLogWriter().log(log);
+                }
+            });
         });
         return future;
     }
@@ -638,17 +653,20 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
-                                                                   RoutingContext routingCtx) {
+                                                                   InetSocketAddress remoteAddress,
+                                                                   InetSocketAddress localAddress,
+                                                                   RoutingContext routingCtx,
+                                                                   EventLoop eventLoop) {
         final ServiceConfig serviceConfig = routingCtx.virtualHost().fallbackServiceConfig();
         final RoutingResult routingResult = RoutingResult.builder()
                                                          .path(routingCtx.path())
                                                          .build();
         return new DefaultServiceRequestContext(
                 serviceConfig,
-                channel, NoopMeterRegistry.get(), protocol(),
+                channel, eventLoop, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(routingCtx, serviceConfig), routingCtx, routingResult, req.exchangeType(),
-                req, sslSession, proxiedAddresses, clientAddress,
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
+                System.nanoTime(), SystemInfo.currentTimeMicros(), NOOP_CONTEXT_HOOK);
     }
 
     private static RequestId nextRequestId(RoutingContext routingCtx, ServiceConfig serviceConfig) {
@@ -670,6 +688,119 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                             e);
             }
             return RequestId.random();
+        }
+    }
+
+    private final class RequestAndResponseCompleteHandler {
+
+        final BiFunction<Void, @Nullable Throwable, Void> requestCompleteHandler;
+        final BiFunction<Void, @Nullable Throwable, Void> responseCompleteHandler;
+        private boolean requestOrResponseComplete;
+
+        private final ChannelHandlerContext ctx;
+        private final DecodedHttpRequest req;
+        private final boolean isTransientService;
+
+        RequestAndResponseCompleteHandler(EventLoop eventLoop, ChannelHandlerContext ctx,
+                                          ServiceRequestContext reqCtx, DecodedHttpRequest req,
+                                          boolean isTransientService) {
+            this.ctx = ctx;
+            this.req = req;
+            this.isTransientService = isTransientService;
+
+            assert responseEncoder != null;
+
+            requestCompleteHandler = (unused, cause) -> {
+                if (eventLoop.inEventLoop()) {
+                    handleRequestComplete(reqCtx.logBuilder(), cause);
+                } else {
+                    eventLoop.execute(() -> handleRequestComplete(reqCtx.logBuilder(), cause));
+                }
+                return null;
+            };
+
+            responseCompleteHandler = (unused, cause) -> {
+                assert eventLoop.inEventLoop();
+                final long requestAutoAbortDelayMillis = reqCtx.requestAutoAbortDelayMillis();
+                if (cause != null || !req.isOpen() || requestAutoAbortDelayMillis == 0) {
+                    handleResponseComplete(cause);
+                    return null;
+                }
+                if (requestAutoAbortDelayMillis > 0 && requestAutoAbortDelayMillis < Long.MAX_VALUE) {
+                    eventLoop.schedule(() -> handleResponseComplete(null),
+                                       requestAutoAbortDelayMillis, TimeUnit.MILLISECONDS);
+                    return null;
+                }
+                // Auto aborting request is disabled.
+                handleRequestOrResponseComplete();
+                return null;
+            };
+        }
+
+        private void handleRequestComplete(RequestLogBuilder logBuilder, @Nullable Throwable cause) {
+            try {
+                if (cause == null) {
+                    logBuilder.endRequest();
+                } else {
+                    logBuilder.endRequest(cause);
+                    // NB: logBuilder.endResponse(cause) will be called by HttpResponseSubscriber below.
+                }
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception:", t);
+            }
+            handleRequestOrResponseComplete();
+        }
+
+        private void handleResponseComplete(@Nullable Throwable cause) {
+            if (cause == null || !req.isOpen()) {
+                req.abort(ResponseCompleteException.get());
+            } else {
+                req.abort(cause);
+            }
+            handleRequestOrResponseComplete();
+        }
+
+        private void handleRequestOrResponseComplete() {
+            try {
+                if (!requestOrResponseComplete) {
+                    // This will make this method is called only once after
+                    // both request and response are complete.
+                    requestOrResponseComplete = true;
+                    return;
+                }
+                // NB: logBuilder.endResponse() is called by HttpResponseSubscriber.
+                if (!isTransientService) {
+                    gracefulShutdownSupport.dec();
+                }
+
+                // This callback could be called by `req.abortResponse(cause, cancel)` in `cleanup()`.
+                // As `unfinishedRequests` is being iterated, `unfinishedRequests` should not be removed.
+                if (!isCleaning) {
+                    unfinishedRequests.remove(req);
+                }
+
+                final boolean needsDisconnection =
+                        ctx.channel().isActive() &&
+                        (handledLastRequest || responseEncoder.keepAliveHandler().needsDisconnection());
+                if (needsDisconnection) {
+                    // Graceful shutdown mode: If a connection needs to be closed by `KeepAliveHandler`
+                    // such as a max connection age or `ServiceRequestContext.initiateConnectionShutdown()`,
+                    // new requests will be ignored and the connection is closed after completing all
+                    // unfinished requests.
+                    if (protocol.isMultiplex()) {
+                        // Initiates channel close, connection will be closed after all streams are closed.
+                        ctx.channel().close();
+                    } else {
+                        // Stop receiving new requests.
+                        handledLastRequest = true;
+                        if (unfinishedRequests.isEmpty()) {
+                            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                logger.warn("Unexpected exception:", t);
+            }
         }
     }
 }

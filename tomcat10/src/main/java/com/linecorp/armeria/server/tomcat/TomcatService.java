@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.tomcat;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp1Headers;
+import static com.linecorp.armeria.internal.common.util.MappedPathUtil.mappedPath;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -63,9 +64,12 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -378,12 +382,22 @@ public abstract class TomcatService implements HttpService {
             return HttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE);
         }
 
+        final String mappedPath = mappedPath(ctx);
+        if (mappedPath == null) {
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
+                                   "Invalid matrix variable: " +
+                                   ctx.routingContext().requestTarget().maybePathWithMatrixVariables());
+        }
+
         final HttpResponseWriter res = HttpResponse.streaming();
         req.aggregate().handle((aReq, cause) -> {
             try {
                 if (cause != null) {
+                    cause = Exceptions.peel(cause);
                     logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                    if (res.tryWrite(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR))) {
+                    if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+                        res.close(cause);
+                    } else if (res.tryWrite(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR))) {
                         res.close();
                     }
                     return null;
@@ -396,7 +410,7 @@ public abstract class TomcatService implements HttpService {
                 }
 
                 final ArmeriaProcessor processor = createProcessor(coyoteAdapter);
-                final Request coyoteReq = convertRequest(ctx, aReq, processor.getRequest());
+                final Request coyoteReq = convertRequest(ctx, mappedPath, aReq, processor.getRequest());
                 if (coyoteReq == null) {
                     if (res.tryWrite(INVALID_AUTHORITY_HEADERS)) {
                         if (res.tryWrite(INVALID_AUTHORITY_DATA)) {
@@ -471,10 +485,8 @@ public abstract class TomcatService implements HttpService {
     }
 
     @Nullable
-    private Request convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest req,
+    private Request convertRequest(ServiceRequestContext ctx, String mappedPath, AggregatedHttpRequest req,
                                    Request coyoteReq) throws Throwable {
-        final String mappedPath = ctx.mappedPath();
-
         coyoteReq.scheme().setString(req.scheme());
 
         // Set the start time which is used by Tomcat access logging

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
@@ -25,17 +24,11 @@ import java.net.http.HttpResponse.BodyHandlers;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.read.ListAppender;
 
 class InvalidPathWithDataTest {
 
@@ -46,7 +39,7 @@ class InvalidPathWithDataTest {
             sb.requestTimeoutMillis(0);
             sb.decorator(LoggingService.newDecorator());
             sb.service("/foo", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(agg -> HttpResponse.of(agg.contentUtf8())));
+                return HttpResponse.of(req.aggregate().thenApply(agg -> HttpResponse.of(agg.contentUtf8())));
             });
         }
     };
@@ -64,17 +57,12 @@ class InvalidPathWithDataTest {
                 java.net.http.HttpRequest.newBuilder()
                                          .version(Version.HTTP_2)
                                          .uri(server.httpUri().resolve("/foo"))
-                                         .GET()
+                                         .POST(java.net.http.HttpRequest.BodyPublishers.ofString(
+                                                 "Hello Armeria!"))
                                          .build();
 
-        final ListAppender<ILoggingEvent> logWatcher = new ListAppender<>();
-        logWatcher.start();
-        final Logger logger = (Logger) LoggerFactory.getLogger(Http2RequestDecoder.class);
-        logger.setLevel(Level.DEBUG);
-        logger.addAppender(logWatcher);
-
         final String bodyNormal = client.send(normalRequest, BodyHandlers.ofString()).body();
-        assertThat(bodyNormal).isEmpty();
+        assertThat(bodyNormal).isEqualTo("Hello Armeria!");
 
         final java.net.http.HttpRequest invalidRequest =
                 java.net.http.HttpRequest.newBuilder()
@@ -88,14 +76,5 @@ class InvalidPathWithDataTest {
                 client.send(invalidRequest, BodyHandlers.ofString());
         assertThat(response.statusCode()).isEqualTo(400);
         assertThat(response.body()).contains("Invalid request path");
-
-        await().untilAsserted(() -> {
-            assertThat(logWatcher.list)
-                    .anyMatch(event -> {
-                        final String logMessage = event.getFormattedMessage();
-                        return event.getLevel().equals(Level.DEBUG) &&
-                               logMessage.contains("Received a DATA frame for a finished stream");
-                    });
-        });
     }
 }

@@ -18,11 +18,10 @@ package com.linecorp.armeria.server.healthcheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
@@ -58,6 +57,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -123,7 +123,9 @@ class HealthCheckServiceTest {
                                              });
                                          })
                                          .build());
-            sb.decorator(LoggingService.builder().logger(logger).newDecorator());
+            sb.decorator(LoggingService.builder()
+                                       .logWriter(LogWriter.of(logger))
+                                       .newDecorator());
             sb.gracefulShutdownTimeout(Duration.ofSeconds(10), Duration.ofSeconds(10));
             sb.disableServerHeader();
             sb.disableDateHeader();
@@ -187,7 +189,7 @@ class HealthCheckServiceTest {
                              "connection: close\r\n\r\n" +
                              "{\"healthy\":false}");
         await().untilAsserted(() -> {
-            verify(logger).debug(anyString(), any(), any());
+            verify(logger).debug(anyString());
         });
     }
 
@@ -212,7 +214,7 @@ class HealthCheckServiceTest {
                              "armeria-lphc: 60, 5\r\n" +
                              "content-length: 17\r\n" +
                              "connection: close\r\n\r\n");
-        verify(logger).debug(anyString(), any(), any());
+        verify(logger).debug(anyString());
     }
 
     private static void assertResponseEquals(String request, String expectedResponse) throws Exception {
@@ -496,10 +498,8 @@ class HealthCheckServiceTest {
     }
 
     private static void verifyDebugEnabled(Logger logger) {
-        await().untilAsserted(() -> {
-            // 2 times for the request and the response.
-            verify(logger, times(2)).isDebugEnabled();
-        });
+        // Do not log for health check requests unless TransientServiceOption is enabled.
+        verify(logger, never()).isDebugEnabled();
     }
 
     private static CompletableFuture<AggregatedHttpResponse> sendLongPollingGet(String healthiness) {

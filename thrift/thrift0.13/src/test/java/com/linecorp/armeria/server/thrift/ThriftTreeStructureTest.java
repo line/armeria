@@ -31,13 +31,14 @@ import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.service.test.thrift.tree.Branch;
-import com.linecorp.armeria.service.test.thrift.tree.IntLeaf;
-import com.linecorp.armeria.service.test.thrift.tree.LeafType;
-import com.linecorp.armeria.service.test.thrift.tree.StringLeaf;
-import com.linecorp.armeria.service.test.thrift.tree.TreeRequest;
-import com.linecorp.armeria.service.test.thrift.tree.TreeService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.thrift.tree.Branch;
+import testing.thrift.tree.IntLeaf;
+import testing.thrift.tree.LeafType;
+import testing.thrift.tree.StringLeaf;
+import testing.thrift.tree.TreeRequest;
+import testing.thrift.tree.TreeService;
 
 class ThriftTreeStructureTest {
     @RegisterExtension

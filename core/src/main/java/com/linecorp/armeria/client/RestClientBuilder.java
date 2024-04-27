@@ -151,6 +151,16 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public RestClientBuilder requestAutoAbortDelay(Duration delay) {
+        return (RestClientBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public RestClientBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (RestClientBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public RestClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (RestClientBuilder) super.requestIdGenerator(requestIdGenerator);
     }
@@ -238,5 +248,10 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
     public RestClientBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (RestClientBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public RestClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (RestClientBuilder) super.contextHook(contextHook);
     }
 }

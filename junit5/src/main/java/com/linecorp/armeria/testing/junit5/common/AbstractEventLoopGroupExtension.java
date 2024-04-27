@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.testing.junit5.common;
 
+import java.util.concurrent.ThreadFactory;
+
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
@@ -26,8 +28,8 @@ import io.netty.channel.EventLoopGroup;
 abstract class AbstractEventLoopGroupExtension extends AbstractAllOrEachExtension {
     private final EventLoopGroupRuleDelegate delegate;
 
-    AbstractEventLoopGroupExtension(int numThreads, String threadNamePrefix, boolean useDaemonThreads) {
-        delegate = new EventLoopGroupRuleDelegate(numThreads, threadNamePrefix, useDaemonThreads);
+    AbstractEventLoopGroupExtension(int numThreads, ThreadFactory threadFactory) {
+        delegate = new EventLoopGroupRuleDelegate(numThreads, threadFactory);
     }
 
     EventLoopGroup group() {

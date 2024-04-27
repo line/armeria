@@ -1,0 +1,222 @@
+---
+date: 2023-10-23
+---
+
+## 🌟 New features
+
+- **Context Path Support**: You can now set services/decorators under a context path fluently. #3591 #4802 #5037 #5157 #5260
+  ```java
+  Server.builder()
+        .baseContextPath("/api")
+        .contextPath("/v1", "/v2")
+        .service(myService) // served under "/api/v1" and "/api/v2"
+        .and()
+        .virtualHost("foo.com")
+        .contextPath("/v3")
+        .service(myService) // served by virtual host "foo.com" under "/api/v3"
+        .build();
+  ```
+  - You can also set the context path via Spring property.
+  ```yaml
+  armeria:
+    context-path: /api/v1
+  ```
+- **Easier Request Scoping for Kotlin**: You can now easily propagate an Armeria <type://RequestContext> in Kotlin using
+  <type://ContextAwareExecutor#asCoroutineDispatcher()>. #5171
+  ```kotlin
+  withContext(ctx.eventLoop().asCoroutineDispatcher()) {
+    assert(RequestContext.current() == ctx)
+    ...
+  }
+  ```
+- **gRPC Exception Handler Annotation**: You can now easily handle an exception that is raised from a gRPC service using
+  <type://@GrpcExceptionHandler> annotation. #5046
+  ```java
+  @GrpcExceptionHandler(MyGrpcExceptionHandlerFunction.class)
+  @Override
+  public void unaryCall(
+    SimpleRequest request,
+    StreamObserver<SimpleResponse> responseObserver) {
+      ...
+  }
+
+  class MyGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
+    @Override
+    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+      if (unauthenticatedException(cause)) {
+        return Status.UNAUTHENTICATED;
+      }
+      ...
+    }
+  }
+  ```
+- **StreamMessage finalizer**: You can now produce the last value for a <type://StreamMessage> when it completes
+  exceptionally or successfully using <type://StreamMessage#endWith(Function)>. #4816 #5198
+  ```java
+  StreamMessage<Integer> message =
+    original.endWith(th -> {
+        if (th instanceof AbortedStreamException) {
+            return 100;
+        }
+        return -1;
+    });
+  ```
+- **Disable HTTP/2 for Requests**: You can now disable HTTP/2 protocol when sending HTTP or HTTPS requests. #5168
+  ```java
+  ClientFactory
+    .builder()
+    .preferHttp1(true)
+    .build();
+  ```
+- **Client Certificate Metrics**: You can now monitor client certificates with the following metrics. #5155
+  - `armeria.client.tls.certificates.validity`: `1` if valid, `0` otherwise.
+  - `armeria.client.tls.certificates.validity.days`: The number of days until the certificate expires.
+- You can now add a hook that is invoked when a <type://RequestContext> is pushed and popped. #4991 #5107
+  ```java
+  Supplier<AutoCloseable> contextHook = () -> {
+    System.out.println("Context is pushed.");
+    return () -> {
+      System.out.println("Context is popped.");
+    };
+  }
+
+  // Client
+  WebClient
+    .builder()
+    .contextHook(contextHook)
+    ...
+    .build();
+  // Server
+  Server
+    .builder()
+    .contextHook(contextHook)
+    ...
+    .build();
+  ```
+- **New Circuit Breaker and Retry Rule for Time-consuming Requests**: You can now report a failure to a
+  circuit breaking or retry when the total duration exceeds a certain threshold. #4782 #4827
+  ```java
+  final CircuitBreakerRuleWithContent<HttpResponse> rule =
+        CircuitBreakerRuleWithContent
+                .<HttpResponse>builder()
+                .onTotalDuration(
+                    (ctx, duration) -> duration.toMillis() > 10000)
+                .thenFailure();
+  ```
+- **RST Flood Attack Prevention**: You can now protect your server against
+  [DDoS caused by RST flood attack](https://www.securityweek.com/rapid-reset-zero-day-exploited-to-launch-largest-ddos-attacks-in-history/)
+  using <type://ServerBuilder#http2MaxResetFramesPerWindow(int,int)>. #5232
+  - The default maximum number of allowed RST frames for an HTTP/2 connection is 400 per minute.
+  ```java
+  Server
+    .builder()
+    .http2MaxResetFramesPerWindow(100, 10)
+    .build();
+  ```
+
+## 📈 Improvements
+
+- Acquiring an `EventLoop` for sending a request is now improved when the number of `EventLoop`s is small.
+  #4439 #4682
+- [Snappy](https://github.com/google/snappy) is now supported for content compression. #5125 #5174
+- The `CompletableFuture`s of a <type://RequestLog> are now completed with the
+  <type://RequestContext#eventLoop()> thus their callbacks are also executed by the `EventLoop`. #5189
+- Adding services and decorators are now unified. #5038 #5040
+
+## 🛠️ Bug fixes
+
+- <type://RequestLog#responseCause()> is correctly propagated to <type://CircuitBreakerRule> when using
+  a <type://CircuitBreakerClient> with a <type://RetryingClient>. #5242
+- A WebSocket session is correctly established even if the `Connection` header has `upgrade` value that is
+  concateneted with other values using a comma. #5165 #5230
+- No more leaks when the size of a request exceeds the max content length. #3803 #5227
+- An `IllegalStateException` is raised if <type://GrpcSerializationFormats#JSON> isn't set when
+  <type://GrpcServiceBuilder#enableHttpJsonTranscoding(boolean)> is enabled. #5176 #5224
+- <type://CookieClient> is now correctly working with redirects. #5221
+- You no longer see duplicate <type://ClientOptions> when creating a derived client via
+  <type://Clients#newDerivedClient(T,Function)>. #5194
+- You no longer see `UnsupportedOperationException` when creating an <type://HttpResponse> with
+  a `CompletationStage`. #5190
+- A new HTTP/2 connection is created and correctly reused from the pending requests when the number of requests
+  exceeds max concurrent streams. #5173
+- You no longer see a false negative <type://EndpointSelectionTimeoutException> when
+  <type://EndpointSelectionStrategy#weightedRoundRobin()> is used with a <type://DynamicEndpointGroup>. #5163
+- `NullPointerException` isn't raised anymore when a client establishes an HTTP session. #5162
+- Pending exceptions that are raised while sending requests or receiving responses are now correctly
+  propagated to users. #5154
+- Armeria gRPC service no longer schedules a timeout if `grpc-timeout` header is omitted when
+  <type://GrpcServiceBuilder#useClientTimeoutHeader(boolean)> is enabled. #5144
+- The `Content-Length` header isn't set anymore for the streaming response of a HEAD request. #4509 #4644
+
+## 🏚️ Deprecations
+
+- <type://GrpcStatusFunction> is deprecated. Use <type://GrpcExceptionHandlerFunction> instead. #5046 #5267
+  - `exceptionMapping` methods on <type://GrpcServiceBuilder> are deprecated.
+    Use <type://GrpcExceptionHandlerFunctionBuilder> instead.
+  - <type://GoogleGrpcStatusFunction> is also deprecated. Use <type://GoogleGrpcExceptionHandlerFunction>
+    instead.
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- Dropwizard2 2.1.6 → 2.1.8
+- Dropwizard metrics 4.2.19 → 4.2.21
+- Futures-extra 4.3.1 → 4.3.3
+- Graphql Kotlin 6.5.3 → 6.5.6
+- gRPC 1.57.2 → 1.58.0
+- gRPC Kotlin 1.3.0 → 1.4.0
+- Guava 32.1.2-jre → 32.1.3-jre
+- Jackson 2.15.2 → 2.15.3
+- Jetty
+  - 10.0.15 → 10.0.17
+  - 11.0.15 → 11.0.17
+- Kafka 3.5.1 → 3.6.0
+- Micrometer 1.11.3 → 1.11.5
+- Micrometer Tracing 1.1.4 → 1.1.6
+- Netty 4.1.96.Final → 4.1.100.Final
+- Netty io_uring 0.0.21.Final → 0.0.23.Final
+- Reactor 3.5.8 → 3.5.11
+- RxJava3 3.1.6 → 3.1.8
+- Sangria 4.0.1 → 4.0.2
+- Scala2.13 2.13.11 → 2.13.12
+- Spring Framework 6.0.11 → 6.0.13
+- Spring Boot
+  - 2.7.14 → 2.7.16
+  - 3.1.2 → 3.1.4
+- Tomcat
+  - 8.5.85 → 8.5.94
+  - 9.0.71 → 9.0.82
+  - 10.1.12 → 10.1.15
+- ZooKeeper 3.8.2 → 3.9.1
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'anuraaga',
+  'babjo',
+  'bkkanq',
+  'Dogacel',
+  'esperar',
+  'ghkim3221',
+  'ikhoon',
+  'injae-kim',
+  'jrhee17',
+  'kezhenxu94',
+  'Kyurenpoto',
+  'minwoox',
+  'my4-dev',
+  'ribafish',
+  'runningcode',
+  'russell-yoo',
+  'seonwoo960000',
+  'sfc-gh-skabanov',
+  'sh-cho',
+  'sindhunaydu',
+  'ta7uw',
+  'thomasbruggink',
+  'tobias-',
+  'trustin'
+]} />

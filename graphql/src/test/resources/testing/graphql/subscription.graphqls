@@ -1,0 +1,13 @@
+schema {
+    query: Query
+    subscription: Subscription
+}
+
+type Query {
+    foo: String
+}
+
+type Subscription {
+    hello: String
+    bye: String
+}

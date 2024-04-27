@@ -16,6 +16,7 @@
 import { Endpoint, Method } from '../specification';
 
 import Transport from './transport';
+import { isValidJsonMimeType, validateJsonObject } from '../json-util';
 
 export const ANNOTATED_HTTP_MIME_TYPE = 'application/json; charset=utf-8';
 
@@ -83,6 +84,7 @@ export default class AnnotatedHttpTransport extends Transport {
   protected async doSend(
     method: Method,
     headers: { [name: string]: string },
+    pathPrefix: string,
     bodyJson?: string,
     endpointPath?: string,
     queries?: string,
@@ -95,6 +97,15 @@ export default class AnnotatedHttpTransport extends Transport {
       hdrs.set(name, value);
     }
 
+    // Validate requestBody only if the content-type hasn't been overwritten and if it's not an empty string.
+    if (
+      isValidJsonMimeType(hdrs.get('content-type')) &&
+      bodyJson &&
+      bodyJson.trim()
+    ) {
+      validateJsonObject(bodyJson, 'request body');
+    }
+
     let newPath =
       endpointPath || endpoint.pathMapping.substring('exact:'.length);
     if (queries && queries.length > 1) {
@@ -103,6 +114,7 @@ export default class AnnotatedHttpTransport extends Transport {
           ? `${newPath}&${queries}`
           : `${newPath}?${queries}`;
     }
+    newPath = pathPrefix + newPath;
 
     return fetch(encodeURI(newPath), {
       headers: hdrs,

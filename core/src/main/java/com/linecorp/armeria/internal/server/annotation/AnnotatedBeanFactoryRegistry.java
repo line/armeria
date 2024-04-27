@@ -49,6 +49,7 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.server.annotation.RequestConverter;
@@ -63,7 +64,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 final class AnnotatedBeanFactoryRegistry {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedBeanFactoryRegistry.class);
 
-    private static final ReentrantLock lock = new ReentrantLock();
+    private static final ReentrantLock lock = new ReentrantShortLock();
 
     private static final ClassValue<AnnotatedBeanFactories> factories =
             new ClassValue<AnnotatedBeanFactories>() {

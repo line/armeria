@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.spring.web.reactive;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -77,7 +79,7 @@ class RetryableArmeriaReactiveWebServerFactory extends ArmeriaReactiveWebServerF
                 }
             }
 
-            assert caughtException != null;
+            assertThat(caughtException).isNotNull();
             Exceptions.throwUnsafely(caughtException);
         }
 

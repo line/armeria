@@ -3,7 +3,7 @@ plugins {
 }
 
 dependencies {
-    implementation project(':thrift0.17')
+    implementation project(':thrift0.18')
     implementation project(':core')
 
     compileOnly libs.javax.annotation

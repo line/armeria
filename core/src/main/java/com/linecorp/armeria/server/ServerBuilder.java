@@ -27,6 +27,8 @@ import static com.linecorp.armeria.server.DefaultServerConfig.validateGreaterTha
 import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
+import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
+import static com.linecorp.armeria.server.VirtualHost.validateHostnamePattern;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static java.util.Objects.requireNonNull;
@@ -47,6 +49,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -61,6 +65,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
@@ -69,9 +74,11 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -81,12 +88,16 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -95,13 +106,14 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.util.Mapping;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 
 /**
@@ -153,7 +165,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * @see VirtualHostBuilder
  */
-public final class ServerBuilder implements TlsSetters {
+public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     // Defaults to no graceful shutdown.
@@ -161,10 +173,14 @@ public final class ServerBuilder implements TlsSetters {
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = Duration.ZERO;
     private static final int PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE = 65535 - 216;
     private static final String DEFAULT_ACCESS_LOGGER_PREFIX = "com.linecorp.armeria.logging.access";
+    private static final Consumer<ChannelPipeline> DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER =
+            v -> { /* no-op */ };
 
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
+    private static final ExecutorService START_STOP_EXECUTOR = Executors.newSingleThreadExecutor(
+            ThreadFactories.newThreadFactory("startstop-support", true));
 
     static {
         RequestContextUtil.init();
@@ -177,13 +193,16 @@ public final class ServerBuilder implements TlsSetters {
     private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
     private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
 
-    private EventLoopGroup workerGroup = CommonPools.workerGroup();
+    EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
-    private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
+    private Executor startStopExecutor = START_STOP_EXECUTOR;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
+    private Consumer<ChannelPipeline> childChannelPipelineCustomizer =
+            DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER;
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
+    private boolean keepAliveOnPing = Flags.defaultServerKeepAliveOnPing();
     private long pingIntervalMillis = Flags.defaultPingIntervalMillis();
     private long maxConnectionAgeMillis = Flags.defaultMaxServerConnectionAgeMillis();
     private long connectionDrainDurationMicros = Flags.defaultServerConnectionDrainDurationMicros();
@@ -200,7 +219,8 @@ public final class ServerBuilder implements TlsSetters {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private MeterRegistry meterRegistry = Flags.meterRegistry();
-    private ServerErrorHandler errorHandler = ServerErrorHandler.ofDefault();
+    @Nullable
+    private ServerErrorHandler errorHandler;
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -215,6 +235,8 @@ public final class ServerBuilder implements TlsSetters {
     private long unhandledExceptionsReportIntervalMillis =
             Flags.defaultUnhandledExceptionsReportIntervalMillis();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
+    private int http2MaxResetFramesPerWindow = Flags.defaultServerHttp2MaxResetFramesPerMinute();
+    private int http2MaxResetFramesWindowSeconds = 60;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -231,6 +253,7 @@ public final class ServerBuilder implements TlsSetters {
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
+        virtualHostTemplate.requestAutoAbortDelayMillis(0);
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
@@ -472,6 +495,24 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * (Advanced users only) Adds the {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * This customizer is run right after the initial set of {@link ChannelHandler}s are configured.
+     * This customizer is no-op by default.
+     *
+     * <p>Note that usage of this customizer is an advanced feature and may produce unintended side effects,
+     * including complete breakdown. It is not recommended if you are not familiar with Armeria and Netty
+     * internals.
+     */
+    @UnstableApi
+    public ServerBuilder childChannelPipelineCustomizer(
+            Consumer<? super ChannelPipeline> childChannelPipelineCustomizer) {
+        requireNonNull(childChannelPipelineCustomizer, "childChannelPipelineCustomizer");
+        this.childChannelPipelineCustomizer =
+                this.childChannelPipelineCustomizer.andThen(childChannelPipelineCustomizer);
+        return this;
+    }
+
+    /**
      * Sets the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
      * {@link Service#serve(ServiceRequestContext, Request)}.
      * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
@@ -500,9 +541,36 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the worker {@link EventLoopGroup} which is responsible for running
+     * {@link Service#serve(ServiceRequestContext, Request)}.
+     * If not set, the value set via {@linkplain #workerGroup(EventLoopGroup, boolean)}
+     * or {@linkplain #workerGroup(int)} is used.
+     *
+     * @param shutdownOnStop whether to shut down the worker {@link EventLoopGroup}
+     *                       when the {@link Server} stops
+     */
+    @UnstableApi
+    public ServerBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop) {
+        virtualHostTemplate.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * running {@link Service#serve(ServiceRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    @UnstableApi
+    public ServerBuilder serviceWorkerGroup(int numThreads) {
+        virtualHostTemplate.serviceWorkerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
+        return this;
+    }
+
+    /**
      * Sets the {@link Executor} which will invoke the callbacks of {@link Server#start()},
-     * {@link Server#stop()} and {@link ServerListener}. If not set, {@link GlobalEventExecutor} will be used
-     * by default.
+     * {@link Server#stop()} and {@link ServerListener}.
      */
     public ServerBuilder startStopExecutor(Executor startStopExecutor) {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
@@ -532,6 +600,18 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the idle timeout of a connection in milliseconds for keep-alive and whether to prevent
+     * connection going idle when an HTTP/2 PING frame or {@code "OPTIONS * HTTP/1.1"} request is received.
+     *
+     * @param idleTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
+     * @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame, OPTIONS * request or not.
+     */
+    @UnstableApi
+    public ServerBuilder idleTimeoutMillis(long idleTimeoutMillis, boolean keepAliveOnPing) {
+        return idleTimeout(Duration.ofMillis(idleTimeoutMillis), keepAliveOnPing);
+    }
+
+    /**
      * Sets the idle timeout of a connection for keep-alive.
      *
      * @param idleTimeout the timeout. {@code 0} disables the timeout.
@@ -539,6 +619,21 @@ public final class ServerBuilder implements TlsSetters {
     public ServerBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
         idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
+        return this;
+    }
+
+    /**
+     * Sets the idle timeout of a connection for keep-alive and whether to prevent connection
+     * connection going idle when an HTTP/2 PING frame or {@code "OPTIONS * HTTP/1.1"} request is received.
+     *
+     * @param idleTimeout the timeout. {@code 0} disables the timeout.
+     * @param keepAliveOnPing whether to reset idle timeout on HTTP/2 PING frame, OPTIONS * request or not.
+     */
+    @UnstableApi
+    public ServerBuilder idleTimeout(Duration idleTimeout, boolean keepAliveOnPing) {
+        requireNonNull(idleTimeout, "idleTimeout");
+        idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
+        this.keepAliveOnPing = keepAliveOnPing;
         return this;
     }
 
@@ -712,6 +807,26 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the maximum number of RST frames that are allowed per window before the connection is closed. This
+     * allows to protect against the remote peer flooding us with such frames and using up a lot of CPU.
+     * Defaults to {@link Flags#defaultServerHttp2MaxResetFramesPerMinute()}.
+     *
+     * <p>Note that {@code 0} for any of the parameters means no protection should be applied.
+     */
+    @UnstableApi
+    public ServerBuilder http2MaxResetFramesPerWindow(int http2MaxResetFramesPerWindow,
+                                                      int http2MaxResetFramesWindowSeconds) {
+        checkArgument(http2MaxResetFramesPerWindow >= 0, "http2MaxResetFramesPerWindow: %s (expected: >= 0)",
+                      http2MaxResetFramesPerWindow);
+        checkArgument(http2MaxResetFramesWindowSeconds >= 0,
+                      "http2MaxResetFramesWindowSeconds: %s (expected: >= 0)",
+                      http2MaxResetFramesWindowSeconds);
+        this.http2MaxResetFramesPerWindow = http2MaxResetFramesPerWindow;
+        this.http2MaxResetFramesWindowSeconds = http2MaxResetFramesWindowSeconds;
+        return this;
+    }
+
+    /**
      * Sets the maximum size of HTTP/2 frame that can be received. Defaults to
      * {@link Flags#defaultHttp2MaxFrameSize()}.
      */
@@ -798,6 +913,31 @@ public final class ServerBuilder implements TlsSetters {
         gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
         validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
                                    gracefulShutdownQuietPeriod, "timeout");
+        return this;
+    }
+
+    /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to receive additional data even after closing the response.
+     * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public ServerBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to receive additional data even after closing the response.
+     * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public ServerBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        virtualHostTemplate.requestAutoAbortDelayMillis(delayMillis);
         return this;
     }
 
@@ -1041,9 +1181,34 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder contextPath(String... contextPaths) {
+        return contextPath(ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths")));
+    }
+
+    /**
+     * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
+     * specified context paths.
+     *
+     * @see ContextPathServicesBuilder
+     */
+    @UnstableApi
+    public ContextPathServicesBuilder contextPath(Iterable<String> contextPaths) {
+        requireNonNull(contextPaths, "contextPaths");
+        return new ContextPathServicesBuilder(
+                this, defaultVirtualHostBuilder, ImmutableSet.copyOf(contextPaths));
+    }
+
+    /**
      * Configures an {@link HttpService} of the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withRoute(Consumer<? super ServiceBindingBuilder> customizer) {
+        requireNonNull(customizer, "customizer");
         final ServiceBindingBuilder serviceBindingBuilder = new ServiceBindingBuilder(this);
         customizer.accept(serviceBindingBuilder);
         return this;
@@ -1052,6 +1217,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Returns a {@link ServiceBindingBuilder} which is for binding an {@link HttpService} fluently.
      */
+    @Override
     public ServiceBindingBuilder route() {
         return new ServiceBindingBuilder(this);
     }
@@ -1060,6 +1226,7 @@ public final class ServerBuilder implements TlsSetters {
      * Returns a {@link DecoratingServiceBindingBuilder} which is for binding a {@code decorator} fluently.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
+    @Override
     public DecoratingServiceBindingBuilder routeDecorator() {
         return new DecoratingServiceBindingBuilder(this);
     }
@@ -1087,18 +1254,10 @@ public final class ServerBuilder implements TlsSetters {
      * >       .build();
      * }</pre>
      */
+    @Override
     public ServerBuilder serviceUnder(String pathPrefix, HttpService service) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
-        if (serviceWithRoutes != null) {
-            serviceWithRoutes.routes()
-                             .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
-                                                      .mappedRoute(route)
-                                                      .build(service));
-            return this;
-        }
-        return route().addRoute(Route.builder().pathPrefix(pathPrefix).build()).build(service);
+        virtualHostTemplate.serviceUnder(pathPrefix, service);
+        return this;
     }
 
     /**
@@ -1116,40 +1275,25 @@ public final class ServerBuilder implements TlsSetters {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
+    @Override
     public ServerBuilder service(String pathPattern, HttpService service) {
         requireNonNull(pathPattern, "pathPattern");
         requireNonNull(service, "service");
         warnIfServiceHasMultipleRoutes(pathPattern, service);
-        return route().path(pathPattern).build(service);
+        virtualHostTemplate.service(pathPattern, service);
+        return this;
     }
 
     /**
      * Binds the specified {@link HttpService} at the specified {@link Route} of the default
      * {@link VirtualHost}.
      */
+    @Override
     public ServerBuilder service(Route route, HttpService service) {
         requireNonNull(route, "route");
         requireNonNull(service, "service");
         warnIfServiceHasMultipleRoutes(route.patternString(), service);
-        return route().addRoute(route).build(service);
-    }
-
-    /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}.
-     *
-     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
-     * @param decorators the decorator functions, which will be applied in the order specified.
-     */
-    public ServerBuilder service(
-            HttpServiceWithRoutes serviceWithRoutes,
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
-        requireNonNull(serviceWithRoutes, "serviceWithRoutes");
-        requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
-        requireNonNull(decorators, "decorators");
-
-        final HttpService decorated = decorate(serviceWithRoutes, decorators);
-        serviceWithRoutes.routes().forEach(route -> route().addRoute(route).build(decorated));
+        virtualHostTemplate.service(route, service);
         return this;
     }
 
@@ -1160,11 +1304,28 @@ public final class ServerBuilder implements TlsSetters {
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
      */
+    @Override
+    public ServerBuilder service(
+            HttpServiceWithRoutes serviceWithRoutes,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        virtualHostTemplate.service(serviceWithRoutes, decorators);
+        return this;
+    }
+
+    /**
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
+     * of the default {@link VirtualHost}.
+     *
+     * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
+     * @param decorators the decorator functions, which will be applied in the order specified.
+     */
+    @Override
     @SafeVarargs
     public final ServerBuilder service(
             HttpServiceWithRoutes serviceWithRoutes,
             Function<? super HttpService, ? extends HttpService>... decorators) {
-        return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+        virtualHostTemplate.service(serviceWithRoutes, decorators);
+        return this;
     }
 
     static HttpService decorate(
@@ -1182,8 +1343,10 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Binds the specified annotated service object under the path prefix {@code "/"}.
      */
+    @Override
     public ServerBuilder annotatedService(Object service) {
-        return annotatedService("/", service, Function.identity(), ImmutableList.of());
+        virtualHostTemplate.annotatedService(service);
+        return this;
     }
 
     /**
@@ -1193,11 +1356,11 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(Object service,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, Function.identity(),
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        virtualHostTemplate.annotatedService(service, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1207,19 +1370,21 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(Object service,
                                           Function<? super HttpService, ? extends HttpService> decorator,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService("/", service, decorator,
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        virtualHostTemplate.annotatedService(service, decorator, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
      * Binds the specified annotated service object under the specified path prefix.
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service) {
-        return annotatedService(pathPrefix, service, Function.identity(), ImmutableList.of());
+        virtualHostTemplate.annotatedService(pathPrefix, service);
+        return this;
     }
 
     /**
@@ -1229,11 +1394,11 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Object... exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(),
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        virtualHostTemplate.annotatedService(pathPrefix, service, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1243,13 +1408,12 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Function<? super HttpService, ? extends HttpService> decorator,
                                           Object... exceptionHandlersAndConverters) {
-
-        return annotatedService(pathPrefix, service, decorator,
-                                ImmutableList.copyOf(requireNonNull(exceptionHandlersAndConverters,
-                                                                    "exceptionHandlersAndConverters")));
+        virtualHostTemplate.annotatedService(pathPrefix, service, decorator, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1259,9 +1423,11 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction}s and/or
      *                                       the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Iterable<?> exceptionHandlersAndConverters) {
-        return annotatedService(pathPrefix, service, Function.identity(), exceptionHandlersAndConverters);
+        virtualHostTemplate.annotatedService(pathPrefix, service, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1271,18 +1437,12 @@ public final class ServerBuilder implements TlsSetters {
      *                                       the {@link RequestConverterFunction} and/or
      *                                       the {@link ResponseConverterFunction}
      */
+    @Override
     public ServerBuilder annotatedService(String pathPrefix, Object service,
                                           Function<? super HttpService, ? extends HttpService> decorator,
                                           Iterable<?> exceptionHandlersAndConverters) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(exceptionHandlersAndConverters, "exceptionHandlersAndConverters");
-        final AnnotatedServiceExtensions configurator =
-                AnnotatedServiceExtensions
-                        .ofExceptionHandlersAndConverters(exceptionHandlersAndConverters);
-        return annotatedService(pathPrefix, service, decorator, configurator.exceptionHandlers(),
-                                configurator.requestConverters(), configurator.responseConverters());
+        virtualHostTemplate.annotatedService(pathPrefix, service, decorator, exceptionHandlersAndConverters);
+        return this;
     }
 
     /**
@@ -1292,28 +1452,21 @@ public final class ServerBuilder implements TlsSetters {
      * @param requestConverterFunctions the {@link RequestConverterFunction}s
      * @param responseConverterFunctions the {@link ResponseConverterFunction}s
      */
+    @Override
     public ServerBuilder annotatedService(
             String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
-        requireNonNull(pathPrefix, "pathPrefix");
-        requireNonNull(service, "service");
-        requireNonNull(decorator, "decorator");
-        requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
-        requireNonNull(requestConverterFunctions, "requestConverterFunctions");
-        requireNonNull(responseConverterFunctions, "responseConverterFunctions");
-        return annotatedService().pathPrefix(pathPrefix)
-                                 .decorator(decorator)
-                                 .exceptionHandlers(exceptionHandlerFunctions)
-                                 .requestConverters(requestConverterFunctions)
-                                 .responseConverters(responseConverterFunctions)
-                                 .build(service);
+        virtualHostTemplate.annotatedService(pathPrefix, service, decorator, exceptionHandlerFunctions,
+                                             requestConverterFunctions, responseConverterFunctions);
+        return this;
     }
 
     /**
      * Returns an {@link AnnotatedServiceBindingBuilder} to build annotated service.
      */
+    @Override
     public AnnotatedServiceBindingBuilder annotatedService() {
         return new AnnotatedServiceBindingBuilder(this);
     }
@@ -1352,6 +1505,35 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the base context path for this {@link ServerBuilder}. Services and decorators added to this
+     * {@link ServerBuilder} will be prefixed by the specified {@code baseContextPath}. If a service is bound
+     * to a scoped {@link #contextPath(String...)}, the {@code baseContextPath} will be prepended to the
+     * {@code contextPath}.
+     *
+     * <pre>{@code
+     * Server
+     *   .builder()
+     *   .baseContextPath("/api")
+     *   // The following service will be served at '/api/v1/items'.
+     *   .service("/v1/items", itemService)
+     *   .contextPath("/v2")
+     *   // The following service will be served at '/api/v2/users'.
+     *   .service("/users", usersService)
+     *   .and() // end of the "/v2" contextPath
+     *   .build();
+     * }
+     * </pre>
+     *
+     * <p>Note that the {@code baseContextPath} won't be applied to {@link VirtualHost}s
+     * added to this {@link Server}. To configure the context path for individual
+     * {@link VirtualHost}s, use {@link VirtualHostBuilder#baseContextPath(String)} instead.
+     */
+    public ServerBuilder baseContextPath(String baseContextPath) {
+        defaultVirtualHostBuilder.baseContextPath(baseContextPath);
+        return this;
+    }
+
+    /**
      * Configures the default {@link VirtualHost} with the {@code customizer}.
      */
     public ServerBuilder withDefaultVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
@@ -1369,9 +1551,24 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Configures a {@link VirtualHost} with the {@code customizer}.
+     *
+     * @deprecated Use {@link #withVirtualHost(String, Consumer)} instead.
      */
+    @Deprecated
     public ServerBuilder withVirtualHost(Consumer<? super VirtualHostBuilder> customizer) {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false);
+        customizer.accept(virtualHostBuilder);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return this;
+    }
+
+    /**
+     * Configures a {@link VirtualHost} with the {@code customizer}.
+     */
+    public ServerBuilder withVirtualHost(String hostnamePattern,
+                                         Consumer<? super VirtualHostBuilder> customizer) {
+        final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
+        requireNonNull(customizer, "customizer");
         customizer.accept(virtualHostBuilder);
         virtualHostBuilders.add(virtualHostBuilder);
         return this;
@@ -1384,8 +1581,7 @@ public final class ServerBuilder implements TlsSetters {
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
     public VirtualHostBuilder virtualHost(String hostnamePattern) {
-        final VirtualHostBuilder virtualHostBuilder =
-                new VirtualHostBuilder(this, false).hostnamePattern(hostnamePattern);
+        final VirtualHostBuilder virtualHostBuilder = findOrCreateVirtualHostBuilder(hostnamePattern);
         virtualHostBuilders.add(virtualHostBuilder);
         return virtualHostBuilder;
     }
@@ -1396,7 +1592,10 @@ public final class ServerBuilder implements TlsSetters {
      * @param defaultHostname default hostname of this virtual host
      * @param hostnamePattern virtual host name regular expression
      * @return {@link VirtualHostBuilder} for building the virtual host
+     *
+     * @deprecated prefer {@link #virtualHost(String)} with {@link VirtualHostBuilder#defaultHostname(String)}.
      */
+    @Deprecated
     public VirtualHostBuilder virtualHost(String defaultHostname, String hostnamePattern) {
         final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, false)
                 .defaultHostname(defaultHostname)
@@ -1433,14 +1632,32 @@ public final class ServerBuilder implements TlsSetters {
         return virtualHostBuilder;
     }
 
+    private VirtualHostBuilder findOrCreateVirtualHostBuilder(String hostnamePattern) {
+        requireNonNull(hostnamePattern, "hostnamePattern");
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        validateHostnamePattern(hostAndPort.getHost());
+
+        final String normalizedHostnamePattern = normalizeHostnamePattern(hostAndPort.getHost());
+        final int port = hostAndPort.getPortOrDefault(-1);
+        for (VirtualHostBuilder virtualHostBuilder : virtualHostBuilders) {
+            if (!virtualHostBuilder.defaultVirtualHost() &&
+                virtualHostBuilder.equalsHostnamePattern(normalizedHostnamePattern, port)) {
+                return virtualHostBuilder;
+            }
+        }
+        return new VirtualHostBuilder(this, false).hostnamePattern(normalizedHostnamePattern, port);
+    }
+
     /**
      * Decorates all {@link HttpService}s with the specified {@code decorator}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
      * @param decorator the {@link Function} that decorates {@link HttpService}s
      */
+    @Override
     public ServerBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
-        return decorator(Route.ofCatchAll(), decorator);
+        virtualHostTemplate.decorator(decorator);
+        return this;
     }
 
     /**
@@ -1450,18 +1667,22 @@ public final class ServerBuilder implements TlsSetters {
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
      */
+    @Override
     public ServerBuilder decorator(
             DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return decorator(Route.ofCatchAll(), decoratingHttpServiceFunction);
+        virtualHostTemplate.decorator(decoratingHttpServiceFunction);
+        return this;
     }
 
     /**
      * Decorates {@link HttpService}s whose {@link Route} matches the specified {@code pathPattern}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
+    @Override
     public ServerBuilder decorator(
             String pathPattern, Function<? super HttpService, ? extends HttpService> decorator) {
-        return decorator(Route.builder().path(pathPattern).build(), decorator);
+        virtualHostTemplate.decorator(pathPattern, decorator);
+        return this;
     }
 
     /**
@@ -1471,9 +1692,11 @@ public final class ServerBuilder implements TlsSetters {
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}.
      */
+    @Override
     public ServerBuilder decorator(
             String pathPattern, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return decorator(Route.builder().path(pathPattern).build(), decoratingHttpServiceFunction);
+        virtualHostTemplate.decorator(pathPattern, decoratingHttpServiceFunction);
+        return this;
     }
 
     /**
@@ -1484,11 +1707,11 @@ public final class ServerBuilder implements TlsSetters {
      * @param decorator the {@link Function} that decorates {@link HttpService} which matches
      *                  the specified {@link Route}
      */
+    @Override
     public ServerBuilder decorator(
             Route route, Function<? super HttpService, ? extends HttpService> decorator) {
-        requireNonNull(route, "route");
-        requireNonNull(decorator, "decorator");
-        return routingDecorator(new RouteDecoratingService(route, decorator));
+        virtualHostTemplate.decorator(route, decorator);
+        return this;
     }
 
     /**
@@ -1499,11 +1722,11 @@ public final class ServerBuilder implements TlsSetters {
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
      */
+    @Override
     public ServerBuilder decorator(
             Route route, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
-        return decorator(route, delegate -> new FunctionalDecoratingHttpService(
-                delegate, decoratingHttpServiceFunction));
+        virtualHostTemplate.decorator(route, decoratingHttpServiceFunction);
+        return this;
     }
 
     /**
@@ -1513,23 +1736,28 @@ public final class ServerBuilder implements TlsSetters {
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
      */
+    @Override
     public ServerBuilder decoratorUnder(
             String prefix, DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return decorator(Route.builder().pathPrefix(prefix).build(), decoratingHttpServiceFunction);
+        virtualHostTemplate.decoratorUnder(prefix, decoratingHttpServiceFunction);
+        return this;
     }
 
     /**
      * Decorates {@link HttpService}s under the specified directory.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      */
+    @Override
     public ServerBuilder decoratorUnder(String prefix,
                                         Function<? super HttpService, ? extends HttpService> decorator) {
-        return decorator(Route.builder().pathPrefix(prefix).build(), decorator);
+        virtualHostTemplate.decoratorUnder(prefix, decorator);
+        return this;
     }
 
     /**
-     * Sets the {@link ServerErrorHandler} that provides the error responses in case of unexpected exceptions
-     * or protocol errors.
+     * Adds the {@link ServerErrorHandler} that provides the error responses in case of unexpected exceptions
+     * or protocol errors. If multiple handlers are added, the latter is composed with the former using
+     * {@link ServerErrorHandler#orElse(ServerErrorHandler)}.
      *
      * <p>Note that the {@link HttpResponseException} is not handled by the {@link ServerErrorHandler}
      * but the {@link HttpResponseException#httpResponse()} is sent as-is.
@@ -1537,16 +1765,12 @@ public final class ServerBuilder implements TlsSetters {
     @UnstableApi
     public ServerBuilder errorHandler(ServerErrorHandler errorHandler) {
         requireNonNull(errorHandler, "errorHandler");
-        if (errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
+        if (this.errorHandler == null) {
+            this.errorHandler = errorHandler;
+        } else {
+            this.errorHandler = this.errorHandler.orElse(errorHandler);
         }
-        this.errorHandler = errorHandler;
         return this;
-    }
-
-    ServerErrorHandler errorHandler() {
-        return errorHandler;
     }
 
     /**
@@ -1818,6 +2042,19 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the {@link AutoCloseable} which will be called whenever this {@link RequestContext} is popped
+     * from the {@link RequestContextStorage}.
+     *
+     * @param contextHook the {@link Supplier} that provides the {@link AutoCloseable}
+     */
+    @UnstableApi
+    public ServerBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        virtualHostTemplate.contextHook(contextHook);
+        return this;
+    }
+
+    /**
      * Sets the {@link DependencyInjector} to inject dependencies in annotated services.
      *
      * @param dependencyInjector the {@link DependencyInjector} to inject dependencies
@@ -1860,7 +2097,7 @@ public final class ServerBuilder implements TlsSetters {
     /**
      * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
-     * case sensitive HTTP/1 headers.
+     * case-sensitive HTTP/1 headers.
      */
     public ServerBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
         requireNonNull(http1HeaderNaming, "http1HeaderNaming");
@@ -1926,13 +2163,20 @@ public final class ServerBuilder implements TlsSetters {
             unhandledExceptionsReporter = null;
         }
 
+        final ServerErrorHandler errorHandler;
+        if (this.errorHandler == null) {
+            errorHandler = ServerErrorHandler.ofDefault();
+        } else {
+            // Ensure that ServerErrorHandler never returns null by falling back to the default.
+            errorHandler = this.errorHandler.orElse(ServerErrorHandler.ofDefault());
+        }
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
-                                                unhandledExceptionsReporter);
+                                                unhandledExceptionsReporter, errorHandler);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector,
-                                                         unhandledExceptionsReporter))
+                                                         unhandledExceptionsReporter, errorHandler))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -1973,7 +2217,7 @@ public final class ServerBuilder implements TlsSetters {
                 ports = ImmutableList.of(new ServerPort(0, HTTP));
             }
         } else {
-            if (!Flags.useOpenSsl() && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
+            if (Flags.tlsEngineType() != TlsEngineType.OPENSSL && !SystemInfo.jettyAlpnOptionalOrAvailable()) {
                 throw new IllegalStateException(
                         "TLS configured but this is Java 8 and neither OpenSSL nor Jetty ALPN could be " +
                         "detected. To use TLS with Armeria, you must either use Java 9+, enable OpenSSL, " +
@@ -2020,18 +2264,22 @@ public final class ServerBuilder implements TlsSetters {
         final Map<ChannelOption<?>, Object> newChildChannelOptions =
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
-
         final BlockingTaskExecutor blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
+
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
+                maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
-                http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
+                http2MaxFrameSize, http2MaxHeaderListSize,
+                http2MaxResetFramesPerWindow, http2MaxResetFramesWindowSeconds,
+                http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
                 blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
+                childChannelPipelineCustomizer,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
@@ -2046,25 +2294,43 @@ public final class ServerBuilder implements TlsSetters {
      */
     private static List<ServerPort> resolveDistinctPorts(List<ServerPort> ports) {
         final List<ServerPort> distinctPorts = new ArrayList<>();
-        for (final ServerPort p : ports) {
+        for (final ServerPort port : ports) {
             boolean found = false;
             // Do not check the port number 0 because a user may want his or her server to be bound
             // on multiple arbitrary ports.
-            if (p.localAddress().getPort() > 0) {
+            final InetSocketAddress portAddress = port.localAddress();
+            if (portAddress.getPort() > 0) {
                 for (int i = 0; i < distinctPorts.size(); i++) {
-                    final ServerPort port = distinctPorts.get(i);
-                    if (port.localAddress().equals(p.localAddress())) {
+                    final ServerPort distinctPort = distinctPorts.get(i);
+                    final InetSocketAddress distinctPortAddress = distinctPort.localAddress();
+
+                    // Compare the addresses taking `DomainSocketAddress` into account.
+                    final boolean hasSameAddress;
+                    if (portAddress instanceof DomainSocketAddress) {
+                        if (distinctPortAddress instanceof DomainSocketAddress) {
+                            hasSameAddress = ((DomainSocketAddress) portAddress).path().equals(
+                                    ((DomainSocketAddress) distinctPortAddress).path());
+                        } else {
+                            hasSameAddress = false;
+                        }
+                    } else {
+                        hasSameAddress = portAddress.equals(distinctPortAddress);
+                    }
+
+                    // Merge two `ServerPort`s into one if their addresses are equal.
+                    if (hasSameAddress) {
                         final ServerPort merged =
-                                new ServerPort(port.localAddress(),
-                                               Sets.union(port.protocols(), p.protocols()));
+                                new ServerPort(distinctPort.localAddress(),
+                                               Sets.union(distinctPort.protocols(), port.protocols()));
                         distinctPorts.set(i, merged);
                         found = true;
                         break;
                     }
                 }
             }
+
             if (!found) {
-                distinctPorts.add(p);
+                distinctPorts.add(port);
             }
         }
         return Collections.unmodifiableList(distinctPorts);
@@ -2118,19 +2384,5 @@ public final class ServerBuilder implements TlsSetters {
                             path, service);
             }
         }
-    }
-
-    @Override
-    public String toString() {
-        return DefaultServerConfig.toString(
-                getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
-                maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
-                http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
-                http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
-                meterRegistry, channelOptions, childChannelOptions,
-                clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, dependencyInjector, absoluteUriTransformer,
-                unhandledExceptionsReportIntervalMillis);
     }
 }

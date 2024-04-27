@@ -19,27 +19,28 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
-import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
+import static com.linecorp.armeria.internal.client.PendingExceptionUtil.getPendingException;
+import static com.linecorp.armeria.internal.client.PendingExceptionUtil.setPendingException;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -49,11 +50,8 @@ import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
-import io.micrometer.core.instrument.Tag;
-import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
@@ -64,9 +62,7 @@ import io.netty.handler.codec.http2.Http2ConnectionPrefaceAndSettingsFrameWritte
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.proxy.ProxyConnectionEvent;
-import io.netty.handler.ssl.SslCloseCompletionEvent;
-import io.netty.handler.ssl.SslHandshakeCompletionEvent;
-import io.netty.util.AttributeKey;
+import io.netty.handler.ssl.SslCompletionEvent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 
@@ -74,25 +70,26 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     private static final Logger logger = LoggerFactory.getLogger(HttpSessionHandler.class);
 
-    private static final AttributeKey<Throwable> PENDING_EXCEPTION =
-            AttributeKey.valueOf(HttpSessionHandler.class, "PENDING_EXCEPTION");
-
     private final HttpChannelPool channelPool;
     private final Channel channel;
     private final SocketAddress remoteAddress;
     private final Promise<Channel> sessionPromise;
-    private final ScheduledFuture<?> sessionTimeoutFuture;
+    private final int connectionTimeoutMillis;
     private final SessionProtocol desiredProtocol;
+    private final SerializationFormat serializationFormat;
     private final PoolKey poolKey;
     private final HttpClientFactory clientFactory;
 
+    @Nullable
+    private ScheduledFuture<?> sessionTimeoutFuture;
     @Nullable
     private SocketAddress proxyDestinationAddress;
 
     /**
      * Whether a new request can acquire this channel from {@link HttpChannelPool}.
      */
-    private volatile boolean isAcquirable;
+    @Nullable
+    private volatile Boolean isAcquirable;
 
     /**
      * The current negotiated {@link SessionProtocol}.
@@ -120,20 +117,53 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      * {@code true} if the protocol upgrade to HTTP/2 has failed.
      * If set to {@code true}, another connection attempt will follow.
      */
-    private boolean needsRetryWithH1C;
+    @Nullable
+    private SessionProtocol retryProtocol;
+
+    /**
+     * {@code true} if an {@link Http2Settings} has been received from the remote endpoint.
+     */
+    private boolean isSettingsFrameReceived;
+    // Note: This field never becomes false once it becomes true.
+    private boolean channelActivated;
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
-                       Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
-                       SessionProtocol desiredProtocol, PoolKey poolKey,
-                       HttpClientFactory clientFactory) {
+                       Promise<Channel> sessionPromise, int connectionTimeoutMillis,
+                       SessionProtocol desiredProtocol, SerializationFormat serializationFormat,
+                       PoolKey poolKey, HttpClientFactory clientFactory) {
         this.channelPool = requireNonNull(channelPool, "channelPool");
         this.channel = requireNonNull(channel, "channel");
         remoteAddress = channel.remoteAddress();
         this.sessionPromise = requireNonNull(sessionPromise, "sessionPromise");
-        this.sessionTimeoutFuture = requireNonNull(sessionTimeoutFuture, "sessionTimeoutFuture");
+        this.connectionTimeoutMillis = connectionTimeoutMillis;
         this.desiredProtocol = desiredProtocol;
+        this.serializationFormat = serializationFormat;
         this.poolKey = poolKey;
         this.clientFactory = clientFactory;
+
+        if (!poolKey.proxyConfig.proxyType().isForwardProxy()) {
+            scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
+        } else {
+            // A session timeout for a proxied connection may be scheduled when ProxyConnectionEvent is
+            // received.
+        }
+    }
+
+    private void scheduleSessionTimeout(Channel channel, Promise<Channel> sessionPromise,
+                                        int connectionTimeoutMillis, SessionProtocol desiredProtocol) {
+        assert sessionTimeoutFuture == null : "sessionTimeoutFuture is scheduled already.";
+        sessionTimeoutFuture = channel.eventLoop().schedule(() -> {
+            if (sessionPromise.tryFailure(new SessionProtocolNegotiationException(
+                    desiredProtocol,
+                    "connection established, but session creation timed out: " + channel))) {
+                channel.close();
+            }
+        }, connectionTimeoutMillis, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public SerializationFormat serializationFormat() {
+        return serializationFormat;
     }
 
     @Override
@@ -178,7 +208,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
         } else {
             // Don't allow to send a request if a connection is closed or about to be closed for HTTP/1.
-            return isAcquirable();
+            return isAcquirable(responseDecoder.keepAliveHandler());
         }
     }
 
@@ -195,8 +225,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         assert protocol != null;
         assert responseDecoder != null;
         assert requestEncoder != null;
-        if (!protocol.isMultiplex()) {
-            // When HTTP/1.1 is used:
+        if (!protocol.isMultiplex() && !serializationFormat.requiresNewConnection(protocol)) {
+            // When HTTP/1.1 is used and the serialization format does not require
+            // a new connection (w.g. WebSocket):
             // If pipelining is enabled, return as soon as the request is fully sent.
             // If pipelining is disabled,
             // return after the response is fully received and the request is fully sent.
@@ -205,28 +236,31 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                     useHttp1Pipelining ? req.whenComplete()
                                        : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
             completionFuture.handle((ret, cause) -> {
-                if (isAcquirable()) {
+                if (isAcquirable(responseDecoder.keepAliveHandler())) {
                     pooledChannel.release();
                 }
                 return null;
             });
         }
 
-        if (ctx.exchangeType().isRequestStreaming()) {
-            final HttpRequestSubscriber reqSubscriber = new HttpRequestSubscriber(
-                    channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
-            // A StreamMessage of a request body uses RequestContext to get the default SubscriberExecutor.
-            try (SafeCloseable ignored = ctx.push()) {
-                req.subscribe(reqSubscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
-            }
-        } else {
-            final AggregatedHttpRequestHandler reqHandler = new AggregatedHttpRequestHandler(
-                    channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
-            try (SafeCloseable ignored = ctx.push()) {
+        try (SafeCloseable ignored = ctx.push()) {
+            if (!ctx.exchangeType().isRequestStreaming()) {
+                final AggregatedHttpRequestHandler reqHandler = new AggregatedHttpRequestHandler(
+                        channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
                 req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), channel.eventLoop()))
                    .handle(reqHandler);
+                return;
             }
+
+            final AbstractHttpRequestSubscriber subscriber = AbstractHttpRequestSubscriber.of(
+                    channel, requestEncoder, responseDecoder, protocol,
+                    ctx, req, res, writeTimeoutMillis, isWebSocket());
+            req.subscribe(subscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
         }
+    }
+
+    private boolean isWebSocket() {
+        return serializationFormat == SerializationFormat.WS;
     }
 
     @Override
@@ -272,37 +306,49 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public void retryWithH1C() {
-        needsRetryWithH1C = true;
+    public void retryWith(SessionProtocol protocol) {
+        retryProtocol = protocol;
     }
 
     @Override
     public boolean isAcquirable() {
-        if (!isAcquirable) {
-            return false;
-        }
         // responseDecoder and keepAliveHandler are set before this session is added to the pool.
         assert responseDecoder != null;
-        final KeepAliveHandler keepAliveHandler = responseDecoder.keepAliveHandler();
-        assert keepAliveHandler != null;
+        return isAcquirable(responseDecoder.keepAliveHandler());
+    }
+
+    @Override
+    public boolean isAcquirable(KeepAliveHandler keepAliveHandler) {
+        final Boolean isAcquirable = this.isAcquirable;
+        if (isAcquirable == null || !isAcquirable) {
+            return false;
+        }
         return !keepAliveHandler.needsDisconnection();
     }
 
     @Override
     public void deactivate() {
-        if (isAcquirable) {
-            isAcquirable = false;
-        }
+        isAcquirable = false;
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        isAcquirable = channel.isActive();
+        channelActivated = channel.isActive();
+        if (isAcquirable == null) {
+            isAcquirable = channelActivated;
+        }
+        tryCompleteSessionPromise(ctx);
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        isAcquirable = true;
+        channelActivated = true;
+        // deactivate() may be called before channelActive() event if the first request contains
+        // "connection:close" or triggers initiateConnectionShutdown().
+        if (isAcquirable == null) {
+            isAcquirable = true;
+        }
+        tryCompleteSessionPromise(ctx);
     }
 
     @Override
@@ -316,6 +362,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             } else {
                 maxUnfinishedResponses = Integer.MAX_VALUE;
             }
+            isSettingsFrameReceived = true;
+            tryCompleteSessionPromise(ctx);
             return;
         }
 
@@ -339,43 +387,26 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             assert protocol == null;
             assert responseDecoder == null;
 
-            sessionTimeoutFuture.cancel(false);
-
             // Set the current protocol and its associated WaitsHolder implementation.
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
-
-                final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
-                final long pingIntervalMillis = clientFactory.pingIntervalMillis();
-                final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
-                final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
-                final boolean needsKeepAliveHandler =
-                        needsKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
-                                              maxConnectionAgeMillis, maxNumRequestsPerConnection);
-
-                final KeepAliveHandler keepAliveHandler;
-                if (needsKeepAliveHandler) {
-                    final Timer keepAliveTimer =
-                            MoreMeters.newTimer(clientFactory.meterRegistry(),
-                                                "armeria.client.connections.lifespan",
-                                                ImmutableList.of(Tag.of("protocol", protocol.uriText())));
-                    keepAliveHandler = new Http1ClientKeepAliveHandler(
-                            channel, responseDecoder, keepAliveTimer, idleTimeoutMillis,
-                            pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                final HttpResponseDecoder responseDecoder;
+                if (isWebSocket()) {
+                    responseDecoder = ctx.pipeline().get(WebSocketHttp1ClientChannelHandler.class);
                 } else {
-                    keepAliveHandler = new NoopKeepAliveHandler();
+                    responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
                 }
+                final KeepAliveHandler keepAliveHandler = responseDecoder.keepAliveHandler();
+                keepAliveHandler.initialize(ctx);
 
                 final ClientHttp1ObjectEncoder requestEncoder =
                         new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming(),
-                                                     keepAliveHandler);
+                                                     keepAliveHandler,
+                                                     isWebSocket());
                 if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
                     ((Http1ClientKeepAliveHandler) keepAliveHandler).setEncoder(requestEncoder);
                 }
-
-                responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
 
                 this.requestEncoder = requestEncoder;
                 this.responseDecoder = responseDecoder;
@@ -391,28 +422,36 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 throw new Error(); // Should never reach here.
             }
 
-            if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT) {
-                if (proxyDestinationAddress != null) {
-                    // ProxyConnectionEvent was already triggered.
-                    tryCompleteSessionPromise(ctx);
-                }
-            } else {
-                tryCompleteSessionPromise(ctx);
-            }
+            tryCompleteSessionPromise(ctx);
             return;
         }
 
         if (evt instanceof SessionProtocolNegotiationException ||
             evt instanceof ProxyConnectException) {
-            sessionTimeoutFuture.cancel(false);
-            sessionPromise.tryFailure((Throwable) evt);
+            tryFailSessionPromise((Throwable) evt);
             ctx.close();
             return;
         }
 
+        if (evt instanceof SslCompletionEvent) {
+            final SslCompletionEvent sslCompletionEvent = (SslCompletionEvent) evt;
+            if (sslCompletionEvent.isSuccess()) {
+                // Expected event
+            } else {
+                Throwable handshakeException = sslCompletionEvent.cause();
+                final Throwable pendingException = getPendingException(ctx);
+                if (pendingException != null && handshakeException != pendingException) {
+                    // Use pendingException as the primary cause.
+                    pendingException.addSuppressed(handshakeException);
+                    handshakeException = pendingException;
+                }
+                tryFailSessionPromise(handshakeException);
+                ctx.close();
+            }
+            return;
+        }
+
         if (evt instanceof Http2ConnectionPrefaceAndSettingsFrameWrittenEvent ||
-            evt instanceof SslHandshakeCompletionEvent ||
-            evt instanceof SslCloseCompletionEvent ||
             evt instanceof ChannelInputShutdownReadComplete) {
             // Expected events
             return;
@@ -420,9 +459,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
         if (evt instanceof ProxyConnectionEvent) {
             proxyDestinationAddress = ((ProxyConnectionEvent) evt).destinationAddress();
-            if (protocol != null) {
-                // SessionProtocol event was already triggered.
-                tryCompleteSessionPromise(ctx);
+            if (!tryCompleteSessionPromise(ctx)) {
+                // A session has not been created yet. Additional handshakes will be done by HTTP/1 or HTTP/2.
+                if (poolKey.proxyConfig.proxyType().isForwardProxy()) {
+                    scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
+                }
             }
             return;
         }
@@ -430,10 +471,43 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         logger.warn("{} Unexpected user event: {}", channel, evt);
     }
 
-    private void tryCompleteSessionPromise(ChannelHandlerContext ctx) {
-        if (!sessionPromise.trySuccess(channel)) {
-            // Session creation has been failed already; close the connection.
+    /**
+     * Tries to complete the {@link #sessionPromise} if the session is ready to serve.
+     *
+     * @return {@code true} if the {@link #sessionPromise} has been completed successfully or exceptionally.
+     *         {@code false} if the {@link #sessionPromise} is still incomplete.
+     */
+    private boolean tryCompleteSessionPromise(ChannelHandlerContext ctx) {
+        if (protocol == null || !channelActivated) {
+            return false;
+        }
+        if (poolKey.proxyConfig.proxyType() != ProxyType.DIRECT && proxyDestinationAddress == null) {
+            // ProxyConnectionEvent is necessary for a proxied connection.
+            return false;
+        }
+        if (protocol.isExplicitHttp2() && !isSettingsFrameReceived) {
+            // Http2Settings should be received for HTTP/2.
+            return false;
+        }
+
+        if (sessionTimeoutFuture != null) {
+            sessionTimeoutFuture.cancel(false);
+        }
+        if (sessionPromise.trySuccess(channel) || sessionPromise.isSuccess()) {
+            // The session is created successfully or has already been created.
+        } else {
+            // The session creation has been failed already; close the connection.
             ctx.close();
+        }
+        return true;
+    }
+
+    private void tryFailSessionPromise(Throwable cause) {
+        if (sessionTimeoutFuture != null) {
+            sessionTimeoutFuture.cancel(false);
+        }
+        if (!sessionPromise.isDone()) {
+            sessionPromise.tryFailure(cause);
         }
     }
 
@@ -442,20 +516,23 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         isAcquirable = false;
 
         // Protocol upgrade has failed, but needs to retry.
-        if (needsRetryWithH1C) {
+        if (retryProtocol != null) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
-            sessionTimeoutFuture.cancel(false);
+            if (sessionTimeoutFuture != null) {
+                sessionTimeoutFuture.cancel(false);
+            }
             if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, H1C, poolKey, sessionPromise);
+                channelPool.connect(proxyDestinationAddress, retryProtocol, serializationFormat,
+                                    poolKey, sessionPromise);
             } else {
-                channelPool.connect(remoteAddress, H1C, poolKey, sessionPromise);
+                channelPool.connect(remoteAddress, retryProtocol, serializationFormat, poolKey, sessionPromise);
             }
         } else {
             // Fail all pending responses.
             final HttpResponseDecoder responseDecoder = this.responseDecoder;
             final Throwable pendingException;
             if (responseDecoder != null && responseDecoder.hasUnfinishedResponses()) {
-                pendingException = getPendingException(ctx);
+                pendingException = newClosedSessionException(ctx);
                 responseDecoder.failUnfinishedResponses(pendingException);
             } else {
                 pendingException = null;
@@ -463,11 +540,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
             // Cancel the timeout and reject the sessionPromise just in case the connection has been closed
             // even before the session protocol negotiation is done.
-            sessionTimeoutFuture.cancel(false);
-            if (!sessionPromise.isDone()) {
-                sessionPromise.tryFailure(pendingException != null ? pendingException
-                                                                   : getPendingException(ctx));
-            }
+            tryFailSessionPromise(pendingException != null ? pendingException
+                                                           : newClosedSessionException(ctx));
         }
     }
 
@@ -477,7 +551,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
             final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
             channelPool.maybeHandleProxyFailure(protocol, poolKey, wrapped);
-            sessionPromise.tryFailure(wrapped);
+            tryFailSessionPromise(wrapped);
             return;
         }
         setPendingException(ctx, new ClosedSessionException(cause));
@@ -485,21 +559,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             ctx.close();
         } else {
             // Netty will close the connection automatically on an IOException.
-        }
-    }
-
-    private static Throwable getPendingException(ChannelHandlerContext ctx) {
-        if (ctx.channel().hasAttr(PENDING_EXCEPTION)) {
-            return ctx.channel().attr(PENDING_EXCEPTION).get();
-        }
-
-        return ClosedSessionException.get();
-    }
-
-    static void setPendingException(ChannelHandlerContext ctx, Throwable cause) {
-        final Throwable previousCause = ctx.channel().attr(PENDING_EXCEPTION).setIfAbsent(cause);
-        if (previousCause != null && logger.isWarnEnabled()) {
-            logger.warn("{} Unexpected suppressed exception:", ctx.channel(), cause);
         }
     }
 }

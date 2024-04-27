@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.spring.tomcat;
 
+import static com.linecorp.armeria.spring.tomcat.MatrixVariablesTest.TOMCAT_BASE_PATH;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,8 +34,6 @@ import jakarta.inject.Inject;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class ErrorHandlingTest {
-
-    private static final String TOMCAT_BASE_PATH = "/tomcat/api/rest/v1";
 
     @LocalArmeriaPort
     private int port;

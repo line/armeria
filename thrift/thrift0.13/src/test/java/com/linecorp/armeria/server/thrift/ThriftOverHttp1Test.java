@@ -40,9 +40,9 @@ import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
-import com.linecorp.armeria.service.test.thrift.main.SleepService;
 
 import io.netty.util.AsciiString;
+import testing.thrift.main.SleepService;
 
 public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
     @Override
@@ -93,7 +93,7 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
         // FIXME: Enable this test once we have a working Thrift-over-HTTP/1 client with pipelining.
         try (TTransport transport = newTransport("http", "/sleep")) {
             final SleepService.Client client = new SleepService.Client.Factory().getClient(
-                    ThriftProtocolFactories.BINARY.getProtocol(transport));
+                    ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             client.send_sleep(1000);
             client.send_sleep(500);

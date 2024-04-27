@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Locale.LanguageRange;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -46,8 +47,10 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
+import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -278,6 +281,61 @@ public interface HttpRequest extends Request, HttpMessage {
         } else {
             return new PublisherBasedHttpRequest(headers, publisher);
         }
+    }
+
+    /**
+     * Creates a new instance from an existing {@link RequestHeaders}, {@link Publisher} and trailers.
+     *
+     * <p>Note that the {@link HttpData}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    @UnstableApi
+    static HttpRequest of(RequestHeaders headers,
+                          Publisher<? extends HttpData> publisher,
+                          HttpHeaders trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailers, "trailers");
+        if (trailers.isEmpty()) {
+            return of(headers, publisher);
+        }
+        return of(headers, new SurroundingPublisher<>(null, publisher, unused -> trailers));
+    }
+
+    /**
+     * Creates a new HTTP request whose {@link Publisher} is produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned request will be
+     * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual data and trailers
+     */
+    @UnstableApi
+    static HttpRequest of(RequestHeaders headers,
+                          CompletionStage<? extends StreamMessage<? extends HttpObject>> stage) {
+        requireNonNull(headers, "headers");
+        requireNonNull(stage, "stage");
+        return of(headers, StreamMessage.of(stage));
+    }
+
+    /**
+     * Creates a new HTTP request whose {@link Publisher} is produced by the specified
+     * {@link CompletionStage}. If the specified {@link CompletionStage} fails, the returned request will be
+     * closed with the same cause as well.
+     *
+     * @param stage the {@link CompletionStage} which will produce the actual data and trailers
+     * @param subscriberExecutor the {@link EventExecutor} which will be used when a user subscribes
+     *                           the returned {@link HttpRequest} using {@link #subscribe(Subscriber)}
+     *                           or {@link #subscribe(Subscriber, SubscriptionOption...)}.
+     */
+    @UnstableApi
+    static HttpRequest of(RequestHeaders headers,
+                          CompletionStage<? extends StreamMessage<? extends HttpObject>> stage,
+                          EventExecutor subscriberExecutor) {
+        requireNonNull(headers, "headers");
+        requireNonNull(stage, "stage");
+        requireNonNull(subscriberExecutor, "subscriberExecutor");
+        return of(headers, StreamMessage.of(stage, subscriberExecutor));
     }
 
     /**
@@ -751,5 +809,11 @@ public interface HttpRequest extends Request, HttpMessage {
     default HttpRequest peekError(Consumer<? super Throwable> action) {
         requireNonNull(action, "action");
         return of(headers(), HttpMessage.super.peekError(action));
+    }
+
+    @Override
+    default HttpRequest subscribeOn(EventExecutor eventExecutor) {
+        requireNonNull(eventExecutor, "eventExecutor");
+        return of(headers(), HttpMessage.super.subscribeOn(eventExecutor));
     }
 }

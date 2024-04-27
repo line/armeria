@@ -198,7 +198,7 @@ public final class TextFormatter {
      * that it does not format a host name if it's not available or it's same with the IP address.
      */
     public static void appendSocketAddress(StringBuilder buf, @Nullable SocketAddress addr) {
-        if (!(addr instanceof InetSocketAddress)) {
+        if (!(addr instanceof InetSocketAddress) || addr instanceof DomainSocketAddress) {
             buf.append(addr);
             return;
         }

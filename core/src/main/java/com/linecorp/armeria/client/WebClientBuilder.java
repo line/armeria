@@ -147,6 +147,16 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public WebClientBuilder requestAutoAbortDelay(Duration delay) {
+        return (WebClientBuilder) super.requestAutoAbortDelay(delay);
+    }
+
+    @Override
+    public WebClientBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        return (WebClientBuilder) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
     public WebClientBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return (WebClientBuilder) super.requestIdGenerator(requestIdGenerator);
     }
@@ -160,6 +170,11 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     public WebClientBuilder endpointRemapper(
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         return (WebClientBuilder) super.endpointRemapper(endpointRemapper);
+    }
+
+    @Override
+    public WebClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (WebClientBuilder) super.contextHook(contextHook);
     }
 
     @Override

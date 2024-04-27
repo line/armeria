@@ -40,8 +40,11 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Server;
@@ -89,7 +92,8 @@ final class SamlService implements HttpServiceWithRoutes {
                                                                      sp.idpConfigs(),
                                                                      sp.defaultIdpConfig(),
                                                                      sp.requestIdManager(),
-                                                                     sp.ssoHandler())));
+                                                                     sp.ssoHandler(),
+                                                                     sp.isSignatureRequired())));
         sp.sloEndpoints().forEach(
                 cfg -> builder.put(cfg.uri().getPath(),
                                    new SamlSingleLogoutFunction(cfg,
@@ -99,7 +103,8 @@ final class SamlService implements HttpServiceWithRoutes {
                                                                 sp.idpConfigs(),
                                                                 sp.defaultIdpConfig(),
                                                                 sp.requestIdManager(),
-                                                                sp.sloHandler())));
+                                                                sp.sloHandler(),
+                                                                sp.isSignatureRequired())));
         final Route route = sp.metadataRoute();
         if (route.pathType() == RoutePathType.EXACT) {
             builder.put(route.paths().get(0),
@@ -152,8 +157,12 @@ final class SamlService implements HttpServiceWithRoutes {
         } else {
             f = portConfigHolder.future().thenCompose(unused -> req.aggregate());
         }
-        return HttpResponse.from(f.handle((aggregatedReq, cause) -> {
+        return HttpResponse.of(f.handleAsync((aggregatedReq, cause) -> {
             if (cause != null) {
+                cause = Exceptions.peel(cause);
+                if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+                    return HttpResponse.ofFailure(cause);
+                }
                 logger.warn("{} Failed to aggregate a SAML request.", ctx, cause);
                 return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
                                        DATA_AGGREGATION_FAILURE);
@@ -177,8 +186,9 @@ final class SamlService implements HttpServiceWithRoutes {
             // If there's no hostname set by a user, the default virtual hostname will be used.
             final String defaultHostname =
                     firstNonNull(sp.hostname(), ctx.config().virtualHost().defaultHostname());
+            // assertion, logout requests incur blocking calls
             return func.serve(ctx, aggregatedReq, defaultHostname, portConfig);
-        }));
+        }, ctx.blockingTaskExecutor()));
     }
 
     /**

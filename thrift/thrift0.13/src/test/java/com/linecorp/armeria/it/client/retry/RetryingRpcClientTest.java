@@ -55,9 +55,10 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.DevNullService;
-import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import testing.thrift.main.DevNullService;
+import testing.thrift.main.HelloService;
 
 class RetryingRpcClientTest {
 
@@ -266,7 +267,9 @@ class RetryingRpcClientTest {
         final DevNullService.Iface client =
                 ThriftClients.builder(server.httpUri())
                              .path("/thrift-devnull")
-                             .rpcDecorator(RetryingRpcClient.newDecorator(retryOnException, 10))
+                             .rpcDecorator(RetryingRpcClient.builder(retryOnException)
+                                                            .maxTotalAttempts(10)
+                                                            .newDecorator())
                              .build(DevNullService.Iface.class);
 
         doThrow(new IllegalArgumentException())

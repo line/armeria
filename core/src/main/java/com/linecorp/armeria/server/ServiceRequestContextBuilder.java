@@ -15,16 +15,13 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.CancellationScheduler.noopCancellationTask;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import javax.net.ssl.SSLSession;
@@ -42,13 +39,12 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
-import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.ImmediateEventExecutor;
 
 /**
  * Builds a new {@link ServiceRequestContext}. Note that it is not usually required to create a new context by
@@ -71,27 +67,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             throw new UnsupportedOperationException();
         }
     };
-
-    private static final CancellationTask noopCancellationTask = new CancellationTask() {
-        @Override
-        public boolean canSchedule() {
-            return true;
-        }
-
-        @Override
-        public void run(Throwable cause) { /* no-op */ }
-    };
-
-    /**
-     * A cancellation scheduler that has been finished.
-     */
-    private static final CancellationScheduler noopRequestCancellationScheduler = new CancellationScheduler(0);
-
-    static {
-        noopRequestCancellationScheduler.init(ImmediateEventExecutor.INSTANCE, noopCancellationTask,
-                                              0, /* server */ true);
-        noopRequestCancellationScheduler.finishNow();
-    }
 
     private final List<Consumer<? super ServerBuilder>> serverConfigurators = new ArrayList<>(4);
 
@@ -198,7 +173,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         if (this.proxiedAddresses != null) {
             proxiedAddresses = this.proxiedAddresses;
         } else {
-            proxiedAddresses = ProxiedAddresses.of((InetSocketAddress) remoteAddress());
+            proxiedAddresses = ProxiedAddresses.of(remoteAddress());
         }
 
         // Build a fake server which never starts up.
@@ -235,10 +210,10 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
         final RoutingContext routingCtx = DefaultRoutingContext.of(
                 server.config().defaultVirtualHost(),
-                ((InetSocketAddress) localAddress()).getHostString(),
+                localAddress().getHostString(),
                 requestTarget(),
                 req.headers(),
-                RoutingStatus.OK);
+                RoutingStatus.OK, sessionProtocol());
 
         final RoutingResult routingResult =
                 this.routingResult != null ? this.routingResult
@@ -255,29 +230,24 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
         final CancellationScheduler requestCancellationScheduler;
         if (timedOut()) {
-            requestCancellationScheduler = noopRequestCancellationScheduler;
+            requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
-            requestCancellationScheduler = new CancellationScheduler(0);
-            final CountDownLatch latch = new CountDownLatch(1);
-            eventLoop().execute(() -> {
-                requestCancellationScheduler.init(eventLoop(), noopCancellationTask, 0, /* server */ true);
-                latch.countDown();
-            });
-
-            try {
-                latch.await(1000, TimeUnit.MILLISECONDS);
-            } catch (InterruptedException ignored) {
-            }
+            requestCancellationScheduler = CancellationScheduler.ofServer(0);
+            requestCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
         }
 
+        final EventLoop serviceWorkerGroup = eventLoop();
+
         // Build the context with the properties set by a user and the fake objects.
+        final Channel ch = fakeChannel();
         return new DefaultServiceRequestContext(
-                serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
-                routingResult, exchangeType, req, sslSession(), proxiedAddresses, clientAddress,
+                serviceCfg, ch, serviceWorkerGroup, meterRegistry(), sessionProtocol(), id(), routingCtx,
+                routingResult, exchangeType, req, sslSession(), proxiedAddresses,
+                clientAddress, remoteAddress(), localAddress(),
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
-                HttpHeaders.of(), HttpHeaders.of());
+                HttpHeaders.of(), HttpHeaders.of(), serviceCfg.contextHook());
     }
 
     private static ServiceConfig findServiceConfig(Server server, HttpService service) {
@@ -318,18 +288,14 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     }
 
     @Override
-    public ServiceRequestContextBuilder remoteAddress(SocketAddress remoteAddress) {
+    public ServiceRequestContextBuilder remoteAddress(InetSocketAddress remoteAddress) {
         requireNonNull(remoteAddress, "remoteAddress");
-        checkArgument(remoteAddress instanceof InetSocketAddress,
-                      "remoteAddress: %s (expected: an InetSocketAddress)", remoteAddress);
         return (ServiceRequestContextBuilder) super.remoteAddress(remoteAddress);
     }
 
     @Override
-    public ServiceRequestContextBuilder localAddress(SocketAddress localAddress) {
+    public ServiceRequestContextBuilder localAddress(InetSocketAddress localAddress) {
         requireNonNull(localAddress, "remoteAddress");
-        checkArgument(localAddress instanceof InetSocketAddress,
-                      "localAddress: %s (expected: an InetSocketAddress)", localAddress);
         return (ServiceRequestContextBuilder) super.localAddress(localAddress);
     }
 

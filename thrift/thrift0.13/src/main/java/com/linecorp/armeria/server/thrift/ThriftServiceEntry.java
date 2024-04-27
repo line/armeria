@@ -23,6 +23,7 @@ import java.util.Set;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
 
 /**
@@ -71,6 +72,16 @@ public final class ThriftServiceEntry {
      */
     public Set<Class<?>> interfaces() {
         return metadata.interfaces();
+    }
+
+    /**
+     * Returns the associated thrift method name in the Thrift IDL.
+     */
+    public String functionName(String method) {
+        final ThriftFunction function = metadata.function(method);
+        requireNonNull(function, "metadata.function(method) returned null. metadata: " + metadata +
+                                 ", method: " + method);
+        return function.name();
     }
 
     @Override

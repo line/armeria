@@ -48,7 +48,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry,
-              HttpResponse::from, (ctx, cause) -> HttpResponse.ofFailure(cause));
+              HttpResponse::of, (ctx, cause) -> HttpResponse.ofFailure(cause));
     }
 
     @Override
@@ -61,7 +61,7 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
         final RequestTarget reqTarget = RequestTarget.forClient(originalPath, prefix);
         if (reqTarget == null) {
             return abortRequestAndReturnFailureResponse(
-                    req, new IllegalArgumentException("Invalid path: " + originalPath));
+                    req, new IllegalArgumentException("Invalid request target: " + originalPath));
         }
 
         final EndpointGroup endpointGroup;

@@ -16,6 +16,8 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.ClientOptions.REDIRECT_CONFIG;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -33,7 +35,10 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -54,6 +59,7 @@ public class AbstractClientOptionsBuilder {
 
     @Nullable
     private Consumer<ClientRequestContext> contextCustomizer;
+    private Supplier<AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
 
     /**
      * Creates a new instance.
@@ -179,6 +185,31 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * Sets the amount of time to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to send additional data even after the response is complete.
+     * Specify {@link Duration#ZERO} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder requestAutoAbortDelay(Duration delay) {
+        return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
+    }
+
+    /**
+     * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * This may be useful when you want to send additional data even after the response is complete.
+     * Specify {@code 0} to abort the {@link HttpRequest} immediately. Any negative value will not
+     * abort the request automatically. There is no delay by default.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder requestAutoAbortDelayMillis(long delayMillis) {
+        option(ClientOptions.REQUEST_AUTO_ABORT_DELAY_MILLIS, delayMillis);
+        return this;
+    }
+
+    /**
      * Sets the {@link Supplier} that generates a {@link RequestId}.
      */
     public AbstractClientOptionsBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
@@ -232,6 +263,19 @@ public class AbstractClientOptionsBuilder {
             Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper) {
         requireNonNull(endpointRemapper, "endpointRemapper");
         return option(ClientOptions.ENDPOINT_REMAPPER, endpointRemapper);
+    }
+
+    /**
+     * Sets the {@link Supplier} which provides an {@link AutoCloseable} and will be called whenever this
+     * {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     *
+     * @param contextHook the {@link Supplier} that provides an {@link AutoCloseable}
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        requireNonNull(contextHook, "contextHook");
+        this.contextHook = mergeHooks(this.contextHook, contextHook);
+        return this;
     }
 
     /**
@@ -477,12 +521,13 @@ public class AbstractClientOptionsBuilder {
     protected final ClientOptions buildOptions(@Nullable ClientOptions baseOptions) {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
-        final int extra = contextCustomizer == null ? 2 : 3;
+        final int extra = contextCustomizer == null ? 3 : 4;
         final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + extra]);
         optValArray[numOpts] = ClientOptions.DECORATION.newValue(decoration.build());
         optValArray[numOpts + 1] = ClientOptions.HEADERS.newValue(headers.build());
+        optValArray[numOpts + 2] = ClientOptions.CONTEXT_HOOK.newValue(contextHook);
         if (contextCustomizer != null) {
-            optValArray[numOpts + 2] = ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer);
+            optValArray[numOpts + 3] = ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer);
         }
 
         if (baseOptions != null) {

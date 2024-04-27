@@ -24,7 +24,6 @@ import static org.reflections.ReflectionUtils.getFields;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -283,8 +282,8 @@ interface AccessLogComponent {
                         return ctx.clientAddress().getHostAddress();
                     }
                 case REMOTE_HOST:
-                    final SocketAddress ra = log.context().remoteAddress();
-                    return ra instanceof InetSocketAddress ? ((InetSocketAddress) ra).getHostString() : null;
+                    final InetSocketAddress ra = log.context().remoteAddress();
+                    return ra != null ? ra.getHostString() : null;
 
                 case RFC931:
                     // We do not support this log type now.

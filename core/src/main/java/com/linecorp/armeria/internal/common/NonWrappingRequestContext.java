@@ -16,9 +16,11 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTEXT_HOOK;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.mergeHooks;
 import static java.util.Objects.requireNonNull;
 
-import java.net.SocketAddress;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -29,6 +31,7 @@ import com.linecorp.armeria.common.ConcurrentAttributes;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -62,29 +65,29 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     private final HttpMethod method;
     private RequestTarget reqTarget;
     private final ExchangeType exchangeType;
+    private long requestAutoAbortDelayMillis;
 
     @Nullable
     private String decodedPath;
+
+    private final Request originalRequest;
     @Nullable
     private volatile HttpRequest req;
     @Nullable
     private volatile RpcRequest rpcReq;
-    @Nullable // Updated via `contextHookUpdater`
+    // Updated via `contextHookUpdater`
     private volatile Supplier<AutoCloseable> contextHook;
 
     /**
      * Creates a new instance.
-     *
-     * @param sessionProtocol the {@link SessionProtocol} of the invocation
-     * @param id the {@link RequestId} associated with this context
-     * @param req the {@link HttpRequest} associated with this context
-     * @param rpcReq the {@link RpcRequest} associated with this context
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, RequestTarget reqTarget, ExchangeType exchangeType,
+            long requestAutoAbortDelayMillis,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable AttributesGetters rootAttributeMap) {
+            @Nullable AttributesGetters rootAttributeMap, Supplier<? extends AutoCloseable> contextHook) {
+        assert req != null || rpcReq != null;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         if (rootAttributeMap == null) {
@@ -98,8 +101,12 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         this.method = requireNonNull(method, "method");
         this.reqTarget = requireNonNull(reqTarget, "reqTarget");
         this.exchangeType = requireNonNull(exchangeType, "exchangeType");
+        this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
+        originalRequest = firstNonNull(req, rpcReq);
         this.req = req;
         this.rpcReq = rpcReq;
+        //noinspection unchecked
+        this.contextHook = (Supplier<AutoCloseable>) contextHook;
     }
 
     @Override
@@ -149,32 +156,12 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return sessionProtocol;
     }
 
-    protected void sessionProtocol(SessionProtocol sessionProtocol) {
-        this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
-    }
-
     /**
      * Returns the {@link Channel} that is handling this request, or {@code null} if the connection is not
      * established yet.
      */
     @Nullable
     protected abstract Channel channel();
-
-    @Nullable
-    @Override
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A remoteAddress() {
-        final Channel ch = channel();
-        return ch != null ? (A) ch.remoteAddress() : null;
-    }
-
-    @Nullable
-    @Override
-    @SuppressWarnings("unchecked")
-    public <A extends SocketAddress> A localAddress() {
-        final Channel ch = channel();
-        return ch != null ? (A) ch.localAddress() : null;
-    }
 
     @Override
     public final RequestId id() {
@@ -220,6 +207,16 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return meterRegistry;
     }
 
+    @Override
+    public long requestAutoAbortDelayMillis() {
+        return requestAutoAbortDelayMillis;
+    }
+
+    @Override
+    public void setRequestAutoAbortDelayMillis(long delayMillis) {
+        requestAutoAbortDelayMillis = delayMillis;
+    }
+
     @Nullable
     @Override
     public <V> V attr(AttributeKey<V> key) {
@@ -257,6 +254,11 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return attrs;
     }
 
+    @Override
+    public Request originalRequest() {
+        return originalRequest;
+    }
+
     /**
      * Adds a hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the
      * {@link RequestContextStorage}. The {@link AutoCloseable} returned by {@code contextHook} will be called
@@ -270,22 +272,14 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public void hook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
+
+        if (contextHook == NOOP_CONTEXT_HOOK) {
+            return;
+        }
+
         for (;;) {
             final Supplier<? extends AutoCloseable> oldContextHook = this.contextHook;
-            final Supplier<? extends AutoCloseable> newContextHook;
-            if (oldContextHook == null) {
-                newContextHook = contextHook;
-            } else {
-                newContextHook = () -> {
-                    final AutoCloseable oldHook = oldContextHook.get();
-                    final AutoCloseable newHook = contextHook.get();
-                    return () -> {
-                        oldHook.close();
-                        newHook.close();
-                    };
-                };
-            }
-
+            final Supplier<? extends AutoCloseable> newContextHook = mergeHooks(oldContextHook, contextHook);
             if (contextHookUpdater.compareAndSet(this, oldContextHook, newContextHook)) {
                 break;
             }
@@ -293,7 +287,6 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     }
 
     @Override
-    @Nullable
     public Supplier<AutoCloseable> hook() {
         return contextHook;
     }

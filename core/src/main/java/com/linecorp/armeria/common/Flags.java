@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
@@ -71,8 +72,11 @@ import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.logging.LoggingService;
 
+import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -104,7 +108,6 @@ public final class Flags {
                              .sorted(Comparator.comparingInt(FlagsProvider::priority).reversed())
                              .collect(Collectors.toList());
         flagsProviders.add(0, SystemPropertyFlagsProvider.INSTANCE);
-        flagsProviders.add(DefaultFlagsProvider.INSTANCE);
         FLAGS_PROVIDERS = ImmutableList.copyOf(flagsProviders);
     }
 
@@ -156,42 +159,39 @@ public final class Flags {
     private static final Predicate<TransportType> TRANSPORT_TYPE_VALIDATOR = transportType -> {
         switch (transportType) {
             case IO_URING:
-                if (TransportType.IO_URING.isAvailable()) {
-                    logger.info("Using io_uring");
-                    return true;
-                } else {
-                    final Throwable cause = TransportType.IO_URING.unavailabilityCause();
-                    if (cause != null) {
-                        logger.info("io_uring not available: {}", cause.toString());
-                    } else {
-                        logger.info("io_uring not available: ?");
-                    }
-                    return false;
-                }
+                return validateTransportType(TransportType.IO_URING, "io_uring");
+            case KQUEUE:
+                return validateTransportType(TransportType.KQUEUE, "Kqueue");
             case EPOLL:
-                if (TransportType.EPOLL.isAvailable()) {
-                    logger.info("Using /dev/epoll");
-                    return true;
-                } else {
-                    final Throwable cause = TransportType.EPOLL.unavailabilityCause();
-                    if (cause != null) {
-                        logger.info("/dev/epoll not available: {}", cause.toString());
-                    } else {
-                        logger.info("/dev/epoll not available: ?");
-                    }
-                    return false;
-                }
+                return validateTransportType(TransportType.EPOLL, "/dev/epoll");
             case NIO:
                 return true;
             default:
                 return false;
         }
     };
+
+    private static boolean validateTransportType(TransportType transportType, String friendlyName) {
+        if (transportType.isAvailable()) {
+            logger.info("Using {}", friendlyName);
+            return true;
+        } else {
+            final Throwable cause = transportType.unavailabilityCause();
+            if (cause != null) {
+                logger.info("{} not available: {}", friendlyName, cause.toString());
+            } else {
+                logger.info("{} not available: ?", friendlyName);
+            }
+            return false;
+        }
+    }
+
     private static final TransportType TRANSPORT_TYPE =
             getValue(FlagsProvider::transportType, "transportType", TRANSPORT_TYPE_VALIDATOR);
 
     @Nullable
-    private static Boolean useOpenSsl;
+    private static TlsEngineType tlsEngineType;
+
     @Nullable
     private static Boolean dumpOpenSslInfo;
 
@@ -199,7 +199,8 @@ public final class Flags {
             getValue(FlagsProvider::maxNumConnections, "maxNumConnections", value -> value > 0);
 
     private static final int NUM_COMMON_WORKERS =
-            getValue(FlagsProvider::numCommonWorkers, "numCommonWorkers", value -> value > 0);
+            getValue(provider -> provider.numCommonWorkers(TRANSPORT_TYPE),
+                     "numCommonWorkers", value -> value > 0);
 
     private static final int NUM_COMMON_BLOCKING_TASK_THREADS =
             getValue(FlagsProvider::numCommonBlockingTaskThreads, "numCommonBlockingTaskThreads",
@@ -233,9 +234,15 @@ public final class Flags {
             getValue(FlagsProvider::defaultServerIdleTimeoutMillis, "defaultServerIdleTimeoutMillis",
                      value -> value >= 0);
 
+    private static final boolean DEFAULT_SERVER_KEEP_ALIVE_ON_PING =
+            getValue(FlagsProvider::defaultServerKeepAliveOnPing, "defaultServerKeepAliveOnPing");
+
     private static final long DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultClientIdleTimeoutMillis, "defaultClientIdleTimeoutMillis",
                      value -> value >= 0);
+
+    private static final boolean DEFAULT_CLIENT_KEEP_ALIVE_ON_PING =
+            getValue(FlagsProvider::defaultClientKeepAliveOnPing, "defaultClientKeepAliveOnPing");
 
     private static final long DEFAULT_PING_INTERVAL_MILLIS =
             getValue(FlagsProvider::defaultPingIntervalMillis, "defaultPingIntervalMillis",
@@ -282,6 +289,10 @@ public final class Flags {
             getValue(FlagsProvider::defaultHttp2MaxHeaderListSize, "defaultHttp2MaxHeaderListSize",
                      value -> value > 0 && value <= 0xFFFFFFFFL);
 
+    private static final int DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE =
+            getValue(FlagsProvider::defaultServerHttp2MaxResetFramesPerMinute,
+                     "defaultServerHttp2MaxResetFramesPerMinute", value -> value >= 0);
+
     private static final int DEFAULT_MAX_HTTP1_INITIAL_LINE_LENGTH =
             getValue(FlagsProvider::defaultHttp1MaxInitialLineLength, "defaultHttp1MaxInitialLineLength",
                      value -> value >= 0);
@@ -296,6 +307,12 @@ public final class Flags {
 
     private static final boolean DEFAULT_USE_HTTP2_PREFACE =
             getValue(FlagsProvider::defaultUseHttp2Preface, "defaultUseHttp2Preface");
+
+    private static final boolean DEFAULT_PREFER_HTTP1 =
+            getValue(FlagsProvider::defaultPreferHttp1, "defaultPreferHttp1");
+
+    private static final boolean DEFAULT_USE_HTTP2_WITHOUT_ALPN =
+            getValue(FlagsProvider::defaultUseHttp2WithoutAlpn, "defaultUseHttp2WithoutAlpn");
 
     private static final boolean DEFAULT_USE_HTTP1_PIPELINING =
             getValue(FlagsProvider::defaultUseHttp1Pipelining, "defaultUseHttp1Pipelining");
@@ -313,6 +330,9 @@ public final class Flags {
 
     private static final int DEFAULT_MAX_TOTAL_ATTEMPTS =
             getValue(FlagsProvider::defaultMaxTotalAttempts, "defaultMaxTotalAttempts", value -> value > 0);
+
+    private static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS =
+            getValue(FlagsProvider::defaultRequestAutoAbortDelayMillis, "defaultRequestAutoAbortDelayMillis");
 
     @Nullable
     private static final String ROUTE_CACHE_SPEC =
@@ -373,6 +393,9 @@ public final class Flags {
     private static final boolean ALLOW_DOUBLE_DOTS_IN_QUERY_STRING =
             getValue(FlagsProvider::allowDoubleDotsInQueryString, "allowDoubleDotsInQueryString");
 
+    private static final boolean ALLOW_SEMICOLON_IN_PATH_COMPONENT =
+            getValue(FlagsProvider::allowSemicolonInPathComponent, "allowSemicolonInPathComponent");
+
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
 
@@ -385,6 +408,9 @@ public final class Flags {
     private static final long DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
             getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
                      "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
+
+    private static final DistributionStatisticConfig DISTRIBUTION_STATISTIC_CONFIG =
+            getValue(FlagsProvider::distributionStatisticConfig, "distributionStatisticConfig");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -406,7 +432,6 @@ public final class Flags {
      * stack trace of the exceptions that are thrown frequently by Armeria.
      *
      * @see #verboseExceptionSampler()
-     *
      * @deprecated Use {@link #verboseExceptionSampler()} and
      *             {@code -Dcom.linecorp.armeria.verboseExceptions=<specification>}.
      */
@@ -515,32 +540,67 @@ public final class Flags {
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
+     *
+     * @deprecated Use {@link #tlsEngineType()} and {@code -Dcom.linecorp.armeria.tlsEngineType=openssl}.
      */
+    @Deprecated
     public static boolean useOpenSsl() {
-        if (useOpenSsl != null) {
-            return useOpenSsl;
-        }
-        setUseOpenSslAndDumpOpenSslInfo();
-        return useOpenSsl;
+        return tlsEngineType() == TlsEngineType.OPENSSL;
     }
 
-    private static void setUseOpenSslAndDumpOpenSslInfo() {
-        final boolean useOpenSsl = getValue(FlagsProvider::useOpenSsl, "useOpenSsl");
-        if (!useOpenSsl) {
-            // OpenSSL explicitly disabled
-            Flags.useOpenSsl = false;
+    /**
+     * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * <p>The default value of this flag is {@link TlsEngineType#OPENSSL}.
+     * Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
+     * the default value.
+     */
+    @UnstableApi
+    public static TlsEngineType tlsEngineType() {
+        if (tlsEngineType != null) {
+            return tlsEngineType;
+        }
+        detectTlsEngineAndDumpOpenSslInfo();
+        return tlsEngineType;
+    }
+
+    private static void detectTlsEngineAndDumpOpenSslInfo() {
+
+        final Boolean useOpenSsl = getUserValue(FlagsProvider::useOpenSsl, "useOpenSsl",
+                                                ignored -> true);
+        final TlsEngineType tlsEngineTypeValue = getUserValue(FlagsProvider::tlsEngineType,
+                                                              "tlsEngineType", ignored -> true);
+
+        if (useOpenSsl != null && (useOpenSsl != (tlsEngineTypeValue == TlsEngineType.OPENSSL))) {
+            logger.warn("useOpenSsl({}) and tlsEngineType({}) are incompatible, tlsEngineType will be used",
+                        useOpenSsl, tlsEngineTypeValue);
+        }
+
+        TlsEngineType preferredTlsEngineType = null;
+        if (tlsEngineTypeValue != null) {
+            preferredTlsEngineType = tlsEngineTypeValue;
+        } else if (useOpenSsl != null) {
+            preferredTlsEngineType = useOpenSsl ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
+        }
+        if (preferredTlsEngineType == TlsEngineType.OPENSSL) {
+            if (!OpenSsl.isAvailable()) {
+                final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
+                logger.info("OpenSSL not available: {}", cause.toString());
+                preferredTlsEngineType = TlsEngineType.JDK;
+            }
+        }
+        if (preferredTlsEngineType == null) {
+            preferredTlsEngineType = OpenSsl.isAvailable() ? TlsEngineType.OPENSSL : TlsEngineType.JDK;
+        }
+        tlsEngineType = preferredTlsEngineType;
+
+        if (tlsEngineType != TlsEngineType.OPENSSL) {
             dumpOpenSslInfo = false;
+            logger.info("Using TLS engine: {}", tlsEngineType);
             return;
         }
-        if (!OpenSsl.isAvailable()) {
-            final Throwable cause = Exceptions.peel(OpenSsl.unavailabilityCause());
-            logger.info("OpenSSL not available: {}", cause.toString());
-            Flags.useOpenSsl = false;
-            dumpOpenSslInfo = false;
-            return;
-        }
-        Flags.useOpenSsl = true;
-        logger.info("Using OpenSSL: {}, 0x{}", OpenSsl.versionString(),
+
+        logger.info("Using Tls engine: OpenSSL {}, 0x{}", OpenSsl.versionString(),
                     Long.toHexString(OpenSsl.version() & 0xFFFFFFFFL));
         dumpOpenSslInfo = getValue(FlagsProvider::dumpOpenSslInfo, "dumpOpenSslInfo");
         if (dumpOpenSslInfo) {
@@ -548,7 +608,7 @@ public final class Flags {
                     SslContextBuilder::forClient,
                     /* forceHttp1 */ false,
                     /* tlsAllowUnsafeCiphers */ false,
-                    ImmutableList.of()).newEngine(ByteBufAllocator.DEFAULT);
+                    ImmutableList.of(), null).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
                         ImmutableList.copyOf(engine.getSupportedProtocols()));
             logger.info("Default enabled SSL protocols: {}", SslContextUtil.DEFAULT_PROTOCOLS);
@@ -565,14 +625,14 @@ public final class Flags {
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
      * option to enable it.
      *
-     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
-     * specified the JVM option.
+     * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
+     * {@code false} no matter what the specified JVM option is.
      */
     public static boolean dumpOpenSslInfo() {
         if (dumpOpenSslInfo != null) {
             return dumpOpenSslInfo;
         }
-        setUseOpenSslAndDumpOpenSslInfo();
+        detectTlsEngineAndDumpOpenSslInfo();
         return dumpOpenSslInfo;
     }
 
@@ -595,8 +655,10 @@ public final class Flags {
      * {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} or
      * {@link ClientFactoryBuilder#workerGroup(EventLoopGroup, boolean)}.
      *
-     * <p>The default value of this flag is {@code 2 * <numCpuCores>}. Specify the
-     * {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>} JVM option to override the default value.
+     * <p>The default value of this flag is {@code 2 * <numCpuCores>} for {@link TransportType#NIO},
+     * {@link TransportType#EPOLL} and {@link TransportType#KQUEUE} and {@code <numCpuCores>} for
+     * {@link TransportType#IO_URING}. Specify the {@code -Dcom.linecorp.armeria.numCommonWorkers=<integer>}
+     * JVM option to override the default value.
      */
     public static int numCommonWorkers() {
         return NUM_COMMON_WORKERS;
@@ -703,6 +765,18 @@ public final class Flags {
     }
 
     /**
+     * Returns the default option that is preventing the server from staying in an idle state when
+     * an HTTP/2 PING frame is received.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_SERVER_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
+    public static boolean defaultServerKeepAliveOnPing() {
+        return DEFAULT_SERVER_KEEP_ALIVE_ON_PING;
+    }
+
+    /**
      * Returns the default client-side idle timeout of a connection for keep-alive in milliseconds.
      * Note that this flag has no effect if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#idleTimeout(Duration)}.
@@ -713,6 +787,18 @@ public final class Flags {
      */
     public static long defaultClientIdleTimeoutMillis() {
         return DEFAULT_CLIENT_IDLE_TIMEOUT_MILLIS;
+    }
+
+    /**
+     * Returns the default option that is preventing the server from staying in an idle state when
+     * an HTTP/2 PING frame is received.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_CLIENT_KEEP_ALIVE_ON_PING}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientKeepAliveOnPing=<boolean>} JVM option to
+     * override the default value.
+     */
+    public static boolean defaultClientKeepAliveOnPing() {
+        return DEFAULT_CLIENT_KEEP_ALIVE_ON_PING;
     }
 
     /**
@@ -776,6 +862,39 @@ public final class Flags {
      */
     public static boolean defaultUseHttp2Preface() {
         return DEFAULT_USE_HTTP2_PREFACE;
+    }
+
+    /**
+     * Returns the default value of the {@link ClientFactoryBuilder#preferHttp1(boolean)} option.
+     * If enabled, the client will not attempt to upgrade to HTTP/2 for {@link SessionProtocol#HTTP} and
+     * {@link SessionProtocol#HTTPS}. However, the client will use HTTP/2 if {@link SessionProtocol#H2} or
+     * {@link SessionProtocol#H2C} is used.
+     *
+     * <p>Note that this option has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#preferHttp1(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultPreferHttp1=true} JVM option to enable it.
+     */
+    @UnstableApi
+    public static boolean defaultPreferHttp1() {
+        return DEFAULT_PREFER_HTTP1;
+    }
+
+    /**
+     * Returns the default value of the {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)} option.
+     * If enabled, even when ALPN negotiation fails client will try to attempt upgrade to HTTP/2 when needed.
+     * This will be either HTTP/2 connection preface or HTTP/1-to-2 upgrade request,
+     * depending on {@link ClientFactoryBuilder#useHttp2Preface(boolean)} setting.
+     * If disabled, when ALPN negotiation fails client will also fail in case HTTP/2 was required.
+     * {@link ClientFactoryBuilder#useHttp2WithoutAlpn(boolean)}.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUseHttp2WithoutAlpn=true} JVM option to enable it.
+     */
+    @UnstableApi
+    public static boolean defaultUseHttp2WithoutAlpn() {
+        return DEFAULT_USE_HTTP2_WITHOUT_ALPN;
     }
 
     /**
@@ -979,6 +1098,22 @@ public final class Flags {
     }
 
     /**
+     * Returns the default maximum number of RST frames that are allowed per window before the connection is
+     * closed. This allows to protect against the remote peer flooding us with such frames and using up a lot
+     * of CPU. Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * to override the default value. {@code 0} means no protection should be applied.
+     */
+    @UnstableApi
+    public static int defaultServerHttp2MaxResetFramesPerMinute() {
+        return DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
+    }
+
+    /**
      * Returns the {@linkplain Backoff#of(String) Backoff specification string} of the default {@link Backoff}
      * returned by {@link Backoff#ofDefault()}. Note that this flag has no effect if a user specified the
      * {@link Backoff} explicitly.
@@ -1000,6 +1135,23 @@ public final class Flags {
      */
     public static int defaultMaxTotalAttempts() {
         return DEFAULT_MAX_TOTAL_ATTEMPTS;
+    }
+
+    /**
+     * Returns the amount of time to wait by default before aborting an {@link HttpRequest} when
+     * its corresponding {@link HttpResponse} is complete.
+     * Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ServerBuilder#requestAutoAbortDelayMillis(long)} (long)} or
+     * {@link ClientBuilder#requestAutoAbortDelayMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultRequestAutoAbortDelayMillis=<long>} JVM option
+     * to override the default value.
+     */
+    @UnstableApi
+    public static long defaultRequestAutoAbortDelayMillis() {
+        return DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
     }
 
     /**
@@ -1119,7 +1271,6 @@ public final class Flags {
      * to override the default value.
      *
      * @see ExceptionVerbosity
-     *
      * @deprecated Use {@link LoggingService} or log exceptions using
      *             {@link ServerBuilder#errorHandler(ServerErrorHandler)}.
      */
@@ -1306,6 +1457,27 @@ public final class Flags {
     }
 
     /**
+     * Returns whether to allow a semicolon ({@code ;}) in a request path component on the server-side.
+     * If disabled, the substring from the semicolon to before the next slash, commonly referred to as
+     * matrix variables, is removed. For example, {@code /foo;a=b/bar} will be converted to {@code /foo/bar}.
+     * Also, an exception is raised if a semicolon is used for binding a service. For example, the following
+     * code raises an exception:
+     * <pre>{@code
+     * Server server =
+     *    Server.builder()
+     *      .service("/foo;bar", ...)
+     *      .build();
+     * }</pre>
+     * Note that this flag has no effect on the client-side.
+     *
+     * <p>This flag is disabled by default. Specify the
+     * {@code -Dcom.linecorp.armeria.allowSemicolonInPathComponent=true} JVM option to enable it.
+     */
+    public static boolean allowSemicolonInPathComponent() {
+        return ALLOW_SEMICOLON_IN_PATH_COMPONENT;
+    }
+
+    /**
      * Returns the {@link Sampler} that determines whether to trace the stack trace of request contexts leaks
      * and how frequently to keeps stack trace. A sampled exception will have the stack trace while the others
      * will have an empty stack trace to eliminate the cost of capturing the stack trace.
@@ -1343,13 +1515,37 @@ public final class Flags {
         return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
     }
 
+    /**
+     * Returns the default {@link DistributionStatisticConfig} of the {@link Timer}s and
+     * {@link DistributionSummary}s created by Armeria.
+     *
+     * <p>The default value of this flag is as follows:
+     * <pre>{@code
+     * DistributionStatisticConfig.builder()
+     *     .percentilesHistogram(false)
+     *     .serviceLevelObjectives()
+     *     .percentiles(
+     *          0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
+     *     .percentilePrecision(2)
+     *     .minimumExpectedValue(1.0)
+     *     .maximumExpectedValue(Double.MAX_VALUE)
+     *     .expiry(Duration.ofMinutes(3))
+     *     .bufferLength(3)
+     *     .build();
+     * }</pre>
+     */
+    @UnstableApi
+    public static DistributionStatisticConfig distributionStatisticConfig() {
+        return DISTRIBUTION_STATISTIC_CONFIG;
+    }
+
     @Nullable
     private static String nullableCaffeineSpec(Function<FlagsProvider, String> method, String flagName) {
         return caffeineSpec(method, flagName, true);
     }
 
     private static String nonnullCaffeineSpec(Function<FlagsProvider, String> method, String flagName) {
-        final String spec = caffeineSpec(method, flagName,false);
+        final String spec = caffeineSpec(method, flagName, false);
         assert spec != null; // Can never be null if allowOff is false.
         return spec;
     }
@@ -1427,24 +1623,37 @@ public final class Flags {
 
     private static <T> T getValue(Function<FlagsProvider, @Nullable T> method,
                                   String flagName, Predicate<T> validator) {
+        final T t = getUserValue(method, flagName, validator);
+        if (t != null) {
+            return t;
+        }
+
+        return method.apply(DefaultFlagsProvider.INSTANCE);
+    }
+
+    @Nullable
+    private static <T> T getUserValue(Function<FlagsProvider, @Nullable T> method, String flagName,
+                                      Predicate<T> validator) {
         for (FlagsProvider provider : FLAGS_PROVIDERS) {
             try {
                 final T value = method.apply(provider);
                 if (value == null) {
                     continue;
                 }
+
                 if (!validator.test(value)) {
                     logger.warn("{}: {} ({}, validation failed)", flagName, value, provider.name());
                     continue;
                 }
+
                 logger.info("{}: {} ({})", flagName, value, provider.name());
                 return value;
             } catch (Exception ex) {
                 logger.warn("{}: ({}, {})", flagName, provider.name(), ex.getMessage());
             }
         }
-        // Should never reach here because DefaultFlagsProvider always returns a normal value.
-        throw new Error();
+
+        return null;
     }
 
     private Flags() {}

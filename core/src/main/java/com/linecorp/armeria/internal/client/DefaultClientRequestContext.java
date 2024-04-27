@@ -15,18 +15,19 @@
  */
 package com.linecorp.armeria.internal.client;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.getScheme;
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -34,8 +35,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
-
-import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -73,6 +72,9 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.SchemeAndAuthority;
+import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -101,6 +103,20 @@ public final class DefaultClientRequestContext
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultClientRequestContext.class, CompletableFuture.class, "whenInitialized");
 
+    private static SessionProtocol desiredSessionProtocol(SessionProtocol protocol, ClientOptions options) {
+        if (!options.factory().options().preferHttp1()) {
+            return protocol;
+        }
+        switch (protocol) {
+            case HTTP:
+                return SessionProtocol.H1C;
+            case HTTPS:
+                return SessionProtocol.H1;
+            default:
+                return protocol;
+        }
+    }
+
     private static final short STR_CHANNEL_AVAILABILITY = 1;
     private static final short STR_PARENT_LOG_AVAILABILITY = 1 << 1;
 
@@ -113,6 +129,12 @@ public final class DefaultClientRequestContext
     private Endpoint endpoint;
     @Nullable
     private ContextAwareEventLoop contextAwareEventLoop;
+    @Nullable
+    private Channel channel;
+    @Nullable
+    private InetSocketAddress remoteAddress;
+    @Nullable
+    private InetSocketAddress localAddress;
     @Nullable
     private final ServiceRequestContext root;
 
@@ -162,9 +184,10 @@ public final class DefaultClientRequestContext
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(eventLoop, meterRegistry, sessionProtocol,
+        this(requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
              id, method, reqTarget, options, req, rpcReq, requestOptions, serviceRequestContext(),
-             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
+             requireNonNull(responseCancellationScheduler, "responseCancellationScheduler"),
+             requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -199,9 +222,13 @@ public final class DefaultClientRequestContext
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        super(meterRegistry, sessionProtocol, id, method, reqTarget,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq,
-              getAttributes(root));
+        super(meterRegistry, desiredSessionProtocol(sessionProtocol, options), id, method, reqTarget,
+              guessExchangeType(requestOptions, req),
+              requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
+              getAttributes(root), options.contextHook());
+        assert (eventLoop == null && responseCancellationScheduler == null) ||
+               (eventLoop != null && responseCancellationScheduler != null)
+                : "'eventLoop' and 'responseCancellationScheduler' should be both null or non-null";
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -216,7 +243,8 @@ public final class DefaultClientRequestContext
                 responseTimeoutMillis = options().responseTimeoutMillis();
             }
             this.responseCancellationScheduler =
-                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+                    CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis));
+            // the cancellationScheduler is not initialized here since the eventLoop is guaranteed to be null
         } else {
             this.responseCancellationScheduler = responseCancellationScheduler;
         }
@@ -232,6 +260,7 @@ public final class DefaultClientRequestContext
             maxResponseLength = options.maxResponseLength();
         }
         this.maxResponseLength = maxResponseLength;
+
         for (Entry<AttributeKey<?>, Object> attr : requestOptions.attrs().entrySet()) {
             //noinspection unchecked
             setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
@@ -249,6 +278,25 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+    }
+
+    private static ExchangeType guessExchangeType(RequestOptions requestOptions, @Nullable HttpRequest req) {
+        final ExchangeType exchangeType = requestOptions.exchangeType();
+        if (exchangeType != null) {
+            return exchangeType;
+        }
+        if (req instanceof FixedStreamMessage) {
+            return ExchangeType.RESPONSE_STREAMING;
+        }
+        return ExchangeType.BIDI_STREAMING;
+    }
+
+    private static long requestAutoAbortDelayMillis(ClientOptions options, RequestOptions requestOptions) {
+        final Long requestAutoAbortDelayMillis = requestOptions.requestAutoAbortDelayMillis();
+        if (requestAutoAbortDelayMillis != null) {
+            return requestAutoAbortDelayMillis;
+        }
+        return options.requestAutoAbortDelayMillis();
     }
 
     @Nullable
@@ -385,7 +433,7 @@ public final class DefaultClientRequestContext
 
     private void updateEndpoint(@Nullable Endpoint endpoint) {
         this.endpoint = endpoint;
-        autoFillSchemeAndAuthority();
+        autoFillSchemeAuthorityAndOrigin();
     }
 
     private void acquireEventLoop(EndpointGroup endpointGroup) {
@@ -394,6 +442,7 @@ public final class DefaultClientRequestContext
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
+            responseCancellationScheduler.init(eventLoop());
         }
     }
 
@@ -409,7 +458,7 @@ public final class DefaultClientRequestContext
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
         if (req != null) {
-            autoFillSchemeAndAuthority();
+            autoFillSchemeAuthorityAndOrigin();
             req.abort(wrapped);
         }
 
@@ -419,13 +468,13 @@ public final class DefaultClientRequestContext
     }
 
     // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
-    private void autoFillSchemeAndAuthority() {
+    private void autoFillSchemeAuthorityAndOrigin() {
         final String authority = authority();
         if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
             // The connection will be established with the IP address but `host` set to the `Endpoint`
             // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
             // proxy based on an authority.
-            final String host = HostAndPort.fromString(removeUserInfo(authority)).getHost();
+            final String host = SchemeAndAuthority.of(null, authority).host();
             if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
                 endpoint = endpoint.withHost(host);
             }
@@ -434,17 +483,18 @@ public final class DefaultClientRequestContext
         final HttpHeadersBuilder headersBuilder = internalRequestHeaders.toBuilder();
         headersBuilder.set(HttpHeaderNames.SCHEME, getScheme(sessionProtocol()));
         if (endpoint != null) {
-            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpoint.authority());
+            final String endpointAuthority = endpoint.authority();
+            headersBuilder.set(HttpHeaderNames.AUTHORITY, endpointAuthority);
+            final String origin = origin();
+            if (origin != null) {
+                headersBuilder.set(HttpHeaderNames.ORIGIN, origin);
+            } else if (options().autoFillOriginHeader()) {
+                final String uriText = sessionProtocol().isTls() ? SessionProtocol.HTTPS.uriText()
+                                                                 : SessionProtocol.HTTP.uriText();
+                headersBuilder.set(HttpHeaderNames.ORIGIN, uriText + "://" + endpointAuthority);
+            }
         }
         internalRequestHeaders = headersBuilder.build();
-    }
-
-    private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf('@');
-        if (indexOfDelimiter == -1) {
-            return authority;
-        }
-        return authority.substring(indexOfDelimiter + 1);
     }
 
     /**
@@ -458,7 +508,7 @@ public final class DefaultClientRequestContext
                                         SessionProtocol sessionProtocol, HttpMethod method,
                                         RequestTarget reqTarget) {
         super(ctx.meterRegistry(), sessionProtocol, id, method, reqTarget, ctx.exchangeType(),
-              req, rpcReq, getAttributes(ctx.root()));
+              ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()), ctx.hook());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -469,16 +519,16 @@ public final class DefaultClientRequestContext
         // So we don't check the nullness of rpcRequest unlike request.
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
-        eventLoop = ctx.eventLoop().withoutContext();
         options = ctx.options();
         root = ctx.root();
 
         log = RequestLog.builder(this);
         log.startRequest();
         responseCancellationScheduler =
-                new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
+                CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
+
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
@@ -488,6 +538,14 @@ public final class DefaultClientRequestContext
 
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);
+        // We don't need to acquire an EventLoop for the initial attempt because it's already acquired by
+        // the root context.
+        if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
+            eventLoop = ctx.eventLoop().withoutContext();
+            responseCancellationScheduler.init(eventLoop());
+        } else {
+            acquireEventLoop(endpoint);
+        }
     }
 
     @Nullable
@@ -556,7 +614,6 @@ public final class DefaultClientRequestContext
                                                        protocol, newHeaders.method(), reqTarget);
             }
         }
-
         return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, endpointGroup(),
                                                sessionProtocol(), method(), requestTarget());
     }
@@ -571,11 +628,42 @@ public final class DefaultClientRequestContext
     @Override
     @Nullable
     protected Channel channel() {
-        if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.partial().channel();
-        } else {
+        final Channel channel = this.channel;
+        if (channel != null) {
+            return channel;
+        }
+
+        if (!log.isAvailable(RequestLogProperty.SESSION)) {
             return null;
         }
+
+        final Channel newChannel = log.partial().channel();
+        this.channel = newChannel;
+        return newChannel;
+    }
+
+    @Override
+    public InetSocketAddress remoteAddress() {
+        final InetSocketAddress remoteAddress = this.remoteAddress;
+        if (remoteAddress != null) {
+            return remoteAddress;
+        }
+
+        final InetSocketAddress newRemoteAddress = ChannelUtil.remoteAddress(channel());
+        this.remoteAddress = newRemoteAddress;
+        return newRemoteAddress;
+    }
+
+    @Override
+    public InetSocketAddress localAddress() {
+        final InetSocketAddress localAddress = this.localAddress;
+        if (localAddress != null) {
+            return localAddress;
+        }
+
+        final InetSocketAddress newLocalAddress = ChannelUtil.localAddress(channel());
+        this.localAddress = newLocalAddress;
+        return newLocalAddress;
     }
 
     @Override
@@ -596,11 +684,8 @@ public final class DefaultClientRequestContext
     @Nullable
     @Override
     public SSLSession sslSession() {
-        if (log.isAvailable(RequestLogProperty.SESSION)) {
-            return log.partial().sslSession();
-        } else {
-            return null;
-        }
+        final RequestLog requestLog = log.getIfAvailable(RequestLogProperty.SESSION);
+        return requestLog != null ? requestLog.sslSession() : null;
     }
 
     @Override
@@ -650,11 +735,55 @@ public final class DefaultClientRequestContext
         return authority;
     }
 
+    @Nullable
+    private String origin() {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        String origin = additionalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        final HttpRequest request = request();
+        if (origin == null && request != null) {
+            origin = request.headers().get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = defaultRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        if (origin == null) {
+            origin = internalRequestHeaders.get(HttpHeaderNames.ORIGIN);
+        }
+        return origin;
+    }
+
+    @Override
+    public String host() {
+        final String authority = authority();
+        if (authority == null) {
+            return null;
+        }
+        return SchemeAndAuthority.of(null, authority).host();
+    }
+
     @Override
     public URI uri() {
         final String scheme = getScheme(sessionProtocol());
-        try {
-            return new URI(scheme, authority(), path(), query(), fragment());
+        final String authority = authority();
+        final String path = path();
+        final String query = query();
+        final String fragment = fragment();
+        try (TemporaryThreadLocals tmp = TemporaryThreadLocals.acquire()) {
+            final StringBuilder buf = tmp.stringBuilder();
+            buf.append(scheme);
+            if (authority != null) {
+                buf.append("://").append(authority);
+            } else {
+                buf.append(':');
+            }
+            buf.append(path);
+            if (query != null) {
+                buf.append('?').append(query);
+            }
+            if (fragment != null) {
+                buf.append('#').append(fragment);
+            }
+            return new URI(buf.toString());
         } catch (URISyntaxException e) {
             throw new IllegalStateException("not a valid URI", e);
         }
@@ -815,13 +944,14 @@ public final class DefaultClientRequestContext
         }
 
         strValAvailabilities = newAvailability;
-        return strVal = toStringSlow(ch, parent);
+        return strVal = toStringSlow(parent);
     }
 
-    private String toStringSlow(@Nullable Channel ch, @Nullable RequestLogAccess parent) {
+    private String toStringSlow(@Nullable RequestLogAccess parent) {
         // Prepare all properties required for building a String, so that we don't have a chance of
         // building one String with a thread-local StringBuilder while building another String with
         // the same StringBuilder. See TemporaryThreadLocals for more information.
+        final Channel ch = channel();
         final String creqId = id().shortText();
         final String preqId = parent != null ? parent.context().id().shortText() : null;
         final String sreqId = root() != null ? root().id().shortText() : null;
@@ -842,11 +972,16 @@ public final class DefaultClientRequestContext
                 buf.append(", sreqId=").append(sreqId);
             }
             if (ch != null) {
-                buf.append(", chanId=").append(chanId)
-                   .append(", laddr=");
-                TextFormatter.appendSocketAddress(buf, ch.localAddress());
-                buf.append(", raddr=");
-                TextFormatter.appendSocketAddress(buf, ch.remoteAddress());
+                final InetSocketAddress laddr = localAddress();
+                final InetSocketAddress raddr = remoteAddress();
+
+                buf.append(", chanId=").append(chanId);
+                buf.append(", laddr=");
+                TextFormatter.appendSocketAddress(buf, laddr);
+                if (!Objects.equals(laddr, raddr)) {
+                    buf.append(", raddr=");
+                    TextFormatter.appendSocketAddress(buf, raddr);
+                }
             }
             buf.append("][")
                .append(proto).append("://").append(authority).append(path).append('#').append(method)

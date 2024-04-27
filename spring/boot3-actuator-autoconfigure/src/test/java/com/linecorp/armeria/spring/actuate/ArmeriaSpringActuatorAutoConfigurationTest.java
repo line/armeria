@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.spring.actuate;
 
+import static com.linecorp.armeria.spring.actuate.WebOperationService.toMediaType;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
@@ -30,12 +31,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.actuate.endpoint.ApiVersion;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
@@ -70,7 +71,7 @@ import reactor.test.StepVerifier;
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-@AutoConfigureMetrics
+@EnableTestMetrics
 @EnableAutoConfiguration
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
 @Timeout(unit = TimeUnit.MILLISECONDS, value = 30_000L)
@@ -136,7 +137,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
     void testHealth() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
+        assertThat(res.contentType()).isEqualTo(toMediaType(ApiVersion.LATEST.getProducedMimeType()));
 
         final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsEntry("status", "UP");
@@ -164,7 +165,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
         final String loggerPath = "/internal/actuator/loggers/" + TEST_LOGGER_NAME;
         AggregatedHttpResponse res = client.get(loggerPath).aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
+        assertThat(res.contentType()).isEqualTo(toMediaType(ApiVersion.LATEST.getProducedMimeType()));
 
         Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsEntry("effectiveLevel", "DEBUG");
@@ -225,7 +226,7 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
     void testLinks() throws Exception {
         final AggregatedHttpResponse res = client.get("/internal/actuator").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isEqualTo(ArmeriaSpringActuatorAutoConfiguration.ACTUATOR_MEDIA_TYPE);
+        assertThat(res.contentType()).isEqualTo(toMediaType(ApiVersion.LATEST.getProducedMimeType()));
         final Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
         assertThat(values).containsKey("_links");
     }
@@ -251,11 +252,87 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
         assertThat(res.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
     }
 
+    @Test
+    void testAcceptJsonMediaTypes() throws Exception {
+        final RequestHeaders req = RequestHeaders.of(
+                HttpMethod.GET, "/internal/actuator/health", HttpHeaderNames.ACCEPT, MediaType.JSON);
+        final AggregatedHttpResponse res = client.execute(req).aggregate().get();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON);
+    }
+
+    @Test
+    void testLinksAcceptJsonMediaTypes() throws Exception {
+        final RequestHeaders req = RequestHeaders.of(
+                HttpMethod.GET, "/internal/actuator", HttpHeaderNames.ACCEPT, MediaType.JSON);
+        final AggregatedHttpResponse res = client.execute(req).aggregate().get();
+        assertThat(res.contentType()).isEqualTo(MediaType.JSON);
+    }
+
+    @Test
+    void testAcceptV2MediaTypes() throws Exception {
+        final MediaType v2MediaType = toMediaType(ApiVersion.V2.getProducedMimeType());
+        final RequestHeaders req = RequestHeaders.of(
+                HttpMethod.GET, "/internal/actuator/health", HttpHeaderNames.ACCEPT, v2MediaType);
+        final AggregatedHttpResponse res = client.execute(req).aggregate().get();
+        assertThat(res.contentType()).isEqualTo(v2MediaType);
+    }
+
+    @Test
+    void testLinksAcceptV2MediaTypes() throws Exception {
+        final MediaType v2MediaType = toMediaType(ApiVersion.V2.getProducedMimeType());
+        final RequestHeaders req = RequestHeaders.of(
+                HttpMethod.GET, "/internal/actuator", HttpHeaderNames.ACCEPT, v2MediaType);
+        final AggregatedHttpResponse res = client.execute(req).aggregate().get();
+        assertThat(res.contentType()).isEqualTo(v2MediaType);
+    }
+
+    @Test
+    void testAcceptV3MediaTypes() throws Exception {
+        final MediaType v3MediaType = toMediaType(ApiVersion.V3.getProducedMimeType());
+        final RequestHeaders req = RequestHeaders.of(
+                HttpMethod.GET, "/internal/actuator/health", HttpHeaderNames.ACCEPT, v3MediaType);
+        final AggregatedHttpResponse res = client.execute(req).aggregate().get();
+        assertThat(res.contentType()).isEqualTo(v3MediaType);
+    }
+
+    @Test
+    void testLinksAcceptV3MediaTypes() throws Exception {
+        final MediaType v3MediaType = toMediaType(ApiVersion.V3.getProducedMimeType());
+        final RequestHeaders req = RequestHeaders.of(
+                HttpMethod.GET, "/internal/actuator", HttpHeaderNames.ACCEPT, v3MediaType);
+        final AggregatedHttpResponse res = client.execute(req).aggregate().get();
+        assertThat(res.contentType()).isEqualTo(v3MediaType);
+    }
+
+    @Test
+    void testAcceptDefaultMediaTypes() throws Exception {
+        final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
+        assertThat(res.contentType()).isEqualTo(toMediaType(ApiVersion.LATEST.getProducedMimeType()));
+    }
+
+    @Test
+    void testLinksAcceptDefaultMediaTypes() throws Exception {
+        final AggregatedHttpResponse res = client.get("/internal/actuator").aggregate().get();
+        assertThat(res.contentType()).isEqualTo(toMediaType(ApiVersion.LATEST.getProducedMimeType()));
+    }
+
+    @Test
+    void testInfo() throws Exception {
+        final AggregatedHttpResponse res = client.get("/internal/actuator/info").aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void testCustomInfo() throws Exception {
+        final AggregatedHttpResponse res = client.get("/internal/actuator/custom-info").aggregate().get();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+    }
+
     @Nested
     @SpringBootTest(classes = ArmeriaSpringActuatorAutoConfigurationCorsTest.TestConfiguration.class)
     @ActiveProfiles({ "local", "autoConfTest", "autoConfTestCors" })
     @DirtiesContext
-    @AutoConfigureMetrics
+    @EnableTestMetrics
     @EnableAutoConfiguration
     @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
     @Timeout(10)
@@ -288,6 +365,67 @@ class ArmeriaSpringActuatorAutoConfigurationTest {
                     .isEqualTo("GET,POST");
             assertThat(res.headers().contains(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE)).isTrue();
             assertThat(res.status()).isNotEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+        }
+    }
+
+    @SpringBootTest(
+            classes = ArmeriaSpringActuatorAutoConfigurationDisableDiscoveryTest.TestConfiguration.class)
+    @ActiveProfiles({ "local", "autoConfTest", "autoConfTestDisableDiscovery" })
+    @DirtiesContext
+    @Timeout(10)
+    static class ArmeriaSpringActuatorAutoConfigurationDisableDiscoveryTest {
+
+        @SpringBootApplication
+        static class TestConfiguration {}
+
+        @Inject
+        private Server server;
+
+        private WebClient client;
+
+        @BeforeEach
+        void setUp() {
+            client = WebClient.of(newUrl("h2c", server.activeLocalPort()));
+        }
+
+        @Test
+        void testLinks() throws Exception {
+            final AggregatedHttpResponse res = client.get("/internal/actuator").aggregate().get();
+            assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+        }
+    }
+
+    @SpringBootTest(
+            classes = ArmeriaSpringActuatorAutoConfigurationHealthStatusTest.TestConfiguration.class)
+    @ActiveProfiles({ "local", "autoConfTest", "autoConfTestHealthStatus" })
+    @DirtiesContext
+    @Timeout(10)
+    static class ArmeriaSpringActuatorAutoConfigurationHealthStatusTest {
+
+        @SpringBootApplication
+        static class TestConfiguration {
+            @Bean
+            public SettableHealthIndicator settableHealth() {
+                return new SettableHealthIndicator();
+            }
+        }
+
+        @Inject
+        private Server server;
+        @Inject
+        private SettableHealthIndicator settableHealth;
+        private WebClient client;
+
+        @BeforeEach
+        void setUp() {
+            client = WebClient.of(newUrl("h2c", server.activeLocalPort()));
+        }
+
+        @Test
+        void testHealth_down() throws Exception {
+            settableHealth.setHealth(Health.down().build());
+            final AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
+            assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

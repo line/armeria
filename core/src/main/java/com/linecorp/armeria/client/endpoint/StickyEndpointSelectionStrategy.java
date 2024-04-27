@@ -77,6 +77,7 @@ final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy
                                ToLongFunction<? super ClientRequestContext> requestContextHasher) {
             super(endpointGroup);
             this.requestContextHasher = requireNonNull(requestContextHasher, "requestContextHasher");
+            initialize();
         }
 
         @Override

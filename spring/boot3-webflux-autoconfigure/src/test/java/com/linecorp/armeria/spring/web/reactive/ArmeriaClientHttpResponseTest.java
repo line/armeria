@@ -25,7 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.springframework.http.ResponseCookie;
 
 import com.linecorp.armeria.common.HttpData;
@@ -35,16 +35,18 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.spring.internal.client.ArmeriaClientHttpResponse;
+import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-public class ArmeriaClientHttpResponseTest {
+class ArmeriaClientHttpResponseTest {
 
     @Test
-    public void readBodyStream() {
+    void readBodyStream() {
         final ResponseHeaders httpHeaders = ResponseHeaders.of(HttpStatus.OK);
         final HttpResponse httpResponse = HttpResponse.of(
                 Flux.concat(Mono.just(httpHeaders),
@@ -77,7 +79,7 @@ public class ArmeriaClientHttpResponseTest {
     }
 
     @Test
-    public void getCookies() {
+    void getCookies() {
         final HttpHeaders httpHeaders = ResponseHeaders.of(HttpStatus.OK,
                                                            HttpHeaderNames.of("blahblah"), "armeria",
                                                            HttpHeaderNames.SET_COOKIE, "a=1; b=2");
@@ -98,7 +100,7 @@ public class ArmeriaClientHttpResponseTest {
     }
 
     @Test
-    public void cancel() {
+    void cancel() {
         final AtomicBoolean completedWithError = new AtomicBoolean();
         final Flux<HttpData> bodyPub = Flux.just("a", "b", "c", "d", "e")
                                            .map(HttpData::ofUtf8)

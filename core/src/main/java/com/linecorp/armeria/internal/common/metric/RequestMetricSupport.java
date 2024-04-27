@@ -20,7 +20,6 @@ import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSumma
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
@@ -39,6 +38,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.util.AttributeKey;
 
 /**
@@ -52,7 +52,7 @@ public final class RequestMetricSupport {
     public static void setup(
             RequestContext ctx, AttributeKey<Boolean> requestMetricsSetKey,
             MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
         final Boolean isRequestMetricsSet = ctx.attr(requestMetricsSetKey);
 
         if (Boolean.TRUE.equals(isRequestMetricsSet)) {
@@ -65,12 +65,13 @@ public final class RequestMetricSupport {
                           RequestLogProperty.REQUEST_HEADERS,
                           RequestLogProperty.NAME,
                           RequestLogProperty.SESSION)
-           .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, successFunction));
+           .thenAccept(log -> onRequest(log, meterIdPrefixFunction, server, successFunction,
+                                        distributionStatisticConfig));
     }
 
     private static void onRequest(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix activeRequestsId =
@@ -83,33 +84,36 @@ public final class RequestMetricSupport {
                                   new ActiveRequestMetrics(), ActiveRequestMetrics::doubleValue));
         activeRequestMetrics.increment();
         ctx.log().whenComplete().thenAccept(requestLog -> {
-            onResponse(requestLog, meterIdPrefixFunction, server, successFunction);
+            onResponse(requestLog, meterIdPrefixFunction, server, successFunction, distributionStatisticConfig);
             activeRequestMetrics.decrement();
         });
     }
 
     private static void onResponse(
             RequestLog log, MeterIdPrefixFunction meterIdPrefixFunction, boolean server,
-            SuccessFunction successFunction) {
+            SuccessFunction successFunction, DistributionStatisticConfig distributionStatisticConfig) {
         final RequestContext ctx = log.context();
         final MeterRegistry registry = ctx.meterRegistry();
         final MeterIdPrefix idPrefix = meterIdPrefixFunction.completeRequestPrefix(registry, log);
+        final boolean isSuccess = successFunction.isSuccess(ctx, log);
 
         if (server) {
-            final ServiceRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
-                                                                          ServiceRequestMetrics.class,
-                                                                          DefaultServiceRequestMetrics::new);
-            updateMetrics(ctx, log, metrics, successFunction);
+            final ServiceRequestMetrics metrics = MicrometerUtil.register(
+                    registry, idPrefix,
+                    ServiceRequestMetrics.class,
+                    (reg, idp) -> new DefaultServiceRequestMetrics(reg, idp, distributionStatisticConfig));
+            updateMetrics(log, metrics, isSuccess);
             if (log.responseCause() instanceof RequestTimeoutException) {
                 metrics.requestTimeouts().increment();
             }
             return;
         }
 
-        final ClientRequestMetrics metrics = MicrometerUtil.register(registry, idPrefix,
-                                                                     ClientRequestMetrics.class,
-                                                                     DefaultClientRequestMetrics::new);
-        updateMetrics(ctx, log, metrics, successFunction);
+        final ClientRequestMetrics metrics = MicrometerUtil.register(
+                registry, idPrefix,
+                ClientRequestMetrics.class,
+                (reg, idp) -> new DefaultClientRequestMetrics(reg, idp, distributionStatisticConfig));
+        updateMetrics(log, metrics, isSuccess);
         final ClientConnectionTimings timings = log.connectionTimings();
         if (timings != null) {
             metrics.connectionAcquisitionDuration().record(timings.connectionAcquisitionDurationNanos(),
@@ -132,7 +136,6 @@ public final class RequestMetricSupport {
             if (log.requestCause() instanceof WriteTimeoutException) {
                 metrics.writeTimeouts().increment();
             }
-            return;
         }
 
         if (log.responseCause() instanceof ResponseTimeoutException) {
@@ -141,23 +144,35 @@ public final class RequestMetricSupport {
 
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
-            metrics.actualRequests().increment(childrenSize);
+            updateRetryingClientMetrics(metrics, childrenSize, isSuccess);
         }
     }
 
     private static void updateMetrics(
-            RequestContext ctx, RequestLog log, RequestMetrics metrics,
-            SuccessFunction successFunction) {
+            RequestLog log, RequestMetrics metrics,
+            boolean isSuccess) {
         metrics.requestDuration().record(log.requestDurationNanos(), TimeUnit.NANOSECONDS);
         metrics.requestLength().record(log.requestLength());
         metrics.responseDuration().record(log.responseDurationNanos(), TimeUnit.NANOSECONDS);
         metrics.responseLength().record(log.responseLength());
         metrics.totalDuration().record(log.totalDurationNanos(), TimeUnit.NANOSECONDS);
 
-        if (successFunction.isSuccess(ctx, log)) {
+        if (isSuccess) {
             metrics.success().increment();
         } else {
             metrics.failure().increment();
+        }
+    }
+
+    private static void updateRetryingClientMetrics(
+            ClientRequestMetrics metrics, int childrenSize, boolean isSuccess) {
+
+        metrics.actualRequests().increment(childrenSize);
+
+        if (isSuccess) {
+            metrics.successAttempts().record(childrenSize);
+        } else {
+            metrics.failureAttempts().record(childrenSize);
         }
     }
 
@@ -194,6 +209,10 @@ public final class RequestMetricSupport {
         Counter writeTimeouts();
 
         Counter responseTimeouts();
+
+        DistributionSummary successAttempts();
+
+        DistributionSummary failureAttempts();
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -211,17 +230,29 @@ public final class RequestMetricSupport {
         private final Timer responseDuration;
         private final DistributionSummary responseLength;
         private final Timer totalDuration;
+        private final DistributionStatisticConfig distributionStatisticConfig;
 
-        AbstractRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
+        AbstractRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
+                               DistributionStatisticConfig distributionStatisticConfig) {
+            this.distributionStatisticConfig = distributionStatisticConfig;
             final String requests = idPrefix.name("requests");
             success = parent.counter(requests, idPrefix.tags("result", "success"));
             failure = parent.counter(requests, idPrefix.tags("result", "failure"));
 
-            requestDuration = newTimer(parent, idPrefix.name("request.duration"), idPrefix.tags());
-            requestLength = newDistributionSummary(parent, idPrefix.name("request.length"), idPrefix.tags());
-            responseDuration = newTimer(parent, idPrefix.name("response.duration"), idPrefix.tags());
-            responseLength = newDistributionSummary(parent, idPrefix.name("response.length"), idPrefix.tags());
-            totalDuration = newTimer(parent, idPrefix.name("total.duration"), idPrefix.tags());
+            requestDuration = newTimer(parent, idPrefix.name("request.duration"), idPrefix.tags(),
+                                       distributionStatisticConfig);
+            requestLength = newDistributionSummary(parent, idPrefix.name("request.length"),
+                                                   idPrefix.tags(), distributionStatisticConfig);
+            responseDuration = newTimer(parent, idPrefix.name("response.duration"), idPrefix.tags(),
+                                        distributionStatisticConfig);
+            responseLength = newDistributionSummary(parent, idPrefix.name("response.length"),
+                                                    idPrefix.tags(), distributionStatisticConfig);
+            totalDuration = newTimer(parent, idPrefix.name("total.duration"), idPrefix.tags(),
+                                     distributionStatisticConfig);
+        }
+
+        DistributionStatisticConfig distributionStatisticConfig() {
+            return distributionStatisticConfig;
         }
 
         @Override
@@ -262,11 +293,6 @@ public final class RequestMetricSupport {
 
     private static class DefaultClientRequestMetrics
             extends AbstractRequestMetrics implements ClientRequestMetrics {
-
-        private static final AtomicReferenceFieldUpdater<DefaultClientRequestMetrics, Counter>
-                actualRequestsUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                DefaultClientRequestMetrics.class, Counter.class, "actualRequests");
-
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
 
@@ -279,21 +305,32 @@ public final class RequestMetricSupport {
         private final Counter responseTimeouts;
 
         @Nullable
-        private volatile Counter actualRequests;
+        private Counter actualRequests;
 
-        DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
-            super(parent, idPrefix);
+        @Nullable
+        private DistributionSummary successAttempts;
+
+        @Nullable
+        private DistributionSummary failureAttempts;
+
+        DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
+                                    DistributionStatisticConfig distributionStatisticConfig) {
+            super(parent, idPrefix, distributionStatisticConfig);
             this.parent = parent;
             this.idPrefix = idPrefix;
 
             connectionAcquisitionDuration = newTimer(
-                    parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags());
+                    parent, idPrefix.name("connection.acquisition.duration"), idPrefix.tags(),
+                    distributionStatisticConfig);
             dnsResolutionDuration = newTimer(
-                    parent, idPrefix.name("dns.resolution.duration"), idPrefix.tags());
+                    parent, idPrefix.name("dns.resolution.duration"), idPrefix.tags(),
+                    distributionStatisticConfig);
             socketConnectDuration = newTimer(
-                    parent, idPrefix.name("socket.connect.duration"), idPrefix.tags());
+                    parent, idPrefix.name("socket.connect.duration"), idPrefix.tags(),
+                    distributionStatisticConfig);
             pendingAcquisitionDuration = newTimer(
-                    parent, idPrefix.name("pending.acquisition.duration"), idPrefix.tags());
+                    parent, idPrefix.name("pending.acquisition.duration"), idPrefix.tags(),
+                    distributionStatisticConfig);
 
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
@@ -302,16 +339,10 @@ public final class RequestMetricSupport {
 
         @Override
         public Counter actualRequests() {
-            final Counter actualRequests = this.actualRequests;
             if (actualRequests != null) {
                 return actualRequests;
             }
-
-            final Counter counter = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
-            if (actualRequestsUpdater.compareAndSet(this, null, counter)) {
-                return counter;
-            }
-            return this.actualRequests;
+            return actualRequests = parent.counter(idPrefix.name("actual.requests"), idPrefix.tags());
         }
 
         @Override
@@ -343,6 +374,28 @@ public final class RequestMetricSupport {
         public Counter responseTimeouts() {
             return responseTimeouts;
         }
+
+        @Override
+        public DistributionSummary successAttempts() {
+            if (successAttempts != null) {
+                return successAttempts;
+            }
+            return successAttempts = newDistributionSummary(parent,
+                                                            idPrefix.name("actual.requests.attempts"),
+                                                            idPrefix.tags("result", "success"),
+                                                            distributionStatisticConfig());
+        }
+
+        @Override
+        public DistributionSummary failureAttempts() {
+            if (failureAttempts != null) {
+                return failureAttempts;
+            }
+            return failureAttempts = newDistributionSummary(parent,
+                                                            idPrefix.name("actual.requests.attempts"),
+                                                            idPrefix.tags("result", "failure"),
+                                                            distributionStatisticConfig());
+        }
     }
 
     private static class DefaultServiceRequestMetrics
@@ -350,8 +403,9 @@ public final class RequestMetricSupport {
 
         private final Counter requestTimeouts;
 
-        DefaultServiceRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
-            super(parent, idPrefix);
+        DefaultServiceRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
+                                     DistributionStatisticConfig distributionStatisticConfig) {
+            super(parent, idPrefix, distributionStatisticConfig);
             requestTimeouts = parent.counter(idPrefix.name("timeouts"),
                                              idPrefix.tags("cause", "RequestTimeoutException"));
         }

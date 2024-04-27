@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 
@@ -30,6 +31,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
@@ -58,8 +60,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
      */
     public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
         requireNonNull(sampler, "sampler");
-        this.successSampler = sampler;
-        this.failureSampler = sampler;
+        successSampler = sampler;
+        failureSampler = sampler;
         return this;
     }
 
@@ -121,19 +123,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
      * of this builder.
      */
     public LoggingService build(HttpService delegate) {
-        return new LoggingService(delegate,
-                                  logger(),
-                                  requestLogLevelMapper(),
-                                  responseLogLevelMapper(),
-                                  requestHeadersSanitizer(),
-                                  requestContentSanitizer(),
-                                  requestTrailersSanitizer(),
-                                  responseHeadersSanitizer(),
-                                  responseContentSanitizer(),
-                                  responseTrailersSanitizer(),
-                                  responseCauseSanitizer(),
-                                  successSampler,
-                                  failureSampler);
+        return new LoggingService(delegate, logWriter(), successSampler, failureSampler);
     }
 
     /**
@@ -146,20 +136,34 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     // Override the return type of the chaining methods in the superclass.
 
     @Override
+    protected LoggingServiceBuilder defaultLogger(Logger defaultLogger) {
+        return (LoggingServiceBuilder) super.defaultLogger(defaultLogger);
+    }
+
+    @Override
+    public LoggingServiceBuilder logWriter(LogWriter logWriter) {
+        return (LoggingServiceBuilder) super.logWriter(logWriter);
+    }
+
+    @Deprecated
+    @Override
     public LoggingServiceBuilder logger(Logger logger) {
         return (LoggingServiceBuilder) super.logger(logger);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder logger(String loggerName) {
         return (LoggingServiceBuilder) super.logger(loggerName);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestLogLevel(LogLevel requestLogLevel) {
         return (LoggingServiceBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
         return (LoggingServiceBuilder) super.requestLogLevel(clazz, requestLogLevel);
@@ -172,31 +176,37 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
         return (LoggingServiceBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
         return (LoggingServiceBuilder) super.responseLogLevel(status, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return (LoggingServiceBuilder) super.responseLogLevel(statusClass, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
         return (LoggingServiceBuilder) super.responseLogLevel(clazz, logLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
         return (LoggingServiceBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder failureResponseLogLevel(LogLevel failureResponseLogLevel) {
         return (LoggingServiceBuilder) super.failureResponseLogLevel(failureResponseLogLevel);
@@ -209,11 +219,13 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -221,6 +233,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -228,6 +241,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -235,6 +249,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -242,6 +257,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder headersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -249,6 +265,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.headersSanitizer(headersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestContentSanitizer(
             BiFunction<? super RequestContext, Object,
@@ -256,6 +273,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.requestContentSanitizer(requestContentSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseContentSanitizer(
             BiFunction<? super RequestContext, Object,
@@ -263,6 +281,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.responseContentSanitizer(responseContentSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder contentSanitizer(
             BiFunction<? super RequestContext, Object,
@@ -270,10 +289,17 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.contentSanitizer(contentSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingServiceBuilder responseCauseSanitizer(
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
         return (LoggingServiceBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
+    }
+
+    @Deprecated
+    @Override
+    public LoggingServiceBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
+        return (LoggingServiceBuilder) super.responseCauseFilter(responseCauseFilter);
     }
 }

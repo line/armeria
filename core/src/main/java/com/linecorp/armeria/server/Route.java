@@ -19,6 +19,8 @@ package com.linecorp.armeria.server;
 import java.util.List;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 
@@ -128,11 +130,13 @@ public interface Route {
      *   </li>
      * </ul>
      */
+    @JsonProperty
     String patternString();
 
     /**
      * Returns the type of the path which was specified when this is created.
      */
+    @JsonProperty
     RoutePathType pathType();
 
     /**
@@ -209,4 +213,42 @@ public interface Route {
      * </ul>
      */
     Route withPrefix(String prefix);
+
+    /**
+     * Returns whether the current {@link Route} is cacheable when queried from a {@link Router}.
+     */
+    boolean isCacheable();
+
+    /**
+     * Tells whether the current {@link Route} shares duplicate route condition with the specified
+     * {@link Route}. This returns {@code true} when all of the following conditions are met:
+     * <ul>
+     *   <li>Both routes have the same trie path.</li>
+     *   <li>One of the {@link #methods()} overlaps with those in the specified route.</li>
+     *   <li>One of the {@link #consumes()} overlaps with those in the specified route.</li>
+     *   <li>One of the {@link #produces()} overlaps with those in the specified route.</li>
+     *   <li>One of the {@link RouteBuilder#matchesParams(String...)}} overlaps with those in the
+     *       specified route.</li>
+     *   <li>One of the {@link RouteBuilder#matchesHeaders(String...)}} overlaps with those in the
+     *       specified route.</li>
+     * </ul>
+     *
+     * <p>For example:
+     * <pre>{@code
+     * Route route = Route.builder().path("/foo").methods(HttpMethod.POST, HttpMethod.GET)
+     *                    .consumes(MediaType.JSON_UTF_8)
+     *                    .produces(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+     *                    .matchesParams("foo")
+     *                    .matchesHeaders("baz", "qux")
+     *                    .build();
+     * Route other = Route.builder().path("/foo").methods(HttpMethod.POST)
+     *                    .consumes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+     *                    .produces(MediaType.PLAIN_TEXT_UTF_8)
+     *                    .matchesParams("foo", "bar")
+     *                    .matchesHeaders("baz")
+     *                    .build();
+     * assert route.hasConflicts(other);
+     * }</pre>
+     */
+    boolean hasConflicts(Route other);
 }

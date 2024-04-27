@@ -32,8 +32,11 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
@@ -75,6 +78,7 @@ abstract class AbstractHttpResponseHandler {
 
     void disconnectWhenFinished() {
         needsDisconnection = true;
+        responseEncoder.keepAliveHandler().disconnectWhenFinished();
     }
 
     final boolean tryComplete(@Nullable Throwable cause) {
@@ -110,7 +114,11 @@ abstract class AbstractHttpResponseHandler {
         // 3. After successfully flushing, the listener requests next data and
         //    the subscriber attempts to write the next data to the stream closed at 2).
         if (!isWritable()) {
-            Throwable cause = CapturedServiceException.get(reqCtx);
+            Throwable cause = null;
+            final RequestLog requestLog = reqCtx.log().getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+            if (requestLog != null) {
+                cause = requestLog.responseCause();
+            }
             if (cause == null) {
                 if (reqCtx.sessionProtocol().isMultiplex()) {
                     cause = ClosedStreamException.get();
@@ -173,15 +181,17 @@ abstract class AbstractHttpResponseHandler {
                              .build();
         }
 
+        final HttpMethod method = reqCtx.method();
         if (!res.informationals().isEmpty()) {
             for (ResponseHeaders informational : res.informationals()) {
                 responseEncoder.writeHeaders(id, streamId, informational,
-                                             false, trailersEmpty);
+                                             false, trailersEmpty, method);
             }
         }
         logBuilder().responseHeaders(headers);
-        ChannelFuture future = responseEncoder.writeHeaders(id, streamId, headers,
-                                                            contentEmpty && trailersEmpty, trailersEmpty);
+        ChannelFuture future =
+                responseEncoder.writeHeaders(id, streamId, headers, contentEmpty && trailersEmpty,
+                                             trailersEmpty, method);
         if (!contentEmpty) {
             logBuilder().increaseResponseLength(content);
             future = responseEncoder.writeData(id, streamId, content, trailersEmpty);
@@ -202,20 +212,20 @@ abstract class AbstractHttpResponseHandler {
         final Throwable cause0 = firstNonNull(cause.getCause(), cause);
         final ServiceConfig serviceConfig = reqCtx.config();
         final AggregatedHttpResponse response = serviceConfig.errorHandler()
-                                                             .renderStatus(serviceConfig, req.headers(), status,
+                                                             .renderStatus(reqCtx, req.headers(), status,
                                                                            null, cause0);
         assert response != null;
         return response;
     }
 
-    final void endLogRequestAndResponse(Throwable cause) {
-        logBuilder().endRequest(cause);
-        logBuilder().endResponse(cause);
-    }
-
-    final void endLogRequestAndResponse() {
-        logBuilder().endRequest();
-        logBuilder().endResponse();
+    final void endLogRequestAndResponse(@Nullable Throwable cause) {
+        if (cause != null) {
+            logBuilder().endRequest(cause);
+            logBuilder().endResponse(cause);
+        } else {
+            logBuilder().endRequest();
+            logBuilder().endResponse();
+        }
     }
 
     /**
@@ -225,7 +235,11 @@ abstract class AbstractHttpResponseHandler {
     final void maybeWriteAccessLog() {
         final ServiceConfig config = reqCtx.config();
         if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
-            reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
+            reqCtx.log().whenComplete().thenAccept(log -> {
+                try (SafeCloseable ignored = reqCtx.push()) {
+                    config.accessLogWriter().log(log);
+                }
+            });
         }
     }
 
@@ -234,8 +248,7 @@ abstract class AbstractHttpResponseHandler {
      */
     final void scheduleTimeout() {
         // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
-        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(),
-                                                   0, /* server */ true);
+        reqCtx.requestCancellationScheduler().start(newCancellationTask());
     }
 
     /**
@@ -261,6 +274,7 @@ abstract class AbstractHttpResponseHandler {
                     // A stream or connection was already closed by a client
                     fail(cause);
                 } else {
+                    req.setShouldResetOnlyIfRemoteIsOpen(true);
                     req.abortResponse(cause, false);
                 }
             }

@@ -48,11 +48,9 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     private boolean callClosed;
 
     DeferredListener(ServerCall<I, ?> serverCall, CompletableFuture<ServerCall.Listener<I>> listenerFuture) {
-        checkState(serverCall instanceof AbstractServerCall, "Cannot use %s with a non-Armeria gRPC server",
-                   AsyncServerInterceptor.class.getName());
-        @SuppressWarnings("unchecked")
-        final AbstractServerCall<I, ?> armeriaServerCall = (AbstractServerCall<I, ?>) serverCall;
-
+        final AbstractServerCall<I, ?> armeriaServerCall = ServerCallUtil.findArmeriaServerCall(serverCall);
+        checkState(armeriaServerCall != null, "Cannot use %s with a non-Armeria gRPC server. ServerCall: %s",
+                   AsyncServerInterceptor.class.getName(), serverCall);
         // As per `ServerCall.Listener`'s Javadoc, the caller should call one simultaneously. `blockingExecutor`
         // is a sequential executor which is wrapped by `MoreExecutors.newSequentialExecutor()`. So both
         // `blockingExecutor` and `eventLoop` guarantees the execution order.

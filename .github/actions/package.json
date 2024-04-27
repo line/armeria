@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "post-release": "ts-node post-release.ts",
+    "comment-build-scan": "ts-node comment-build-scan.ts"
+  },
+  "dependencies": {
+    "octokit": "^3.1.2",
+    "ts-node": "^10.9.1"
+  }
+}

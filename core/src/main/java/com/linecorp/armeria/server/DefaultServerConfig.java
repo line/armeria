@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -44,6 +45,7 @@ import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
@@ -72,6 +74,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final int maxNumConnections;
 
     private final long idleTimeoutMillis;
+    private final boolean keepAliveOnPing;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
     private final long connectionDrainDurationMicros;
@@ -82,6 +85,8 @@ final class DefaultServerConfig implements ServerConfig {
     private final long http2MaxStreamsPerConnection;
     private final int http2MaxFrameSize;
     private final long http2MaxHeaderListSize;
+    private final int http2MaxResetFramesPerWindow;
+    private final int http2MaxResetFramesWindowSeconds;
     private final int http1MaxInitialLineLength;
     private final int http1MaxHeaderSize;
     private final int http1MaxChunkSize;
@@ -97,6 +102,7 @@ final class DefaultServerConfig implements ServerConfig {
 
     private final Map<ChannelOption<?>, ?> channelOptions;
     private final Map<ChannelOption<?>, ?> childChannelOptions;
+    private final Consumer<? super ChannelPipeline> childChannelPipelineCustomizer;
 
     private final List<ClientAddressSource> clientAddressSources;
     private final Predicate<? super InetAddress> clientAddressTrustedProxyFilter;
@@ -121,16 +127,19 @@ final class DefaultServerConfig implements ServerConfig {
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
-            int maxNumConnections, long idleTimeoutMillis, long pingIntervalMillis, long maxConnectionAgeMillis,
+            int maxNumConnections, long idleTimeoutMillis, boolean keepAliveOnPing, long pingIntervalMillis,
+            long maxConnectionAgeMillis,
             int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
             int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
-            long http2MaxStreamsPerConnection, int http2MaxFrameSize,
-            long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
+            long http2MaxStreamsPerConnection, int http2MaxFrameSize, long http2MaxHeaderListSize,
+            int http2MaxResetFramesPerWindow, int http2MaxResetFramesWindowSeconds,
+            int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             BlockingTaskExecutor blockingTaskExecutor,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
+            Consumer<? super ChannelPipeline> childChannelPipelineCustomizer,
             List<ClientAddressSource> clientAddressSources,
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
             Predicate<? super InetAddress> clientAddressFilter,
@@ -153,6 +162,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
+        this.keepAliveOnPing = keepAliveOnPing;
         this.pingIntervalMillis = validateNonNegative(pingIntervalMillis, "pingIntervalMillis");
         this.maxNumRequestsPerConnection =
                 validateNonNegative(maxNumRequestsPerConnection, "maxNumRequestsPerConnection");
@@ -164,6 +174,8 @@ final class DefaultServerConfig implements ServerConfig {
         this.http2MaxStreamsPerConnection = http2MaxStreamsPerConnection;
         this.http2MaxFrameSize = http2MaxFrameSize;
         this.http2MaxHeaderListSize = http2MaxHeaderListSize;
+        this.http2MaxResetFramesPerWindow = http2MaxResetFramesPerWindow;
+        this.http2MaxResetFramesWindowSeconds = http2MaxResetFramesWindowSeconds;
         this.http1MaxInitialLineLength = validateNonNegative(
                 http1MaxInitialLineLength, "http1MaxInitialLineLength");
         this.http1MaxHeaderSize = validateNonNegative(
@@ -185,6 +197,8 @@ final class DefaultServerConfig implements ServerConfig {
                 new Object2ObjectArrayMap<>(requireNonNull(channelOptions, "channelOptions")));
         this.childChannelOptions = Collections.unmodifiableMap(
                 new Object2ObjectArrayMap<>(requireNonNull(childChannelOptions, "childChannelOptions")));
+        this.childChannelPipelineCustomizer =
+                requireNonNull(childChannelPipelineCustomizer, "childChannelPipelineCustomizer");
         this.clientAddressSources = ImmutableList.copyOf(
                 requireNonNull(clientAddressSources, "clientAddressSources"));
         this.clientAddressTrustedProxyFilter =
@@ -480,6 +494,11 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
+    public Consumer<? super ChannelPipeline> childChannelPipelineCustomizer() {
+        return childChannelPipelineCustomizer;
+    }
+
+    @Override
     public int maxNumConnections() {
         return maxNumConnections;
     }
@@ -487,6 +506,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public long idleTimeoutMillis() {
         return idleTimeoutMillis;
+    }
+
+    @Override
+    public boolean keepAliveOnPing() {
+        return keepAliveOnPing;
     }
 
     @Override
@@ -547,6 +571,16 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public long http2MaxHeaderListSize() {
         return http2MaxHeaderListSize;
+    }
+
+    @Override
+    public int http2MaxResetFramesPerWindow() {
+        return http2MaxResetFramesPerWindow;
+    }
+
+    @Override
+    public int http2MaxResetFramesWindowSeconds() {
+        return http2MaxResetFramesWindowSeconds;
     }
 
     @Override

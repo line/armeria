@@ -38,8 +38,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
@@ -49,6 +47,8 @@ import io.grpc.Codec.Gzip;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
 
 class ArmeriaMessageFramerTest {
 
@@ -209,7 +209,7 @@ class ArmeriaMessageFramerTest {
     private static ByteBuf serializedTrailers() {
         final ResponseHeadersBuilder trailersBuilder = ResponseHeaders.builder(200).contentType(
                 GrpcSerializationFormats.PROTO.mediaType());
-        GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null);
+        GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null, null);
         return serializeTrailersAsMessage(ByteBufAllocator.DEFAULT, trailersBuilder.build());
     }
 }

@@ -44,7 +44,8 @@ public interface RequestTarget {
     @Nullable
     static RequestTarget forServer(String reqTarget) {
         requireNonNull(reqTarget, "reqTarget");
-        return DefaultRequestTarget.forServer(reqTarget, Flags.allowDoubleDotsInQueryString());
+        return DefaultRequestTarget.forServer(reqTarget, Flags.allowSemicolonInPathComponent(),
+                                              Flags.allowDoubleDotsInQueryString());
     }
 
     /**
@@ -98,9 +99,37 @@ public interface RequestTarget {
     String authority();
 
     /**
+     * Returns the host of this {@link RequestTarget}. Unlike {@link #authority()}, host doesn't include
+     * a port number.
+     *
+     * @return a non-empty string if {@link #form()} is {@link RequestTargetForm#ABSOLUTE}.
+     *         {@code null} otherwise.
+     */
+    @Nullable
+    String host();
+
+    /**
+     * Returns the port of this {@link RequestTarget}.
+     *
+     * @return a positive port number if {@link #form()} is {@link RequestTargetForm#ABSOLUTE} and
+     *         {@link #authority()} has the port number. Zero or a negative value otherwise.
+     */
+    int port();
+
+    /**
      * Returns the path of this {@link RequestTarget}, which always starts with {@code '/'}.
      */
     String path();
+
+    /**
+     * Returns the path of this {@link RequestTarget}, which always starts with {@code '/'}.
+     * Unlike {@link #path()}, the returned string contains matrix variables it the original request path
+     * contains them.
+     *
+     * @see <a href="https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/matrix-variables.html">
+     *      Matrix Variables</a>
+     */
+    String maybePathWithMatrixVariables();
 
     /**
      * Returns the query of this {@link RequestTarget}.

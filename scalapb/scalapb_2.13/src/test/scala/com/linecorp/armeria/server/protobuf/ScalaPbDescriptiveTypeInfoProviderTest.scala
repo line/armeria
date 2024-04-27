@@ -19,17 +19,19 @@ package com.linecorp.armeria.server.protobuf
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.json.JsonMapper
-import com.linecorp.armeria.scalapb.testing.messages.TestMessage
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.{ConsumesJson, Post, ProducesJson}
-import com.linecorp.armeria.server.docs.{ContainerTypeSignature, DocService, FieldInfo, FieldRequirement, MapTypeSignature, StructInfo, TypeSignatureType}
-import ProtobufDescriptiveTypeInfoProvider._
+import com.linecorp.armeria.server.docs.{ContainerTypeSignature, DocService, MapTypeSignature, StructInfo, TypeSignatureType}
+import com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider._
 import com.linecorp.armeria.server.scalapb.{ScalaPbDescriptiveTypeInfoProvider, ServerSuite}
 import munit.FunSuite
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
+import testing.scalapb.messages.TestMessage
 
 import scala.concurrent.Future
 
+@GenerateNativeImageTrace
 class ScalaPbDescriptiveTypeInfoProviderTest extends FunSuite with ServerSuite {
 
   override def configureServer: ServerBuilder => Unit = {
@@ -42,7 +44,7 @@ class ScalaPbDescriptiveTypeInfoProviderTest extends FunSuite with ServerSuite {
     val namedInfo = provider.newDescriptiveTypeInfo(classOf[TestMessage])
     assert(namedInfo.isInstanceOf[StructInfo])
     val structInfo: StructInfo = namedInfo.asInstanceOf[StructInfo]
-    assertEquals(structInfo.name, "armeria.protobuf.testing.TestMessage")
+    assertEquals(structInfo.name, "testing.scalapb.TestMessage")
     assertEquals(structInfo.fields.size(), 19)
     assertEquals(structInfo.fields.get(0).name, "bool")
     assertEquals(structInfo.fields.get(0).typeSignature, BOOL)
@@ -71,11 +73,11 @@ class ScalaPbDescriptiveTypeInfoProviderTest extends FunSuite with ServerSuite {
     assertEquals(structInfo.fields.get(12).name, "bytes")
     assertEquals(structInfo.fields.get(12).typeSignature, BYTES)
     assertEquals(structInfo.fields.get(13).name, "test_enum")
-    assertEquals(structInfo.fields.get(13).typeSignature.signature, "armeria.protobuf.testing.TestEnum")
+    assertEquals(structInfo.fields.get(13).typeSignature.signature, "testing.scalapb.TestEnum")
 
     val nested = structInfo.fields.get(14)
     assertEquals(nested.name, "nested")
-    assertEquals(nested.typeSignature.signature, "armeria.protobuf.testing.TestMessage.Nested")
+    assertEquals(nested.typeSignature.signature, "testing.scalapb.TestMessage.Nested")
 
     assertEquals(structInfo.fields.get(15).name, "strings")
     val repeatedTypeSignature = structInfo.fields.get(15).typeSignature
@@ -90,11 +92,11 @@ class ScalaPbDescriptiveTypeInfoProviderTest extends FunSuite with ServerSuite {
     assertEquals(mapTypeSignature.asInstanceOf[MapTypeSignature].valueTypeSignature(), INT32)
     val self = structInfo.fields.get(17)
     assertEquals(self.name, "self")
-    assertEquals(self.typeSignature.signature, "armeria.protobuf.testing.TestMessage")
+    assertEquals(self.typeSignature.signature, "testing.scalapb.TestMessage")
 
     val oneof = structInfo.fields.get(18)
     assertEquals(oneof.name(), "oneof")
-    assertEquals(oneof.typeSignature.signature, "armeria.protobuf.testing.SimpleOneof")
+    assertEquals(oneof.typeSignature.signature, "testing.scalapb.SimpleOneof")
   }
 
   test("should not handle com.google.protobuf.Message with ScalaPbDescriptiveTypeInfoProvider") {
@@ -118,7 +120,7 @@ class ScalaPbDescriptiveTypeInfoProviderTest extends FunSuite with ServerSuite {
       .content()
 
     val resourceAsStream = classOf[ScalaPbDescriptiveTypeInfoProviderTest].getResourceAsStream(
-      "ScalaPbDescriptiveTypeInfoProviderTest_specification.json5")
+      "/testing/scalapb/ScalaPbDescriptiveTypeInfoProviderTest_specification.json5")
     val json5Mapper = JsonMapper
       .builder()
       .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature)

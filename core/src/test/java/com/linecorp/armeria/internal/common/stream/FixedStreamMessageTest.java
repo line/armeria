@@ -44,6 +44,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -94,12 +95,7 @@ class FixedStreamMessageTest {
 
             @Override
             public void onSubscribe(Subscription s) {
-                try {
-                    // Wait for `abort()` to be called.
-                    latch.await();
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+                BlockingUtils.blockingRun(() -> latch.await());
             }
 
             @Override
@@ -267,8 +263,10 @@ class FixedStreamMessageTest {
         assertThatThrownBy(stream.whenComplete()::join)
                 .isInstanceOf(CompletionException.class)
                 .hasCause(abortCause);
-        assertThat(subscriptionRef).hasValue(NoopSubscription.get());
-        assertThat(causeRef).hasValue(abortCause);
+        await().untilAsserted(() -> {
+            assertThat(subscriptionRef).hasValue(NoopSubscription.get());
+            assertThat(causeRef).hasValue(abortCause);
+        });
     }
 
     @ArgumentsSource(FixedStreamMessageProvider.class)

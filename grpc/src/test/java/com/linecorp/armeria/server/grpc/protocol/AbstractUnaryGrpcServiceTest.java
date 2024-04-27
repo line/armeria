@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.UncheckedIOException;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Stream;
 
@@ -34,8 +35,12 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.client.grpc.protocol.UnaryGrpcClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -45,15 +50,9 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.grpc.testing.Messages;
-import com.linecorp.armeria.grpc.testing.Messages.EchoStatus;
-import com.linecorp.armeria.grpc.testing.Messages.Payload;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
-import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
+import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -63,7 +62,15 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import testing.grpc.Messages;
+import testing.grpc.Messages.EchoStatus;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
+@GenerateNativeImageTrace
 class AbstractUnaryGrpcServiceTest {
     private static final String METHOD_NAME = "/armeria.grpc.testing.TestService/UnaryCall";
     private static final String PAYLOAD_BODY = "hello";
@@ -98,7 +105,9 @@ class AbstractUnaryGrpcServiceTest {
                 // For statusExceptionUpstream() and statusExceptionDownstream()
                 assertThat(request).isEqualTo(EXCEPTION_REQUEST_MESSAGE);
                 final Messages.EchoStatus resStatus = request.getResponseStatus();
-                throw new ArmeriaStatusException(resStatus.getCode(), resStatus.getMessage());
+                throw new ArmeriaStatusException(resStatus.getCode(),
+                                                 resStatus.getMessage(),
+                                                 "TestDetails".getBytes());
             } else {
                 // For normalUpstream() and normalDownstream()
                 assertThat(request).isEqualTo(REQUEST_MESSAGE);
@@ -196,6 +205,32 @@ class AbstractUnaryGrpcServiceTest {
 
         assertThat(response.headers().get(HttpHeaderNames.STATUS)).isEqualTo(
                 HttpStatus.UNSUPPORTED_MEDIA_TYPE.codeAsText());
+    }
+
+    @Test
+    void exceptionWithDetails() throws Exception {
+        final UnaryGrpcClient client = Clients.newClient(
+            server.httpUri(UnaryGrpcSerializationFormats.PROTO),
+                           UnaryGrpcClient.class);
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThatThrownBy(
+                    () -> client.execute("/armeria.grpc.testing.TestService/UnaryCall",
+                                         EXCEPTION_REQUEST_MESSAGE.toByteArray()).join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasMessageContaining("not for your eyes")
+                    .hasCauseInstanceOf(ArmeriaStatusException.class)
+                    .cause()
+                    .satisfies(ex -> {
+                            final ArmeriaStatusException cause = (ArmeriaStatusException) ex;
+                            assertThat(cause.getGrpcStatusDetailsBin()).isNotEmpty();
+                            assertThat(cause.getGrpcStatusDetailsBin()).isEqualTo("TestDetails".getBytes());
+                        });
+            final ClientRequestContext ctx = captor.get();
+            final HttpHeaders trailers = GrpcWebTrailers.get(ctx);
+            assertThat(trailers).isNotNull();
+            assertThat(trailers.getInt(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(StatusCodes.PERMISSION_DENIED);
+        }
     }
 
     @ParameterizedTest

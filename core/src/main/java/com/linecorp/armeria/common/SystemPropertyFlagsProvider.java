@@ -39,6 +39,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
@@ -149,6 +150,23 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public TlsEngineType tlsEngineType() {
+        final String strTlsEngineType = getNormalized("tlsEngineType");
+        if (strTlsEngineType == null) {
+            return null;
+        }
+        switch (strTlsEngineType) {
+            case "jdk":
+                return TlsEngineType.JDK;
+            case "openssl":
+                return TlsEngineType.OPENSSL;
+            default:
+                throw new IllegalArgumentException(
+                        String.format("%s isn't one of 'jdk' or 'openssl'", strTlsEngineType));
+        }
+    }
+
+    @Override
     public Boolean dumpOpenSslInfo() {
         return getBoolean("dumpOpenSslInfo");
     }
@@ -159,7 +177,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Integer numCommonWorkers() {
+    public Integer numCommonWorkers(TransportType transportType) {
         return getInt("numCommonWorkers");
     }
 
@@ -229,6 +247,16 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean defaultPreferHttp1() {
+        return getBoolean("preferHttp1");
+    }
+
+    @Override
+    public Boolean defaultUseHttp2WithoutAlpn() {
+        return getBoolean("defaultUseHttp2WithoutAlpn");
+    }
+
+    @Override
     public Boolean defaultUseHttp1Pipelining() {
         return getBoolean("defaultUseHttp1Pipelining");
     }
@@ -289,6 +317,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Integer defaultServerHttp2MaxResetFramesPerMinute() {
+        return getInt("defaultServerHttp2MaxResetFramesPerMinute");
+    }
+
+    @Override
     public String defaultBackoffSpec() {
         return getNormalized("defaultBackoffSpec");
     }
@@ -296,6 +329,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Integer defaultMaxTotalAttempts() {
         return getInt("defaultMaxTotalAttempts");
+    }
+
+    @Override
+    public @Nullable Long defaultRequestAutoAbortDelayMillis() {
+        return getLong("defaultRequestAutoAbortDelayMillis");
     }
 
     @Override
@@ -423,6 +461,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Boolean allowDoubleDotsInQueryString() {
         return getBoolean("allowDoubleDotsInQueryString");
+    }
+
+    @Override
+    public Boolean allowSemicolonInPathComponent() {
+        return getBoolean("allowSemicolonInPathComponent");
     }
 
     @Override

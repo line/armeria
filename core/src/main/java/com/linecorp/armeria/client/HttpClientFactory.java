@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -29,6 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,11 +48,14 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -77,12 +82,25 @@ final class HttpClientFactory implements ClientFactory {
 
     private static final Set<Scheme> SUPPORTED_SCHEMES =
             Arrays.stream(SessionProtocol.values())
-                  .map(p -> Scheme.of(SerializationFormat.NONE, p))
+                  .flatMap(p -> Stream.of(Scheme.of(SerializationFormat.NONE, p),
+                                          Scheme.of(SerializationFormat.WS, p)))
                   .collect(toImmutableSet());
+
+    private static void setupTlsMetrics(List<X509Certificate> certificates, MeterRegistry registry) {
+        final MeterIdPrefix meterIdPrefix = new MeterIdPrefix("armeria.client");
+            try {
+                MoreMeterBinders.certificateMetrics(certificates, meterIdPrefix)
+                                .bindTo(registry);
+            } catch (Exception ex) {
+                logger.warn("Failed to set up TLS certificate metrics: {}", certificates, ex);
+            }
+    }
 
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnClose;
-    private final Bootstrap baseBootstrap;
+    private final Bootstrap inetBaseBootstrap;
+    @Nullable
+    private final Bootstrap unixBaseBootstrap;
     private final SslContext sslCtxHttp1Or2;
     private final SslContext sslCtxHttp1Only;
     private final AddressResolverGroup<InetSocketAddress> addressResolverGroup;
@@ -94,10 +112,12 @@ final class HttpClientFactory implements ClientFactory {
     private final int http1MaxHeaderSize;
     private final int http1MaxChunkSize;
     private final long idleTimeoutMillis;
+    private final boolean keepAliveOnPing;
     private final long pingIntervalMillis;
     private final long maxConnectionAgeMillis;
     private final int maxNumRequestsPerConnection;
     private final boolean useHttp2Preface;
+    private final boolean useHttp2WithoutAlpn;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
     private MeterRegistry meterRegistry;
@@ -125,26 +145,47 @@ final class HttpClientFactory implements ClientFactory {
         addressResolverGroup = group;
 
         final Bootstrap bootstrap = new Bootstrap();
-        bootstrap.channel(TransportType.socketChannelType(workerGroup));
         bootstrap.resolver(addressResolverGroup);
 
+        shutdownWorkerGroupOnClose = options.shutdownWorkerGroupOnClose();
+        eventLoopScheduler = options.eventLoopSchedulerFactory().apply(workerGroup);
+
+        // Initialize the base Bootstrap used for connecting to an InetSocketAddress.
+        inetBaseBootstrap = bootstrap.clone();
+        inetBaseBootstrap.channel(TransportType.socketChannelType(workerGroup));
         options.channelOptions().forEach((option, value) -> {
             @SuppressWarnings("unchecked")
             final ChannelOption<Object> castOption = (ChannelOption<Object>) option;
-            bootstrap.option(castOption, value);
+            inetBaseBootstrap.option(castOption, value);
         });
+
+        // Initialize the base Bootstrap used for connecting to a DomainSocketAddress.
+        if (TransportType.supportsDomainSockets(workerGroup)) {
+            unixBaseBootstrap = bootstrap.clone();
+            unixBaseBootstrap.channel(TransportType.domainSocketChannelType(workerGroup));
+            options.channelOptions().forEach((option, value) -> {
+                if (!ChannelUtil.isTcpOption(option)) {
+                    @SuppressWarnings("unchecked")
+                    final ChannelOption<Object> castOption = (ChannelOption<Object>) option;
+                    unixBaseBootstrap.option(castOption, value);
+                }
+            });
+        } else {
+            unixBaseBootstrap = null;
+        }
 
         final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
                 ImmutableList.of(options.tlsCustomizer());
         final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
-
-        shutdownWorkerGroupOnClose = options.shutdownWorkerGroupOnClose();
-        eventLoopScheduler = options.eventLoopSchedulerFactory().apply(workerGroup);
-        baseBootstrap = bootstrap;
+        final List<X509Certificate> keyCertChainCaptor = new ArrayList<>();
         sslCtxHttp1Or2 = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers);
+                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizers,
+                                  keyCertChainCaptor);
         sslCtxHttp1Only = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers);
+                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizers,
+                                  keyCertChainCaptor);
+        setupTlsMetrics(keyCertChainCaptor, options.meterRegistry());
+
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();
         http2InitialStreamWindowSize = options.http2InitialStreamWindowSize();
         http2MaxFrameSize = options.http2MaxFrameSize();
@@ -154,7 +195,9 @@ final class HttpClientFactory implements ClientFactory {
         http1MaxHeaderSize = options.http1MaxHeaderSize();
         http1MaxChunkSize = options.http1MaxChunkSize();
         idleTimeoutMillis = options.idleTimeoutMillis();
+        keepAliveOnPing = options.keepAliveOnPing();
         useHttp2Preface = options.useHttp2Preface();
+        useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
         meterRegistry = options.meterRegistry();
@@ -171,11 +214,25 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     /**
-     * Returns a new {@link Bootstrap} whose {@link ChannelFactory}, {@link AddressResolverGroup} and
-     * socket options are pre-configured.
+     * Returns a new {@link Bootstrap} for connecting to an {@link InetSocketAddress}.
+     * The returned {@link Bootstrap} has its {@link ChannelFactory}, {@link AddressResolverGroup} and
+     * socket options pre-configured.
      */
-    Bootstrap newBootstrap() {
-        return baseBootstrap.clone();
+    Bootstrap newInetBootstrap() {
+        return inetBaseBootstrap.clone();
+    }
+
+    /**
+     * Returns a new {@link Bootstrap} for connecting to a {@link io.netty.channel.unix.DomainSocketAddress}.
+     * The returned {@link Bootstrap} has its {@link ChannelFactory}, {@link AddressResolverGroup} and
+     * socket options pre-configured.
+     */
+    @Nullable
+    Bootstrap newUnixBootstrap() {
+        if (unixBaseBootstrap == null) {
+            return null;
+        }
+        return unixBaseBootstrap.clone();
     }
 
     int http2InitialConnectionWindowSize() {
@@ -210,6 +267,10 @@ final class HttpClientFactory implements ClientFactory {
         return idleTimeoutMillis;
     }
 
+    boolean keepAliveOnPing() {
+        return keepAliveOnPing;
+    }
+
     long pingIntervalMillis() {
         return pingIntervalMillis;
     }
@@ -224,6 +285,10 @@ final class HttpClientFactory implements ClientFactory {
 
     boolean useHttp2Preface() {
         return useHttp2Preface;
+    }
+
+    boolean useHttp2WithoutAlpn() {
+        return useHttp2WithoutAlpn;
     }
 
     boolean useHttp1Pipelining() {

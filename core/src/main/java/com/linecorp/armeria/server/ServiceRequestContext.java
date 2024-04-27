@@ -15,12 +15,14 @@
  */
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.invokeHook;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.time.Duration;
 import java.util.List;
@@ -52,6 +54,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -181,17 +184,21 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns the remote address of this request.
+     *
+     * @return an {@link InetSocketAddress} or a {@link DomainSocketAddress}
      */
     @Nonnull
     @Override
-    <A extends SocketAddress> A remoteAddress();
+    InetSocketAddress remoteAddress();
 
     /**
      * Returns the local address of this request.
+     *
+     * @return an {@link InetSocketAddress} or a {@link DomainSocketAddress}
      */
     @Nonnull
     @Override
-    <A extends SocketAddress> A localAddress();
+    InetSocketAddress localAddress();
 
     /**
      * Returns the address of the client who initiated this request.
@@ -226,8 +233,9 @@ public interface ServiceRequestContext extends RequestContext {
         }
 
         if (oldCtx.unwrapAll() == unwrapAll()) {
-            // Reentrance
-            return noopSafeCloseable();
+            // Reentrance, invoke only the hooks because some new hooks may have been added after the last push.
+            final SafeCloseable closeable = invokeHook(this);
+            return firstNonNull(closeable, noopSafeCloseable());
         }
 
         if (RequestContextUtil.equalsIgnoreWrapper(oldCtx.root(), this)) {

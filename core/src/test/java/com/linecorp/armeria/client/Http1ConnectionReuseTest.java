@@ -17,7 +17,7 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -44,7 +44,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 class Http1ConnectionReuseTest {
 
-    private static final List<SocketAddress> remoteAddresses = new ArrayList<>(3);
+    private static final List<InetSocketAddress> remoteAddresses = new ArrayList<>(3);
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {

@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -240,7 +241,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
+        final HttpResponse res = HttpResponse.of(responseFuture, ctx.eventLoop());
         if (ctx.exchangeType().isRequestStreaming()) {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             doExecute0(ctx, reqDuplicator, req, res, responseFuture);
@@ -318,7 +319,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
             response = initContextAndExecuteWithFallback(
-                    unwrap(), ctxExtension, endpointGroup, HttpResponse::from,
+                    unwrap(), ctxExtension, endpointGroup, HttpResponse::of,
                     (context, cause) -> HttpResponse.ofFailure(cause));
         } else {
             response = executeWithFallback(unwrap(), derivedCtx,
@@ -373,7 +374,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         assert response != null || aggregatedRes != null;
         final RequestLogProperty logProperty =
                 retryConfig.requiresResponseTrailers() ?
-                RequestLogProperty.RESPONSE_TRAILERS : RequestLogProperty.RESPONSE_HEADERS;
+                RequestLogProperty.RESPONSE_END_TIME : RequestLogProperty.RESPONSE_HEADERS;
 
         derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable responseCause =
@@ -480,11 +481,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     private static long getRetryAfterMillis(ClientRequestContext ctx) {
         final RequestLogAccess log = ctx.log();
         final String value;
-        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
-            value = log.partial().responseHeaders().get(HttpHeaderNames.RETRY_AFTER);
-        } else {
-            value = null;
-        }
+        final RequestLog requestLog = log.getIfAvailable(RequestLogProperty.RESPONSE_HEADERS);
+        value = requestLog != null ? requestLog.responseHeaders().get(HttpHeaderNames.RETRY_AFTER) : null;
 
         if (value != null) {
             try {

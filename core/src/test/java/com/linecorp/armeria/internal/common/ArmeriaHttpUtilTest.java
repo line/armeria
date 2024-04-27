@@ -28,7 +28,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -59,11 +58,7 @@ import com.linecorp.armeria.server.ServerConfig;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.HttpMethod;
-import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http2.Http2Headers;
 import io.netty.handler.codec.http2.HttpConversionUtil.ExtensionHeaderNames;
 import io.netty.util.AsciiString;
@@ -270,33 +265,6 @@ class ArmeriaHttpUtilTest {
     }
 
     @Test
-    void addHostHeaderIfMissing() throws URISyntaxException {
-        final io.netty.handler.codec.http.HttpHeaders headers = new DefaultHttpHeaders();
-        headers.add(HttpHeaderNames.HOST, "bar");
-
-        final HttpRequest originReq =
-                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello", headers);
-
-        final ChannelHandlerContext ctx = mockChannelHandlerContext();
-
-        RequestHeaders armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "http",
-                                                  RequestTarget.forServer(originReq.uri()));
-        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("bar");
-        assertThat(armeriaHeaders.authority()).isEqualTo("bar");
-        assertThat(armeriaHeaders.scheme()).isEqualTo("http");
-        assertThat(armeriaHeaders.path()).isEqualTo("/hello");
-
-        // Remove Host header.
-        headers.remove(HttpHeaderNames.HOST);
-        armeriaHeaders = toArmeria(ctx, originReq, serverConfig(), "https",
-                                   RequestTarget.forServer(originReq.uri()));
-        assertThat(armeriaHeaders.get(HttpHeaderNames.HOST)).isEqualTo("foo:36462"); // The default hostname.
-        assertThat(armeriaHeaders.authority()).isEqualTo("foo:36462");
-        assertThat(armeriaHeaders.scheme()).isEqualTo("https");
-        assertThat(armeriaHeaders.path()).isEqualTo("/hello");
-    }
-
-    @Test
     void stripTEHeaders() {
         final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
         in.add(HttpHeaderNames.TE, HttpHeaderValues.GZIP);
@@ -377,18 +345,18 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void excludeDisallowedHeadersWhileHttp2ToHttp1() {
-        final HttpHeaders in = HttpHeaders.builder()
-                                          .add(HttpHeaderNames.TRAILER, "foo")
-                                          .add(HttpHeaderNames.HOST, "bar")
-                                          .add(HttpHeaderNames.PATH, "dummy")
-                                          .add(HttpHeaderNames.METHOD, "dummy")
-                                          .add(HttpHeaderNames.SCHEME, "dummy")
-                                          .add(HttpHeaderNames.STATUS, "dummy")
-                                          .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")
-                                          .add(ExtensionHeaderNames.STREAM_ID.text(), "dummy")
-                                          .add(ExtensionHeaderNames.SCHEME.text(), "dummy")
-                                          .add(ExtensionHeaderNames.PATH.text(), "dummy")
-                                          .build();
+        final ResponseHeaders in = ResponseHeaders.builder()
+                                                  .add(HttpHeaderNames.TRAILER, "foo")
+                                                  .add(HttpHeaderNames.HOST, "bar")
+                                                  .add(HttpHeaderNames.PATH, "dummy")
+                                                  .add(HttpHeaderNames.METHOD, "dummy")
+                                                  .add(HttpHeaderNames.SCHEME, "dummy")
+                                                  .add(HttpHeaderNames.STATUS, "dummy")
+                                                  .add(HttpHeaderNames.TRANSFER_ENCODING, "dummy")
+                                                  .add(ExtensionHeaderNames.STREAM_ID.text(), "dummy")
+                                                  .add(ExtensionHeaderNames.SCHEME.text(), "dummy")
+                                                  .add(ExtensionHeaderNames.PATH.text(), "dummy")
+                                                  .build();
 
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
@@ -462,9 +430,11 @@ class ArmeriaHttpUtilTest {
                                                        .add("Content-Length", "dummy")
                                                        .add("Cache-Control", "dummy"));
 
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(200).add(in).build();
         final io.netty.handler.codec.http.HttpHeaders serverOutHeaders =
                 new DefaultHttpHeaders();
-        toNettyHttp1ServerHeaders(in, serverOutHeaders, Http1HeaderNaming.traditional(), true);
+        toNettyHttp1ServerHeaders(responseHeaders, serverOutHeaders, Http1HeaderNaming.traditional(), true);
+        // 200 status is included in the status-line.
         assertThat(serverOutHeaders).isEqualTo(new DefaultHttpHeaders()
                                                        .add("foo", "bar")
                                                        .add("Authorization", "dummy")

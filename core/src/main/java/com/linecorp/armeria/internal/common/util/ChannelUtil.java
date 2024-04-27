@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.common.util;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.ssl.SSLSession;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -35,6 +38,7 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
@@ -42,6 +46,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.handler.ssl.SslHandler;
 
 public final class ChannelUtil {
@@ -106,7 +111,10 @@ public final class ChannelUtil {
     @Nullable
     private static ChannelOption<Integer> ioUringTcpKeepintvl;
 
+    private static final Set<ChannelOption<?>> tcpOptions;
+
     static {
+        final ImmutableSet.Builder<ChannelOption<?>> tcpOptionsBuilder = ImmutableSet.builder();
         try {
             final Class<?> clazz = Class.forName(
                     CHANNEL_PACKAGE_NAME + ".epoll.EpollChannelOption", false,
@@ -117,6 +125,10 @@ public final class ChannelUtil {
             epollTcpKeepidle = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPIDLE");
             //noinspection unchecked
             epollTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
+
+            tcpOptionsBuilder.add(epollTcpUserTimeout);
+            tcpOptionsBuilder.add(epollTcpKeepidle);
+            tcpOptionsBuilder.add(epollTcpKeepintvl);
         } catch (Throwable ignored) {
             // Ignore
         }
@@ -132,10 +144,16 @@ public final class ChannelUtil {
                 ioUringTcpKeepidle = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPIDLE");
                 //noinspection unchecked
                 ioUringTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
+
+                tcpOptionsBuilder.add(ioUringTcpUserTimeout);
+                tcpOptionsBuilder.add(ioUringTcpKeepidle);
+                tcpOptionsBuilder.add(ioUringTcpKeepintvl);
             } catch (Throwable ignored) {
                 // Ignore
             }
         }
+
+        tcpOptions = tcpOptionsBuilder.build();
     }
 
     @Nullable
@@ -281,6 +299,75 @@ public final class ChannelUtil {
     @Nullable
     public static String incubatorChannelPackageName() {
         return INCUBATOR_CHANNEL_PACKAGE_NAME;
+    }
+
+    public static boolean isTcpOption(ChannelOption<?> option) {
+        return tcpOptions.contains(option);
+    }
+
+    @Nullable
+    public static InetSocketAddress localAddress(@Nullable Channel ch) {
+        if (ch == null) {
+            return null;
+        }
+
+        if (ch instanceof DomainSocketChannel) {
+            return findAddress((DomainSocketChannel) ch);
+        } else {
+            return (InetSocketAddress) ch.localAddress();
+        }
+    }
+
+    @Nullable
+    public static InetSocketAddress remoteAddress(@Nullable Channel ch) {
+        if (ch == null) {
+            return null;
+        }
+
+        if (ch instanceof DomainSocketChannel) {
+            return findAddress((DomainSocketChannel) ch);
+        } else {
+            return (InetSocketAddress) ch.remoteAddress();
+        }
+    }
+
+    @Nullable
+    private static DomainSocketAddress findAddress(DomainSocketChannel ch) {
+        final Channel parent = ch.parent();
+        if (parent != null) {
+            final DomainSocketAddress addr = toArmeriaDomainSocketAddress(
+                    (io.netty.channel.unix.DomainSocketAddress) parent.localAddress());
+            if (addr != null) {
+                return addr;
+            }
+        }
+
+        final DomainSocketAddress laddr = toArmeriaDomainSocketAddress(ch.localAddress());
+        if (laddr != null) {
+            return laddr;
+        }
+
+        return toArmeriaDomainSocketAddress(ch.remoteAddress());
+    }
+
+    @Nullable
+    private static DomainSocketAddress toArmeriaDomainSocketAddress(
+            @Nullable io.netty.channel.unix.DomainSocketAddress addr) {
+        if (addr != null) {
+            final String path = addr.path();
+            if (!Strings.isNullOrEmpty(path)) {
+                return DomainSocketAddress.of(path);
+            }
+        }
+        return null;
+    }
+
+    public static int getPort(SocketAddress addr, int defaultValue) {
+        if (addr instanceof InetSocketAddress) {
+            assert !(addr instanceof DomainSocketAddress) : addr;
+            return ((InetSocketAddress) addr).getPort();
+        }
+        return defaultValue;
     }
 
     private ChannelUtil() {}

@@ -24,8 +24,8 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CompletableFuture;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscription;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,14 +39,14 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import okhttp3.ResponseBody;
 import retrofit2.converter.jackson.JacksonConverterFactory;
 import retrofit2.http.GET;
 import retrofit2.http.Streaming;
 
-public class ArmeriaCallFactoryLargeStreamTest {
+class ArmeriaCallFactoryLargeStreamTest {
 
     interface Service {
         @Streaming
@@ -56,8 +56,8 @@ public class ArmeriaCallFactoryLargeStreamTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    @ClassRule
-    public static final ServerRule server = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/large-stream", new AbstractHttpService() {
@@ -98,8 +98,8 @@ public class ArmeriaCallFactoryLargeStreamTest {
         }
     };
 
-    @Test(timeout = 30 * 1000L)
-    public void largeStream() throws Exception {
+    @Test
+    void largeStream() throws Exception {
         final WebClient webClient =
                 WebClient.builder(server.httpUri())
                          .maxResponseLength(Long.MAX_VALUE)

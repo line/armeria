@@ -16,13 +16,11 @@
 
 package com.linecorp.armeria.internal.server;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Iterator;
@@ -33,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
 import javax.net.ssl.SSLSession;
@@ -73,6 +72,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 
 /**
@@ -90,9 +90,8 @@ public final class DefaultServiceRequestContext
             additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
 
-    private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
-
     private final Channel ch;
+    private final EventLoop eventLoop;
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
@@ -103,6 +102,8 @@ public final class DefaultServiceRequestContext
     private final ProxiedAddresses proxiedAddresses;
 
     private final InetAddress clientAddress;
+    private final InetSocketAddress remoteAddress;
+    private final InetSocketAddress localAddress;
 
     private boolean shouldReportUnhandledExceptions = true;
 
@@ -142,31 +143,38 @@ public final class DefaultServiceRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
+            ServiceConfig cfg, Channel ch, EventLoop eventLoop, MeterRegistry meterRegistry,
+            SessionProtocol sessionProtocol, RequestId id, RoutingContext routingContext,
+            RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
-            InetAddress clientAddress, long requestStartTimeNanos, long requestStartTimeMicros) {
+            InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
+            long requestStartTimeNanos, long requestStartTimeMicros,
+            Supplier<? extends AutoCloseable> contextHook) {
 
-        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, exchangeType,
-             req, sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
-             requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
+        this(cfg, ch, eventLoop, meterRegistry, sessionProtocol, id, routingContext, routingResult,
+             exchangeType, req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
+             null /* requestCancellationScheduler */, requestStartTimeNanos, requestStartTimeMicros,
+             HttpHeaders.of(), HttpHeaders.of(), contextHook);
     }
 
     public DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
+            ServiceConfig cfg, Channel ch, EventLoop eventLoop, MeterRegistry meterRegistry,
+            SessionProtocol sessionProtocol, RequestId id, RoutingContext routingContext,
+            RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
-            InetAddress clientAddress,
+            InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
-            HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
+            HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers,
+            Supplier<? extends AutoCloseable> contextHook) {
 
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(),
-              routingContext.requestTarget(), exchangeType,
-              requireNonNull(req, "req"), null, null);
+              routingContext.requestTarget(), exchangeType, cfg.requestAutoAbortDelayMillis(),
+              requireNonNull(req, "req"), null, null, contextHook);
 
         this.ch = requireNonNull(ch, "ch");
+        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
@@ -174,11 +182,16 @@ public final class DefaultServiceRequestContext
             this.requestCancellationScheduler = requestCancellationScheduler;
         } else {
             this.requestCancellationScheduler =
-                    new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+                    CancellationScheduler.ofServer(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+            // the cancellation scheduler uses channelEventLoop since #start is called
+            // from the netty pipeline logic
+            this.requestCancellationScheduler.init(ch.eventLoop());
         }
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
         this.clientAddress = requireNonNull(clientAddress, "clientAddress");
+        this.remoteAddress = requireNonNull(remoteAddress, "remoteAddress");
+        this.localAddress = requireNonNull(localAddress, "localAddress");
 
         log = RequestLog.builder(this);
         log.startRequest(requestStartTimeNanos, requestStartTimeMicros);
@@ -217,18 +230,14 @@ public final class DefaultServiceRequestContext
 
     @Nonnull
     @Override
-    public <A extends SocketAddress> A remoteAddress() {
-        @SuppressWarnings("unchecked")
-        final A addr = (A) firstNonNull(ch.remoteAddress(), UNKNOWN_ADDR);
-        return addr;
+    public InetSocketAddress remoteAddress() {
+        return remoteAddress;
     }
 
     @Nonnull
     @Override
-    public <A extends SocketAddress> A localAddress() {
-        @SuppressWarnings("unchecked")
-        final A addr = (A) firstNonNull(ch.localAddress(), UNKNOWN_ADDR);
-        return addr;
+    public InetSocketAddress localAddress() {
+        return localAddress;
     }
 
     @Override
@@ -299,7 +308,7 @@ public final class DefaultServiceRequestContext
         if (contextAwareEventLoop != null) {
             return contextAwareEventLoop;
         }
-        return contextAwareEventLoop = ContextAwareEventLoop.of(this, ch.eventLoop());
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, eventLoop);
     }
 
     @Override
@@ -519,8 +528,6 @@ public final class DefaultServiceRequestContext
         // the same StringBuilder. See TemporaryThreadLocals for more information.
         final String sreqId = id().shortText();
         final String chanId = ch.id().asShortText();
-        final InetSocketAddress raddr = remoteAddress();
-        final InetSocketAddress laddr = localAddress();
         final InetAddress caddr = clientAddress();
         final String proto = sessionProtocol().uriText();
         final String authority = config().virtualHost().defaultHostname();
@@ -533,15 +540,16 @@ public final class DefaultServiceRequestContext
             buf.append("[sreqId=").append(sreqId)
                .append(", chanId=").append(chanId);
 
-            if (!Objects.equals(caddr, raddr.getAddress())) {
+            if (!Objects.equals(caddr, remoteAddress.getAddress())) {
                 buf.append(", caddr=");
                 TextFormatter.appendInetAddress(buf, caddr);
             }
-
-            buf.append(", raddr=");
-            TextFormatter.appendSocketAddress(buf, raddr);
+            if (!Objects.equals(remoteAddress, localAddress)) {
+                buf.append(", raddr=");
+                TextFormatter.appendSocketAddress(buf, remoteAddress);
+            }
             buf.append(", laddr=");
-            TextFormatter.appendSocketAddress(buf, laddr);
+            TextFormatter.appendSocketAddress(buf, localAddress);
             buf.append("][")
                .append(proto).append("://").append(authority).append(path).append('#').append(method)
                .append(']');

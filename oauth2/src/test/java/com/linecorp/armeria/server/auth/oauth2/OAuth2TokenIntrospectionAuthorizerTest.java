@@ -34,24 +34,24 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
 import com.linecorp.armeria.common.auth.oauth2.MockOAuth2AccessToken;
 import com.linecorp.armeria.internal.server.auth.oauth2.MockOAuth2IntrospectionService;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class OAuth2TokenIntrospectionAuthorizerTest {
+class OAuth2TokenIntrospectionAuthorizerTest {
 
     static final String CLIENT_CREDENTIALS = "dGVzdF9jbGllbnQ6Y2xpZW50X3NlY3JldA=="; //test_client:client_secret
     static final String SERVER_CREDENTIALS = "dGVzdF9zZXJ2ZXI6c2VydmVyX3NlY3JldA=="; //test_server:server_secret
 
     static final MockOAuth2AccessToken TOKEN =
-        MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(3L),
-                                       ImmutableMap.of("extension_field", "twenty-seven"), "read", "write");
+            MockOAuth2AccessToken.generate("test_client", null, Duration.ofHours(3L),
+                                           ImmutableMap.of("extension_field", "twenty-seven"), "read", "write");
 
     static final HttpService SERVICE = new AbstractHttpService() {
         @Override
@@ -72,93 +72,97 @@ public class OAuth2TokenIntrospectionAuthorizerTest {
         }
     };
 
-    private final ServerExtension resourceServer = new ServerExtension(false) {
+    @RegisterExtension
+    final ServerExtension resourceServer = new ServerExtension() {
+
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             final WebClient introspectClient = WebClient.of(authServer.httpUri());
             sb.service("/resource-read-write/",
-                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
-                               introspectClient,
-                               "/introspect/token/")
-                               .realm("protected resource read-write")
-                               .accessTokenType("Bearer")
-                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                               .permittedScope("read", "write")
-                               .build()
+                       AuthService.builder().addOAuth2(
+                               OAuth2TokenIntrospectionAuthorizer
+                                       .builder(introspectClient, "/introspect/token/")
+                                       .realm("protected resource read-write")
+                                       .accessTokenType("Bearer")
+                                       .clientAuthentication(
+                                               () -> ClientAuthentication.ofBasic(CLIENT_CREDENTIALS))
+                                       .permittedScope("read", "write")
+                                       .build()
                        ).build(SERVICE));
             sb.service("/resource-read/",
-                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
-                               introspectClient,
-                               "/introspect/token/")
-                               .realm("protected resource read")
-                               .accessTokenType("Bearer")
-                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                               .permittedScope("read")
-                               .build()
+                       AuthService.builder().addOAuth2(
+                               OAuth2TokenIntrospectionAuthorizer
+                                       .builder(introspectClient, "/introspect/token/")
+                                       .realm("protected resource read")
+                                       .accessTokenType("Bearer")
+                                       .clientAuthentication(
+                                               ClientAuthentication.ofClientPassword("test_server",
+                                                                                     "server_secret"))
+                                       .permittedScope("read")
+                                       .build()
                        ).build(SERVICE));
             sb.service("/resource-read-write-update/",
-                       AuthService.builder().addOAuth2(OAuth2TokenIntrospectionAuthorizer.builder(
-                               introspectClient,
-                               "/introspect/token/")
-                               .realm("protected resource read-write-update")
-                               .accessTokenType("Bearer")
-                               .clientBasicAuthorization(() -> SERVER_CREDENTIALS)
-                               .permittedScope("read", "write", "update")
-                               .build()
+                       AuthService.builder().addOAuth2(
+                               OAuth2TokenIntrospectionAuthorizer
+                                       .builder(introspectClient, "/introspect/token/")
+                                       .realm("protected resource read-write-update")
+                                       .accessTokenType("Bearer")
+                                       .clientAuthentication(ClientAuthentication.ofBasic(SERVER_CREDENTIALS))
+                                       .permittedScope("read", "write", "update")
+                                       .build()
                        ).build(SERVICE));
         }
     };
 
     @Test
-    public void testOk() throws Exception {
-        try (Server server = resourceServer.start()) {
+    void testOk() throws Exception {
+        final BlockingWebClient client = resourceServer.blockingWebClient();
 
-            final BlockingWebClient client = BlockingWebClient.of(resourceServer.httpUri());
+        final RequestHeaders requestHeaders1 = RequestHeaders.of(
+                HttpMethod.GET, "/resource-read-write/",
+                HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
+        final AggregatedHttpResponse response1 = client.execute(requestHeaders1);
+        assertThat(response1.status()).isEqualTo(HttpStatus.OK);
 
-            final RequestHeaders requestHeaders1 = RequestHeaders.of(
-                    HttpMethod.GET, "/resource-read-write/",
-                    HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
-            final AggregatedHttpResponse response1 = client.execute(requestHeaders1);
-            assertThat(response1.status()).isEqualTo(HttpStatus.OK);
+        final RequestHeaders requestHeaders2 = RequestHeaders.of(
+                HttpMethod.GET, "/resource-read/",
+                HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
+        final AggregatedHttpResponse response2 = client.execute(requestHeaders2);
+        assertThat(response2.status()).isEqualTo(HttpStatus.OK);
 
-            final RequestHeaders requestHeaders2 = RequestHeaders.of(
-                    HttpMethod.GET, "/resource-read/",
-                    HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
-            final AggregatedHttpResponse response2 = client.execute(requestHeaders2);
-            assertThat(response2.status()).isEqualTo(HttpStatus.OK);
-
-            final RequestHeaders requestHeaders3 = RequestHeaders.of(
-                    HttpMethod.GET, "/resource-read-write-update/",
-                    HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
-            final AggregatedHttpResponse response3 = client.execute(requestHeaders3);
-            assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
-        }
+        final RequestHeaders requestHeaders3 = RequestHeaders.of(
+                HttpMethod.GET, "/resource-read-write-update/",
+                HttpHeaderNames.AUTHORIZATION, "Bearer " + TOKEN.accessToken());
+        final AggregatedHttpResponse response3 = client.execute(requestHeaders3);
+        assertThat(response3.status()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 
     @Test
-    public void testUnauthorized() throws Exception {
-        try (Server server = resourceServer.start()) {
+    void testUnauthorized() throws Exception {
+        final BlockingWebClient client = resourceServer.blockingWebClient();
 
-            final BlockingWebClient client = BlockingWebClient.of(resourceServer.httpUri());
+        final RequestHeaders requestHeaders1 = RequestHeaders.of(
+                HttpMethod.GET, "/resource-read-write/",
+                HttpHeaderNames.AUTHORIZATION, "Bearer XYZ");
+        final AggregatedHttpResponse response1 = client.execute(requestHeaders1);
+        assertThat(response1.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response1.headers().get(HttpHeaderNames.WWW_AUTHENTICATE))
+                .isEqualTo("Bearer realm=\"protected resource read-write\", " +
+                           "error=\"invalid_token\", scope=\"read write\"");
+        assertThat(response1.content().isEmpty()).isTrue();
 
-            final RequestHeaders requestHeaders1 = RequestHeaders.of(
-                    HttpMethod.GET, "/resource-read-write/",
-                    HttpHeaderNames.AUTHORIZATION, "Bearer XYZ");
-            final AggregatedHttpResponse response1 = client.execute(requestHeaders1);
-            assertThat(response1.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
-            assertThat(response1.headers().get(HttpHeaderNames.WWW_AUTHENTICATE))
-                    .isEqualTo("Bearer realm=\"protected resource read-write\", " +
-                               "error=\"invalid_token\", scope=\"read write\"");
-            assertThat(response1.content().isEmpty()).isTrue();
-
-            final RequestHeaders requestHeaders2 = RequestHeaders.of(
-                    HttpMethod.GET, "/resource-read-write/",
-                    HttpHeaderNames.AUTHORIZATION, "Basic " + CLIENT_CREDENTIALS);
-            final AggregatedHttpResponse response2 = client.execute(requestHeaders2);
-            assertThat(response2.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
-            assertThat(response2.headers().get(HttpHeaderNames.WWW_AUTHENTICATE))
-                    .isEqualTo("Bearer realm=\"protected resource read-write\", scope=\"read write\"");
-            assertThat(response2.content().isEmpty()).isTrue();
-        }
+        final RequestHeaders requestHeaders2 = RequestHeaders.of(
+                HttpMethod.GET, "/resource-read-write/",
+                HttpHeaderNames.AUTHORIZATION, "Basic " + CLIENT_CREDENTIALS);
+        final AggregatedHttpResponse response2 = client.execute(requestHeaders2);
+        assertThat(response2.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        assertThat(response2.headers().get(HttpHeaderNames.WWW_AUTHENTICATE))
+                .isEqualTo("Bearer realm=\"protected resource read-write\", scope=\"read write\"");
+        assertThat(response2.content().isEmpty()).isTrue();
     }
 }

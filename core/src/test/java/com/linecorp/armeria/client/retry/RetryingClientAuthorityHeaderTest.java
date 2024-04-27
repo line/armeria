@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.common.HttpStatus.SERVICE_UNAVAILABLE;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.AfterEach;
@@ -94,13 +93,13 @@ class RetryingClientAuthorityHeaderTest {
 
         assertThat(backend1.requestContextCaptor().size()).isGreaterThanOrEqualTo(1);
         assertCaptorMatches(backend1.requestContextCaptor(), ctx -> {
-            assertThat(((InetSocketAddress) ctx.localAddress()).getPort()).isEqualTo(backend1.httpPort());
+            assertThat(ctx.localAddress().getPort()).isEqualTo(backend1.httpPort());
             assertThat(ctx.request().uri().getPort()).isEqualTo(backend1.httpPort());
         });
 
         assertThat(backend2.requestContextCaptor().size()).isGreaterThanOrEqualTo(1);
         assertCaptorMatches(backend2.requestContextCaptor(), ctx -> {
-            assertThat(((InetSocketAddress) ctx.localAddress()).getPort()).isEqualTo(backend2.httpPort());
+            assertThat(ctx.localAddress().getPort()).isEqualTo(backend2.httpPort());
             assertThat(ctx.request().uri().getPort()).isEqualTo(backend2.httpPort());
         });
     }

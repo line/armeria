@@ -157,6 +157,9 @@ public enum RequestLogProperty {
                   .filter(p -> !p.isRequestProperty)
                   .collect(Sets.toImmutableEnumSet());
 
+    private static final Set<RequestLogProperty> ALL_PROPERTIES =
+            Arrays.stream(RequestLogProperty.values()).collect(Sets.toImmutableEnumSet());
+
     static final int FLAGS_REQUEST_COMPLETE;
     static final int FLAGS_RESPONSE_COMPLETE;
     static final int FLAGS_ALL_COMPLETE;
@@ -179,6 +182,21 @@ public enum RequestLogProperty {
      */
     public static Set<RequestLogProperty> responseProperties() {
         return RESPONSE_PROPERTIES;
+    }
+
+    /**
+     * Returns all of the {@link RequestLogProperty}s.
+     */
+    public static Set<RequestLogProperty> allProperties() {
+        return ALL_PROPERTIES;
+    }
+
+    /**
+     * Check if this property is available by using the specified flags which represents the currently available
+     * properties.
+     */
+    public boolean isAvailable(int flags) {
+        return (flag & flags) != 0;
     }
 
     static int flags(RequestLogProperty... properties) {

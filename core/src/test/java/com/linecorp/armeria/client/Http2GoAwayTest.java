@@ -26,38 +26,32 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.DisableOnDebug;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2FrameTypes;
 
-public class Http2GoAwayTest {
+@Timeout(10)
+class Http2GoAwayTest {
 
-    @ClassRule
-    public static final EventLoopRule eventLoop = new EventLoopRule();
-
-    @Rule
-    public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
+    @RegisterExtension
+    static final EventLoopExtension eventLoop = new EventLoopExtension();
 
     /**
      * Server sends a GOAWAY frame after finishing all streams.
      */
     @Test
-    public void streamEndsBeforeGoAway() throws Exception {
+    void streamEndsBeforeGoAway() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
              ClientFactory clientFactory = newClientFactory()) {
 
@@ -105,7 +99,7 @@ public class Http2GoAwayTest {
      * Server sends GOAWAY before finishing all streams.
      */
     @Test
-    public void streamEndsAfterGoAway() throws Exception {
+    void streamEndsAfterGoAway() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
              ClientFactory clientFactory = newClientFactory()) {
 
@@ -154,7 +148,7 @@ public class Http2GoAwayTest {
      * whose lastStreamId is 3. The request with streamId 5 should fail.
      */
     @Test
-    public void streamGreaterThanLastStreamId() throws Exception {
+    void streamGreaterThanLastStreamId() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
              ClientFactory clientFactory = newClientFactory()) {
 

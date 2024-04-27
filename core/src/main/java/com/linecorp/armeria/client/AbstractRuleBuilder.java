@@ -19,8 +19,10 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -35,6 +37,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -55,6 +58,8 @@ public abstract class AbstractRuleBuilder {
     private BiPredicate<ClientRequestContext, Throwable> exceptionFilter;
     @Nullable
     private BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter;
+    @Nullable
+    private BiPredicate<ClientRequestContext, Duration> totalDurationFilter;
 
     /**
      * Creates a new instance with the specified {@code requestHeadersFilter}.
@@ -174,6 +179,19 @@ public abstract class AbstractRuleBuilder {
         return onException((unused1, unused2) -> true);
     }
 
+    /**
+     * Adds {@link TimeoutException}.
+     */
+    public AbstractRuleBuilder onTimeoutException() {
+        return onException((ctx, ex) -> {
+            if (ctx.isTimedOut()) {
+                return true;
+            }
+            return ex instanceof TimeoutException ||
+                   ex instanceof UnprocessedRequestException && ex.getCause() instanceof TimeoutException;
+        });
+    }
+
     private static <T> BiPredicate<ClientRequestContext, T> combinePredicates(
             @Nullable BiPredicate<ClientRequestContext, T> firstPredicate,
             BiPredicate<? super ClientRequestContext, ? super T> secondPredicate,
@@ -195,6 +213,16 @@ public abstract class AbstractRuleBuilder {
      */
     public AbstractRuleBuilder onUnprocessed() {
         return onException(UnprocessedRequestException.class);
+    }
+
+    /**
+     * Adds the specified {@code totalDurationFilter}.
+     */
+    public AbstractRuleBuilder onTotalDuration(
+            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
+        this.totalDurationFilter = combinePredicates(this.totalDurationFilter, totalDurationFilter,
+                                                     "totalDurationFilter");
+        return this;
     }
 
     /**
@@ -237,10 +265,19 @@ public abstract class AbstractRuleBuilder {
     }
 
     /**
+     * Returns then {@link Predicate} of total duration.
+     */
+    @Nullable
+    protected final BiPredicate<ClientRequestContext, Duration> totalDurationFilter() {
+        return totalDurationFilter;
+    }
+
+    /**
      * Returns whether this rule being built requires HTTP response trailers.
      */
     protected final boolean requiresResponseTrailers() {
         return responseTrailersFilter != null ||
-               grpcTrailersFilter != null;
+               grpcTrailersFilter != null ||
+               totalDurationFilter != null;
     }
 }

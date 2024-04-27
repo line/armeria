@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package com.linecorp.armeria.grpc.scala;
+package testing.grpc;
 
-service HelloService {
+service TestService {
   rpc HelloError (HelloRequest) returns (HelloReply) {}
 }
 

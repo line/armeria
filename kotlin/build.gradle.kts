@@ -7,6 +7,7 @@ dependencies {
     implementation(libs.kotlin.coroutines.jdk8)
     implementation(libs.kotlin.reflect)
 
+    testImplementation(libs.kotlin.coroutines.test)
     testImplementation(libs.reactivestreams.tck)
 }
 
@@ -15,12 +16,3 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         freeCompilerArgs += listOf("-opt-in=kotlin.RequiresOptIn")
     }
 }
-
-val testNg by tasks.registering(Test::class) {
-    group = "Verification"
-    description = "Runs the TestNG unit tests"
-    useTestNG()
-}
-
-tasks.shadedTest { finalizedBy(testNg) }
-tasks.check { dependsOn(testNg) }

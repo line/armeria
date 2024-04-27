@@ -43,6 +43,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.Ticker;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -86,7 +87,7 @@ public final class CaffeineMetricSupport {
 
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
-        private final ReentrantLock lock = new ReentrantLock();
+        private final ReentrantLock lock = new ReentrantShortLock();
         @GuardedBy("lock")
         private final List<CacheReference> cacheRefs = new ArrayList<>(2);
         private final AtomicBoolean hasLoadingCache = new AtomicBoolean();
