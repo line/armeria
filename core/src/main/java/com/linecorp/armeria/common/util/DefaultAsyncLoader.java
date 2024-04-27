@@ -39,12 +39,8 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<
-            DefaultAsyncLoader, CompletableFuture> loadFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(DefaultAsyncLoader.class, CompletableFuture.class, "loadFuture");
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<
-            DefaultAsyncLoader, CompletableFuture> refreshFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(DefaultAsyncLoader.class, CompletableFuture.class, "refreshFuture");
+            DefaultAsyncLoader, RefreshingFuture> loadFutureUpdater = AtomicReferenceFieldUpdater
+            .newUpdater(DefaultAsyncLoader.class, RefreshingFuture.class, "loadFuture");
     private static final ExecutorService DEFAULT_REFRESH_EXECUTOR = Executors.newSingleThreadExecutor();
 
     private final Function<@Nullable T, CompletableFuture<T>> loader;
@@ -59,8 +55,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     @Nullable
     private final BiFunction<Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler;
 
-    private volatile CompletableFuture<CacheEntry<T>> loadFuture = UnmodifiableFuture.completedFuture(null);
-    private volatile CompletableFuture<CacheEntry<T>> refreshFuture = UnmodifiableFuture.completedFuture(null);
+    private volatile RefreshingFuture<T> loadFuture = RefreshingFuture.completedFuture();
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
                        @Nullable Duration expireAfterLoad,
@@ -84,40 +79,47 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     }
 
     private CompletableFuture<CacheEntry<T>> get0() {
-        CompletableFuture<CacheEntry<T>> future;
+        RefreshingFuture<T> future;
         CacheEntry<T> cacheEntry = null;
+        boolean needsRefresh = false;
         for (;;) {
-            final CompletableFuture<CacheEntry<T>> loadFuture = this.loadFuture;
+            final RefreshingFuture<T> loadFuture = this.loadFuture;
             if (!loadFuture.isDone()) {
                 return loadFuture;
             }
 
             if (!loadFuture.isCompletedExceptionally()) {
                 cacheEntry = loadFuture.join();
-                final boolean isValid = isValid(cacheEntry);
-                final CompletableFuture<CacheEntry<T>> refreshFuture = maybeRefresh(cacheEntry);
-                if (isValid) {
-                    return loadFuture;
-                }
-                if (refreshFuture != null) {
-                    return refreshFuture;
+                if (isValid(cacheEntry)) {
+                    needsRefresh = needsRefresh(cacheEntry);
+                    if (!needsRefresh || loadFuture.refreshing) {
+                        return loadFuture;
+                    }
                 }
             }
 
-            future = new CompletableFuture<>();
+            future = new RefreshingFuture<>(isValid(cacheEntry) ? cacheEntry : null);
             if (loadFutureUpdater.compareAndSet(this, loadFuture, future)) {
                 break;
             }
         }
 
-        load(cacheEntry != null ? cacheEntry.loadVal : null, future);
+        final T cache = cacheEntry != null ? cacheEntry.loadVal : null;
+        if (needsRefresh) {
+            final CompletableFuture<CacheEntry<T>> newRefreshFuture = future;
+            CompletableFuture.runAsync(() -> load(cache, newRefreshFuture),
+                                       refreshExecutor != null ? refreshExecutor : DEFAULT_REFRESH_EXECUTOR);
+        } else {
+            load(cache, future);
+        }
+
         return future;
     }
 
     @Nullable
-    private CompletableFuture<CacheEntry<T>> maybeRefresh(@Nullable CacheEntry<T> cacheEntry) {
+    private boolean needsRefresh(@Nullable CacheEntry<T> cacheEntry) {
         if (cacheEntry == null) {
-            return null;
+            return false;
         }
 
         boolean refresh = false;
@@ -128,35 +130,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             logger.warn("Unexpected exception from refreshIf.test()", e);
         }
 
-        if (!refresh) {
-            return null;
-        }
-
-        CompletableFuture<CacheEntry<T>> future;
-        for (;;) {
-            final CompletableFuture<CacheEntry<T>> refreshFuture = this.refreshFuture;
-            if (!refreshFuture.isDone()) {
-                return refreshFuture;
-            }
-
-            future = new CompletableFuture<>();
-            if (refreshFutureUpdater.compareAndSet(this, refreshFuture, future)) {
-                break;
-            }
-        }
-
-        final CompletableFuture<CacheEntry<T>> newRefreshFuture = future;
-        CompletableFuture.runAsync(() -> load(cache, newRefreshFuture),
-                                   refreshExecutor != null ? refreshExecutor : DEFAULT_REFRESH_EXECUTOR);
-
-        return newRefreshFuture.whenComplete((val, cause) -> {
-            if (cause != null) {
-                logger.warn("Failed to refresh a new value from loader: {}. the previous value: {}",
-                            loader, cache, cause);
-            } else {
-                loadFuture = UnmodifiableFuture.completedFuture(val);
-            }
-        });
+        return refresh;
     }
 
     private void load(@Nullable T cache, CompletableFuture<CacheEntry<T>> future) {
@@ -238,6 +212,57 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         CacheEntry(T loadVal) {
             requireNonNull(loadVal, "loadVal");
             this.loadVal = loadVal;
+        }
+    }
+
+    private static class RefreshingFuture<U> extends CompletableFuture<CacheEntry<U>> {
+
+        public static <T> RefreshingFuture<T> completedFuture() {
+            final RefreshingFuture<T> future = new RefreshingFuture<>(null);
+            future.complete(null);
+            return future;
+        }
+
+        @Nullable
+        private volatile CacheEntry<U> cacheEntry;
+        // True when refreshing is in progress, means not yet completed by new value or exception.
+        private volatile boolean refreshing;
+
+        RefreshingFuture(@Nullable CacheEntry<U> cacheEntry) {
+            // cacheEntry can be null if it expired or has not loaded yet.
+            this.cacheEntry = cacheEntry;
+            if (cacheEntry != null) {
+                complete(cacheEntry);
+            }
+            refreshing = true;
+        }
+
+        @Override
+        public boolean complete(CacheEntry<U> newVal) {
+            refreshing = false;
+            cacheEntry = newVal;
+            obtrudeValue(newVal);
+            return true;
+        }
+
+        @Override
+        public boolean completeExceptionally(Throwable ex) {
+            refreshing = false;
+            if (cacheEntry != null) {
+                logger.warn("Failed to refresh a new value. the previous value: {}", cacheEntry.loadVal, ex);
+            } else {
+                obtrudeException(ex);
+            }
+            return true;
+        }
+
+        @Override
+        public CacheEntry<U> join() {
+            final CacheEntry<U> cacheEntry = this.cacheEntry;
+            if (cacheEntry != null) {
+                return cacheEntry;
+            }
+            return super.join();
         }
     }
 }
