@@ -31,13 +31,13 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
  */
 @UnstableApi
 public final class HttpServiceOptions {
-    private static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions.builder().buildDefault();
+    private static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions.builder().build();
     private static final HttpServiceOptions WEB_SOCKET_DEFAULT_OPTIONS = HttpServiceOptions
             .builder()
             .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
             .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
             .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
-            .buildDefault();
+            .build();
 
     /**
      * Returns the default {@link HttpServiceOptions}.
@@ -63,14 +63,11 @@ public final class HttpServiceOptions {
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
     private final long requestAutoAbortDelayMillis;
-    private final boolean isDefault;
 
-    HttpServiceOptions(long requestTimeoutMillis, long maxRequestLength, long requestAutoAbortDelayMillis,
-                       boolean isDefault) {
+    HttpServiceOptions(long requestTimeoutMillis, long maxRequestLength, long requestAutoAbortDelayMillis) {
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
-        this.isDefault = isDefault;
     }
 
     /**
@@ -96,13 +93,6 @@ public final class HttpServiceOptions {
         return requestAutoAbortDelayMillis;
     }
 
-    /**
-     * Returns whether this {@link HttpServiceOptions} is configured internally and used as default.
-     */
-    public boolean isDefault() {
-        return isDefault;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -116,13 +106,12 @@ public final class HttpServiceOptions {
 
         return requestTimeoutMillis == that.requestTimeoutMillis &&
                maxRequestLength == that.maxRequestLength &&
-               requestAutoAbortDelayMillis == that.requestAutoAbortDelayMillis &&
-               isDefault == that.isDefault;
+               requestAutoAbortDelayMillis == that.requestAutoAbortDelayMillis;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis, isDefault);
+        return Objects.hash(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis);
     }
 
     @Override
@@ -131,7 +120,6 @@ public final class HttpServiceOptions {
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("requestAutoAbortDelayMillis", requestAutoAbortDelayMillis)
-                          .add("isDefault", isDefault)
                           .toString();
     }
 }

@@ -56,16 +56,6 @@ public class HttpServiceOptionsBuilder {
      * Returns a newly created {@link HttpServiceOptions} based on the properties of this builder.
      */
     public HttpServiceOptions build() {
-        return new HttpServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis,
-                                      false);
-    }
-
-    /**
-     * Returns a newly created {@link HttpServiceOptions} based on the properties of this builder. This
-     * method is used internally to build the default {@link HttpServiceOptions}s.
-     */
-    HttpServiceOptions buildDefault() {
-        return new HttpServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis,
-                                      true);
+        return new HttpServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis);
     }
 }

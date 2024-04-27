@@ -35,7 +35,6 @@ import java.util.function.Supplier;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
@@ -89,6 +88,21 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     ServiceConfigBuilder(Route route, String contextPath, HttpService service) {
         this.route = requireNonNull(route, "route").withPrefix(contextPath);
         this.service = requireNonNull(service, "service");
+
+        final HttpServiceOptions options = service.options();
+        if (options == null) {
+            return;
+        }
+
+        if (options.requestTimeoutMillis() != -1) {
+            this.requestTimeoutMillis = options.requestTimeoutMillis();
+        }
+        if (options.maxRequestLength() != -1) {
+            this.maxRequestLength = options.maxRequestLength();
+        }
+        if (options.requestAutoAbortDelayMillis() != -1) {
+            this.requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
+        }
     }
 
     void addMappedRoute(Route mappedRoute) {
@@ -341,48 +355,25 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                                                                      unhandledExceptionsReporter);
         }
 
-        final HttpServiceOptions options = service.options();
-        final boolean optionsConfigured = options != null && !options.isDefault();
-        final boolean defaultValuesApplicable = options == null || options == HttpServiceOptions.of();
-
         final long requestTimeoutMillis;
-        if (optionsConfigured && options.requestTimeoutMillis() != -1) {
-            requestTimeoutMillis = options.requestTimeoutMillis();
-        } else if (this.requestTimeoutMillis != null) {
+        if (this.requestTimeoutMillis != null) {
             requestTimeoutMillis = this.requestTimeoutMillis;
         } else {
-            if (defaultValuesApplicable || defaultRequestTimeoutMillis != Flags.defaultRequestTimeoutMillis()) {
-                requestTimeoutMillis = defaultRequestTimeoutMillis;
-            } else {
-                requestTimeoutMillis = options.requestTimeoutMillis();
-            }
+            requestTimeoutMillis = defaultRequestTimeoutMillis;
         }
 
         final long maxRequestLength;
-        if (optionsConfigured && options.maxRequestLength() != -1) {
-            maxRequestLength = options.maxRequestLength();
-        } else if (this.maxRequestLength != null) {
+        if (this.maxRequestLength != null) {
             maxRequestLength = this.maxRequestLength;
         } else {
-            if (defaultValuesApplicable || defaultMaxRequestLength != Flags.defaultMaxRequestLength()) {
-                maxRequestLength = defaultMaxRequestLength;
-            } else {
-                maxRequestLength = options.maxRequestLength();
-            }
+            maxRequestLength = defaultMaxRequestLength;
         }
 
         final long requestAutoAbortDelayMillis;
-        if (optionsConfigured && options.requestAutoAbortDelayMillis() != -1) {
-            requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
-        } else if (this.requestAutoAbortDelayMillis != null) {
+        if (this.requestAutoAbortDelayMillis != null) {
             requestAutoAbortDelayMillis = this.requestAutoAbortDelayMillis;
         } else {
-            if (defaultValuesApplicable ||
-                defaultRequestAutoAbortDelayMillis != Flags.defaultRequestAutoAbortDelayMillis()) {
-                requestAutoAbortDelayMillis = defaultRequestAutoAbortDelayMillis;
-            } else {
-                requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
-            }
+            requestAutoAbortDelayMillis = defaultRequestAutoAbortDelayMillis;
         }
 
         final Supplier<AutoCloseable> mergedContextHook = mergeHooks(contextHook, this.contextHook);
