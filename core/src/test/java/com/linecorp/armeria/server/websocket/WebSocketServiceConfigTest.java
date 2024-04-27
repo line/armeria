@@ -40,6 +40,7 @@ class WebSocketServiceConfigTest {
         assertThat(serviceConfig.requestAutoAbortDelayMillis()).isEqualTo(
                 WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS);
 
+        // TODO: Should we allow default HttpServiceOptions to override the default values from virtualHostTemplate
         server.reconfigure(sb -> sb.requestAutoAbortDelayMillis(1000)
                                    .route()
                                    .get("/")
