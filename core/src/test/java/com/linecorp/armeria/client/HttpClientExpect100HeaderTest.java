@@ -39,7 +39,6 @@ import org.apache.hc.core5.util.ByteArrayBuffer;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -47,13 +46,10 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -75,7 +71,7 @@ final class HttpClientExpect100HeaderTest {
         void continueToSendHttp1Request() throws Exception {
             try (ServerSocket ss = new ServerSocket(0)) {
                 final int port = ss.getLocalPort();
-                final WebClient client = WebClient.of( "h1c://127.0.0.1:" + port);
+                final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
                 client.prepare()
                       .post("/")
                       .content("foo")
@@ -114,7 +110,7 @@ final class HttpClientExpect100HeaderTest {
             try (ServerSocket ss = new ServerSocket(0)) {
                 final int port = ss.getLocalPort();
 
-                final WebClient client = WebClient.of( "h1c://127.0.0.1:" + port);
+                final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
                 client.prepare()
                       .post("/")
                       .content("foo")
@@ -245,7 +241,7 @@ final class HttpClientExpect100HeaderTest {
         void continueToSendHttp1StreamingRequest() throws Exception {
             try (ServerSocket ss = new ServerSocket(0)) {
                 final int port = ss.getLocalPort();
-                final WebClient client = WebClient.of( "h1c://127.0.0.1:" + port);
+                final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
                 final RequestHeaders headers =
                         RequestHeaders.builder(HttpMethod.POST, "/")
                                       .contentType(MediaType.PLAIN_TEXT_UTF_8)
@@ -290,7 +286,7 @@ final class HttpClientExpect100HeaderTest {
         void failToSendHttp1StreamingRequest() throws Exception {
             try (ServerSocket ss = new ServerSocket(0)) {
                 final int port = ss.getLocalPort();
-                final WebClient client = WebClient.of( "h1c://127.0.0.1:" + port);
+                final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
                 final RequestHeaders headers =
                         RequestHeaders.builder(HttpMethod.POST, "/")
                                       .contentType(MediaType.PLAIN_TEXT_UTF_8)
