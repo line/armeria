@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -101,6 +102,7 @@ final class JsonSchemaGenerator {
      *
      * @return a json object that contains the "$defs" object.
      */
+    @VisibleForTesting
     static ObjectNode generateDefs(ServiceSpecification serviceSpecification) {
         final JsonSchemaGenerator generator = new JsonSchemaGenerator(serviceSpecification, true);
 
@@ -217,8 +219,9 @@ final class JsonSchemaGenerator {
             currentPath = path + '/' + field.name();
         }
 
-        if (!field.descriptionInfo().docString().isEmpty()) {
-            fieldNode.put("description", field.descriptionInfo().docString());
+        final String description = field.descriptionInfo().docString();
+        if (!description.isEmpty()) {
+            fieldNode.put("description", description);
         }
 
         // Fill required fields for the current object.
