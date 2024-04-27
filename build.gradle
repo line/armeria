@@ -128,8 +128,10 @@ allprojects {
             }
         }
 
-        predictiveSelection {
-            enabled.set(!isCi)
+        develocity {
+            predictiveTestSelection {
+                enabled.set(!isCi)
+            }
         }
     }
 }
@@ -439,7 +441,7 @@ configure(relocatedProjects) {
 }
 
 // additional configuration that can't be done at settings.gradle
-gradleEnterprise {
+buildScan {
     buildScan {
         // maintain a allowList so that sensitive information (credentials) aren't accidentally published.
         Set<String> allowList = ['coverage', 'leak', 'blockhound', 'noLint', 'flakyTests', 'buildJdkVersion',

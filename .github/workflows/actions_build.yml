@@ -17,7 +17,7 @@ concurrency:
 
 env:
   LC_ALL: "en_US.UTF-8"
-  BUILD_JDK_VERSION: "19"
+  BUILD_JDK_VERSION: "21"
   # Used by GitHub CLI
   GH_TOKEN: ${{ github.token }}
   RUN_ID: ${{ github.run_id }}
@@ -48,7 +48,7 @@ jobs:
       fail-fast: false
       matrix:
         on: [ "${{ needs.choose-self-hosted.outputs.runner }}", macos-12, windows-latest ]
-        java: [ 19 ]
+        java: [ 21, 19 ]
         include:
           - java: 8
             on: ${{ needs.choose-self-hosted.outputs.runner }}
@@ -65,6 +65,11 @@ jobs:
             min-java: 17
             coverage: true
           - java: 19
+            on: ${{ needs.choose-self-hosted.outputs.runner }}
+            snapshot: true
+            # blockhound makes the build run about 10 minutes slower
+            blockhound: true
+          - java: 21
             on: ${{ needs.choose-self-hosted.outputs.runner }}
             snapshot: true
             # blockhound makes the build run about 10 minutes slower
