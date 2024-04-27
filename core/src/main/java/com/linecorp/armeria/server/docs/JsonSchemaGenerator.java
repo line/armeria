@@ -33,7 +33,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -251,7 +250,10 @@ final class JsonSchemaGenerator {
             fieldNode.put("$ref", pathName);
         } else {
             // Field is not visited, create a new type definition for it.
-            fieldNode.put("type", schemaType);
+            // Note, any is not a valid type, instead we should omit the type field to allow any type.
+            if (!"any".equals(schemaType)) {
+                fieldNode.put("type", schemaType);
+            }
 
             if (fieldTypeSignature.type() == TypeSignatureType.ENUM) {
                 fieldNode.set("enum", getEnumType(field.typeSignature()));
@@ -301,6 +303,17 @@ final class JsonSchemaGenerator {
 
     private void generateTypeFields(ObjectNode fieldNode, FieldInfo field, String schemaType,
                                     String currentPath) {
+        // Do not generate fields for well known types that are objects, maps or arrays.
+        switch (field.typeSignature().signature()) {
+            case "google.protobuf.ListValue":
+            case "google.protobuf.Empty":
+            case "google.protobuf.Struct":
+            case "google.protobuf.Value":
+            case "google.protobuf.Any":
+                return;
+            default:
+        }
+
         final TypeSignatureType type = field.typeSignature().type();
         // Based on field type, we need to call the appropriate method to generate the schema.
         // For example maps have `additionalProperties` field, arrays have `items` field and structs
@@ -407,6 +420,36 @@ final class JsonSchemaGenerator {
      * @see <a href="https://json-schema.org/understanding-json-schema/reference/type.html">JSON Schema</a>
      */
     private static String getSchemaType(TypeSignature typeSignature) {
+        // Check well known types first
+        switch (typeSignature.signature()) {
+            case "google.protobuf.BoolValue":
+                return "boolean";
+            case "google.protobuf.DoubleValue":
+            case "google.protobuf.FloatValue":
+            case "google.protobuf.Int32Value":
+            case "google.protobuf.Int64Value":
+            case "google.protobuf.UInt32Value":
+            case "google.protobuf.UInt64Value":
+                return "number";
+            case "google.protobuf.Timestamp":
+            case "google.protobuf.Duration":
+            case "google.protobuf.FieldMask":
+            case "google.protobuf.StringValue":
+            case "google.protobuf.BytesValue":
+                return "string";
+            case "google.protobuf.ListValue":
+                return "array";
+            case "google.protobuf.Any":
+            case "google.protobuf.Empty":
+            case "google.protobuf.Struct":
+                return "object";
+            case "google.protobuf.Value":
+                return "any";
+            case "google.protobuf.NullValue":
+                return "null";
+            default:
+        }
+
         if (typeSignature.type() == TypeSignatureType.ENUM) {
             return "string";
         }
