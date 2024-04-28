@@ -59,7 +59,7 @@ public interface AnnotatedService extends HttpService {
     }
 
     /**
-     * Returns {@link Route} for this {@link AnnotatedService}.
+     * Returns the {@link Route} for this {@link AnnotatedService}.
      */
     Route route();
 
