@@ -145,7 +145,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         serviceConfigs.forEach(sc -> {
             final DefaultAnnotatedService service = sc.service().as(DefaultAnnotatedService.class);
             if (service != null) {
-                final Class<?> serviceClass = ClassUtil.getUserClass(service.serviceObject().getClass());
+                final Class<?> serviceClass = service.serviceClass();
                 final String className = serviceClass.getName();
                 final String methodName = service.methodName();
                 if (!filter.test(name(), className, methodName)) {
