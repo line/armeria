@@ -44,7 +44,7 @@ public interface AnnotatedService extends HttpService {
     Object serviceObject();
 
     /**
-     * Returns the annotated service object specified with {@link ServerBuilder#annotatedService(Object)}.
+     * Returns the {@link Class} of the annotated service object specified with {@link ServerBuilder#annotatedService(Object)}.
      */
     Class<?> serviceClass();
 
