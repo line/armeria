@@ -326,7 +326,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
         final DefaultAnnotatedService annotatedService;
         if (defaultServiceNaming == null || defaultLogName == null) {
-            annotatedService = service.as(DefaultAnnotatedService.class);
+            annotatedService = service.as(AnnotatedService.class);
         } else {
             annotatedService = null;
         }
