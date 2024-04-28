@@ -25,8 +25,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
- * This class is designed to provide a common interface for {@link AnnotatedService}
- * internally. Please check out the documentation at
+ * This class is designed to provide a common interface for {@link AnnotatedService}.
+ * Please check out the documentation at
  * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
 public interface AnnotatedService extends HttpService {
