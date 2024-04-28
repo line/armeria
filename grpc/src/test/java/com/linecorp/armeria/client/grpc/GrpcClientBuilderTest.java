@@ -62,48 +62,6 @@ class GrpcClientBuilderTest {
         }
     };
 
-    private static class CustomMarshallerInterceptor implements ClientInterceptor {
-        private int spiedMarshallerCallCnt;
-
-        CustomMarshallerInterceptor() {
-        }
-
-        int getSpiedMarshallerCallCnt() {
-            return spiedMarshallerCallCnt;
-        }
-
-        @Override
-        public <I, O> ClientCall<I, O> interceptCall(MethodDescriptor<I, O> method, CallOptions callOptions,
-                                                     Channel next) {
-            final MethodDescriptor<I, O> methodDescriptor = method.toBuilder().setRequestMarshaller(
-                    new PrototypeMarshaller<I>() {
-                        @Nullable
-                        @Override
-                        public I getMessagePrototype() {
-                            return null;
-                        }
-
-                        @Override
-                        public Class<I> getMessageClass() {
-                            return null;
-                        }
-
-                        @Override
-                        public InputStream stream(I value) {
-                            spiedMarshallerCallCnt++;
-                            return method.getRequestMarshaller().stream(value);
-                        }
-
-                        @Override
-                        public I parse(InputStream inputStream) {
-                            return null;
-                        }
-                    }
-            ).build();
-            return next.newCall(methodDescriptor, callOptions);
-        }
-    }
-
     @Test
     void defaultSerializationFormat() {
         TestServiceBlockingStub client =
@@ -242,5 +200,47 @@ class GrpcClientBuilderTest {
         final ClientBuilderParams clientParams = Clients.unwrap(client, ClientBuilderParams.class);
         assertThat(clientParams.options().get(GrpcClientOptions.INTERCEPTORS))
                 .containsExactly(interceptorA, interceptorB);
+    }
+
+    private static class CustomMarshallerInterceptor implements ClientInterceptor {
+        private int spiedMarshallerCallCnt;
+
+        CustomMarshallerInterceptor() {
+        }
+
+        int getSpiedMarshallerCallCnt() {
+            return spiedMarshallerCallCnt;
+        }
+
+        @Override
+        public <I, O> ClientCall<I, O> interceptCall(MethodDescriptor<I, O> method, CallOptions callOptions,
+                                                     Channel next) {
+            final MethodDescriptor<I, O> methodDescriptor = method.toBuilder().setRequestMarshaller(
+                    new PrototypeMarshaller<I>() {
+                        @Nullable
+                        @Override
+                        public I getMessagePrototype() {
+                            return null;
+                        }
+
+                        @Override
+                        public Class<I> getMessageClass() {
+                            return null;
+                        }
+
+                        @Override
+                        public InputStream stream(I value) {
+                            spiedMarshallerCallCnt++;
+                            return method.getRequestMarshaller().stream(value);
+                        }
+
+                        @Override
+                        public I parse(InputStream inputStream) {
+                            return null;
+                        }
+                    }
+            ).build();
+            return next.newCall(methodDescriptor, callOptions);
+        }
     }
 }
