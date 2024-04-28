@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -276,12 +277,15 @@ class GrpcServiceBuilderTest {
                 .hasMessageContaining("enableHttpJsonTranscoding");
     }
 
-    static int spiedMarshallerCallCnt;
-
     @ParameterizedTest
-    @CsvSource({ "true, 1", "false, 0" })
-    void setUseMethodMarshaller(boolean useMethodMarshaller, int expectedCallCnt) {
-        spiedMarshallerCallCnt = -1; // one stream(SimpleRequest) call must happen in MethodDescriptor
+    @CsvSource({ "true, 1, 1", "false, 1, 0"})
+    void setUseMethodMarshaller(boolean useMethodMarshaller, int expectedRequestStreamCallCnt,
+                                int expectedResponseStreamCallCnt) {
+        // About requestStreamCallCnt, one stream(SimpleRequest) call must happen in MethodDescriptor
+        // per each unaryCall regardless of useMethodMarshaller state.
+        final AtomicInteger requestStreamCallCnt = new AtomicInteger(0);
+        final AtomicInteger responseStreamCallCnt = new AtomicInteger(0);
+
         final Marshaller<SimpleRequest> customRequestMarshaller = new PrototypeMarshaller<SimpleRequest>() {
             @Override
             public Class<SimpleRequest> getMessageClass() {
@@ -296,7 +300,7 @@ class GrpcServiceBuilderTest {
 
             @Override
             public InputStream stream(SimpleRequest value) {
-                spiedMarshallerCallCnt++;
+                requestStreamCallCnt.incrementAndGet();
                 return TestServiceGrpc.getUnaryCallMethod().getRequestMarshaller().stream(value);
             }
 
@@ -320,7 +324,7 @@ class GrpcServiceBuilderTest {
 
             @Override
             public InputStream stream(SimpleResponse value) {
-                spiedMarshallerCallCnt++;
+                responseStreamCallCnt.incrementAndGet();
                 return TestServiceGrpc.getUnaryCallMethod().getResponseMarshaller().stream(value);
             }
 
@@ -336,9 +340,9 @@ class GrpcServiceBuilderTest {
                 testService.bindService(), customRequestMarshaller, customResponseMarshaller);
 
         final GrpcService service = GrpcService.builder()
-                                         .addService(serviceDefinition)
-                                         .useMethodMarshaller(useMethodMarshaller)
-                                         .build();
+                                               .addService(serviceDefinition)
+                                               .useMethodMarshaller(useMethodMarshaller)
+                                               .build();
 
         try (Server server = Server.builder()
                                    .service(service)
@@ -357,7 +361,8 @@ class GrpcServiceBuilderTest {
             stub.unaryCall(request);
         }
 
-        assertThat(spiedMarshallerCallCnt).isEqualTo(expectedCallCnt);
+        assertThat(requestStreamCallCnt.get()).isEqualTo(expectedRequestStreamCallCnt);
+        assertThat(responseStreamCallCnt.get()).isEqualTo(expectedResponseStreamCallCnt);
     }
 
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
