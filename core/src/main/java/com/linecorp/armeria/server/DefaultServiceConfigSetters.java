@@ -324,7 +324,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         final ServiceConfigBuilder serviceConfigBuilder =
                 new ServiceConfigBuilder(route, contextPath, service);
 
-        final DefaultAnnotatedService annotatedService;
+        final AnnotatedService annotatedService;
         if (defaultServiceNaming == null || defaultLogName == null) {
             annotatedService = service.as(AnnotatedService.class);
         } else {
