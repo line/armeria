@@ -370,7 +370,7 @@ class TestsReportTask extends DefaultTask {
 }
 
 def graalLauncher = javaToolchains.launcherFor {
-    languageVersion.set(JavaLanguageVersion.of(17))
+    languageVersion.set(JavaLanguageVersion.of(rootProject.ext.buildJdkVersion))
     vendor.set(JvmVendorSpec.GRAAL_VM)
 }.get()
 rootProject.ext.graalLauncher = graalLauncher
