@@ -369,8 +369,8 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
         if (!subscribedToUpstreamUpdater.compareAndSet(this, 0, 1)) {
             // Already subscribed to upstream so just abort upstream.
-            // upstream.abort(cause) might be as well in delegate(StreamMessage<T> upstream) method which is
-            // perfectly fine.
+            // upstream.abort(cause) might be called as well in delegate(StreamMessage<T> upstream) method
+            // which is perfectly fine.
             final StreamMessage<T> upstream = this.upstream;
             assert upstream != null;
             upstream.abort(cause);
@@ -391,7 +391,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             return;
         }
 
-        // Downstream was already subscribed but upstream wasn't set yet.
+        // Downstream was already set but upstream wasn't set yet.
 
         //noinspection unchecked
         final CompletableFuture<List<?>> collectingFuture =
