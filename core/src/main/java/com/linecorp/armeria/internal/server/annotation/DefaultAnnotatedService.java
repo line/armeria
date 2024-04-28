@@ -239,10 +239,6 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         return method;
     }
 
-    @Override
-    public String methodName() {
-        return method.getName();
-    }
 
     public int overloadId() {
         return overloadId;
