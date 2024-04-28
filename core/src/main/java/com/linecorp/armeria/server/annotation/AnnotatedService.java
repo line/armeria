@@ -29,6 +29,7 @@ import com.linecorp.armeria.server.ServerBuilder;
  * Please check out the documentation at
  * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
+@Nullable
 public interface AnnotatedService extends HttpService {
 
     /**
