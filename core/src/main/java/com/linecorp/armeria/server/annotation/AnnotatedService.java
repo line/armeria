@@ -34,6 +34,7 @@ public interface AnnotatedService extends HttpService {
     /**
      * Returns service name for this {@link AnnotatedService}.
      */
+    @Nullable
     String name();
 
     /**
