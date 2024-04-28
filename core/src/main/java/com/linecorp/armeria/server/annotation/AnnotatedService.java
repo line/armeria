@@ -54,7 +54,7 @@ public interface AnnotatedService extends HttpService {
     Method method();
 
     /**
-     * Returns method name which is annotated in {@link AnnotatedService}.
+     *  Returns the name of the target method invoked when a request is received.
      */
     default String methodName() {
         return method().getName();
