@@ -147,7 +147,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             if (service != null) {
                 final Class<?> serviceClass = ClassUtil.getUserClass(service.serviceObject().getClass());
                 final String className = serviceClass.getName();
-                final String methodName = service.method().getName();
+                final String methodName = service.methodName();
                 if (!filter.test(name(), className, methodName)) {
                     return;
                 }
