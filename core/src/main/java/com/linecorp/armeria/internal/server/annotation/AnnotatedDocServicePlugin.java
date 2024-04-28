@@ -143,7 +143,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, DescriptionInfo> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
-            final DefaultAnnotatedService service = sc.service().as(DefaultAnnotatedService.class);
+            final AnnotatedService service = sc.service().as(AnnotatedService.class);
             if (service != null) {
                 final Class<?> serviceClass = service.serviceClass();
                 final String className = serviceClass.getName();
