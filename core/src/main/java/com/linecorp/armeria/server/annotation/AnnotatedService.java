@@ -49,7 +49,7 @@ public interface AnnotatedService extends HttpService {
     Class<?> serviceClass();
 
     /**
-     * Returns the target {@link Method} invoked when the request is received.
+     * Returns the target {@link Method} invoked when a request is received.
      */
     Method method();
 
