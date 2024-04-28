@@ -32,7 +32,7 @@ import com.linecorp.armeria.server.ServerBuilder;
 public interface AnnotatedService extends HttpService {
 
     /**
-     * Returns service name for this {@link AnnotatedService}.
+     * Returns the name of this annotated service specified with {@link ServiceName}.
      */
     @Nullable
     String name();
