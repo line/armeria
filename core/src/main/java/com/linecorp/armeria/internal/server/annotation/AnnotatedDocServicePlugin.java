@@ -165,9 +165,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
-                                      String hostnamePattern, DefaultAnnotatedService service,
+                                      String hostnamePattern, AnnotatedService service0,
                                       Class<?> serviceClass) {
 
+        final DefaultAnnotatedService service = service0.as(DefaultAnnotatedService.class);
         final Route route = service.route();
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Method method = service.method();

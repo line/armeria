@@ -109,7 +109,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
     @Nullable
-    private String name;
+    private final String name;
 
     DefaultAnnotatedService(Object object, Method method,
                             int overloadId, List<AnnotatedValueResolver> resolvers,
@@ -169,6 +169,8 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         }
         if (serviceName != null) {
             this.name = serviceName.value();
+        } else {
+            this.name = null;
         }
 
         this.method.setAccessible(true);
@@ -238,7 +240,6 @@ public final class DefaultAnnotatedService implements AnnotatedService {
     public Method method() {
         return method;
     }
-
 
     public int overloadId() {
         return overloadId;

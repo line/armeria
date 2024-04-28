@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.internal.server.annotation.DefaultAnnotatedService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.EventLoopGroup;

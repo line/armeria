@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.annotation;
 import java.lang.reflect.Method;
 
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -44,7 +45,8 @@ public interface AnnotatedService extends HttpService {
     Object serviceObject();
 
     /**
-     * Returns the {@link Class} of the annotated service object specified with {@link ServerBuilder#annotatedService(Object)}.
+     * Returns the {@link Class} of the annotated service object specified
+     * with {@link ServerBuilder#annotatedService(Object)}.
      */
     Class<?> serviceClass();
 
