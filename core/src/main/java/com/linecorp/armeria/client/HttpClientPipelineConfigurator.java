@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.client.HttpChannelPool.TIMINGS_BUILDER_KEY;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -49,6 +50,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
@@ -227,6 +229,16 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             sslHandler = sslCtx.newHandler(ch.alloc());
         }
 
+        p.addLast(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                final ClientConnectionTimingsBuilder timingsBuilder =
+                        ctx.channel().attr(TIMINGS_BUILDER_KEY).get();
+                timingsBuilder.tlsHandshakeStart();
+                super.channelActive(ctx);
+                p.remove(this);
+            }
+        });
         p.addLast(configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
@@ -239,6 +251,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     ctx.fireUserEventTriggered(evt);
                     return;
                 }
+
+                final ClientConnectionTimingsBuilder timingsBuilder =
+                        ctx.channel().attr(TIMINGS_BUILDER_KEY).get();
+                timingsBuilder.tlsHandshakeEnd();
 
                 final SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
                 handshakeFailed = !handshakeEvent.isSuccess();

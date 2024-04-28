@@ -32,6 +32,10 @@ public final class ClientConnectionTimingsBuilder {
 
     private final long connectionAcquisitionStartTimeMicros;
     private final long connectionAcquisitionStartNanos;
+    private long tlsHandshakeStartTimeMicros;
+    private long tlsHandshakeStartNanos;
+    private long tlsHandshakeEndNanos;
+    private boolean tlsHandshakeEndSet;
     private long dnsResolutionEndNanos;
     private boolean dnsResolutionEndSet;
 
@@ -85,6 +89,31 @@ public final class ClientConnectionTimingsBuilder {
     }
 
     /**
+     * Sets the time when the client started to TLS handshake to a remote peer.
+     */
+    public ClientConnectionTimingsBuilder tlsHandshakeStart() {
+        final boolean alreadySet = tlsHandshakeStartTimeMicros > 0;
+        if (!alreadySet) {
+            tlsHandshakeStartTimeMicros = SystemInfo.currentTimeMicros();
+            tlsHandshakeStartNanos = System.nanoTime();
+        }
+        return this;
+    }
+
+    /**
+     * Sets the time when the client ended to TLS handshake to a remote peer.
+     *
+     * @throws IllegalStateException if {@link #tlsHandshakeStart()} is not invoked before calling this.
+     */
+    public ClientConnectionTimingsBuilder tlsHandshakeEnd() {
+        checkState(tlsHandshakeStartTimeMicros > 0, "tlsHandshakeStart() is not called yet.");
+        checkState(!tlsHandshakeEndSet, "tlsHandshakeEnd() is already called.");
+        tlsHandshakeEndNanos = System.nanoTime();
+        tlsHandshakeEndSet = true;
+        return this;
+    }
+
+    /**
      * Sets the time when the client started to wait for the completion of an existing connection attempt
      * in order to use one connection for HTTP/2.
      */
@@ -127,6 +156,8 @@ public final class ClientConnectionTimingsBuilder {
                 dnsResolutionEndSet ? dnsResolutionEndNanos - connectionAcquisitionStartNanos : -1,
                 socketConnectEndSet ? socketConnectStartTimeMicros : -1,
                 socketConnectEndSet ? socketConnectEndNanos - socketConnectStartNanos : -1,
+                tlsHandshakeEndSet ? tlsHandshakeStartTimeMicros : -1,
+                tlsHandshakeEndSet ? tlsHandshakeEndNanos - tlsHandshakeStartNanos : -1,
                 pendingAcquisitionEndSet ? pendingAcquisitionStartTimeMicros : -1,
                 pendingAcquisitionEndSet ? pendingAcquisitionEndNanos - pendingAcquisitionStartNanos : -1);
     }
