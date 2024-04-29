@@ -389,15 +389,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (whenAggregated != null) {
             res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
                 if (serviceEventLoop.inEventLoop()) {
-                    return serve0(req, serviceCfg, service, reqCtx);
+                    return serve0(req, service, reqCtx);
                 }
-                return serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop);
+                return serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop);
             }));
         } else {
             if (serviceEventLoop.inEventLoop()) {
-                res = serve0(req, serviceCfg, service, reqCtx);
+                res = serve0(req, service, reqCtx);
             } else {
-                res = serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop);
+                res = serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop);
             }
         }
         res = res.recover(cause -> {
@@ -455,9 +455,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private static HttpResponse serve0(HttpRequest req,
-                                       ServiceConfig serviceCfg,
-                                       HttpService service,
+    private static HttpResponse serve0(HttpRequest req, HttpService service,
                                        DefaultServiceRequestContext reqCtx) {
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
@@ -478,11 +476,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private static HttpResponse serveInServiceEventLoop(DecodedHttpRequest req,
-                                                        ServiceConfig serviceCfg,
                                                         HttpService service,
                                                         DefaultServiceRequestContext reqCtx,
                                                         EventLoop serviceEventLoop) {
-        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx),
+        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), service, reqCtx),
                                serviceEventLoop)
                            .subscribeOn(serviceEventLoop);
     }
