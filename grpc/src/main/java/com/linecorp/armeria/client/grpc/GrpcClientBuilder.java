@@ -411,6 +411,12 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
 
         final Object client;
         final ClientOptions options = buildOptions();
+        if (options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS) && options.get(USE_METHOD_MARSHALLER)) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive"
+            );
+        }
+
         final ClientFactory factory = options.factory();
         URI uri = this.uri;
         if (uri != null) {

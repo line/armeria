@@ -979,6 +979,11 @@ public final class GrpcServiceBuilder {
                     "'GrpcSerializationFormats.JSON' must be set if 'enableHttpJsonTranscoding' is set"
             );
         }
+        if (unsafeWrapRequestBuffers && useMethodMarshaller) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive"
+            );
+        }
         if (enableHealthCheckService) {
             grpcHealthCheckService = GrpcHealthCheckService.builder().build();
         }

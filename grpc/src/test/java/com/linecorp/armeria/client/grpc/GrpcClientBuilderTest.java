@@ -152,6 +152,17 @@ class GrpcClientBuilderTest {
         assertThat(clientParams.options().get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS)).isTrue();
     }
 
+    @Test
+    void canNotSetUseMethodMarshallerAndUnsafeWrapDeserializedBufferAtTheSameTime() {
+        assertThatThrownBy(() -> GrpcClients.builder(server.httpUri())
+                                            .enableUnsafeWrapResponseBuffers(true)
+                                            .useMethodMarshaller(true)
+                                            .build(TestServiceBlockingStub.class))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive");
+    }
+
     @ParameterizedTest
     @CsvSource({"true, 1", "false, 0"})
     void useMethodMarshaller(boolean useMethodMarshaller, int expectedCallCnt) {
@@ -204,9 +215,6 @@ class GrpcClientBuilderTest {
 
     private static class CustomMarshallerInterceptor implements ClientInterceptor {
         private int spiedMarshallerCallCnt;
-
-        CustomMarshallerInterceptor() {
-        }
 
         int getSpiedMarshallerCallCnt() {
             return spiedMarshallerCallCnt;

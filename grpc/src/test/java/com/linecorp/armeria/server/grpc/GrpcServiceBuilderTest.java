@@ -277,14 +277,25 @@ class GrpcServiceBuilderTest {
                 .hasMessageContaining("enableHttpJsonTranscoding");
     }
 
+    @Test
+    void canNotSetUseMethodMarshallerAndUnsafeWrapDeserializedBufferAtTheSameTime() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .unsafeWrapRequestBuffers(true)
+                                            .useMethodMarshaller(true)
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive");
+    }
+
     @ParameterizedTest
     @CsvSource({ "true, 1, 1", "false, 1, 0"})
     void setUseMethodMarshaller(boolean useMethodMarshaller, int expectedRequestStreamCallCnt,
                                 int expectedResponseStreamCallCnt) {
         // About requestStreamCallCnt, one stream(SimpleRequest) call must happen in MethodDescriptor
         // per each unaryCall regardless of useMethodMarshaller state.
-        final AtomicInteger requestStreamCallCnt = new AtomicInteger(0);
-        final AtomicInteger responseStreamCallCnt = new AtomicInteger(0);
+        final AtomicInteger requestStreamCallCnt = new AtomicInteger();
+        final AtomicInteger responseStreamCallCnt = new AtomicInteger();
 
         final Marshaller<SimpleRequest> customRequestMarshaller = new PrototypeMarshaller<SimpleRequest>() {
             @Override
