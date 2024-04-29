@@ -440,7 +440,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         } catch (Throwable t) {
             final Exception composite = new CompositeException(t, cause);
             throwIfFatal(t);
-            logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+            logger.warn("Subscriber.onSubscribe() or onError() should not raise an exception. subscriber: {}",
                         subscriber, composite);
         }
         whenComplete().completeExceptionally(cause);
