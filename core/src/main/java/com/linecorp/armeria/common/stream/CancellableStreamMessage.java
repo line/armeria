@@ -154,7 +154,7 @@ abstract class CancellableStreamMessage<T> extends AggregationSupport implements
         private final EventExecutor executor;
         private final SubscriptionOption[] options;
         private final boolean withPooledObjects;
-        private final boolean notifyCancellation;
+        private final boolean shouldNotifyCancellation;
 
         private volatile boolean cancelRequested;
 
@@ -166,7 +166,7 @@ abstract class CancellableStreamMessage<T> extends AggregationSupport implements
             this.executor = executor;
             this.options = options;
             withPooledObjects = containsWithPooledObjects(options);
-            notifyCancellation = containsNotifyCancellation(options);
+            shouldNotifyCancellation = containsNotifyCancellation(options);
         }
 
         Subscriber<Object> subscriber() {
@@ -195,8 +195,8 @@ abstract class CancellableStreamMessage<T> extends AggregationSupport implements
             return withPooledObjects;
         }
 
-        boolean notifyCancellation() {
-            return notifyCancellation;
+        boolean shouldNotifyCancellation() {
+            return shouldNotifyCancellation;
         }
 
         boolean cancelRequested() {
@@ -269,7 +269,7 @@ abstract class CancellableStreamMessage<T> extends AggregationSupport implements
                 }
             } else {
                 try {
-                    if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
+                    if (subscription.shouldNotifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
                         subscriber.onError(cause);
                     }
                     completionFuture.completeExceptionally(cause);

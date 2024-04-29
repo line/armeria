@@ -413,7 +413,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     private void downstreamOnError(Throwable cause, SubscriptionImpl downstreamSubscription) {
         final Subscriber<Object> subscriber = downstreamSubscription.subscriber();
         try {
-            if (downstreamSubscription.notifyCancellation() ||
+            if (downstreamSubscription.shouldNotifyCancellation() ||
                 !(cause instanceof CancelledSubscriptionException)) {
                 subscriber.onError(cause);
             }
