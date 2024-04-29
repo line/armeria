@@ -114,6 +114,9 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     @Nullable
     private volatile Throwable abortCause;
 
+    // Only accessed from downstreamSubscription's executor.
+    private boolean downstreamOnSubscribeCalled;
+
     /**
      * Creates a new instance.
      */
@@ -328,6 +331,11 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     }
 
     private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+        if (downstreamOnSubscribeCalled) {
+            // abort is called.
+            return;
+        }
+        downstreamOnSubscribeCalled = true;
         try {
             subscriber.onSubscribe(subscription);
         } catch (Throwable t) {
@@ -369,13 +377,20 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
         if (!subscribedToUpstreamUpdater.compareAndSet(this, 0, 1)) {
             // Already subscribed to upstream so just abort upstream.
-            // upstream.abort(cause) might be called as well in delegate(StreamMessage<T> upstream) method
-            // which is perfectly fine.
             final StreamMessage<T> upstream = this.upstream;
             assert upstream != null;
             upstream.abort(cause);
             return;
         }
+
+        // The upstream wouldn't be subscribed to by the downstream.
+        // So we need to abort upstream and complete the downstream with the cause.
+        // Upstream.abort() is called here and in delegate(StreamMessage<T> upstream) method.
+        // It's safe to call upstream.abort() multiple times.
+
+        // The downstream.onError() is called in downstreamOnError method if it's already set.
+        // If it wasn't set yet, downstream.onError() will be called in
+        // CancellableStreamMessage.failLateSubscriber().
 
         // Abort upstream if it's set.
         final StreamMessage<T> upstream = this.upstream;
@@ -413,6 +428,11 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     private void downstreamOnError(Throwable cause, SubscriptionImpl downstreamSubscription) {
         final Subscriber<Object> subscriber = downstreamSubscription.subscriber();
         try {
+            if (!downstreamOnSubscribeCalled) {
+                downstreamOnSubscribeCalled = true;
+                subscriber.onSubscribe(downstreamSubscription);
+            }
+
             if (downstreamSubscription.shouldNotifyCancellation() ||
                 !(cause instanceof CancelledSubscriptionException)) {
                 subscriber.onError(cause);
