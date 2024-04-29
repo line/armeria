@@ -19,50 +19,72 @@ package com.linecorp.armeria.xds.client.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.stringValue;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
-import static com.linecorp.armeria.xds.client.endpoint.XdsEndpointUtil.convertEndpoints;
-import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Test;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.Any;
+import com.google.protobuf.ListValue;
 import com.google.protobuf.Struct;
 import com.google.protobuf.Value;
 
-import com.linecorp.armeria.client.Endpoint;
-
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetSelector;
 import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
+import io.envoyproxy.envoy.config.listener.v3.ApiListener;
+import io.envoyproxy.envoy.config.listener.v3.Listener;
+import io.envoyproxy.envoy.config.route.v3.Route;
+import io.envoyproxy.envoy.config.route.v3.RouteAction;
+import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
+import io.envoyproxy.envoy.config.route.v3.RouteMatch;
+import io.envoyproxy.envoy.config.route.v3.VirtualHost;
+import io.envoyproxy.envoy.extensions.filters.http.router.v3.Router;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager.CodecType;
+import io.envoyproxy.envoy.extensions.filters.network.http_connection_manager.v3.HttpFilter;
 
-class XdsConverterUtilTest {
+final class EndpointTestUtil {
 
-    @Test
-    void convertEndpointsWithFilterMetadata() {
-        final Metadata metadata1 = metadata(ImmutableMap.of("foo", "foo1"));
-        final LbEndpoint lbEndpoint1 = endpoint("127.0.0.1", 8080, metadata1);
-        final Endpoint endpoint1 = Endpoint.of("127.0.0.1", 8080)
-                                           .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint1);
-        final Metadata metadata2 = metadata(ImmutableMap.of("foo", "foo1", "bar", "bar2"));
-        final LbEndpoint lbEndpoint2 = endpoint("127.0.0.1", 8081, metadata2);
-        final Endpoint endpoint2 = Endpoint.of("127.0.0.1", 8081)
-                                           .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint2);
-        final Metadata metadata3 = metadata(ImmutableMap.of("foo", "foo1", "bar", "bar1", "baz", "baz1"));
-        final LbEndpoint lbEndpoint3 = endpoint("127.0.0.1", 8082, metadata3);
-        final Endpoint endpoint3 = Endpoint.of("127.0.0.1", 8082)
-                                           .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint3);
-        final List<Endpoint> endpoints =
-                convertEndpoints(ImmutableList.of(endpoint1, endpoint2, endpoint3), Struct.newBuilder()
-                                                      .putFields("foo", stringValue("foo1"))
-                                                      .putFields("bar", stringValue("bar1"))
-                                                      .build());
-        assertThat(endpoints).containsExactly(Endpoint.of("127.0.0.1", 8082));
+    static Listener staticResourceListener() {
+        return staticResourceListener(Metadata.getDefaultInstance());
+    }
+
+    static Listener staticResourceListener(Metadata metadata) {
+        final RouteAction.Builder routeActionBuilder = RouteAction.newBuilder().setCluster("cluster");
+        if (metadata != Metadata.getDefaultInstance()) {
+            routeActionBuilder.setMetadataMatch(metadata);
+        }
+        final VirtualHost virtualHost =
+                VirtualHost.newBuilder()
+                           .setName("route")
+                           .addDomains("*")
+                           .addRoutes(Route.newBuilder()
+                                           .setMatch(RouteMatch.newBuilder().setPrefix("/"))
+                                           .setRoute(routeActionBuilder))
+                           .build();
+        final HttpConnectionManager manager =
+                HttpConnectionManager
+                        .newBuilder()
+                        .setCodecType(CodecType.AUTO)
+                        .setStatPrefix("ingress_http")
+                        .setRouteConfig(RouteConfiguration.newBuilder()
+                                                          .setName("route")
+                                                          .addVirtualHosts(virtualHost)
+                                                          .build())
+                        .addHttpFilters(HttpFilter.newBuilder()
+                                                  .setName("envoy.filters.http.router")
+                                                  .setTypedConfig(Any.pack(Router.getDefaultInstance())))
+                        .build();
+        return Listener.newBuilder()
+                       .setName("listener")
+                       .setApiListener(ApiListener.newBuilder().setApiListener(Any.pack(manager)))
+                       .build();
     }
 
     static Metadata metadata(Struct struct) {
@@ -74,6 +96,18 @@ class XdsConverterUtilTest {
         return metadata(struct(map));
     }
 
+    static Value fallbackListValue(Map<String, String>... maps) {
+        final List<Value> values =
+                Arrays.stream(maps).map(map -> Value.newBuilder()
+                                                    .setStructValue(struct(map))
+                                                    .build()).collect(Collectors.toList());
+        return Value.newBuilder()
+                    .setListValue(ListValue.newBuilder()
+                                           .addAllValues(values)
+                                           .build())
+                    .build();
+    }
+
     static Struct struct(Map<String, String> map) {
         final Map<String, Value> structMap =
                 map.entrySet().stream()
@@ -81,6 +115,18 @@ class XdsConverterUtilTest {
                                              e -> Value.newBuilder()
                                                        .setStringValue(e.getValue()).build()));
         return Struct.newBuilder().putAllFields(structMap).build();
+    }
+
+    static LbSubsetSelector lbSubsetSelector(Iterable<String> keys) {
+        return LbSubsetSelector.newBuilder()
+                               .addAllKeys(keys)
+                               .build();
+    }
+
+    static LbSubsetConfig lbSubsetConfig(LbSubsetSelector... lbSubsetSelectors) {
+        return LbSubsetConfig.newBuilder()
+                             .addAllSubsetSelectors(Arrays.asList(lbSubsetSelectors))
+                             .build();
     }
 
     static ClusterLoadAssignment sampleClusterLoadAssignment() {
@@ -118,8 +164,10 @@ class XdsConverterUtilTest {
                                    .addLbEndpoints(endpoint3)
                                    .build();
         return ClusterLoadAssignment.newBuilder()
-                            .setClusterName("cluster")
-                            .addEndpoints(lbEndpoints)
-                            .build();
+                                    .setClusterName("cluster")
+                                    .addEndpoints(lbEndpoints)
+                                    .build();
     }
+
+    private EndpointTestUtil() {}
 }

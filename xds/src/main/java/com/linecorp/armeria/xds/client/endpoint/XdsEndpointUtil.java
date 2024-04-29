@@ -16,20 +16,13 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.function.Predicate;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
-import com.google.protobuf.Struct;
-import com.google.protobuf.Value;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -52,33 +45,6 @@ import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 
 final class XdsEndpointUtil {
-
-    static List<Endpoint> convertEndpoints(List<Endpoint> endpoints, Struct filterMetadata) {
-        checkArgument(filterMetadata.getFieldsCount() > 0,
-                      "filterMetadata.getFieldsCount(): %s (expected: > 0)", filterMetadata.getFieldsCount());
-        final Predicate<Endpoint> lbEndpointPredicate = endpoint -> {
-            final LbEndpoint lbEndpoint = endpoint.attr(XdsAttributesKeys.LB_ENDPOINT_KEY);
-            assert lbEndpoint != null;
-            final Struct endpointMetadata = lbEndpoint.getMetadata().getFilterMetadataOrDefault(
-                    SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.getDefaultInstance());
-            if (endpointMetadata.getFieldsCount() == 0) {
-                return false;
-            }
-            return containsFilterMetadata(filterMetadata, endpointMetadata);
-        };
-        return endpoints.stream().filter(lbEndpointPredicate).collect(toImmutableList());
-    }
-
-    private static boolean containsFilterMetadata(Struct filterMetadata, Struct endpointMetadata) {
-        final Map<String, Value> endpointMetadataMap = endpointMetadata.getFieldsMap();
-        for (Entry<String, Value> entry : filterMetadata.getFieldsMap().entrySet()) {
-            final Value value = endpointMetadataMap.get(entry.getKey());
-            if (value == null || !value.equals(entry.getValue())) {
-                return false;
-            }
-        }
-        return true;
-    }
 
     static EndpointGroup convertEndpointGroup(ClusterSnapshot clusterSnapshot) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();

@@ -22,10 +22,13 @@ import io.netty.util.AttributeKey;
 
 final class XdsAttributesKeys {
 
-    static final AttributeKey<LbEndpoint> LB_ENDPOINT_KEY =
+    public static final AttributeKey<LbEndpoint> LB_ENDPOINT_KEY =
             AttributeKey.valueOf(XdsAttributesKeys.class, "LB_ENDPOINT_KEY");
-    static final AttributeKey<LocalityLbEndpoints> LOCALITY_LB_ENDPOINTS_KEY =
+    public static final AttributeKey<LocalityLbEndpoints> LOCALITY_LB_ENDPOINTS_KEY =
             AttributeKey.valueOf(XdsAttributesKeys.class, "LOCALITY_LB_ENDPOINTS_KEY");
+
+    public static final AttributeKey<Integer> SELECTION_HASH =
+            AttributeKey.valueOf(XdsAttributesKeys.class, "SELECTION_HASH");
 
     private XdsAttributesKeys() {}
 }

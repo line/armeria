@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds;
+package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
@@ -31,6 +31,14 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.EndpointSnapshot;
+import com.linecorp.armeria.xds.ListenerRoot;
+import com.linecorp.armeria.xds.ListenerSnapshot;
+import com.linecorp.armeria.xds.RouteSnapshot;
+import com.linecorp.armeria.xds.TestResourceWatcher;
+import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.XdsTestResources;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -83,7 +91,7 @@ class MostlyStaticWithDynamicEdsTest {
         final Listener listener = staticResourceListener();
         final Bootstrap bootstrap = XdsTestResources.bootstrap(configSource, listener,
                                                                bootstrapCluster, staticCluster);
-        try (XdsBootstrapImpl xdsBootstrap = new XdsBootstrapImpl(bootstrap)) {
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
             final TestResourceWatcher watcher = new TestResourceWatcher();
             listenerRoot.addSnapshotWatcher(watcher);

@@ -20,7 +20,7 @@ import static com.linecorp.armeria.xds.XdsTestResources.createStaticCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
 import static com.linecorp.armeria.xds.XdsTestResources.staticBootstrap;
-import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
+import static com.linecorp.armeria.xds.client.endpoint.EndpointTestUtil.staticResourceListener;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
