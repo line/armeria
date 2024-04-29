@@ -269,7 +269,8 @@ abstract class CancellableStreamMessage<T> extends AggregationSupport implements
                 }
             } else {
                 try {
-                    if (subscription.shouldNotifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
+                    if (subscription.shouldNotifyCancellation() ||
+                        !(cause instanceof CancelledSubscriptionException)) {
                         subscriber.onError(cause);
                     }
                     completionFuture.completeExceptionally(cause);
