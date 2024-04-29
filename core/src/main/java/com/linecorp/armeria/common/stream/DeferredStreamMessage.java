@@ -391,7 +391,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             return;
         }
 
-        // Downstream was already set but upstream wasn't set yet.
+        // Downstream was already set but upstream wasn't set yet or wouldn't be subscribed by the downstream.
 
         //noinspection unchecked
         final CompletableFuture<List<?>> collectingFuture =
