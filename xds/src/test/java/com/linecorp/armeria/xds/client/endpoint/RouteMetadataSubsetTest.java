@@ -25,8 +25,9 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsConverterUtilTest.samp
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Struct;
@@ -79,9 +80,10 @@ class RouteMetadataSubsetTest {
                                                           .setAds(AggregatedConfigSource.getDefaultInstance())
                                                           .setResourceApiVersion(ApiVersion.V3)
                                                           .build();
-            final Cluster cluster =
+            final String anyEndpointFallbackClusterName = "any_endpoint_fallback_cluster";
+            final Cluster anyEndpointFallbackCluster =
                     Cluster.newBuilder()
-                           .setName("cluster")
+                           .setName(anyEndpointFallbackClusterName)
                            .setEdsClusterConfig(Cluster.EdsClusterConfig
                                                         .newBuilder().setEdsConfig(configSource))
                            .setType(Cluster.DiscoveryType.EDS)
@@ -94,11 +96,30 @@ class RouteMetadataSubsetTest {
                                                                                      .build())
                                                  .build())
                            .build();
-            final ClusterLoadAssignment loadAssignment = sampleClusterLoadAssignment();
+            final ClusterLoadAssignment anyEndpointLoadAssignment =
+                    sampleClusterLoadAssignment(anyEndpointFallbackClusterName);
+            final String noFallbackClusterName = "no_fallback_cluster";
+            final Cluster noFallbackCluster =
+                    Cluster.newBuilder()
+                           .setName(noFallbackClusterName)
+                           .setEdsClusterConfig(Cluster.EdsClusterConfig
+                                                        .newBuilder().setEdsConfig(configSource))
+                           .setType(Cluster.DiscoveryType.EDS)
+                           .setLbSubsetConfig(
+                                   LbSubsetConfig.newBuilder()
+                                                 .setFallbackPolicy(LbSubsetFallbackPolicy.NO_FALLBACK)
+                                                 .addSubsetSelectors(LbSubsetSelector.newBuilder()
+                                                                                     .addKeys("foo")
+                                                                                     .addKeys("bar")
+                                                                                     .build())
+                                                 .build())
+                           .build();
+            final ClusterLoadAssignment noFallbackLoadAssignment =
+                    sampleClusterLoadAssignment(noFallbackClusterName);
             cache.setSnapshot(
                     "key",
-                    Snapshot.create(ImmutableList.of(cluster),
-                                    ImmutableList.of(loadAssignment),
+                    Snapshot.create(ImmutableList.of(anyEndpointFallbackCluster, noFallbackCluster),
+                                    ImmutableList.of(anyEndpointLoadAssignment, noFallbackLoadAssignment),
                                     ImmutableList.of(),
                                     ImmutableList.of(),
                                     ImmutableList.of(),
@@ -106,8 +127,11 @@ class RouteMetadataSubsetTest {
         }
     };
 
-    @Test
-    void routeMetadataMatch() {
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void routeMetadataMatch(boolean noFallback) {
+        final String clusterName = noFallback ? "no_fallback_cluster" : "any_endpoint_fallback_cluster";
+
         final ConfigSource configSource = XdsTestResources.basicConfigSource(BOOTSTRAP_CLUSTER_NAME);
         final Cluster bootstrapCluster = bootstrapCluster(server.httpUri(), BOOTSTRAP_CLUSTER_NAME);
         final Metadata routeMetadataMatch1 = Metadata.newBuilder().putFilterMetadata(
@@ -115,9 +139,9 @@ class RouteMetadataSubsetTest {
                                                          .putFields("foo", stringValue("foo1"))
                                                          .putFields("bar", stringValue("bar1"))
                                                          .build()).build();
-        Bootstrap bootstrap = XdsTestResources.bootstrap(configSource,
-                                                         staticResourceListener(routeMetadataMatch1),
-                                                         bootstrapCluster);
+        Bootstrap bootstrap = XdsTestResources.bootstrap(
+                configSource, staticResourceListener(routeMetadataMatch1, clusterName),
+                bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
 
@@ -127,10 +151,11 @@ class RouteMetadataSubsetTest {
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
 
-        // No metadata. Fallback to all endpoints.
+        // No Route metadata so use all endpoints.
         final Metadata routeMetadataMatch2 = Metadata.newBuilder().putFilterMetadata(
                 SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.getDefaultInstance()).build();
-        bootstrap = XdsTestResources.bootstrap(configSource, staticResourceListener(routeMetadataMatch2),
+        bootstrap = XdsTestResources.bootstrap(configSource,
+                                               staticResourceListener(routeMetadataMatch2, clusterName),
                                                bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
@@ -142,21 +167,25 @@ class RouteMetadataSubsetTest {
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
 
-        // No matched metadata. Fallback to all endpoints.
         final Metadata routeMetadataMatch3 = Metadata.newBuilder().putFilterMetadata(
                 SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.newBuilder()
                                                          .putFields("foo", stringValue("foo1"))
                                                          .build()).build();
-        bootstrap = XdsTestResources.bootstrap(configSource, staticResourceListener(routeMetadataMatch3),
+        bootstrap = XdsTestResources.bootstrap(configSource,
+                                               staticResourceListener(routeMetadataMatch3, clusterName),
                                                bootstrapCluster);
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
             final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
 
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
-            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            if (noFallback) {
+                assertThat(endpointGroup.selectNow(ctx)).isNull();
+            } else {
+                assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+                assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
+                assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            }
         }
     }
 }
