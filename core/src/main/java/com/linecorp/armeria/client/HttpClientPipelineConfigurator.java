@@ -70,6 +70,7 @@ import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -229,16 +230,19 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             sslHandler = sslCtx.newHandler(ch.alloc());
         }
 
-        p.addLast(new ChannelInboundHandlerAdapter() {
-            @Override
-            public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                final ClientConnectionTimingsBuilder timingsBuilder =
-                        ctx.channel().attr(TIMINGS_BUILDER_KEY).get();
-                timingsBuilder.tlsHandshakeStart();
-                super.channelActive(ctx);
-                p.remove(this);
-            }
-        });
+        final boolean fastOpen = Boolean.TRUE.equals(ch.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
+        if (!fastOpen) {
+            p.addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                    final ClientConnectionTimingsBuilder timingsBuilder =
+                            ctx.channel().attr(TIMINGS_BUILDER_KEY).get();
+                    timingsBuilder.tlsHandshakeStart();
+                    super.channelActive(ctx);
+                    p.remove(this);
+                }
+            });
+        }
         p.addLast(configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
@@ -254,12 +258,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
                 final ClientConnectionTimingsBuilder timingsBuilder =
                         ctx.channel().attr(TIMINGS_BUILDER_KEY).get();
-                timingsBuilder.tlsHandshakeEnd();
-
                 final SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
                 handshakeFailed = !handshakeEvent.isSuccess();
                 if (handshakeFailed) {
                     // The connection will be closed automatically by SslHandler.
+                    timingsBuilder.tlsHandshakeEnd();
                     return;
                 }
 
@@ -270,6 +273,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     // conclude protocol negotiation and start a new session.
                     return;
                 }
+                timingsBuilder.tlsHandshakeEnd();
 
                 final SessionProtocol protocol;
                 if (isHttp2Protocol(sslHandler)) {
