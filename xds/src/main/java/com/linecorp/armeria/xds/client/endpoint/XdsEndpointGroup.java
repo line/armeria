@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Lock;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -192,6 +193,17 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
     @Override
     public void close() {
         closeAsync().join();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("selectionStrategy", selectionStrategy)
+                          .add("allowEmptyEndpoints", allowEmptyEndpoints)
+                          .add("initialized", initialEndpointsFuture.isDone())
+                          .add("state", state)
+                          .add("clusterManager", clusterManager)
+                          .toString();
     }
 
     private static class XdsEndpointSelectionStrategy implements EndpointSelectionStrategy {
