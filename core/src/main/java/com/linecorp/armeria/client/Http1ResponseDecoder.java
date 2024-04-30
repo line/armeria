@@ -292,7 +292,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
             return true;
         }
 
-        return res.requestHandler().handle100Continue(status);
+        return res.handle100Continue(status);
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {

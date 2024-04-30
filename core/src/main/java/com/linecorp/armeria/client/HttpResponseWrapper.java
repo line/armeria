@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -75,9 +76,9 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         this.responseTimeoutMillis = responseTimeoutMillis;
     }
 
-    AbstractHttpRequestHandler requestHandler() {
+    boolean handle100Continue(HttpStatus status) {
         assert requestHandler != null;
-        return requestHandler;
+        return requestHandler.handle100Continue(status);
     }
 
     DecodedHttpResponse delegate() {

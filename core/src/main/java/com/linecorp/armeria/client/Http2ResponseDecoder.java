@@ -209,7 +209,7 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
             final ResponseHeaders responseHeaders = (ResponseHeaders) converted;
             final HttpStatus status = responseHeaders.status();
             if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
-                res.requestHandler().handle100Continue(status);
+                res.handle100Continue(status);
                 written = res.tryWrite(converted);
             } else {
                 written = res.tryWriteResponseHeaders(responseHeaders);
