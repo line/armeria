@@ -103,7 +103,7 @@ class Http1ServerDelayedCloseConnectionTest {
             );
 
             // Additional test to check that the socket is in the CLOSED state
-            if (SystemInfo.osType() == OsType.LINUX || SystemInfo.osType() == OsType.WINDOWS) {
+            if (SystemInfo.osType() == OsType.LINUX || SystemInfo.osType() == OsType.MAC) {
                 socket.close();
                 try(Socket reuseSock = new Socket()) {
                     assertThatCode(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
@@ -144,7 +144,7 @@ class Http1ServerDelayedCloseConnectionTest {
             assertThat(server.server().numConnections()).isEqualTo(1);
 
             // Additional test to check that the socket is in the TIMED_WAIT state
-            if (SystemInfo.osType() == OsType.LINUX || SystemInfo.osType() == OsType.WINDOWS) {
+            if (SystemInfo.osType() == OsType.LINUX || SystemInfo.osType() == OsType.MAC) {
                 socket.close();
                 try(Socket reuseSock = new Socket()) {
                     assertThatThrownBy(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
