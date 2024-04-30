@@ -58,7 +58,7 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
     }
 
     @Override
-    public HttpResponseWrapper addResponse(AbstractHttpRequestHandler requestHandler,
+    public HttpResponseWrapper addResponse(@Nullable AbstractHttpRequestHandler requestHandler,
                                            int id, DecodedHttpResponse res,
                                            ClientRequestContext ctx, EventLoop eventLoop) {
         final HttpResponseWrapper newRes =

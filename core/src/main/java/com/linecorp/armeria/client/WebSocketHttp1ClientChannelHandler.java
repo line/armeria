@@ -96,7 +96,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
     }
 
     @Override
-    public HttpResponseWrapper addResponse(AbstractHttpRequestHandler requestHandler,
+    public HttpResponseWrapper addResponse(@Nullable AbstractHttpRequestHandler requestHandler,
                                            int id, DecodedHttpResponse decodedHttpResponse,
                                            ClientRequestContext ctx, EventLoop eventLoop) {
         assert res == null;

@@ -93,6 +93,7 @@ final class HttpClientExpect100HeaderTest {
                     assertThat(in.readLine()).isEmpty();
 
                     // Check that the data is not sent until sending 100-continue response.
+                    Thread.sleep(1000);
                     assertThat(inputStream.available()).isZero();
 
                     out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
@@ -182,6 +183,7 @@ final class HttpClientExpect100HeaderTest {
                     // Read a HEADERS frame and validate it.
                     readHeadersFrame(in);
                     // Check that the data is not sent until sending 100-continue response.
+                    Thread.sleep(1000);
                     assertThat(in.available()).isZero();
                     // Send a CONTINUE response.
                     sendFrameHeaders(bos, HttpStatus.CONTINUE, false);
@@ -279,6 +281,7 @@ final class HttpClientExpect100HeaderTest {
                     assertThat(in.readLine()).isEmpty();
 
                     // Check that the data is not sent until sending 100-continue response.
+                    Thread.sleep(1000);
                     assertThat(inputStream.available()).isZero();
 
                     out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
@@ -375,6 +378,7 @@ final class HttpClientExpect100HeaderTest {
                     // Read a HEADERS frame and validate it.
                     readHeadersFrame(in);
                     // Check that the data is not sent until sending 100-continue response.
+                    Thread.sleep(1000);
                     assertThat(in.available()).isZero();
                     // Send a CONTINUE response.
                     sendFrameHeaders(bos, HttpStatus.CONTINUE, false);
