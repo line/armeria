@@ -80,8 +80,9 @@ final class HttpClientExpect100HeaderTest {
                       .aggregate();
 
                 try (Socket s = ss.accept()) {
+                    final InputStream inputStream = s.getInputStream();
                     final BufferedReader in = new BufferedReader(
-                            new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
+                            new InputStreamReader(inputStream, StandardCharsets.US_ASCII));
                     final OutputStream out = s.getOutputStream();
                     assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
                     assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
@@ -91,8 +92,13 @@ final class HttpClientExpect100HeaderTest {
                     assertThat(in.readLine()).startsWith("user-agent: armeria/");
                     assertThat(in.readLine()).isEmpty();
 
+                    // Check that the data is not sent until sending 100-continue response.
+                    assertThat(inputStream.available()).isZero();
+
                     out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
 
+                    Thread.sleep(1000); // Wait for the client to send the payload.
+                    assertThat(inputStream.available()).isGreaterThan(0);
                     assertThat(in.readLine()).isEqualTo("foo");
 
                     out.write(("HTTP/1.1 201 Created\r\n" +
@@ -175,9 +181,14 @@ final class HttpClientExpect100HeaderTest {
 
                     // Read a HEADERS frame and validate it.
                     readHeadersFrame(in);
+                    // Check that the data is not sent until sending 100-continue response.
+                    assertThat(in.available()).isZero();
                     // Send a CONTINUE response.
                     sendFrameHeaders(bos, HttpStatus.CONTINUE, false);
 
+                    // Wait for the client to send the payload.
+                    Thread.sleep(1000);
+                    assertThat(in.available()).isGreaterThan(0);
                     // Read a DATA frame.
                     readDataFrame(in);
                     // Send a response.
@@ -255,8 +266,9 @@ final class HttpClientExpect100HeaderTest {
                 req.close();
 
                 try (Socket s = ss.accept()) {
+                    final InputStream inputStream = s.getInputStream();
                     final BufferedReader in = new BufferedReader(
-                            new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
+                            new InputStreamReader(inputStream, StandardCharsets.US_ASCII));
                     final OutputStream out = s.getOutputStream();
                     assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
                     assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
@@ -266,8 +278,13 @@ final class HttpClientExpect100HeaderTest {
                     assertThat(in.readLine()).isEqualTo("transfer-encoding: chunked");
                     assertThat(in.readLine()).isEmpty();
 
+                    // Check that the data is not sent until sending 100-continue response.
+                    assertThat(inputStream.available()).isZero();
+
                     out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
 
+                    Thread.sleep(1000); // Wait for the client to send the payload.
+                    assertThat(inputStream.available()).isGreaterThan(0);
                     assertThat(in.readLine()).isEqualTo("3");
                     assertThat(in.readLine()).isEqualTo("foo");
 
@@ -357,9 +374,14 @@ final class HttpClientExpect100HeaderTest {
 
                     // Read a HEADERS frame and validate it.
                     readHeadersFrame(in);
+                    // Check that the data is not sent until sending 100-continue response.
+                    assertThat(in.available()).isZero();
                     // Send a CONTINUE response.
                     sendFrameHeaders(bos, HttpStatus.CONTINUE, false);
 
+                    // Wait for the client to send the payload.
+                    Thread.sleep(1000);
+                    assertThat(in.available()).isGreaterThan(0);
                     // Read a DATA frame.
                     readDataFrame(in);
                     // Send a response.
