@@ -181,6 +181,12 @@ public final class VirtualHostContextPathServiceBindingBuilder
     }
 
     @Override
+    public VirtualHostContextPathServiceBindingBuilder multipartRemovalStrategy(
+            MultipartRemovalStrategy removalStrategy) {
+        return (VirtualHostContextPathServiceBindingBuilder) super.multipartRemovalStrategy(removalStrategy);
+    }
+
+    @Override
     public VirtualHostContextPathServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
                                                                           boolean shutdownOnStop) {
         return (VirtualHostContextPathServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup,

@@ -58,6 +58,7 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
@@ -398,6 +399,9 @@ public final class Flags {
 
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
+
+    private static final MultipartRemovalStrategy DEFAULT_MULTIPART_REMOVAL_STRATEGY =
+            getValue(FlagsProvider::defaultMultipartRemovalStrategy, "defaultMultipartRemovalStrategy");
 
     private static final Sampler<? super RequestContext> REQUEST_CONTEXT_LEAK_DETECTION_SAMPLER =
             getValue(FlagsProvider::requestContextLeakDetectionSampler, "requestContextLeakDetectionSampler");
@@ -1440,6 +1444,15 @@ public final class Flags {
      */
     public static Path defaultMultipartUploadsLocation() {
         return DEFAULT_MULTIPART_UPLOADS_LOCATION;
+    }
+
+    /**
+     * Returns the {@link MultipartRemovalStrategy} that is used to determine how to remove the uploaded files
+     * from {@code multipart/form-data}.
+     */
+    @UnstableApi
+    public static MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
+        return DEFAULT_MULTIPART_REMOVAL_STRATEGY;
     }
 
     /**

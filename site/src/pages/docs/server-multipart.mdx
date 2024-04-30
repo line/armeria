@@ -140,7 +140,8 @@ public HttpResponse upload(
 <Tip>
 
 The multipart files uploaded to an annotated service are stored into
-<type://ServerBuilder#multipartUploadsLocation(Path)> and the files are not removed automatically. 
-You should explicitly **delete** the files after use.
+<type://ServerBuilder#multipartUploadsLocation(Path)> and the files are removed depending on the 
+<type://MultipartRemovalStrategy>. If <type://MultipartRemovalStrategy#NEVER> is set, you should explicitly 
+**delete** the files after use.
 
 </Tip>

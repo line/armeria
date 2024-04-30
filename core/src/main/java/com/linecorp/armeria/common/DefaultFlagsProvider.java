@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -458,6 +459,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return Paths.get(System.getProperty("java.io.tmpdir") +
                          File.separatorChar + "armeria" +
                          File.separatorChar + "multipart-uploads");
+    }
+
+    @Override
+    public MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
+        return MultipartRemovalStrategy.ON_RESPONSE_COMPLETION;
     }
 
     @Override

@@ -165,6 +165,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     @Nullable
     private Path multipartUploadsLocation;
     @Nullable
+    private MultipartRemovalStrategy multipartRemovalStrategy;
+    @Nullable
     private EventLoopGroup serviceWorkerGroup;
     @Nullable
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
@@ -1191,6 +1193,11 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         return multipartUploadsLocation;
     }
 
+    @UnstableApi
+    public void multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        multipartRemovalStrategy = requireNonNull(removalStrategy, "removalStrategy");
+    }
+
     /**
      * Sets the {@link Function} which generates a {@link RequestId}.
      * If not set, the value set via {@link ServerBuilder#requestIdGenerator(Function)} is used.
@@ -1353,6 +1360,9 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         final Path multipartUploadsLocation =
                 this.multipartUploadsLocation != null ?
                 this.multipartUploadsLocation : template.multipartUploadsLocation;
+        final MultipartRemovalStrategy multipartRemovalStrategy =
+                this.multipartRemovalStrategy != null ?
+                this.multipartRemovalStrategy : template.multipartRemovalStrategy;
 
         final HttpHeaders defaultHeaders =
                 mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
@@ -1382,6 +1392,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         assert blockingTaskExecutor != null;
         assert successFunction != null;
         assert multipartUploadsLocation != null;
+        assert multipartRemovalStrategy != null;
         assert requestIdGenerator != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
@@ -1401,7 +1412,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
                                             successFunction, requestAutoAbortDelayMillis,
-                                            multipartUploadsLocation, serviceWorkerGroup, defaultHeaders,
+                                            multipartUploadsLocation, multipartRemovalStrategy,
+                                            serviceWorkerGroup, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
                                             unhandledExceptionsReporter, baseContextPath, contextHook);
                 }).collect(toImmutableList());
@@ -1410,8 +1422,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, "/", FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               requestAutoAbortDelayMillis, multipartUploadsLocation, serviceWorkerGroup,
-                               defaultHeaders, requestIdGenerator,
+                               requestAutoAbortDelayMillis, multipartUploadsLocation, multipartRemovalStrategy,
+                               serviceWorkerGroup, defaultHeaders, requestIdGenerator,
                                defaultErrorHandler, unhandledExceptionsReporter, "/", contextHook);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();

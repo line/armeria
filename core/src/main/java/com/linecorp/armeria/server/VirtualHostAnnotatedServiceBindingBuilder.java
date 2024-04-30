@@ -232,6 +232,12 @@ public final class VirtualHostAnnotatedServiceBindingBuilder extends AbstractAnn
     }
 
     @Override
+    public VirtualHostAnnotatedServiceBindingBuilder multipartRemovalStrategy(
+            MultipartRemovalStrategy removalStrategy) {
+        return (VirtualHostAnnotatedServiceBindingBuilder) super.multipartRemovalStrategy(removalStrategy);
+    }
+
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         return (VirtualHostAnnotatedServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);

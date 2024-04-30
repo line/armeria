@@ -51,9 +51,9 @@ public final class ContextPathAnnotatedServiceConfigSetters
      * Registers the given service to {@link ContextPathServicesBuilder} and returns the parent object.
      *
      * @param service annotated service object to handle incoming requests matching path prefix, which
-     *                can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
-     *                If path prefix is not set then this service is registered to handle requests matching
-     *                {@code /}
+     * can be configured through {@link AnnotatedServiceBindingBuilder#pathPrefix(String)}.
+     * If path prefix is not set then this service is registered to handle requests matching
+     * {@code /}
      */
     @Override
     public ContextPathServicesBuilder build(Object service) {
@@ -248,6 +248,12 @@ public final class ContextPathAnnotatedServiceConfigSetters
             Path multipartUploadsLocation) {
         return (ContextPathAnnotatedServiceConfigSetters)
                 super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public ContextPathAnnotatedServiceConfigSetters multipartRemovalStrategy(
+            MultipartRemovalStrategy removalStrategy) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.multipartRemovalStrategy(removalStrategy);
     }
 
     @Override

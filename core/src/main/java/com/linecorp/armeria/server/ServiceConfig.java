@@ -81,6 +81,7 @@ public final class ServiceConfig {
 
     private final long requestAutoAbortDelayMillis;
     private final Path multipartUploadsLocation;
+    private final MultipartRemovalStrategy multipartRemovalStrategy;
     private final EventLoopGroup serviceWorkerGroup;
 
     private final List<ShutdownSupport> shutdownSupports;
@@ -98,7 +99,8 @@ public final class ServiceConfig {
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
                   BlockingTaskExecutor blockingTaskExecutor,
                   SuccessFunction successFunction, long requestAutoAbortDelayMillis,
-                  Path multipartUploadsLocation, EventLoopGroup serviceWorkerGroup,
+                  Path multipartUploadsLocation, MultipartRemovalStrategy multipartRemovalStrategy,
+                  EventLoopGroup serviceWorkerGroup,
                   List<ShutdownSupport> shutdownSupports,
                   HttpHeaders defaultHeaders,
                   Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
@@ -107,8 +109,8 @@ public final class ServiceConfig {
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
-             multipartUploadsLocation, serviceWorkerGroup, shutdownSupports, defaultHeaders,
-                     requestIdGenerator, serviceErrorHandler, contextHook);
+             multipartUploadsLocation, multipartRemovalStrategy, serviceWorkerGroup, shutdownSupports,
+             defaultHeaders, requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
     /**
@@ -123,7 +125,7 @@ public final class ServiceConfig {
                           BlockingTaskExecutor blockingTaskExecutor,
                           SuccessFunction successFunction,
                           long requestAutoAbortDelayMillis,
-                          Path multipartUploadsLocation,
+                          Path multipartUploadsLocation, MultipartRemovalStrategy multipartRemovalStrategy,
                           EventLoopGroup serviceWorkerGroup,
                           List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders,
                           Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
@@ -145,6 +147,7 @@ public final class ServiceConfig {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        this.multipartRemovalStrategy = requireNonNull(multipartRemovalStrategy, "multipartRemovalStrategy");
         this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
         this.defaultHeaders = defaultHeaders;
@@ -192,7 +195,8 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
-                                 multipartUploadsLocation, serviceWorkerGroup, shutdownSupports, defaultHeaders,
+                                 multipartUploadsLocation, multipartRemovalStrategy, serviceWorkerGroup,
+                                 shutdownSupports, defaultHeaders,
                                  requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
@@ -203,7 +207,8 @@ public final class ServiceConfig {
                                  maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
-                                 multipartUploadsLocation, serviceWorkerGroup, shutdownSupports, defaultHeaders,
+                                 multipartUploadsLocation, multipartRemovalStrategy, serviceWorkerGroup,
+                                 shutdownSupports, defaultHeaders,
                                  requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
@@ -213,7 +218,8 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
-                                 multipartUploadsLocation, serviceWorkerGroup, shutdownSupports, defaultHeaders,
+                                 multipartUploadsLocation, multipartRemovalStrategy, serviceWorkerGroup,
+                                 shutdownSupports, defaultHeaders,
                                  requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
@@ -433,6 +439,15 @@ public final class ServiceConfig {
      */
     public Path multipartUploadsLocation() {
         return multipartUploadsLocation;
+    }
+
+    /**
+     * Returns the {@link MultipartRemovalStrategy} that specifies when to remove the temporary files created
+     * for multipart requests.
+     */
+    @UnstableApi
+    public MultipartRemovalStrategy multipartRemovalStrategy() {
+        return multipartRemovalStrategy;
     }
 
     /**

@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -1092,6 +1093,15 @@ public interface FlagsProvider {
      */
     @Nullable
     default Path defaultMultipartUploadsLocation() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link MultipartRemovalStrategy} that is used to determine how to remove the uploaded files
+     * from {@code multipart/form-data}.
+     */
+    @Nullable
+    default MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
         return null;
     }
 
