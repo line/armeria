@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static testing.grpc.Messages.PayloadType.COMPRESSABLE;
 
 import java.io.InputStream;
-import java.util.concurrent.Executors;
 
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
@@ -34,6 +33,7 @@ import com.google.protobuf.ByteString;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
@@ -57,7 +57,7 @@ class GrpcClientBuilderTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service(GrpcService.builder()
-                                  .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                                  .addService(new TestServiceImpl(CommonPools.blockingTaskExecutor()))
                                   .build());
         }
     };
@@ -160,7 +160,7 @@ class GrpcClientBuilderTest {
                                             .build(TestServiceBlockingStub.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
-                        "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive");
+                        "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive.");
     }
 
     @ParameterizedTest

@@ -285,7 +285,7 @@ class GrpcServiceBuilderTest {
                                             .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
-                        "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive");
+                        "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive.");
     }
 
     @ParameterizedTest

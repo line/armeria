@@ -256,7 +256,12 @@ public final class GrpcMessageMarshaller<I, O> {
                 stream = CodedInputStream.newInstance(buf.nioBuffer());
             }
             try {
-                final Message msg = prototype.getParserForType().parseFrom(stream);
+                final Message msg;
+                if (useMethodMarshaller) {
+                    msg = (Message) marshaller.parse(new ByteBufInputStream(buf));
+                } else {
+                    msg = prototype.getParserForType().parseFrom(stream);
+                }
                 try {
                     stream.checkLastTagWas(0);
                 } catch (InvalidProtocolBufferException e) {

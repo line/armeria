@@ -981,7 +981,7 @@ public final class GrpcServiceBuilder {
         }
         if (unsafeWrapRequestBuffers && useMethodMarshaller) {
             throw new IllegalStateException(
-                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive"
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
             );
         }
         if (enableHealthCheckService) {
