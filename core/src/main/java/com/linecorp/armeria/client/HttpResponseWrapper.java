@@ -65,7 +65,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     private boolean done;
     private boolean closed;
 
-    HttpResponseWrapper(AbstractHttpRequestHandler requestHandler,
+    HttpResponseWrapper(@Nullable AbstractHttpRequestHandler requestHandler,
                         DecodedHttpResponse delegate, EventLoop eventLoop, ClientRequestContext ctx,
                         long responseTimeoutMillis, long maxContentLength) {
         this.requestHandler = requestHandler;
