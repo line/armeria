@@ -143,7 +143,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, DescriptionInfo> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
-            final AnnotatedService service = sc.service().as(AnnotatedService.class);
+            final DefaultAnnotatedService service = sc.service().as(DefaultAnnotatedService.class);
             if (service != null) {
                 final Class<?> serviceClass = service.serviceClass();
                 final String className = serviceClass.getName();
@@ -165,10 +165,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
-                                      String hostnamePattern, AnnotatedService service0,
+                                      String hostnamePattern, DefaultAnnotatedService service,
                                       Class<?> serviceClass) {
 
-        final DefaultAnnotatedService service = service0.as(DefaultAnnotatedService.class);
         final Route route = service.route();
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Method method = service.method();

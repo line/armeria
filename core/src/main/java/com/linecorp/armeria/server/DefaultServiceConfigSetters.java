@@ -339,12 +339,10 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
             // Set the default service name only when the service name is set using @ServiceName.
             // If it's not, the global defaultServiceNaming is used.
             if (annotatedService != null) {
-                final String serivceName = annotatedService.name();
+                final String serviceName = annotatedService.name();
                 if (serviceName != null) {
-                   
- serviceConfigBuilder.defaultServiceName(serviceName);
+                    serviceConfigBuilder.defaultServiceName(serviceName);
                 }
-            }
             }
         }
 
