@@ -32,7 +32,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.ChannelOption;
 
-public class TlsHandshakeTimingTest {
+class TlsHandshakeTimingTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
