@@ -233,7 +233,9 @@ final class RoutingTrie<V> {
                         return node;
                     } else {
                         final Node<V> verb = node.children.get(':');
-                        return verb != null ? verb : node;
+                        final String pathVerbPart = path.substring(lastColon);
+
+                        return verb != null && verb.path.equals(pathVerbPart) ? verb : node;
                     }
                 }
 

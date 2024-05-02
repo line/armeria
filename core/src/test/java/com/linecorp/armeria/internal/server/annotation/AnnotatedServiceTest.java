@@ -335,13 +335,24 @@ class AnnotatedServiceTest {
         }
 
         @Get("/verb/test:verb")
-        public String verbTestExact() { return "/verb/test:verb"; }
+        public String verbTestExact() {
+            return "/verb/test:verb";
+        }
 
         @Get("/colon-param/:colon:verb")
-        public String verbTestParamColon(@Param String colon) { return colon + " colon verb"; }
+        public String verbTestParamColon(@Param String colon) {
+            return colon + " colon verb";
+        }
 
         @Get("/braces-param/{braces}:verb")
-        public String verbTestParamBraces(@Param String braces) { return braces + " braces verb"; }
+        public String verbTestParamBraces(@Param String braces) {
+            return braces + " braces verb";
+        }
+
+        @Get("/verb/:param")
+        public String noVerbTest(@Param String param) {
+            return "no-verb";
+        }
     }
 
     static class VoidTo200ResponseConverter implements ResponseConverterFunction {
@@ -895,6 +906,7 @@ class AnnotatedServiceTest {
             testBody(hc, get("/1/colon-param/test:verb"), "String[test colon verb]");
             testBody(hc, get("/1/braces-param/test:verb"), "String[test braces verb]");
             testBody(hc, get("/1/colon-param/colon:test:verb"), "String[colon:test colon verb]");
+            testBody(hc, get("/1/verb/test:no-verb"), "String[no-verb]");
 
             testBody(hc, get("/2/int/42"), "Number[42]");
             testBody(hc, post("/2/long/42"), "Number[42]");
@@ -921,8 +933,6 @@ class AnnotatedServiceTest {
             testBody(hc, get("/3/no-path-param"), "String[no-path-param]");
 
             testStatusCode(hc, get("/3/undefined"), 404);
-
-
         }
     }
 
