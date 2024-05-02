@@ -139,8 +139,8 @@ final class RoutingTrieBuilder<V> {
             final PathReader pathReader = new PathReader(path);
             while (same < max && pathReader.isSameChar(p.charAt(same))) {
                 same++;
+                pathReader.moveIndex();
             }
-            pathReader.setIndex(same);
 
             // We need to split the current node into two in order to ensure that this node has the
             // same part of the path. Assume that the path is "/abb" and this node is "/abc/d".
@@ -466,8 +466,8 @@ final class RoutingTrieBuilder<V> {
             return path.charAt(index) == c;
         }
 
-        void setIndex(int index) {
-            this.index = index;
+        int moveIndex() {
+            return ++index;
         }
 
         boolean hasNext() {
