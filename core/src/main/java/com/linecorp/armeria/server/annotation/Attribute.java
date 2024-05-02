@@ -31,6 +31,7 @@ import io.netty.util.AttributeKey;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
+@UnstableApi
 public @interface Attribute {
 
     /**
