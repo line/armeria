@@ -49,6 +49,7 @@ import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.PrototypeMarshaller;
 import testing.grpc.Messages.Payload;
 import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcClientBuilderTest {
@@ -164,10 +165,11 @@ class GrpcClientBuilderTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"true, 1", "false, 0"})
-    void useMethodMarshaller(boolean useMethodMarshaller, int expectedCallCnt) {
+    @CsvSource({"true, 1, 1", "false, 0, 0"})
+    void useMethodMarshaller(boolean useMethodMarshaller, int expectedStreamCallCnt, int expectedParseCallCnt) {
         final CustomMarshallerInterceptor customMarshallerInterceptor = new CustomMarshallerInterceptor();
-        assertThat(customMarshallerInterceptor.getSpiedMarshallerCallCnt()).isEqualTo(0);
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerStreamCallCnt()).isEqualTo(0);
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerParseCallCnt()).isEqualTo(0);
 
         final TestServiceBlockingStub stub = GrpcClients.builder(server.httpUri())
                                                         .intercept(customMarshallerInterceptor)
@@ -181,7 +183,10 @@ class GrpcClientBuilderTest {
                                                                               new byte[1])))
                                                    .build();
         stub.unaryCall(request);
-        assertThat(customMarshallerInterceptor.getSpiedMarshallerCallCnt()).isEqualTo(expectedCallCnt);
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerStreamCallCnt()).isEqualTo(
+                expectedStreamCallCnt);
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerParseCallCnt()).isEqualTo(
+                expectedParseCallCnt);
     }
 
     @Test
@@ -214,10 +219,15 @@ class GrpcClientBuilderTest {
     }
 
     private static class CustomMarshallerInterceptor implements ClientInterceptor {
-        private int spiedMarshallerCallCnt;
+        private int spiedMarshallerStreamCallCnt;
+        private int spiedMarshallerParseCallCnt;
 
-        int getSpiedMarshallerCallCnt() {
-            return spiedMarshallerCallCnt;
+        int getSpiedMarshallerStreamCallCnt() {
+            return spiedMarshallerStreamCallCnt;
+        }
+
+        int getSpiedMarshallerParseCallCnt() {
+            return spiedMarshallerParseCallCnt;
         }
 
         @Override
@@ -238,7 +248,7 @@ class GrpcClientBuilderTest {
 
                         @Override
                         public InputStream stream(I value) {
-                            spiedMarshallerCallCnt++;
+                            spiedMarshallerStreamCallCnt++;
                             return method.getRequestMarshaller().stream(value);
                         }
 
@@ -246,8 +256,30 @@ class GrpcClientBuilderTest {
                         public I parse(InputStream inputStream) {
                             return null;
                         }
-                    }
-            ).build();
+                    }).setResponseMarshaller(
+                    new PrototypeMarshaller<O>() {
+                        @Nullable
+                        @Override
+                        public O getMessagePrototype() {
+                            return (O) SimpleResponse.getDefaultInstance();
+                        }
+
+                        @Override
+                        public Class<O> getMessageClass() {
+                            return null;
+                        }
+
+                        @Override
+                        public InputStream stream(O o) {
+                            return null;
+                        }
+
+                        @Override
+                        public O parse(InputStream inputStream) {
+                            spiedMarshallerParseCallCnt++;
+                            return method.parseResponse(inputStream);
+                        }
+                    }).build();
             return next.newCall(methodDescriptor, callOptions);
         }
     }

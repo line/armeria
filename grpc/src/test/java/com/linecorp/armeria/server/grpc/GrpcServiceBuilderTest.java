@@ -289,13 +289,17 @@ class GrpcServiceBuilderTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "true, 1, 1", "false, 1, 0"})
-    void setUseMethodMarshaller(boolean useMethodMarshaller, int expectedRequestStreamCallCnt,
-                                int expectedResponseStreamCallCnt) {
+    @CsvSource({ "true, 1, 1, 1, 1", "false, 1, 0, 0, 1" })
+    void setUseMethodMarshaller(boolean useMethodMarshaller,
+                                int expectedRequestStreamCallCnt, int expectedRequestParseCallCnt,
+                                int expectedResponseStreamCallCnt, int expectedResponseParseCallCnt) {
         // About requestStreamCallCnt, one stream(SimpleRequest) call must happen in MethodDescriptor
         // per each unaryCall regardless of useMethodMarshaller state.
         final AtomicInteger requestStreamCallCnt = new AtomicInteger();
         final AtomicInteger responseStreamCallCnt = new AtomicInteger();
+
+        final AtomicInteger requestParseCallCnt = new AtomicInteger();
+        final AtomicInteger responseParseCallCnt = new AtomicInteger();
 
         final Marshaller<SimpleRequest> customRequestMarshaller = new PrototypeMarshaller<SimpleRequest>() {
             @Override
@@ -317,6 +321,7 @@ class GrpcServiceBuilderTest {
 
             @Override
             public SimpleRequest parse(InputStream stream) {
+                requestParseCallCnt.incrementAndGet();
                 return TestServiceGrpc.getUnaryCallMethod().getRequestMarshaller().parse(stream);
             }
         };
@@ -341,6 +346,7 @@ class GrpcServiceBuilderTest {
 
             @Override
             public SimpleResponse parse(InputStream stream) {
+                responseParseCallCnt.incrementAndGet();
                 return TestServiceGrpc.getUnaryCallMethod().getResponseMarshaller().parse(stream);
             }
         };
@@ -373,7 +379,9 @@ class GrpcServiceBuilderTest {
         }
 
         assertThat(requestStreamCallCnt.get()).isEqualTo(expectedRequestStreamCallCnt);
+        assertThat(requestParseCallCnt.get()).isEqualTo(expectedRequestParseCallCnt);
         assertThat(responseStreamCallCnt.get()).isEqualTo(expectedResponseStreamCallCnt);
+        assertThat(responseParseCallCnt.get()).isEqualTo(expectedResponseParseCallCnt);
     }
 
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
