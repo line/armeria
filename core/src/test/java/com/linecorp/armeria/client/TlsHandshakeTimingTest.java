@@ -30,8 +30,6 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.netty.channel.ChannelOption;
-
 class TlsHandshakeTimingTest {
 
     @RegisterExtension
@@ -49,31 +47,6 @@ class TlsHandshakeTimingTest {
     void httpsServerConnectionWithTlsSelfSigned() {
         final AtomicReference<ClientConnectionTimings> timingsHolder = new AtomicReference<>();
         try (ClientFactory clientFactory = ClientFactory.builder().tlsNoVerify().build()) {
-            final AggregatedHttpResponse res =
-                    WebClient.builder(server.httpsUri())
-                             .factory(clientFactory)
-                             .decorator((delegate, ctx, req) -> {
-                                 ctx.log().whenAvailable(RequestLogProperty.SESSION)
-                                    .thenAccept(log -> timingsHolder.set(log.connectionTimings()));
-                                 return delegate.execute(ctx, req);
-                             })
-                             .build()
-                             .blocking()
-                             .get("/");
-            assertThat(res.status().code()).isEqualTo(200);
-            assertThat(timingsHolder.get().tlsHandshakeStartTimeMicros()).isPositive();
-            assertThat(timingsHolder.get().tlsHandshakeStartTimeMillis()).isPositive();
-            assertThat(timingsHolder.get().tlsHandshakeDurationNanos()).isPositive();
-        }
-    }
-
-    @Test
-    void httpsServerConnectionWithTlsSelfSignedByTFOOption() {
-        final AtomicReference<ClientConnectionTimings> timingsHolder = new AtomicReference<>();
-        try (ClientFactory clientFactory = ClientFactory.builder()
-                                                        .tlsNoVerify()
-                                                        .channelOption(ChannelOption.TCP_FASTOPEN_CONNECT, true)
-                                                        .build()) {
             final AggregatedHttpResponse res =
                     WebClient.builder(server.httpsUri())
                              .factory(clientFactory)

@@ -397,14 +397,6 @@ final class HttpChannelPool implements AsyncCloseable {
 
                 if (desiredProtocol.isTls() && timingsBuilder != null) {
                     channel.attr(TIMINGS_BUILDER_KEY).set(timingsBuilder);
-
-                    // If TCP fast open is enabled,
-                    // Should start the TLS handshake timer after before connecting the TCP connection.
-                    final boolean fastOpen =
-                            Boolean.TRUE.equals(channel.config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT));
-                    if (fastOpen) {
-                        timingsBuilder.tlsHandshakeStart();
-                    }
                 }
 
                 // should be invoked right before channel.connect() is invoked as defined in javadocs
