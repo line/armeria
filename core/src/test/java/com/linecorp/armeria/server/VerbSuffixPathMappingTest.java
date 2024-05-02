@@ -25,8 +25,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 
 class VerbSuffixPathMappingTest {

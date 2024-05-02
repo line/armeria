@@ -65,8 +65,8 @@ final class VerbSuffixPathMapping extends AbstractPathMapping {
             return null;
         }
 
-        final String basePath = path.substring(0, path.length() - colonAndVerbLength);
-        return basePathMapping.apply(routingCtx.overridePath(basePath));
+        final String basePath = path.substring(0, basePathLength);
+        return basePathMapping.apply(routingCtx.withPath(basePath));
     }
 
     @Nullable
@@ -75,7 +75,7 @@ final class VerbSuffixPathMapping extends AbstractPathMapping {
 
         if (matcher.find()) {
             final String verbWithoutColon = matcher.group(1);
-            if(withColon) {
+            if (withColon) {
                 return ':' + verbWithoutColon;
             }
             return verbWithoutColon;
