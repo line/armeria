@@ -122,21 +122,21 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
         } else {
             endpointGroup = Endpoint.parse(authority());
         }
-        final DefaultClientRequestContext ctx;
+
+        final CancellationScheduler responseCancellationScheduler;
         if (timedOut()) {
-            ctx = new DefaultClientRequestContext(
-                    eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(), options,
-                    request(), rpcRequest(), requestOptions, CancellationScheduler.finished(false),
-                    isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
-                    isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
+            responseCancellationScheduler = CancellationScheduler.finished(false);
         } else {
-            ctx = new DefaultClientRequestContext(
-                    eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(), options,
-                    request(), rpcRequest(), requestOptions, CancellationScheduler.ofClient(0),
-                    isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
-                    isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
+            responseCancellationScheduler = CancellationScheduler.ofClient(0);
+        }
+        final DefaultClientRequestContext ctx = new DefaultClientRequestContext(
+                eventLoop(), meterRegistry(), sessionProtocol(), id(), method(), requestTarget(), options,
+                request(), rpcRequest(), requestOptions, responseCancellationScheduler,
+                isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
+                isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
+        if (!timedOut()) {
             ctx.whenInitialized().handle((unused1, unused2) -> {
-                ctx.responseCancellationScheduler().initAndStart(eventLoop(), noopCancellationTask);
+                ctx.responseCancellationScheduler().initAndStart(ctx.eventLoop(), noopCancellationTask);
                 return null;
             });
         }
