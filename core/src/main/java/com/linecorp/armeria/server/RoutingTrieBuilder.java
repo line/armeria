@@ -467,7 +467,6 @@ final class RoutingTrieBuilder<V> {
         }
 
         void setIndex(int index) {
-            checkArgument(index >= 0 && index < path.length(), "index must be within the path length.");
             this.index = index;
         }
 
