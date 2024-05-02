@@ -224,10 +224,11 @@ final class RoutingTrie<V> {
             case PARAMETER:
                 // Consume characters until the delimiter '/' as a path variable.
                 final int delimSlash = path.indexOf('/', begin);
-                final int lastColon = path.lastIndexOf(':');
 
                 if (delimSlash < 0) {
-                    if (lastColon < 0) {
+                    final int lastColon = path.lastIndexOf(':');
+                    // lastIndexOf performs backward search
+                    if (lastColon < begin) {
                         // No more delimiter.
                         return node;
                     } else {

@@ -45,6 +45,10 @@ class RouteTest {
         Route route;
         Route routeWithPrefix;
 
+        route = Route.builder().path("exact:/foo:bar/biz").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo:bar/biz", "/foo:bar/biz");
+
         route = Route.builder().path("/foo").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo", "/foo");
@@ -104,6 +108,13 @@ class RouteTest {
         routeWithPrefix = route.withPrefix("/prefix");
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/:foo/bar", "/prefix/:foo/bar");
+
+        route = Route.builder().path("exact:/foo:bar/biz").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo:bar/biz", "/foo:bar/biz");
+        routeWithPrefix = route.withPrefix("/prefix");
+        assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo:bar/biz", "/prefix/foo:bar/biz");
 
         route = Route.builder().path("prefix:/").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PREFIX);
@@ -218,6 +229,7 @@ class RouteTest {
     void invalidRoutePath() {
         assertThatThrownBy(() -> Route.builder().path("foo")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Route.builder().path("foo:/bar")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo:bar/biz")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Route.builder().path("/foo/{bar}:verb1:verb2")).isInstanceOf(
                 IllegalArgumentException.class);
     }

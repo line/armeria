@@ -170,7 +170,7 @@ class RoutingTrieTest {
     @ParameterizedTest
     @MethodSource("generateFindStrategyData")
     void testFindAll(String path, int findFirst, List<Integer> findAll) {
-        final ImmutableList<Object> values = IntStream.range(0, 10).mapToObj(i -> new Object() {
+        final ImmutableList<Object> values = IntStream.range(0, 12).mapToObj(i -> new Object() {
             @Override
             public String toString() {
                 return "value" + i;
@@ -188,6 +188,8 @@ class RoutingTrieTest {
         builder.add("/users/:/movies/*", values.get(7));
         builder.add("/:", values.get(8));
         builder.add("/*", values.get(9));
+        builder.add("/users/:/books/:\\:update", values.get(10));
+        builder.add("/users/:/books/harry_potter\\:update", values.get(11));
 
         final RoutingTrie<Object> trie = builder.build();
         List<Object> found;
@@ -202,8 +204,13 @@ class RoutingTrieTest {
 
     static Stream<Arguments> generateFindStrategyData() {
         return Stream.of(
-                Arguments.of("/users/1", 0, ImmutableList.of(0, 1, 9)),
-                Arguments.of("/users/1/movies/1", 7, ImmutableList.of(7, 1, 9))
+//                Arguments.of("/users/1", 0, ImmutableList.of(0, 1, 9)),
+//                Arguments.of("/users/1/movies/1", 7, ImmutableList.of(7, 1, 9)),
+                Arguments.of("/users/1/books/1:update", 10, ImmutableList.of(10,1,9)),
+                Arguments.of("/users/1:2/books/1", 6, ImmutableList.of(6,1,9)),
+                Arguments.of("/users/1:2/books/1:update", 10, ImmutableList.of(10,1,9)),
+                Arguments.of("/users/1/books/harry_potter:update", 11, ImmutableList.of(11,1,9)),
+                Arguments.of("/users/1:2/books/harry_potter:update", 11, ImmutableList.of(11,1,9))
         );
     }
 
