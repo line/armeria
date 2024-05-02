@@ -82,6 +82,7 @@ jmh {
     }
 }
 
+// Disable output caching so that benchmarks are not skipped on the second run.
 tasks.jmh.outputs.upToDateWhen {
     false
 }
