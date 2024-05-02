@@ -70,6 +70,8 @@ final class HttpClientExpect100HeaderTest {
         @Test
         void continueToSendHttp1Request() throws Exception {
             try (ServerSocket ss = new ServerSocket(0)) {
+                ss.setSoTimeout(10000);
+
                 final int port = ss.getLocalPort();
                 final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
                 client.prepare()
@@ -84,6 +86,7 @@ final class HttpClientExpect100HeaderTest {
                     final BufferedReader in = new BufferedReader(
                             new InputStreamReader(inputStream, StandardCharsets.US_ASCII));
                     final OutputStream out = s.getOutputStream();
+
                     assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
                     assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
                     assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
@@ -98,8 +101,6 @@ final class HttpClientExpect100HeaderTest {
 
                     out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
 
-                    Thread.sleep(1000); // Wait for the client to send the payload.
-                    assertThat(inputStream.available()).isGreaterThan(0);
                     assertThat(in.readLine()).isEqualTo("foo");
 
                     out.write(("HTTP/1.1 201 Created\r\n" +
@@ -129,6 +130,7 @@ final class HttpClientExpect100HeaderTest {
                     final BufferedReader in = new BufferedReader(
                             new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
                     final OutputStream out = s.getOutputStream();
+
                     assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
                     assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
                     assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
@@ -155,6 +157,8 @@ final class HttpClientExpect100HeaderTest {
                                       .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
                                       .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
                                       .build()) {
+                ss.setSoTimeout(10000);
+
                 final int port = ss.getLocalPort();
                 final WebClient client = WebClient.builder("http://127.0.0.1:" + port)
                                                   .factory(clientFactory)
@@ -188,9 +192,6 @@ final class HttpClientExpect100HeaderTest {
                     // Send a CONTINUE response.
                     sendFrameHeaders(bos, HttpStatus.CONTINUE, false);
 
-                    // Wait for the client to send the payload.
-                    Thread.sleep(1000);
-                    assertThat(in.available()).isGreaterThan(0);
                     // Read a DATA frame.
                     readDataFrame(in);
                     // Send a response.
@@ -253,6 +254,8 @@ final class HttpClientExpect100HeaderTest {
         @Test
         void continueToSendHttp1StreamingRequest() throws Exception {
             try (ServerSocket ss = new ServerSocket(0)) {
+                ss.setSoTimeout(10000);
+
                 final int port = ss.getLocalPort();
                 final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
                 final RequestHeaders headers =
@@ -272,6 +275,7 @@ final class HttpClientExpect100HeaderTest {
                     final BufferedReader in = new BufferedReader(
                             new InputStreamReader(inputStream, StandardCharsets.US_ASCII));
                     final OutputStream out = s.getOutputStream();
+
                     assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
                     assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
                     assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
@@ -286,8 +290,6 @@ final class HttpClientExpect100HeaderTest {
 
                     out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
 
-                    Thread.sleep(1000); // Wait for the client to send the payload.
-                    assertThat(inputStream.available()).isGreaterThan(0);
                     assertThat(in.readLine()).isEqualTo("3");
                     assertThat(in.readLine()).isEqualTo("foo");
 
@@ -322,6 +324,7 @@ final class HttpClientExpect100HeaderTest {
                     final BufferedReader in = new BufferedReader(
                             new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
                     final OutputStream out = s.getOutputStream();
+
                     assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
                     assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
                     assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
@@ -347,6 +350,8 @@ final class HttpClientExpect100HeaderTest {
                                       .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
                                       .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
                                       .build()) {
+                ss.setSoTimeout(10000);
+
                 final int port = ss.getLocalPort();
                 final WebClient client = WebClient.builder("http://127.0.0.1:" + port)
                                                   .factory(clientFactory)
@@ -383,9 +388,6 @@ final class HttpClientExpect100HeaderTest {
                     // Send a CONTINUE response.
                     sendFrameHeaders(bos, HttpStatus.CONTINUE, false);
 
-                    // Wait for the client to send the payload.
-                    Thread.sleep(1000);
-                    assertThat(in.available()).isGreaterThan(0);
                     // Read a DATA frame.
                     readDataFrame(in);
                     // Send a response.
