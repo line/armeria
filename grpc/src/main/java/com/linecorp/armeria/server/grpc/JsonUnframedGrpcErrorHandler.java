@@ -193,8 +193,8 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
             try {
                 jsonMarshaller.writeValue(detail, jsonGenerator);
             } catch (IOException e) {
-                logger.warn("{} Unexpected exception while writing an error detail to JSON. detail: {}",
-                            ctx, detail, e);
+                logger.warn("Unexpected exception while writing an error detail to JSON." +
+                            " ctx: '{}', detail: '{}'", ctx, detail, e);
             }
         }
         jsonGenerator.writeEndArray();
