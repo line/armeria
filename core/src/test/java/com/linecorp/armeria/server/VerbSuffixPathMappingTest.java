@@ -18,8 +18,16 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.annotation.Nullable;
 
 class VerbSuffixPathMappingTest {
 
@@ -108,5 +116,24 @@ class VerbSuffixPathMappingTest {
                 verbSuffixPathMapping.apply(RoutingContextTest.create("/users/tom:update2", "foo=bar"));
 
         assertThat(routingResultBuilder).isNull();
+    }
+
+    @ParameterizedTest
+    @MethodSource("generateFindVerbData")
+    void findVerb(String path, @Nullable String expectedVerbWithColon) {
+        final String verb = VerbSuffixPathMapping.findVerb(path, true);
+        assertThat(verb).isEqualTo(expectedVerbWithColon);
+    }
+
+    static Stream<Arguments> generateFindVerbData() {
+        return Stream.of(
+                Arguments.of("/users/1", null),
+                Arguments.of("/users/1/books/1:update", ":update"),
+                Arguments.of("/users/1:2/books/1", null),
+                Arguments.of("/users/:userId/books/:bookId:update", ":update"),
+                Arguments.of("/users/1:/books/1:update", ":update"),
+                Arguments.of("/users/:userId:u%p-d.a_t~e", ":u%p-d.a_t~e"),
+                Arguments.of("/users/:userId:%E3%83%86%E3%82%B9%E3%83%88", ":%E3%83%86%E3%82%B9%E3%83%88")
+        );
     }
 }

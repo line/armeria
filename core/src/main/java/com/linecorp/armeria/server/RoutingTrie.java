@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.server.VerbSuffixPathMapping.findVerb;
 import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
@@ -226,16 +227,13 @@ final class RoutingTrie<V> {
                 final int delimSlash = path.indexOf('/', begin);
 
                 if (delimSlash < 0) {
-                    final int lastColon = path.lastIndexOf(':');
-                    // lastIndexOf performs backward search
-                    if (lastColon < begin) {
+                    final String pathVerb = findVerb(path, true);
+                    if (pathVerb == null) {
                         // No more delimiter.
                         return node;
                     } else {
                         final Node<V> verb = node.children.get(':');
-                        final String pathVerbPart = path.substring(lastColon);
-
-                        return verb != null && verb.path.equals(pathVerbPart) ? verb : node;
+                        return verb != null && verb.path.equals(pathVerb) ? verb : node;
                     }
                 }
 

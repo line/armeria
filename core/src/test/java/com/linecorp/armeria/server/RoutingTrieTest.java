@@ -213,6 +213,7 @@ class RoutingTrieTest {
                 Arguments.of("/users/1:2/books/1:no-verb", 6, ImmutableList.of(6,1,9)),
                 Arguments.of("/users/1/books/harry_potter:update", 11, ImmutableList.of(11,1,9)),
                 Arguments.of("/users/1:2/books/harry_potter:update", 11, ImmutableList.of(11,1,9)),
+                Arguments.of("/users/:2/books/harry_potter:update", 11, ImmutableList.of(11,1,9)),
                 Arguments.of("/users/bob:no-verb", 12, ImmutableList.of(12,0,1,9))
         );
     }

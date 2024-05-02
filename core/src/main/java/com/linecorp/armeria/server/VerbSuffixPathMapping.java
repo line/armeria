@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 final class VerbSuffixPathMapping extends AbstractPathMapping {
-    private static final Pattern VERB_PATTERN = Pattern.compile("[^/]+:([a-zA-Z0-9-_]+)$");
+    private static final Pattern VERB_PATTERN = Pattern.compile("[^/]+:([a-zA-Z0-9-_.~%]+)$");
 
     private final PathMapping basePathMapping;
     private final String verb;
@@ -70,11 +70,15 @@ final class VerbSuffixPathMapping extends AbstractPathMapping {
     }
 
     @Nullable
-    static String findVerb(String pathPattern) {
+    static String findVerb(String pathPattern, boolean withColon) {
         final Matcher matcher = VERB_PATTERN.matcher(pathPattern);
 
         if (matcher.find()) {
-            return matcher.group(1);
+            final String verbWithoutColon = matcher.group(1);
+            if(withColon) {
+                return ':' + verbWithoutColon;
+            }
+            return verbWithoutColon;
         }
 
         return null;
