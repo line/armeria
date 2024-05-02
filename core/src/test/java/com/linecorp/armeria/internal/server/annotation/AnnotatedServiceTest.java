@@ -333,6 +333,15 @@ class AnnotatedServiceTest {
         public CompletionStage<Void> voidFutureJson204() {
             return UnmodifiableFuture.completedFuture(null);
         }
+
+        @Get("/verb/test:verb")
+        public String verbTestExact() { return "/verb/test:verb"; }
+
+        @Get("/colon-param/:colon:verb")
+        public String verbTestParamColon(@Param String colon) { return colon + " colon verb"; }
+
+        @Get("/braces-param/{braces}:verb")
+        public String verbTestParamBraces(@Param String braces) { return braces + " braces verb"; }
     }
 
     static class VoidTo200ResponseConverter implements ResponseConverterFunction {
@@ -881,6 +890,12 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/1/exception/42"), 500);
             testStatusCode(hc, get("/1/exception-async/1"), 500);
 
+            // Verb suffix in a path
+            testBody(hc, get("/1/verb/test:verb"), "String[/verb/test:verb]");
+            testBody(hc, get("/1/colon-param/test:verb"), "String[test colon verb]");
+            testBody(hc, get("/1/braces-param/test:verb"), "String[test braces verb]");
+            testBody(hc, get("/1/colon-param/colon:test:verb"), "String[colon:test colon verb]");
+
             testBody(hc, get("/2/int/42"), "Number[42]");
             testBody(hc, post("/2/long/42"), "Number[42]");
             testBody(hc, get("/2/string/blah"), "String: blah");
@@ -906,6 +921,8 @@ class AnnotatedServiceTest {
             testBody(hc, get("/3/no-path-param"), "String[no-path-param]");
 
             testStatusCode(hc, get("/3/undefined"), 404);
+
+
         }
     }
 

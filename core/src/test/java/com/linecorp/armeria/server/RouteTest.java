@@ -109,6 +109,13 @@ class RouteTest {
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/:foo/bar", "/prefix/:foo/bar");
 
+        route = Route.builder().path("exact:/:foo/bar:verb").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/:foo/bar:verb", "/:foo/bar:verb");
+        routeWithPrefix = route.withPrefix("/prefix");
+        assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/:foo/bar:verb", "/prefix/:foo/bar:verb");
+
         route = Route.builder().path("exact:/foo:bar/biz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo:bar/biz", "/foo:bar/biz");
