@@ -486,8 +486,6 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
                 return MultipartRemovalStrategy.NEVER;
             case "on_response_completion":
                 return MultipartRemovalStrategy.ON_RESPONSE_COMPLETION;
-            case "on_jvm_shutdown":
-                return MultipartRemovalStrategy.ON_JVM_SHUTDOWN;
             default:
                 throw new IllegalArgumentException(
                         multipartRemovalStrategy + " isn't MultipartRemovalStrategy");

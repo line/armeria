@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -59,10 +58,6 @@ class MultipartTempFileRemovalTest {
               .multipartRemovalStrategy(MultipartRemovalStrategy.NEVER)
               .build(new TestMultipartService());
             sb.annotatedService()
-              .pathPrefix("/on_jvm_shutdown")
-              .multipartRemovalStrategy(MultipartRemovalStrategy.ON_JVM_SHUTDOWN)
-              .build(new TestMultipartService());
-            sb.annotatedService()
               .pathPrefix("/default")
               .build(new TestMultipartService());
         }
@@ -83,20 +78,6 @@ class MultipartTempFileRemovalTest {
         } else {
             assertThat(Files.exists(path)).isFalse();
         }
-    }
-
-    @Disabled("Enable this test to manually check if the temporary file is removed after the JVM shuts down.")
-    @CsvSource("/on_jvm_shutdown")
-    @ParameterizedTest
-    void testOnJvmShutDown(String type) throws Exception {
-        final BlockingWebClient client = server.blockingWebClient();
-        final ContentDisposition contentDisposition = ContentDisposition.of("form-data", "file1", "file1.txt");
-        final Multipart multipart = Multipart.of(BodyPart.of(contentDisposition, "file1 content"));
-        final AggregatedHttpResponse response = client.execute(multipart.toHttpRequest(type + "/upload"));
-        server.requestContextCaptor().take().log().whenComplete().join();
-        final java.nio.file.Path path = Paths.get(response.contentUtf8());
-        assertThat(Files.exists(path)).isTrue();
-        logger.info("Please check if the temporary file is removed after the JVM shuts down: {}", path);
     }
 
     @Consumes(MediaTypeNames.MULTIPART_FORM_DATA)
