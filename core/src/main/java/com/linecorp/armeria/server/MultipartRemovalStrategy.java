@@ -33,9 +33,5 @@ public enum MultipartRemovalStrategy {
     /**
      * Remove the temporary files after the response is fully sent.
      */
-    ON_RESPONSE_COMPLETION,
-    /**
-     * Remove the temporary files when the JVM is shutting down.
-     */
-    ON_JVM_SHUTDOWN
+    ON_RESPONSE_COMPLETION
 }

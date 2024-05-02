@@ -137,9 +137,6 @@ public final class FileAggregatedMultipart {
                     }
                 }, blockingExecutorService);
                 break;
-            case ON_JVM_SHUTDOWN:
-                tempFile.toFile().deleteOnExit();
-                break;
         }
         return tempFile;
     }
