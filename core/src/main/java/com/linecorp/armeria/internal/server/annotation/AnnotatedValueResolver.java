@@ -1319,7 +1319,13 @@ final class AnnotatedValueResolver {
             }
 
             final Class<?> containerType = getContainerType(unwrappedParameterizedType);
-            final Class<?> rawType = toRawType(unwrappedParameterizedType);
+            final Class<?> rawType;
+            final Class<?> mayRawType = toRawType(unwrappedParameterizedType);
+            if (mayRawType.isPrimitive()) {
+                rawType = Primitives.wrap(mayRawType);
+            } else {
+                rawType = mayRawType;
+            }
             final Class<?> elementType;
             final ParameterizedType parameterizedElementType;
 
