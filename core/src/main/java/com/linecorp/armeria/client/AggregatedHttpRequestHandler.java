@@ -116,5 +116,6 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     @Override
     void resume() {
         writeDataOrTrailers();
+        channel().flush();
     }
 }
