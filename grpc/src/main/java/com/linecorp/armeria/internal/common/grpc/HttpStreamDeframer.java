@@ -61,7 +61,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         this.ctx = requireNonNull(ctx, "ctx");
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.transportStatusListener = requireNonNull(transportStatusListener, "transportStatusListener");
-        this.exceptionHandler = new UnwrappingGrpcExceptionHandleFunction(exceptionHandler);
+        this.exceptionHandler = exceptionHandler;
         this.server = server;
     }
 
