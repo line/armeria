@@ -796,10 +796,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         handledLastRequest = true;
                         if (unfinishedRequests.isEmpty()) {
                             ctx.channel().eventLoop().schedule(() -> {
-                                    if (ctx.channel().isActive()) {
-                                        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
-                                    }
-                                }, Flags.defaultHttp1ConnectionCloseDelayMillis(), TimeUnit.MILLISECONDS);
+                                if (ctx.channel().isActive()) {
+                                    ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                                }
+                            }, Flags.defaultHttp1ConnectionCloseDelayMillis(), TimeUnit.MILLISECONDS);
                         }
                     }
                 }
