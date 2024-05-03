@@ -104,7 +104,7 @@ public final class MoreMeters {
         requireNonNull(tags, "tags");
         requireNonNull(distStatsConfig, "distStatsConfig");
 
-        final Builder builder =
+        final DistributionSummary.Builder builder =
                 DistributionSummary.builder(name)
                                    .tags(tags)
                                    .publishPercentiles(distStatsConfig.getPercentiles())
@@ -160,16 +160,32 @@ public final class MoreMeters {
         final Duration minExpectedValue =
                 minExpectedValueNanos != null ? Duration.ofNanos(minExpectedValueNanos.longValue()) : null;
 
-        return Timer.builder(name)
-                    .tags(tags)
-                    .maximumExpectedValue(maxExpectedValue)
-                    .minimumExpectedValue(minExpectedValue)
-                    .publishPercentiles(distStatsConfig.getPercentiles())
-                    .publishPercentileHistogram(distStatsConfig.isPercentileHistogram())
-                    .percentilePrecision(distStatsConfig.getPercentilePrecision())
-                    .distributionStatisticBufferLength(distStatsConfig.getBufferLength())
-                    .distributionStatisticExpiry(distStatsConfig.getExpiry())
-                    .register(registry);
+        final Timer.Builder builder =
+                Timer.builder(name)
+                     .tags(tags)
+                     .maximumExpectedValue(maxExpectedValue)
+                     .minimumExpectedValue(minExpectedValue)
+                     .publishPercentiles(distStatsConfig.getPercentiles())
+                     .publishPercentileHistogram(distStatsConfig.isPercentileHistogram())
+                     .percentilePrecision(distStatsConfig.getPercentilePrecision())
+                     .distributionStatisticBufferLength(distStatsConfig.getBufferLength())
+                     .distributionStatisticExpiry(distStatsConfig.getExpiry());
+
+        final double[] sloBoundariesNanos = distStatsConfig.getServiceLevelObjectiveBoundaries();
+        if (sloBoundariesNanos == null) {
+            return builder.register(registry);
+        }
+
+        final Duration[] sloBoundaries = Arrays.stream(sloBoundariesNanos)
+                                               .mapToObj(slo -> Duration.ofNanos((long) slo))
+                                               .toArray(Duration[]::new);
+
+        if (MICROMETER_1_5) {
+            builder.serviceLevelObjectives(sloBoundaries);
+        } else {
+            builder.sla(sloBoundaries);
+        }
+        return builder.register(registry);
     }
 
     /**
