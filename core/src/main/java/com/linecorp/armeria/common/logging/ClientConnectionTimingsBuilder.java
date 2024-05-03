@@ -92,11 +92,8 @@ public final class ClientConnectionTimingsBuilder {
      * Sets the time when the client started to TLS handshake to a remote peer.
      */
     public ClientConnectionTimingsBuilder tlsHandshakeStart() {
-        final boolean alreadySet = tlsHandshakeStartTimeMicros > 0;
-        if (!alreadySet) {
-            tlsHandshakeStartTimeMicros = SystemInfo.currentTimeMicros();
-            tlsHandshakeStartNanos = System.nanoTime();
-        }
+        tlsHandshakeStartTimeMicros = SystemInfo.currentTimeMicros();
+        tlsHandshakeStartNanos = System.nanoTime();
         return this;
     }
 
