@@ -77,7 +77,7 @@ import com.linecorp.armeria.server.annotation.ServiceName;
  * This class is not supposed to be instantiated by a user. Please check out the documentation
  * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
-public final class DefaultAnnotatedService implements AnnotatedService {
+final class DefaultAnnotatedService implements AnnotatedService {
     private static final Logger logger = LoggerFactory.getLogger(DefaultAnnotatedService.class);
 
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
