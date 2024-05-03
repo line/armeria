@@ -124,7 +124,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         this.method = requireNonNull(method, "method");
         checkArgument(overloadId >= 0, "overloadId: %s (expected: >= 0)", overloadId);
         this.overloadId = overloadId;
-        this.serviceClass = ClassUtil.getUserClass(object.getClass());
+        serviceClass = ClassUtil.getUserClass(object.getClass());
 
         checkArgument(!method.isVarArgs(), "%s#%s declared to take a variable number of arguments",
                       method.getDeclaringClass().getSimpleName(), method.getName());
@@ -168,9 +168,9 @@ public final class DefaultAnnotatedService implements AnnotatedService {
             serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
         if (serviceName != null) {
-            this.name = serviceName.value();
+            name = serviceName.value();
         } else {
-            this.name = null;
+            name = null;
         }
 
         this.method.setAccessible(true);
@@ -241,7 +241,7 @@ public final class DefaultAnnotatedService implements AnnotatedService {
         return method;
     }
 
-    public int overloadId() {
+    int overloadId() {
         return overloadId;
     }
 
