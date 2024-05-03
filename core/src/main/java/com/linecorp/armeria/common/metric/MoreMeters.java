@@ -30,7 +30,6 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.Flags;
 
 import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.DistributionSummary.Builder;
 import io.micrometer.core.instrument.Measurement;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -45,7 +44,7 @@ public final class MoreMeters {
     private static final boolean MICROMETER_1_5;
 
     static {
-        MICROMETER_1_5 = Stream.of(Builder.class.getMethods())
+        MICROMETER_1_5 = Stream.of(DistributionSummary.Builder.class.getMethods())
                                .anyMatch(method -> method != null &&
                                                    "serviceLevelObjectives".equals(method.getName()));
     }
