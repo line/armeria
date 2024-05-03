@@ -121,15 +121,17 @@ allprojects {
             })
         }
 
-        retry {
-            if (rootProject.findProperty('retry') == 'true') {
-                maxRetries = 3
-                failOnPassedAfterRetry = rootProject.findProperty('failOnPassedAfterRetry') != 'false'
+        develocity {
+            testRetry {
+                if (rootProject.findProperty('retry') == 'true') {
+                    maxRetries = 3
+                    failOnPassedAfterRetry = rootProject.findProperty('failOnPassedAfterRetry') != 'false'
+                }
             }
-        }
 
-        predictiveSelection {
-            enabled.set(!isCi)
+            predictiveTestSelection {
+                enabled.set(!isCi)
+            }
         }
     }
 }
@@ -439,7 +441,7 @@ configure(relocatedProjects) {
 }
 
 // additional configuration that can't be done at settings.gradle
-gradleEnterprise {
+develocity {
     buildScan {
         // maintain a allowList so that sensitive information (credentials) aren't accidentally published.
         Set<String> allowList = ['coverage', 'leak', 'blockhound', 'noLint', 'flakyTests', 'buildJdkVersion',
