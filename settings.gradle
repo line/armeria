@@ -73,8 +73,10 @@ apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 
 // Published BOM projects
 includeWithFlags ':bom',                                 'bom'
+project(':bom').projectDir.mkdirs()
 // Published version catalog projects
 includeWithFlags ':version-catalog',                     'version-catalog'
+project(':version-catalog').projectDir.mkdirs()
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
