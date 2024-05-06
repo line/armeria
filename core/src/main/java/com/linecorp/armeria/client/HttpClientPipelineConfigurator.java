@@ -218,19 +218,19 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         assert isHttps();
 
         final ChannelPipeline p = ch.pipeline();
-        final SslHandler sslHandler;
+        final SSLEngine sslEngine;
         if (remoteAddr instanceof InetSocketAddress) {
             final InetSocketAddress raddr = (InetSocketAddress) remoteAddr;
-            sslHandler = sslCtx.newHandler(ch.alloc(),
-                                           raddr.getHostString(),
-                                           raddr.getPort());
+            sslEngine = sslCtx.newEngine(ch.alloc(),
+                                         raddr.getHostString(),
+                                         raddr.getPort());
         } else {
             assert remoteAddr instanceof DomainSocketAddress : remoteAddr;
-            sslHandler = sslCtx.newHandler(ch.alloc());
+            sslEngine = sslCtx.newEngine(ch.alloc());
         }
-
         final ClientConnectionTimingsBuilder timingsBuilder = ch.attr(TIMINGS_BUILDER_KEY).get();
-        p.addLast(configureSslHandler(new ClientSslHandler(sslCtx.newEngine(ch.alloc()), timingsBuilder)));
+        final SslHandler sslHandler = new ClientSslHandler(sslEngine, timingsBuilder);
+        p.addLast(configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
             @Nullable
