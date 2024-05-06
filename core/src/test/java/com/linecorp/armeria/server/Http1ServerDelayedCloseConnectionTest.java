@@ -30,10 +30,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.time.Duration;
-import java.util.Random;
 
-import com.linecorp.armeria.common.util.OsType;
-import com.linecorp.armeria.common.util.SystemInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -64,10 +61,9 @@ class Http1ServerDelayedCloseConnectionTest {
 
     @Test
     void shouldDelayDisconnectByServerSideIfClientDoesNotHandleConnectionClose() throws IOException {
-        final Random random = new Random();
-        final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
-        try (Socket socket = new Socket("127.0.0.1", server.httpPort(), null, localPort)) {
+        try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
             socket.setSoTimeout(100000);
+            final int socketPort = socket.getLocalPort();
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close" + " HTTP/1.1\r\n");
             writer.print("\r\n");
@@ -102,23 +98,19 @@ class Http1ServerDelayedCloseConnectionTest {
                     defaultHttp1ConnectionCloseDelayMillis + 1000
             );
 
-            // Additional test to check that the socket is in the CLOSED state
-            if (SystemInfo.osType() == OsType.LINUX || SystemInfo.osType() == OsType.MAC) {
-                socket.close();
-                try (Socket reuseSock = new Socket()) {
-                    assertThatCode(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
-                            .doesNotThrowAnyException();
-                }
+            socket.close();
+            try (Socket reuseSock = new Socket()) {
+                assertThatCode(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, socketPort)))
+                        .doesNotThrowAnyException();
             }
         }
     }
 
     @Test
     void shouldWaitForDisconnectByClientSideFirst() throws IOException {
-        final Random random = new Random();
-        final short localPort = (short) random.nextInt(Short.MAX_VALUE + 1);
-        try (Socket socket = new Socket("127.0.0.1", server.httpPort(), null, localPort)) {
+        try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
             socket.setSoTimeout(100000);
+            final int socketPort = socket.getLocalPort();
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close" + " HTTP/1.1\r\n");
             writer.print("\r\n");
@@ -143,16 +135,15 @@ class Http1ServerDelayedCloseConnectionTest {
             assertThat(hasConnectionClose).isTrue();
             assertThat(server.server().numConnections()).isEqualTo(1);
 
-            // Additional test to check that the socket is in the TIMED_WAIT state
-            if (SystemInfo.osType() == OsType.LINUX || SystemInfo.osType() == OsType.MAC) {
-                socket.close();
-                try (Socket reuseSock = new Socket()) {
-                    assertThatThrownBy(
-                            () -> reuseSock.bind(new InetSocketAddress((InetAddress) null, localPort)))
-                            .isInstanceOf(BindException.class)
-                            .hasMessageContaining("Address already in use");
-                }
-            }
+            socket.close();
+            assertThatThrownBy(
+                    () -> {
+                        final Socket reuseSock = new Socket("127.0.0.1", server.httpPort(), null, socketPort);
+                        reuseSock.close();
+                    })
+                    .isInstanceOf(BindException.class)
+                    .hasMessageContaining("Address already in use");
+
             await().untilAsserted(() -> assertThat(server.server().numConnections()).isZero());
         }
     }
