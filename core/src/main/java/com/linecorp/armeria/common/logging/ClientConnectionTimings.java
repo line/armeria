@@ -94,36 +94,6 @@ public final class ClientConnectionTimings {
     }
 
     /**
-     * Returns the time when the client started to TLS handshake, in microseconds since the epoch.
-     *
-     * @return the start time, or {@code -1} if there was no action to TLS handshake.
-     */
-    public long tlsHandshakeStartTimeMicros() {
-        return tlsHandshakeStartTimeMicros;
-    }
-
-    /**
-     * Returns the time when the client started to TLS handshake, in milliseconds since the epoch.
-     *
-     * @return the start time, or {@code -1} if there was no action to TLS handshake.
-     */
-    public long tlsHandshakeStartTimeMillis() {
-        if (tlsHandshakeStartTimeMicros >= 0) {
-            return TimeUnit.MICROSECONDS.toMillis(tlsHandshakeStartTimeMicros);
-        }
-        return -1;
-    }
-
-    /**
-     * Returns the duration which was taken to TLS handshake, in nanoseconds.
-     *
-     * @return the duration, or {@code -1} if there was no action to TLS handshake.
-     */
-    public long tlsHandshakeDurationNanos() {
-        return tlsHandshakeDurationNanos;
-    }
-
-    /**
      * Returns the time when the client started to resolve a domain name, in microseconds since the epoch.
      *
      * @return the start time, or {@code -1} if there was no action to resolve a domain name.
@@ -181,6 +151,36 @@ public final class ClientConnectionTimings {
      */
     public long socketConnectDurationNanos() {
         return socketConnectDurationNanos;
+    }
+
+    /**
+     * Returns the time when the client started to TLS handshake, in microseconds since the epoch.
+     *
+     * @return the start time, or {@code -1} if there was no action to TLS handshake.
+     */
+    public long tlsHandshakeStartTimeMicros() {
+        return tlsHandshakeStartTimeMicros;
+    }
+
+    /**
+     * Returns the time when the client started to TLS handshake, in milliseconds since the epoch.
+     *
+     * @return the start time, or {@code -1} if there was no action to TLS handshake.
+     */
+    public long tlsHandshakeStartTimeMillis() {
+        if (tlsHandshakeStartTimeMicros >= 0) {
+            return TimeUnit.MICROSECONDS.toMillis(tlsHandshakeStartTimeMicros);
+        }
+        return -1;
+    }
+
+    /**
+     * Returns the duration which was taken to TLS handshake, in nanoseconds.
+     *
+     * @return the duration, or {@code -1} if there was no action to TLS handshake.
+     */
+    public long tlsHandshakeDurationNanos() {
+        return tlsHandshakeDurationNanos;
     }
 
     /**

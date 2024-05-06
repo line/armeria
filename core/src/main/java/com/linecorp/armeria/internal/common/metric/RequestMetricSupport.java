@@ -126,6 +126,10 @@ public final class RequestMetricSupport {
             if (socketConnectDurationNanos >= 0) {
                 metrics.socketConnectDuration().record(socketConnectDurationNanos, TimeUnit.NANOSECONDS);
             }
+            final long tlsHandshakeDurationNanos = timings.tlsHandshakeDurationNanos();
+            if (tlsHandshakeDurationNanos >= 0) {
+                metrics.tlsHandshakeDuration().record(tlsHandshakeDurationNanos, TimeUnit.NANOSECONDS);
+            }
             final long pendingAcquisitionDurationNanos = timings.pendingAcquisitionDurationNanos();
             if (pendingAcquisitionDurationNanos >= 0) {
                 metrics.pendingAcquisitionDuration().record(pendingAcquisitionDurationNanos,
@@ -203,6 +207,8 @@ public final class RequestMetricSupport {
         Timer dnsResolutionDuration();
 
         Timer socketConnectDuration();
+
+        Timer tlsHandshakeDuration();
 
         Timer pendingAcquisitionDuration();
 
@@ -299,6 +305,7 @@ public final class RequestMetricSupport {
         private final Timer connectionAcquisitionDuration;
         private final Timer dnsResolutionDuration;
         private final Timer socketConnectDuration;
+        private final Timer tlsHandshakeDuration;
         private final Timer pendingAcquisitionDuration;
 
         private final Counter writeTimeouts;
@@ -327,6 +334,9 @@ public final class RequestMetricSupport {
                     distributionStatisticConfig);
             socketConnectDuration = newTimer(
                     parent, idPrefix.name("socket.connect.duration"), idPrefix.tags(),
+                    distributionStatisticConfig);
+            tlsHandshakeDuration = newTimer(
+                    parent, idPrefix.name("tls.handshake.duration"), idPrefix.tags(),
                     distributionStatisticConfig);
             pendingAcquisitionDuration = newTimer(
                     parent, idPrefix.name("pending.acquisition.duration"), idPrefix.tags(),
@@ -359,6 +369,9 @@ public final class RequestMetricSupport {
         public Timer socketConnectDuration() {
             return socketConnectDuration;
         }
+
+        @Override
+        public Timer tlsHandshakeDuration() {return tlsHandshakeDuration;}
 
         @Override
         public Timer pendingAcquisitionDuration() {
