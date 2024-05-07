@@ -31,7 +31,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.RoutingTrie.Node;
 import com.linecorp.armeria.server.RoutingTrie.NodeProcessor;
 
