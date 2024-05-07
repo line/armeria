@@ -38,6 +38,7 @@ public final class ArmeriaConfigurationSettingsUtil {
      * Configures the {@link ServerBuilder} using the specified {@link ArmeriaSettings}.
      */
     public static void configureSettings(ServerBuilder server, ArmeriaSettings settings) {
+        configureIfNonNull(settings.getContextPath(), server::baseContextPath);
         configureIfNonNull(settings.getWorkerGroup(), server::workerGroup);
         configureIfNonNull(settings.getBlockingTaskExecutor(), server::blockingTaskExecutor);
 

@@ -227,4 +227,12 @@ class PortBasedVirtualHostTest {
         assertThat(server.config().virtualHosts().stream().map(VirtualHost::originalHostnamePattern))
                 .containsExactly("*", "foo.com", "*");
     }
+
+    @Test
+    void notAllowSettingHostnameWhenDefaultVirtualHost() {
+        final VirtualHostBuilder virtualHostBuilder = Server.builder()
+                                                            .virtualHost(8080);
+        assertThatThrownBy(() -> virtualHostBuilder.hostnamePattern("foo.com"))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
 }

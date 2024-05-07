@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -33,6 +34,8 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A builder class for binding an {@link HttpService} fluently.
@@ -175,6 +178,19 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
+    public AbstractServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                            boolean shutdownOnStop) {
+        defaultServiceConfigSetters.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        defaultServiceConfigSetters.serviceWorkerGroup(numThreads);
+        return this;
+    }
+
+    @Override
     public AbstractServiceBindingBuilder requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         defaultServiceConfigSetters.requestIdGenerator(requestIdGenerator);
@@ -210,6 +226,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        defaultServiceConfigSetters.contextHook(contextHook);
         return this;
     }
 

@@ -538,6 +538,31 @@ public interface RequestContext extends Unwrappable {
     @MustBeClosed
     SafeCloseable push();
 
+    /**
+     * Adds a hook which is invoked whenever this {@link RequestContext} is pushed to the
+     * {@link RequestContextStorage}. The {@link AutoCloseable} returned by {@code contextHook} will be called
+     * whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
+     *
+     * <p>Note:
+     * <ul>
+     *   <li>The {@code contextHook} is not invoked when this {@link #hook(Supplier)} method is called
+     *       thus you need to call it yourself if you want to apply the hook in the current thread. </li>
+     *   <li>This operation is highly performance-sensitive operation, and thus it's not a good idea to run a
+     *       time-consuming task.</li>
+     * </ul>
+     */
+    @UnstableApi
+    void hook(Supplier<? extends AutoCloseable> contextHook);
+
+    /**
+     * Returns the hook which is invoked whenever this {@link RequestContext} is pushed to the
+     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by the {@link Supplier} will be
+     * called whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     */
+    @UnstableApi
+    Supplier<AutoCloseable> hook();
+
     @Override
     default RequestContext unwrap() {
         return (RequestContext) Unwrappable.super.unwrap();

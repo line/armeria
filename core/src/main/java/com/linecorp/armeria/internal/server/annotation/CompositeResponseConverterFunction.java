@@ -24,11 +24,13 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.FallthroughException;
+import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
@@ -61,6 +63,18 @@ final class CompositeResponseConverterFunction implements ResponseConverterFunct
                                         HttpHeaders trailers) throws Exception {
         if (result instanceof HttpResponse) {
             return (HttpResponse) result;
+        }
+
+        if (result instanceof ResponseEntity) {
+            final ResponseEntity<?> responseEntity = (ResponseEntity<?>) result;
+            headers = ResponseEntityUtil.buildResponseHeaders(ctx, responseEntity);
+            result = responseEntity.hasContent() ? responseEntity.content() : null;
+            trailers = responseEntity.trailers();
+        } else if (result instanceof HttpResult) {
+            final HttpResult<?> httpResult = (HttpResult<?>) result;
+            headers = HttpResultUtil.buildResponseHeaders(ctx, httpResult);
+            result = httpResult.content();
+            trailers = httpResult.trailers();
         }
         try (SafeCloseable ignored = ctx.push()) {
             for (final ResponseConverterFunction func : functions) {

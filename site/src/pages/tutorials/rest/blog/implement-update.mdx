@@ -17,17 +17,13 @@ In this step, you'll write a method for updating a blog post. By completing this
 
 ## What you need
 
-You must have the following files ready for updating a blog post. You can always [download](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
+You need to have the following files obtained from previous steps.
+You can always [download](https://github.com/line/armeria-examples/blob/main/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/) the full version, instead of creating one yourself.
 
-- Main.java from [Step 1. Create a server](/tutorials/rest/blog/create-server)
-- BlogPost.java from [Step 2. Prepare a data object](/tutorials/rest/blog/prepare-data-object)
-- BlogService.java from [Step 3. Add services to a server](/tutorials/rest/blog/add-services-to-server)
-
-<Warning>
-
-To test updating a blog post, you need to have blog posts created, which requires you to have the creation method implemented in the BlogService.java. See [Step 4. Implement CREATE](/tutorials/rest/blog/implement-create) for instructions.
-
-</Warning>
+- `Main.java`
+- `BlogPost.java`
+- `BlogService.java`
+- `BlogServiceTest.java`
 
 ## 1. Map HTTP method
 
@@ -164,66 +160,35 @@ public final class BlogService {
 
 ## 5. Test updating a blog post
 
-Let's test updating a blog post.
+Let's try updating the content of the first blog post.
+Add a method like the following.
 
-1. Run the server like we did in [Step 1. Create a server](/tutorials/rest/blog/create-server) by running the `main()` method or using Gradle. When you see the message, "Server has been started", you can try testing service methods.
-2. Create a couple of blog posts to test updating a blog post and get the ID value returned. Enter the cURL commands below.
+```java filename=BlogServiceTest.java
+@Test
+@Order(4)
+void updateBlogPosts() throws JsonProcessingException {
+  final WebClient client = WebClient.of(server.httpUri());
+  final Map<String, Object> updatedContent = Map.of("id", 0,
+                "title", "My first blog",
+                "content", "Hello awesome Armeria!");
+  final HttpRequest updateBlogPostRequest =
+          HttpRequest.builder()
+                .put("/blogs/0")
+                .content(MediaType.JSON_UTF_8, mapper.writeValueAsString(updatedContent))
+                .build();
+  client.execute(updateBlogPostRequest).aggregate().join();
+  final AggregatedHttpResponse res = client.get("/blogs/0").aggregate().join();
+  final Map<String, Object> expected = Map.of("id", 0,
+                "title", "My first blog",
+                "content", "Hello awesome Armeria!");
 
-  ```bash
-  $ curl --request POST 'localhost:8080/blogs' \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"First post for testing", "content":"Test updating."}'
-  ```
+  assertThatJson(res.contentUtf8()).whenIgnoringPaths("createdAt", "modifiedAt")
+                .isEqualTo(mapper.writeValueAsString(expected));
+}
+```
 
-  ```bash
-  $ curl --request POST 'localhost:8080/blogs' \
-  -H 'Content-Type: application/json' \
-  -d '{"title":"Second post for testing", "content":"Test updating a post."}'
-  ```
-
-  For each command, you'll get a response similar to the following.
-
-  ```bash
-  {"id":0,"title":"First post for testing","content":"Test updating.","createdAt":...,"modifiedAt":...}
-
-  {"id":1,"title":"Second post for testing","content":"Test updating a post.","createdAt":...,"modifiedAt":...}
-  ```
-
-3. Let's update the second blog with the ID, `1`. Change the value for the `"title"` and `"content"` properties.
-
-  ```bash
-  $ curl --request PUT 'localhost:8080/blogs/1' \
-  -H 'Content-Type: application/json' \
-  -d '{
-      "title": "Update title to this title",
-      "content": "Update blog content with this content."
-  }'
-  ```
-
-  You'll get a response similar to this. Not only the title and content are changed, but the last updated time (`modifiedAt`) is changed, too.
-
-  ```bash
-  {"id":1,"title":"Update title to this title","content":"Update blog content with this content.","createdAt":...,
-  "modifiedAt":...}
-  ```
-
-4. Let's retrieve the same blog post to see if the change has been applied successfully.
-
-  ```bash
-  $ curl --request GET 'localhost:8080/blogs/1'
-  ```
-
-  The response we get confirms that the change is applied.
-
-  ```bash
-  {
-    "id": 1,
-    "title": "Update title to this title",
-    "content": "Update blog content with this content.",
-    "createdAt": ...,
-    "modifiedAt": ...
-  }
-  ```
+Run all the test cases on your IDE or using Gradle.
+Check that you see the test is passed.
 
 You can test this also with Armeria's [Documentation service](/docs/server-docservice). See [Using DocService after adding service methods](/tutorials/rest/blog/add-services-to-server#using-docservice-after-adding-service-methods) for instructions.
 

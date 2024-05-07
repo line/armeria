@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -30,6 +31,8 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
@@ -178,6 +181,18 @@ public final class VirtualHostContextPathServiceBindingBuilder
     }
 
     @Override
+    public VirtualHostContextPathServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                                          boolean shutdownOnStop) {
+        return (VirtualHostContextPathServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup,
+                                                                                      shutdownOnStop);
+    }
+
+    @Override
+    public VirtualHostContextPathServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (VirtualHostContextPathServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
+    }
+
+    @Override
     public VirtualHostContextPathServiceBindingBuilder requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         return (VirtualHostContextPathServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
@@ -211,6 +226,12 @@ public final class VirtualHostContextPathServiceBindingBuilder
     public VirtualHostContextPathServiceBindingBuilder errorHandler(
             ServiceErrorHandler serviceErrorHandler) {
         return (VirtualHostContextPathServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public VirtualHostContextPathServiceBindingBuilder contextHook(
+            Supplier<? extends AutoCloseable> contextHook) {
+        return (VirtualHostContextPathServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     @Override

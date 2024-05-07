@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -29,6 +30,8 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A builder class for binding an {@link HttpService} to a virtual host fluently. This class can be instantiated
@@ -259,6 +262,24 @@ public final class VirtualHostAnnotatedServiceBindingBuilder extends AbstractAnn
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         return (VirtualHostAnnotatedServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder contextHook(
+            Supplier<? extends AutoCloseable> contextHook) {
+        return (VirtualHostAnnotatedServiceBindingBuilder) super.contextHook(contextHook);
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                                        boolean shutdownOnStop) {
+        return (VirtualHostAnnotatedServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup,
+                                                                                    shutdownOnStop);
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (VirtualHostAnnotatedServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     /**

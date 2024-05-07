@@ -27,11 +27,13 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 
 /**
  * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
@@ -78,7 +80,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     // parameter values, thus anything greater than 0x7FFFFFFF will break them or make them unhappy.
     static final long DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
     static final long DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE = 8192L; // from Netty default maxHeaderSize
-    static final int DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE = 400; // Netty default is 200 for 30 seconds
+    // Netty default is 200 for 30 seconds
+    static final int DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE = 400;
     static final String DEFAULT_BACKOFF_SPEC = "exponential=200:10000,jitter=0.2";
     static final int DEFAULT_MAX_TOTAL_ATTEMPTS = 10;
     static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS = 0; // No delay.
@@ -156,6 +159,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean useOpenSsl() {
         return true;
+    }
+
+    @Override
+    public TlsEngineType tlsEngineType() {
+        return TlsEngineType.OPENSSL;
     }
 
     @Override
@@ -324,8 +332,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Integer defaultHttp2MaxResetFramesPerMinute() {
-        return DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
+    public Integer defaultServerHttp2MaxResetFramesPerMinute() {
+        return DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
     }
 
     @Override
@@ -465,5 +473,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultUnhandledExceptionsReportIntervalMillis() {
         return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    @Override
+    public DistributionStatisticConfig distributionStatisticConfig() {
+        return DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG;
     }
 }

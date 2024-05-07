@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
 import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 
 import org.slf4j.Logger;
@@ -24,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ProtocolViolationException;
@@ -151,7 +151,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         if (res != null) {
-            res.close(ClosedSessionException.get());
+            res.close(newClosedSessionException(ctx));
         }
         keepAliveHandler.destroy();
         ctx.fireChannelInactive();
@@ -206,7 +206,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                         }
 
                         if (!written) {
-                            fail(ctx, ClosedSessionException.get());
+                            fail(ctx, newClosedSessionException(ctx));
                             return;
                         }
                     } else {
@@ -240,7 +240,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                                 fail(ctx, contentTooLargeException(res, transferred));
                                 return;
                             } else if (!res.tryWriteData(HttpData.wrap(data.retain()))) {
-                                fail(ctx, ClosedSessionException.get());
+                                fail(ctx, newClosedSessionException(ctx));
                                 return;
                             }
                         }
@@ -256,7 +256,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                             final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
                             if (!trailingHeaders.isEmpty() &&
                                 !res.tryWriteTrailers(ArmeriaHttpUtil.toArmeria(trailingHeaders))) {
-                                fail(ctx, ClosedSessionException.get());
+                                fail(ctx, newClosedSessionException(ctx));
                                 return;
                             }
 

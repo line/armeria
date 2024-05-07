@@ -52,9 +52,9 @@ final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler
 
     @Nullable
     @Override
-    public AggregatedHttpResponse renderStatus(ServiceConfig config, @Nullable RequestHeaders headers,
+    public AggregatedHttpResponse renderStatus(ServiceRequestContext ctx, RequestHeaders headers,
                                                HttpStatus status, @Nullable String description,
                                                @Nullable Throwable cause) {
-        return delegate.renderStatus(config, headers, status, description, cause);
+        return delegate.renderStatus(ctx, headers, status, description, cause);
     }
 }

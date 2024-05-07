@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -56,6 +57,7 @@ import com.linecorp.armeria.server.file.HttpFile;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -197,9 +199,24 @@ public interface FlagsProvider {
      *
      * <p>This flag is enabled by default for supported platforms. Specify the
      * {@code -Dcom.linecorp.armeria.useOpenSsl=false} JVM option to disable it.
+     *
+     * @deprecated Use {@link #tlsEngineType()} and {@code -Dcom.linecorp.armeria.tlsEngineType=openssl}.
      */
     @Nullable
+    @Deprecated
     default Boolean useOpenSsl() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * <p>The default value of this flag is "openssl", which means the {@link TlsEngineType#OPENSSL} will
+     * be used. Specify the {@code -Dcom.linecorp.armeria.tlsEngineType=<jdk|openssl>} JVM option to override
+     * the default.</p>
+     */
+    @Nullable
+    default TlsEngineType tlsEngineType() {
         return null;
     }
 
@@ -210,8 +227,8 @@ public interface FlagsProvider {
      * <p>This flag is disabled by default. Specify the {@code -Dcom.linecorp.armeria.dumpOpenSslInfo=true} JVM
      * option to enable it.
      *
-     * <p>If {@link #useOpenSsl()} returns {@code false}, this also returns {@code false} no matter you
-     * specified the JVM option.
+     * <p>If {@link #tlsEngineType()} does not return {@link TlsEngineType#OPENSSL}, this also returns
+     * {@code false} no matter what the specified JVM option is.
      */
     @Nullable
     default Boolean dumpOpenSslInfo() {
@@ -718,12 +735,12 @@ public interface FlagsProvider {
      * {@link ServerBuilder#http2MaxResetFramesPerWindow(int, int)}.
      *
      * <p>The default value of this flag is
-     * {@value DefaultFlagsProvider#DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
-     * Specify the {@code -Dcom.linecorp.armeria.defaultHttp2MaxResetFramesPerMinute=<integer>} JVM option
+     * {@value DefaultFlagsProvider#DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultServerHttp2MaxResetFramesPerMinute=<integer>} JVM option
      * to override the default value. {@code 0} means no protection should be applied.
      */
     @Nullable
-    default Integer defaultHttp2MaxResetFramesPerMinute() {
+    default Integer defaultServerHttp2MaxResetFramesPerMinute() {
         return null;
     }
 
@@ -1116,6 +1133,30 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default Long defaultUnhandledExceptionsReportIntervalMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link DistributionStatisticConfig} where armeria utilizes.
+     *
+     * <p>The default value of this flag is as follows:
+     * <pre>{@code
+     * DistributionStatisticConfig.builder()
+     *     .percentilesHistogram(false)
+     *     .serviceLevelObjectives()
+     *     .percentiles(
+     *          0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0)
+     *     .percentilePrecision(2)
+     *     .minimumExpectedValue(1.0)
+     *     .maximumExpectedValue(Double.MAX_VALUE)
+     *     .expiry(Duration.ofMinutes(3))
+     *     .bufferLength(3)
+     *     .build();
+     * }</pre>
+     */
+    @Nullable
+    @UnstableApi
+    default DistributionStatisticConfig distributionStatisticConfig() {
         return null;
     }
 }

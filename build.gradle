@@ -50,6 +50,7 @@ gradle.buildFinished({ result ->
     }
 })
 
+def isCi = System.getenv("CI") != null
 allprojects {
     // Add common JVM options such as max memory and leak detection.
     tasks.withType(JavaForkOptions) {
@@ -68,6 +69,8 @@ allprojects {
 
     tasks.withType(Test) {
         jvmArgumentProviders.add(new TestBuildDirArgumentsProvider(project.buildDir))
+
+        useJUnitPlatform()
 
         // Do not omit stack frames for easier tracking.
         jvmArgs '-XX:-OmitStackTraceInFastThrow'
@@ -123,6 +126,10 @@ allprojects {
                 maxRetries = 3
                 failOnPassedAfterRetry = rootProject.findProperty('failOnPassedAfterRetry') != 'false'
             }
+        }
+
+        predictiveSelection {
+            enabled.set(!isCi)
         }
     }
 }
@@ -275,7 +282,7 @@ allprojects {
 }
 
 // Require to use JDK 19 when releasing.
-tasks.closeAndReleaseStagingRepository.doFirst {
+tasks.closeAndReleaseStagingRepositories.doFirst {
     if (JavaVersion.current() != JavaVersion.VERSION_19) {
         throw new IllegalStateException("You must release using JDK 19.");
     }

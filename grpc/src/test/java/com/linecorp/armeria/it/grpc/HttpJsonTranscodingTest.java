@@ -72,6 +72,7 @@ import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
@@ -100,6 +101,7 @@ import testing.grpc.Transcoding.GetMessageRequestV2;
 import testing.grpc.Transcoding.GetMessageRequestV2.SubMessage;
 import testing.grpc.Transcoding.GetMessageRequestV3;
 import testing.grpc.Transcoding.GetMessageRequestV4;
+import testing.grpc.Transcoding.GetMessageRequestV5;
 import testing.grpc.Transcoding.Message;
 import testing.grpc.Transcoding.MessageType;
 import testing.grpc.Transcoding.Recursive;
@@ -144,6 +146,17 @@ public class HttpJsonTranscodingTest {
                                 request.getQueryParameter() + ':' +
                                 request.getParentField().getChildField() + ':' +
                                 request.getParentField().getChildField2();
+            responseObserver.onNext(Message.newBuilder().setText(text).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void getMessageV5(GetMessageRequestV5 request, StreamObserver<Message> responseObserver) {
+            final String text = request.getMessageId() + ':' +
+                    request.getQueryParameter() + ':' +
+                    request.getQueryField1() + ':' +
+                    request.getParentField().getChildField() + ':' +
+                    request.getParentField().getChildField2();
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
         }
@@ -264,10 +277,10 @@ public class HttpJsonTranscodingTest {
 
         static EchoResponseBodyResponse getResponseBodyResponse(EchoResponseBodyRequest request) {
             return EchoResponseBodyResponse.newBuilder()
-                    .setValue(request.getValue())
-                    .addAllArrayField(request.getArrayFieldList())
-                    .setStructBody(request.getStructBody())
-                    .build();
+                                           .setValue(request.getValue())
+                                           .addAllArrayField(request.getArrayFieldList())
+                                           .setStructBody(request.getStructBody())
+                                           .build();
         }
 
         @Override
@@ -734,17 +747,17 @@ public class HttpJsonTranscodingTest {
         final QueryParamsBuilder query = QueryParams.builder();
         query.add("value", "value");
         final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/value?" +
-                query.toQueryString())
-                .aggregate().join();
+                                                              query.toQueryString())
+                                                         .aggregate().join();
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(response.contentUtf8()).isEqualTo("\"value\"");
     }
 
     @Test
     void shouldAcceptResponseBodyRepeated() throws JsonProcessingException {
-        final AggregatedHttpResponse response = webClient.get(
-                "/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
-                .aggregate().join();
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
+                         .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.isArray()).isTrue();
@@ -754,9 +767,9 @@ public class HttpJsonTranscodingTest {
     @Test
     void shouldAcceptResponseBodyValueStruct() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}," +
-                "\"arrayField\":[\"value1\",\"value2\"]}";
+                                   "\"arrayField\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
-                "/v1/echo/response_body/struct", jsonContent);
+                                                                "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.has("structBody")).isTrue();
@@ -766,9 +779,9 @@ public class HttpJsonTranscodingTest {
     @Test
     void shouldAcceptResponseBodyValueNullValue() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\"," +
-                "\"arrayField\":[\"value1\",\"value2\"]}";
+                                   "\"arrayField\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
-                "/v1/echo/response_body/struct", jsonContent);
+                                                                "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.isEmpty()).isTrue();
@@ -777,9 +790,9 @@ public class HttpJsonTranscodingTest {
     @Test
     void shouldAcceptResponseBodyValueAnonymusField() throws JsonProcessingException {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}" +
-                ",\"arrayField\":[\"value1\",\"value2\"]}";
+                                   ",\"arrayField\":[\"value1\",\"value2\"]}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
-                "/v1/echo/response_body/nomatch", jsonContent);
+                                                                "/v1/echo/response_body/nomatch", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(root).isEqualTo("{\"value\":\"value\"," +
@@ -789,11 +802,91 @@ public class HttpJsonTranscodingTest {
 
     @Test
     void shouldAcceptResponseBodyValueNoMatchInside() throws JsonProcessingException {
-        final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}";
-        final AggregatedHttpResponse response = jsonPostRequest(webClient,
-                                                                "/v1/echo/response_body/repeated", jsonContent);
+        final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
+        final AggregatedHttpResponse response = jsonPostRequest(
+                webClient, "/v1/echo/response_body/repeated", jsonContent);
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(response.contentUtf8()).isEqualTo("null");
+    }
+
+    @Test
+    void shouldDenyMalformedJson() throws JsonProcessingException {
+        final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}";
+        final AggregatedHttpResponse response =
+                jsonPostRequest(webClient, "/v1/echo/response_body/repeated", jsonContent);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"int32Val\": 1.1}",
+            "{\"int64Val\": 2.2}",
+            "{\"uint32Val\": 3.3}",
+            "{\"uint64Val\": 4.4}"
+    })
+    void shouldDenyTypeMismatchedValue(String jsonContent)
+            throws JsonProcessingException {
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/wrappers", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(root.get("code").asInt()).isEqualTo(Code.INVALID_ARGUMENT.value());
+    }
+
+    @Test
+    void shouldDenyMissingContentType() {
+        final String validJson = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
+        final RequestHeaders headers = RequestHeaders.builder()
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, validJson).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void shouldDenyNonJsonContentType() {
+        final String validJson = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
+        final RequestHeaders headers = RequestHeaders.builder()
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .contentType(MediaType.CSV_UTF_8)
+                                                     .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, validJson).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void shouldDenyEmptyJson() {
+        final String emptyJson = "";
+        final RequestHeaders headers = RequestHeaders.builder()
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .contentType(MediaType.JSON)
+                                                     .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, emptyJson).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void shouldAcceptEmptyNonJson() {
+        final String body = "";
+        final RequestHeaders headers = RequestHeaders.builder()
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, body).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void shouldDenyNonObjectJson() {
+        final String body = "[ 42, null ]";
+        final RequestHeaders headers = RequestHeaders.builder()
+                                                     .method(HttpMethod.POST)
+                                                     .path("/v1/echo/response_body/repeated")
+                                                     .build();
+        final AggregatedHttpResponse response = webClient.execute(headers, body).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -914,6 +1007,26 @@ public class HttpJsonTranscodingTest {
                                                             .execute()
                                                             .content();
         assertThat(response2.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+    }
+
+    @Test
+    void supportJsonName() {
+        final QueryParams query =
+                QueryParams.builder()
+                        .add("query_parameter", "query")
+                        .add("second_query", "query2")
+                        .add("parent.child_field", "childField")
+                        .add("parent.second_field", "childField2")
+                        .build();
+
+        final JsonNode response =
+                webClientCamelCaseQueryAndOriginalParameters.prepare()
+                        .get("/v5/messages/1")
+                        .queryParams(query)
+                        .asJson(JsonNode.class)
+                        .execute()
+                        .content();
+        assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
     }
 
     @Test

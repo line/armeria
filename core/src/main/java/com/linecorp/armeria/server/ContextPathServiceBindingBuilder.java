@@ -22,6 +22,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -30,6 +31,8 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
@@ -167,6 +170,17 @@ public final class ContextPathServiceBindingBuilder
     public ContextPathServiceBindingBuilder multipartUploadsLocation(
             Path multipartUploadsLocation) {
         return (ContextPathServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public ContextPathServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                               boolean shutdownOnStop) {
+        return (ContextPathServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public ContextPathServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (ContextPathServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     @Override
@@ -335,6 +349,11 @@ public final class ContextPathServiceBindingBuilder
     @Override
     public ContextPathServiceBindingBuilder exclude(Route excludedRoute) {
         return (ContextPathServiceBindingBuilder) super.exclude(excludedRoute);
+    }
+
+    @Override
+    public ContextPathServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+        return (ContextPathServiceBindingBuilder) super.contextHook(contextHook);
     }
 
     /**
