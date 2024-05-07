@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.encoding;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.UnexpectedDecodeException;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
@@ -54,11 +53,9 @@ class AbstractStreamDecoder implements StreamDecoder {
                                               .maxContentLength(maxLength)
                                               .cause(ex)
                                               .build();
+            } else {
+                throw ex;
             }
-            throw new UnexpectedDecodeException(
-                    "Unexpected exception has occurred. " +
-                    "This exception is not caused by the buffer reaching max size. Exception message: " +
-                    message);
         }
         return fetchDecoderOutput();
     }

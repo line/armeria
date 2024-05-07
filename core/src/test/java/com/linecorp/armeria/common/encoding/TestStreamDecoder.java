@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.encoding;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.UnexpectedDecodeException;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;

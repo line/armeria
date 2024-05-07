@@ -13,10 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.encoding;
 
 /**
- * A {@link RuntimeException} raised when an unexpected decoding exception is thrown.
+ * A {@link RuntimeException} raised when a {@link StreamDecoder} failed to decode
+ * a stream.
  */
 public final class UnexpectedDecodeException extends RuntimeException {
 
