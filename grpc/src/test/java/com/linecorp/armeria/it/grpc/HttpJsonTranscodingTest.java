@@ -558,7 +558,7 @@ public class HttpJsonTranscodingTest {
         final String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
         final AggregatedHttpResponse response =
-                webClient.get("/v1/echo/" + timestamp).aggregate().join();
+                webClient.post("/v1/echo/" + timestamp + ":get", "").aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);

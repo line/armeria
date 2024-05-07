@@ -80,7 +80,8 @@ service HttpJsonTranscodingTestService {
 
   rpc EchoTimestamp(EchoTimestampRequest) returns (EchoTimestampResponse) {
     option (google.api.http) = {
-      get: "/v1/echo/{timestamp}"
+      post: "/v1/echo/{timestamp}:get",
+      body: "*"
     };
   }
 

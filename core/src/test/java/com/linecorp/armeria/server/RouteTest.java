@@ -240,6 +240,10 @@ class RouteTest {
                 IllegalArgumentException.class);
         assertThatThrownBy(() -> Route.builder().path("/foo/{bar}:verb1:verb2")).isInstanceOf(
                 IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo/bar:verb1:verb2")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo/bar:verb1:verb2")).isInstanceOf(
+                IllegalArgumentException.class);
     }
 
     @Test
