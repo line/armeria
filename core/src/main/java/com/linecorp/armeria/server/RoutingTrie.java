@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.server.VerbSuffixPathMapping.findVerb;
 import static java.util.Objects.requireNonNull;
 
 import java.io.OutputStream;
@@ -227,7 +226,7 @@ final class RoutingTrie<V> {
                 final int delimSlash = path.indexOf('/', begin);
 
                 if (delimSlash < 0) {
-                    final String pathVerb = findVerb(path, true);
+                    final String pathVerb = findVerb(path, begin);
                     if (pathVerb == null) {
                         // No more delimiter.
                         return node;
@@ -260,6 +259,20 @@ final class RoutingTrie<V> {
     private void dump(PrintWriter p, Node<V> node, int depth) {
         p.printf("<%d> %s%n", depth, node);
         node.children.values().forEach(child -> dump(p, child, depth + 1));
+    }
+
+    /**
+     * Returns the substring from the last colon ':' found after 'begin', including the colon.
+     * Returns {@code null} if no colon is found after the 'begin' index.
+     */
+    @Nullable
+    private static String findVerb(String path, int begin) {
+        for (int i = path.length() - 1; i >= begin; i--) {
+            if (path.charAt(i) == ':') {
+                return path.substring(i);
+            }
+        }
+        return null;
     }
 
     /**

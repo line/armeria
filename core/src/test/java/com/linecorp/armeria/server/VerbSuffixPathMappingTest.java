@@ -115,23 +115,4 @@ class VerbSuffixPathMappingTest {
 
         assertThat(routingResultBuilder).isNull();
     }
-
-    @ParameterizedTest
-    @MethodSource("generateFindVerbData")
-    void findVerb(String path, @Nullable String expectedVerbWithColon) {
-        final String verb = VerbSuffixPathMapping.findVerb(path, true);
-        assertThat(verb).isEqualTo(expectedVerbWithColon);
-    }
-
-    static Stream<Arguments> generateFindVerbData() {
-        return Stream.of(
-                Arguments.of("/users/1", null),
-                Arguments.of("/users/1/books/1:update", ":update"),
-                Arguments.of("/users/1:2/books/1", null),
-                Arguments.of("/users/:userId/books/:bookId:update", ":update"),
-                Arguments.of("/users/1:/books/1:update", ":update"),
-                Arguments.of("/users/:userId:u%p-d.a_t~e", ":u%p-d.a_t~e"),
-                Arguments.of("/users/:userId:%E3%83%86%E3%82%B9%E3%83%88", ":%E3%83%86%E3%82%B9%E3%83%88")
-        );
-    }
 }

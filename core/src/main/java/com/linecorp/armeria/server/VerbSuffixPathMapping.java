@@ -70,15 +70,11 @@ final class VerbSuffixPathMapping extends AbstractPathMapping {
     }
 
     @Nullable
-    static String findVerb(String pathPattern, boolean withColon) {
+    static String findVerb(String pathPattern) {
         final Matcher matcher = VERB_PATH_PATTERN.matcher(pathPattern);
 
         if (matcher.find()) {
-            final String verbWithoutColon = matcher.group(1);
-            if (withColon) {
-                return ':' + verbWithoutColon;
-            }
-            return verbWithoutColon;
+            return matcher.group(1);
         }
 
         return null;

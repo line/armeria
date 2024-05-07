@@ -560,7 +560,7 @@ public final class RouteBuilder {
         }
 
         // Parameterized, glob or no prefix.
-        final String verb = VerbSuffixPathMapping.findVerb(pathPattern, false);
+        final String verb = VerbSuffixPathMapping.findVerb(pathPattern);
         if (verb == null) {
             return basePathMappingMapper.apply(pathPattern);
         }
