@@ -233,7 +233,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
 
     @Override
     public Class<?> serviceClass() {
-        return this.serviceClass;
+        return serviceClass;
     }
 
     @Override
