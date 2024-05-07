@@ -552,6 +552,7 @@ public final class VirtualHost {
      * Returns the {@link MultipartRemovalStrategy} that specifies when to remove the temporary files created
      * for multipart requests.
      */
+    @UnstableApi
     public MultipartRemovalStrategy multipartRemovalStrategy() {
         return multipartRemovalStrategy;
     }

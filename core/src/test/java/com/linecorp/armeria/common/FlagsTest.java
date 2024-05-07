@@ -342,11 +342,7 @@ class FlagsTest {
                 input.close();
                 final byte[] classData = buffer.toByteArray();
 
-                final Class<?> aClass = defineClass(name, classData, 0, classData.length);
-                if (name.contains("Multipart")) {
-                    System.out.println("Loading class: " + name + ", class: " + aClass);
-                }
-                return aClass;
+                return defineClass(name, classData, 0, classData.length);
             } catch (IOException e) {
                 Exceptions.throwUnsafely(e);
             }
