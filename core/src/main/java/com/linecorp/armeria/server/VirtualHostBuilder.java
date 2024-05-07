@@ -1442,7 +1442,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
                                 requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
-                                serviceWorkerGroup, builder.build(), requestIdGenerator);
+                                multipartRemovalStrategy, serviceWorkerGroup, builder.build(),
+                                requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template, baseContextPath);
