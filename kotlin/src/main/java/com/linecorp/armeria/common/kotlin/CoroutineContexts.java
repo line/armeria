@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.kotlin.CoroutineContextService;
 
 import io.netty.util.AttributeKey;
