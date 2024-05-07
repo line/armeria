@@ -31,7 +31,7 @@ import com.google.common.collect.ImmutableMap;
  * @see ThriftCallService
  */
 public final class ThriftCallServiceBuilder {
-    private Map<String, ? extends Iterable<?>> implementations;
+    private final ImmutableMap.Builder<String, Iterable<?>> implementations = ImmutableMap.builder();
     private boolean useBlockingTaskExecutor;
 
     ThriftCallServiceBuilder() {}
@@ -44,16 +44,24 @@ public final class ThriftCallServiceBuilder {
         if (implementations.isEmpty()) {
             throw new IllegalArgumentException("empty implementations");
         }
-        this.implementations = implementations;
+        this.implementations.putAll(implementations);
         return this;
     }
 
     /**
      * Adds an implementation for {@link ThriftServiceEntry}.
      */
-    public ThriftCallServiceBuilder implementation(Object implementation) {
+    public ThriftCallServiceBuilder addService(Object implementation) {
         requireNonNull(implementation, "implementation");
-        this.implementations = ImmutableMap.of("", ImmutableList.of(implementation));
+        return addService("", implementation);
+    }
+
+    /**
+     * Adds an implementation with key for {@link ThriftServiceEntry}.
+     */
+    public ThriftCallServiceBuilder addService(String key, Object implementation) {
+        requireNonNull(implementation, "implementation");
+        this.implementations.put(key, ImmutableList.of(implementation));
         return this;
     }
 
@@ -73,7 +81,7 @@ public final class ThriftCallServiceBuilder {
      */
     public ThriftCallService build() {
         return new ThriftCallService(
-                implementations.entrySet().stream().collect(
+                implementations.build().entrySet().stream().collect(
                         toImmutableMap(Map.Entry::getKey, ThriftServiceEntry::new)),
                 useBlockingTaskExecutor
         );
