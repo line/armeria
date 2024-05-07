@@ -1,0 +1,19 @@
+---
+date: 2024-04-29
+---
+
+## 🛠️ Bug fixes
+
+- <type://XdsEndpointGroup> now adheres to the `LbSubsetFallbackPolicy.NO_FALLBACK` policy. #5649
+- The <type://HttpResponse> returned from an <type://HttpService> is now correctly recovered from the exception. #5648
+- Aborted <type://DeferredStreamMessage> doesn't call `Subscriber.onError()` multiple times anymore. #5648
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'minwoox',
+  'seongbeenkim',
+  'trustin'
+]} />

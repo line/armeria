@@ -24,6 +24,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 
 /**
  * Details of an annotated HTTP service method.
@@ -32,12 +33,12 @@ public final class AnnotatedServiceElement {
 
     private final Route route;
 
-    private final AnnotatedService service;
+    private final DefaultAnnotatedService service;
 
     private final Function<? super HttpService, ? extends HttpService> decorator;
 
     AnnotatedServiceElement(Route route,
-                            AnnotatedService service,
+                            DefaultAnnotatedService service,
                             Function<? super HttpService, ? extends HttpService> decorator) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");

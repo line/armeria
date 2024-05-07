@@ -9,8 +9,10 @@
 *.001.test.code-builder-stg.platform.salesforce.com
 *.0emm.com
 *.advisor.ws
+*.af-south-1.airflow.amazonaws.com
 *.alces.network
 *.amplifyapp.com
+*.ap-east-1.airflow.amazonaws.com
 *.ap-northeast-1.airflow.amazonaws.com
 *.ap-northeast-2.airflow.amazonaws.com
 *.ap-south-1.airflow.amazonaws.com
@@ -56,6 +58,7 @@
 *.er
 *.eu-central-1.airflow.amazonaws.com
 *.eu-north-1.airflow.amazonaws.com
+*.eu-south-1.airflow.amazonaws.com
 *.eu-west-1.airflow.amazonaws.com
 *.eu-west-2.airflow.amazonaws.com
 *.eu-west-3.airflow.amazonaws.com
@@ -84,6 +87,7 @@
 *.lclstage.dev
 *.linodeobjects.com
 *.magentosite.cloud
+*.me-south-1.airflow.amazonaws.com
 *.migration.run
 *.mm
 *.moonscale.io
@@ -107,6 +111,7 @@
 *.pg
 *.platformsh.site
 *.private.repost.aws
+*.privatelink.snowflake.app
 *.quipelements.com
 *.r.appspot.com
 *.rss.my.id
@@ -118,6 +123,7 @@
 *.sch.uk
 *.sendai.jp
 *.sensiosite.cloud
+*.snowflake.app
 *.spectrum.myjino.ru
 *.statics.cloud
 *.stg-builder.code.com
@@ -136,18 +142,25 @@
 *.upsun.app
 *.us-east-1.airflow.amazonaws.com
 *.us-east-2.airflow.amazonaws.com
+*.us-west-1.airflow.amazonaws.com
 *.us-west-2.airflow.amazonaws.com
 *.user.fm
 *.user.localcert.dev
 *.usercontent.goog
 *.vps.myjino.ru
 *.vultrobjects.com
+*.wadl.top
 *.webhare.dev
 *.webpaas.ovh.net
+*.xmit.co
 *.yokohama.jp
 0.bg
 001www.com
+0am.jp
 0e.vc
+0g0.jp
+0j0.jp
+0t0.jp
 1.azurestaticapps.net
 1.bg
 123hjemmeside.dk
@@ -157,7 +170,6 @@
 123minsida.se
 123miweb.es
 123paginaweb.pt
-123sait.ru
 123siteweb.fr
 123webseite.at
 123webseite.de
@@ -214,6 +226,7 @@ a2hosted.com
 aa.no
 aaa
 aaa.pro
+aaa.vodka
 aarborte.no
 aarp
 ab.ca
@@ -533,8 +546,6 @@ apigee.io
 app
 app.banzaicloud.io
 app.br
-app.gp
-app.lmpm.com
 app.os.fedoraproject.org
 app.os.stg.fedoraproject.org
 app.render.com
@@ -647,10 +658,9 @@ asti.it
 asuke.aichi.jp
 at
 at-band-camp.net
+at.emf.camp
 at.eu.org
 at.it
-at.md
-at.vg
 atami.shizuoka.jp
 ath.cx
 athleta
@@ -688,17 +698,22 @@ auth.ap-northeast-1.amazoncognito.com
 auth.ap-northeast-2.amazoncognito.com
 auth.ap-northeast-3.amazoncognito.com
 auth.ap-south-1.amazoncognito.com
+auth.ap-south-2.amazoncognito.com
 auth.ap-southeast-1.amazoncognito.com
 auth.ap-southeast-2.amazoncognito.com
 auth.ap-southeast-3.amazoncognito.com
+auth.ap-southeast-4.amazoncognito.com
 auth.ca-central-1.amazoncognito.com
 auth.eu-central-1.amazoncognito.com
+auth.eu-central-2.amazoncognito.com
 auth.eu-north-1.amazoncognito.com
 auth.eu-south-1.amazoncognito.com
+auth.eu-south-2.amazoncognito.com
 auth.eu-west-1.amazoncognito.com
 auth.eu-west-2.amazoncognito.com
 auth.eu-west-3.amazoncognito.com
 auth.il-central-1.amazoncognito.com
+auth.me-central-1.amazoncognito.com
 auth.me-south-1.amazoncognito.com
 auth.sa-east-1.amazoncognito.com
 auth.us-east-1.amazoncognito.com
@@ -724,6 +739,7 @@ avoues.fr
 aw
 awaji.hyogo.jp
 aws
+awsapps.com
 awsglobalaccelerator.com
 awsmppl.com
 ax
@@ -788,9 +804,6 @@ bando.ibaraki.jp
 bank
 bar
 bar.pro
-bar0.net
-bar1.net
-bar2.net
 barcelona
 barclaycard
 barclays
@@ -854,9 +867,7 @@ bci.dnstrace.pro
 bcn
 bd.se
 be
-be.ax
 be.eu.org
-be.gy
 beagleboard.io
 bearalvahki.no
 beardu.no
@@ -907,6 +918,7 @@ bid
 biei.hokkaido.jp
 bielawa.pl
 biella.it
+bielsko.pl
 bieszczady.pl
 bievat.no
 bifuka.hokkaido.jp
@@ -973,8 +985,6 @@ blockbuster
 blog
 blog.bo
 blog.br
-blog.gt
-blog.vu
 blogdns.com
 blogdns.net
 blogdns.org
@@ -1216,6 +1226,7 @@ campidanomedio.it
 campinagrande.br
 campinas.br
 campobasso.it
+can.re
 canary.replit.dev
 candypop.jp
 canon
@@ -1249,7 +1260,6 @@ cash
 casino
 casino.hu
 cat
-cat.ax
 catania.it
 catanzaro.it
 catering
@@ -1278,7 +1288,6 @@ cc.fl.us
 cc.ga.us
 cc.gu.us
 cc.hi.us
-cc.hn
 cc.ia.us
 cc.id.us
 cc.il.us
@@ -1328,6 +1337,7 @@ cd.eu.org
 cdn-edges.net
 cdn.prod.atlassian-dev.net
 cdn77-ssl.net
+cdn77-storage.com
 ce.gov.br
 ce.it
 ce.leg.br
@@ -1348,7 +1358,6 @@ cg
 ch
 ch.eu.org
 ch.it
-ch.tc
 ch.trendhosting.cloud
 chambagri.fr
 championship.aero
@@ -1442,6 +1451,7 @@ clerkstage.app
 cleverapps.io
 click
 clickrising.net
+client.scrypted.io
 clinic
 clinique
 clothing
@@ -1456,7 +1466,6 @@ cloud66.ws
 cloud66.zone
 cloudaccess.host
 cloudaccess.net
-cloudapp.azure.com
 cloudapp.net
 cloudapps.digital
 cloudcontrolapp.com
@@ -1466,13 +1475,19 @@ cloudfront.net
 cloudfunctions.net
 cloudjiffy.net
 cloudns.asia
+cloudns.be
 cloudns.biz
 cloudns.cc
+cloudns.ch
+cloudns.cl
 cloudns.club
+cloudns.cx
 cloudns.eu
 cloudns.in
 cloudns.info
+cloudns.nz
 cloudns.org
+cloudns.ph
 cloudns.pro
 cloudns.pw
 cloudns.us
@@ -1771,6 +1786,7 @@ coop.rw
 coop.tt
 cooperativa.bo
 copro.uk
+corpnet.work
 corsica
 cosenza.it
 couchpotatofries.org
@@ -1808,6 +1824,7 @@ cruises
 cs.in
 cs.it
 cs.keliweb.cloud
+csb.app
 csx.cc
 ct.it
 ct.us
@@ -1818,6 +1835,7 @@ cuneo.it
 cupcake.is
 curitiba.br
 curv.dev
+cust.cloudscale.ch
 cust.dev.thingdust.io
 cust.disrec.thingdust.io
 cust.prod.thingdust.io
@@ -1856,6 +1874,7 @@ dabur
 dad
 daegu.kr
 daejeon.kr
+daemon.asia
 daemon.panel.gg
 dagestan.ru
 dagestan.su
@@ -1869,6 +1888,7 @@ damnserver.com
 danang.vn
 dance
 daplie.me
+darklang.io
 data
 date
 date.fukushima.jp
@@ -1901,9 +1921,6 @@ de
 de.com
 de.cool
 de.eu.org
-de.gt
-de.ls
-de.md
 de.trendhosting.cloud
 de.us
 deal
@@ -1950,7 +1967,6 @@ dev
 dev-myqnapcloud.com
 dev.br
 dev.static.land
-dev.vu
 development.run
 devices.resinstaging.io
 df.gov.br
@@ -1983,6 +1999,7 @@ diskussionsbereich.de
 ditchyourip.com
 divtasvuodna.no
 divttasvuotna.no
+dix.asia
 diy
 dj
 dk
@@ -1994,6 +2011,9 @@ dnepropetrovsk.ua
 dni.us
 dnipropetrovsk.ua
 dnp
+dns-cloud.net
+dns-dynamic.net
+dnsabr.com
 dnsalias.com
 dnsalias.net
 dnsalias.org
@@ -2323,18 +2343,24 @@ emrappui-prod.ap-northeast-1.amazonaws.com
 emrappui-prod.ap-northeast-2.amazonaws.com
 emrappui-prod.ap-northeast-3.amazonaws.com
 emrappui-prod.ap-south-1.amazonaws.com
+emrappui-prod.ap-south-2.amazonaws.com
 emrappui-prod.ap-southeast-1.amazonaws.com
 emrappui-prod.ap-southeast-2.amazonaws.com
 emrappui-prod.ap-southeast-3.amazonaws.com
+emrappui-prod.ap-southeast-4.amazonaws.com
 emrappui-prod.ca-central-1.amazonaws.com
+emrappui-prod.ca-west-1.amazonaws.com
 emrappui-prod.cn-north-1.amazonaws.com.cn
 emrappui-prod.cn-northwest-1.amazonaws.com.cn
 emrappui-prod.eu-central-1.amazonaws.com
+emrappui-prod.eu-central-2.amazonaws.com
 emrappui-prod.eu-north-1.amazonaws.com
 emrappui-prod.eu-south-1.amazonaws.com
+emrappui-prod.eu-south-2.amazonaws.com
 emrappui-prod.eu-west-1.amazonaws.com
 emrappui-prod.eu-west-2.amazonaws.com
 emrappui-prod.eu-west-3.amazonaws.com
+emrappui-prod.il-central-1.amazonaws.com
 emrappui-prod.me-central-1.amazonaws.com
 emrappui-prod.me-south-1.amazonaws.com
 emrappui-prod.sa-east-1.amazonaws.com
@@ -2350,18 +2376,24 @@ emrnotebooks-prod.ap-northeast-1.amazonaws.com
 emrnotebooks-prod.ap-northeast-2.amazonaws.com
 emrnotebooks-prod.ap-northeast-3.amazonaws.com
 emrnotebooks-prod.ap-south-1.amazonaws.com
+emrnotebooks-prod.ap-south-2.amazonaws.com
 emrnotebooks-prod.ap-southeast-1.amazonaws.com
 emrnotebooks-prod.ap-southeast-2.amazonaws.com
 emrnotebooks-prod.ap-southeast-3.amazonaws.com
+emrnotebooks-prod.ap-southeast-4.amazonaws.com
 emrnotebooks-prod.ca-central-1.amazonaws.com
+emrnotebooks-prod.ca-west-1.amazonaws.com
 emrnotebooks-prod.cn-north-1.amazonaws.com.cn
 emrnotebooks-prod.cn-northwest-1.amazonaws.com.cn
 emrnotebooks-prod.eu-central-1.amazonaws.com
+emrnotebooks-prod.eu-central-2.amazonaws.com
 emrnotebooks-prod.eu-north-1.amazonaws.com
 emrnotebooks-prod.eu-south-1.amazonaws.com
+emrnotebooks-prod.eu-south-2.amazonaws.com
 emrnotebooks-prod.eu-west-1.amazonaws.com
 emrnotebooks-prod.eu-west-2.amazonaws.com
 emrnotebooks-prod.eu-west-3.amazonaws.com
+emrnotebooks-prod.il-central-1.amazonaws.com
 emrnotebooks-prod.me-central-1.amazonaws.com
 emrnotebooks-prod.me-south-1.amazonaws.com
 emrnotebooks-prod.sa-east-1.amazonaws.com
@@ -2377,18 +2409,24 @@ emrstudio-prod.ap-northeast-1.amazonaws.com
 emrstudio-prod.ap-northeast-2.amazonaws.com
 emrstudio-prod.ap-northeast-3.amazonaws.com
 emrstudio-prod.ap-south-1.amazonaws.com
+emrstudio-prod.ap-south-2.amazonaws.com
 emrstudio-prod.ap-southeast-1.amazonaws.com
 emrstudio-prod.ap-southeast-2.amazonaws.com
 emrstudio-prod.ap-southeast-3.amazonaws.com
+emrstudio-prod.ap-southeast-4.amazonaws.com
 emrstudio-prod.ca-central-1.amazonaws.com
+emrstudio-prod.ca-west-1.amazonaws.com
 emrstudio-prod.cn-north-1.amazonaws.com.cn
 emrstudio-prod.cn-northwest-1.amazonaws.com.cn
 emrstudio-prod.eu-central-1.amazonaws.com
+emrstudio-prod.eu-central-2.amazonaws.com
 emrstudio-prod.eu-north-1.amazonaws.com
 emrstudio-prod.eu-south-1.amazonaws.com
+emrstudio-prod.eu-south-2.amazonaws.com
 emrstudio-prod.eu-west-1.amazonaws.com
 emrstudio-prod.eu-west-2.amazonaws.com
 emrstudio-prod.eu-west-3.amazonaws.com
+emrstudio-prod.il-central-1.amazonaws.com
 emrstudio-prod.me-central-1.amazonaws.com
 emrstudio-prod.me-south-1.amazonaws.com
 emrstudio-prod.sa-east-1.amazonaws.com
@@ -2435,7 +2473,6 @@ erotica.hu
 erotika.hu
 es
 es-1.axarnet.cloud
-es.ax
 es.eu.org
 es.gov.br
 es.kr
@@ -2467,7 +2504,6 @@ eu-south-1.elasticbeanstalk.com
 eu-west-1.elasticbeanstalk.com
 eu-west-2.elasticbeanstalk.com
 eu-west-3.elasticbeanstalk.com
-eu.ax
 eu.com
 eu.encoway.cloud
 eu.int
@@ -2713,6 +2749,7 @@ fr-par-2.baremetal.scw.cloud
 fr.eu.org
 fr.it
 fra1-de.cloudjiffy.net
+framer.ai
 framer.app
 framer.media
 framer.photos
@@ -2943,11 +2980,10 @@ getmyip.com
 gets-it.net
 gf
 gg
-gg.ax
 ggee
 ggf.br
 gh
-ghost.io
+gh.srv.us
 gi
 gialai.vn
 giehtavuoatna.no
@@ -2979,6 +3015,7 @@ gjerstad.no
 gjesdal.no
 gjovik.no
 gl
+gl.srv.us
 glass
 gle
 gleeze.com
@@ -3226,6 +3263,7 @@ graphics
 graphox.us
 gratangen.no
 gratis
+grayjayleagues.com
 greater.jp
 green
 greta.fr
@@ -3398,6 +3436,8 @@ healthcare
 heavy.jp
 heguri.nara.jp
 hekinan.aichi.jp
+helioho.st
+heliohost.us
 help
 helsinki
 hemne.no
@@ -3752,7 +3792,6 @@ independent-inquiry.uk
 independent-panel.uk
 independent-review.uk
 inderoy.no
-indie.porn
 indigena.bo
 industria.bo
 industries
@@ -3842,7 +3881,6 @@ investments
 inzai.chiba.jp
 io
 io.in
-io.kg
 io.vn
 iobb.net
 iopsys.se
@@ -3906,6 +3944,7 @@ is-a-student.com
 is-a-teacher.com
 is-a-techie.com
 is-a-therapist.com
+is-a.dev
 is-an-accountant.com
 is-an-actor.com
 is-an-actress.com
@@ -3915,6 +3954,7 @@ is-an-engineer.com
 is-an-entertainer.com
 is-by.us
 is-certified.com
+is-cool.dev
 is-found.org
 is-gone.com
 is-into-anime.com
@@ -3922,7 +3962,9 @@ is-into-cars.com
 is-into-cartoons.com
 is-into-games.com
 is-leet.com
+is-local.org
 is-lost.org
+is-not-a.dev
 is-not-certified.com
 is-saved.org
 is-slick.com
@@ -4087,13 +4129,12 @@ jot
 jotelulu.cloud
 journal.aero
 journalist.aero
+jouwweb.site
 joy
 joyo.kyoto.jp
 jozi.biz
 jp
 jp.eu.org
-jp.kg
-jp.md
 jp.net
 jp.ngrok.io
 jpmorgan
@@ -4335,6 +4376,7 @@ kerrylogistics
 kerryproperties
 ketrzyn.pl
 keymachine.de
+keyword-on.net
 kfh
 kg
 kg.kr
@@ -4603,6 +4645,18 @@ la-spezia.it
 la.us
 laakesvuemie.no
 lab.ms
+labeling.ap-northeast-1.sagemaker.aws
+labeling.ap-northeast-2.sagemaker.aws
+labeling.ap-south-1.sagemaker.aws
+labeling.ap-southeast-1.sagemaker.aws
+labeling.ap-southeast-2.sagemaker.aws
+labeling.ca-central-1.sagemaker.aws
+labeling.eu-central-1.sagemaker.aws
+labeling.eu-west-1.sagemaker.aws
+labeling.eu-west-2.sagemaker.aws
+labeling.us-east-1.sagemaker.aws
+labeling.us-east-2.sagemaker.aws
+labeling.us-west-2.sagemaker.aws
 lacaixa
 ladesk.com
 lahppi.no
@@ -4767,6 +4821,7 @@ linkyard.cloud
 lipsy
 littlestar.jp
 live
+live-on.net
 living
 livorno.it
 lk
@@ -4778,7 +4833,10 @@ lo.it
 loabat.no
 loan
 loans
+localcert.net
 localhost.daplie.me
+localhostcert.net
+localplayer.dev
 localzone.xyz
 locker
 locus
@@ -4968,7 +5026,6 @@ mb.ca
 mb.it
 mba
 mc
-mc.ax
 mc.eu.org
 mc.it
 mcdir.me
@@ -4987,11 +5044,9 @@ me.it
 me.ke
 me.so
 me.ss
-me.tc
 me.tz
 me.uk
 me.us
-me.vu
 med
 med.br
 med.ec
@@ -5394,10 +5449,15 @@ myamaze.net
 myasustor.com
 mycd.eu
 mycloud.by
+mycloudnas.com
 mydatto.com
 mydatto.net
 myddns.rocks
 mydissent.net
+mydns.bz
+mydns.jp
+mydns.tw
+mydns.vc
 mydobiss.com
 mydrobo.com
 myds.me
@@ -5406,6 +5466,7 @@ myfast.host
 myfast.space
 myfirewall.org
 myforum.community
+myfritz.link
 myfritz.net
 myftp.biz
 myftp.org
@@ -5415,12 +5476,14 @@ myjino.ru
 mykolaiv.ua
 mymailer.com.tw
 mymediapc.net
+mynascloud.com
 myoko.niigata.jp
 mypep.link
 mypets.ws
 myphotos.cc
 mypi.co
 mypsx.net
+myqnapcloud.cn
 myqnapcloud.com
 myradweb.net
 mysecuritycamera.com
@@ -5598,7 +5661,6 @@ ne.us
 neat-url.com
 nec
 nedre-eiker.no
-neko.am
 nemuro.hokkaido.jp
 nerdpol.ovh
 nerima.tokyo.jp
@@ -5772,6 +5834,7 @@ ngo
 ngo.lk
 ngo.ng
 ngo.ph
+ngo.us
 ngo.za
 ngrok-free.app
 ngrok-free.dev
@@ -5807,6 +5870,7 @@ nikita.jp
 nikko.tochigi.jp
 nikolaev.ua
 nikon
+nimsite.uk
 ninhbinh.vn
 ninhthuan.vn
 ninja
@@ -5847,7 +5911,6 @@ njs.jelastic.vps-host.net
 nl
 nl-ams-1.baremetal.scw.cloud
 nl.ca
-nl.ci
 nl.eu.org
 nl.no
 nm.cn
@@ -5926,6 +5989,7 @@ notebook-fips.us-east-1.sagemaker.aws
 notebook-fips.us-east-2.sagemaker.aws
 notebook-fips.us-gov-east-1.sagemaker.aws
 notebook-fips.us-gov-west-1.sagemaker.aws
+notebook-fips.us-west-1.sagemaker.aws
 notebook-fips.us-west-2.sagemaker.aws
 notebook.af-south-1.sagemaker.aws
 notebook.ap-east-1.sagemaker.aws
@@ -6007,8 +6071,6 @@ nx.cn
 ny-1.paas.massivegrid.net
 ny-2.paas.massivegrid.net
 ny.us
-nyaa.am
-nyan.to
 nyanta.jp
 nyc
 nyc.mn
@@ -6028,6 +6090,8 @@ obanazawa.yamagata.jp
 obi
 obihiro.hokkaido.jp
 obira.hokkaido.jp
+objects.lpg.cloudscale.ch
+objects.rma.cloudscale.ch
 obninsk.su
 observer
 obu.aichi.jp
@@ -6532,6 +6596,7 @@ pg.in
 pg.it
 pgafan.net
 pgfog.com
+pgw.jp
 ph
 pharmacien.fr
 pharmaciens.km
@@ -6667,6 +6732,7 @@ press.se
 presse.ci
 presse.km
 presse.ml
+preview.csb.app
 pri.ee
 prime
 primetel.cloud
@@ -6677,7 +6743,6 @@ priv.instances.scw.cloud
 priv.me
 priv.no
 priv.pl
-privatelink.snowflake.app
 privatizehealthinsurance.net
 pro
 pro.az
@@ -6808,13 +6873,11 @@ ras.ru
 rauma.no
 ravendb.cloud
 ravendb.community
-ravendb.me
 ravendb.run
 ravenna.it
 ravpage.co.il
 rawa-maz.pl
 rc.it
-rdv.to
 rdy.jp
 re
 re.it
@@ -6970,7 +7033,9 @@ rs.gov.br
 rs.leg.br
 rs.webaccel.jp
 rsc.cdn77.org
+rsc.contentproxy9.cz
 rsvp
+rt.ht
 ru
 ru.com
 ru.eu.org
@@ -6979,6 +7044,7 @@ rugby
 ruhr
 rulez.jp
 run
+runcontainers.dev
 runs.onstackit.cloud
 ruovat.no
 rv.ua
@@ -7537,6 +7603,7 @@ servemp3.com
 servep2p.com
 servepics.com
 servequake.com
+server-on.net
 servername.us
 servers.run
 servesarcasm.com
@@ -7664,6 +7731,7 @@ shonai.fukuoka.jp
 shonai.yamagata.jp
 shoo.okayama.jp
 shop
+shop.brendly.hr
 shop.brendly.rs
 shop.ht
 shop.hu
@@ -7762,7 +7830,6 @@ snasa.no
 sncf
 snillfjord.no
 snoasa.no
-snowflake.app
 so
 so.gov.pl
 so.it
@@ -7844,6 +7911,7 @@ sr.it
 srht.site
 srl
 srv.br
+srv.us
 ss
 ss.it
 ssl.origin.cdn77-secure.org
@@ -7929,6 +7997,7 @@ studio.cn-northwest-1.sagemaker.com.cn
 studio.eu-central-1.sagemaker.aws
 studio.eu-north-1.sagemaker.aws
 studio.eu-south-1.sagemaker.aws
+studio.eu-south-2.sagemaker.aws
 studio.eu-west-1.sagemaker.aws
 studio.eu-west-2.sagemaker.aws
 studio.eu-west-3.sagemaker.aws
@@ -8241,10 +8310,8 @@ tn.oxa.cloud
 tn.us
 to
 to.gov.br
-to.gt
 to.it
 to.leg.br
-to.md
 toba.mie.jp
 tobe.ehime.jp
 tobetsu.hokkaido.jp
@@ -8483,7 +8550,6 @@ tv.br
 tv.im
 tv.in
 tv.it
-tv.kg
 tv.na
 tv.sd
 tv.tr
@@ -8540,7 +8606,6 @@ uk
 uk.com
 uk.eu.org
 uk.in
-uk.kg
 uk.net
 uk.oxa.cloud
 uk.primetel.cloud
@@ -8565,6 +8630,7 @@ uni5.net
 unicloud.pl
 unicom
 union.aero
+unison-services.cloud
 univ.bj
 univ.sn
 university
@@ -8610,7 +8676,6 @@ us-gov-east-1.elasticbeanstalk.com
 us-gov-west-1.elasticbeanstalk.com
 us-west-1.elasticbeanstalk.com
 us-west-2.elasticbeanstalk.com
-us.ax
 us.com
 us.eu.org
 us.gov.pl
@@ -8826,7 +8891,9 @@ vt.it
 vt.us
 vu
 vv.it
-vxl.sh
+w-corp-staticblitz.com
+w-credentialless-staticblitz.com
+w-staticblitz.com
 w.bg
 w.se
 wa.au
@@ -8864,7 +8931,6 @@ watson.jp
 waw.pl
 wazuka.kyoto.jp
 we.bs
-we.tc
 weather
 weatherchannel
 web.app
@@ -8882,6 +8948,7 @@ web.tj
 web.tr
 web.ve
 web.za
+webadorsite.com
 webcam
 weber
 webflow.io
@@ -8985,6 +9052,7 @@ wiw.gov.pl
 wix.run
 wixsite.com
 wixstudio.io
+wjg.jp
 wkz.gov.pl
 wlocl.pl
 wloclawek.pl
@@ -9040,6 +9108,7 @@ xihuan
 xii.jp
 xin
 xj.cn
+xmit.dev
 xn--0trq7p7nn.jp
 xn--11b4c3d
 xn--12c1fe0br.xn--o3cw4h
@@ -9501,9 +9570,7 @@ xn--zf0avx.hk
 xn--zfr164b
 xnbay.com
 xs4all.space
-xx.gl
 xxx
-xy.ax
 xyz
 xz.cn
 y.bg
