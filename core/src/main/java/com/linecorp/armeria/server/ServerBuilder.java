@@ -958,7 +958,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      * Sets the {@link MultipartRemovalStrategy} that determines when to remove temporary files created
      * for multipart requests.
      * If not set, {@link MultipartRemovalStrategy#ON_RESPONSE_COMPLETION} is used by default.
-     *
      */
     @UnstableApi
     public ServerBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {

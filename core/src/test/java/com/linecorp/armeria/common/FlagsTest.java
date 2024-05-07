@@ -304,8 +304,10 @@ class FlagsTest {
 
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
         final Lookup lookup = MethodHandles.publicLookup();
-        final Class<?> rtype = flagsClassLoader.loadClass(Flags.class.getMethod(flagsMethod).getReturnType()
-                                                                     .getCanonicalName());
+        Class<?> rtype = Flags.class.getMethod(flagsMethod).getReturnType();
+        if (!rtype.isPrimitive()) {
+            rtype = flagsClassLoader.loadClass(rtype.getCanonicalName());
+        }
         final MethodHandle method =
                 lookup.findStatic(flags, flagsMethod, MethodType.methodType(rtype));
         return assertThat(method.invoke());
