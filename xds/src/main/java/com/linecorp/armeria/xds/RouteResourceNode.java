@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.linecorp.armeria.xds.StaticResourceUtils.staticCluster;
 import static com.linecorp.armeria.xds.XdsType.ROUTE;
 
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.route.v3.Route;
 import io.envoyproxy.envoy.config.route.v3.Route.ActionCase;
@@ -64,18 +66,28 @@ final class RouteResourceNode extends AbstractResourceNodeWithPrimer<RouteXdsRes
                     continue;
                 }
                 final RouteAction routeAction = route.getRoute();
-                final String cluster = routeAction.getCluster();
+                final String clusterName = routeAction.getCluster();
 
                 // add a dummy element to the index list so that we can call List.set later
                 // without incurring an IndexOutOfBoundException when a snapshot is updated
                 clusterSnapshotList.add(null);
                 pending.add(index);
-                final ClusterResourceNode node =
-                        new ClusterResourceNode(null, cluster, xdsBootstrap(),
-                                                resource, snapshotWatcher, virtualHost, route,
-                                                index++, ResourceNodeType.DYNAMIC);
-                children().add(node);
-                xdsBootstrap().subscribe(node);
+
+                final Cluster cluster = xdsBootstrap().bootstrapClusters().cluster(clusterName);
+                final ClusterResourceNode node;
+                if (cluster != null) {
+                    node = staticCluster(xdsBootstrap(), clusterName, resource, snapshotWatcher, virtualHost,
+                                         route, index++, cluster);
+                    children().add(node);
+                } else {
+                    final ConfigSource configSource =
+                            configSourceMapper().cdsConfigSource(null, clusterName);
+                    node = new ClusterResourceNode(configSource, clusterName, xdsBootstrap(),
+                                                   resource, snapshotWatcher, virtualHost, route,
+                                                   index++, ResourceNodeType.DYNAMIC);
+                    children().add(node);
+                    xdsBootstrap().subscribe(node);
+                }
             }
         }
         if (children().isEmpty()) {

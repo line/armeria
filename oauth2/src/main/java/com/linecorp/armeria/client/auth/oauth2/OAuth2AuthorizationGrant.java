@@ -16,8 +16,11 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
 
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 
@@ -27,6 +30,22 @@ import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 @UnstableApi
 @FunctionalInterface
 public interface OAuth2AuthorizationGrant {
+
+    /**
+     * Creates a new builder for OAuth 2.0 Access Token Grant flow,
+     * as per <a href="https://datatracker.ietf.org/doc/rfc6749/">[RFC6749]</a>.
+     *
+     * @param accessTokenEndpoint A {@link WebClient} to facilitate an Access Token request. Must correspond to
+     *                            the Access Token endpoint of the OAuth 2 system.
+     * @param accessTokenEndpointPath A URI path that corresponds to the Access Token endpoint of the
+     *                                OAuth 2 system.
+     */
+    static OAuth2AuthorizationGrantBuilder builder(WebClient accessTokenEndpoint,
+                                                   String accessTokenEndpointPath) {
+        requireNonNull(accessTokenEndpoint, "accessTokenEndpoint");
+        requireNonNull(accessTokenEndpointPath, "accessTokenEndpointPath");
+        return new OAuth2AuthorizationGrantBuilder(accessTokenEndpoint, accessTokenEndpointPath);
+    }
 
     /**
      * Produces OAuth 2.0 Access Token

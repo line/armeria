@@ -96,7 +96,9 @@ public final class GrpcMessageMarshaller<I, O> {
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
                     if (isProto) {
-                        ByteStreams.copy(method.streamRequest(message), os);
+                        try (InputStream is = method.streamRequest(message)) {
+                            ByteStreams.copy(is, os);
+                        }
                     } else {
                         jsonMarshaller.serializeMessage(requestMarshaller, message, os);
                     }
@@ -148,7 +150,9 @@ public final class GrpcMessageMarshaller<I, O> {
                 final CompositeByteBuf out = alloc.compositeBuffer();
                 try (ByteBufOutputStream os = new ByteBufOutputStream(out)) {
                     if (isProto) {
-                        ByteStreams.copy(method.streamResponse(message), os);
+                        try (InputStream is = method.streamResponse(message)) {
+                            ByteStreams.copy(is, os);
+                        }
                     } else {
                         jsonMarshaller.serializeMessage(responseMarshaller, message, os);
                     }

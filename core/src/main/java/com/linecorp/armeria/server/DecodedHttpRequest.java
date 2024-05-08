@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -73,8 +75,6 @@ interface DecodedHttpRequest extends HttpRequest {
 
     void init(ServiceRequestContext ctx);
 
-    boolean isInitialized();
-
     RoutingContext routingContext();
 
     /**
@@ -108,9 +108,13 @@ interface DecodedHttpRequest extends HttpRequest {
     boolean isResponseAborted();
 
     /**
-     * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
+     * Returns a {@link CompletableFuture} that is completed the request is fully aggregated.
+     * {@code null} if the request does not need to be aggregated.
      */
-    boolean needsAggregation();
+    @Nullable
+    default CompletableFuture<Void> whenAggregated() {
+        return null;
+    }
 
     /**
      * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
@@ -134,17 +138,6 @@ interface DecodedHttpRequest extends HttpRequest {
      */
     default boolean isHttp1WebSocket() {
         return false;
-    }
-
-    /**
-     * Returns a new {@link StreamingDecodedHttpRequest} whose corresponding response is aborted using the
-     * specified {@link Throwable}. This is called when an {@link AggregatingDecodedHttpRequest}
-     * needs to be passed to a service before it's closed.
-     */
-    default StreamingDecodedHttpRequest toAbortedStreaming(
-            InboundTrafficController inboundTrafficController,
-            Throwable cause, boolean shouldResetOnlyIfRemoteIsOpen) {
-        throw new UnsupportedOperationException();
     }
 
     /**

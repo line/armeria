@@ -49,7 +49,7 @@ class ServiceErrorHandlerTest {
             sb.service("/baz", (ctx, req) -> {
                 throw new RuntimeException();
             });
-            sb.errorHandler(((ctx, cause) -> HttpResponse.of(HttpStatus.NO_CONTENT)));
+            sb.errorHandler((ctx, cause) -> HttpResponse.of(HttpStatus.NO_CONTENT));
         }
     };
 

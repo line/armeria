@@ -6,20 +6,19 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.enterprise' version '3.16.2'
+    id 'com.gradle.develocity' version '3.17.2'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.12.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.1'
 }
 
-import com.gradle.scan.plugin.PublishedBuildScan
+import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
 
 def isCi = System.getenv("CI") != null
 
-gradleEnterprise {
+develocity {
     server = "https://ge.armeria.dev"
     buildScan {
-        publishIfAuthenticated()
-        publishAlways()
+        publishing.onlyIf { it.authenticated }
         uploadInBackground = !isCi
         if (isCi) {
             buildScanPublished { PublishedBuildScan scan ->
@@ -53,10 +52,6 @@ gradleEnterprise {
                 tag jobName
             }
         }
-
-        capture {
-            taskInputFiles = true
-        }
     }
 }
 
@@ -64,10 +59,10 @@ buildCache {
     local {
         enabled = true
     }
-    remote(gradleEnterprise.buildCache) {
+    remote(develocity.buildCache) {
         enabled = true
         // also check access key to avoid warning logs
-        def accessKey = System.getenv("GRADLE_ENTERPRISE_ACCESS_KEY")
+        def accessKey = System.getenv("DEVELOCITY_ACCESS_KEY")
         push = isCi && accessKey != null && !accessKey.isEmpty()
     }
 }
@@ -83,8 +78,6 @@ includeWithFlags ':version-catalog',                     'version-catalog'
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
-includeWithFlags ':brave',                               'java', 'publish', 'relocate', 'no_aggregation'
-project(':brave').projectDir = file('brave/brave')
 includeWithFlags ':brave5',                              'java', 'publish', 'relocate', 'no_aggregation'
 project(':brave5').projectDir = file('brave/brave5')
 includeWithFlags ':brave6',                              'java', 'publish', 'relocate', 'native'
@@ -158,6 +151,7 @@ includeWithFlags ':spring:boot3-autoconfigure',          'java17', 'publish', 'r
 includeWithFlags ':spring:boot3-starter',                'java17', 'publish', 'relocate'
 includeWithFlags ':spring:boot3-webflux-autoconfigure',  'java17', 'publish', 'relocate'
 includeWithFlags ':spring:boot3-webflux-starter',        'java17', 'publish', 'relocate'
+includeWithFlags ':spring:spring6',                      'java17', 'publish', 'relocate'
 
 includeWithFlags ':dropwizard1',                         'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':dropwizard2',                         'java', 'publish', 'relocate'

@@ -67,28 +67,33 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
 
     private final SamlRequestIdManager requestIdManager;
     private final SamlSingleSignOnHandler ssoHandler;
+    private final boolean signatureRequired;
 
     SamlAssertionConsumerFunction(SamlAssertionConsumerConfig cfg, String entityId,
                                   Map<String, SamlIdentityProviderConfig> idpConfigs,
                                   @Nullable SamlIdentityProviderConfig defaultIdpConfig,
                                   SamlRequestIdManager requestIdManager,
-                                  SamlSingleSignOnHandler ssoHandler) {
+                                  SamlSingleSignOnHandler ssoHandler,
+                                  boolean signatureRequired) {
         this.cfg = cfg;
         this.entityId = entityId;
         this.idpConfigs = idpConfigs;
         this.defaultIdpConfig = defaultIdpConfig;
         this.requestIdManager = requestIdManager;
         this.ssoHandler = ssoHandler;
+        this.signatureRequired = signatureRequired;
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpRequest req,
                               String defaultHostname, SamlPortConfig portConfig) {
         try {
+            final SamlBindingProtocol bindingProtocol = cfg.endpoint().bindingProtocol();
             final MessageContext<Response> messageContext;
-            if (cfg.endpoint().bindingProtocol() == SamlBindingProtocol.HTTP_REDIRECT) {
+            if (bindingProtocol == SamlBindingProtocol.HTTP_REDIRECT) {
                 messageContext = HttpRedirectBindingUtil.toSamlObject(req, SAML_RESPONSE,
-                                                                      idpConfigs, defaultIdpConfig);
+                                                                      idpConfigs, defaultIdpConfig,
+                                                                      signatureRequired);
             } else {
                 messageContext = HttpPostBindingUtil.toSamlObject(req, SAML_RESPONSE);
             }
@@ -96,7 +101,9 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
             final String endpointUri = cfg.endpoint().toUriString(portConfig.scheme().uriText(),
                                                                   defaultHostname, portConfig.port());
             final Response response = messageContext.getMessage();
-            final Assertion assertion = getValidatedAssertion(response, endpointUri);
+            assert response != null;
+
+            final Assertion assertion = getValidatedAssertion(bindingProtocol, response, endpointUri);
 
             // Find a session index which is sent by an identity provider.
             final String sessionIndex = assertion.getAuthnStatements().stream()
@@ -125,7 +132,8 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
                                               issuer.getValue());
     }
 
-    private Assertion getValidatedAssertion(Response response, String endpointUri) {
+    private Assertion getValidatedAssertion(SamlBindingProtocol bindingProtocol,
+                                            Response response, String endpointUri) {
         final Status status = response.getStatus();
         final String statusCode = status.getStatusCode().getValue();
         if (!StatusCode.SUCCESS.equals(statusCode)) {
@@ -190,8 +198,13 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
 
             final SamlIdentityProviderConfig idp = resolveIdpConfig(issuer);
 
-            validateSignature(idp.signingCredential(), response);
-            validateSignature(idp.signingCredential(), assertion);
+            if (bindingProtocol != SamlBindingProtocol.HTTP_REDIRECT) {
+                validateSignature(idp.signingCredential(), response, signatureRequired);
+            } else {
+                // The above `HttpRedirectBindingUtil.toSamlObject()` call performed the validation already.
+            }
+
+            validateSignature(idp.signingCredential(), assertion, signatureRequired);
 
             final List<AuthnStatement> authnStatements = assertion.getAuthnStatements();
             if (authnStatements.isEmpty()) {

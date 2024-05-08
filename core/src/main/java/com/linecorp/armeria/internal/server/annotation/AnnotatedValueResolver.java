@@ -84,6 +84,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Delimiter;
@@ -753,6 +754,9 @@ final class AnnotatedValueResolver {
 
                 // Do not convert value here because the element type is String.
                 if (values != null && !values.isEmpty()) {
+                    if (values.size() == 1 && values.get(0).isEmpty()) {
+                        return resolvedValues;
+                    }
                     if (queryDelimiter != null && values.size() == 1) {
                         final String first = values.get(0);
                         Splitter.on(queryDelimiter)
@@ -1026,6 +1030,16 @@ final class AnnotatedValueResolver {
         if (value == null) {
             return defaultOrException();
         }
+        if (value.isEmpty()) {
+            if (String.class.isAssignableFrom(elementType)) {
+                return value;
+            }
+            if (elementType.isPrimitive()) {
+                throw new IllegalArgumentException("Cannot set null to primitive type parameter: " +
+                                                   httpElementName);
+            }
+            return null;
+        }
         return convert(value, elementType, enumConverter);
     }
 
@@ -1033,6 +1047,10 @@ final class AnnotatedValueResolver {
     private Object defaultOrException() {
         if (!shouldExist) {
             // May return 'null' if no default value is specified.
+            if (elementType.isPrimitive() && defaultValue == null) {
+                throw new IllegalArgumentException("Cannot set null to primitive type parameter: " +
+                                                   httpElementName);
+            }
             return defaultValue;
         }
         throw new IllegalArgumentException("Mandatory parameter/header is missing: " + httpElementName);

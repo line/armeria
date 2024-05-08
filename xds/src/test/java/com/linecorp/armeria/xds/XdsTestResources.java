@@ -17,11 +17,15 @@
 package com.linecorp.armeria.xds;
 
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
+import com.google.protobuf.UInt32Value;
+import com.google.protobuf.Value;
 import com.google.protobuf.util.Durations;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -39,6 +43,10 @@ import io.envoyproxy.envoy.config.core.v3.ApiVersion;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.core.v3.GrpcService;
 import io.envoyproxy.envoy.config.core.v3.GrpcService.EnvoyGrpc;
+import io.envoyproxy.envoy.config.core.v3.HeaderValue;
+import io.envoyproxy.envoy.config.core.v3.HealthStatus;
+import io.envoyproxy.envoy.config.core.v3.Locality;
+import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.core.v3.TransportSocket;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -61,15 +69,34 @@ import io.envoyproxy.envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContex
 
 public final class XdsTestResources {
 
+    public static final String BOOTSTRAP_CLUSTER_NAME = "bootstrap-cluster";
+
     private XdsTestResources() {}
 
     public static LbEndpoint endpoint(String address, int port) {
+        return endpoint(address, port, Metadata.getDefaultInstance());
+    }
+
+    public static LbEndpoint endpoint(String address, int port, int weight) {
+        return endpoint(address, port, Metadata.getDefaultInstance(), weight,
+                        HealthStatus.HEALTHY);
+    }
+
+    public static LbEndpoint endpoint(String address, int port, Metadata metadata) {
+        return endpoint(address, port, metadata, 1, HealthStatus.HEALTHY);
+    }
+
+    public static LbEndpoint endpoint(String address, int port, Metadata metadata, int weight,
+                                      HealthStatus healthStatus) {
         final SocketAddress socketAddress = SocketAddress.newBuilder()
                                                          .setAddress(address)
                                                          .setPortValue(port)
                                                          .build();
         return LbEndpoint
                 .newBuilder()
+                .setLoadBalancingWeight(UInt32Value.of(weight))
+                .setMetadata(metadata)
+                .setHealthStatus(healthStatus)
                 .setEndpoint(Endpoint.newBuilder()
                                      .setAddress(Address.newBuilder()
                                                         .setSocketAddress(socketAddress)
@@ -84,15 +111,23 @@ public final class XdsTestResources {
     public static ClusterLoadAssignment loadAssignment(String clusterName, String address, int port) {
         return ClusterLoadAssignment.newBuilder()
                                     .setClusterName(clusterName)
-                                    .addEndpoints(
-                                            LocalityLbEndpoints.newBuilder()
-                                                               .addLbEndpoints(endpoint(address, port)))
+                                    .addEndpoints(LocalityLbEndpoints.newBuilder()
+                                                                     .addLbEndpoints(endpoint(address, port)))
                                     .build();
     }
 
+    public static Cluster bootstrapCluster(URI uri, String bootstrapClusterName) {
+        final ClusterLoadAssignment loadAssignment =
+                loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
+        return createStaticCluster(bootstrapClusterName, loadAssignment);
+    }
+
+    public static Bootstrap bootstrap(URI uri) {
+        return bootstrap(uri, BOOTSTRAP_CLUSTER_NAME);
+    }
+
     public static Bootstrap bootstrap(URI uri, String clusterName) {
-        final Cluster cluster = createStaticCluster(
-                clusterName, loadAssignment(clusterName, uri.getHost(), uri.getPort()));
+        final Cluster cluster = bootstrapCluster(uri, clusterName);
         final ConfigSource configSource = basicConfigSource(clusterName);
         return bootstrap(configSource, cluster);
     }
@@ -117,37 +152,23 @@ public final class XdsTestResources {
                 .build();
     }
 
-    public static Bootstrap bootstrap(URI uri) {
-        final String bootstrapClusterName = "bootstrap-cluster";
-        final ClusterLoadAssignment loadAssignment =
-                loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
-        final Cluster cluster = createStaticCluster(bootstrapClusterName, loadAssignment);
-        final ConfigSource configSource = basicConfigSource(bootstrapClusterName);
-        return Bootstrap
-                .newBuilder()
-                .setStaticResources(
-                        StaticResources.newBuilder()
-                                       .addAllClusters(ImmutableSet.of(cluster)))
-                .setDynamicResources(
-                        DynamicResources
-                                .newBuilder()
-                                .setCdsConfig(configSource)
-                                .setAdsConfig(configSource.getApiConfigSource())
-                )
-                .build();
+    public static Bootstrap bootstrap(ConfigSource configSource, Cluster cluster) {
+        return bootstrap(configSource, Listener.getDefaultInstance(), cluster);
     }
 
-    public static Bootstrap bootstrap(ConfigSource configSource, Cluster... cluster) {
+    public static Bootstrap bootstrap(ConfigSource configSource, Listener listener, Cluster... cluster) {
+        final StaticResources.Builder staticResourceBuilder = StaticResources.newBuilder();
+        if (listener != Listener.getDefaultInstance()) {
+            staticResourceBuilder.addListeners(listener);
+        }
+        staticResourceBuilder.addAllClusters(ImmutableList.copyOf(cluster));
         return Bootstrap
                 .newBuilder()
-                .setStaticResources(
-                        StaticResources.newBuilder()
-                                       .addAllClusters(ImmutableSet.copyOf(cluster)))
-                .setDynamicResources(
-                        DynamicResources
-                                .newBuilder()
-                                .setCdsConfig(configSource)
-                                .setAdsConfig(configSource.getApiConfigSource())
+                .setStaticResources(staticResourceBuilder.build())
+                .setDynamicResources(DynamicResources
+                                             .newBuilder()
+                                             .setCdsConfig(configSource)
+                                             .setAdsConfig(configSource.getApiConfigSource())
                 )
                 .build();
     }
@@ -172,6 +193,20 @@ public final class XdsTestResources {
                 .addGrpcServices(
                         GrpcService
                                 .newBuilder()
+                                .setEnvoyGrpc(EnvoyGrpc.newBuilder()
+                                                       .setClusterName(clusterName)))
+                .setApiType(apiType)
+                .build();
+    }
+
+    public static ApiConfigSource apiConfigSource(String clusterName, ApiType apiType,
+                                                  HeaderValue... headerValues) {
+        return ApiConfigSource
+                .newBuilder()
+                .addGrpcServices(
+                        GrpcService
+                                .newBuilder()
+                                .addAllInitialMetadata(Arrays.asList(headerValues))
                                 .setEnvoyGrpc(EnvoyGrpc.newBuilder()
                                                        .setClusterName(clusterName)))
                 .setApiType(apiType)
@@ -229,17 +264,19 @@ public final class XdsTestResources {
                       .build();
     }
 
-    public static Listener exampleListener(String listenerName, String routeName) {
-        final HttpConnectionManager manager =
-                HttpConnectionManager
-                        .newBuilder()
-                        .setCodecType(CodecType.AUTO)
-                        .setStatPrefix("ingress_http")
-                        .setRds(Rds.newBuilder().setRouteConfigName(routeName))
-                        .addHttpFilters(HttpFilter.newBuilder()
-                                                  .setName("envoy.filters.http.router")
-                                                  .setTypedConfig(Any.pack(Router.getDefaultInstance())))
-                        .build();
+    public static HttpConnectionManager httpConnectionManager(Rds rds) {
+        return HttpConnectionManager
+                .newBuilder()
+                .setCodecType(CodecType.AUTO)
+                .setStatPrefix("ingress_http")
+                .setRds(rds)
+                .addHttpFilters(HttpFilter.newBuilder()
+                                          .setName("envoy.filters.http.router")
+                                          .setTypedConfig(Any.pack(Router.getDefaultInstance())))
+                .build();
+    }
+
+    public static Listener exampleListener(String listenerName, HttpConnectionManager manager) {
         return Listener.newBuilder()
                        .setName(listenerName)
                        .setApiListener(ApiListener.newBuilder()
@@ -247,25 +284,23 @@ public final class XdsTestResources {
                        .build();
     }
 
+    public static Listener exampleListener(String listenerName, String routeName) {
+        final HttpConnectionManager manager =
+                httpConnectionManager(Rds.newBuilder().setRouteConfigName(routeName).build());
+        return exampleListener(listenerName, manager);
+    }
+
     public static Listener exampleListener(String listenerName, String routeName, String clusterName) {
         final ConfigSource configSource = basicConfigSource(clusterName);
-        final HttpConnectionManager manager =
-                HttpConnectionManager
-                        .newBuilder()
-                        .setCodecType(CodecType.AUTO)
-                        .setStatPrefix("ingress_http")
-                        .setRds(Rds.newBuilder()
-                                   .setRouteConfigName(routeName)
-                                   .setConfigSource(configSource))
-                        .addHttpFilters(HttpFilter.newBuilder()
-                                                  .setName("envoy.filters.http.router")
-                                                  .setTypedConfig(Any.pack(Router.getDefaultInstance())))
-                        .build();
-        return Listener.newBuilder()
-                       .setName(listenerName)
-                       .setApiListener(ApiListener.newBuilder()
-                                                  .setApiListener(Any.pack(manager)))
-                       .build();
+        return exampleListener(listenerName, routeName, configSource);
+    }
+
+    public static Listener exampleListener(String listenerName, String routeName, ConfigSource configSource) {
+        final HttpConnectionManager manager = httpConnectionManager(Rds.newBuilder()
+                                                                       .setRouteConfigName(routeName)
+                                                                       .setConfigSource(configSource)
+                                                                       .build());
+        return exampleListener(listenerName, manager);
     }
 
     public static RouteConfiguration routeConfiguration(String routeName, VirtualHost... virtualHosts) {
@@ -289,5 +324,69 @@ public final class XdsTestResources {
                                                         .setCluster(clusterName)));
         }
         return builder.build();
+    }
+
+    public static Value stringValue(String value) {
+        return Value.newBuilder().setStringValue(value).build();
+    }
+
+    public static Listener staticResourceListener() {
+        return staticResourceListener(Metadata.getDefaultInstance());
+    }
+
+    public static Listener staticResourceListener(Metadata metadata) {
+        return staticResourceListener(metadata, "cluster");
+    }
+
+    public static Listener staticResourceListener(Metadata metadata, String clusterName) {
+        final RouteAction.Builder routeActionBuilder = RouteAction.newBuilder().setCluster(clusterName);
+        if (metadata != Metadata.getDefaultInstance()) {
+            routeActionBuilder.setMetadataMatch(metadata);
+        }
+        final VirtualHost virtualHost =
+                VirtualHost.newBuilder()
+                           .setName("route")
+                           .addDomains("*")
+                           .addRoutes(Route.newBuilder()
+                                           .setMatch(RouteMatch.newBuilder().setPrefix("/"))
+                                           .setRoute(routeActionBuilder))
+                           .build();
+        final HttpConnectionManager manager =
+                HttpConnectionManager
+                        .newBuilder()
+                        .setCodecType(CodecType.AUTO)
+                        .setStatPrefix("ingress_http")
+                        .setRouteConfig(RouteConfiguration.newBuilder()
+                                                          .setName("route")
+                                                          .addVirtualHosts(virtualHost)
+                                                          .build())
+                        .addHttpFilters(HttpFilter.newBuilder()
+                                                  .setName("envoy.filters.http.router")
+                                                  .setTypedConfig(Any.pack(Router.getDefaultInstance())))
+                        .build();
+        return Listener.newBuilder()
+                       .setName("listener")
+                       .setApiListener(ApiListener.newBuilder().setApiListener(Any.pack(manager)))
+                       .build();
+    }
+
+    public static Bootstrap staticBootstrap(Listener listener, Cluster cluster) {
+        return Bootstrap.newBuilder()
+                        .setStaticResources(StaticResources.newBuilder()
+                                                           .addListeners(listener)
+                                                           .addClusters(cluster)
+                                                           .build()).build();
+    }
+
+    public static LocalityLbEndpoints localityLbEndpoints(Locality locality,
+                                                          Collection<LbEndpoint> endpoints) {
+        return LocalityLbEndpoints.newBuilder()
+                                  .addAllLbEndpoints(endpoints)
+                                  .setLocality(locality)
+                                  .build();
+    }
+
+    public static LocalityLbEndpoints localityLbEndpoints(Locality locality, LbEndpoint... endpoints) {
+        return localityLbEndpoints(locality, Arrays.asList(endpoints));
     }
 }

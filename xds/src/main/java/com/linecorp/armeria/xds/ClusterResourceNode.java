@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.linecorp.armeria.xds.XdsType.CLUSTER;
 import static java.util.Objects.requireNonNull;
 
@@ -24,6 +25,7 @@ import java.util.Objects;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.EdsClusterConfig;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.route.v3.Route;
@@ -69,13 +71,17 @@ final class ClusterResourceNode extends AbstractResourceNodeWithPrimer<ClusterXd
         if (cluster.hasLoadAssignment()) {
             final ClusterLoadAssignment loadAssignment = cluster.getLoadAssignment();
             final EndpointResourceNode node =
-                    StaticResourceUtils.staticEndpoint(xdsBootstrap(), cluster.getName(),
+                    StaticResourceUtils.staticEndpoint(xdsBootstrap(), loadAssignment.getClusterName(),
                                                        resource, snapshotWatcher, loadAssignment);
             children().add(node);
         } else if (cluster.hasEdsClusterConfig()) {
-            final ConfigSource configSource = cluster.getEdsClusterConfig().getEdsConfig();
+            final EdsClusterConfig edsClusterConfig = cluster.getEdsClusterConfig();
+            final String serviceName = edsClusterConfig.getServiceName();
+            final String clusterName = !isNullOrEmpty(serviceName) ? serviceName : cluster.getName();
+            final ConfigSource configSource = configSourceMapper()
+                    .edsConfigSource(cluster.getEdsClusterConfig().getEdsConfig(), clusterName);
             final EndpointResourceNode node =
-                    new EndpointResourceNode(configSource, cluster.getName(), xdsBootstrap(), resource,
+                    new EndpointResourceNode(configSource, clusterName, xdsBootstrap(), resource,
                                              snapshotWatcher, ResourceNodeType.DYNAMIC);
             children().add(node);
             xdsBootstrap().subscribe(node);

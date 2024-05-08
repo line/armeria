@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,16 +29,17 @@ import io.grpc.Status;
 final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
 
     private final Map<String, ClusterSnapshot> clusterSnapshots = new HashMap<>();
+    private final Map<String, Cluster> clusters = new HashMap<>();
 
     BootstrapClusters(Bootstrap bootstrap, XdsBootstrapImpl xdsBootstrap) {
         if (bootstrap.hasStaticResources()) {
             final StaticResources staticResources = bootstrap.getStaticResources();
             for (Cluster cluster : staticResources.getClustersList()) {
-                checkArgument(cluster.hasLoadAssignment(),
-                              "Only fully static configurations are allowed for bootstrap clusters. " +
-                              "Violating cluster is %s", cluster);
-                // no need to clean this cluster up since it is fully static
-                StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), this, cluster);
+                if (cluster.hasLoadAssignment()) {
+                    // no need to clean this cluster up since it is fully static
+                    StaticResourceUtils.staticCluster(xdsBootstrap, cluster.getName(), this, cluster);
+                }
+                clusters.put(cluster.getName(), cluster);
             }
         }
     }
@@ -51,8 +50,13 @@ final class BootstrapClusters implements SnapshotWatcher<ClusterSnapshot> {
     }
 
     @Nullable
-    ClusterSnapshot get(String name) {
-        return clusterSnapshots.get(name);
+    ClusterSnapshot clusterSnapshot(String clusterName) {
+        return clusterSnapshots.get(clusterName);
+    }
+
+    @Nullable
+    Cluster cluster(String clusterName) {
+        return clusters.get(clusterName);
     }
 
     @Override
