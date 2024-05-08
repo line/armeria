@@ -202,7 +202,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     final void writeHeaders(RequestHeaders headers) {
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        if (handleExpect100ContinueHeader(headers)) {
+        if (shouldExpect100ContinueHeader(headers)) {
             state = State.NEEDS_100_CONTINUE;
         } else if (headersOnly) {
             state = State.DONE;
@@ -240,19 +240,10 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
     }
 
-    private static boolean handleExpect100ContinueHeader(RequestHeaders headers) {
+    private static boolean shouldExpect100ContinueHeader(RequestHeaders headers) {
         // Skip checking protocol version since Armeria is not fully compatible with HTTP/1.0.
         // We can assume that the version is always HTTP/1.1 or later.
-        final String expectValue = headers.get(HttpHeaderNames.EXPECT);
-        if (expectValue == null) {
-            return false;
-        }
-
-        if (!Ascii.equalsIgnoreCase(HttpHeaderValues.CONTINUE, expectValue)) {
-            return false;
-        }
-
-        return true;
+        return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
     }
 
     final boolean handle100Continue(HttpStatus status) {

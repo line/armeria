@@ -32,6 +32,7 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hc.core5.http2.hpack.HPackEncoder;
@@ -74,12 +75,13 @@ final class HttpClientExpect100HeaderTest {
 
                 final int port = ss.getLocalPort();
                 final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
-                client.prepare()
-                      .post("/")
-                      .content("foo")
-                      .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
-                      .execute()
-                      .aggregate();
+                final CompletableFuture<AggregatedHttpResponse> future =
+                        client.prepare()
+                              .post("/")
+                              .content("foo\n")
+                              .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
+                              .execute()
+                              .aggregate();
 
                 try (Socket s = ss.accept()) {
                     final InputStream inputStream = s.getInputStream();
@@ -91,7 +93,7 @@ final class HttpClientExpect100HeaderTest {
                     assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
                     assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
                     assertThat(in.readLine()).isEqualTo("expect: 100-continue");
-                    assertThat(in.readLine()).isEqualTo("content-length: 3");
+                    assertThat(in.readLine()).isEqualTo("content-length: 4");
                     assertThat(in.readLine()).startsWith("user-agent: armeria/");
                     assertThat(in.readLine()).isEmpty();
 
@@ -109,6 +111,9 @@ final class HttpClientExpect100HeaderTest {
                                "\r\n").getBytes(StandardCharsets.US_ASCII));
 
                     assertThat(in.readLine()).isNull();
+
+                    final AggregatedHttpResponse res = future.join();
+                    assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
                 }
             }
         }
@@ -121,7 +126,7 @@ final class HttpClientExpect100HeaderTest {
                 final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
                 client.prepare()
                       .post("/")
-                      .content("foo")
+                      .content("foo\n")
                       .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
                       .execute()
                       .aggregate();
@@ -135,7 +140,7 @@ final class HttpClientExpect100HeaderTest {
                     assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
                     assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
                     assertThat(in.readLine()).isEqualTo("expect: 100-continue");
-                    assertThat(in.readLine()).isEqualTo("content-length: 3");
+                    assertThat(in.readLine()).isEqualTo("content-length: 4");
                     assertThat(in.readLine()).startsWith("user-agent: armeria/");
                     assertThat(in.readLine()).isEmpty();
 
@@ -144,6 +149,8 @@ final class HttpClientExpect100HeaderTest {
                                "\r\n").getBytes(StandardCharsets.US_ASCII));
 
                     assertThat(in.readLine()).isNull();
+
+                    // TODO: Check the response status.
                 }
             }
         }
