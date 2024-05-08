@@ -66,7 +66,6 @@ final class HttpJsonTranscodingPathParser {
             // Consume the start symbol ':'.
             checkArgument(context.read() == ':',
                           "path: %s (invalid verb part at index %s)", context.path(), context.index());
-            // We don't check 'Verb' part because we don't use it when generating a corresponding path pattern.
             segments.add(new VerbPathSegment(context.readAll()));
         }
 
