@@ -30,8 +30,6 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.oauth2.ClientAuthentication;
@@ -140,13 +138,11 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
         return token != null && token.isValid(Instant.now().plus(refreshBefore));
     }
 
-    @VisibleForTesting
-    void obtainAccessToken(CompletableFuture<GrantedOAuth2AccessToken> future) {
+    private void obtainAccessToken(CompletableFuture<GrantedOAuth2AccessToken> future) {
         executeRequest(accessTokenRequest(), future);
     }
 
-    @VisibleForTesting
-    void refreshAccessToken(GrantedOAuth2AccessToken token,
+    private void refreshAccessToken(GrantedOAuth2AccessToken token,
                             CompletableFuture<GrantedOAuth2AccessToken> future) {
         final AccessTokenRequest accessTokenRequest = accessTokenRequest();
         final ClientAuthentication clientAuthentication = accessTokenRequest.clientAuthentication();
