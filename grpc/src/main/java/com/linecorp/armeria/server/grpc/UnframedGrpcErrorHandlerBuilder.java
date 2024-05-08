@@ -60,8 +60,7 @@ public final class UnframedGrpcErrorHandlerBuilder {
      * for encoding the error responses. If messages or message types have
      * already been registered, calling this method will result in an
      * {@link IllegalStateException}. If nothing is specified,
-     * {@link UnframedGrpcErrorHandlers#ERROR_DETAILS_MARSHALLER} is used as
-     * default json marshaller.
+     * the default JSON marshaller is used.
      *
      * @param jsonMarshaller The custom JSON marshaller to use
      */
@@ -210,7 +209,7 @@ public final class UnframedGrpcErrorHandlerBuilder {
      */
     public UnframedGrpcErrorHandler build() {
         if (jsonMarshaller == null) {
-            jsonMarshaller = UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER;
+            jsonMarshaller = JsonUnframedGrpcErrorHandler.ERROR_DETAILS_MARSHALLER;
             final MessageMarshaller.Builder builder = jsonMarshaller.toBuilder();
 
             if (marshalledMessages != null) {
@@ -229,22 +228,22 @@ public final class UnframedGrpcErrorHandlerBuilder {
         }
 
         if (responseTypes == null) {
-            return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
+            return DefaultUnframedGrpcErrorHandler.of(statusMappingFunction, jsonMarshaller);
         }
 
         if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON) &&
             responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
-            return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
+            return DefaultUnframedGrpcErrorHandler.of(statusMappingFunction, jsonMarshaller);
         }
 
         if (responseTypes.contains(UnframedGrpcErrorResponseType.JSON)) {
-            return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction, jsonMarshaller);
+            return JsonUnframedGrpcErrorHandler.of(statusMappingFunction, jsonMarshaller);
         }
 
         if (responseTypes.contains(UnframedGrpcErrorResponseType.PLAINTEXT)) {
-            return UnframedGrpcErrorHandlers.ofPlaintext(statusMappingFunction);
+            return TextUnframedGrpcErrorHandler.of(statusMappingFunction);
         }
 
-        return UnframedGrpcErrorHandlers.of(statusMappingFunction, jsonMarshaller);
+        return DefaultUnframedGrpcErrorHandler.of(statusMappingFunction, jsonMarshaller);
     }
 }

@@ -11,7 +11,7 @@ plugins {
     id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.1'
 }
 
-import com.gradle.scan.plugin.PublishedBuildScan
+import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
 
 def isCi = System.getenv("CI") != null
 
@@ -19,7 +19,6 @@ develocity {
     server = "https://ge.armeria.dev"
     buildScan {
         publishing.onlyIf { it.authenticated }
-        publishing
         uploadInBackground = !isCi
         if (isCi) {
             buildScanPublished { PublishedBuildScan scan ->
@@ -67,7 +66,7 @@ buildCache {
     remote(develocity.buildCache) {
         enabled = true
         // also check access key to avoid warning logs
-        def accessKey = System.getenv("GRADLE_ENTERPRISE_ACCESS_KEY")
+        def accessKey = System.getenv("DEVELOCITY_ACCESS_KEY")
         push = isCi && accessKey != null && !accessKey.isEmpty()
     }
 }
