@@ -27,8 +27,8 @@ import io.micrometer.context.ThreadLocalAccessor;
 
 /**
  * This class works with the
- * <a href="https://docs.micrometer.io/context-propagation/reference/index.html">
- * Context-propagation</a> library and keep the {@link RequestContext} during
+ * <a href="https://docs.micrometer.io/context-propagation/reference/index.html">Micrometer
+ * Context Propagation</a> to keep the {@link RequestContext} during
  * <a href="https://github.com/reactor/reactor-core">Reactor</a> operations.
  * Get the {@link RequestContextThreadLocalAccessor} to register it to the {@link ContextRegistry}.
  * Then, {@link ContextRegistry} will use {@link RequestContextThreadLocalAccessor} to
