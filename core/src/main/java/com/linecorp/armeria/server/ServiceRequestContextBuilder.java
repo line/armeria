@@ -242,7 +242,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
 
         // Build the context with the properties set by a user and the fake objects.
-        final Channel ch = fakeChannel();
+        final Channel ch = fakeChannel(eventLoop);
         return new DefaultServiceRequestContext(
                 serviceCfg, ch, eventLoop, meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, exchangeType, req, sslSession(), proxiedAddresses,

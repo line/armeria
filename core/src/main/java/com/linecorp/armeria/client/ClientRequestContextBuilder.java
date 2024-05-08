@@ -145,7 +145,8 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
             ctx.finishInitialization(cause == null);
             return null;
         });
-        ctx.logBuilder().session(fakeChannel(), sessionProtocol(), sslSession(), connectionTimings);
+        ctx.logBuilder().session(fakeChannel(ctx.eventLoop()), sessionProtocol(), sslSession(),
+                                 connectionTimings);
 
         if (request() != null) {
             ctx.logBuilder().requestHeaders(request().headers());
