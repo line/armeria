@@ -57,10 +57,10 @@ jobs:
           - java: 17
             on: ${{ needs.choose-self-hosted.outputs.runner }}
             leak: true
-          - java: 21
+          - java: 17
             on: ${{ needs.choose-self-hosted.outputs.runner }}
             min-java: 11
-          - java: 21
+          - java: 17
             on: ${{ needs.choose-self-hosted.outputs.runner }}
             min-java: 17
             coverage: true
