@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -41,7 +39,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private static final AtomicReferenceFieldUpdater<
             DefaultAsyncLoader, RefreshingFuture> loadFutureUpdater = AtomicReferenceFieldUpdater
             .newUpdater(DefaultAsyncLoader.class, RefreshingFuture.class, "loadFuture");
-    private static final ExecutorService DEFAULT_REFRESH_EXECUTOR = Executors.newSingleThreadExecutor();
 
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     @Nullable
@@ -51,8 +48,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     @Nullable
     private final Predicate<@Nullable T> refreshIf;
     @Nullable
-    private final ExecutorService refreshExecutor;
-    @Nullable
     private final BiFunction<Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler;
 
     private volatile RefreshingFuture<T> loadFuture = RefreshingFuture.completedFuture();
@@ -61,7 +56,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                        @Nullable Duration expireAfterLoad,
                        @Nullable Predicate<@Nullable T> expireIf,
                        @Nullable Predicate<@Nullable T> refreshIf,
-                       @Nullable ExecutorService refreshExecutor,
                        @Nullable BiFunction<
                                Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler) {
         requireNonNull(loader, "loader");
@@ -69,7 +63,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         this.expireAfterLoad = expireAfterLoad;
         this.expireIf = expireIf;
         this.refreshIf = refreshIf;
-        this.refreshExecutor = refreshExecutor;
         this.exceptionHandler = exceptionHandler;
     }
 
@@ -81,7 +74,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private CompletableFuture<CacheEntry<T>> get0() {
         RefreshingFuture<T> future;
         CacheEntry<T> cacheEntry = null;
-        boolean needsRefresh = false;
         for (;;) {
             final RefreshingFuture<T> loadFuture = this.loadFuture;
             if (!loadFuture.isDone()) {
@@ -105,13 +97,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         }
 
         final T cache = cacheEntry != null ? cacheEntry.loadVal : null;
-        if (needsRefresh) {
-            final CompletableFuture<CacheEntry<T>> newRefreshFuture = future;
-            CompletableFuture.runAsync(() -> load(cache, newRefreshFuture),
-                                       refreshExecutor != null ? refreshExecutor : DEFAULT_REFRESH_EXECUTOR);
-        } else {
-            load(cache, future);
-        }
+        load(cache, future);
 
         return future;
     }

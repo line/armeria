@@ -43,8 +43,6 @@ public final class AsyncLoaderBuilder<T> {
     @Nullable
     private Predicate<@Nullable T> refreshIf;
     @Nullable
-    private ExecutorService refreshExecutor;
-    @Nullable
     private BiFunction<Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler;
 
     AsyncLoaderBuilder(Function<@Nullable T, CompletableFuture<T>> loader) {
@@ -86,16 +84,6 @@ public final class AsyncLoaderBuilder<T> {
     }
 
     /**
-     * Set executor service to execute refresh.
-     * @see AsyncLoaderBuilder#refreshIf(Predicate)
-     */
-    public AsyncLoaderBuilder<T> refreshExecutor(ExecutorService refreshExecutor) {
-        requireNonNull(refreshExecutor, "refreshExecutor");
-        this.refreshExecutor = refreshExecutor;
-        return this;
-    }
-
-    /**
      * Handles exception thrown by loader.
      * If exception handler returns {@code null}, complete {@link AsyncLoader#get()} exceptionally.
      */
@@ -115,7 +103,6 @@ public final class AsyncLoaderBuilder<T> {
         if (expireAfterLoad == null && expireIf == null) {
             throw new IllegalStateException("Must set AsyncLoader's expiration.");
         }
-        return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, refreshIf,
-                                        refreshExecutor, exceptionHandler);
+        return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, refreshIf, exceptionHandler);
     }
 }
