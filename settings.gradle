@@ -52,10 +52,6 @@ develocity {
                 tag jobName
             }
         }
-
-        capture {
-            fileFingerprints = true
-        }
     }
 }
 

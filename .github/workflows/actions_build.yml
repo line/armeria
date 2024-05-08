@@ -48,7 +48,7 @@ jobs:
       fail-fast: false
       matrix:
         on: [ "${{ needs.choose-self-hosted.outputs.runner }}", macos-12, windows-latest ]
-        java: [ 21, 19 ]
+        java: [ 21 ]
         include:
           - java: 8
             on: ${{ needs.choose-self-hosted.outputs.runner }}
@@ -57,18 +57,13 @@ jobs:
           - java: 17
             on: ${{ needs.choose-self-hosted.outputs.runner }}
             leak: true
-          - java: 17
+          - java: 21
             on: ${{ needs.choose-self-hosted.outputs.runner }}
             min-java: 11
-          - java: 17
+          - java: 21
             on: ${{ needs.choose-self-hosted.outputs.runner }}
             min-java: 17
             coverage: true
-          - java: 19
-            on: ${{ needs.choose-self-hosted.outputs.runner }}
-            snapshot: true
-            # blockhound makes the build run about 10 minutes slower
-            blockhound: true
           - java: 21
             on: ${{ needs.choose-self-hosted.outputs.runner }}
             snapshot: true
