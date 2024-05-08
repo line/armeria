@@ -198,6 +198,7 @@ public abstract class AbstractRequestContextBuilder {
     /**
      * Returns the {@link EventLoop} that handles the request.
      */
+    @Nullable
     protected final EventLoop eventLoop() {
         return eventLoop;
     }
