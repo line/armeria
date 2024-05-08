@@ -57,9 +57,7 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
     private final Supplier<CompletableFuture<? extends GrantedOAuth2AccessToken>> fallbackTokenProvider;
     @Nullable
     private final Consumer<? super GrantedOAuth2AccessToken> newTokenConsumer;
-
-    @Nullable
-    private AsyncLoader<GrantedOAuth2AccessToken> tokenLoader;
+    private final AsyncLoader<GrantedOAuth2AccessToken> tokenLoader;
 
     DefaultOAuth2AuthorizationGrant(
             WebClient accessTokenEndpoint, String accessTokenEndpointPath,
@@ -74,36 +72,12 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
         this.refreshBefore = refreshBefore;
         this.fallbackTokenProvider = fallbackTokenProvider;
         this.newTokenConsumer = newTokenConsumer;
-    }
-
-    /**
-     * Issues an {@code OAuth 2.0 Access Token} and cache it in memory and returns the cached one
-     * until the token is considered valid. It automatically refreshes the cached token once it's
-     * considered expired and returns the refreshed one.
-     *
-     * <p>Renewing a token is guaranteed to be atomic even though the method is invoked by multiple threads.
-     *
-     * <p>It optionally tries to load an access token from
-     * {@link OAuth2AuthorizationGrantBuilder#fallbackTokenProvider(Supplier)}
-     * which supposedly gets one by querying to a longer term storage, before it makes a request
-     * to the authorization server.
-     *
-     * <p>One may choose to provide a hook which gets executed every time a token is issued or refreshed
-     * from the authorization server to store the renewed token to a longer term storage via
-     * {@link OAuth2AuthorizationGrantBuilder#newTokenConsumer(Consumer)} .
-     */
-    @Override
-    public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
-        return tokenLoader().get();
+        tokenLoader = tokenLoader();
     }
 
     private AsyncLoader<GrantedOAuth2AccessToken> tokenLoader() {
-        if (tokenLoader != null) {
-            return tokenLoader;
-        }
-
-        final Function<GrantedOAuth2AccessToken, CompletableFuture<GrantedOAuth2AccessToken>> loader =
-                token -> {
+        final Function<GrantedOAuth2AccessToken,
+                CompletableFuture<GrantedOAuth2AccessToken>> loader = token -> {
             final CompletableFuture<GrantedOAuth2AccessToken> newTokenFuture = new CompletableFuture<>();
 
             if (token == null && fallbackTokenProvider != null) {
@@ -136,10 +110,30 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
             return newTokenFuture;
         };
 
-        tokenLoader = AsyncLoader.builder(loader)
-                                 .expireIf(token -> !isValidToken(token))
-                                 .build();
-        return tokenLoader;
+        return AsyncLoader.builder(loader)
+                          .expireIf(token -> !isValidToken(token))
+                          .build();
+    }
+
+    /**
+     * Issues an {@code OAuth 2.0 Access Token} and cache it in memory and returns the cached one
+     * until the token is considered valid. It automatically refreshes the cached token once it's
+     * considered expired and returns the refreshed one.
+     *
+     * <p>Renewing a token is guaranteed to be atomic even though the method is invoked by multiple threads.
+     *
+     * <p>It optionally tries to load an access token from
+     * {@link OAuth2AuthorizationGrantBuilder#fallbackTokenProvider(Supplier)}
+     * which supposedly gets one by querying to a longer term storage, before it makes a request
+     * to the authorization server.
+     *
+     * <p>One may choose to provide a hook which gets executed every time a token is issued or refreshed
+     * from the authorization server to store the renewed token to a longer term storage via
+     * {@link OAuth2AuthorizationGrantBuilder#newTokenConsumer(Consumer)} .
+     */
+    @Override
+    public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
+        return tokenLoader.get();
     }
 
     private boolean isValidToken(@Nullable GrantedOAuth2AccessToken token) {
