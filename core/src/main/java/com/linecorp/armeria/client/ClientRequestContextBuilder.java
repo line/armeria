@@ -134,15 +134,12 @@ public final class ClientRequestContextBuilder extends AbstractRequestContextBui
                 request(), rpcRequest(), requestOptions, responseCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros());
-        if (!timedOut()) {
-            ctx.whenInitialized().handle((unused1, unused2) -> {
-                ctx.responseCancellationScheduler().initAndStart(ctx.eventLoop(), noopCancellationTask);
-                return null;
-            });
-        }
-
+        
         ctx.init(endpointGroup).handle((unused, cause) -> {
             ctx.finishInitialization(cause == null);
+            if (!timedOut()) {
+                ctx.responseCancellationScheduler().initAndStart(ctx.eventLoop(), noopCancellationTask);
+            }
             return null;
         });
         ctx.logBuilder().session(fakeChannel(ctx.eventLoop()), sessionProtocol(), sslSession(),
