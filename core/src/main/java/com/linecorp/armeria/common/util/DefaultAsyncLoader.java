@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
@@ -68,10 +67,10 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     @Override
     public CompletableFuture<T> get() {
-        return get0().thenApply(f -> f.loadVal);
+        return maybeLoad().thenApply(f -> f.value);
     }
 
-    private CompletableFuture<CacheEntry<T>> get0() {
+    private CompletableFuture<CacheEntry<T>> maybeLoad() {
         RefreshingFuture<T> future;
         CacheEntry<T> cacheEntry = null;
         for (;;) {
@@ -81,22 +80,22 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             }
 
             if (!loadFuture.isCompletedExceptionally()) {
-                cacheEntry = loadFuture.join();
-                if (isValid(cacheEntry)) {
-                    needsRefresh = needsRefresh(cacheEntry);
-                    if (!needsRefresh || loadFuture.refreshing) {
+                final CacheEntry<T> cacheEntry0 = loadFuture.join();
+                if (isValid(cacheEntry0)) {
+                    cacheEntry = cacheEntry0;
+                    if (!needsRefresh(cacheEntry) || loadFuture.refreshing) {
                         return loadFuture;
                     }
                 }
             }
 
-            future = new RefreshingFuture<>(isValid(cacheEntry) ? cacheEntry : null);
+            future = new RefreshingFuture<>(cacheEntry);
             if (loadFutureUpdater.compareAndSet(this, loadFuture, future)) {
                 break;
             }
         }
 
-        final T cache = cacheEntry != null ? cacheEntry.loadVal : null;
+        final T cache = cacheEntry != null ? cacheEntry.value : null;
         load(cache, future);
 
         return future;
@@ -109,7 +108,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         }
 
         boolean refresh = false;
-        final T cache = cacheEntry.loadVal;
+        final T cache = cacheEntry.value;
         try {
             refresh = refreshIf != null && refreshIf.test(cache);
         } catch (Exception e) {
@@ -150,9 +149,9 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private void handleByExceptionHandler(Throwable originCause, @Nullable T cache,
                                           CompletableFuture<CacheEntry<T>> future) {
         try {
-            final CompletableFuture<T> handleException = exceptionHandler.apply(originCause, cache);
-            if (handleException != null) {
-                handleException.handle((val, cause) -> {
+            final CompletableFuture<T> fallback = exceptionHandler.apply(originCause, cache);
+            if (fallback != null) {
+                fallback.handle((val, cause) -> {
                     if (cause != null) {
                         logger.warn("Failed to load a new value from exceptionHandler: {}." +
                                     "the previous value: {}", exceptionHandler, cache, cause);
@@ -177,13 +176,13 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         }
 
         if (expireAfterLoad != null) {
-            final Instant expiration = cacheEntry.loadWhen.plusMillis(expireAfterLoad.toMillis());
-            if (Instant.now().isAfter(expiration)) {
+            final long elapsed = System.nanoTime() - cacheEntry.cachedAt;
+            if (elapsed >= expireAfterLoad.toNanos()) {
                 return false;
             }
         }
 
-        if (expireIf != null && expireIf.test(cacheEntry.loadVal)) {
+        if (expireIf != null && expireIf.test(cacheEntry.value)) {
             return false;
         }
 
@@ -192,21 +191,27 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     private static class CacheEntry<T> {
 
-        private final T loadVal;
-        private final Instant loadWhen = Instant.now();
+        private final T value;
+        private final long cachedAt = System.nanoTime();
 
-        CacheEntry(T loadVal) {
-            requireNonNull(loadVal, "loadVal");
-            this.loadVal = loadVal;
+        CacheEntry(T value) {
+            requireNonNull(value, "value");
+            this.value = value;
         }
     }
 
     private static class RefreshingFuture<U> extends CompletableFuture<CacheEntry<U>> {
 
-        public static <T> RefreshingFuture<T> completedFuture() {
-            final RefreshingFuture<T> future = new RefreshingFuture<>(null);
-            future.complete(null);
-            return future;
+        private static final RefreshingFuture<?> COMPLETED;
+
+        static {
+            COMPLETED = new RefreshingFuture<>(null);
+            COMPLETED.complete(null);
+        }
+
+        @SuppressWarnings("unchecked")
+        static <T> RefreshingFuture<T> completedFuture() {
+            return (RefreshingFuture<T>) COMPLETED;
         }
 
         @Nullable
@@ -235,7 +240,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         public boolean completeExceptionally(Throwable ex) {
             refreshing = false;
             if (cacheEntry != null) {
-                logger.warn("Failed to refresh a new value. the previous value: {}", cacheEntry.loadVal, ex);
+                logger.warn("Failed to refresh a new value. the previous value: {}", cacheEntry.value, ex);
             } else {
                 obtrudeException(ex);
             }
