@@ -23,13 +23,13 @@ import java.util.Queue;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Routed;
 import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -202,15 +202,18 @@ public final class RouteDecoratingService implements HttpService {
             return service.serve(ctx, req);
         }
 
-        public List<HttpService> serviceChain(ServiceRequestContext ctx) {
-            final ImmutableList.Builder<HttpService> builder = ImmutableList.builder();
-            router.findAll(ctx.routingContext()).forEach(routed -> {
+        @Nullable
+        public <T extends HttpService> T findService(ServiceRequestContext ctx,
+                                                     Class<? extends T> serviceClass) {
+            for (Routed<RouteDecoratingService> routed : router.findAll(ctx.routingContext())) {
                 if (routed.isPresent()) {
-                    builder.add(routed.value().decorator());
+                    final T service = routed.value().decorator().as(serviceClass);
+                    if (service != null) {
+                        return service;
+                    }
                 }
-            });
-            builder.add((HttpService) unwrap());
-            return builder.build();
+            }
+            return unwrap().as(serviceClass);
         }
 
         @Override

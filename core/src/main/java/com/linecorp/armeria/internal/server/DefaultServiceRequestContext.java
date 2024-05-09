@@ -266,21 +266,11 @@ public final class DefaultServiceRequestContext
     public <T extends HttpService> T findService(Class<? extends T> serviceClass) {
         requireNonNull(serviceClass, "serviceClass");
         final HttpService service = config().service();
-        if (!(service instanceof InitialDispatcherService)) {
+        if (service instanceof InitialDispatcherService) {
+            return ((InitialDispatcherService) service).findService(this, serviceClass);
+        } else {
             return service.as(serviceClass);
         }
-
-        if (serviceChain == null) {
-            serviceChain = ((InitialDispatcherService) service).serviceChain(this);
-        }
-
-        for (HttpService service0 : serviceChain) {
-            final T targetService = service0.as(serviceClass);
-            if (targetService != null) {
-                return targetService;
-            }
-        }
-        return null;
     }
 
     @Override
