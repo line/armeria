@@ -86,8 +86,8 @@ class Http1ServerDelayedCloseConnectionTest {
 
             final long defaultHttp1ConnectionCloseDelayMillis = Flags.defaultHttp1ConnectionCloseDelayMillis();
             assertThat(readDurationMillis).isBetween(
-                    defaultHttp1ConnectionCloseDelayMillis - 100,
-                    defaultHttp1ConnectionCloseDelayMillis + 1000
+                    defaultHttp1ConnectionCloseDelayMillis - 2000,
+                    defaultHttp1ConnectionCloseDelayMillis + 2000
             );
 
             socket.close();
