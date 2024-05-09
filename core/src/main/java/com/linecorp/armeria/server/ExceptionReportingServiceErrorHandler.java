@@ -37,7 +37,7 @@ final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
         if (ctx.shouldReportUnhandledExceptions() && !isIgnorableException(cause)) {
-            reporter.report(cause);
+            reporter.report(ctx, cause);
         }
         return delegate.onServiceException(ctx, cause);
     }
