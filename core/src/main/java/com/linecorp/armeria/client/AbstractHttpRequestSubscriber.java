@@ -85,7 +85,9 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         //     class can be called before the member fields (subscription, id, responseWrapper and
         //     timeoutFuture) are initialized.
         //     It is because the successful write of the first headers will trigger subscription.request(1).
-        writeHeaders(mapHeaders(request.headers()));
+        //     And it ignores `Expect: 100-continue` header because it is not common to use the header
+        //     with the reactive streams API.
+        writeHeaders(mapHeaders(request.headers()), false);
         channel().flush();
     }
 

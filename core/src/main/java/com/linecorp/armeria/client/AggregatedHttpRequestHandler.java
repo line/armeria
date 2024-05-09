@@ -20,13 +20,16 @@ import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.http.HttpHeaderValues;
 
 final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         implements BiFunction<AggregatedHttpRequest, Throwable, Void> {
@@ -65,7 +68,14 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
             return;
         }
 
-        writeHeaders(request.headers());
+        final RequestHeaders headers = request.headers();
+        final boolean shouldExpect100ContinueHeader = shouldExpect100ContinueHeader(headers);
+        if (shouldExpect100ContinueHeader && request.content().isEmpty()) {
+            failAndReset(new IllegalArgumentException(
+                    "an empty content is not allowed with Expect: 100-continue header"));
+            return;
+        }
+        writeHeaders(headers, shouldExpect100ContinueHeader);
         if (cancelled) {
             request.content().close();
             // If the headers size exceeds the limit, the headers write fails immediately.
@@ -77,6 +87,12 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
             writeDataOrTrailers();
         }
         channel().flush();
+    }
+
+    private static boolean shouldExpect100ContinueHeader(RequestHeaders headers) {
+        // Skip checking protocol version since Armeria is not fully compatible with HTTP/1.0.
+        // We can assume that the version is always HTTP/1.1 or later.
+        return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
     }
 
     private void writeDataOrTrailers() {

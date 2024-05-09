@@ -69,6 +69,24 @@ final class HttpClientExpect100HeaderTest {
     @Nested
     class AggregatedHttpRequestHandlerTest {
         @Test
+        void sendRequestWithEmptyContent() throws Exception {
+            try (ServerSocket ss = new ServerSocket(0)) {
+                final int port = ss.getLocalPort();
+                final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
+                final CompletableFuture<AggregatedHttpResponse> future =
+                        client.prepare()
+                              .get("/")
+                              .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
+                              .execute()
+                              .aggregate();
+
+                assertThatThrownBy(future::join)
+                        .hasCauseInstanceOf(IllegalArgumentException.class)
+                        .hasMessageContaining("Expect: 100-continue header");
+            }
+        }
+
+        @Test
         void continueToSendHttp1Request() throws Exception {
             try (ServerSocket ss = new ServerSocket(0)) {
                 ss.setSoTimeout(10000);
@@ -259,10 +277,8 @@ final class HttpClientExpect100HeaderTest {
     @Nested
     class HttpRequestHandlerSubscriberTest {
         @Test
-        void continueToSendHttp1StreamingRequest() throws Exception {
+        void ignoreHeaderWhenStreamingRequest() throws Exception {
             try (ServerSocket ss = new ServerSocket(0)) {
-                ss.setSoTimeout(10000);
-
                 final int port = ss.getLocalPort();
                 final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
                 final RequestHeaders headers =
@@ -290,13 +306,6 @@ final class HttpClientExpect100HeaderTest {
                     assertThat(in.readLine()).startsWith("user-agent: armeria/");
                     assertThat(in.readLine()).isEqualTo("transfer-encoding: chunked");
                     assertThat(in.readLine()).isEmpty();
-
-                    // Check that the data is not sent until sending 100-continue response.
-                    Thread.sleep(1000);
-                    assertThat(inputStream.available()).isZero();
-
-                    out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
-
                     assertThat(in.readLine()).isEqualTo("3");
                     assertThat(in.readLine()).isEqualTo("foo");
 
@@ -310,150 +319,204 @@ final class HttpClientExpect100HeaderTest {
                 }
             }
         }
-
-        @Test
-        void failToSendHttp1StreamingRequest() throws Exception {
-            try (ServerSocket ss = new ServerSocket(0)) {
-                final int port = ss.getLocalPort();
-                final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
-                final RequestHeaders headers =
-                        RequestHeaders.builder(HttpMethod.POST, "/")
-                                      .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                      .add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString())
-                                      .build();
-                final HttpRequestWriter req = HttpRequest.streaming(headers);
-
-                final CompletableFuture<AggregatedHttpResponse> future = client.execute(req).aggregate();
-
-                req.write(HttpData.ofUtf8("foo"));
-
-                try (Socket s = ss.accept()) {
-                    final BufferedReader in = new BufferedReader(
-                            new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
-                    final OutputStream out = s.getOutputStream();
-
-                    assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
-                    assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
-                    assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
-                    assertThat(in.readLine()).isEqualTo("expect: 100-continue");
-                    assertThat(in.readLine()).startsWith("user-agent: armeria/");
-                    assertThat(in.readLine()).isEqualTo("transfer-encoding: chunked");
-                    assertThat(in.readLine()).isEmpty();
-
-                    out.write("HTTP/1.1 417 Expectation Failed\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
-
-                    assertThatThrownBy(future::join)
-                            .hasCauseInstanceOf(AbortedStreamException.class);
-                }
-            }
-        }
-
-        @Test
-        void continueToSendHttp2StreamRequest() throws Exception {
-            try (ServerSocket ss = new ServerSocket(0);
-                 ClientFactory clientFactory =
-                         ClientFactory.builder()
-                                      .useHttp2Preface(true)
-                                      .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                                      .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                                      .build()) {
-                ss.setSoTimeout(10000);
-
-                final int port = ss.getLocalPort();
-                final WebClient client = WebClient.builder("http://127.0.0.1:" + port)
-                                                  .factory(clientFactory)
-                                                  .build();
-                final RequestHeaders headers =
-                        RequestHeaders.builder(HttpMethod.POST, "/")
-                                      .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                      .add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString())
-                                      .build();
-                final HttpRequestWriter req = HttpRequest.streaming(headers);
-
-                final CompletableFuture<AggregatedHttpResponse> future = client.execute(req).aggregate();
-
-                req.write(HttpData.ofUtf8("foo"));
-
-                try (Socket s = ss.accept()) {
-                    final InputStream in = s.getInputStream();
-                    final BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
-
-                    // Read the connection preface and discard it.
-                    readBytes(in, connectionPrefaceBuf().capacity());
-
-                    // Read a SETTINGS frame and validate it.
-                    readSettingsFrame(in);
-                    sendEmptySettingsAndAckFrame(bos);
-
-                    readBytes(in, 9); // Read a SETTINGS_ACK frame and discard it.
-
-                    // Read a HEADERS frame and validate it.
-                    readHeadersFrame(in);
-                    // Check that the data is not sent until sending 100-continue response.
-                    Thread.sleep(1000);
-                    assertThat(in.available()).isZero();
-                    // Send a CONTINUE response.
-                    sendFrameHeaders(bos, HttpStatus.CONTINUE, false);
-
-                    // Read a DATA frame.
-                    readDataFrame(in);
-                    // Send a response.
-                    sendFrameHeaders(bos, HttpStatus.CREATED, true);
-
-                    final AggregatedHttpResponse res = future.join();
-                    assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
-                }
-            }
-        }
-
-        @Test
-        void failToSendHttp2StreamRequest() throws Exception {
-            try (ServerSocket ss = new ServerSocket(0);
-                 ClientFactory clientFactory =
-                         ClientFactory.builder()
-                                      .useHttp2Preface(true)
-                                      .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                                      .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
-                                      .build()) {
-                final int port = ss.getLocalPort();
-                final WebClient client = WebClient.builder("http://127.0.0.1:" + port)
-                                                  .factory(clientFactory)
-                                                  .build();
-                final RequestHeaders headers =
-                        RequestHeaders.builder(HttpMethod.POST, "/")
-                                      .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                      .add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString())
-                                      .build();
-                final HttpRequestWriter req = HttpRequest.streaming(headers);
-
-                final CompletableFuture<AggregatedHttpResponse> future = client.execute(req).aggregate();
-
-                req.write(HttpData.ofUtf8("foo"));
-
-                try (Socket s = ss.accept()) {
-                    final InputStream in = s.getInputStream();
-                    final BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
-
-                    // Read the connection preface and discard it.
-                    readBytes(in, connectionPrefaceBuf().capacity());
-
-                    // Read a SETTINGS frame and validate it.
-                    readSettingsFrame(in);
-                    sendEmptySettingsAndAckFrame(bos);
-
-                    readBytes(in, 9); // Read a SETTINGS_ACK frame and discard it.
-
-                    // Read a HEADERS frame and validate it.
-                    readHeadersFrame(in);
-                    // Send a EXPECTATION_FAILED response.
-                    sendFrameHeaders(bos, HttpStatus.EXPECTATION_FAILED, true);
-
-                    final AggregatedHttpResponse res = future.join();
-                    assertThat(res.status()).isEqualTo(HttpStatus.EXPECTATION_FAILED);
-                }
-            }
-        }
     }
+
+//        @Test
+//        void continueToSendHttp1StreamingRequest() throws Exception {
+//            try (ServerSocket ss = new ServerSocket(0)) {
+//                ss.setSoTimeout(10000);
+//
+//                final int port = ss.getLocalPort();
+//                final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
+//                final RequestHeaders headers =
+//                        RequestHeaders.builder(HttpMethod.POST, "/")
+//                                      .contentType(MediaType.PLAIN_TEXT_UTF_8)
+//                                      .add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString())
+//                                      .build();
+//                final HttpRequestWriter req = HttpRequest.streaming(headers);
+//
+//                final CompletableFuture<AggregatedHttpResponse> future = client.execute(req).aggregate();
+//
+//                req.write(HttpData.ofUtf8("foo"));
+//                req.close();
+//
+//                try (Socket s = ss.accept()) {
+//                    final InputStream inputStream = s.getInputStream();
+//                    final BufferedReader in = new BufferedReader(
+//                            new InputStreamReader(inputStream, StandardCharsets.US_ASCII));
+//                    final OutputStream out = s.getOutputStream();
+//
+//                    assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
+//                    assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
+//                    assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
+//                    assertThat(in.readLine()).isEqualTo("expect: 100-continue");
+//                    assertThat(in.readLine()).startsWith("user-agent: armeria/");
+//                    assertThat(in.readLine()).isEqualTo("transfer-encoding: chunked");
+//                    assertThat(in.readLine()).isEmpty();
+//
+//                    // Check that the data is not sent until sending 100-continue response.
+//                    Thread.sleep(1000);
+//                    assertThat(inputStream.available()).isZero();
+//
+//                    out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+//
+//                    assertThat(in.readLine()).isEqualTo("3");
+//                    assertThat(in.readLine()).isEqualTo("foo");
+//
+//                    out.write(("HTTP/1.1 201 Created\r\n" +
+//                               "Connection: close\r\n" +
+//                               "Content-Length: 0\r\n" +
+//                               "\r\n").getBytes(StandardCharsets.US_ASCII));
+//
+//                    final AggregatedHttpResponse res = future.join();
+//                    assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
+//                }
+//            }
+//        }
+//
+//        @Test
+//        void failToSendHttp1StreamingRequest() throws Exception {
+//            try (ServerSocket ss = new ServerSocket(0)) {
+//                final int port = ss.getLocalPort();
+//                final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
+//                final RequestHeaders headers =
+//                        RequestHeaders.builder(HttpMethod.POST, "/")
+//                                      .contentType(MediaType.PLAIN_TEXT_UTF_8)
+//                                      .add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString())
+//                                      .build();
+//                final HttpRequestWriter req = HttpRequest.streaming(headers);
+//
+//                final CompletableFuture<AggregatedHttpResponse> future = client.execute(req).aggregate();
+//
+//                req.write(HttpData.ofUtf8("foo"));
+//
+//                try (Socket s = ss.accept()) {
+//                    final BufferedReader in = new BufferedReader(
+//                            new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
+//                    final OutputStream out = s.getOutputStream();
+//
+//                    assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
+//                    assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
+//                    assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
+//                    assertThat(in.readLine()).isEqualTo("expect: 100-continue");
+//                    assertThat(in.readLine()).startsWith("user-agent: armeria/");
+//                    assertThat(in.readLine()).isEqualTo("transfer-encoding: chunked");
+//                    assertThat(in.readLine()).isEmpty();
+//
+//                    out.write("HTTP/1.1 417 Expectation Failed\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+//
+//                    assertThatThrownBy(future::join)
+//                            .hasCauseInstanceOf(AbortedStreamException.class);
+//                }
+//            }
+//        }
+//
+//        @Test
+//        void continueToSendHttp2StreamRequest() throws Exception {
+//            try (ServerSocket ss = new ServerSocket(0);
+//                 ClientFactory clientFactory =
+//                         ClientFactory.builder()
+//                                      .useHttp2Preface(true)
+//                                      .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+//                                      .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+//                                      .build()) {
+//                ss.setSoTimeout(10000);
+//
+//                final int port = ss.getLocalPort();
+//                final WebClient client = WebClient.builder("http://127.0.0.1:" + port)
+//                                                  .factory(clientFactory)
+//                                                  .build();
+//                final RequestHeaders headers =
+//                        RequestHeaders.builder(HttpMethod.POST, "/")
+//                                      .contentType(MediaType.PLAIN_TEXT_UTF_8)
+//                                      .add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString())
+//                                      .build();
+//                final HttpRequestWriter req = HttpRequest.streaming(headers);
+//
+//                final CompletableFuture<AggregatedHttpResponse> future = client.execute(req).aggregate();
+//
+//                req.write(HttpData.ofUtf8("foo"));
+//
+//                try (Socket s = ss.accept()) {
+//                    final InputStream in = s.getInputStream();
+//                    final BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
+//
+//                    // Read the connection preface and discard it.
+//                    readBytes(in, connectionPrefaceBuf().capacity());
+//
+//                    // Read a SETTINGS frame and validate it.
+//                    readSettingsFrame(in);
+//                    sendEmptySettingsAndAckFrame(bos);
+//
+//                    readBytes(in, 9); // Read a SETTINGS_ACK frame and discard it.
+//
+//                    // Read a HEADERS frame and validate it.
+//                    readHeadersFrame(in);
+//                    // Check that the data is not sent until sending 100-continue response.
+//                    Thread.sleep(1000);
+//                    assertThat(in.available()).isZero();
+//                    // Send a CONTINUE response.
+//                    sendFrameHeaders(bos, HttpStatus.CONTINUE, false);
+//
+//                    // Read a DATA frame.
+//                    readDataFrame(in);
+//                    // Send a response.
+//                    sendFrameHeaders(bos, HttpStatus.CREATED, true);
+//
+//                    final AggregatedHttpResponse res = future.join();
+//                    assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
+//                }
+//            }
+//        }
+//
+//        @Test
+//        void failToSendHttp2StreamRequest() throws Exception {
+//            try (ServerSocket ss = new ServerSocket(0);
+//                 ClientFactory clientFactory =
+//                         ClientFactory.builder()
+//                                      .useHttp2Preface(true)
+//                                      .http2InitialConnectionWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+//                                      .http2InitialStreamWindowSize(Http2CodecUtil.DEFAULT_WINDOW_SIZE)
+//                                      .build()) {
+//                final int port = ss.getLocalPort();
+//                final WebClient client = WebClient.builder("http://127.0.0.1:" + port)
+//                                                  .factory(clientFactory)
+//                                                  .build();
+//                final RequestHeaders headers =
+//                        RequestHeaders.builder(HttpMethod.POST, "/")
+//                                      .contentType(MediaType.PLAIN_TEXT_UTF_8)
+//                                      .add(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString())
+//                                      .build();
+//                final HttpRequestWriter req = HttpRequest.streaming(headers);
+//
+//                final CompletableFuture<AggregatedHttpResponse> future = client.execute(req).aggregate();
+//
+//                req.write(HttpData.ofUtf8("foo"));
+//
+//                try (Socket s = ss.accept()) {
+//                    final InputStream in = s.getInputStream();
+//                    final BufferedOutputStream bos = new BufferedOutputStream(s.getOutputStream());
+//
+//                    // Read the connection preface and discard it.
+//                    readBytes(in, connectionPrefaceBuf().capacity());
+//
+//                    // Read a SETTINGS frame and validate it.
+//                    readSettingsFrame(in);
+//                    sendEmptySettingsAndAckFrame(bos);
+//
+//                    readBytes(in, 9); // Read a SETTINGS_ACK frame and discard it.
+//
+//                    // Read a HEADERS frame and validate it.
+//                    readHeadersFrame(in);
+//                    // Send a EXPECTATION_FAILED response.
+//                    sendFrameHeaders(bos, HttpStatus.EXPECTATION_FAILED, true);
+//
+//                    final AggregatedHttpResponse res = future.join();
+//                    assertThat(res.status()).isEqualTo(HttpStatus.EXPECTATION_FAILED);
+//                }
+//            }
+//        }
+//    }
 
     private static void readSettingsFrame(InputStream in) throws Exception {
         final byte[] expected = {

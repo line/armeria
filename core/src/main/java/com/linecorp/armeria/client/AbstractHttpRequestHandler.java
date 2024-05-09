@@ -199,10 +199,10 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
      * Note that the written data is not flushed by this method. The caller should explicitly call
      * {@link Channel#flush()} when each write unit is done.
      */
-    final void writeHeaders(RequestHeaders headers) {
+    final void writeHeaders(RequestHeaders headers, boolean shouldExpect100ContinueHeader) {
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        if (shouldExpect100ContinueHeader(headers)) {
+        if (shouldExpect100ContinueHeader) {
             state = State.NEEDS_100_CONTINUE;
         } else if (headersOnly) {
             state = State.DONE;
@@ -238,12 +238,6 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         // before any other callbacks like `onStreamClosed()` are invoked.
         promise.addListener(this);
         encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
-    }
-
-    private static boolean shouldExpect100ContinueHeader(RequestHeaders headers) {
-        // Skip checking protocol version since Armeria is not fully compatible with HTTP/1.0.
-        // We can assume that the version is always HTTP/1.1 or later.
-        return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
     }
 
     final boolean handle100Continue(HttpStatus status) {
