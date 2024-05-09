@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 
@@ -34,5 +35,19 @@ class ClientRequestContextBuilderTest {
 
         final ClientRequestContext ctx2 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertThat(ctx2.isTimedOut()).isFalse();
+    }
+
+    @Test
+    void testEndPointGroup() {
+        final ClientRequestContext ctx1 = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(ctx1.endpoint()).isEqualTo(EndpointGroup.of(
+                Endpoint.of("127.0.0.1")));
+
+        final ClientRequestContext ctx2 = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                              .endpointGroup(EndpointGroup.of(
+                                                                      Endpoint.of("127.0.0.1", 1)))
+                                                              .build();
+        assertThat(ctx2.endpoint()).isEqualTo(EndpointGroup.of(
+                Endpoint.of("127.0.0.1", 1)));
     }
 }
