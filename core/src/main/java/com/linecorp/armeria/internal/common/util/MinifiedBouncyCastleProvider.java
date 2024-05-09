@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.security.AccessController;
@@ -132,24 +133,25 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
         checkState(!containsKey(key), "duplicate algorithm: %s", key);
         if (value.contains(".bouncycastle.")) {
             // Very likely to be a class name.
-            assertClassName(value);
+            checkClassName(value);
         }
         put(key, value);
     }
 
     @Override
     public void addAlgorithm(String type, ASN1ObjectIdentifier oid, String className) {
-        assertClassName(className);
+        checkClassName(className);
         addAlgorithm(type + '.' + oid, className);
         addAlgorithm(type + ".OID." + oid, className);
     }
 
-    private static void assertClassName(String className) {
+    private static void checkClassName(String className) {
         // Bouncy Castle sometimes uses a hard-coded class name when configuring itself.
         // Such hard-coded names may or may not be updated during the class relocation process
         // depending on how and what relocation tool we use, so this `assert` will help us
         // notice when the relocation did not work as expected.
-        assert className.startsWith(BC_PACKAGE_PREFIX) : "Unexpected BouncyCastle class name: " + className;
+        checkArgument(className.startsWith(BC_PACKAGE_PREFIX),
+                      "Unexpected BouncyCastle class name: %s", className);
     }
 
     @Override
