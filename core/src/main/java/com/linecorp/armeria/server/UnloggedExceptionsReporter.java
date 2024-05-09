@@ -21,7 +21,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 interface UnloggedExceptionsReporter extends ServerListener {
 
     static UnloggedExceptionsReporter of(MeterRegistry meterRegistry, long intervalMillis) {
-        return new DefaultUnloggedExceptionsReporter(meterRegistry, intervalMillis);
+        return new PeriodicUnloggedExceptionsReporter(meterRegistry, intervalMillis);
     }
 
     void report(Throwable cause);

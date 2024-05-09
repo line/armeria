@@ -31,11 +31,11 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 
-final class DefaultUnloggedExceptionsReporter implements UnloggedExceptionsReporter {
+final class PeriodicUnloggedExceptionsReporter implements UnloggedExceptionsReporter {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultUnloggedExceptionsReporter.class);
-    private static final AtomicIntegerFieldUpdater<DefaultUnloggedExceptionsReporter> scheduledUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(DefaultUnloggedExceptionsReporter.class,
+    private static final Logger logger = LoggerFactory.getLogger(PeriodicUnloggedExceptionsReporter.class);
+    private static final AtomicIntegerFieldUpdater<PeriodicUnloggedExceptionsReporter> scheduledUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(PeriodicUnloggedExceptionsReporter.class,
                                                  "scheduled");
 
     private final long intervalMillis;
@@ -52,9 +52,9 @@ final class DefaultUnloggedExceptionsReporter implements UnloggedExceptionsRepor
     @Nullable
     private Throwable thrownException;
 
-    DefaultUnloggedExceptionsReporter(MeterRegistry meterRegistry, long intervalMillis) {
+    PeriodicUnloggedExceptionsReporter(MeterRegistry meterRegistry, long intervalMillis) {
         this.intervalMillis = intervalMillis;
-        micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unhandled");
+        micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unlogged");
         counter = new LongAdder();
     }
 

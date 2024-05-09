@@ -41,7 +41,7 @@ class DefaultUnhandledExceptionReporterTest {
     @Spy
     final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
     final Logger errorHandlerLogger =
-            (Logger) LoggerFactory.getLogger(DefaultUnloggedExceptionsReporter.class);
+            (Logger) LoggerFactory.getLogger(PeriodicUnloggedExceptionsReporter.class);
     private static final long reportIntervalMillis = 1000;
     private static final long awaitIntervalMillis = 2000;
     private static volatile boolean throwNonIgnorableException;
