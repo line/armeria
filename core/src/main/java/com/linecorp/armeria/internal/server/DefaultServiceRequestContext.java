@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -62,6 +63,8 @@ import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.server.RouteDecoratingService.InitialDispatcherService;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
@@ -114,6 +117,9 @@ public final class DefaultServiceRequestContext
     @Nullable
     private ContextAwareBlockingTaskExecutor blockingTaskExecutor;
     private long maxRequestLength;
+
+    @Nullable
+    private List<HttpService> serviceChain;
 
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`
     private volatile HttpHeaders additionalResponseHeaders;
@@ -253,6 +259,28 @@ public final class DefaultServiceRequestContext
     @Override
     public ServiceConfig config() {
         return cfg;
+    }
+
+    @Nullable
+    @Override
+    public <T extends HttpService> T findService(Class<? extends T> serviceClass) {
+        requireNonNull(serviceClass, "serviceClass");
+        final HttpService service = config().service();
+        if (!(service instanceof InitialDispatcherService)) {
+            return service.as(serviceClass);
+        }
+
+        if (serviceChain == null) {
+            serviceChain = ((InitialDispatcherService) service).serviceChain(this);
+        }
+
+        for (HttpService service0 : serviceChain) {
+            final T targetService = service0.as(serviceClass);
+            if (targetService != null) {
+                return targetService;
+            }
+        }
+        return null;
     }
 
     @Override

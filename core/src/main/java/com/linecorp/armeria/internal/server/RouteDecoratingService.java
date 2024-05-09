@@ -23,6 +23,7 @@ import java.util.Queue;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -162,7 +163,7 @@ public final class RouteDecoratingService implements HttpService {
                           .toString();
     }
 
-    private static class InitialDispatcherService extends SimpleDecoratingHttpService {
+    public static final class InitialDispatcherService extends SimpleDecoratingHttpService {
 
         private final Router<RouteDecoratingService> router;
         private final List<RouteDecoratingService> routeDecoratingServices;
@@ -199,6 +200,17 @@ public final class RouteDecoratingService implements HttpService {
             ctx.setAttr(DECORATOR_KEY, serviceChain);
             assert service != null;
             return service.serve(ctx, req);
+        }
+
+        public List<HttpService> serviceChain(ServiceRequestContext ctx) {
+            final ImmutableList.Builder<HttpService> builder = ImmutableList.builder();
+            router.findAll(ctx.routingContext()).forEach(routed -> {
+                if (routed.isPresent()) {
+                    builder.add(routed.value().decorator());
+                }
+            });
+            builder.add((HttpService) unwrap());
+            return builder.build();
         }
 
         @Override
