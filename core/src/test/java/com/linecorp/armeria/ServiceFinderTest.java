@@ -41,7 +41,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ServiceFinderTest {
     @RegisterExtension
-    static final ServerExtension server0 = new ServerExtension() {
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.decorator(CorsService.builderForAnyOrigin().newDecorator());
@@ -53,20 +53,12 @@ class ServiceFinderTest {
         }
     };
 
-    @RegisterExtension
-    static final ServerExtension server1 = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.service("/prefix/nested/service", new MyService().decorate(MyDecorator::new));
-        }
-    };
-
     @Test
     void shouldFindService() throws InterruptedException {
-        final BlockingWebClient client = server0.blockingWebClient();
+        final BlockingWebClient client = server.blockingWebClient();
         final AggregatedHttpResponse res = client.get("/prefix/nested/service");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        final ServiceRequestContext ctx = server0.requestContextCaptor().take();
+        final ServiceRequestContext ctx = server.requestContextCaptor().take();
         assertThat(ctx.findService(CorsService.class)).isNotNull();
         assertThat(ctx.findService(LoggingService.class)).isNotNull();
         assertThat(ctx.findService(MyDecorator.class)).isNotNull();
