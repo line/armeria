@@ -151,7 +151,7 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
         // depending on how and what relocation tool we use, so this `assert` will help us
         // notice when the relocation did not work as expected.
         checkArgument(className.startsWith(BC_PACKAGE_PREFIX),
-                      "Unexpected BouncyCastle class name: %s", className);
+                      "Unexpected Bouncy Castle class name: %s", className);
     }
 
     @Override
