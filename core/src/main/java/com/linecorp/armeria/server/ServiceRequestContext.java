@@ -260,6 +260,7 @@ public interface ServiceRequestContext extends RequestContext {
      *
      * <p>Note that {@link HttpService#as(Class)} cannot find the dynamic decorator.
      */
+    @UnstableApi
     @Nullable
     <T extends HttpService> T findService(Class<? extends T> serviceClass);
 
