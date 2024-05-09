@@ -71,25 +71,17 @@ class Http1ServerDelayedCloseConnectionTest {
 
             final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             assertThat(in.readLine()).isEqualTo("HTTP/1.1 200 OK");
-
-            String line;
-            boolean hasConnectionClose = false;
-            while ((line = in.readLine()) != null) {
-                if ("connection: close".equalsIgnoreCase(line)) {
-                    hasConnectionClose = true;
-                }
-                if (line.isEmpty() || line.contains(":")) {
-                    continue;
-                }
-                if (line.startsWith("OK")) {
-                    break;
-                }
-            }
+            in.readLine(); // content-type
+            in.readLine(); // content-length
+            in.readLine(); // server
+            in.readLine(); // date
+            assertThat(in.readLine()).isEqualToIgnoringCase("connection: close");
+            assertThat(in.readLine()).isEmpty();
+            assertThat(in.readLine()).isEqualToIgnoringCase("OK");
             final long readStartTimestamp = System.nanoTime();
             final int readResult = in.read();
             final long readDurationMillis = Duration.ofNanos(System.nanoTime() - readStartTimestamp).toMillis();
 
-            assertThat(hasConnectionClose).isTrue();
             assertThat(readResult).isEqualTo(-1);
 
             final long defaultHttp1ConnectionCloseDelayMillis = Flags.defaultHttp1ConnectionCloseDelayMillis();
@@ -118,27 +110,21 @@ class Http1ServerDelayedCloseConnectionTest {
 
             final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             assertThat(in.readLine()).isEqualTo("HTTP/1.1 200 OK");
+            in.readLine(); // content-type
+            in.readLine(); // content-length
+            in.readLine(); // server
+            in.readLine(); // date
+            assertThat(in.readLine()).isEqualToIgnoringCase("connection: close");
+            assertThat(in.readLine()).isEmpty();
+            assertThat(in.readLine()).isEqualToIgnoringCase("OK");
 
-            String line;
-            boolean hasConnectionClose = false;
-            while ((line = in.readLine()) != null) {
-                if ("connection: close".equalsIgnoreCase(line)) {
-                    hasConnectionClose = true;
-                }
-                if (line.isEmpty() || line.contains(":")) {
-                    continue;
-                }
-                if (line.startsWith("OK")) {
-                    break;
-                }
-            }
-            assertThat(hasConnectionClose).isTrue();
             assertThat(server.server().numConnections()).isEqualTo(1);
 
             socket.close();
             assertThatThrownBy(
                     () -> {
                         final Socket reuseSock = new Socket("127.0.0.1", server.httpPort(), null, socketPort);
+                        // close the socket in case initializing the socket doesn't throw an exception
                         reuseSock.close();
                     })
                     .isInstanceOf(BindException.class)
