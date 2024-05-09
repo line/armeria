@@ -49,7 +49,7 @@ class MinifiedBouncyCastleProviderTest {
         final MinifiedBouncyCastleProvider provider = new MinifiedBouncyCastleProvider();
         assertThatThrownBy(() -> provider.addAlgorithm("foo", "incorrect.bouncycastle.class.name"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Unexpected BouncyCastle class name");
+                .hasMessageContaining("Unexpected Bouncy Castle class name");
     }
 
     @Test
