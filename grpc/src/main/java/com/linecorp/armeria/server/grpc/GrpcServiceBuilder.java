@@ -751,6 +751,11 @@ public final class GrpcServiceBuilder {
      * {@link GrpcSerializationFormats#PROTO_WEB_TEXT}.
      */
     public GrpcServiceBuilder unsafeWrapRequestBuffers(boolean unsafeWrapRequestBuffers) {
+        if (unsafeWrapRequestBuffers && useMethodMarshaller) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         return this;
     }
@@ -832,6 +837,11 @@ public final class GrpcServiceBuilder {
      */
     @UnstableApi
     public GrpcServiceBuilder useMethodMarshaller(boolean useMethodMarshaller) {
+        if (unsafeWrapRequestBuffers && useMethodMarshaller) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
         this.useMethodMarshaller = useMethodMarshaller;
         return this;
     }
@@ -977,11 +987,6 @@ public final class GrpcServiceBuilder {
                 GrpcSerializationFormats.JSON)) {
             throw new IllegalStateException(
                     "'GrpcSerializationFormats.JSON' must be set if 'enableHttpJsonTranscoding' is set"
-            );
-        }
-        if (unsafeWrapRequestBuffers && useMethodMarshaller) {
-            throw new IllegalStateException(
-                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
             );
         }
         if (enableHealthCheckService) {

@@ -286,6 +286,12 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
      */
     @UnstableApi
     public GrpcClientBuilder enableUnsafeWrapResponseBuffers(boolean enableUnsafeWrapResponseBuffers) {
+        final ClientOptions options = buildOptions();
+        if (options.get(USE_METHOD_MARSHALLER)) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
         return option(UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(enableUnsafeWrapResponseBuffers));
     }
 
@@ -296,6 +302,12 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
      */
     @UnstableApi
     public GrpcClientBuilder useMethodMarshaller(boolean useMethodMarshaller) {
+        final ClientOptions options = buildOptions();
+        if (options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS)) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
         return option(USE_METHOD_MARSHALLER.newValue(useMethodMarshaller));
     }
 
@@ -411,12 +423,6 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
 
         final Object client;
         final ClientOptions options = buildOptions();
-        if (options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS) && options.get(USE_METHOD_MARSHALLER)) {
-            throw new IllegalStateException(
-                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
-            );
-        }
-
         final ClientFactory factory = options.factory();
         URI uri = this.uri;
         if (uri != null) {

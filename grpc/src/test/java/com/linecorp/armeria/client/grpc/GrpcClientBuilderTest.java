@@ -157,8 +157,7 @@ class GrpcClientBuilderTest {
     void canNotSetUseMethodMarshallerAndUnsafeWrapDeserializedBufferAtTheSameTime() {
         assertThatThrownBy(() -> GrpcClients.builder(server.httpUri())
                                             .enableUnsafeWrapResponseBuffers(true)
-                                            .useMethodMarshaller(true)
-                                            .build(TestServiceBlockingStub.class))
+                                            .useMethodMarshaller(true))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(
                         "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive.");
