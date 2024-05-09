@@ -256,7 +256,7 @@ public interface ServiceRequestContext extends RequestContext {
      * Finds the {@link HttpService} of the specified {@link Class} within the decorators or the service
      * handling the current {@link Request}. This method is particularly useful when attempting to finding a
      * dynamic decorator set using {@link ServerBuilder#decorator(DecoratingHttpServiceFunction)} or
-     * {@link ServerBuilder#service(Route, HttpService)}.
+     * {@link ServerBuilder#decorator(Route, DecoratingHttpServiceFunction)}.
      *
      * <p>Note that {@link HttpService#as(Class)} cannot find the dynamic decorator.
      */
