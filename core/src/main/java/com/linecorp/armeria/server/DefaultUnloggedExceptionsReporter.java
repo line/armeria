@@ -54,7 +54,7 @@ final class DefaultUnloggedExceptionsReporter implements UnloggedExceptionsRepor
 
     DefaultUnloggedExceptionsReporter(MeterRegistry meterRegistry, long intervalMillis) {
         this.intervalMillis = intervalMillis;
-        micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unhandled");
+        micrometerCounter = meterRegistry.counter("armeria.server.exceptions.unlogged");
         counter = new LongAdder();
     }
 
