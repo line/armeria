@@ -258,7 +258,8 @@ public interface ServiceRequestContext extends RequestContext {
      * dynamic decorator set using {@link ServerBuilder#decorator(DecoratingHttpServiceFunction)} or
      * {@link ServerBuilder#decorator(Route, DecoratingHttpServiceFunction)}.
      *
-     * <p>Note that {@link HttpService#as(Class)} cannot find the dynamic decorator.
+     * <p>Note that {@link HttpService#as(Class)} by itself cannot find a dynamic decorator added directly
+     * to a {@link ServerBuilder}.
      */
     @UnstableApi
     @Nullable
