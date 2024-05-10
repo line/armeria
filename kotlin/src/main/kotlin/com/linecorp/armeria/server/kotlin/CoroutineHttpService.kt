@@ -27,11 +27,11 @@ import kotlinx.coroutines.future.future
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
- * An Coroutine-based [HttpService]
+ * A Coroutine-based [HttpService]
  */
 fun interface CoroutineHttpService : HttpService {
     /**
-     * Invoke the suspendedServe method within the CoroutineScope, supports [CoroutineContextService] newDecorator
+     * Calls [suspendedServe] in a [CoroutineScope] and returns the result as an [HttpResponse].
      */
     override fun serve(
         ctx: ServiceRequestContext,
@@ -48,7 +48,7 @@ fun interface CoroutineHttpService : HttpService {
     }
 
     /**
-     * Async serves in a coroutine suspend
+     * Serves an incoming [HttpRequest] in a [CoroutineScope].
      */
     suspend fun suspendedServe(
         ctx: ServiceRequestContext,
