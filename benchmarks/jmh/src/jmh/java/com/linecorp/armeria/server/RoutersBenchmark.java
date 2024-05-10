@@ -21,7 +21,6 @@ import static com.linecorp.armeria.internal.common.RequestContextUtil.NOOP_CONTE
 import java.nio.file.Path;
 import java.util.List;
 
-import org.jetbrains.annotations.NotNull;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.slf4j.helpers.NOPLogger;
 
@@ -71,7 +70,7 @@ public class RoutersBenchmark {
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }
 
-    private static @NotNull ServiceConfig newServiceConfig(Route route) {
+    private static ServiceConfig newServiceConfig(Route route) {
         final String defaultLogName = "log";
         final String defaultServiceName = null;
         final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");

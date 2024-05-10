@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.io.File;
 import java.io.IOException;
@@ -76,7 +77,7 @@ class MultipartTempFileRemovalTest {
             assertThat(Files.exists(path)).isTrue();
             Files.delete(path);
         } else {
-            assertThat(Files.exists(path)).isFalse();
+            await().untilAsserted(() -> assertThat(Files.exists(path)).isFalse());
         }
     }
 

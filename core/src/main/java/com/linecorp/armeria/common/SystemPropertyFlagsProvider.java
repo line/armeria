@@ -488,7 +488,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
                 return MultipartRemovalStrategy.ON_RESPONSE_COMPLETION;
             default:
                 throw new IllegalArgumentException(
-                        multipartRemovalStrategy + " isn't MultipartRemovalStrategy");
+                        multipartRemovalStrategy + " isn't a MultipartRemovalStrategy");
         }
     }
 
