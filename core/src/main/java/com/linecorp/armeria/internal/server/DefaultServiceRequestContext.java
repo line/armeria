@@ -118,9 +118,6 @@ public final class DefaultServiceRequestContext
     private ContextAwareBlockingTaskExecutor blockingTaskExecutor;
     private long maxRequestLength;
 
-    @Nullable
-    private List<HttpService> serviceChain;
-
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`
     private volatile HttpHeaders additionalResponseHeaders;
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseTrailersUpdater`
