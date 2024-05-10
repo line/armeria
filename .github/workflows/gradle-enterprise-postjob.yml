@@ -9,7 +9,7 @@ on:
 env:
   LC_ALL: "en_US.UTF-8"
   BUILD_JDK_VERSION: "19"
-  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
   RUN_ID: ${{ github.event.workflow_run.id }}
   COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
   # Used by Octokit
