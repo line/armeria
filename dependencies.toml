@@ -106,7 +106,7 @@ opensaml = "3.4.6"
 osdetector = "1.7.3"
 # Used for kubernetes-chaos-tests
 picocli = "4.7.5"
-proguard = "7.3.1"
+proguard = "7.4.2"
 prometheus = "0.16.0"
 # Ensure that we use the same Protobuf version as what gRPC depends on.
 # See: https://github.com/grpc/grpc-java/blob/master/gradle/libs.versions.toml
