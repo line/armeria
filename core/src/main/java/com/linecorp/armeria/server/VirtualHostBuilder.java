@@ -1279,7 +1279,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * added to this builder.
      */
     VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector,
-                      @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
+                      @Nullable UnloggedExceptionsReporter unloggedExceptionsReporter,
                       ServerErrorHandler serverErrorHandler) {
         requireNonNull(template, "template");
 
@@ -1403,7 +1403,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                             successFunction, requestAutoAbortDelayMillis,
                                             multipartUploadsLocation, serviceWorkerGroup, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
-                                            unhandledExceptionsReporter, baseContextPath, contextHook);
+                                            unloggedExceptionsReporter, baseContextPath, contextHook);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
@@ -1412,7 +1412,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                accessLogWriter, blockingTaskExecutor, successFunction,
                                requestAutoAbortDelayMillis, multipartUploadsLocation, serviceWorkerGroup,
                                defaultHeaders, requestIdGenerator,
-                               defaultErrorHandler, unhandledExceptionsReporter, "/", contextHook);
+                               defaultErrorHandler, unloggedExceptionsReporter, "/", contextHook);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);
