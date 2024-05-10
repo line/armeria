@@ -497,6 +497,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         return getLong("defaultHttp1ConnectionCloseDelayMillis");
     }
 
+    @Override
+    public @Nullable Long defaultUnloggedExceptionsReportIntervalMillis() {
+        return getLong("defaultUnloggedExceptionsReportIntervalMillis");
+    }
+
     @Nullable
     private static Long getLong(String name) {
         return getAndParse(name, Long::parseLong);
