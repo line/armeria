@@ -356,12 +356,12 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         }
 
         final long requestTimeoutMillis = this.requestTimeoutMillis != null ? this.requestTimeoutMillis
-                                                                           : defaultRequestTimeoutMillis;
+                                                                            : defaultRequestTimeoutMillis;
         final long maxRequestLength = this.maxRequestLength != null ? this.maxRequestLength
                                                                     : defaultMaxRequestLength;
-        final long requestAutoAbortDelayMillis = this.requestAutoAbortDelayMillis != null
-                                                 ? this.requestAutoAbortDelayMillis
-                                                 : defaultRequestAutoAbortDelayMillis;
+        final long requestAutoAbortDelayMillis =
+                this.requestAutoAbortDelayMillis != null ? this.requestAutoAbortDelayMillis
+                                                         : defaultRequestAutoAbortDelayMillis;
 
         final Supplier<AutoCloseable> mergedContextHook = mergeHooks(contextHook, this.contextHook);
 
