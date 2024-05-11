@@ -38,10 +38,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
-import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
-import com.linecorp.armeria.server.cors.CorsConfig;
-import com.linecorp.armeria.server.cors.CorsService;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -200,18 +197,7 @@ abstract class AbstractHttpResponseHandler {
     }
 
     final CompletableFuture<AggregatedHttpResponse> toAggregatedHttpResponse(HttpResponseException cause) {
-        final ServiceConfig serviceConfig = reqCtx.config();
-        final CorsService corsService = serviceConfig.service().as(CorsService.class);
-        if (corsService == null) {
-            return cause.httpResponse().aggregate(ctx.executor());
-        }
-        final AggregatedHttpResponse res = cause.httpResponse().aggregate(ctx.executor()).join();
-
-        final CorsConfig corsConfig = corsService.config();
-        final ResponseHeaders updatedResponseHeaders = CorsHeaderUtil.addCorsHeaders(reqCtx, corsConfig,
-                                                                                     res.headers());
-        return AggregatedHttpResponse.of(updatedResponseHeaders, res.content()).toHttpResponse().aggregate(
-                ctx.executor());
+        return cause.httpResponse().aggregate(ctx.executor());
     }
 
     final AggregatedHttpResponse toAggregatedHttpResponse(HttpStatusException cause) {

@@ -16,13 +16,14 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.server.CorsHeaderUtil.addCorsHeaders;
+
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.cors.CorsConfig;
 import com.linecorp.armeria.server.cors.CorsService;
 
@@ -54,6 +55,9 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
         }
 
         final CorsService corsService = serviceConfig.service().as(CorsService.class);
+        if (corsService == null) {
+            return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
+        }
 
         final AggregatedHttpResponse res = serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status,
                                                                            description, cause);
@@ -63,14 +67,31 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
         }
 
         final CorsConfig corsConfig = corsService.config();
-        final ResponseHeaders updatedResponseHeaders = CorsHeaderUtil.addCorsHeaders(ctx, corsConfig,
-                                                                                     res.headers());
+        final ResponseHeaders updatedResponseHeaders = addCorsHeaders(ctx, corsConfig,
+                                                                      res.headers());
 
         return AggregatedHttpResponse.of(updatedResponseHeaders, res.content());
     }
 
     @Override
     public @Nullable HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        return serverErrorHandler.onServiceException(ctx, cause);
+        if (cause instanceof HttpResponseException) {
+            final HttpResponse oldRes = serverErrorHandler.onServiceException(ctx, cause);
+            if (oldRes == null) {
+                return null;
+            }
+            final CorsService corsService = ctx.config().service().as(CorsService.class);
+            if (corsService == null) {
+                return oldRes;
+            }
+            return oldRes
+                    .recover(HttpResponseException.class,
+                             ex -> ex.httpResponse()
+                                     .mapHeaders(oldHeaders -> addCorsHeaders(ctx,
+                                                                              corsService.config(),
+                                                                              oldHeaders)));
+        } else {
+            return serverErrorHandler.onServiceException(ctx, cause);
+        }
     }
 }
