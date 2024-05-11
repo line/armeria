@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.websocket;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -184,7 +186,10 @@ public final class WebSocketServiceBuilder {
 
     private static Set<String> validateOrigins(Iterable<String> allowedOrigins) {
         //TODO(minwoox): Dedup the same logic in cors service.
-        final Set<String> copied = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"));
+        final Set<String> copied = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"))
+                                               .stream()
+                                               .map(Ascii::toLowerCase)
+                                               .collect(toImmutableSet());
         checkArgument(!copied.isEmpty(), "allowedOrigins is empty. (expected: non-empty)");
         if (copied.contains(ANY_ORIGIN)) {
             if (copied.size() > 1) {

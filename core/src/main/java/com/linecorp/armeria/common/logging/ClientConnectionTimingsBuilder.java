@@ -77,7 +77,7 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #socketConnectStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder socketConnectEnd() {
-        checkState(socketConnectStartTimeMicros >= 0, "socketConnectStart() is not called yet.");
+        checkState(socketConnectStartTimeMicros > 0, "socketConnectStart() is not called yet.");
         checkState(!socketConnectEndSet, "socketConnectEnd() is already called.");
         socketConnectEndNanos = System.nanoTime();
         socketConnectEndSet = true;
@@ -103,7 +103,7 @@ public final class ClientConnectionTimingsBuilder {
      * @throws IllegalStateException if {@link #pendingAcquisitionStart()} is not invoked before calling this.
      */
     public ClientConnectionTimingsBuilder pendingAcquisitionEnd() {
-        checkState(pendingAcquisitionStartTimeMicros >= 0, "pendingAcquisitionStart() is not called yet.");
+        checkState(pendingAcquisitionStartTimeMicros > 0, "pendingAcquisitionStart() is not called yet.");
         pendingAcquisitionEndNanos = System.nanoTime();
         pendingAcquisitionEndSet = true;
         return this;

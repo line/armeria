@@ -371,14 +371,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
         final EventLoop serviceEventLoop;
-        final boolean needsDirectExecution;
         final EventLoopGroup serviceWorkerGroup = serviceCfg.serviceWorkerGroup();
         if (serviceWorkerGroup == config.workerGroup()) {
             serviceEventLoop = channelEventLoop;
-            needsDirectExecution = true;
         } else {
             serviceEventLoop = serviceWorkerGroup.next();
-            needsDirectExecution = serviceEventLoop == channelEventLoop;
         }
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, serviceEventLoop, config.meterRegistry(), protocol,
@@ -386,15 +383,28 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros(), serviceCfg.contextHook());
 
-        final HttpResponse res;
+        HttpResponse res;
         req.init(reqCtx);
-        if (needsDirectExecution) {
-            res = serve0(req, serviceCfg, service, reqCtx);
+        final CompletableFuture<Void> whenAggregated = req.whenAggregated();
+        if (whenAggregated != null) {
+            res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
+                if (serviceEventLoop.inEventLoop()) {
+                    return serve0(req, service, reqCtx);
+                }
+                return serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop);
+            }));
         } else {
-            res = HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx),
-                                  serviceEventLoop)
-                              .subscribeOn(serviceEventLoop);
+            if (serviceEventLoop.inEventLoop()) {
+                res = serve0(req, service, reqCtx);
+            } else {
+                res = serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop);
+            }
         }
+        res = res.recover(cause -> {
+            reqCtx.logBuilder().responseCause(cause);
+            // Recover the failed response with the error handler.
+            return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+        });
 
         // Keep track of the number of unfinished requests and
         // clean up the request stream when response stream ends.
@@ -445,10 +455,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private HttpResponse serve0(HttpRequest req,
-                                ServiceConfig serviceCfg,
-                                HttpService service,
-                                DefaultServiceRequestContext reqCtx) {
+    private static HttpResponse serve0(HttpRequest req, HttpService service,
+                                       DefaultServiceRequestContext reqCtx) {
         try (SafeCloseable ignored = reqCtx.push()) {
             HttpResponse serviceResponse;
             try {
@@ -463,13 +471,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceResponse = HttpResponse.ofFailure(cause);
             }
 
-            serviceResponse = serviceResponse.recover(cause -> {
-                reqCtx.logBuilder().responseCause(cause);
-                // Recover the failed response with the error handler.
-                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
-            });
             return serviceResponse;
         }
+    }
+
+    private static HttpResponse serveInServiceEventLoop(DecodedHttpRequest req,
+                                                        HttpService service,
+                                                        DefaultServiceRequestContext reqCtx,
+                                                        EventLoop serviceEventLoop) {
+        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), service, reqCtx),
+                               serviceEventLoop)
+                           .subscribeOn(serviceEventLoop);
     }
 
     private ProxiedAddresses determineProxiedAddresses(InetSocketAddress remoteAddress,

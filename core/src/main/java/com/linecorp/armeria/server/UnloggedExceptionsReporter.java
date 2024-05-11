@@ -18,10 +18,10 @@ package com.linecorp.armeria.server;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
-interface UnhandledExceptionsReporter extends ServerListener {
+interface UnloggedExceptionsReporter extends ServerListener {
 
-    static UnhandledExceptionsReporter of(MeterRegistry meterRegistry, long intervalMillis) {
-        return new DefaultUnhandledExceptionsReporter(meterRegistry, intervalMillis);
+    static UnloggedExceptionsReporter of(MeterRegistry meterRegistry, long intervalMillis) {
+        return new DefaultUnloggedExceptionsReporter(meterRegistry, intervalMillis);
     }
 
     void report(Throwable cause);

@@ -16,8 +16,8 @@
 package com.linecorp.armeria.internal.common.util;
 
 import com.linecorp.armeria.common.util.Unwrappable;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 
 public final class ServiceNamingUtil {
 
@@ -32,7 +32,12 @@ public final class ServiceNamingUtil {
                 continue;
             }
             if (delegate instanceof AnnotatedService) {
-                return ((AnnotatedService) delegate).serviceName();
+                final AnnotatedService annotatedService = (AnnotatedService) delegate;
+                final String serviceName = annotatedService.name();
+                if (serviceName != null) {
+                    return serviceName;
+                }
+                return annotatedService.serviceClass().getName();
             } else {
                 return delegate.getClass().getName();
             }

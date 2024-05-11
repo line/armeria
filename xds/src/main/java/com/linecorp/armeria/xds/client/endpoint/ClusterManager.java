@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +34,7 @@ import javax.annotation.concurrent.GuardedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -232,6 +234,16 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         closeAsync().join();
     }
 
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("eventLoop", eventLoop)
+                          .add("clusterEntries", clusterEntries)
+                          .add("listenerSnapshot", listenerSnapshot)
+                          .add("closed", closed)
+                          .toString();
+    }
+
     static final class State {
 
         static final State INITIAL_STATE = new State(null, ImmutableList.of());
@@ -268,6 +280,15 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         @Override
         public int hashCode() {
             return Objects.hashCode(listenerSnapshot, endpoints);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this).omitNullValues()
+                              .add("listenerSnapshot", listenerSnapshot)
+                              .add("numEndpoints", endpoints.size())
+                              .add("endpoints", truncate(endpoints, 10))
+                              .toString();
         }
     }
 }
