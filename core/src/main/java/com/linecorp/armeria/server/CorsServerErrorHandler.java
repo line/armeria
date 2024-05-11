@@ -17,12 +17,10 @@
 package com.linecorp.armeria.server;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.cors.CorsConfig;
@@ -31,7 +29,7 @@ import com.linecorp.armeria.server.cors.CorsService;
 /**
  * wraps ServerErrorHandler for adding CORS headers to error responses.
  */
-public class CorsServerErrorHandler implements ServerErrorHandler {
+final class CorsServerErrorHandler implements ServerErrorHandler {
     ServerErrorHandler serverErrorHandler;
 
     /**
@@ -40,7 +38,7 @@ public class CorsServerErrorHandler implements ServerErrorHandler {
      *
      * @param serverErrorHandler The {@link ServerErrorHandler} to be used for handling server errors.
      */
-    public CorsServerErrorHandler(ServerErrorHandler serverErrorHandler) {
+    CorsServerErrorHandler(ServerErrorHandler serverErrorHandler) {
         this.serverErrorHandler = serverErrorHandler;
     }
 
@@ -51,11 +49,11 @@ public class CorsServerErrorHandler implements ServerErrorHandler {
                                                          HttpStatus status, @Nullable String description,
                                                          @Nullable Throwable cause) {
 
-        final CorsService corsService = serviceConfig.service().as(CorsService.class);
-
-        if (corsService == null || ctx == null) {
-            return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
+        if (ctx == null) {
+            return serverErrorHandler.renderStatus(null, serviceConfig, headers, status, description, cause);
         }
+
+        final CorsService corsService = serviceConfig.service().as(CorsService.class);
 
         final AggregatedHttpResponse res = serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status,
                                                                            description, cause);
@@ -65,19 +63,10 @@ public class CorsServerErrorHandler implements ServerErrorHandler {
         }
 
         final CorsConfig corsConfig = corsService.config();
-        final ResponseHeaders updatedResponseHeaders = addCorsHeaders(ctx, corsConfig, res.headers());
+        final ResponseHeaders updatedResponseHeaders = CorsHeaderUtil.addCorsHeaders(ctx, corsConfig,
+                                                                                     res.headers());
 
         return AggregatedHttpResponse.of(updatedResponseHeaders, res.content());
-    }
-
-    private static ResponseHeaders addCorsHeaders(ServiceRequestContext ctx, CorsConfig corsConfig,
-                                                  ResponseHeaders responseHeaders) {
-        final HttpRequest httpRequest = ctx.request();
-        final ResponseHeadersBuilder responseHeadersBuilder = responseHeaders.toBuilder();
-
-        CorsHeaderUtil.setCorsResponseHeaders(ctx, httpRequest, responseHeadersBuilder, corsConfig);
-
-        return responseHeadersBuilder.build();
     }
 
     @Override

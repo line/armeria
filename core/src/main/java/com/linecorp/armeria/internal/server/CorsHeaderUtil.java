@@ -24,6 +24,7 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -41,6 +42,16 @@ public final class CorsHeaderUtil {
     public static final String NULL_ORIGIN = "null";
 
     private CorsHeaderUtil() {
+    }
+
+    public static ResponseHeaders addCorsHeaders(ServiceRequestContext ctx, CorsConfig corsConfig,
+                                                 ResponseHeaders responseHeaders) {
+        final HttpRequest httpRequest = ctx.request();
+        final ResponseHeadersBuilder responseHeadersBuilder = responseHeaders.toBuilder();
+
+        setCorsResponseHeaders(ctx, httpRequest, responseHeadersBuilder, corsConfig);
+
+        return responseHeadersBuilder.build();
     }
 
     /**
