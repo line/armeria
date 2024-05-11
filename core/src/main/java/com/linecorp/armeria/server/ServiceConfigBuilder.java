@@ -355,26 +355,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                                                                      unloggedExceptionsReporter);
         }
 
-        final long requestTimeoutMillis;
-        if (this.requestTimeoutMillis != null) {
-            requestTimeoutMillis = this.requestTimeoutMillis;
-        } else {
-            requestTimeoutMillis = defaultRequestTimeoutMillis;
-        }
-
-        final long maxRequestLength;
-        if (this.maxRequestLength != null) {
-            maxRequestLength = this.maxRequestLength;
-        } else {
-            maxRequestLength = defaultMaxRequestLength;
-        }
-
-        final long requestAutoAbortDelayMillis;
-        if (this.requestAutoAbortDelayMillis != null) {
-            requestAutoAbortDelayMillis = this.requestAutoAbortDelayMillis;
-        } else {
-            requestAutoAbortDelayMillis = defaultRequestAutoAbortDelayMillis;
-        }
+        final long requestTimeoutMillis = this.requestTimeoutMillis != null ? this.requestTimeoutMillis
+                                                                           : defaultRequestTimeoutMillis;
+        final long maxRequestLength = this.maxRequestLength != null ? this.maxRequestLength
+                                                                    : defaultMaxRequestLength;
+        final long requestAutoAbortDelayMillis = this.requestAutoAbortDelayMillis != null
+                                                 ? this.requestAutoAbortDelayMillis
+                                                 : defaultRequestAutoAbortDelayMillis;
 
         final Supplier<AutoCloseable> mergedContextHook = mergeHooks(contextHook, this.contextHook);
 
