@@ -53,9 +53,6 @@ public final class CorsService extends SimpleDecoratingHttpService {
 
     private static final Logger logger = LoggerFactory.getLogger(CorsService.class);
 
-    static final String ANY_ORIGIN = CorsHeaderUtil.ANY_ORIGIN;
-    static final String NULL_ORIGIN = CorsHeaderUtil.NULL_ORIGIN;
-
     /**
      * Returns a new {@link CorsServiceBuilder} with its origin set with {@code "*"} (any origin).
      */
@@ -76,11 +73,11 @@ public final class CorsService extends SimpleDecoratingHttpService {
     public static CorsServiceBuilder builder(Iterable<String> origins) {
         requireNonNull(origins, "origins");
         final List<String> copied = ImmutableList.copyOf(origins);
-        if (copied.contains(ANY_ORIGIN)) {
+        if (copied.contains(CorsHeaderUtil.ANY_ORIGIN)) {
             if (copied.size() > 1) {
                 logger.warn("Any origin (*) has been already included. Other origins ({}) will be ignored.",
                             copied.stream()
-                                  .filter(c -> !ANY_ORIGIN.equals(c))
+                                  .filter(c -> !CorsHeaderUtil.ANY_ORIGIN.equals(c))
                                   .collect(Collectors.joining(",")));
             }
             return builderForAnyOrigin();
@@ -158,7 +155,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
         if (policy != null) {
             policy.setCorsAllowMethods(headers);
             policy.setCorsAllowHeaders(req.headers(), headers);
-            policy.setCorsAllowCredentials(headers);
+            CorsHeaderUtil.setCorsAllowCredentials(headers, policy);
             policy.setCorsMaxAge(headers);
             policy.setCorsPreflightResponseHeaders(headers);
         }

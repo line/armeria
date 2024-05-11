@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.cors;
 
-import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
+import static com.linecorp.armeria.internal.server.CorsHeaderUtil.DELIMITER;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -29,7 +29,6 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -54,9 +53,6 @@ import io.netty.util.AsciiString;
  * Contains information of the CORS policy with the specified origins.
  */
 public final class CorsPolicy {
-
-    private static final String DELIMITER = ",";
-    private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
 
     /**
      * Returns a new {@link CorsPolicyBuilder}.
@@ -153,7 +149,7 @@ public final class CorsPolicy {
      */
     @Deprecated
     public String origin() {
-        return Iterables.getFirst(origins, ANY_ORIGIN);
+        return Iterables.getFirst(origins, CorsHeaderUtil.ANY_ORIGIN);
     }
 
     /**
@@ -298,68 +294,14 @@ public final class CorsPolicy {
         headers.add(generatePreflightResponseHeaders());
     }
 
-    void setCorsAllowCredentials(ResponseHeadersBuilder headers) {
-        CorsHeaderUtil.setCorsAllowCredentials(headers, this);
-    }
-
-    /**
-     * Retrieves the set of headers that are exposed to the client.
-     *
-     * @return A set of {@link AsciiString} representing the headers that can be safely exposed to the client.
-     */
-    public Set<AsciiString> getExposedHeaders() {
-        return exposedHeaders;
-    }
-
     /**
      * Determines whether all request headers are allowed.
      *
      * @return true if all request headers are allowed,
      *         false if only specific request headers are allowed.
      */
-    public boolean isAllowAllRequestHeaders() {
+    public boolean shouldAllowAllRequestHeaders() {
         return allowAllRequestHeaders;
-    }
-
-    /**
-     * Retrieves the set of request headers that are allowed.
-     *
-     * @return A set of {@link AsciiString} representing the request headers that are permitted.
-     */
-    public Set<AsciiString> getAllowedRequestHeaders() {
-        return allowedRequestHeaders;
-    }
-
-    /**
-     * Joins the given set of headers into a single string.
-     * This can be useful for creating a comma-separated list of headers.
-     *
-     * @param headers The set of headers to be joined.
-     * @return A {@link String} representing the joined headers.
-     */
-    public String joinHeaders(Set<AsciiString> headers) {
-        return HEADER_JOINER.join(headers);
-    }
-
-    /**
-     * Joins the set of exposed headers into a single string.
-     * This method utilizes {@link #joinHeaders(Set)} to create a comma-separated list of exposed headers.
-     *
-     * @return A {@link String} representing the joined exposed headers.
-     */
-    public String joinExposedHeaders() {
-        return joinHeaders(exposedHeaders);
-    }
-
-    /**
-     * Joins the set of allowed request headers into a single string.
-     * This method utilizes {@link #joinHeaders(Set)}
-     * to create a comma-separated list of allowed request headers.
-     *
-     * @return A {@link String} representing the joined allowed request headers.
-     */
-    public String joinAllowedRequestHeaders() {
-        return joinHeaders(allowedRequestHeaders);
     }
 
     void setCorsAllowMethods(ResponseHeadersBuilder headers) {

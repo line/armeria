@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.internal.server;
 
+import java.util.Set;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -31,6 +34,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.cors.CorsConfig;
 import com.linecorp.armeria.server.cors.CorsPolicy;
 
+import io.netty.util.AsciiString;
+
 /**
  * A utility class related to CORS headers.
  */
@@ -39,6 +44,8 @@ public final class CorsHeaderUtil {
     private static final Logger logger = LoggerFactory.getLogger(CorsHeaderUtil.class);
     public static final String ANY_ORIGIN = "*";
     public static final String NULL_ORIGIN = "null";
+    public static final String DELIMITER = ",";
+    private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
 
     public static ResponseHeaders addCorsHeaders(ServiceRequestContext ctx, CorsConfig corsConfig,
                                                  ResponseHeaders responseHeaders) {
@@ -76,16 +83,16 @@ public final class CorsHeaderUtil {
     }
 
     private static void setCorsExposeHeaders(ResponseHeadersBuilder headers, CorsPolicy corsPolicy) {
-        if (corsPolicy.getExposedHeaders().isEmpty()) {
+        if (corsPolicy.exposedHeaders().isEmpty()) {
             return;
         }
 
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, corsPolicy.joinExposedHeaders());
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, joinExposedHeaders(corsPolicy));
     }
 
     public static void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers,
                                            CorsPolicy corsPolicy) {
-        if (corsPolicy.isAllowAllRequestHeaders()) {
+        if (corsPolicy.shouldAllowAllRequestHeaders()) {
             final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
             if (!Strings.isNullOrEmpty(header)) {
                 headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
@@ -94,11 +101,11 @@ public final class CorsHeaderUtil {
             return;
         }
 
-        if (corsPolicy.getAllowedRequestHeaders().isEmpty()) {
+        if (corsPolicy.allowedRequestHeaders().isEmpty()) {
             return;
         }
 
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, corsPolicy.joinAllowedRequestHeaders());
+        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, joinAllowedRequestHeaders(corsPolicy));
     }
 
     /**
@@ -163,6 +170,38 @@ public final class CorsHeaderUtil {
 
     private static void setCorsNullOrigin(ResponseHeadersBuilder headers) {
         setCorsOrigin(headers, NULL_ORIGIN);
+    }
+
+    /**
+     * Joins the given set of headers into a single string.
+     * This can be useful for creating a comma-separated list of headers.
+     *
+     * @param headers The set of headers to be joined.
+     * @return A {@link String} representing the joined headers.
+     */
+    private static String joinHeaders(Set<AsciiString> headers) {
+        return HEADER_JOINER.join(headers);
+    }
+
+    /**
+     * Joins the set of exposed headers into a single string.
+     * This method utilizes {@link #joinHeaders(Set)} to create a comma-separated list of exposed headers.
+     *
+     * @return A {@link String} representing the joined exposed headers.
+     */
+    private static String joinExposedHeaders(CorsPolicy policy) {
+        return joinHeaders(policy.exposedHeaders());
+    }
+
+    /**
+     * Joins the set of allowed request headers into a single string.
+     * This method utilizes {@link #joinHeaders(Set)}
+     * to create a comma-separated list of allowed request headers.
+     *
+     * @return A {@link String} representing the joined allowed request headers.
+     */
+    private static String joinAllowedRequestHeaders(CorsPolicy corsPolicy) {
+        return joinHeaders(corsPolicy.allowedRequestHeaders());
     }
 
     private CorsHeaderUtil() {
