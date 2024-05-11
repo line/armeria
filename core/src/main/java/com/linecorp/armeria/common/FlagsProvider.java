@@ -1175,4 +1175,20 @@ public interface FlagsProvider {
     default DistributionStatisticConfig distributionStatisticConfig() {
         return null;
     }
+
+    /**
+     * Returns the default time in milliseconds to wait before closing an HTTP/1 connection when a server needs
+     * to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state
+     * instead of CLOSED when a connection is closed.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultHttp1ConnectionCloseDelayMillis=<long>} JVM option to
+     * override the default value. {@code 0} closes the connection immediately. </p>
+     */
+    @Nullable
+    @UnstableApi
+    default Long defaultHttp1ConnectionCloseDelayMillis() {
+        return null;
+    }
 }

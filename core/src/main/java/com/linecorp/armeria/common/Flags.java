@@ -421,6 +421,10 @@ public final class Flags {
     private static final DistributionStatisticConfig DISTRIBUTION_STATISTIC_CONFIG =
             getValue(FlagsProvider::distributionStatisticConfig, "distributionStatisticConfig");
 
+    private static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS =
+            getValue(FlagsProvider::defaultHttp1ConnectionCloseDelayMillis,
+                    "defaultHttp1ConnectionCloseDelayMillis", value -> value >= 0);
+
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
      * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
@@ -1561,6 +1565,21 @@ public final class Flags {
     @UnstableApi
     public static DistributionStatisticConfig distributionStatisticConfig() {
         return DISTRIBUTION_STATISTIC_CONFIG;
+    }
+
+    /**
+     * Returns the default time in milliseconds to wait before closing an HTTP/1 connection when a server needs
+     * to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state
+     * instead of CLOSED when a connection is closed.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultHttp1ConnectionCloseDelayMillis=<long>} JVM option to
+     * override the default value. {@code 0} closes the connection immediately.</p>
+     */
+    @UnstableApi
+    public static long defaultHttp1ConnectionCloseDelayMillis() {
+        return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
     }
 
     @Nullable

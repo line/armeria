@@ -93,6 +93,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final String FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
     static final String DNS_CACHE_SPEC = "maximumSize=4096";
     static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
+    static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS = 3000;
 
     private DefaultFlagsProvider() {}
 
@@ -483,5 +484,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public DistributionStatisticConfig distributionStatisticConfig() {
         return DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG;
+    }
+
+    @Override
+    public Long defaultHttp1ConnectionCloseDelayMillis() {
+        return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
     }
 }
