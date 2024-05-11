@@ -32,17 +32,13 @@ import com.linecorp.armeria.server.cors.CorsConfig;
 import com.linecorp.armeria.server.cors.CorsPolicy;
 
 /**
- * utility class related to CORS headers.
+ * A utility class related to CORS headers.
  */
 public final class CorsHeaderUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(CorsHeaderUtil.class);
-
     public static final String ANY_ORIGIN = "*";
     public static final String NULL_ORIGIN = "null";
-
-    private CorsHeaderUtil() {
-    }
 
     public static ResponseHeaders addCorsHeaders(ServiceRequestContext ctx, CorsConfig corsConfig,
                                                  ResponseHeaders responseHeaders) {
@@ -62,7 +58,7 @@ public final class CorsHeaderUtil {
      */
     public static void setCorsResponseHeaders(ServiceRequestContext ctx, HttpRequest req,
                                               ResponseHeadersBuilder headers, CorsConfig config) {
-        final CorsPolicy policy = setCorsOrigin(ctx, req, headers, config, logger);
+        final CorsPolicy policy = setCorsOrigin(ctx, req, headers, config);
         if (policy != null) {
             setCorsAllowCredentials(headers, policy);
             setCorsAllowHeaders(req.headers(), headers, policy);
@@ -79,7 +75,7 @@ public final class CorsHeaderUtil {
         }
     }
 
-    public static void setCorsExposeHeaders(ResponseHeadersBuilder headers, CorsPolicy corsPolicy) {
+    private static void setCorsExposeHeaders(ResponseHeadersBuilder headers, CorsPolicy corsPolicy) {
         if (corsPolicy.getExposedHeaders().isEmpty()) {
             return;
         }
@@ -87,19 +83,14 @@ public final class CorsHeaderUtil {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, corsPolicy.joinExposedHeaders());
     }
 
-    public static void copyCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
-        final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
-        if (Strings.isNullOrEmpty(header)) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
-    }
-
     public static void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers,
                                            CorsPolicy corsPolicy) {
         if (corsPolicy.isAllowAllRequestHeaders()) {
-            copyCorsAllowHeaders(requestHeaders, headers);
+            final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
+            if (!Strings.isNullOrEmpty(header)) {
+                headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
+            }
+
             return;
         }
 
@@ -115,11 +106,12 @@ public final class CorsHeaderUtil {
      *
      * @param request the HTTP request
      * @param headers the HTTP headers to modify
+     *
      * @return {@code policy} if CORS configuration matches, otherwise {@code null}
      */
     @Nullable
     public static CorsPolicy setCorsOrigin(ServiceRequestContext ctx, HttpRequest request,
-                                           ResponseHeadersBuilder headers, CorsConfig config, Logger logger) {
+                                           ResponseHeadersBuilder headers, CorsConfig config) {
 
         final String origin = request.headers().get(HttpHeaderNames.ORIGIN);
         if (origin != null) {
@@ -171,5 +163,8 @@ public final class CorsHeaderUtil {
 
     private static void setCorsNullOrigin(ResponseHeadersBuilder headers) {
         setCorsOrigin(headers, NULL_ORIGIN);
+    }
+
+    private CorsHeaderUtil() {
     }
 }

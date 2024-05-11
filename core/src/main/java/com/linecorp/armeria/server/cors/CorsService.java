@@ -174,7 +174,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
      */
     private void setCorsResponseHeaders(ServiceRequestContext ctx, HttpRequest req,
                                         ResponseHeadersBuilder headers) {
-        CorsHeaderUtil.setCorsResponseHeaders(ctx, req, headers, this.config);
+        CorsHeaderUtil.setCorsResponseHeaders(ctx, req, headers, config);
     }
 
     /**
@@ -196,6 +196,6 @@ public final class CorsService extends SimpleDecoratingHttpService {
     private CorsPolicy setCorsOrigin(ServiceRequestContext ctx, HttpRequest request,
                                      ResponseHeadersBuilder headers) {
 
-        return CorsHeaderUtil.setCorsOrigin(ctx, request, headers, config, logger);
+        return CorsHeaderUtil.setCorsOrigin(ctx, request, headers, config);
     }
 }
