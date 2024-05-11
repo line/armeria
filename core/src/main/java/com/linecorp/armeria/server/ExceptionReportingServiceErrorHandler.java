@@ -26,9 +26,9 @@ import com.linecorp.armeria.common.util.Exceptions;
 final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler {
 
     private final ServiceErrorHandler delegate;
-    private final UnhandledExceptionsReporter reporter;
+    private final UnloggedExceptionsReporter reporter;
 
-    ExceptionReportingServiceErrorHandler(ServiceErrorHandler delegate, UnhandledExceptionsReporter reporter) {
+    ExceptionReportingServiceErrorHandler(ServiceErrorHandler delegate, UnloggedExceptionsReporter reporter) {
         this.delegate = delegate;
         this.reporter = reporter;
     }
@@ -36,10 +36,11 @@ final class ExceptionReportingServiceErrorHandler implements ServiceErrorHandler
     @Nullable
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (ctx.shouldReportUnhandledExceptions() && !isIgnorableException(cause)) {
+        final HttpResponse httpResponse = delegate.onServiceException(ctx, cause);
+        if (ctx.shouldReportUnloggedExceptions() && !isIgnorableException(cause)) {
             reporter.report(cause);
         }
-        return delegate.onServiceException(ctx, cause);
+        return httpResponse;
     }
 
     private static boolean isIgnorableException(Throwable cause) {

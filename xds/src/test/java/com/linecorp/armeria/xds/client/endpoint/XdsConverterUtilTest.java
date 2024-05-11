@@ -83,7 +83,7 @@ class XdsConverterUtilTest {
         return Struct.newBuilder().putAllFields(structMap).build();
     }
 
-    static ClusterLoadAssignment sampleClusterLoadAssignment() {
+    static ClusterLoadAssignment sampleClusterLoadAssignment(String clusterName) {
         final Metadata metadata1 =
                 Metadata.newBuilder()
                         .putFilterMetadata(SUBSET_LOAD_BALANCING_FILTER_NAME,
@@ -118,7 +118,7 @@ class XdsConverterUtilTest {
                                    .addLbEndpoints(endpoint3)
                                    .build();
         return ClusterLoadAssignment.newBuilder()
-                            .setClusterName("cluster")
+                            .setClusterName(clusterName)
                             .addEndpoints(lbEndpoints)
                             .build();
     }
