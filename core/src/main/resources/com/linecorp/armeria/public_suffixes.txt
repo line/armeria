@@ -123,6 +123,7 @@
 *.sch.uk
 *.sendai.jp
 *.sensiosite.cloud
+*.services.clever-cloud.com
 *.snowflake.app
 *.spectrum.myjino.ru
 *.statics.cloud
@@ -1116,6 +1117,7 @@ bounty-full.com
 boutique
 boutir.com
 box
+box.ca
 boxfuse.io
 boy.jp
 boyfriend.jp
@@ -1448,7 +1450,9 @@ clan.rip
 cleaning
 clerk.app
 clerkstage.app
+cleverapps.cc
 cleverapps.io
+cleverapps.tech
 click
 clickrising.net
 client.scrypted.io
@@ -2561,6 +2565,7 @@ experts-comptables.fr
 exposed
 express
 express.aero
+express.val.run
 extraspace
 ezproxy.kuleuven.be
 f.bg
@@ -6026,6 +6031,7 @@ notebook.us-west-1.sagemaker.aws
 notebook.us-west-2.sagemaker.aws
 noticeable.news
 noticias.bo
+notion.site
 noto.ishikawa.jp
 notodden.no
 notogawa.shiga.jp
@@ -6093,6 +6099,7 @@ obira.hokkaido.jp
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
 obninsk.su
+observablehq.cloud
 observer
 obu.aichi.jp
 obuse.nagano.jp
@@ -8947,6 +8954,7 @@ web.ni
 web.pk
 web.tj
 web.tr
+web.val.run
 web.ve
 web.za
 webadorsite.com
@@ -9719,6 +9727,7 @@ zapto.org
 zapto.xyz
 zara
 zarow.pl
+zeabur.app
 zentsuji.kagawa.jp
 zero
 zgora.pl
