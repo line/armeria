@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
@@ -306,10 +305,6 @@ public final class CorsPolicy {
 
     void setCorsAllowMethods(ResponseHeadersBuilder headers) {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, joinedAllowedRequestMethods);
-    }
-
-    void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
-        CorsHeaderUtil.setCorsAllowHeaders(requestHeaders, headers, this);
     }
 
     void setCorsMaxAge(ResponseHeadersBuilder headers) {
