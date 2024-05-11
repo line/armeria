@@ -116,6 +116,8 @@ public final class Flags {
 
     private static final String VERBOSE_EXCEPTION_SAMPLER_SPEC;
 
+    private static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+
     static {
         final String strSpec = getNormalized("verboseExceptions",
                                              DefaultFlagsProvider.VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
@@ -133,6 +135,17 @@ public final class Flags {
             VERBOSE_EXCEPTION_SAMPLER_SPEC = "never";
         } else {
             VERBOSE_EXCEPTION_SAMPLER_SPEC = strSpec;
+        }
+
+        final Long intervalMillis = getUserValue(
+                FlagsProvider::defaultUnloggedExceptionsReportIntervalMillis,
+                "defaultUnloggedExceptionsReportIntervalMillis", value -> value >= 0);
+        if (intervalMillis != null) {
+            DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = intervalMillis;
+        } else {
+            DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
+                    getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
+                             "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
         }
     }
 
@@ -405,12 +418,12 @@ public final class Flags {
     private static final MeterRegistry METER_REGISTRY =
             getValue(FlagsProvider::meterRegistry, "meterRegistry");
 
-    private static final long DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
-            getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
-                     "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
-
     private static final DistributionStatisticConfig DISTRIBUTION_STATISTIC_CONFIG =
             getValue(FlagsProvider::distributionStatisticConfig, "distributionStatisticConfig");
+
+    private static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS =
+            getValue(FlagsProvider::defaultHttp1ConnectionCloseDelayMillis,
+                    "defaultHttp1ConnectionCloseDelayMillis", value -> value >= 0);
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1503,16 +1516,31 @@ public final class Flags {
     }
 
     /**
-     * Returns the default interval in milliseconds between the reports on unhandled exceptions.
+     * Returns the default interval in milliseconds between the reports on unlogged exceptions.
      *
      * <p>The default value of this flag is
-     * {@value DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@value DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUnhandledExceptionsReportIntervalMillis=<long>} JVM option to
+     * override the default value.</p>
+     *
+     * @deprecated Use {@link #defaultUnloggedExceptionsReportIntervalMillis()} instead.
+     */
+    @Deprecated
+    public static long defaultUnhandledExceptionsReportIntervalMillis() {
+        return DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    /**
+     * Returns the default interval in milliseconds between the reports on unlogged exceptions.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUnloggedExceptionsReportIntervalMillis=<long>} JVM option to
      * override the default value.</p>
      */
     @UnstableApi
-    public static long defaultUnhandledExceptionsReportIntervalMillis() {
-        return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    public static long defaultUnloggedExceptionsReportIntervalMillis() {
+        return DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
     }
 
     /**
@@ -1537,6 +1565,21 @@ public final class Flags {
     @UnstableApi
     public static DistributionStatisticConfig distributionStatisticConfig() {
         return DISTRIBUTION_STATISTIC_CONFIG;
+    }
+
+    /**
+     * Returns the default time in milliseconds to wait before closing an HTTP/1 connection when a server needs
+     * to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state
+     * instead of CLOSED when a connection is closed.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultHttp1ConnectionCloseDelayMillis=<long>} JVM option to
+     * override the default value. {@code 0} closes the connection immediately.</p>
+     */
+    @UnstableApi
+    public static long defaultHttp1ConnectionCloseDelayMillis() {
+        return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
     }
 
     @Nullable
