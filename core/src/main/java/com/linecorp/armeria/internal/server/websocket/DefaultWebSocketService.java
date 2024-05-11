@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
+import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceOptions;
@@ -86,6 +87,13 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
 
     // Server-side encoder do not mask the payloads.
     private static final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(false);
+
+    private static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions
+            .builder()
+            .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
+            .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
+            .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
+            .build();
 
     private final WebSocketServiceHandler handler;
     @Nullable
@@ -399,6 +407,6 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
 
     @Override
     public HttpServiceOptions options() {
-        return HttpServiceOptions.websocket();
+        return DEFAULT_OPTIONS;
     }
 }

@@ -23,7 +23,6 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 
 /**
  * Options for configuring a {@link HttpService}.
@@ -32,25 +31,12 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 @UnstableApi
 public final class HttpServiceOptions {
     private static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions.builder().build();
-    private static final HttpServiceOptions WEB_SOCKET_DEFAULT_OPTIONS = HttpServiceOptions
-            .builder()
-            .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
-            .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
-            .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
-            .build();
 
     /**
      * Returns the default {@link HttpServiceOptions}.
      */
     public static HttpServiceOptions of() {
         return DEFAULT_OPTIONS;
-    }
-
-    /**
-     * Returns the default {@link HttpServiceOptions} for a WebSocket service.
-     */
-    public static HttpServiceOptions websocket() {
-        return WEB_SOCKET_DEFAULT_OPTIONS;
     }
 
     /**
