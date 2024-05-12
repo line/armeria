@@ -359,6 +359,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 maxUnfinishedResponses =
                         maxConcurrentStreams > Integer.MAX_VALUE ? Integer.MAX_VALUE
                                                                  : maxConcurrentStreams.intValue();
+                logger.info("maxUnfinishedResponses : " + maxUnfinishedResponses);
             } else {
                 maxUnfinishedResponses = Integer.MAX_VALUE;
             }

@@ -18,9 +18,12 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.common.ConnectionEventKey;
+import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.UserAgentUtil;
@@ -31,7 +34,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
-final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
+final class Http1ClientKeepAliveHandler<T extends ConnectionEventKey> extends Http1KeepAliveHandler {
 
     private static final RequestHeaders HTTP1_PING_REQUEST =
             RequestHeaders.builder(HttpMethod.OPTIONS, "*")
@@ -43,11 +46,12 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
     @Nullable
     private ClientHttp1ObjectEncoder encoder;
 
-    Http1ClientKeepAliveHandler(Channel channel, Http1ResponseDecoder decoder,
-                                Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
+    Http1ClientKeepAliveHandler(Channel channel, Http1ResponseDecoder decoder, Timer keepAliveTimer,
+                                ConnectionEventListener connectionEventListener, SessionProtocol protocol,
+                                long idleTimeoutMillis, long pingIntervalMillis,
                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
                                 boolean keepAliveOnPing) {
-        super(channel, "client", keepAliveTimer, idleTimeoutMillis,
+        super(channel, "client", keepAliveTimer, connectionEventListener, protocol, idleTimeoutMillis,
               pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
         httpSession = HttpSession.get(requireNonNull(channel, "channel"));
         this.decoder = requireNonNull(decoder, "decoder");

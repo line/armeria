@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.common;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -27,8 +28,12 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 
+import com.linecorp.armeria.common.ConnectionEventKey;
+import com.linecorp.armeria.common.ConnectionEventListener;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
@@ -55,9 +60,11 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private final String name;
     private final boolean isServer;
     private final Timer keepAliveTimer;
-
+    private final ConnectionEventListener connectionEventListener;
+    private final SessionProtocol protocol;
     private final long maxNumRequestsPerConnection;
     private long currentNumRequests;
+    private boolean isActive = true;
 
     @Nullable
     private ScheduledFuture<?> connectionIdleTimeout;
@@ -87,13 +94,16 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private Future<?> shutdownFuture;
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
-                                       long idleTimeoutMillis, long pingIntervalMillis,
-                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
-                                       boolean keepAliveOnPing) {
+                                       ConnectionEventListener connectionEventListener,
+                                       SessionProtocol protocol, long idleTimeoutMillis,
+                                       long pingIntervalMillis, long maxConnectionAgeMillis,
+                                       long maxNumRequestsPerConnection, boolean keepAliveOnPing) {
         this.channel = channel;
         this.name = name;
         isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
+        this.connectionEventListener = connectionEventListener;
+        this.protocol = protocol;
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
         this.keepAliveOnPing = keepAliveOnPing;
 
@@ -120,14 +130,55 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     public final void initialize(ChannelHandlerContext ctx) {
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
+        logger.info(ctx.handler().getClass().toString() + " : initialize" + isInitialized);
         if (isInitialized) {
             return;
         }
         isInitialized = true;
 
+        if (channel.isActive() && !(ctx.handler() instanceof HttpProtocolUpgradeHandler)) {
+            final ConnectionEventKey connectionEventKey = connectionEventKey(channel);
+            connectionEventKey.setProtocol(protocol);
+
+            try {
+                connectionEventListener.connectionOpened(connectionEventKey.desiredProtocol(),
+                                                         protocol,
+                                                         connectionEventKey.remoteAddress(),
+                                                         connectionEventKey.localAddress(),
+                                                         channel);
+                connectionEventListener.connectionActive(protocol,
+                                                         connectionEventKey.remoteAddress(),
+                                                         connectionEventKey.localAddress(),
+                                                         channel);
+            } catch (Throwable e) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("{} Exception handling {}.connectionOpened()",
+                                channel, connectionEventListener.getClass().getName(), e);
+                }
+            }
+        }
+
         final long connectionStartTimeNanos = System.nanoTime();
         ctx.channel().closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
+
+            try {
+                if (!(ctx.handler() instanceof HttpProtocolUpgradeHandler)) {
+                    final ConnectionEventKey connectionEventKey = connectionEventKey(channel);
+                    connectionEventListener.connectionClosed(protocol,
+                                                             connectionEventKey.remoteAddress(),
+                                                             connectionEventKey.localAddress(),
+                                                             !isActive,
+                                                             channel);
+                    ChannelUtil.setConnectionEventKey(channel, null);
+                }
+            } catch (Throwable e) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("{} Exception handling {}.connectionClosed()",
+                                channel, connectionEventListener.getClass().getName(), e);
+                }
+            }
+
             destroy();
         });
 
@@ -188,6 +239,24 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             }
             pingState = PingState.IDLE;
             cancelFutures();
+        }
+
+        if (!isActive) {
+            isActive = true;
+
+            final ConnectionEventKey connectionEventKey = connectionEventKey(channel);
+
+            try {
+                connectionEventListener.connectionActive(protocol,
+                                                         connectionEventKey.remoteAddress(),
+                                                         connectionEventKey.localAddress(),
+                                                         channel);
+            } catch (Throwable e) {
+                if (logger.isWarnEnabled()) {
+                    logger.warn("{} Exception handling {}.connectionActive()",
+                                channel, connectionEventListener.getClass().getName(), e);
+                }
+            }
         }
     }
 
@@ -251,6 +320,25 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     @VisibleForTesting
     final PingState state() {
         return pingState;
+    }
+
+    private ConnectionEventKey connectionEventKey(Channel channel) {
+        ConnectionEventKey connectionEventKey = ChannelUtil.connectionEventKey(channel);
+
+        if (connectionEventKey != null) {
+            return connectionEventKey;
+        }
+
+        final InetSocketAddress remoteAddress = ChannelUtil.remoteAddress(channel);
+        final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
+
+        assert localAddress != null && remoteAddress != null;
+
+        connectionEventKey = new ConnectionEventKey(remoteAddress, localAddress);
+
+        ChannelUtil.setConnectionEventKey(channel, connectionEventKey);
+
+        return connectionEventKey;
     }
 
     private void cancelFutures() {
@@ -373,6 +461,25 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 // notify the callback.
                 connectionIdleTimeout = executor().schedule(this, connectionIdleTimeNanos,
                                                             TimeUnit.NANOSECONDS);
+
+                if (isActive) {
+                    isActive = false;
+
+                    final ConnectionEventKey connectionEventKey = connectionEventKey(ctx.channel());
+
+                    try {
+                        connectionEventListener.connectionIdle(protocol,
+                                                               connectionEventKey.remoteAddress(),
+                                                               connectionEventKey.localAddress(),
+                                                               channel);
+                    } catch (Exception e) {
+                        if (logger.isWarnEnabled()) {
+                            logger.warn("{} Exception handling {}.connectionIdle()",
+                                        channel, connectionEventListener.getClass().getName(), e);
+                        }
+                    }
+                }
+
                 try {
                     if (!hasRequestsInProgress(ctx)) {
                         pingState = PingState.SHUTDOWN;

@@ -934,6 +934,16 @@ public final class ClientFactoryBuilder implements TlsSetters {
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
 
+        if (options.containsKey(ClientFactoryOptions.CONNECTION_POOL_LISTENER) &&
+            !options.containsKey(ClientFactoryOptions.CLIENT_CONNECTION_EVENT_LISTENER)) {
+            final ConnectionPoolListener connectionPoolListener =
+                    (ConnectionPoolListener) options.get(ClientFactoryOptions.CONNECTION_POOL_LISTENER).value();
+
+            options.put(ClientFactoryOptions.CLIENT_CONNECTION_EVENT_LISTENER,
+                        ClientFactoryOptions.CLIENT_CONNECTION_EVENT_LISTENER
+                                .newValue(ClientConnectionEventListenerAdapter.of(connectionPoolListener)));
+        }
+
         if (tlsNoVerifySet) {
             tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
         } else if (!insecureHosts.isEmpty()) {

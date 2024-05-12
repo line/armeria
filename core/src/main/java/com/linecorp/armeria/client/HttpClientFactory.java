@@ -121,6 +121,7 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
     private final long http2GracefulShutdownTimeoutMillis;
+    private final ClientConnectionEventListener clientConnectionEventListener;
     private MeterRegistry meterRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
     private final Http1HeaderNaming http1HeaderNaming;
@@ -202,6 +203,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
         http2GracefulShutdownTimeoutMillis = options.http2GracefulShutdownTimeoutMillis();
+        clientConnectionEventListener = options.clientConnectionEventListener();
         meterRegistry = options.meterRegistry();
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();
@@ -297,12 +299,21 @@ final class HttpClientFactory implements ClientFactory {
         return useHttp1Pipelining;
     }
 
+    /**
+     * Use {@link #clientConnectionEventListener()} instead.
+     * @deprecated Use {@link #clientConnectionEventListener()} instead.
+     */
+    @Deprecated
     ConnectionPoolListener connectionPoolListener() {
         return connectionPoolListener;
     }
 
     long http2GracefulShutdownTimeoutMillis() {
         return http2GracefulShutdownTimeoutMillis;
+    }
+
+    ClientConnectionEventListener clientConnectionEventListener() {
+        return clientConnectionEventListener;
     }
 
     ProxyConfigSelector proxyConfigSelector() {
@@ -493,6 +504,6 @@ final class HttpClientFactory implements ClientFactory {
         return pools.computeIfAbsent(eventLoop,
                                      e -> new HttpChannelPool(this, eventLoop,
                                                               sslCtxHttp1Or2, sslCtxHttp1Only,
-                                                              connectionPoolListener()));
+                                                              clientConnectionEventListener()));
     }
 }

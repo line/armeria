@@ -93,7 +93,7 @@ final class HttpChannelPool implements AsyncCloseable {
     private final Map<PoolKey, Deque<PooledChannel>>[] pool;
     private final Map<PoolKey, ChannelAcquisitionFuture>[] pendingAcquisitions;
     private final Map<Channel, Boolean> allChannels;
-    private final ConnectionPoolListener listener;
+    private final ClientConnectionEventListener listener;
 
     // Fields for creating a new connection:
     private final Bootstraps bootstraps;
@@ -101,7 +101,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
-                    ConnectionPoolListener listener) {
+                    ClientConnectionEventListener listener) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
         this.listener = listener;
@@ -111,8 +111,8 @@ final class HttpChannelPool implements AsyncCloseable {
         pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
         connectTimeoutMillis = (Integer) clientFactory.options()
-                .channelOptions()
-                .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                                                      .channelOptions()
+                                                      .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
     }
 
@@ -415,6 +415,21 @@ final class HttpChannelPool implements AsyncCloseable {
                     }
                 });
                 channel.connect(remoteAddress, connectionPromise);
+
+                try {
+                    final InetSocketAddress remoteInetAddress = poolKey.endpoint.toSocketAddress(-1);
+                    final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
+
+                    assert remoteInetAddress != null && localAddress != null;
+
+                    listener.connectionPending(desiredProtocol,
+                                               remoteInetAddress,
+                                               localAddress,
+                                               channel);
+                } catch (Throwable t) {
+                    logger.warn("Unexpected exception from {}.connectionPending()",
+                                ClientConnectionEventListener.class.getSimpleName(), t);
+                }
             } catch (Throwable cause) {
                 maybeHandleProxyFailure(desiredProtocol, poolKey, cause);
                 sessionPromise.tryFailure(cause);
@@ -480,19 +495,6 @@ final class HttpChannelPool implements AsyncCloseable {
 
                 allChannels.put(channel, Boolean.TRUE);
 
-                final InetSocketAddress remoteAddr = ChannelUtil.remoteAddress(channel);
-                final InetSocketAddress localAddr = ChannelUtil.localAddress(channel);
-                assert remoteAddr != null && localAddr != null
-                        : "raddr: " + remoteAddr + ", laddr: " + localAddr;
-                try {
-                    listener.connectionOpen(protocol, remoteAddr, localAddr, channel);
-                } catch (Throwable e) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn("{} Exception handling {}.connectionOpen()",
-                                    channel, listener.getClass().getName(), e);
-                    }
-                }
-
                 final HttpSession session = HttpSession.get(channel);
                 if (session.incrementNumUnfinishedResponses()) {
                     if (protocol.isMultiplex()) {
@@ -515,7 +517,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     // Clean up old unhealthy channels by iterating from the beginning of the queue.
                     final Deque<PooledChannel> queue = getPool(protocol, key);
                     if (queue != null) {
-                        for (;;) {
+                        for (; ; ) {
                             final PooledChannel pooledChannel = queue.peekFirst();
                             if (pooledChannel == null || isHealthy(pooledChannel)) {
                                 break;
@@ -524,14 +526,6 @@ final class HttpChannelPool implements AsyncCloseable {
                         }
                     }
 
-                    try {
-                        listener.connectionClosed(protocol, remoteAddr, localAddr, channel);
-                    } catch (Throwable e) {
-                        if (logger.isWarnEnabled()) {
-                            logger.warn("{} Exception handling {}.connectionClosed()",
-                                        channel, listener.getClass().getName(), e);
-                        }
-                    }
                 });
             } else {
                 final Throwable throwable = future.cause();

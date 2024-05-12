@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
@@ -132,6 +133,11 @@ public interface ServerConfig {
      */
     @UnstableApi
     Consumer<? super ChannelPipeline> childChannelPipelineCustomizer();
+
+    /**
+     * Returns the {@link ConnectionEventListener} that listens to the life cycle of connections.
+     */
+    ConnectionEventListener connectionEventListener();
 
     /**
      * Returns the maximum allowed number of open connections.

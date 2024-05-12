@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.ConnectionEventListener;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
@@ -26,12 +28,14 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 
 final class Http2ClientKeepAliveHandler extends Http2KeepAliveHandler {
     Http2ClientKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Timer keepAliveTimer,
+                                ConnectionEventListener connectionEventListener, SessionProtocol protocol,
                                 long idleTimeoutMillis, long pingIntervalMillis,
                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
                                 boolean keepAliveOnPing) {
 
-        super(channel, frameWriter, "client", keepAliveTimer,
-              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+        super(channel, frameWriter, "client", keepAliveTimer, connectionEventListener, protocol,
+              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
+              maxNumRequestsPerConnection,
               keepAliveOnPing);
     }
 

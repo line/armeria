@@ -249,6 +249,13 @@ public final class ClientFactoryOptions
                                        Flags.defaultClientHttp2GracefulShutdownTimeoutMillis());
 
     /**
+     * The listener which is notified on a connection pool event.
+     */
+    public static final ClientFactoryOption<ClientConnectionEventListener> CLIENT_CONNECTION_EVENT_LISTENER =
+            ClientFactoryOption.define("CLIENT_CONNECTION_EVENT_LISTENER",
+                                       ClientConnectionEventListener.noop());
+
+    /**
      * The {@link MeterRegistry} which collects various stats.
      */
     public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
@@ -569,6 +576,13 @@ public final class ClientFactoryOptions
      */
     public long http2GracefulShutdownTimeoutMillis() {
         return get(HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Returns the listener which is notified on a connection event.
+     */
+    public ClientConnectionEventListener clientConnectionEventListener() {
+        return get(CLIENT_CONNECTION_EVENT_LISTENER);
     }
 
     /**
