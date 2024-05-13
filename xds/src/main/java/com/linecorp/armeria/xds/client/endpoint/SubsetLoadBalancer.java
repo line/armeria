@@ -25,6 +25,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
 import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -74,22 +75,29 @@ final class SubsetLoadBalancer implements LoadBalancer {
         final Cluster cluster = clusterSnapshot.xdsResource().resource();
         final LbSubsetConfig lbSubsetConfig = cluster.getLbSubsetConfig();
         if (lbSubsetConfig == LbSubsetConfig.getDefaultInstance()) {
-            // No lbSubsetConfig. Use the whole endpoints.
-            return createEndpointGroup(prioritySet.endpoints());
+            // Route metadata exists but no lbSubsetConfig. Use NO_FALLBACK.
+            return EndpointGroup.of();
         }
-        final LbSubsetFallbackPolicy fallbackPolicy = lbSubsetConfig.getFallbackPolicy();
-        if (fallbackPolicy != LbSubsetFallbackPolicy.ANY_ENDPOINT) {
-            logger.warn("Currently, only {} is supported.", LbSubsetFallbackPolicy.ANY_ENDPOINT);
+        LbSubsetFallbackPolicy fallbackPolicy = lbSubsetConfig.getFallbackPolicy();
+        if (!(fallbackPolicy == LbSubsetFallbackPolicy.NO_FALLBACK ||
+              fallbackPolicy == LbSubsetFallbackPolicy.ANY_ENDPOINT)) {
+            logger.warn("Currently, {} isn't supported. Use {}",
+                        fallbackPolicy, LbSubsetFallbackPolicy.NO_FALLBACK);
+            fallbackPolicy = LbSubsetFallbackPolicy.NO_FALLBACK;
         }
 
         if (!findMatchedSubsetSelector(lbSubsetConfig, filterMetadata)) {
-            // No matched subset selector. Use the whole endpoints.
+            if (fallbackPolicy == LbSubsetFallbackPolicy.NO_FALLBACK) {
+                return EndpointGroup.of();
+            }
             return createEndpointGroup(prioritySet.endpoints());
         }
         final List<Endpoint> endpoints = convertEndpoints(prioritySet.endpoints(),
                                                           filterMetadata);
         if (endpoints.isEmpty()) {
-            // No matched metadata. Use the whole endpoints.
+            if (fallbackPolicy == LbSubsetFallbackPolicy.NO_FALLBACK) {
+                return EndpointGroup.of();
+            }
             return createEndpointGroup(prioritySet.endpoints());
         }
         return createEndpointGroup(endpoints);
@@ -97,5 +105,13 @@ final class SubsetLoadBalancer implements LoadBalancer {
 
     private static EndpointGroup createEndpointGroup(List<Endpoint> endpoints) {
         return EndpointGroup.of(endpoints);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("clusterSnapshot", clusterSnapshot)
+                          .add("endpointGroup", endpointGroup)
+                          .toString();
     }
 }

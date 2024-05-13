@@ -16,10 +16,13 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -87,5 +90,15 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
     @Override
     public void close() {
         endpointGroup.close();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("endpointGroup", endpointGroup)
+                          .add("loadBalancer", loadBalancer)
+                          .add("numEndpoints", endpoints.size())
+                          .add("endpoints", truncate(endpoints, 10))
+                          .toString();
     }
 }

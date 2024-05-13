@@ -45,7 +45,6 @@ class JsonLogFormatterTest {
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
         final String requestLog = logFormatter.formatRequest(log);
-        System.err.println(requestLog);
         assertThat(requestLog)
                 .matches("^\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
                          "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}}$");

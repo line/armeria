@@ -40,8 +40,11 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Server;
@@ -156,6 +159,10 @@ final class SamlService implements HttpServiceWithRoutes {
         }
         return HttpResponse.of(f.handleAsync((aggregatedReq, cause) -> {
             if (cause != null) {
+                cause = Exceptions.peel(cause);
+                if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+                    return HttpResponse.ofFailure(cause);
+                }
                 logger.warn("{} Failed to aggregate a SAML request.", ctx, cause);
                 return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
                                        DATA_AGGREGATION_FAILURE);

@@ -27,13 +27,16 @@ import java.nio.channels.ClosedChannelException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.stubbing.Answer;
+
+import com.linecorp.armeria.common.HttpResponse;
 
 class ExceptionReportingServiceErrorHandlerTest {
 
     @Mock
     private ServiceErrorHandler delegate;
     @Mock
-    private UnhandledExceptionsReporter reporter;
+    private UnloggedExceptionsReporter reporter;
     @Mock
     private ServiceRequestContext ctx;
 
@@ -48,35 +51,45 @@ class ExceptionReportingServiceErrorHandlerTest {
 
     @Test
     void onServiceExceptionShouldNotReportWhenShouldReportUnhandledExceptionsIsFalse() {
-        when(ctx.shouldReportUnhandledExceptions()).thenReturn(false);
+        when(ctx.shouldReportUnloggedExceptions()).thenReturn(false);
         serviceErrorHandler.onServiceException(ctx, new IllegalArgumentException("Test"));
         verify(reporter, times(0)).report(any());
     }
 
     @Test
     void onServiceExceptionShouldNotReportWhenCauseIsExpected() {
-        when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
+        when(ctx.shouldReportUnloggedExceptions()).thenReturn(true);
         serviceErrorHandler.onServiceException(ctx, new ClosedChannelException());
         verify(reporter, times(0)).report(any());
     }
 
     @Test
     void onServiceExceptionShouldReportWhenCauseIsNotExpected() {
-        when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
+        when(ctx.shouldReportUnloggedExceptions()).thenReturn(true);
         serviceErrorHandler.onServiceException(ctx, new IllegalArgumentException("Test"));
         verify(reporter, times(1)).report(any());
     }
 
     @Test
+    void onServiceExceptionShouldNotReportWhenDelegateSetShouldReport() {
+        when(delegate.onServiceException(any(), any())).then((Answer<HttpResponse>) invocation -> {
+            when(ctx.shouldReportUnloggedExceptions()).thenReturn(false);
+            return HttpResponse.of(200);
+        });
+        serviceErrorHandler.onServiceException(ctx, new IllegalArgumentException("Test"));
+        verify(reporter, times(0)).report(any());
+    }
+
+    @Test
     void onServiceExceptionShouldNotReportWhenCauseIsHttpStatusExceptionAndCauseNull() {
-        when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
+        when(ctx.shouldReportUnloggedExceptions()).thenReturn(true);
         serviceErrorHandler.onServiceException(ctx, HttpStatusException.of(500));
         verify(reporter, times(0)).report(any());
     }
 
     @Test
     void onServiceExceptionShouldReportWhenCauseIsHttpStatusExceptionAndCauseNonNull() {
-        when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
+        when(ctx.shouldReportUnloggedExceptions()).thenReturn(true);
         serviceErrorHandler.onServiceException(
                 ctx, HttpStatusException.of(500, new IllegalArgumentException("test")));
         verify(reporter, times(1)).report(any());
