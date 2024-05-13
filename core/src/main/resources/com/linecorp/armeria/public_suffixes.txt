@@ -70,6 +70,7 @@
 *.frusky.de
 *.futurecms.at
 *.gateway.dev
+*.hosted.app
 *.hosting.myjino.ru
 *.hosting.ovh.net
 *.id.pub
@@ -2562,6 +2563,7 @@ execute-api.us-west-2.amazonaws.com
 exnet.su
 expert
 experts-comptables.fr
+expo.app
 exposed
 express
 express.aero
@@ -7933,6 +7935,7 @@ stackit.run
 stackit.zone
 stada
 stage.nodeart.io
+staging.expo.app
 staging.onred.one
 staging.replit.dev
 stalowa-wola.pl
