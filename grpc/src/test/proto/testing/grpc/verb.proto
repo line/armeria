@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package example.grpc.testing;
+
+option java_package = "testing.grpc";
+
+import "google/api/annotations.proto";
+
+service TranscodingVerbService {
+  rpc WildcardVerb(Simple) returns (Simple) {
+    option (google.api.http) = {
+      get: "/v1/wildcard/verb/{name=hello/*}:verb"
+    };
+  }
+}
+
+message GetMessageRequestV1 {
+  string name = 1; // Mapped to URL path.
+}
+
+message Simple {
+  string name = 1;
+}
