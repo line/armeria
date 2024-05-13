@@ -117,6 +117,9 @@ class GrpcDocServicePluginTest {
         services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
                      GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
+                if (m.examplePaths().isEmpty()) {
+                    return;
+                }
                 assertThat(e.pathMapping()).endsWith(m.examplePaths().get(0));
             });
         });

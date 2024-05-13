@@ -142,7 +142,16 @@ public final class MethodInfo {
                 requireNonNull(endpoints, "endpoints"));
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
         this.exampleRequests = ImmutableList.copyOf(requireNonNull(exampleRequests, "exampleRequests"));
-        this.examplePaths = ImmutableList.copyOf(requireNonNull(examplePaths, "examplePaths"));
+
+        requireNonNull(examplePaths, "examplePaths");
+        final ImmutableList.Builder<String> examplePathsBuilder =
+                ImmutableList.builderWithExpectedSize(Iterables.size(examplePaths));
+        for (String path : examplePaths) {
+            final RequestTarget reqTarget = RequestTarget.forServer(path);
+            checkArgument(reqTarget != null, "examplePaths contains an invalid path: %s", path);
+            examplePathsBuilder.add(reqTarget.path());
+        }
+        this.examplePaths = examplePathsBuilder.build();
 
         requireNonNull(exampleQueries, "exampleQueries");
         final ImmutableList.Builder<String> exampleQueriesBuilder =

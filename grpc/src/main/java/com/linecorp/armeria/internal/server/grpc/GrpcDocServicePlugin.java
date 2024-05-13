@@ -309,7 +309,9 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                            .build()).collect(toImmutableList());
 
             final List<String> examplePaths =
-                    sortedEndpoints.stream().map(httpEndpoint -> httpEndpoint.spec().route().patternString())
+                    sortedEndpoints.stream()
+                                   .filter(httpEndpoint -> httpEndpoint.spec().route().pathType() != RoutePathType.REGEX)
+                                   .map(httpEndpoint -> httpEndpoint.spec().route().patternString())
                                    .collect(toImmutableList());
 
             final List<String> exampleQueries =
