@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -310,7 +309,7 @@ final class HttpJsonTranscodingPathParser {
         }
 
         enum PathMappingType {
-            PARAMETERIZED, GLOB
+            PARAMETERIZED, GLOB, REGEX,
         }
     }
 
@@ -372,13 +371,20 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String segmentString(PathMappingType type) {
-            return type == PathMappingType.PARAMETERIZED ? ':' + pathVariable(type)
-                                                         : "*";
+            switch (type) {
+                case PARAMETERIZED:
+                    return ':' + pathVariable(type);
+                case GLOB:
+                    return "*";
+                case REGEX:
+                    return "(?<" + pathVariable(type) + ">[^/]+)";
+            }
+            throw new Error();
         }
 
         @Override
         public String pathVariable(PathMappingType type) {
-            if (type == PathMappingType.PARAMETERIZED) {
+            if (type == PathMappingType.PARAMETERIZED || type == PathMappingType.REGEX) {
                 if (parentFieldPath != null) {
                     return parentFieldPath;
                 } else {
@@ -411,7 +417,7 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String segmentString(PathMappingType type) {
-            if (type == PathMappingType.PARAMETERIZED) {
+            if (type != PathMappingType.GLOB) {
                 throw new UnsupportedOperationException("Unable to convert to ParameterizedPathMapping.");
             }
             return "**";
@@ -456,8 +462,15 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String segmentString(PathMappingType type) {
-            return type == PathMappingType.PARAMETERIZED ? Stringifier.asParameterizedPath(valueSegments, false)
-                                                         : Stringifier.asGlobPath(valueSegments, false);
+            switch (type) {
+                case PARAMETERIZED:
+                    return Stringifier.asParameterizedPath(valueSegments, false);
+                case GLOB:
+                    return Stringifier.asGlobPath(valueSegments, false);
+                case REGEX:
+                    return Stringifier.asRegexPath(valueSegments, false);
+            }
+            throw new Error();
         }
 
         @Override
@@ -480,7 +493,13 @@ final class HttpJsonTranscodingPathParser {
          */
         static String asParameterizedPath(List<PathSegment> segments, boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            final String path = toPathString(segments, PathMappingType.PARAMETERIZED);
+            final String path = concatWithSlash(segments, PathMappingType.PARAMETERIZED);
+            return withLeadingSlash ? '/' + path : path;
+        }
+
+        static String asRegexPath(List<PathSegment> segments, boolean withLeadingSlash) {
+            requireNonNull(segments, "segments");
+            final String path = concatWithSlash(segments, PathMappingType.REGEX);
             return withLeadingSlash ? '/' + path : path;
         }
 
@@ -489,24 +508,22 @@ final class HttpJsonTranscodingPathParser {
          */
         static String asGlobPath(List<PathSegment> segments, boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            final String path = toPathString(segments, PathMappingType.GLOB);
+            final String path = concatWithSlash(segments, PathMappingType.GLOB);
             return withLeadingSlash ? '/' + path : path;
         }
 
-        private static String toPathString(List<PathSegment> segments, PathMappingType type) {
-            final PathSegment lastSegment = segments.get(segments.size() - 1);
-            if (lastSegment instanceof VerbPathSegment) {
-                final String basePath = concatWithSlash(segments.subList(0, segments.size() - 1), type);
-                return basePath + ':' + lastSegment.segmentString(type);
-            } else {
-                return concatWithSlash(segments, type);
-            }
-        }
-
         private static String concatWithSlash(List<PathSegment> segments, PathMappingType type) {
-            return segments.stream()
-                           .map(segment -> segment.segmentString(type))
-                           .collect(Collectors.joining("/"));
+            final StringBuilder ret = new StringBuilder(segments.get(0).segmentString(type));
+            for (int i = 1; i < segments.size(); i++) {
+                final PathSegment segment = segments.get(i);
+                if (segment instanceof VerbPathSegment) {
+                    ret.append(':');
+                } else {
+                    ret.append('/');
+                }
+                ret.append(segment.segmentString(type));
+            }
+            return ret.toString();
         }
 
         private Stringifier() {}

@@ -105,6 +105,7 @@ import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegmen
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment.PathMappingType;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.Stringifier;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VariablePathSegment;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VerbPathSegment;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.PathVariable.ValueDefinition.Type;
 
 import io.grpc.MethodDescriptor.MethodType;
@@ -283,14 +284,20 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
         final List<PathSegment> segments = HttpJsonTranscodingPathParser.parse(path);
 
-        final PathMappingType pathMappingType =
+        PathMappingType pathMappingType =
                 segments.stream().allMatch(segment -> segment.support(PathMappingType.PARAMETERIZED)) ?
                 PathMappingType.PARAMETERIZED : PathMappingType.GLOB;
+        if (segments.get(segments.size() - 1) instanceof VerbPathSegment) {
+            assert pathMappingType == PathMappingType.PARAMETERIZED;
+            pathMappingType = PathMappingType.REGEX;
+        }
 
         if (pathMappingType == PathMappingType.PARAMETERIZED) {
             builder.path(Stringifier.asParameterizedPath(segments, true));
-        } else {
+        } else if (pathMappingType == PathMappingType.GLOB) {
             builder.glob(Stringifier.asGlobPath(segments, true));
+        } else {
+            builder.regex(Stringifier.asRegexPath(segments, true));
         }
         return new SimpleImmutableEntry<>(builder.build(), PathVariable.from(segments, pathMappingType));
     }

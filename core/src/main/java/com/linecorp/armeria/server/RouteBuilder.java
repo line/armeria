@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -96,7 +95,7 @@ public final class RouteBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public RouteBuilder path(String pathPattern) {
-        return pathMapping(getPathMapping(pathPattern, RouteBuilder::getPathMapping));
+        return pathMapping(getPathMapping(pathPattern));
     }
 
     /**
@@ -546,26 +545,6 @@ public final class RouteBuilder {
             return new ExactPathMapping(pathPattern);
         }
         return new ParameterizedPathMapping(pathPattern);
-    }
-
-    private static PathMapping getPathMapping(String pathPattern,
-                                              Function<String, PathMapping> basePathMappingMapper) {
-        requireNonNull(pathPattern, "pathPattern");
-        if (pathPattern.startsWith(EXACT) ||
-            pathPattern.startsWith(PREFIX) ||
-            pathPattern.startsWith(REGEX) ||
-            pathPattern.startsWith(GLOB)) {
-            return basePathMappingMapper.apply(pathPattern);
-        }
-
-        // Parameterized, glob or no prefix.
-        final String verb = VerbSuffixPathMapping.findVerb(pathPattern);
-        if (verb == null) {
-            return basePathMappingMapper.apply(pathPattern);
-        }
-        final String basePathPattern = pathPattern.substring(0, pathPattern.length() - verb.length() - 1);
-        final PathMapping basePathMapping = basePathMappingMapper.apply(basePathPattern);
-        return new VerbSuffixPathMapping(basePathMapping, verb);
     }
 
     static PathMapping prefixPathMapping(String prefix, boolean stripPrefix) {
