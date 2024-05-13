@@ -22,7 +22,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -36,8 +35,7 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class CorsServerErrorHanderTest {
-    private static final ClientFactory clientFactory = ClientFactory.ofDefault();
+class CorsServerErrorHandlerTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -49,25 +47,22 @@ public class CorsServerErrorHanderTest {
                                         HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR));
             addCorsServiceWithException(sb, myService, "/cors_response_exception",
                                         HttpResponseException.of(
-                                        HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR)));
+                                                HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR)));
         }
     };
 
     private static void addCorsServiceWithException(ServerBuilder sb, HttpService myService, String pathPattern,
                                                     Exception exception) {
-        sb.service(pathPattern, myService.decorate(
-        CorsService.builder("http://example.com")
-        .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-        .allowRequestHeaders("allow_request_header")
-        .exposeHeaders("expose_header_1", "expose_header_2")
-        .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-        .newDecorator())
-        .decorate((delegate, ctx, req) -> {
-            throw exception; }));
-    }
-
-    private static WebClient client() {
-        return WebClient.builder(server.httpUri()).factory(clientFactory).build();
+        sb.service(pathPattern,
+                   myService.decorate(CorsService.builder("http://example.com")
+                                                 .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                                                 .allowRequestHeaders("allow_request_header")
+                                                 .exposeHeaders("expose_header_1", "expose_header_2")
+                                                 .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                                                 .newDecorator())
+                            .decorate((delegate, ctx, req) -> {
+                                throw exception;
+                            }));
     }
 
     private static AggregatedHttpResponse request(WebClient client, HttpMethod method, String path,
@@ -78,14 +73,14 @@ public class CorsServerErrorHanderTest {
     }
 
     private static AggregatedHttpResponse preflightRequest(WebClient client, String path, String origin,
-                                                   String requestMethod) {
+                                                           String requestMethod) {
         return request(client, HttpMethod.OPTIONS, path, origin, requestMethod);
     }
 
     @ParameterizedTest
     @CsvSource({ "/cors_status_exception", "/cors_response_exception" })
     void testCorsHeaderWithException(String path) {
-        final WebClient client = client();
+        final WebClient client = server.webClient();
         final AggregatedHttpResponse response = preflightRequest(client, path,
                                                                  "http://example.com", "GET");
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);

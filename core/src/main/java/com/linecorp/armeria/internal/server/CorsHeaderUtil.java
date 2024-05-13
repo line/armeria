@@ -136,14 +136,14 @@ public final class CorsHeaderUtil {
             if (config.isAnyOriginSupported()) {
                 if (policy.isCredentialsAllowed()) {
                     echoCorsRequestOrigin(request, headers);
-                    setCorsVaryHeader(headers);
+                    addCorsVaryHeader(headers);
                 } else {
                     setCorsAnyOrigin(headers);
                 }
                 return policy;
             }
             setCorsOrigin(headers, origin);
-            setCorsVaryHeader(headers);
+            addCorsVaryHeader(headers);
             return policy;
         }
         return null;
@@ -160,8 +160,8 @@ public final class CorsHeaderUtil {
         }
     }
 
-    private static void setCorsVaryHeader(ResponseHeadersBuilder headers) {
-        headers.set(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN.toString());
+    private static void addCorsVaryHeader(ResponseHeadersBuilder headers) {
+        headers.add(HttpHeaderNames.VARY, HttpHeaderNames.ORIGIN.toString());
     }
 
     private static void setCorsAnyOrigin(ResponseHeadersBuilder headers) {
