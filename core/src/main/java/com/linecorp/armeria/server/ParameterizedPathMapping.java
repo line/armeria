@@ -163,7 +163,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
             }
 
             normalizedPatternJoiner.add((captureRestPathMatching ? ":*" : ':') + colonRemovedParamName);
-            skeletonJoiner.add(captureRestPathMatching ? "*" : ":");
+            skeletonJoiner.add(captureRestPathMatching ? "*" : "\0");
         }
 
         this.pathPattern = pathPattern;

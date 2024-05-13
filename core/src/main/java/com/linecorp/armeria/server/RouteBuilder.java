@@ -541,7 +541,7 @@ public final class RouteBuilder {
                     "pathPattern: " + pathPattern +
                     " (not an absolute path starting with '/' or a unknown pattern type)");
         }
-        if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
+        if (!pathPattern.contains("{") && !pathPattern.contains("/:")) {
             return new ExactPathMapping(pathPattern);
         }
         return new ParameterizedPathMapping(pathPattern);

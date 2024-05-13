@@ -342,16 +342,6 @@ class AnnotatedServiceTest {
             return "/verb/test:verb";
         }
 
-        @Get("/colon-param/:colon:verb")
-        public String verbTestParamColon(@Param String colon) {
-            return colon + " colon verb";
-        }
-
-        @Get("/braces-param/{braces}:verb")
-        public String verbTestParamBraces(@Param String braces) {
-            return braces + " braces verb";
-        }
-
         @Get("/verb/:param")
         public String noVerbTest(@Param String param) {
             return "no-verb";
@@ -936,11 +926,8 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/1/exception/42"), 500);
             testStatusCode(hc, get("/1/exception-async/1"), 500);
 
-            // Verb suffix in a path
+            // colon in a path
             testBody(hc, get("/1/verb/test:verb"), "String[/verb/test:verb]");
-            testBody(hc, get("/1/colon-param/test:verb"), "String[test colon verb]");
-            testBody(hc, get("/1/braces-param/test:verb"), "String[test braces verb]");
-            testBody(hc, get("/1/colon-param/colon:test:verb"), "String[colon:test colon verb]");
             testBody(hc, get("/1/verb/test:no-verb"), "String[no-verb]");
 
             testBody(hc, get("/2/int/42"), "Number[42]");

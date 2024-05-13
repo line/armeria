@@ -178,18 +178,9 @@ final class RoutingTrieBuilder<V> {
         StringBuilder exactPath = null;
 
         while (pathReader.hasNext()) {
-            // All escaped characters will be treated as an exact path.
-            if (pathReader.isEscaped()) {
-                if (exactPath == null) {
-                    exactPath = new StringBuilder();
-                }
-                exactPath.append(pathReader.read());
-                continue;
-            }
-
             final char c = pathReader.read();
-            // Find the prefix until the first wildcard (':' or '*')
-            if (c != '*' && c != ':') {
+            // Find the prefix until the first wildcard ('\0' or '*')
+            if (c != '*' && c != '\0') {
                 if (exactPath == null) {
                     exactPath = new StringBuilder();
                 }
@@ -209,7 +200,7 @@ final class RoutingTrieBuilder<V> {
             if (c == '*') {
                 node = asChild(new NodeBuilder<>(NodeType.CATCH_ALL, node, "*"));
             } else {
-                node = asChild(new NodeBuilder<>(NodeType.PARAMETER, node, ":"));
+                node = asChild(new NodeBuilder<>(NodeType.PARAMETER, node, "\0"));
             }
         }
 
@@ -440,11 +431,8 @@ final class RoutingTrieBuilder<V> {
 
         char peekAsKey() {
             final char c = path.charAt(index);
-            if (isEscapeChar(c)) {
-                return path.charAt(index + 1);
-            }
             switch (c) {
-                case ':':
+                case '\0':
                     return KEY_PARAMETER;
                 case '*':
                     return KEY_CATCH_ALL;
@@ -454,12 +442,7 @@ final class RoutingTrieBuilder<V> {
         }
 
         char read() {
-            final char c = path.charAt(index++);
-            if (isEscapeChar(c)) {
-                return path.charAt(index++);
-            } else {
-                return c;
-            }
+            return path.charAt(index++);
         }
 
         boolean isSameChar(char c) {
@@ -474,16 +457,8 @@ final class RoutingTrieBuilder<V> {
             return index < length;
         }
 
-        boolean isEscaped() {
-            return isEscapeChar(path.charAt(index));
-        }
-
         String remaining() {
             return path.substring(index);
-        }
-
-        private static boolean isEscapeChar(char ch) {
-            return ch == '\\';
         }
     }
 }
