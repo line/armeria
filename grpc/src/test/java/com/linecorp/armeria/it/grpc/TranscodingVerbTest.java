@@ -32,7 +32,8 @@ import testing.grpc.Verb.Simple;
 
 class TranscodingVerbTest {
 
-    static class HttpJsonTranscodingTestService extends TranscodingVerbServiceGrpc.TranscodingVerbServiceImplBase {
+    static class HttpJsonTranscodingTestService
+            extends TranscodingVerbServiceGrpc.TranscodingVerbServiceImplBase {
         @Override
         public void wildcardVerb(Simple request, StreamObserver<Simple> responseObserver) {
             responseObserver.onNext(request);
@@ -53,7 +54,8 @@ class TranscodingVerbTest {
 
     @Test
     void testWildcardVerb() throws Exception {
-        final AggregatedHttpResponse response = server.blockingWebClient().get("/v1/wildcard/verb/hello/world:verb");
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().get("/v1/wildcard/verb/hello/world:verb");
         assertThatJson(response.contentUtf8()).node("name").isEqualTo("hello/world");
     }
 }
