@@ -45,9 +45,9 @@ class TranscodingVerbTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(GrpcService.builder()
-                               .addService(new HttpJsonTranscodingTestService())
-                               .enableHttpJsonTranscoding(true)
-                               .build());
+                                  .addService(new HttpJsonTranscodingTestService())
+                                  .enableHttpJsonTranscoding(true)
+                                  .build());
         }
     };
 
