@@ -32,7 +32,6 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hc.core5.http2.hpack.HPackEncoder;
@@ -50,7 +49,6 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

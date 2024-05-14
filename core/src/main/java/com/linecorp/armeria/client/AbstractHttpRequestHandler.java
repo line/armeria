@@ -28,8 +28,6 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Ascii;
-
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -240,7 +238,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
     }
 
-    final static boolean shouldExpect100ContinueHeader(RequestHeaders headers) {
+    static final boolean shouldExpect100ContinueHeader(RequestHeaders headers) {
         // Skip checking protocol version since Armeria is not fully compatible with HTTP/1.0.
         // We can assume that the version is always HTTP/1.1 or later.
         return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
@@ -391,10 +389,6 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
 
         reset(error);
-//        if (ch.isActive()) {
-//            encoder.writeReset(id, streamId(), error, false);
-//            ch.flush();
-//        }
     }
 
     final void reset(@Nullable Http2Error error) {

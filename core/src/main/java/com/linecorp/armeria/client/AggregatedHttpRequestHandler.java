@@ -30,7 +30,6 @@ import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.http.HttpHeaderValues;
 
 final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         implements BiFunction<AggregatedHttpRequest, Throwable, Void> {
@@ -125,7 +124,7 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     }
 
     @Override
-    final void repeat() {
+    void repeat() {
         assert aReq != null;
 
         reset(null);
