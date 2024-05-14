@@ -248,25 +248,25 @@ public final class GrpcMessageMarshaller<I, O> {
             if (!buf.isReadable()) {
                 return prototype.getDefaultInstanceForType();
             }
-            final CodedInputStream stream;
-            if (unsafeWrapDeserializedBuffer) {
-                stream = UnsafeByteOperations.unsafeWrap(buf.nioBuffer()).newCodedInput();
-                stream.enableAliasing(true);
-            } else {
-                stream = CodedInputStream.newInstance(buf.nioBuffer());
-            }
             try {
                 final Message msg;
                 if (useMethodMarshaller) {
                     msg = (Message) marshaller.parse(new ByteBufInputStream(buf));
                 } else {
+                    final CodedInputStream stream;
+                    if (unsafeWrapDeserializedBuffer) {
+                        stream = UnsafeByteOperations.unsafeWrap(buf.nioBuffer()).newCodedInput();
+                        stream.enableAliasing(true);
+                    } else {
+                        stream = CodedInputStream.newInstance(buf.nioBuffer());
+                    }
                     msg = prototype.getParserForType().parseFrom(stream);
-                }
-                try {
-                    stream.checkLastTagWas(0);
-                } catch (InvalidProtocolBufferException e) {
-                    e.setUnfinishedMessage(msg);
-                    throw e;
+                    try {
+                        stream.checkLastTagWas(0);
+                    } catch (InvalidProtocolBufferException e) {
+                        e.setUnfinishedMessage(msg);
+                        throw e;
+                    }
                 }
                 return msg;
             } catch (InvalidProtocolBufferException e) {
