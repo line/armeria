@@ -18,6 +18,8 @@ package com.linecorp.armeria.client;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
@@ -31,6 +33,8 @@ import io.netty.channel.Channel;
 
 abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         implements Subscriber<HttpObject> {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractHttpRequestSubscriber.class);
 
     private static final HttpData EMPTY_EOS = HttpData.empty().withEndOfStream();
 
@@ -87,7 +91,12 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         //     It is because the successful write of the first headers will trigger subscription.request(1).
         //     And it ignores `Expect: 100-continue` header because it is not common to use the header
         //     with the reactive streams API.
-        writeHeaders(mapHeaders(request.headers()), false);
+        final RequestHeaders headers = mapHeaders(request.headers());
+        if (shouldExpect100ContinueHeader(headers)) {
+            logger.warn("'Expect: 100-continue' header is not supported by Armeria client " +
+                        "when using a streaming request. Therefore, this header will be ignored.");
+        }
+        writeHeaders(headers, false);
         channel().flush();
     }
 
@@ -113,12 +122,6 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
 
     @Override
     void onWriteSuccess() {
-        // Don't call request(1) if Expect: 100-continue header is set.
-        // Because we need to wait for the 100-continue response and then request more messages.
-        if (state() == State.NEEDS_100_CONTINUE) {
-            return;
-        }
-
         // Request more messages regardless whether the state is DONE. It makes the producer have
         // a chance to produce the last call such as 'onComplete' and 'onError' when there are
         // no more messages it can produce.
@@ -136,15 +139,12 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     }
 
     @Override
-    void abort() {
-        request.abort();
+    final void resume() {
+        // Do nothing because this does not support Expect: 100-continue header.
     }
 
     @Override
-    final void resume() {
-        if (!isSubscriptionCompleted) {
-            assert subscription != null;
-            subscription.request(1);
-        }
+    final void repeat() {
+        // Do nothing because this does not support Expect: 100-continue header.
     }
 }
