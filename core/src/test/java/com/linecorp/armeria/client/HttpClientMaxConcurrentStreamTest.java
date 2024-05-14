@@ -130,7 +130,7 @@ public class HttpClientMaxConcurrentStreamTest {
     @AfterEach
     void tearDown() throws Exception {
         // Complete all uncompleted requests.
-        for (; ; ) {
+        for (;;) {
             final CompletableFuture<HttpResponse> f = responses.poll();
             if (f == null) {
                 break;
@@ -216,8 +216,7 @@ public class HttpClientMaxConcurrentStreamTest {
                                           .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
-        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {
-        });
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
 
         final int numExpectedConnections = MAX_NUM_CONNECTIONS;
         final int numRequests = MAX_CONCURRENT_STREAMS * numExpectedConnections;
@@ -245,8 +244,7 @@ public class HttpClientMaxConcurrentStreamTest {
                                           .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
-        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {
-        });
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
         final List<CompletableFuture<AggregatedHttpResponse>> receivedResponses = new ArrayList<>();
 
         final int numExpectedConnections = MAX_NUM_CONNECTIONS;
@@ -323,8 +321,7 @@ public class HttpClientMaxConcurrentStreamTest {
                                           .build();
         final int sleepMillis = 300;
         connectionPoolListener = newConnectionPoolListener(
-                () -> BlockingUtils.blockingRun(() -> Thread.sleep(sleepMillis)), () -> {
-                });
+                () -> BlockingUtils.blockingRun(() -> Thread.sleep(sleepMillis)), () -> {});
 
         final int numConnections = MAX_NUM_CONNECTIONS;
         final int numRequests = MAX_CONCURRENT_STREAMS * numConnections;
@@ -355,8 +352,7 @@ public class HttpClientMaxConcurrentStreamTest {
                                           .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
-        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {
-        });
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
 
         final int numExpectedConnections = 6;
         final int maxConcurrentStreams = 1;
@@ -383,8 +379,7 @@ public class HttpClientMaxConcurrentStreamTest {
                                           .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
                                           .build();
         final AtomicInteger opens = new AtomicInteger();
-        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {
-        });
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
         final int numExpectedConnections = 1;
 
         // queue a request which is closed before headers are written

@@ -42,8 +42,6 @@ class HttpClientUpgradeTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service("/", (ctx, req) -> HttpResponse.of(200));
-            sb.service("/test", (ctx, req) -> HttpResponse.of(200));
-            sb.requestTimeoutMillis(10000000);
         }
     };
 
@@ -67,7 +65,6 @@ class HttpClientUpgradeTest {
     void upgradeSuccess() {
         try (ClientFactory factory = ClientFactory.builder()
                                                   .useHttp2Preface(false)
-                                                  .connectTimeoutMillis(10000000000L)
                                                   .build()) {
             final WebClient client = WebClient.builder(server.httpUri()).factory(factory).build();
             // Before https://github.com/line/armeria/pull/5162 is applied,
@@ -79,13 +76,6 @@ class HttpClientUpgradeTest {
             //  at com.linecorp.armeria.client.AbstractHttpResponseDecoder.needsToDisconnectNow(Abstract...)
             //  at com.linecorp.armeria.client.Http2ResponseDecoder.shouldSendGoAway(Http2ResponseDecoder...)
             //  ..
-            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-                assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
-                assertThat(captor.get().log().whenComplete().join().sessionProtocol())
-                        .isEqualTo(SessionProtocol.H2C);
-            }
-            // "Caught Throwable from listener onStreamClosed." isn't logged.
-            assertThat(logAppender.list.size()).isZero();
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
                 assertThat(captor.get().log().whenComplete().join().sessionProtocol())

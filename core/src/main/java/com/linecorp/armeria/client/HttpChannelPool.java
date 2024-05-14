@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.ConnectionEventKey;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -111,8 +112,8 @@ final class HttpChannelPool implements AsyncCloseable {
         pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
         connectTimeoutMillis = (Integer) clientFactory.options()
-                                                      .channelOptions()
-                                                      .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                .channelOptions()
+                .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
     }
 
@@ -420,7 +421,13 @@ final class HttpChannelPool implements AsyncCloseable {
                     final InetSocketAddress remoteInetAddress = poolKey.endpoint.toSocketAddress(-1);
                     final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
 
-                    assert remoteInetAddress != null && localAddress != null;
+                    assert localAddress != null;
+
+                    final ConnectionEventKey connectionEventKey = new ConnectionEventKey(remoteInetAddress,
+                                                                                         localAddress,
+                                                                                         desiredProtocol);
+
+                    ChannelUtil.setConnectionEventKey(channel, connectionEventKey);
 
                     listener.connectionPending(desiredProtocol,
                                                remoteInetAddress,
@@ -517,7 +524,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     // Clean up old unhealthy channels by iterating from the beginning of the queue.
                     final Deque<PooledChannel> queue = getPool(protocol, key);
                     if (queue != null) {
-                        for (; ; ) {
+                        for (;;) {
                             final PooledChannel pooledChannel = queue.peekFirst();
                             if (pooledChannel == null || isHealthy(pooledChannel)) {
                                 break;

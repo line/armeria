@@ -89,13 +89,13 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                     MoreMeters.newTimer(clientFactory.meterRegistry(),
                                         "armeria.client.connections.lifespan",
                                         ImmutableList.of(Tag.of("protocol", protocol.uriText())));
-            keepAliveHandler = new Http1ClientKeepAliveHandler<>(
-                    channel, this, keepAliveTimer, clientFactory.clientConnectionEventListener(),
+            keepAliveHandler = new Http1ClientKeepAliveHandler(
+                    channel, this, keepAliveTimer, clientFactory.connectionEventListener(),
                     protocol, idleTimeoutMillis,
                     pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                     keepAliveOnPing);
         } else {
-            keepAliveHandler = new NoopKeepAliveHandler(channel, clientFactory.clientConnectionEventListener(),
+            keepAliveHandler = new NoopKeepAliveHandler(channel, clientFactory.connectionEventListener(),
                                                         protocol);
         }
     }

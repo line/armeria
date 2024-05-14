@@ -71,7 +71,7 @@ class Http2KeepAliveHandlerTest {
                 new InetSocketAddress("localhost", 8080),
                 new InetSocketAddress("localhost", 8081),
                 SessionProtocol.H2
-        ));
+        ).setProtocol(SessionProtocol.H2));
         final EmbeddedSessionHandler embeddedSessionHandler = mock(EmbeddedSessionHandler.class);
         channel.pipeline().addLast(embeddedSessionHandler);
         when(channel.eventLoop()).thenReturn(eventLoop.get());

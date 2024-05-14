@@ -62,23 +62,21 @@ public final class ConnectionEventKey {
 
     /**
      * Creates a new instance.
-     * @param remoteAddress
-     * @param localAddress
-     * @param protocol
      */
     public ConnectionEventKey(InetSocketAddress remoteAddress,
                               InetSocketAddress localAddress,
-                              SessionProtocol protocol) {
+                              SessionProtocol desiredProtocol) {
         this.remoteAddress = remoteAddress;
         this.localAddress = localAddress;
-        this.protocol = protocol;
+        this.desiredProtocol = desiredProtocol;
     }
 
     /**
      * Sets the protocol of the connection.
      */
-    public void setProtocol(SessionProtocol protocol) {
+    public ConnectionEventKey setProtocol(SessionProtocol protocol) {
         this.protocol = protocol;
+        return this;
     }
 
     /**

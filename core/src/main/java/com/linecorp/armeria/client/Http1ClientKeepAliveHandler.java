@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.ConnectionEventKey;
 import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -34,7 +33,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 
-final class Http1ClientKeepAliveHandler<T extends ConnectionEventKey> extends Http1KeepAliveHandler {
+final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
 
     private static final RequestHeaders HTTP1_PING_REQUEST =
             RequestHeaders.builder(HttpMethod.OPTIONS, "*")

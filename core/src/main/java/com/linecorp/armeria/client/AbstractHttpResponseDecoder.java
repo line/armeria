@@ -102,8 +102,6 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
 
     @Override
     public boolean reserveUnfinishedResponse(int maxUnfinishedResponses) {
-        System.out.println("unfinishedResponses: " + unfinishedResponses + ", maxUnfinishedResponses: "
-                           + maxUnfinishedResponses);
         if (unfinishedResponses >= maxUnfinishedResponses) {
             return false;
         }
@@ -125,7 +123,7 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
         closing = true;
 
         for (final Iterator<HttpResponseWrapper> iterator = responses.values().iterator();
-             iterator.hasNext(); ) {
+             iterator.hasNext();) {
             final HttpResponseWrapper res = iterator.next();
             // To avoid calling removeResponse by res.close(cause), remove before closing.
             iterator.remove();

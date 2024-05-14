@@ -43,7 +43,7 @@ class Http1ResponseDecoderTest {
                 new InetSocketAddress("localhost", 8080),
                 new InetSocketAddress("localhost", 8081),
                 SessionProtocol.H1
-        ));
+        ).setProtocol(SessionProtocol.H1));
 
         try (HttpClientFactory httpClientFactory = new HttpClientFactory(ClientFactoryOptions.of())) {
             final Http1ResponseDecoder decoder = new Http1ResponseDecoder(

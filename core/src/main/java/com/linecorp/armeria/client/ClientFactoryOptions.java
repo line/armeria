@@ -251,8 +251,8 @@ public final class ClientFactoryOptions
     /**
      * The listener which is notified on a connection pool event.
      */
-    public static final ClientFactoryOption<ClientConnectionEventListener> CLIENT_CONNECTION_EVENT_LISTENER =
-            ClientFactoryOption.define("CLIENT_CONNECTION_EVENT_LISTENER",
+    public static final ClientFactoryOption<ClientConnectionEventListener> CONNECTION_EVENT_LISTENER =
+            ClientFactoryOption.define("CONNECTION_EVENT_LISTENER",
                                        ClientConnectionEventListener.noop());
 
     /**
@@ -581,8 +581,8 @@ public final class ClientFactoryOptions
     /**
      * Returns the listener which is notified on a connection event.
      */
-    public ClientConnectionEventListener clientConnectionEventListener() {
-        return get(CLIENT_CONNECTION_EVENT_LISTENER);
+    public ClientConnectionEventListener connectionEventListener() {
+        return get(CONNECTION_EVENT_LISTENER);
     }
 
     /**

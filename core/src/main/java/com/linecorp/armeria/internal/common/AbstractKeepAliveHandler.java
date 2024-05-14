@@ -130,13 +130,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     public final void initialize(ChannelHandlerContext ctx) {
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
-        logger.info(ctx.handler().getClass().toString() + " : initialize" + isInitialized);
         if (isInitialized) {
             return;
         }
         isInitialized = true;
 
-        if (channel.isActive() && !(ctx.handler() instanceof HttpProtocolUpgradeHandler)) {
+        if (!(ctx.handler() instanceof HttpProtocolUpgradeHandler)) {
             final ConnectionEventKey connectionEventKey = connectionEventKey(channel);
             connectionEventKey.setProtocol(protocol);
 

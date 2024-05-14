@@ -84,7 +84,7 @@ class KeepAliveHandlerTest {
                 new InetSocketAddress("localhost", 8080),
                 new InetSocketAddress("localhost", 8081),
                 SessionProtocol.H1
-        ));
+        ).setProtocol(SessionProtocol.H1));
 
         ctx = mock(ChannelHandlerContext.class);
         when(ctx.channel()).thenReturn(channel);

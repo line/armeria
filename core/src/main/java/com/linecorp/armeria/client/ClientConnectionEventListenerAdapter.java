@@ -44,7 +44,6 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
                                          InetSocketAddress remoteAddress,
                                          InetSocketAddress localAddress,
                                          AttributeMap attrs) throws Exception {
-                System.out.println("ClientConnectionEventListenerAdapter.connectionOpened");
                 connectionPoolListener.connectionOpen(protocol,
                                                       remoteAddress,
                                                       localAddress,
@@ -57,7 +56,6 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
                                          InetSocketAddress localAddress,
                                          boolean isIdle,
                                          AttributeMap attrs) throws Exception {
-                System.out.println("ClientConnectionEventListenerAdapter.connectionClosed");
                 connectionPoolListener.connectionClosed(protocol,
                                                         remoteAddress,
                                                         localAddress,
