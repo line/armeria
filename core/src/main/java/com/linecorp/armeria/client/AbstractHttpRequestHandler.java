@@ -257,7 +257,8 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             return true;
         } else if (status == HttpStatus.EXPECTATION_FAILED) {
             state = State.NEEDS_TO_WRITE_FIRST_HEADER;
-//            repeat();
+            // TODO: repeat the request without 'Expect: 100-continue' header correctly.
+            repeat();
             return false;
         } else {
             state = State.DONE;
