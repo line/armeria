@@ -203,7 +203,12 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
 
                         final boolean hasInvalid100ContinueResponse = !handle100Continue(nettyRes, status);
                         if (hasInvalid100ContinueResponse) {
-                            state = State.DISCARD;
+                            if (status == HttpStatus.EXPECTATION_FAILED) {
+                                // TODO:
+                                state = State.NEED_INFORMATIONAL_DATA;
+                            } else {
+                                state = State.NEED_DATA_OR_TRAILERS;
+                            }
                             written = res.tryWriteResponseHeaders(responseHeaders);
                         } else if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;

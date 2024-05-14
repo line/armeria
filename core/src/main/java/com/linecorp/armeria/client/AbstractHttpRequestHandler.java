@@ -240,24 +240,34 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
     }
 
+    final static boolean shouldExpect100ContinueHeader(RequestHeaders headers) {
+        // Skip checking protocol version since Armeria is not fully compatible with HTTP/1.0.
+        // We can assume that the version is always HTTP/1.1 or later.
+        return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
+    }
+
     final boolean handle100Continue(HttpStatus status) {
         if (state != State.NEEDS_100_CONTINUE) {
             return true;
         }
 
-        if (status != HttpStatus.CONTINUE) {
-            abort();
+        if (status == HttpStatus.CONTINUE) {
+            state = State.NEEDS_DATA_OR_TRAILERS;
+            resume();
+            return true;
+        } else if (status == HttpStatus.EXPECTATION_FAILED) {
+            state = State.NEEDS_TO_WRITE_FIRST_HEADER;
+//            repeat();
+            return false;
+        } else {
+            state = State.DONE;
             return false;
         }
-
-        state = State.NEEDS_DATA_OR_TRAILERS;
-        resume();
-        return true;
     }
 
-    abstract void abort();
-
     abstract void resume();
+
+    abstract void repeat();
 
     /**
      * Writes the {@link HttpData} to the {@link Channel}.
@@ -379,6 +389,14 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                                        "a request publisher raised an exception", cause);
         }
 
+        reset(error);
+//        if (ch.isActive()) {
+//            encoder.writeReset(id, streamId(), error, false);
+//            ch.flush();
+//        }
+    }
+
+    final void reset(@Nullable Http2Error error) {
         if (ch.isActive()) {
             encoder.writeReset(id, streamId(), error, false);
             ch.flush();

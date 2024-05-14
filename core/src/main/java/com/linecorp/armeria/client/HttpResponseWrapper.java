@@ -82,6 +82,11 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         return requestHandler.handle100Continue(status);
     }
 
+    void repeat() {
+        assert requestHandler != null;
+        requestHandler.repeat();
+    }
+
     DecodedHttpResponse delegate() {
         return delegate;
     }

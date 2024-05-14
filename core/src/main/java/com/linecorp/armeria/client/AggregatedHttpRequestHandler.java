@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 
@@ -89,12 +90,6 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         channel().flush();
     }
 
-    private static boolean shouldExpect100ContinueHeader(RequestHeaders headers) {
-        // Skip checking protocol version since Armeria is not fully compatible with HTTP/1.0.
-        // We can assume that the version is always HTTP/1.1 or later.
-        return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
-    }
-
     private void writeDataOrTrailers() {
         assert aReq != null;
         final HttpData content = aReq.content();
@@ -124,13 +119,28 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     }
 
     @Override
-    void abort() {
-        assert aReq != null;
-        aReq.content().close();
+    void resume() {
+        writeDataOrTrailers();
+        channel().flush();
     }
 
     @Override
-    void resume() {
+    final void repeat() {
+        assert aReq != null;
+
+        reset(null);
+        cancelTimeout();
+
+        if (!tryInitialize()) {
+            aReq.content().close();
+            return;
+        }
+
+        final RequestHeadersBuilder builder = aReq.headers().toBuilder();
+        builder.remove(HttpHeaderNames.EXPECT);
+        final RequestHeaders newHeaders = builder.build();
+
+        writeHeaders(newHeaders, shouldExpect100ContinueHeader(newHeaders));
         writeDataOrTrailers();
         channel().flush();
     }
