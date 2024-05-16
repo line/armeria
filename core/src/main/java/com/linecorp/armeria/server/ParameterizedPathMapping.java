@@ -47,12 +47,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 final class ParameterizedPathMapping extends AbstractPathMapping {
 
     private static final Pattern VALID_PATTERN = Pattern.compile(
-            '('
-            + "/[^:{][^/]*|" // If the segment doesn't start with ':' or '{', the behavior should be the
-                             // same as ExactPathMapping
-            + "/:[^/{}]+|"
-            + "/\\{[^/{}]+}"
-            + ")+/?"
+            '(' +
+            // If the segment doesn't start with ':' or '{', the behavior should be the same as ExactPathMapping
+            "/[^:{][^/]*|" +
+            "/:[^/{}]+|" +
+            "/\\{[^/{}]+}" +
+            ")+/?"
     );
 
     private static final Pattern CAPTURE_REST_PATTERN = Pattern.compile("/\\{\\*([^/{}]*)}|/:\\*([^/{}]*)");

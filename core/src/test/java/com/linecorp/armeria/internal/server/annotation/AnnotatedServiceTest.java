@@ -346,6 +346,16 @@ class AnnotatedServiceTest {
         public String noVerbTest(@Param String param) {
             return "no-verb";
         }
+
+        @Get("/\\:colon:literal:/:param")
+        public String colonLiteralParam(@Param String param) {
+            return "colon-literal-" + param;
+        }
+
+        @Get("/\\:colon:literal:exact:")
+        public String colonLiteralExact() {
+            return "colon-literal-exact";
+        }
     }
 
     static class VoidTo200ResponseConverter implements ResponseConverterFunction {
@@ -929,6 +939,8 @@ class AnnotatedServiceTest {
             // colon in a path
             testBody(hc, get("/1/verb/test:verb"), "String[/verb/test:verb]");
             testBody(hc, get("/1/verb/test:no-verb"), "String[no-verb]");
+            testBody(hc, get("/1/:colon:literal:/hello"), "String[colon-literal-hello]");
+            testBody(hc, get("/1/:colon:literal:exact:"), "String[colon-literal-exact]");
 
             testBody(hc, get("/2/int/42"), "Number[42]");
             testBody(hc, post("/2/long/42"), "Number[42]");

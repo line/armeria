@@ -19,23 +19,11 @@ service TranscodingVerbService {
     };
   }
 
-  rpc ConflictWildcardVerb(Conflict) returns (Conflict) {
-    option (google.api.http) = {
-      get: "/v1/wildcard/3/{p0=*/{p1=*/{p2=hello/**}}}:verb"
-    };
-  }
-
   rpc ComplexWildcardVerb(Simple) returns (Simple) {
     option (google.api.http) = {
       get: "/v1/wildcard/2/{first=*/{second=*/{third=hello/**}}}:verb"
     };
   }
-}
-
-message Conflict {
-  string p0 = 1;
-  string p1 = 2;
-  string p2 = 3;
 }
 
 message Simple {

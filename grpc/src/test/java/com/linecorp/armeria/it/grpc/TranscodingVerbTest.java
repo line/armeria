@@ -28,7 +28,6 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 import testing.grpc.TranscodingVerbServiceGrpc;
-import testing.grpc.Verb.Conflict;
 import testing.grpc.Verb.Simple;
 
 class TranscodingVerbTest {
@@ -49,12 +48,6 @@ class TranscodingVerbTest {
 
         @Override
         public void complexWildcardVerb(Simple request, StreamObserver<Simple> responseObserver) {
-            responseObserver.onNext(request);
-            responseObserver.onCompleted();
-        }
-
-        @Override
-        public void conflictWildcardVerb(Conflict request, StreamObserver<Conflict> responseObserver) {
             responseObserver.onNext(request);
             responseObserver.onCompleted();
         }
@@ -92,14 +85,5 @@ class TranscodingVerbTest {
         assertThatJson(response.contentUtf8()).node("first").isEqualTo("a/b/hello/c/d");
         assertThatJson(response.contentUtf8()).node("second").isEqualTo("b/hello/c/d");
         assertThatJson(response.contentUtf8()).node("third").isEqualTo("hello/c/d");
-    }
-
-    @Test
-    void testConflictWildcardVerb() throws Exception {
-        final AggregatedHttpResponse response =
-                server.blockingWebClient().get("/v1/wildcard/3/a/b/hello/c/d:verb");
-        assertThatJson(response.contentUtf8()).node("p0").isEqualTo("a/b/hello/c/d");
-        assertThatJson(response.contentUtf8()).node("p1").isEqualTo("b/hello/c/d");
-        assertThatJson(response.contentUtf8()).node("p2").isEqualTo("hello/c/d");
     }
 }

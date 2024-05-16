@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -384,14 +385,14 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String pathVariable(PathMappingType type) {
-            if (type == PathMappingType.GLOB) {
+            if (type == PathMappingType.PARAMETERIZED) {
+                if (parentFieldPath != null) {
+                    return parentFieldPath;
+                } else {
+                    return 'p' + StringUtil.toString(pathVarIndex);
+                }
+            } else if (type == PathMappingType.GLOB) {
                 return StringUtil.toString(pathVarIndex);
-            }
-            if (type == PathMappingType.REGEX) {
-                return 'p' + StringUtil.toString(pathVarIndex);
-            }
-            if (parentFieldPath != null) {
-                return parentFieldPath;
             } else {
                 return 'p' + StringUtil.toString(pathVarIndex);
             }
@@ -420,22 +421,22 @@ final class HttpJsonTranscodingPathParser {
         @Override
         public String segmentString(PathMappingType type) {
             checkArgument(type == PathMappingType.GLOB || type == PathMappingType.REGEX,
-                          "'**' path segment is not supported by '%s' type", PathMappingType.PARAMETERIZED);
+                          "'**' path segment is not supported by '%s' type", type);
             if (type == PathMappingType.GLOB) {
                 return "**";
             } else {
-                return "(?<" + pathVariable(type) + ">.+)";
+                return "(?<" + pathVariable(PathMappingType.REGEX) + ">.+)";
             }
         }
 
         @Override
         public String pathVariable(PathMappingType type) {
             checkArgument(type == PathMappingType.GLOB || type == PathMappingType.REGEX,
-                          "'**' path segment is not supported by '%s' type", PathMappingType.PARAMETERIZED);
-            if (type == PathMappingType.REGEX) {
-                return 'p' + StringUtil.toString(pathVarIndex);
-            } else {
+                          "'**' path segment is not supported by '%s' type", type);
+            if (type == PathMappingType.GLOB) {
                 return StringUtil.toString(pathVarIndex);
+            } else {
+                return 'p' + StringUtil.toString(pathVarIndex);
             }
         }
 
@@ -494,22 +495,24 @@ final class HttpJsonTranscodingPathParser {
         static String segmentsToPath(PathMappingType mappingType, List<PathSegment> segments,
                                      boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            final String path = concatWithSlash(segments, mappingType);
+            final String path = toPathString(segments, mappingType);
             return withLeadingSlash ? '/' + path : path;
         }
 
-        private static String concatWithSlash(List<PathSegment> segments, PathMappingType type) {
-            final StringBuilder ret = new StringBuilder(segments.get(0).segmentString(type));
-            for (int i = 1; i < segments.size(); i++) {
-                final PathSegment segment = segments.get(i);
-                if (segment instanceof VerbPathSegment) {
-                    ret.append(':');
-                } else {
-                    ret.append('/');
-                }
-                ret.append(segment.segmentString(type));
+        private static String toPathString(List<PathSegment> segments, PathMappingType type) {
+            final PathSegment lastSegment = segments.get(segments.size() - 1);
+            if (lastSegment instanceof VerbPathSegment) {
+                final String basePath = concatWithSlash(segments.subList(0, segments.size() - 1), type);
+                return basePath + ':' + lastSegment.segmentString(type);
+            } else {
+                return concatWithSlash(segments, type);
             }
-            return ret.toString();
+        }
+
+        private static String concatWithSlash(List<PathSegment> segments, PathMappingType type) {
+            return segments.stream()
+                           .map(segment -> segment.segmentString(type))
+                           .collect(Collectors.joining("/"));
         }
 
         private Stringifier() {}
