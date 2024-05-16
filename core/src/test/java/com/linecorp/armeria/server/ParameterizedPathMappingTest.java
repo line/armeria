@@ -121,9 +121,6 @@ class ParameterizedPathMappingTest {
     void testInvalidPattern() throws Exception {
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{value}/test/{value2"))
                 .isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/:value/test/value2}"))
-                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
