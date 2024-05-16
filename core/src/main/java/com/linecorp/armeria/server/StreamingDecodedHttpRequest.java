@@ -54,6 +54,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Nullable
     private Throwable abortResponseCause;
 
+    private boolean isNormallyClosed;
+
     StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
@@ -163,6 +165,17 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
             final int length = ((HttpData) obj).length();
             inboundTrafficController.dec(length);
         }
+    }
+
+    @Override
+    public void close() {
+        isNormallyClosed = true;
+        super.close();
+    }
+
+    @Override
+    public boolean isNormallyClosed() {
+        return isNormallyClosed;
     }
 
     @Override

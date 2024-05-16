@@ -193,6 +193,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     public void close(Throwable cause) {}
 
     @Override
+    public boolean isNormallyClosed() {
+        return true;
+    }
+
+    @Override
     public void setResponse(HttpResponse response) {
         // TODO(ikhoon): Dedup
         if (abortResponseCause != null) {
