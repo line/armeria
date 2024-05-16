@@ -298,6 +298,7 @@ class StreamingServerCallTest {
                                        .build(),
                         /* exceptionMappings */ null,
                         /* blockingExecutor */ null,
+                        false,
                         false);
 
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
@@ -367,6 +368,7 @@ class StreamingServerCallTest {
                                .build(),
                 /* exceptionMappings */ null,
                 /* blockingExecutor */ null,
+                false,
                 false);
     }
 }
