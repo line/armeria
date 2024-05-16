@@ -147,6 +147,8 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
+    private boolean useMethodMarshaller;
+
     private boolean enableHealthCheckService;
 
     private boolean autoCompression;
@@ -749,6 +751,11 @@ public final class GrpcServiceBuilder {
      * {@link GrpcSerializationFormats#PROTO_WEB_TEXT}.
      */
     public GrpcServiceBuilder unsafeWrapRequestBuffers(boolean unsafeWrapRequestBuffers) {
+        if (unsafeWrapRequestBuffers && useMethodMarshaller) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         return this;
     }
@@ -821,6 +828,21 @@ public final class GrpcServiceBuilder {
     @UnstableApi
     public GrpcServiceBuilder autoCompression(boolean autoCompression) {
         this.autoCompression = autoCompression;
+        return this;
+    }
+
+    /**
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}
+     * If not set, will use the default(false), which use more efficient way that reduce copy operation.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder useMethodMarshaller(boolean useMethodMarshaller) {
+        if (unsafeWrapRequestBuffers && useMethodMarshaller) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
+        this.useMethodMarshaller = useMethodMarshaller;
         return this;
     }
 
@@ -1016,7 +1038,8 @@ public final class GrpcServiceBuilder {
                 useClientTimeoutHeader,
                 enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
                 grpcHealthCheckService,
-                autoCompression);
+                autoCompression,
+                useMethodMarshaller);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,
