@@ -46,7 +46,14 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class ParameterizedPathMapping extends AbstractPathMapping {
 
-    private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
+    private static final Pattern VALID_PATTERN = Pattern.compile(
+            '('
+            + "/[^:{][^/]*|" // If the segment doesn't start with ':' or '{', the behavior should be the
+                             // same as ExactPathMapping
+            + "/:[^/{}]+|"
+            + "/\\{[^/{}]+}"
+            + ")+/?"
+    );
 
     private static final Pattern CAPTURE_REST_PATTERN = Pattern.compile("/\\{\\*([^/{}]*)}|/:\\*([^/{}]*)");
 
@@ -136,21 +143,23 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         for (String token : PATH_SPLITTER.split(pathPattern)) {
             final String paramName = paramName(token);
             if (paramName == null) {
-                // If the given token is a constant, do not manipulate it.
+                // If the token escapes the first colon, then clean it. We don't need to handle '{'
+                // since it's not an allowed path character per rfc3986.
+                if (token.startsWith("\\:")) {
+                    token = token.substring(1);
+                }
+
                 patternJoiner.add(token);
                 normalizedPatternJoiner.add(token);
                 skeletonJoiner.add(token);
                 continue;
             }
-            // The paramName should not include colons.
-            // TODO: Implement param options expressed like `{bar:type=int,range=[0,10]}`.
-            final String colonRemovedParamName = removeColonAndFollowing(paramName);
             final boolean captureRestPathMatching = isCaptureRestPathMatching(token);
-            final int paramNameIdx = paramNames.indexOf(colonRemovedParamName);
+            final int paramNameIdx = paramNames.indexOf(paramName);
             if (paramNameIdx < 0) {
                 // If the given token appeared first time, add it to the set and
                 // replace it with a capturing group expression in regex.
-                paramNames.add(colonRemovedParamName);
+                paramNames.add(paramName);
                 if (captureRestPathMatching) {
                     patternJoiner.add("(.*)");
                 } else {
@@ -162,7 +171,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
                 patternJoiner.add("\\" + (paramNameIdx + 1));
             }
 
-            normalizedPatternJoiner.add((captureRestPathMatching ? ":*" : ':') + colonRemovedParamName);
+            normalizedPatternJoiner.add((captureRestPathMatching ? ":*" : ':') + paramName);
             skeletonJoiner.add(captureRestPathMatching ? "*" : "\0");
         }
 
@@ -199,17 +208,6 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         }
 
         return null;
-    }
-
-    /**
-     * Removes the portion of the specified string following a colon (:).
-     */
-    private static String removeColonAndFollowing(String paramName) {
-        final int index = paramName.indexOf(':');
-        if (index == -1) {
-            return paramName;
-        }
-        return paramName.substring(0, index);
     }
 
     /**

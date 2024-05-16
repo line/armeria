@@ -74,7 +74,7 @@ class RouteTest {
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/foo/\0", "/foo/\0");
         assertThat(route.paramNames()).hasSize(1);
-        assertThat(route.paramNames()).containsExactly("bar");
+        assertThat(route.paramNames()).containsExactly("bar:biz");
 
         route = Route.builder().path("/bar/:baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
@@ -87,7 +87,7 @@ class RouteTest {
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/\0", "/bar/\0");
         assertThat(route.paramNames()).hasSize(1);
-        assertThat(route.paramNames()).containsExactly("baz");
+        assertThat(route.paramNames()).containsExactly("baz:");
 
         route = Route.builder().path("/bar/:baz:verb").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
@@ -100,7 +100,7 @@ class RouteTest {
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/\0", "/bar/\0");
         assertThat(route.paramNames()).hasSize(1);
-        assertThat(route.paramNames()).containsExactly("baz");
+        assertThat(route.paramNames()).containsExactly("baz:foo:verb");
 
         route = Route.builder().path("exact:/:foo/bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);

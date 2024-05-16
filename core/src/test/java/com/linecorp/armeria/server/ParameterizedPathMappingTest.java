@@ -20,8 +20,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class ParameterizedPathMappingTest {
     @Test
@@ -239,10 +243,22 @@ class ParameterizedPathMappingTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/:* "))
                 .isInstanceOf(IllegalArgumentException.class);
-        // "{*...}" or ":*..." can only be preceded by a path separator.
-        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/foo{*value}"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/foo:*value"))
-                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static Stream<Arguments> colonAllowedArgs() {
+        return Stream.of(
+                Arguments.of("/foo:bar", "/foo:bar"),
+                Arguments.of("/a:/b:asdf", "/a:/b:asdf"),
+                Arguments.of("/\\:/\\:asdf:", "/:/:asdf:")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("colonAllowedArgs")
+    void colonAllowed(String pathPattern, String reqPath) {
+        final ParameterizedPathMapping m = new ParameterizedPathMapping(pathPattern);
+        final RoutingResult res = m.apply(create(reqPath)).build();
+        assertThat(res.path()).isEqualTo(reqPath);
+        assertThat(res.pathParams()).isEmpty();
     }
 }
