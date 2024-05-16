@@ -224,6 +224,12 @@ service HttpJsonTranscodingTestService {
       }
     };
   }
+
+  rpc ParamNameConflict(ConflictMessage) returns (ConflictMessage) {
+    option(google.api.http) = {
+      get: "/v1/conflict/{id=hello/*}/{p0}/test"
+    };
+  }
 }
 
 message GetMessageRequestV1 {
@@ -406,4 +412,9 @@ message EchoNestedMessageRequest {
 
 message EchoNestedMessageResponse {
   TopLevelMessage.NestedMessage nested = 1;
+}
+
+message ConflictMessage {
+  string p0 = 1;
+  string id = 2;
 }
