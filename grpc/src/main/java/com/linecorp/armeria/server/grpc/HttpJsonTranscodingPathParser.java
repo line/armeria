@@ -384,14 +384,16 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String pathVariable(PathMappingType type) {
-            if (type == PathMappingType.PARAMETERIZED || type == PathMappingType.REGEX) {
-                if (parentFieldPath != null) {
-                    return parentFieldPath;
-                } else {
-                    return 'p' + StringUtil.toString(pathVarIndex);
-                }
-            } else {
+            if (type == PathMappingType.GLOB) {
                 return StringUtil.toString(pathVarIndex);
+            }
+            if (type == PathMappingType.REGEX) {
+                return 'p' + StringUtil.toString(pathVarIndex);
+            }
+            if (parentFieldPath != null) {
+                return parentFieldPath;
+            } else {
+                return 'p' + StringUtil.toString(pathVarIndex);
             }
         }
 
@@ -417,16 +419,24 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String segmentString(PathMappingType type) {
-            if (type != PathMappingType.GLOB) {
-                throw new UnsupportedOperationException("Unable to convert to ParameterizedPathMapping.");
+            checkArgument(type == PathMappingType.GLOB || type == PathMappingType.REGEX,
+                          "'**' path segment is not supported by '%s' type", PathMappingType.PARAMETERIZED);
+            if (type == PathMappingType.GLOB) {
+                return "**";
+            } else {
+                return "(?<" + pathVariable(type) + ">.+)";
             }
-            return "**";
         }
 
         @Override
         public String pathVariable(PathMappingType type) {
-            return type == PathMappingType.GLOB ? StringUtil.toString(pathVarIndex)
-                                                : null;
+            checkArgument(type == PathMappingType.GLOB || type == PathMappingType.REGEX,
+                          "'**' path segment is not supported by '%s' type", PathMappingType.PARAMETERIZED);
+            if (type == PathMappingType.REGEX) {
+                return 'p' + StringUtil.toString(pathVarIndex);
+            } else {
+                return StringUtil.toString(pathVarIndex);
+            }
         }
 
         @Override
@@ -462,15 +472,7 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String segmentString(PathMappingType type) {
-            switch (type) {
-                case PARAMETERIZED:
-                    return Stringifier.asParameterizedPath(valueSegments, false);
-                case GLOB:
-                    return Stringifier.asGlobPath(valueSegments, false);
-                case REGEX:
-                    return Stringifier.asRegexPath(valueSegments, false);
-            }
-            throw new Error();
+            return Stringifier.segmentsToPath(type, valueSegments, false);
         }
 
         @Override
@@ -488,27 +490,11 @@ final class HttpJsonTranscodingPathParser {
     }
 
     static final class Stringifier {
-        /**
-         * Returns a parameterized path string of the parsed {@link PathSegment}s.
-         */
-        static String asParameterizedPath(List<PathSegment> segments, boolean withLeadingSlash) {
-            requireNonNull(segments, "segments");
-            final String path = concatWithSlash(segments, PathMappingType.PARAMETERIZED);
-            return withLeadingSlash ? '/' + path : path;
-        }
 
-        static String asRegexPath(List<PathSegment> segments, boolean withLeadingSlash) {
+        static String segmentsToPath(PathMappingType mappingType, List<PathSegment> segments,
+                                     boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            final String path = concatWithSlash(segments, PathMappingType.REGEX);
-            return withLeadingSlash ? '/' + path : path;
-        }
-
-        /**
-         * Returns a glob path string of the parsed {@link PathSegment}s.
-         */
-        static String asGlobPath(List<PathSegment> segments, boolean withLeadingSlash) {
-            requireNonNull(segments, "segments");
-            final String path = concatWithSlash(segments, PathMappingType.GLOB);
+            final String path = concatWithSlash(segments, mappingType);
             return withLeadingSlash ? '/' + path : path;
         }
 

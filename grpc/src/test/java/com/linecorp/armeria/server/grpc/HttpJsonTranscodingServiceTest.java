@@ -24,7 +24,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -69,15 +68,6 @@ public class HttpJsonTranscodingServiceTest {
         assertThat(routeAndPathVars.getValue().size()).isEqualTo(pathVariableNamesAnswer.size());
         assertThat(routeAndPathVars.getValue().stream().map(PathVariable::name).collect(toImmutableSet()))
                 .containsAll(pathVariableNamesAnswer);
-    }
-
-    @Test
-    void regexTypeSupported() {
-        final String path = "/{name=hello/*}:verb";
-        final HttpRule httpRule = HttpRule.newBuilder().setGet(path).build();
-        final Entry<Route, List<PathVariable>> routeAndPathVars =
-                HttpJsonTranscodingService.toRouteAndPathVariables(httpRule);
-        System.out.println(routeAndPathVars);
     }
 
     private static class PathArgumentsProvider implements ArgumentsProvider {

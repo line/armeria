@@ -9,15 +9,37 @@ import "google/api/annotations.proto";
 service TranscodingVerbService {
   rpc WildcardVerb(Simple) returns (Simple) {
     option (google.api.http) = {
-      get: "/v1/wildcard/verb/{name=hello/*}:verb"
+      get: "/v1/wildcard/1/{first=hello/*}:verb"
+    };
+  }
+
+  rpc DeepWildcardVerb(Simple) returns (Simple) {
+    option (google.api.http) = {
+      get: "/v1/wildcard/1/{first=hello/**}:verb"
+    };
+  }
+
+  rpc ConflictWildcardVerb(Conflict) returns (Conflict) {
+    option (google.api.http) = {
+      get: "/v1/wildcard/3/{p0=*/{p1=*/{p2=hello/**}}}:verb"
+    };
+  }
+
+  rpc ComplexWildcardVerb(Simple) returns (Simple) {
+    option (google.api.http) = {
+      get: "/v1/wildcard/2/{first=*/{second=*/{third=hello/**}}}:verb"
     };
   }
 }
 
-message GetMessageRequestV1 {
-  string name = 1; // Mapped to URL path.
+message Conflict {
+  string p0 = 1;
+  string p1 = 2;
+  string p2 = 3;
 }
 
 message Simple {
-  string name = 1;
+  string first = 1;
+  string second = 2;
+  string third = 3;
 }
