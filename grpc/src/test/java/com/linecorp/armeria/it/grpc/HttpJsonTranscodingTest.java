@@ -175,7 +175,7 @@ public class HttpJsonTranscodingTest {
         @Override
         public void updateMessageV2(Message request, StreamObserver<Message> responseObserver) {
             final ServiceRequestContext ctx = ServiceRequestContext.current();
-            final String messageId = Optional.ofNullable(ctx.pathParam("message_id")).orElse("no_id");
+            final String messageId = Optional.ofNullable(ctx.pathParam("p0")).orElse("no_id");
             final String text = messageId + ':' + request.getText();
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
@@ -960,23 +960,23 @@ public class HttpJsonTranscodingTest {
 
         final JsonNode getMessageV2 = findMethod(methods, "GetMessageV2");
         assertThat(getMessageV2.get("httpMethod").asText()).isEqualTo("GET");
-        assertThat(pathMapping(getMessageV2)).containsExactlyInAnyOrder("/v2/messages/:message_id",
-                                                                        "/foo/v2/messages/:message_id");
+        assertThat(pathMapping(getMessageV2)).containsExactlyInAnyOrder("/v2/messages/:p0",
+                                                                        "/foo/v2/messages/:p0");
 
         final JsonNode getMessageV3 = findMethod(methods, "GetMessageV3");
         assertThat(getMessageV3.get("httpMethod").asText()).isEqualTo("GET");
-        assertThat(pathMapping(getMessageV3)).containsExactlyInAnyOrder("/v3/messages/:message_id",
-                                                                        "/foo/v3/messages/:message_id");
+        assertThat(pathMapping(getMessageV3)).containsExactlyInAnyOrder("/v3/messages/:p0",
+                                                                        "/foo/v3/messages/:p0");
 
         final JsonNode updateMessageV1 = findMethod(methods, "UpdateMessageV1");
         assertThat(updateMessageV1.get("httpMethod").asText()).isEqualTo("PATCH");
-        assertThat(pathMapping(updateMessageV1)).containsExactlyInAnyOrder("/v1/messages/:message_id",
-                                                                           "/foo/v1/messages/:message_id");
+        assertThat(pathMapping(updateMessageV1)).containsExactlyInAnyOrder("/v1/messages/:p0",
+                                                                           "/foo/v1/messages/:p0");
 
         final JsonNode updateMessageV2 = findMethod(methods, "UpdateMessageV2");
         assertThat(updateMessageV2.get("httpMethod").asText()).isEqualTo("PATCH");
-        assertThat(pathMapping(updateMessageV2)).containsExactlyInAnyOrder("/v2/messages/:message_id",
-                                                                           "/foo/v2/messages/:message_id");
+        assertThat(pathMapping(updateMessageV2)).containsExactlyInAnyOrder("/v2/messages/:p0",
+                                                                           "/foo/v2/messages/:p0");
     }
 
     @Test
