@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 final class ExactPathMapping extends AbstractPathMapping {
 
-    private static final Pattern ESCAPE_COLON = Pattern.compile("\\\\:");
+    private static final Pattern ESCAPE_COLON = Pattern.compile("/\\\\:");
     private final String prefix;
     private final String exactPath;
     private final List<String> paths;
@@ -48,7 +48,7 @@ final class ExactPathMapping extends AbstractPathMapping {
         }
         this.prefix = prefix;
         ensureAbsolutePath(exactPath, "exactPath");
-        exactPath = ESCAPE_COLON.matcher(exactPath).replaceAll(":");
+        exactPath = ESCAPE_COLON.matcher(exactPath).replaceAll("/:");
         this.exactPath = exactPath;
         paths = ImmutableList.of(exactPath, exactPath);
     }
