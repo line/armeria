@@ -112,12 +112,12 @@ import io.netty.util.ReferenceCountUtil;
  * @see ServerBuilder
  * @see Route
  */
-public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuilder {
+public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuilder<VirtualHostBuilder> {
 
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final boolean portBased;
-    private final List<ServiceConfigSetters> serviceConfigSetters = new ArrayList<>();
+    private final List<ServiceConfigSetters<?>> serviceConfigSetters = new ArrayList<>();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
 
@@ -695,16 +695,16 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         return new VirtualHostAnnotatedServiceBindingBuilder(this);
     }
 
-    VirtualHostBuilder addServiceConfigSetters(ServiceConfigSetters serviceConfigSetters) {
+    VirtualHostBuilder addServiceConfigSetters(ServiceConfigSetters<?> serviceConfigSetters) {
         this.serviceConfigSetters.add(serviceConfigSetters);
         return this;
     }
 
-    private List<ServiceConfigSetters> getServiceConfigSetters(
+    private List<ServiceConfigSetters<?>> getServiceConfigSetters(
             @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
-        final List<ServiceConfigSetters> serviceConfigSetters;
+        final List<ServiceConfigSetters<?>> serviceConfigSetters;
         if (defaultVirtualHostBuilder != null) {
-            serviceConfigSetters = ImmutableList.<ServiceConfigSetters>builder()
+            serviceConfigSetters = ImmutableList.<ServiceConfigSetters<?>>builder()
                                                 .addAll(this.serviceConfigSetters)
                                                 .addAll(defaultVirtualHostBuilder.serviceConfigSetters)
                                                 .build();
@@ -1388,7 +1388,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                 .stream()
                 .flatMap(cfgSetters -> {
                     if (cfgSetters instanceof AbstractAnnotatedServiceConfigSetters) {
-                        return ((AbstractAnnotatedServiceConfigSetters) cfgSetters)
+                        return ((AbstractAnnotatedServiceConfigSetters<?>) cfgSetters)
                                 .buildServiceConfigBuilder(extensions, dependencyInjector).stream();
                     } else if (cfgSetters instanceof ServiceConfigBuilder) {
                         return Stream.of((ServiceConfigBuilder) cfgSetters);

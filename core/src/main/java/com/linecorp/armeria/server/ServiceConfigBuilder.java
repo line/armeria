@@ -49,7 +49,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.EventLoopGroup;
 
-final class ServiceConfigBuilder implements ServiceConfigSetters {
+final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBuilder> {
 
     private final Route route;
     private final HttpService service;
