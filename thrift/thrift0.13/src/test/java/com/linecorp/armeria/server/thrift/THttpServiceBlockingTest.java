@@ -39,13 +39,10 @@ import testing.thrift.main.HelloService;
 class THttpServiceBlockingTest {
     private static final AtomicBoolean blocking = new AtomicBoolean();
 
+    private static final String BLOCKING_EXECUTOR_PREFIX = "blocking-test";
     private static final ScheduledExecutorService executor =
-            new ScheduledThreadPoolExecutor(1, ThreadFactories.newThreadFactory("blocking-test", true)) {
-                @Override
-                protected void beforeExecute(Thread t, Runnable r) {
-                    blocking.set(true);
-                }
-            };
+            new ScheduledThreadPoolExecutor(1,
+                                            ThreadFactories.newThreadFactory(BLOCKING_EXECUTOR_PREFIX, true));
 
     @BeforeEach
     void clearDetector() {
@@ -116,12 +113,14 @@ class THttpServiceBlockingTest {
         @Override
         public void hello(String name, AsyncMethodCallback resultHandler) throws TException {
             resultHandler.onComplete(name);
+            blocking.set(Thread.currentThread().getName().startsWith(BLOCKING_EXECUTOR_PREFIX));
         }
     }
 
     static class HelloServiceImpl implements HelloService.Iface {
         @Override
         public String hello(String name) throws TException {
+            blocking.set(Thread.currentThread().getName().startsWith(BLOCKING_EXECUTOR_PREFIX));
             return name;
         }
     }
