@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 
 import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
 /**

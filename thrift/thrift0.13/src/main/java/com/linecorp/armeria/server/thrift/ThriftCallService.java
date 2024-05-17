@@ -30,8 +30,6 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.Multimap;
-
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;

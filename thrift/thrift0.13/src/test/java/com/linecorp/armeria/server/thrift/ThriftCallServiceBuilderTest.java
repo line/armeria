@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 
 import testing.thrift.main.FooService.AsyncIface;
 
@@ -73,7 +72,8 @@ class ThriftCallServiceBuilderTest {
                 .addService("foobarOnce", fooServiceImpl, barServiceImpl)
                 .addService("foobarList", ImmutableList.of(fooServiceImpl, barServiceImpl))
                 .addServices(ImmutableMap.of("fooMap", fooServiceImpl, "barMap", barServiceImpl))
-                .addServices(ImmutableMap.of("fooIterableMap", ImmutableList.of(fooServiceImpl, barServiceImpl)))
+                .addServices(ImmutableMap.of("fooIterableMap",
+                                             ImmutableList.of(fooServiceImpl, barServiceImpl)))
                 .build();
         assertTrue(service.entries().containsKey(""));
         final Iterator<?> defaultIterator = service.entries().get("").implementations.iterator();
