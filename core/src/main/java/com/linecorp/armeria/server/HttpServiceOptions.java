@@ -25,12 +25,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Options for configuring a {@link HttpService}.
+ * Options for configuring an {@link HttpService}.
  * You can override the default options by implementing {@link HttpService#options()}.
  */
 @UnstableApi
 public final class HttpServiceOptions {
-    private static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions.builder().build();
+    private static final HttpServiceOptions DEFAULT_OPTIONS = builder().build();
 
     /**
      * Returns the default {@link HttpServiceOptions}.
@@ -57,7 +57,7 @@ public final class HttpServiceOptions {
     }
 
     /**
-     * Returns the server-side timeout of a request in milliseconds.
+     * Returns the server-side timeout of a request in milliseconds. {@code -1} if not set.
      */
     public long requestTimeoutMillis() {
         return requestTimeoutMillis;
@@ -74,7 +74,6 @@ public final class HttpServiceOptions {
      * Returns the amount of time to wait before aborting an {@link HttpRequest} when its corresponding
      * {@link HttpResponse} is complete.
      */
-
     public long requestAutoAbortDelayMillis() {
         return requestAutoAbortDelayMillis;
     }

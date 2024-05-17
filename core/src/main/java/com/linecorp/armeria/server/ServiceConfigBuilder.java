@@ -95,13 +95,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         }
 
         if (options.requestTimeoutMillis() != -1) {
-            this.requestTimeoutMillis = options.requestTimeoutMillis();
+            requestTimeoutMillis = options.requestTimeoutMillis();
         }
         if (options.maxRequestLength() != -1) {
-            this.maxRequestLength = options.maxRequestLength();
+            maxRequestLength = options.maxRequestLength();
         }
         if (options.requestAutoAbortDelayMillis() != -1) {
-            this.requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
+            requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
         }
     }
 

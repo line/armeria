@@ -27,7 +27,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceOptions;
 
 /**
- * An annotation used to configure {@link HttpServiceOptions} of a {@link HttpService}.
+ * An annotation used to configure {@link HttpServiceOptions} of an {@link HttpService}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.METHOD })
