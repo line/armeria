@@ -77,14 +77,9 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         this.responseTimeoutMillis = responseTimeoutMillis;
     }
 
-    boolean handle100Continue(HttpStatus status) {
+    boolean handle100Continue(HttpStatus status, boolean isHttp1) {
         assert requestHandler != null;
-        return requestHandler.handle100Continue(status);
-    }
-
-    void repeat() {
-        assert requestHandler != null;
-        requestHandler.repeat();
+        return requestHandler.handle100Continue(status, isHttp1);
     }
 
     DecodedHttpResponse delegate() {

@@ -144,7 +144,7 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     }
 
     @Override
-    final void repeat() {
+    final void repeat(boolean isHttp1) {
         // Do nothing because this does not support Expect: 100-continue header.
     }
 }

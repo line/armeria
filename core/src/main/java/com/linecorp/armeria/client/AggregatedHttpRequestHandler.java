@@ -34,6 +34,8 @@ import io.netty.channel.EventLoop;
 final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         implements BiFunction<AggregatedHttpRequest, Throwable, Void> {
 
+    private static final HttpData EMPTY_EOS = HttpData.empty().withEndOfStream();
+
     @Nullable
     private AggregatedHttpRequest aReq;
     private boolean cancelled;
@@ -124,10 +126,13 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     }
 
     @Override
-    void repeat() {
-        assert aReq != null;
+    void repeat(boolean isHttp1) {
+        if (isHttp1) {
+            writeData(EMPTY_EOS);
+            channel().flush();
+        }
 
-        reset(null);
+        assert aReq != null;
         cancelTimeout();
 
         if (!tryInitialize()) {

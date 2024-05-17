@@ -46,9 +46,12 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -247,8 +250,6 @@ final class HttpClientExpect100HeaderTest {
                                "Content-Length: 0\r\n" +
                                "\r\n").getBytes(StandardCharsets.US_ASCII));
 
-                    assertThat(in.readLine()).isNull();
-
                     final AggregatedHttpResponse res = future.join();
                     assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
                 }
@@ -310,6 +311,41 @@ final class HttpClientExpect100HeaderTest {
                     assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
                 }
             }
+        }
+
+        @Test
+        void repeatToSendRequestWithoutHeaderViaProxy() {
+            final ServerExtension server = new ServerExtension() {
+                @Override
+                protected void configure(ServerBuilder sb) {
+                    sb.service("/", (ctx, req) -> HttpResponse.of(201));
+                }
+            };
+            server.start();
+
+            final ServerExtension proxy = new ServerExtension() {
+                @Override
+                protected void configure(ServerBuilder sb) {
+                    sb.serviceUnder("/", (ctx, req) -> {
+                        if (req.headers().contains(HttpHeaderNames.EXPECT)) {
+                            return HttpResponse.of(417);
+                        }
+                        return server.webClient().execute(req);
+                    });
+                }
+            };
+            proxy.start();
+
+            final WebClient client = WebClient.of(proxy.httpUri());
+            final HttpRequest request = HttpRequest.builder()
+                                                   .post("/")
+                                                   .content("foo\n")
+                                                   .header(HttpHeaderNames.EXPECT, "100-continue")
+                                                   .build();
+            final AggregatedHttpResponse response = client.execute(request)
+                                                          .aggregate()
+                                                          .join();
+            assertThat(response.status().code()).isEqualTo(201);
         }
 
         /////////////////////////////

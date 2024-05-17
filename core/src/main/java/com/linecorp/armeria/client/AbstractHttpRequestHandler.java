@@ -244,7 +244,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
     }
 
-    final boolean handle100Continue(HttpStatus status) {
+    final boolean handle100Continue(HttpStatus status, boolean isHttp1) {
         if (state != State.NEEDS_100_CONTINUE) {
             return true;
         }
@@ -255,8 +255,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             return true;
         } else if (status == HttpStatus.EXPECTATION_FAILED) {
             state = State.NEEDS_TO_WRITE_FIRST_HEADER;
-            // TODO: repeat the request without 'Expect: 100-continue' header correctly.
-            repeat();
+            repeat(isHttp1);
             return false;
         } else {
             state = State.DONE;
@@ -266,7 +265,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
     abstract void resume();
 
-    abstract void repeat();
+    abstract void repeat(boolean isHttp1);
 
     /**
      * Writes the {@link HttpData} to the {@link Channel}.
@@ -388,10 +387,6 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                                        "a request publisher raised an exception", cause);
         }
 
-        reset(error);
-    }
-
-    final void reset(@Nullable Http2Error error) {
         if (ch.isActive()) {
             encoder.writeReset(id, streamId(), error, false);
             ch.flush();
