@@ -41,9 +41,9 @@ import com.google.common.collect.Multimaps;
  *                 .addService("foobarList", ImmutableList.of(fooServiceImpl, barServiceImpl))
  *                  // Adds multiple services by map
  *                 .addServices(ImmutableMap.of("fooMap", fooServiceImpl, "barMap", barServiceImpl))
- *                  // Adds multiple services by multimap
- *                 .addServices(ImmutableMultimap.of("foobarMultiMap", fooServiceImpl,
- *                                                   "foobarMultiMap", barServiceImpl))
+ *                  // Adds multiple services by map
+ *                 .addServices(ImmutableMap.of("fooIterableMap",
+ *                                              ImmutableList.of(fooServiceImpl, barServiceImpl)))
  *                 .build();
  *  * }</pre>
  *
