@@ -20,6 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
@@ -31,6 +33,7 @@ import org.apache.thrift.protocol.TCompactProtocol;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimaps;
 
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -235,8 +238,9 @@ public final class THttpServiceBuilder {
      * Builds a new instance of {@link THttpService}.
      */
     public THttpService build() {
+        final Map<String, List<Object>> implementations = Multimaps.asMap(implementationsBuilder.build());
         final ThriftCallService tcs = new ThriftCallServiceBuilder()
-                .addServices(implementationsBuilder.build())
+                .addServices(implementations)
                 .useBlockingTaskExecutor(useBlockingTaskExecutor)
                 .build();
         return build0(tcs);

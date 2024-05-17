@@ -22,7 +22,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.RpcRequest;
@@ -42,7 +43,9 @@ class THttpClientTest {
         final THttpService tHttpService =
                 ThriftCallService
                         .builder()
-                        .addServices(ImmutableMultimap.of("", (AsyncIface) (name, cb) -> cb.onComplete("name")))
+                        .addServices(ImmutableMap.of("", ImmutableList.of(
+                                (AsyncIface) (name, cb) -> cb.onComplete("name")
+                        )))
                         .build()
                         .decorate(delegate -> new SimpleDecoratingRpcService(delegate) {
                             @Override

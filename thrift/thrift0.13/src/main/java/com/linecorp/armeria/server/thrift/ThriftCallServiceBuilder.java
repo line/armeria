@@ -59,26 +59,20 @@ public final class ThriftCallServiceBuilder {
     ThriftCallServiceBuilder() {}
 
     /**
-     * Adds multiple services by multimap for {@link ThriftServiceEntry}.
-     */
-    public ThriftCallServiceBuilder addServices(Multimap<String, Object> services) {
-        requireNonNull(services, "services");
-        if (services.isEmpty()) {
-            throw new IllegalArgumentException("empty services");
-        }
-        servicesBuilder.putAll(services);
-        return this;
-    }
-
-    /**
      * Adds multiple services by map for {@link ThriftServiceEntry}.
      */
-    public ThriftCallServiceBuilder addServices(Map<String, Object> services) {
+    public ThriftCallServiceBuilder addServices(Map<String, ?> services) {
         requireNonNull(services, "services");
         if (services.isEmpty()) {
             throw new IllegalArgumentException("empty services");
         }
-        servicesBuilder.putAll(services.entrySet());
+        services.forEach((k, v) -> {
+            if (v instanceof Iterable<?>) {
+                servicesBuilder.putAll(k, (Iterable<?>) v);
+            } else {
+                servicesBuilder.put(k, v);
+            }
+        });
         return this;
     }
 

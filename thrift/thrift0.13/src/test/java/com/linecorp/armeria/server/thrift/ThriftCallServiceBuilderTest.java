@@ -39,9 +39,6 @@ import testing.thrift.main.FooService.AsyncIface;
 class ThriftCallServiceBuilderTest {
     @Test
     void nullAndEmptyCases() {
-        assertThrows(IllegalArgumentException.class, () ->
-                ThriftCallService.builder().addServices(ImmutableMultimap.of())
-        );
         assertThrows(NullPointerException.class, () ->
                 ThriftCallService.builder().addService(null)
         );
@@ -76,8 +73,7 @@ class ThriftCallServiceBuilderTest {
                 .addService("foobarOnce", fooServiceImpl, barServiceImpl)
                 .addService("foobarList", ImmutableList.of(fooServiceImpl, barServiceImpl))
                 .addServices(ImmutableMap.of("fooMap", fooServiceImpl, "barMap", barServiceImpl))
-                .addServices(ImmutableMultimap.of("foobarMultiMap", fooServiceImpl,
-                                                  "foobarMultiMap", barServiceImpl))
+                .addServices(ImmutableMap.of("fooIterableMap", ImmutableList.of(fooServiceImpl, barServiceImpl)))
                 .build();
         assertTrue(service.entries().containsKey(""));
         final Iterator<?> defaultIterator = service.entries().get("").implementations.iterator();
@@ -117,11 +113,11 @@ class ThriftCallServiceBuilderTest {
         assertEquals(barServiceImpl, barMapIterator.next());
         assertFalse(barMapIterator.hasNext());
 
-        assertTrue(service.entries().containsKey("foobarMultiMap"));
-        final Iterator<?> foobarMultiMapIterator =
-                service.entries().get("foobarMultiMap").implementations.iterator();
-        assertEquals(fooServiceImpl, foobarMultiMapIterator.next());
-        assertEquals(barServiceImpl, foobarMultiMapIterator.next());
-        assertFalse(foobarMultiMapIterator.hasNext());
+        assertTrue(service.entries().containsKey("fooIterableMap"));
+        final Iterator<?> fooIterableMapIterator =
+                service.entries().get("fooIterableMap").implementations.iterator();
+        assertEquals(fooServiceImpl, fooIterableMapIterator.next());
+        assertEquals(barServiceImpl, fooIterableMapIterator.next());
+        assertFalse(fooIterableMapIterator.hasNext());
     }
 }
