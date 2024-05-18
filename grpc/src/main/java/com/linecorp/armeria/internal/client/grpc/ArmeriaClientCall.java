@@ -160,7 +160,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             SerializationFormat serializationFormat,
             @Nullable GrpcJsonMarshaller jsonMarshaller,
             boolean unsafeWrapResponseBuffers,
-            GrpcExceptionHandlerFunction exceptionHandler) {
+            GrpcExceptionHandlerFunction exceptionHandler,
+            boolean useMethodMarshaller) {
         this.ctx = ctx;
         this.endpointGroup = endpointGroup;
         this.httpClient = httpClient;
@@ -184,7 +185,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         requestFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
-                                                 unsafeWrapResponseBuffers);
+                                                 unsafeWrapResponseBuffers, useMethodMarshaller);
 
         if (callOptions.getExecutor() == null) {
             executor = MoreExecutors.directExecutor();

@@ -132,6 +132,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final boolean useClientTimeoutHeader;
+    private final boolean useMethodMarshaller;
     private final String advertisedEncodingsHeader;
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
     @Nullable
@@ -153,7 +154,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useClientTimeoutHeader,
                       boolean lookupMethodFromAttribute,
                       @Nullable GrpcHealthCheckService grpcHealthCheckService,
-                      boolean autoCompression) {
+                      boolean autoCompression, boolean useMethodMarshaller) {
         this.registry = requireNonNull(registry, "registry");
         routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
         exchangeTypes = registry.methods().entrySet().stream()
@@ -172,6 +173,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.lookupMethodFromAttribute = lookupMethodFromAttribute;
         this.autoCompression = autoCompression;
+        this.useMethodMarshaller = useMethodMarshaller;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -354,7 +356,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     defaultHeaders.get(serializationFormat),
                     exceptionHandler,
                     blockingExecutor,
-                    autoCompression);
+                    autoCompression,
+                    useMethodMarshaller);
         } else {
             return new StreamingServerCall<>(
                     req,
@@ -372,7 +375,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     defaultHeaders.get(serializationFormat),
                     exceptionHandler,
                     blockingExecutor,
-                    autoCompression);
+                    autoCompression,
+                    useMethodMarshaller);
         }
     }
 

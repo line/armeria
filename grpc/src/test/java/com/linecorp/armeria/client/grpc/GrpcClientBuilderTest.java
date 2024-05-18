@@ -18,15 +18,25 @@ package com.linecorp.armeria.client.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static testing.grpc.Messages.PayloadType.COMPRESSABLE;
 
+import java.io.InputStream;
+
+import org.jetbrains.annotations.Nullable;
 import java.util.concurrent.Executors;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+
+import com.google.protobuf.ByteString;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
@@ -41,6 +51,10 @@ import io.grpc.Channel;
 import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
 import io.grpc.MethodDescriptor;
+import io.grpc.MethodDescriptor.PrototypeMarshaller;
+import testing.grpc.Messages.Payload;
+import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
@@ -48,6 +62,15 @@ import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcClientBuilderTest {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service(GrpcService.builder()
+                                  .addService(new TestServiceImpl(CommonPools.blockingTaskExecutor()))
+                                  .build());
+        }
+    };
 
     @Test
     void defaultSerializationFormat() {
@@ -140,6 +163,41 @@ class GrpcClientBuilderTest {
     }
 
     @Test
+    void canNotSetUseMethodMarshallerAndUnsafeWrapDeserializedBufferAtTheSameTime() {
+        assertThatThrownBy(() -> GrpcClients.builder(server.httpUri())
+                                            .enableUnsafeWrapResponseBuffers(true)
+                                            .useMethodMarshaller(true))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive.");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true, 1, 1", "false, 0, 0"})
+    void useMethodMarshaller(boolean useMethodMarshaller, int expectedStreamCallCnt, int expectedParseCallCnt) {
+        final CustomMarshallerInterceptor customMarshallerInterceptor = new CustomMarshallerInterceptor();
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerStreamCallCnt()).isEqualTo(0);
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerParseCallCnt()).isEqualTo(0);
+
+        final TestServiceBlockingStub stub = GrpcClients.builder(server.httpUri())
+                                                        .intercept(customMarshallerInterceptor)
+                                                        .useMethodMarshaller(useMethodMarshaller)
+                                                        .build(TestServiceBlockingStub.class);
+        final SimpleRequest request = SimpleRequest.newBuilder()
+                                                   .setResponseSize(1)
+                                                   .setResponseType(COMPRESSABLE)
+                                                   .setPayload(Payload.newBuilder()
+                                                                      .setBody(ByteString.copyFrom(
+                                                                              new byte[1])))
+                                                   .build();
+        stub.unaryCall(request);
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerStreamCallCnt()).isEqualTo(
+                expectedStreamCallCnt);
+        assertThat(customMarshallerInterceptor.getSpiedMarshallerParseCallCnt()).isEqualTo(
+                expectedParseCallCnt);
+    }
+
+    @Test
     void intercept() {
         final ClientInterceptor interceptorA = new ClientInterceptor() {
             @Override
@@ -168,16 +226,71 @@ class GrpcClientBuilderTest {
                 .containsExactly(interceptorA, interceptorB);
     }
 
-    @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.service(
-                    GrpcService.builder()
-                               .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
-                               .build());
+    private static class CustomMarshallerInterceptor implements ClientInterceptor {
+        private int spiedMarshallerStreamCallCnt;
+        private int spiedMarshallerParseCallCnt;
+
+        int getSpiedMarshallerStreamCallCnt() {
+            return spiedMarshallerStreamCallCnt;
         }
-    };
+
+        int getSpiedMarshallerParseCallCnt() {
+            return spiedMarshallerParseCallCnt;
+        }
+
+        @Override
+        public <I, O> ClientCall<I, O> interceptCall(MethodDescriptor<I, O> method, CallOptions callOptions,
+                                                     Channel next) {
+            final MethodDescriptor<I, O> methodDescriptor = method.toBuilder().setRequestMarshaller(
+                    new PrototypeMarshaller<I>() {
+                        @Nullable
+                        @Override
+                        public I getMessagePrototype() {
+                            return null;
+                        }
+
+                        @Override
+                        public Class<I> getMessageClass() {
+                            return null;
+                        }
+
+                        @Override
+                        public InputStream stream(I value) {
+                            spiedMarshallerStreamCallCnt++;
+                            return method.getRequestMarshaller().stream(value);
+                        }
+
+                        @Override
+                        public I parse(InputStream inputStream) {
+                            return null;
+                        }
+                    }).setResponseMarshaller(
+                    new PrototypeMarshaller<O>() {
+                        @Nullable
+                        @Override
+                        public O getMessagePrototype() {
+                            return (O) SimpleResponse.getDefaultInstance();
+                        }
+
+                        @Override
+                        public Class<O> getMessageClass() {
+                            return null;
+                        }
+
+                        @Override
+                        public InputStream stream(O o) {
+                            return null;
+                        }
+
+                        @Override
+                        public O parse(InputStream inputStream) {
+                            spiedMarshallerParseCallCnt++;
+                            return method.parseResponse(inputStream);
+                        }
+                    }).build();
+            return next.newCall(methodDescriptor, callOptions);
+        }
+    }
 
     @Test
     void useDefaultGrpcExceptionHandlerFunctionAsFallback() {

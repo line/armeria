@@ -72,10 +72,11 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                     ResponseHeaders defaultHeaders,
                     @Nullable GrpcExceptionHandlerFunction exceptionHandler,
                     @Nullable Executor blockingExecutor,
-                    boolean autoCompress) {
+                    boolean autoCompress,
+                    boolean useMethodMarshaller) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              defaultHeaders, exceptionHandler, blockingExecutor, autoCompress);
+              defaultHeaders, exceptionHandler, blockingExecutor, autoCompress, useMethodMarshaller);
         requireNonNull(req, "req");
         this.ctx = requireNonNull(ctx, "ctx");
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);

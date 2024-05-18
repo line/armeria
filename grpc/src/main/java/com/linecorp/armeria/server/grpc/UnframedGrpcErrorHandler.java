@@ -43,7 +43,7 @@ public interface UnframedGrpcErrorHandler {
      * Returns a plain text or json response based on the content type.
      */
     static UnframedGrpcErrorHandler of() {
-        return UnframedGrpcErrorHandlers.of(UnframedGrpcStatusMappingFunction.of());
+        return DefaultUnframedGrpcErrorHandler.of();
     }
 
     /**
@@ -53,7 +53,7 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return UnframedGrpcErrorHandlers.of(statusMappingFunction);
+        return DefaultUnframedGrpcErrorHandler.of(statusMappingFunction);
     }
 
     /**
@@ -62,7 +62,7 @@ public interface UnframedGrpcErrorHandler {
      * for more information.
      */
     static UnframedGrpcErrorHandler ofJson() {
-        return UnframedGrpcErrorHandlers.ofJson(UnframedGrpcStatusMappingFunction.of());
+        return JsonUnframedGrpcErrorHandler.of();
     }
 
     /**
@@ -74,14 +74,14 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction);
+        return JsonUnframedGrpcErrorHandler.of(statusMappingFunction);
     }
 
     /**
      * Returns a plain text response.
      */
     static UnframedGrpcErrorHandler ofPlainText() {
-        return UnframedGrpcErrorHandlers.ofPlaintext(UnframedGrpcStatusMappingFunction.of());
+        return TextUnframedGrpcErrorHandler.of();
     }
 
     /**
@@ -91,7 +91,7 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofPlainText(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return UnframedGrpcErrorHandlers.ofPlaintext(statusMappingFunction);
+        return TextUnframedGrpcErrorHandler.of(statusMappingFunction);
     }
 
     /**
