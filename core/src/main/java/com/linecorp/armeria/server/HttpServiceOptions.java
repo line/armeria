@@ -64,7 +64,7 @@ public final class HttpServiceOptions {
     }
 
     /**
-     * Returns the server-side maximum length of a request.
+     * Returns the server-side maximum length of a request. {@code -1} if not set.
      */
     public long maxRequestLength() {
         return maxRequestLength;
@@ -72,7 +72,7 @@ public final class HttpServiceOptions {
 
     /**
      * Returns the amount of time to wait before aborting an {@link HttpRequest} when its corresponding
-     * {@link HttpResponse} is complete.
+     * {@link HttpResponse} is complete. {@code -1} if not set.
      */
     public long requestAutoAbortDelayMillis() {
         return requestAutoAbortDelayMillis;

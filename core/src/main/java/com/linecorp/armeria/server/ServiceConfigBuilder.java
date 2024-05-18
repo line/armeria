@@ -90,10 +90,6 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         this.service = requireNonNull(service, "service");
 
         final HttpServiceOptions options = service.options();
-        if (options == null) {
-            return;
-        }
-
         if (options.requestTimeoutMillis() != -1) {
             requestTimeoutMillis = options.requestTimeoutMillis();
         }

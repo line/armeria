@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -76,7 +75,6 @@ public interface HttpService extends Service<HttpRequest, HttpResponse> {
     /**
      * Returns the {@link HttpServiceOptions} of this {@link HttpService}.
      */
-    @Nullable
     @UnstableApi
     default HttpServiceOptions options() {
         return HttpServiceOptions.of();

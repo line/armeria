@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
@@ -33,6 +35,8 @@ public final class HttpServiceOptionsBuilder {
      * Returns the server-side timeout of a request in milliseconds.
      */
     public HttpServiceOptionsBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+        checkArgument(requestTimeoutMillis >= 0, "requestTimeoutMillis: %s (expected: >= 0)",
+                      requestTimeoutMillis);
         this.requestTimeoutMillis = requestTimeoutMillis;
         return this;
     }
@@ -41,6 +45,7 @@ public final class HttpServiceOptionsBuilder {
      * Returns the server-side maximum length of a request.
      */
     public HttpServiceOptionsBuilder maxRequestLength(long maxRequestLength) {
+        checkArgument(maxRequestLength >= 0, "maxRequestLength: %s (expected: >= 0)", maxRequestLength);
         this.maxRequestLength = maxRequestLength;
         return this;
     }
@@ -50,6 +55,8 @@ public final class HttpServiceOptionsBuilder {
      * {@link HttpResponse} is complete.
      */
     public HttpServiceOptionsBuilder requestAutoAbortDelayMillis(long requestAutoAbortDelayMillis) {
+        checkArgument(requestAutoAbortDelayMillis >= 0, "requestAutoAbortDelayMillis: %s (expected: >= 0)",
+                      requestAutoAbortDelayMillis);
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         return this;
     }

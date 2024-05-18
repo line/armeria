@@ -60,6 +60,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Ag
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceOptions;
+import com.linecorp.armeria.server.HttpServiceOptionsBuilder;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -113,7 +114,6 @@ final class DefaultAnnotatedService implements AnnotatedService {
     @Nullable
     private final String name;
 
-    @Nullable
     private final HttpServiceOptions options;
 
     DefaultAnnotatedService(Object object, Method method,
@@ -182,16 +182,14 @@ final class DefaultAnnotatedService implements AnnotatedService {
         // following must be called only after method.setAccessible(true)
         methodHandle = asMethodHandle(method, object);
 
-        final HttpServiceOption httpServiceOption = AnnotationUtil.findFirst(method, HttpServiceOption.class);
+        HttpServiceOption httpServiceOption = AnnotationUtil.findFirst(method, HttpServiceOption.class);
+        if (httpServiceOption == null) {
+            httpServiceOption = AnnotationUtil.findFirst(object.getClass(), HttpServiceOption.class);
+        }
         if (httpServiceOption != null) {
-            options = HttpServiceOptions.builder()
-                                        .requestTimeoutMillis(httpServiceOption.requestTimeoutMillis())
-                                        .maxRequestLength(httpServiceOption.maxRequestLength())
-                                        .requestAutoAbortDelayMillis(
-                                                httpServiceOption.requestAutoAbortDelayMillis())
-                                        .build();
+            options = buildHttpServiceOptions(httpServiceOption);
         } else {
-            options = null;
+            options = HttpServiceOptions.of();
         }
     }
 
@@ -236,6 +234,20 @@ final class DefaultAnnotatedService implements AnnotatedService {
                 }
             }
         }
+    }
+
+    private HttpServiceOptions buildHttpServiceOptions(HttpServiceOption httpServiceOption) {
+        final HttpServiceOptionsBuilder builder = HttpServiceOptions.builder();
+        if (httpServiceOption.requestTimeoutMillis() >= 0) {
+            builder.requestTimeoutMillis(httpServiceOption.requestTimeoutMillis());
+        }
+        if (httpServiceOption.maxRequestLength() >= 0) {
+            builder.maxRequestLength(httpServiceOption.maxRequestLength());
+        }
+        if (httpServiceOption.requestAutoAbortDelayMillis() >= 0) {
+            builder.requestAutoAbortDelayMillis(httpServiceOption.requestAutoAbortDelayMillis());
+        }
+        return builder.build();
     }
 
     @Override

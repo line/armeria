@@ -24,6 +24,8 @@ import org.dataloader.DataLoaderRegistry;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
+import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
+import com.linecorp.armeria.server.HttpServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolHandler;
 import com.linecorp.armeria.server.websocket.WebSocketService;
@@ -33,6 +35,12 @@ import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 final class GraphqlWebSocketService implements GraphqlService, WebSocketService, WebSocketServiceHandler {
 
     private static final String GRAPHQL_TRANSPORT_WS = "graphql-transport-ws";
+    private static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions
+            .builder()
+            .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
+            .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
+            .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
+            .build();
 
     private final WebSocketService delegate;
     private final Function<? super ServiceRequestContext, ? extends DataLoaderRegistry>
@@ -73,5 +81,10 @@ final class GraphqlWebSocketService implements GraphqlService, WebSocketService,
                 new GraphqlWSSubProtocol(ctx, graphqlExecutor, dataLoaderRegistryFunction);
         in.subscribe(new GraphqlWebSocketSubscriber(protocol, outgoing));
         return outgoing;
+    }
+
+    @Override
+    public HttpServiceOptions options() {
+        return DEFAULT_OPTIONS;
     }
 }
