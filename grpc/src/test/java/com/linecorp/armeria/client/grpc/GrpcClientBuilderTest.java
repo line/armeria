@@ -23,15 +23,12 @@ import static testing.grpc.Messages.PayloadType.COMPRESSABLE;
 import java.io.InputStream;
 
 import org.jetbrains.annotations.Nullable;
-import java.util.concurrent.Executors;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.protobuf.ByteString;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
@@ -52,13 +49,12 @@ import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.PrototypeMarshaller;
-import testing.grpc.Messages.Payload;
-import testing.grpc.Messages.SimpleRequest;
-import testing.grpc.Messages.SimpleResponse;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
+import testing.grpc.Messages.Payload;
 import testing.grpc.Messages.SimpleRequest;
+import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 
 class GrpcClientBuilderTest {
