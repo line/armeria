@@ -224,6 +224,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             return;
         }
         Status newStatus = exceptionHandler.apply(ctx, status.getCause(), metadata);
+        assert newStatus != null;
         if (status.getDescription() != null) {
             newStatus = newStatus.withDescription(status.getDescription());
         }
