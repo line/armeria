@@ -32,7 +32,7 @@ class DefaultGrpcExceptionHandlerFunctionTest {
     @Test
     void failFastExceptionToUnavailableCode() {
         assertThat(GrpcExceptionHandlerFunction
-                           .ofDefault()
+                           .of()
                            .apply(null, new FailFastException(CircuitBreaker.ofDefaultName()), null)
                            .getCode()).isEqualTo(Status.Code.UNAVAILABLE);
     }
@@ -40,7 +40,7 @@ class DefaultGrpcExceptionHandlerFunctionTest {
     @Test
     void invalidProtocolBufferExceptionToInvalidArgumentCode() {
         assertThat(GrpcExceptionHandlerFunction
-                           .ofDefault()
+                           .of()
                            .apply(null, new InvalidProtocolBufferException("Failed to parse message"), null)
                            .getCode()).isEqualTo(Status.Code.INVALID_ARGUMENT);
     }

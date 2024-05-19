@@ -88,7 +88,7 @@ class GrpcExceptionHandlerFunctionBuilderTest {
                                  B1Exception.class);
 
         final GrpcExceptionHandlerFunction exceptionHandler = builder.build().orElse(
-                GrpcExceptionHandlerFunction.ofDefault());
+                GrpcExceptionHandlerFunction.of());
         Status status = exceptionHandler.apply(ctx, new A3Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNAUTHENTICATED);
 

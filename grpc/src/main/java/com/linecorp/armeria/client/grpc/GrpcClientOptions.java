@@ -173,7 +173,7 @@ public final class GrpcClientOptions {
      * to a gRPC {@link Status}.
      */
     public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
-            ClientOption.define("EXCEPTION_HANDLER", GrpcExceptionHandlerFunction.ofDefault());
+            ClientOption.define("EXCEPTION_HANDLER", GrpcExceptionHandlerFunction.of());
 
     /**
      * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}.

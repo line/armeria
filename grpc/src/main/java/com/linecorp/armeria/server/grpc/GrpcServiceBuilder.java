@@ -998,14 +998,14 @@ public final class GrpcServiceBuilder {
         }
 
         if (exceptionHandler == null) {
-            exceptionHandler = GrpcExceptionHandlerFunction.ofDefault();
+            exceptionHandler = GrpcExceptionHandlerFunction.of();
         } else {
-            exceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.ofDefault());
+            exceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
         }
         GrpcExceptionHandlerFunction grpcExceptionHandler;
         if (exceptionMappingsBuilder != null) {
             grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(
-                    GrpcExceptionHandlerFunction.ofDefault());
+                    GrpcExceptionHandlerFunction.of());
         } else {
             grpcExceptionHandler = exceptionHandler;
         }

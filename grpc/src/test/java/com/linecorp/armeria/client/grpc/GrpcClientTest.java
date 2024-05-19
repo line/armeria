@@ -746,7 +746,7 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion();
         assertThat(responseObserver.getValues()).isEmpty();
-        assertThat(GrpcExceptionHandlerFunction.ofDefault()
+        assertThat(GrpcExceptionHandlerFunction.of()
                                                .apply(null, responseObserver.getError(), null)
                                                .getCode()).isEqualTo(Code.CANCELLED);
 
@@ -782,7 +782,7 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).hasSize(1);
-        assertThat(GrpcExceptionHandlerFunction.ofDefault()
+        assertThat(GrpcExceptionHandlerFunction.of()
                                                .apply(null, responseObserver.getError(), null)
                                                .getCode()).isEqualTo(Code.CANCELLED);
 
@@ -1417,7 +1417,7 @@ class GrpcClientTest {
         recorder.awaitCompletion();
 
         assertThat(recorder.getError()).isNotNull();
-        assertThat(GrpcExceptionHandlerFunction.ofDefault()
+        assertThat(GrpcExceptionHandlerFunction.of()
                                                .apply(null, recorder.getError(), null)
                                                .getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
@@ -1617,10 +1617,10 @@ class GrpcClientTest {
         final ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
         verify(responseObserver,
                timeout(operationTimeoutMillis())).onError(captor.capture());
-        assertThat(GrpcExceptionHandlerFunction.ofDefault()
+        assertThat(GrpcExceptionHandlerFunction.of()
                                                .apply(null, captor.getValue(), null)
                                                .getCode()).isEqualTo(Status.UNKNOWN.getCode());
-        assertThat(GrpcExceptionHandlerFunction.ofDefault()
+        assertThat(GrpcExceptionHandlerFunction.of()
                                                .apply(null, captor.getValue(), null)
                                                .getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);
