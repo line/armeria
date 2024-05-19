@@ -22,7 +22,7 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * An {@link AsyncLoader} to atomically load, cache and update value.
+ * A loader which atomically loads, caches and updates value.
  */
 @FunctionalInterface
 public interface AsyncLoader<T> {

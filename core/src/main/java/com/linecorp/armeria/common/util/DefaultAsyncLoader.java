@@ -83,9 +83,15 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                 final CacheEntry<T> cacheEntry0 = loadFuture.join();
                 if (isValid(cacheEntry0)) {
                     cacheEntry = cacheEntry0;
-                    if (!needsRefresh(cacheEntry) || loadFuture.refreshing) {
+                    final boolean needsRefresh = needsRefresh(cacheEntry);
+                    if (!needsRefresh || loadFuture.refreshing) {
+                        if (needsRefresh) {
+                            logger.debug("Refreshing already in progress, " +
+                                    "so not refresh it again. cacheEntry {}", cacheEntry);
+                        }
                         return loadFuture;
                     }
+                    logger.debug("Refresh cacheEntry {}", cacheEntry);
                 }
             }
 
@@ -178,11 +184,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         if (expireAfterLoad != null) {
             final long elapsed = System.nanoTime() - cacheEntry.cachedAt;
             if (elapsed >= expireAfterLoad.toNanos()) {
+                logger.debug("CacheEntry {} is expired due to expireAfterLoad {}",
+                        cacheEntry, expireAfterLoad);
                 return false;
             }
         }
 
         if (expireIf != null && expireIf.test(cacheEntry.value)) {
+            logger.debug("CacheEntry {} is expired due to expireIf matches", cacheEntry);
             return false;
         }
 
