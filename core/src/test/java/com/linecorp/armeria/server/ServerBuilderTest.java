@@ -504,8 +504,7 @@ class ServerBuilderTest {
         // Did not call `tls()` for both default host and virtual host.
         assertThatThrownBy(() -> Server.builder()
                                        .virtualHost("example.com")
-                                       .tlsCustomizer(unused -> {
-                                       })
+                                       .tlsCustomizer(unused -> {})
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
@@ -515,8 +514,7 @@ class ServerBuilderTest {
                                        .tls(selfSignedCertificate.certificateFile(),
                                             selfSignedCertificate.privateKeyFile())
                                        .virtualHost("example.com")
-                                       .tlsCustomizer(unused -> {
-                                       })
+                                       .tlsCustomizer(unused -> {})
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
@@ -528,8 +526,7 @@ class ServerBuilderTest {
         assertThatThrownBy(() -> Server.builder()
                                        .tlsSelfSigned()
                                        .virtualHost("example.com")
-                                       .tlsCustomizer(unused -> {
-                                       })
+                                       .tlsCustomizer(unused -> {})
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
