@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -97,6 +98,12 @@ public final class ClientFactoryOptions
     @Deprecated
     public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS =
             ClientFactoryOption.define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
+
+    /**
+     * The {@link TlsEngineType} that will be used for processing TLS connections.
+     */
+    public static final ClientFactoryOption<TlsEngineType> TLS_ENGINE_TYPE =
+            ClientFactoryOption.define("tlsEngineType", Flags.tlsEngineType());
 
     /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
@@ -592,6 +599,13 @@ public final class ClientFactoryOptions
      */
     public boolean tlsAllowUnsafeCiphers() {
         return get(TLS_ALLOW_UNSAFE_CIPHERS);
+    }
+
+    /**
+     * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
+     */
+    public TlsEngineType tlsEngineType() {
+        return get(TLS_ENGINE_TYPE);
     }
 
     /**

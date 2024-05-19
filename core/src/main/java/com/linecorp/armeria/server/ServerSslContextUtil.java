@@ -28,9 +28,12 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.ssl.JdkSslServerContext;
+import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -61,10 +64,11 @@ final class ServerSslContextUtil {
             serverEngine.setNeedClientAuth(false);
 
             // Create a client-side engine with very permissive settings.
+            final TlsEngineType tlsEngineType = determineTlsEngineType(sslContext);
             final SslContext sslContextClient =
                     buildSslContext(() -> SslContextBuilder.forClient()
                                                            .trustManager(InsecureTrustManagerFactory.INSTANCE),
-                                    true, ImmutableList.of());
+                                    tlsEngineType, true, ImmutableList.of());
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
             clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());
@@ -94,13 +98,26 @@ final class ServerSslContextUtil {
         return sslSession;
     }
 
+    private static TlsEngineType determineTlsEngineType(SslContext sslContext) {
+        if (sslContext instanceof OpenSslServerContext) {
+            return TlsEngineType.OPENSSL;
+        }
+
+        if (sslContext instanceof JdkSslServerContext) {
+            return TlsEngineType.JDK;
+        }
+
+        throw new IllegalStateException("Unknown SslContext type: " + sslContext.getClass().getName());
+    }
+
     static SslContext buildSslContext(
             Supplier<SslContextBuilder> sslContextBuilderSupplier,
+            TlsEngineType tlsEngineType,
             boolean tlsAllowUnsafeCiphers,
             Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
         return SslContextUtil
-                .createSslContext(sslContextBuilderSupplier,
-                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, tlsCustomizers, null);
+                .createSslContext(sslContextBuilderSupplier,/* forceHttp1 */ false, tlsEngineType,
+                                  tlsAllowUnsafeCiphers, tlsCustomizers, null);
     }
 
     private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {

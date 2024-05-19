@@ -1181,6 +1181,14 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * The {@link TlsEngineType} that will be used for processing TLS connections.
+     */
+    public ServerBuilder tlsEngineType(TlsEngineType tlsEngineType) {
+        virtualHostTemplate.tlsEngineType(tlsEngineType);
+        return this;
+    }
+
+    /**
      * Returns a {@link ContextPathServicesBuilder} which binds {@link HttpService}s under the
      * specified context paths.
      *

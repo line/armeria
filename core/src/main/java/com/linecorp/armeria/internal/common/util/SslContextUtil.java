@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.TlsEngineType;
 
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.handler.codec.http2.Http2SecurityUtil;
@@ -100,10 +101,23 @@ public final class SslContextUtil {
             boolean tlsAllowUnsafeCiphers,
             Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers,
             @Nullable List<X509Certificate> keyCertChainCaptor) {
+        return createSslContext(builderSupplier, forceHttp1, Flags.tlsEngineType(), tlsAllowUnsafeCiphers,
+                                userCustomizers, keyCertChainCaptor);
+    }
+
+    /**
+     * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
+     * TLSv1.3 (if supported), and TLSv1.2.
+     */
+    public static SslContext createSslContext(
+            Supplier<SslContextBuilder> builderSupplier, boolean forceHttp1,
+            TlsEngineType tlsEngineType, boolean tlsAllowUnsafeCiphers,
+            Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers,
+            @Nullable List<X509Certificate> keyCertChainCaptor) {
 
         return MinifiedBouncyCastleProvider.call(() -> {
             final SslContextBuilder builder = builderSupplier.get();
-            final SslProvider provider = Flags.tlsEngineType().sslProvider();
+            final SslProvider provider = tlsEngineType.sslProvider();
             builder.sslProvider(provider);
 
             final Set<String> supportedProtocols = supportedProtocols(builder);

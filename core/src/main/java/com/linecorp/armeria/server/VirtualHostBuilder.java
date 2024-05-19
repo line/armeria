@@ -84,6 +84,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.internal.server.RouteUtil;
@@ -136,6 +137,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
     @Nullable
     private Boolean tlsAllowUnsafeCiphers;
+    @Nullable
+    private TlsEngineType tlsEngineType;
     private final LinkedList<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
     @Nullable
     private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
@@ -422,6 +425,15 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     @Deprecated
     public VirtualHostBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         this.tlsAllowUnsafeCiphers = tlsAllowUnsafeCiphers;
+        return this;
+    }
+
+    /**
+     * The {@link TlsEngineType} that will be used for processing TLS connections.
+     */
+    public VirtualHostBuilder tlsEngineType(TlsEngineType tlsEngineType) {
+        requireNonNull(tlsEngineType, "tlsEngineType");
+        this.tlsEngineType = tlsEngineType;
         return this;
     }
 
@@ -1465,15 +1477,24 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
             boolean sslContextFromThis = false;
 
+            final TlsEngineType tlsEngineType;
+            if (this.tlsEngineType != null) {
+                tlsEngineType = this.tlsEngineType;
+            } else if (template.tlsEngineType != null) {
+                tlsEngineType = template.tlsEngineType;
+            } else {
+                tlsEngineType = Flags.tlsEngineType();
+            }
+
             // Build a new SslContext or use a user-specified one for backward compatibility.
             if (sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(sslContextBuilderSupplier, tlsAllowUnsafeCiphers, tlsCustomizers);
+                sslContext = buildSslContext(sslContextBuilderSupplier, tlsEngineType, tlsAllowUnsafeCiphers,
+                                             tlsCustomizers);
                 sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
             } else if (template.sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(template.sslContextBuilderSupplier,
-                                             tlsAllowUnsafeCiphers,
-                                             template.tlsCustomizers);
+                sslContext = buildSslContext(template.sslContextBuilderSupplier, tlsEngineType,
+                                             tlsAllowUnsafeCiphers, template.tlsCustomizers);
                 releaseSslContextOnFailure = true;
             }
 
@@ -1500,6 +1521,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
                     sslContext = buildSslContext(() -> SslContextBuilder.forServer(ssc.certificate(),
                                                                                    ssc.privateKey()),
+                                                 tlsEngineType,
                                                  tlsAllowUnsafeCiphers,
                                                  tlsCustomizers);
                     releaseSslContextOnFailure = true;
