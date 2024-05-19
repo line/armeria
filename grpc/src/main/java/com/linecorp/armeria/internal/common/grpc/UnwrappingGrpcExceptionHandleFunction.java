@@ -27,11 +27,11 @@ import com.linecorp.armeria.common.util.Exceptions;
 import io.grpc.Metadata;
 import io.grpc.Status;
 
-public class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptionHandlerFunction {
+public final class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptionHandlerFunction {
     private final GrpcExceptionHandlerFunction delegate;
 
     public UnwrappingGrpcExceptionHandleFunction(GrpcExceptionHandlerFunction handlerFunction) {
-        this.delegate = handlerFunction;
+        delegate = handlerFunction;
     }
 
     @Override
@@ -40,7 +40,7 @@ public class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptionHandl
         return delegate.apply(ctx, t, metadata);
     }
 
-    private Throwable peelAndUnwrap(Throwable t) {
+    private static Throwable peelAndUnwrap(Throwable t) {
         requireNonNull(t, "t");
         t = Exceptions.peel(t);
         Throwable cause = t;
