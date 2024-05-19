@@ -338,11 +338,11 @@ class GraphqlWSSubProtocol {
     }
 
     private static void writePong(WebSocketWriter out) {
-        out.tryWrite("{\"type\":\"pong\"}");
+        out.write("{\"type\":\"pong\"}");
     }
 
     private static void writeConnectionAck(WebSocketWriter out) {
-        out.tryWrite("{\"type\":\"connection_ack\"}");
+        out.write("{\"type\":\"connection_ack\"}");
     }
 
     private static void writeNext(WebSocketWriter out, String operationId, ExecutionResult executionResult)
@@ -397,7 +397,7 @@ class GraphqlWSSubProtocol {
         try {
             final String event = serializeToJson(errorResponse);
             logger.trace("ERROR: {}", event);
-            out.tryWrite(event);
+            out.write(event);
         } catch (JsonProcessingException e) {
             logger.warn("Error serializing error event", e);
             out.close(e);
@@ -407,7 +407,7 @@ class GraphqlWSSubProtocol {
     private static void writeComplete(WebSocketWriter out, String operationId) {
         try {
             final String json = serializeToJson(ImmutableMap.of("type", "complete", "id", operationId));
-            out.tryWrite(json);
+            out.write(json);
         } catch (JsonProcessingException e) {
             logger.warn("Unexpected exception while serializing complete event. operationId: {}",
                         operationId, e);
