@@ -563,27 +563,37 @@ class ServerBuilderTest {
         final Server sb1 = Server.builder()
                                  .tlsSelfSigned()
                                  .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                 .tlsEngineType(TlsEngineType.JDK)
+                                 .build();
+        assertThat(sb1.config().defaultVirtualHost().sslContext()).isNotNull();
+
+        final Server sb2 = Server.builder()
+                                 .tlsSelfSigned()
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .tlsEngineType(TlsEngineType.OPENSSL)
                                  .virtualHost("*.example1.com")
                                  .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                  .tlsSelfSigned()
-                                 .tlsEngineType(TlsEngineType.OPENSSL)
+                                 .tlsEngineType(TlsEngineType.JDK)
                                  .and()
                                  .virtualHost("*.example2.com")
                                  .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                  .tlsSelfSigned()
-                                 .tlsEngineType(TlsEngineType.JDK)
                                  .and()
                                  .virtualHost("*.example3.com")
                                  .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                  .and()
                                  .build();
-        assertThat(sb1.config().defaultVirtualHost().sslContext().getClass())
-                .isEqualTo(JdkSslServerContext.class);
-        assertThat(sb1.config().findVirtualHost("*.example1.com", 8080).sslContext().getClass())
+        assertThat(sb2.config().defaultVirtualHost().sslContext().getClass())
                 .isEqualTo(OpenSslServerContext.class);
-        assertThat(sb1.config().findVirtualHost("*.example2.com", 8080).sslContext().getClass())
+        assertThat(sb2.config().findVirtualHost("*.example1.com", 8080).sslContext().getClass())
                 .isEqualTo(JdkSslServerContext.class);
+        assertThat(sb2.config().findVirtualHost("*.example2.com", 8080).sslContext().getClass())
+                .isEqualTo(OpenSslServerContext.class);
+
+        final Server sb3 = Server.builder()
+                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                 .build();
+        assertThat(sb3.config().defaultVirtualHost().sslContext()).isNull();
     }
 
     @Test
