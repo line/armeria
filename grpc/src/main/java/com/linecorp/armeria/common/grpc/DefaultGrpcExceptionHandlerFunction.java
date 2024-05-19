@@ -36,8 +36,8 @@ import io.grpc.Status.Code;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Exception;
 
-final class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
-    static final GrpcExceptionHandlerFunction INSTANCE = new DefaultGrpcExceptionHandlerFunction();
+enum DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
+    INSTANCE;
 
     /**
      * Converts the {@link Throwable} to a {@link Status}, taking into account exceptions specific to Armeria as
@@ -82,6 +82,4 @@ final class DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerF
         }
         return s;
     }
-
-    private DefaultGrpcExceptionHandlerFunction() {}
 }
