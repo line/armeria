@@ -997,23 +997,16 @@ public final class GrpcServiceBuilder {
             registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
 
-        if (exceptionHandler == null) {
-            exceptionHandler = GrpcExceptionHandlerFunction.of();
-        } else {
-            exceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
-        }
         GrpcExceptionHandlerFunction grpcExceptionHandler;
         if (exceptionMappingsBuilder != null) {
-            grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(
-                    GrpcExceptionHandlerFunction.of());
+            grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(GrpcExceptionHandlerFunction.of());
+        } else if (exceptionHandler != null) {
+            grpcExceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
         } else {
-            grpcExceptionHandler = exceptionHandler;
+            grpcExceptionHandler = GrpcExceptionHandlerFunction.of();
         }
         grpcExceptionHandler = new UnwrappingGrpcExceptionHandleFunction(grpcExceptionHandler);
-
-        if (grpcExceptionHandler != null) {
-            registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
-        }
+        registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
 
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();

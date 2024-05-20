@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.client.grpc.NullCallCredentials;
 import com.linecorp.armeria.internal.client.grpc.NullGrpcClientStubFactory;
+import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallCredentials;
@@ -174,7 +175,8 @@ public final class GrpcClientOptions {
      * exceptionHandler is set while building a gRPC client in GrpcClientBuilder
      */
     public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
-            ClientOption.define("EXCEPTION_HANDLER", GrpcExceptionHandlerFunction.of());
+            ClientOption.define("EXCEPTION_HANDLER", new UnwrappingGrpcExceptionHandleFunction(
+                    GrpcExceptionHandlerFunction.of()));
 
     /**
      * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}.

@@ -418,13 +418,10 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
         if (!clientInterceptors.isEmpty()) {
             option(INTERCEPTORS.newValue(clientInterceptors));
         }
-        if (exceptionHandler == null) {
-            exceptionHandler = GrpcExceptionHandlerFunction.of();
-        } else {
-            exceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
+        if (exceptionHandler != null) {
+            option(EXCEPTION_HANDLER.newValue(new UnwrappingGrpcExceptionHandleFunction(exceptionHandler.orElse(
+                    GrpcExceptionHandlerFunction.of()))));
         }
-        exceptionHandler = new UnwrappingGrpcExceptionHandleFunction(exceptionHandler);
-        option(EXCEPTION_HANDLER.newValue(exceptionHandler));
 
         final Object client;
         final ClientOptions options = buildOptions();
