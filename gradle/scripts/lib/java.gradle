@@ -50,9 +50,7 @@ configure(projectsWithFlags('java')) {
     apply plugin: 'idea'
     apply plugin: 'jvm-test-suite'
 
-    base {
-        archivesName = project.ext.artifactId
-    }
+    archivesBaseName = project.ext.artifactId
 
     // Delete the generated source directory on clean.
     ext {

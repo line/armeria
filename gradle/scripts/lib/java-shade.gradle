@@ -57,7 +57,7 @@ configure(relocatedProjects) {
             description: 'Extracts the shaded main JAR.',
             dependsOn: tasks.shadedJar) {
 
-        from(zipTree(tasks.shadedJar.archiveFile.get().asFile))
+        from(zipTree(tasks.shadedJar.archivePath))
         from(sourceSets.main.output.classesDirs) {
             // Add the JAR resources excluded in the 'shadedJar' task.
             include '**/*.jar'
@@ -81,7 +81,7 @@ configure(relocatedProjects) {
             description: 'Extracts the shaded test JAR.',
             dependsOn: tasks.shadedTestJar) {
 
-        from(zipTree(tasks.shadedTestJar.archiveFile.get().asFile))
+        from(zipTree(tasks.shadedTestJar.archivePath))
         from(sourceSets.test.output.classesDirs) {
             // Add the JAR resources excluded in the 'shadedTestJar' task.
             include '**/*.jar'
@@ -107,7 +107,7 @@ configure(relocatedProjects) {
                 dependsOn it.tasks.shadedTestJar.path
             }
 
-            def shadedFile = tasks.shadedJar.archiveFile.get().asFile
+            def shadedFile = tasks.shadedJar.archivePath
             def shadedAndTrimmedFile = file(shadedFile.path.replaceFirst('-untrimmed-', '-shaded-'))
 
             injars shadedFile
@@ -118,11 +118,11 @@ configure(relocatedProjects) {
 
             // Include all other shaded JARs so that ProGuard does not trim the classes and methods
             // that are used actually.
-            injars tasks.shadedTestJar.archiveFile.get().asFile
+            injars tasks.shadedTestJar.archivePath
             relocatedProjects.each {
                 if (it != project && !it.hasFlags('no_aggregation')) {
-                    injars it.tasks.shadedJar.archiveFile.get().asFile
-                    injars it.tasks.shadedTestJar.archiveFile.get().asFile
+                    injars it.tasks.shadedJar.archivePath
+                    injars it.tasks.shadedTestJar.archivePath
                 }
             }
 
@@ -336,7 +336,7 @@ private Configuration configureShadedTestImplementConfiguration(
     if (recursedProject.tasks.findByName('trimShadedJar')) {
         project.dependencies.add(shadedJarTestImplementation.name, files(recursedProject.tasks.trimShadedJar.outJarFiles))
     } else if (recursedProject.tasks.findByName('shadedJar')) {
-        project.dependencies.add(shadedJarTestImplementation.name, files(recursedProject.tasks.shadedJar.archiveFile.get().asFile))
+        project.dependencies.add(shadedJarTestImplementation.name, files(recursedProject.tasks.shadedJar.archivePath))
     }
 
     def shadedDependencyNames = project.ext.relocations.collect { it['name'] }
