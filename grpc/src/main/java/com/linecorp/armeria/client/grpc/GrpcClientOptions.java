@@ -171,8 +171,7 @@ public final class GrpcClientOptions {
 
     /**
      * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
-     * to a gRPC {@link Status}. GrpcExceptionHandlerFunction.of() isn't used because the actual
-     * exceptionHandler is set while building a gRPC client in GrpcClientBuilder
+     * to a gRPC {@link Status}.
      */
     public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
             ClientOption.define("EXCEPTION_HANDLER", new UnwrappingGrpcExceptionHandleFunction(
