@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -77,17 +76,15 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         this.responseTimeoutMillis = responseTimeoutMillis;
     }
 
-    boolean handle100Continue(HttpStatus status, boolean isHttp1) {
-        assert requestHandler != null;
-        return requestHandler.handle100Continue(status, isHttp1);
+    final boolean needs100Continue() {
+        if (requestHandler == null) {
+            return false;
+        }
+        return requestHandler.needs100Continue();
     }
 
     DecodedHttpResponse delegate() {
         return delegate;
-    }
-
-    EventLoop eventLoop() {
-        return eventLoop;
     }
 
     long maxContentLength() {
@@ -333,5 +330,20 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
                                    .add("contentLengthHeaderValue", contentLengthHeaderValue)
                                    .add("delegate", delegate)
                                    .toString();
+    }
+
+    void resume() {
+        assert requestHandler != null;
+        requestHandler.resume();
+    }
+
+    void discardRequestBody() {
+        assert requestHandler != null;
+        requestHandler.discardRequestBody();
+    }
+
+    void repeat() {
+        assert requestHandler != null;
+        requestHandler.repeat();
     }
 }

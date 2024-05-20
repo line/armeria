@@ -39,6 +39,9 @@ import org.apache.hc.core5.util.ByteArrayBuffer;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -50,6 +53,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -66,6 +70,27 @@ import io.netty.handler.codec.http2.Http2Headers;
  * This test is to check the behavior of the HttpClient when the 'Expect: 100-continue' header is set.
  */
 final class HttpClientExpect100HeaderTest {
+
+    @RegisterExtension
+    static final ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service("/", (ctx, req) -> HttpResponse.of(201));
+        }
+    };
+
+    @RegisterExtension
+    static final ServerExtension proxy = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.serviceUnder("/", (ctx, req) -> {
+                if (req.headers().contains(HttpHeaderNames.EXPECT)) {
+                    return HttpResponse.of(417);
+                }
+                return server.webClient().execute(req);
+            });
+        }
+    };
 
     @Nested
     class AggregatedHttpRequestHandlerTest {
@@ -180,17 +205,17 @@ final class HttpClientExpect100HeaderTest {
                     readBytes(in, 9); // Read a SETTINGS_ACK frame and discard it.
 
                     // Read a HEADERS frame and validate it.
-                    readHeadersFrame(in, true);
+                    readHeadersFrame(new DefaultHttp2HeadersDecoder(), in, true);
                     // Check that the data is not sent until sending 100-continue response.
                     Thread.sleep(1000);
                     assertThat(in.available()).isZero();
                     // Send a CONTINUE response.
-                    sendFrameHeaders(bos, HttpStatus.CONTINUE, false);
+                    sendFrameHeaders(bos, HttpStatus.CONTINUE, false, 3);
 
                     // Read a DATA frame.
                     readDataFrame(in);
                     // Send a response.
-                    sendFrameHeaders(bos, HttpStatus.CREATED, true);
+                    sendFrameHeaders(bos, HttpStatus.CREATED, true, 3);
 
                     final AggregatedHttpResponse res = future.join();
                     assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
@@ -234,7 +259,9 @@ final class HttpClientExpect100HeaderTest {
                     Thread.sleep(1000);
                     assertThat(inputStream.available()).isZero();
 
-                    out.write("HTTP/1.1 417 Expectation Failed\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+                    out.write(("HTTP/1.1 417 Expectation Failed\r\n" +
+                               "Content-Length: 0\r\n" +
+                               "\r\n").getBytes(StandardCharsets.US_ASCII));
 
                     // Repeat sending the same request without 'Expect: 100-continue' header.
                     assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
@@ -292,20 +319,25 @@ final class HttpClientExpect100HeaderTest {
 
                     readBytes(in, 9); // Read a SETTINGS_ACK frame and discard it.
 
+                    final DefaultHttp2HeadersDecoder headersDecoder = new DefaultHttp2HeadersDecoder();
                     // Read a HEADERS frame and validate it.
-                    readHeadersFrame(in, true);
+                    readHeadersFrame(headersDecoder, in, true);
                     // Check that the data is not sent until sending 100-continue response.
                     Thread.sleep(1000);
                     assertThat(in.available()).isZero();
                     // Send a 417 Expectation Failed response.
-                    sendFrameHeaders(bos, HttpStatus.EXPECTATION_FAILED, false);
+                    sendFrameHeaders(bos, HttpStatus.EXPECTATION_FAILED, true, 3);
+
+                    final byte[] frameHeader = readBytes(in, 9);
+                    final int payloadLength = payloadLength(frameHeader);
+                    assertThat(payloadLength).isZero();
 
                     // Read a HEADERS frame and validate it.
-                    readHeadersFrame(in, false);
+                    readHeadersFrame(headersDecoder, in, false);
                     // Read a DATA frame.
                     readDataFrame(in);
                     // Send a CREATED response.
-                    sendFrameHeaders(bos, HttpStatus.CREATED, true);
+                    sendFrameHeaders(bos, HttpStatus.CREATED, true, 5);
 
                     final AggregatedHttpResponse res = future.join();
                     assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
@@ -313,29 +345,9 @@ final class HttpClientExpect100HeaderTest {
             }
         }
 
-        @Test
-        void repeatToSendRequestWithoutHeaderViaProxy() {
-            final ServerExtension server = new ServerExtension() {
-                @Override
-                protected void configure(ServerBuilder sb) {
-                    sb.service("/", (ctx, req) -> HttpResponse.of(201));
-                }
-            };
-            server.start();
-
-            final ServerExtension proxy = new ServerExtension() {
-                @Override
-                protected void configure(ServerBuilder sb) {
-                    sb.serviceUnder("/", (ctx, req) -> {
-                        if (req.headers().contains(HttpHeaderNames.EXPECT)) {
-                            return HttpResponse.of(417);
-                        }
-                        return server.webClient().execute(req);
-                    });
-                }
-            };
-            proxy.start();
-
+        @ParameterizedTest
+        @CsvSource({ "H1C", "H2C" })
+        void repeatToSendRequestWithoutHeaderViaProxy(SessionProtocol protocol) {
             final WebClient client = WebClient.of(proxy.httpUri());
             final HttpRequest request = HttpRequest.builder()
                                                    .post("/")
@@ -435,12 +447,12 @@ final class HttpClientExpect100HeaderTest {
                     readBytes(in, 9); // Read a SETTINGS_ACK frame and discard it.
 
                     // Read a HEADERS frame and validate it.
-                    readHeadersFrame(in, true);
+                    readHeadersFrame(new DefaultHttp2HeadersDecoder(), in, true);
                     // Check that the data is not sent until sending 100-continue response.
                     Thread.sleep(1000);
                     assertThat(in.available()).isZero();
                     // Send a CREATED response.
-                    sendFrameHeaders(bos, HttpStatus.CREATED, true);
+                    sendFrameHeaders(bos, HttpStatus.CREATED, true, 3);
 
                     final AggregatedHttpResponse res = future.join();
                     assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
@@ -514,12 +526,12 @@ final class HttpClientExpect100HeaderTest {
         bos.flush();
     }
 
-    private static void readHeadersFrame(InputStream in, boolean hasExpect100Continueheader) throws Exception {
+    private static void readHeadersFrame(DefaultHttp2HeadersDecoder headersDecoder, InputStream in,
+                                         boolean hasExpect100ContinueHeader) throws Exception {
         final byte[] frameHeader = readBytes(in, 9);
         final int payloadLength = payloadLength(frameHeader);
         final byte[] headersPayload = readBytes(in, payloadLength);
 
-        final DefaultHttp2HeadersDecoder headersDecoder = new DefaultHttp2HeadersDecoder();
         final ByteBuf payloadBuf = Unpooled.wrappedBuffer(headersPayload);
         final Http2Headers headers = headersDecoder.decodeHeaders(0, payloadBuf);
 
@@ -529,7 +541,7 @@ final class HttpClientExpect100HeaderTest {
         assertThat(get(headers, HttpHeaderNames.AUTHORITY)).startsWith("127.0.0.1");
         assertThat(get(headers, HttpHeaderNames.USER_AGENT)).startsWith("armeria/");
         assertThat(get(headers, HttpHeaderNames.CONTENT_TYPE)).isEqualTo("text/plain; charset=utf-8");
-        if (hasExpect100Continueheader) {
+        if (hasExpect100ContinueHeader) {
             assertThat(get(headers, HttpHeaderNames.EXPECT)).isEqualTo(HttpHeaderValues.CONTINUE.toString());
         }
     }
@@ -542,7 +554,7 @@ final class HttpClientExpect100HeaderTest {
 
     private static void sendFrameHeaders(BufferedOutputStream bos,
                                          HttpStatus status,
-                                         boolean endOfStream) throws Exception {
+                                         boolean endOfStream, int streamId) throws Exception {
         final HPackEncoder encoder = new HPackEncoder(StandardCharsets.UTF_8);
         final ByteArrayBuffer buffer = new ByteArrayBuffer(1024);
         encoder.encodeHeader(buffer, ":status", status.codeAsText(), false);
@@ -552,7 +564,7 @@ final class HttpClientExpect100HeaderTest {
         buf.writeMedium(headersPayload.length);
         buf.writeByte(Http2FrameTypes.HEADERS);
         buf.writeByte(new Http2Flags().endOfHeaders(true).endOfStream(endOfStream).value());
-        buf.writeInt(3);
+        buf.writeInt(streamId);
         buf.writeBytes(headersPayload);
 
         bos.write(buf.array());

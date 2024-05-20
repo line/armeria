@@ -65,7 +65,7 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         }
 
         assert request != null;
-        if (!tryInitialize()) {
+        if (!tryInitialize(false)) {
             request.content().close();
             return;
         }
@@ -120,32 +120,34 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     }
 
     @Override
-    void resume() {
+    void doResume() {
         writeDataOrTrailers();
         channel().flush();
     }
 
     @Override
-    void repeat(boolean isHttp1) {
-        if (isHttp1) {
-            writeData(EMPTY_EOS);
-            channel().flush();
-        }
+    void doRepeat() {
+        writeData(EMPTY_EOS);
+        channel().flush();
 
         assert aReq != null;
         cancelTimeout();
 
-        if (!tryInitialize()) {
-            aReq.content().close();
-            return;
-        }
+        final boolean initialized = tryInitialize(true);
+        assert initialized;
 
         final RequestHeadersBuilder builder = aReq.headers().toBuilder();
         builder.remove(HttpHeaderNames.EXPECT);
         final RequestHeaders newHeaders = builder.build();
 
-        writeHeaders(newHeaders, shouldExpect100ContinueHeader(newHeaders));
+        writeHeaders(newHeaders, false);
         writeDataOrTrailers();
         channel().flush();
+    }
+
+    @Override
+    void doDiscardRequestBody() {
+        assert aReq != null;
+        aReq.content().close();
     }
 }

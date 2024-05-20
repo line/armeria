@@ -81,7 +81,7 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
             return;
         }
 
-        if (!tryInitialize()) {
+        if (!tryInitialize(false)) {
             return;
         }
 
@@ -139,12 +139,17 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     }
 
     @Override
-    final void resume() {
-        // Do nothing because this does not support Expect: 100-continue header.
+    final void doResume() {
+        // TODO(minwoox): handle in the follow-up PR.
     }
 
     @Override
-    final void repeat(boolean isHttp1) {
-        // Do nothing because this does not support Expect: 100-continue header.
+    final void doRepeat() {
+        // TODO(minwoox): handle in the follow-up PR.
+    }
+
+    @Override
+    void doDiscardRequestBody() {
+        // TODO(minwoox): handle in the follow-up PR.
     }
 }

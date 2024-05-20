@@ -52,7 +52,6 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 
@@ -205,20 +204,23 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
 
                         res.startResponse();
                         final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
-                        final boolean written;
                         final HttpStatus status = responseHeaders.status();
 
-                        final boolean hasInvalid100ContinueResponse = !handle100Continue(nettyRes, status);
-                        if (hasInvalid100ContinueResponse) {
-                            if (status == HttpStatus.EXPECTATION_FAILED) {
-                                // No need to write response headers when 417 Expectation Failed is received.
+                        if (res.needs100Continue()) {
+                            if (status == HttpStatus.CONTINUE) {
+                                res.resume();
+                            } else if (status == HttpStatus.EXPECTATION_FAILED) {
+                                removeResponse(resId++);
                                 state = State.DISCARD_DATA_OR_TRAILERS;
-                                written = true;
+                                res.repeat();
+                                return;
                             } else {
-                                state = State.NEED_DATA_OR_TRAILERS;
-                                written = res.tryWriteResponseHeaders(responseHeaders);
+                                res.discardRequestBody();
                             }
-                        } else if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+                        }
+
+                        final boolean written;
+                        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
                             written = res.tryWrite(responseHeaders);
                         } else {
@@ -297,15 +299,6 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
         } finally {
             ReferenceCountUtil.release(msg);
         }
-    }
-
-    private boolean handle100Continue(HttpResponse nettyRes, HttpStatus status) {
-        // Ignore HTTP/1.0
-        if (nettyRes.protocolVersion().compareTo(HttpVersion.HTTP_1_1) < 0) {
-            return true;
-        }
-
-        return res.handle100Continue(status, true);
     }
 
     private void failWithUnexpectedMessageType(ChannelHandlerContext ctx, Object msg, Class<?> expected) {

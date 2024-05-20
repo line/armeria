@@ -208,9 +208,20 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
             res.startResponse();
             final ResponseHeaders responseHeaders = (ResponseHeaders) converted;
             final HttpStatus status = responseHeaders.status();
-            if (res.handle100Continue(status, false) && status == HttpStatus.EXPECTATION_FAILED) {
-                written = true;
-            } else if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+
+            if (res.needs100Continue()) {
+                if (status == HttpStatus.CONTINUE) {
+                    res.resume();
+                } else if (status == HttpStatus.EXPECTATION_FAILED) {
+                    removeResponse(streamIdToId(streamId));
+                    res.repeat();
+                    return;
+                } else {
+                    res.discardRequestBody();
+                }
+            }
+
+            if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
                 written = res.tryWrite(converted);
             } else {
                 written = res.tryWriteResponseHeaders(responseHeaders);
