@@ -158,7 +158,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Sets the factory that creates an {@link EventLoopScheduler} which is responsible for assigning an
      * {@link EventLoop} to handle a connection to the specified {@link Endpoint}.
+     * @deprecated This factory method lacks the ability to build a sophisticated scheduler.
+     * Use the method that requires an EventLoopSchedulerFactory instead.
      */
+    @Deprecated
     public ClientFactoryBuilder eventLoopSchedulerFactory(
             Function<? super EventLoopGroup, ? extends EventLoopScheduler> eventLoopSchedulerFactory) {
         requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
@@ -167,6 +170,19 @@ public final class ClientFactoryBuilder implements TlsSetters {
                    "Cannot set eventLoopSchedulerFactory when maxEventLoop per endpoint is specified.");
         option(ClientFactoryOptions.EVENT_LOOP_SCHEDULER_FACTORY, eventLoopSchedulerFactory);
         return this;
+    }
+
+    /**
+     * Sets the factory that creates an {@link EventLoopScheduler} which is responsible for assigning an
+     * {@link EventLoop} to handle a connection to the specified {@link Endpoint}.
+     * @deprecated This factory method lacks the ability to build a sophisticated scheduler.
+     * Use the method that requires an EventLoopSchedulerFactory instead.
+     */
+    @Deprecated
+    public ClientFactoryBuilder eventLoopSchedulerFactory(EventLoopSchedulerFactory eventLoopSchedulerFactory){
+    requireNonNull(eventLoopSchedulerFactory, "eventLoopSchedulerFactory");
+    option(ClientFactoryOptions.CUSTOM_EVENT_LOOP_SCHEDULER_FACTORY, eventLoopSchedulerFactory);
+    return this;
     }
 
     /**
