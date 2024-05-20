@@ -294,7 +294,6 @@ class SamlServiceProviderTest {
         @Override
         public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                         @Nullable MessageContext<Response> message, Throwable cause) {
-            System.err.println("message: " + message);
             messageContextHolder.set(message);
             // Handle as an error so that a test client can detect the failure.
             return HttpResponse.of(HttpStatus.BAD_REQUEST);
