@@ -18,36 +18,35 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
-final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
+import io.netty.util.concurrent.EventExecutor;
 
-    private final EndpointGroup endpointGroup;
-    private final LoadBalancer loadBalancer;
+final class ClusterEntry implements AsyncCloseable {
+
+    private final DelegatingEndpointGroup endpointGroup = new DelegatingEndpointGroup(this);
+    private final LoadBalancer loadBalancer = new SubsetLoadBalancer();
+    private final ClusterManager clusterManager;
+    private final EventExecutor eventExecutor;
     private List<Endpoint> endpoints = ImmutableList.of();
 
-    ClusterEntry(ClusterSnapshot clusterSnapshot, ClusterManager clusterManager) {
-        final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-        assert endpointSnapshot != null;
-        loadBalancer = new SubsetLoadBalancer(clusterSnapshot);
-
-        // The order of adding listeners is important
-        endpointGroup = XdsEndpointUtil.convertEndpointGroup(clusterSnapshot);
-        endpointGroup.addListener(this, true);
-        endpointGroup.addListener(clusterManager, true);
+    ClusterEntry(ClusterSnapshot clusterSnapshot,
+                 ClusterManager clusterManager, EventExecutor eventExecutor) {
+        this.clusterManager = clusterManager;
+        this.eventExecutor = eventExecutor;
+        updateClusterSnapshot(clusterSnapshot);
     }
 
     @Nullable
@@ -55,11 +54,19 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
         return loadBalancer.selectNow(ctx);
     }
 
-    @Override
-    public void accept(List<Endpoint> endpoints) {
-        this.endpoints = ImmutableList.copyOf(endpoints);
-        final PrioritySet prioritySet = new PrioritySet(endpoints);
-        loadBalancer.prioritySetUpdated(prioritySet);
+    void updateClusterSnapshot(ClusterSnapshot clusterSnapshot) {
+        final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
+        assert endpointSnapshot != null;
+        endpointGroup.updateClusterSnapshot(clusterSnapshot);
+    }
+
+    public void accept(ClusterSnapshot clusterSnapshot, Collection<Endpoint> endpoints) {
+        eventExecutor.execute(() -> {
+            this.endpoints = ImmutableList.copyOf(endpoints);
+            final PrioritySet prioritySet = new PrioritySet(this.endpoints, clusterSnapshot);
+            loadBalancer.prioritySetUpdated(prioritySet);
+            clusterManager.notifyListeners();
+        });
     }
 
     List<Endpoint> allEndpoints() {

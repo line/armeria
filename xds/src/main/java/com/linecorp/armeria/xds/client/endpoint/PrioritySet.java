@@ -21,15 +21,22 @@ import java.util.List;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.xds.ClusterSnapshot;
 
 final class PrioritySet {
     private final List<Endpoint> endpoints;
+    private final ClusterSnapshot clusterSnapshot;
 
-    PrioritySet(List<Endpoint> endpoints) {
+    PrioritySet(List<Endpoint> endpoints, ClusterSnapshot clusterSnapshot) {
         this.endpoints = ImmutableList.copyOf(endpoints);
+        this.clusterSnapshot = clusterSnapshot;
     }
 
     List<Endpoint> endpoints() {
         return endpoints;
+    }
+
+    public ClusterSnapshot clusterSnapshot() {
+        return clusterSnapshot;
     }
 }
