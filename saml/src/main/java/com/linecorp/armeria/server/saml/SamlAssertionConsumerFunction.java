@@ -87,9 +87,10 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, AggregatedHttpRequest req,
                               String defaultHostname, SamlPortConfig portConfig) {
+        MessageContext<Response> messageContext = null;
+
         try {
             final SamlBindingProtocol bindingProtocol = cfg.endpoint().bindingProtocol();
-            final MessageContext<Response> messageContext;
             if (bindingProtocol == SamlBindingProtocol.HTTP_REDIRECT) {
                 messageContext = HttpRedirectBindingUtil.toSamlObject(req, SAML_RESPONSE,
                                                                       idpConfigs, defaultIdpConfig,
@@ -116,7 +117,7 @@ final class SamlAssertionConsumerFunction implements SamlServiceFunction {
 
             return ssoHandler.loginSucceeded(ctx, req, messageContext, sessionIndex, relayState);
         } catch (SamlException e) {
-            return ssoHandler.loginFailed(ctx, req, null, e);
+            return ssoHandler.loginFailed(ctx, req, messageContext, e);
         }
     }
 
