@@ -42,12 +42,10 @@ public final class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptio
 
     private static Throwable peelAndUnwrap(Throwable t) {
         requireNonNull(t, "t");
-        t = Exceptions.peel(t);
-        Throwable cause = t;
+        Throwable cause = Exceptions.peel(t);
         while (cause != null) {
             if (cause instanceof ArmeriaStatusException) {
-                t = StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
-                break;
+                return StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
             }
             cause = cause.getCause();
         }
