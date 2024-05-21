@@ -32,6 +32,11 @@ service HttpJsonTranscodingTestService {
   rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
     option (google.api.http) = {
       get: "/v1/{name=messages/*}"
+
+      additional_bindings {
+        post: "/v1/{name=messages/*}:get"
+        body: "*"
+      }
     };
   }
   rpc GetMessageV2(GetMessageRequestV2) returns (Message) {
@@ -49,7 +54,11 @@ service HttpJsonTranscodingTestService {
       get:"/v4/messages/{message_id}"
     };
   }
-
+  rpc GetMessageV5(GetMessageRequestV5) returns (Message) {
+    option (google.api.http) = {
+      get:"/v5/messages/{messageType}"
+    };
+  }
   rpc UpdateMessageV1(UpdateMessageRequestV1) returns (Message) {
     option (google.api.http) = {
       patch: "/v1/messages/{message_id}"
@@ -69,6 +78,13 @@ service HttpJsonTranscodingTestService {
     };
   }
 
+  rpc EchoTimestamp(EchoTimestampRequest) returns (EchoTimestampResponse) {
+    option (google.api.http) = {
+      post: "/v1/echo/{timestamp}:get",
+      body: "*"
+    };
+  }
+
   rpc EchoFieldMask(EchoFieldMaskRequest) returns (EchoFieldMaskResponse) {
     option (google.api.http) = {
       get: "/v1/echo/field_mask"
@@ -78,6 +94,11 @@ service HttpJsonTranscodingTestService {
   rpc EchoWrappers(EchoWrappersRequest) returns (EchoWrappersResponse) {
     option (google.api.http) = {
       get: "/v1/echo/wrappers"
+
+      additional_bindings {
+        post: "/v1/echo/wrappers"
+        body: "value"
+      }
     };
   }
 
@@ -229,8 +250,19 @@ message GetMessageRequestV4 {
   string query_parameter = 2;
   ParentMessage parent_field = 3;
   message ParentMessage {
-     string child_field = 1;
-     string child_field_2 = 2;
+    string child_field = 1;
+    string child_field_2 = 2;
+  }
+}
+
+message GetMessageRequestV5 {
+  string message_id = 1 [json_name = "messageType"];
+  string query_parameter = 2;
+  string query_field_1 = 3 [json_name = "second_query"];
+  ParentMessage parent_field = 4 [json_name = "parent"];
+  message ParentMessage {
+    string child_field = 1;
+    string child_field_2 = 2 [json_name = "second_field"];
   }
 }
 
@@ -256,6 +288,14 @@ message EchoTimestampAndDurationRequest {
 message EchoTimestampAndDurationResponse {
   google.protobuf.Timestamp timestamp = 1;
   google.protobuf.Duration duration = 2;
+}
+
+message EchoTimestampRequest {
+  google.protobuf.Timestamp timestamp = 1;
+}
+
+message EchoTimestampResponse {
+  google.protobuf.Timestamp timestamp = 1;
 }
 
 message EchoFieldMaskRequest {

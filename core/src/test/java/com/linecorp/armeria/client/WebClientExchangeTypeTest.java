@@ -68,6 +68,27 @@ class WebClientExchangeTypeTest {
     }
 
     @Test
+    void fixedMessageWithCustomRequestOptions() {
+        assertExchangeType(() -> {
+            client.execute(HttpRequest.of(HttpMethod.POST, "/",
+                                          MediaType.PLAIN_TEXT, "foo"),
+                           RequestOptions.builder()
+                                         .maxResponseLength(1000)
+                                         .build())
+                  .aggregate();
+        }).isEqualTo(ExchangeType.RESPONSE_STREAMING);
+
+        assertExchangeType(() -> {
+            client.execute(HttpRequest.of(HttpMethod.POST, "/",
+                                          MediaType.PLAIN_TEXT, "foo"),
+                           RequestOptions.builder()
+                                         .exchangeType(ExchangeType.BIDI_STREAMING)
+                                         .build())
+                  .aggregate();
+        }).isEqualTo(ExchangeType.BIDI_STREAMING);
+    }
+
+    @Test
     void publisher() {
         assertExchangeType(() -> {
             client.execute(HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/"),

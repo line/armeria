@@ -61,9 +61,15 @@ tasks.withType(Jar) {
 tasks.trimShadedJar.doLast {
     // outjars is a file, so only one jar generated for sure
     def trimmed = tasks.trimShadedJar.outJarFiles[0].toPath()
-    ant.jar(destfile: trimmed.toString(), update: true) {
+
+    ant.jar(destfile: trimmed.toString(), update: true, duplicate: 'fail') {
         zipfileset(src: tasks.shadedJar.archivePath) {
             include(name: 'META-INF/versions/**')
+        }
+
+        // Do not let Ant put the properties that harm the build reproducibility, such as JDK version.
+        delegate.manifest {
+            attribute(name: 'Created-By', value: "Gradle ${gradle.gradleVersion}")
         }
     }
 }
@@ -71,7 +77,7 @@ tasks.trimShadedJar.doLast {
 tasks.shadedTest.exclude 'META-INF/versions/**'
 
 dependencies {
-    mrJarVersions.each { version->
+    mrJarVersions.each { version ->
         // Common to reference classes in main sourceset from Java 9 one (e.g., to return a common interface)
         "java${version}Implementation" files(sourceSets.main.output.classesDirs) { builtBy compileJava }
 
@@ -112,12 +118,12 @@ dependencies {
 
     // Netty native libraries
     ['linux-x86_64', 'linux-aarch_64'].each { arch ->
-        implementation(variantOf(libs.netty.transport.native.unix.common) { classifier(arch) })
+        api(variantOf(libs.netty.transport.native.unix.common) { classifier(arch) })
         implementation(variantOf(libs.netty.transport.native.epoll) { classifier(arch) })
         optionalImplementation(variantOf(libs.netty.io.uring) { classifier(arch) })
     }
     ['osx-x86_64', 'osx-aarch_64'].each { arch ->
-        implementation(variantOf(libs.netty.transport.native.unix.common) { classifier(arch) })
+        api(variantOf(libs.netty.transport.native.unix.common) { classifier(arch) })
         implementation(variantOf(libs.netty.transport.native.kqueue) { classifier(arch) })
         implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier(arch) })
     }
@@ -126,7 +132,7 @@ dependencies {
     }
 
     // TestNG
-    testImplementation libs.testng
+    testRuntimeOnly libs.junit.testng.engine
 
     // JUnit Pioneer
     testImplementation libs.junit.pioneer
@@ -160,8 +166,8 @@ dependencies {
     testImplementation (libs.micrometer.tracing.integration.test) {
         exclude group: "org.mockito"
     }
-    testImplementation libs.brave.context.slf4j
-    testImplementation libs.brave.instrumentation.http.tests
+    testImplementation libs.brave6.context.slf4j
+    testImplementation libs.brave6.instrumentation.http.tests
 }
 
 if (!rootProject.hasProperty('noWeb')) {
@@ -203,34 +209,6 @@ testing.suites {
 }
 tasks.check.dependsOn testing.suites.testStreaming
 
-// Run the test cases based on reactive-streams-tck only with non-flaky mode
-if (rootProject.findProperty('flakyTests') != 'true') {
-    testing.suites {
-        testNg(JvmTestSuite) {
-            useTestNG()
-
-            targets.configureEach {
-                testTask.configure {
-
-                    project.ext.configureCommonTestSettings(it)
-                    include '/com/linecorp/armeria/**/common/**'
-                    dependsOn tasks.copyShadedTestClasses
-                    scanForTestClasses = false
-                    testClassesDirs = tasks.shadedTest.testClassesDirs
-                    classpath = testClassesDirs
-                    doFirst {
-                        classpath += project.files(configurations.shadedJarTestRuntime.resolve())
-                    }
-                }
-            }
-            dependencies {
-                runtimeOnly libs.junit.testng.engine
-            }
-        }
-    }
-    tasks.check.dependsOn testing.suites.testNg
-}
-
 if (tasks.findByName('trimShadedJar')) {
     tasks.trimShadedJar.configure {
         // Keep all classes under com.linecorp.armeria, except the internal ones.
@@ -240,7 +218,11 @@ if (tasks.findByName('trimShadedJar')) {
         // Do not optimize the dependencies that access some fields via sun.misc.Unsafe or reflection only.
         keep "class com.linecorp.armeria.internal.shaded.caffeine.** { *; }"
         keep "class com.linecorp.armeria.internal.shaded.jctools.** { *; }"
-
+        // Keep the Bouncy Castle classes dynamically accessed by MinifiedBouncyCastleProvider.
+        keep "class com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.dsa.** { *; }"
+        keep "class com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.ec.** { *; }"
+        keep "class com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.rsa.** { *; }"
+        keep "class com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.x509.** { *; }"
         dontnote
     }
 }

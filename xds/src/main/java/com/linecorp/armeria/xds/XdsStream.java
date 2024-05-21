@@ -21,6 +21,4 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 interface XdsStream extends SafeCloseable {
 
     void resourcesUpdated(XdsType type);
-
-    void start();
 }

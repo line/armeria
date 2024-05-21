@@ -126,7 +126,7 @@ public interface ServerErrorHandler {
                                                        HttpStatus status,
                                                        @Nullable String description,
                                                        @Nullable Throwable cause) {
-        return renderStatus(config, headers, status, description, cause);
+        return renderStatus(null, config, headers, status, description, cause);
     }
 
     /**
@@ -141,6 +141,8 @@ public interface ServerErrorHandler {
      * {@link #onServiceException(ServiceRequestContext, Throwable)} and
      * {@link #onProtocolViolation(ServiceConfig, RequestHeaders, HttpStatus, String, Throwable)} instead.
      *
+     * @param ctx the {@link ServiceRequestContext} of the request being handled, or {@code null} in case of
+     *            severe protocol violation.
      * @param config the {@link ServiceConfig} that provides the configuration properties.
      * @param headers the received {@link RequestHeaders}, or {@code null} in case of severe protocol violation.
      * @param status the desired {@link HttpStatus} of the error response.
@@ -152,7 +154,8 @@ public interface ServerErrorHandler {
      *         {@link #orElse(ServerErrorHandler)} handle the event.
      */
     @Nullable
-    default AggregatedHttpResponse renderStatus(ServiceConfig config,
+    default AggregatedHttpResponse renderStatus(@Nullable ServiceRequestContext ctx,
+                                                ServiceConfig config,
                                                 @Nullable RequestHeaders headers,
                                                 HttpStatus status,
                                                 @Nullable String description,
@@ -223,17 +226,18 @@ public interface ServerErrorHandler {
 
             @Nullable
             @Override
-            public AggregatedHttpResponse renderStatus(ServiceConfig config,
+            public AggregatedHttpResponse renderStatus(@Nullable ServiceRequestContext ctx,
+                                                       ServiceConfig config,
                                                        @Nullable RequestHeaders headers,
                                                        HttpStatus status,
                                                        @Nullable String description,
                                                        @Nullable Throwable cause) {
                 final AggregatedHttpResponse response =
-                        ServerErrorHandler.this.renderStatus(config, headers, status, description, cause);
+                        ServerErrorHandler.this.renderStatus(ctx, config, headers, status, description, cause);
                 if (response != null) {
                     return response;
                 }
-                return other.renderStatus(config, headers, status, description, cause);
+                return other.renderStatus(ctx, config, headers, status, description, cause);
             }
         };
     }
@@ -249,12 +253,13 @@ public interface ServerErrorHandler {
             }
 
             @Override
-            public @Nullable AggregatedHttpResponse renderStatus(ServiceConfig config,
-                                                                 @Nullable RequestHeaders headers,
+            public @Nullable AggregatedHttpResponse renderStatus(ServiceRequestContext ctx,
+                                                                 RequestHeaders headers,
                                                                  HttpStatus status,
                                                                  @Nullable String description,
                                                                  @Nullable Throwable cause) {
-                return ServerErrorHandler.this.renderStatus(config, headers, status, description, cause);
+                return ServerErrorHandler.this.renderStatus(ctx, ctx.config(), headers,
+                                                            status, description, cause);
             }
         };
     }

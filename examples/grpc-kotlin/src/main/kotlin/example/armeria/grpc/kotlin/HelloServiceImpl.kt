@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
 
 class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
-
     /**
      * Sends a [HelloReply] immediately when receiving a request.
      */
@@ -38,15 +37,18 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
      *
      * @see [Blocking service implementation](https://armeria.dev/docs/server-grpc#blocking-service-implementation)
      */
-    override suspend fun blockingHello(request: HelloRequest): HelloReply = withArmeriaBlockingContext {
-        try { // Simulate a blocking API call.
-            Thread.sleep(3000)
-        } catch (ignored: Exception) { // Do nothing.
+    override suspend fun blockingHello(request: HelloRequest): HelloReply =
+        withArmeriaBlockingContext {
+            try {
+                // Simulate a blocking API call.
+                Thread.sleep(3000)
+            } catch (ignored: Exception) {
+                // Do nothing.
+            }
+            // Make sure that current thread is request context aware
+            ServiceRequestContext.current()
+            buildReply(toMessage(request.name))
         }
-        // Make sure that current thread is request context aware
-        ServiceRequestContext.current()
-        buildReply(toMessage(request.name))
-    }
 
     /**
      * Sends 5 [HelloReply] responses when receiving a request.
@@ -98,7 +100,9 @@ class HelloServiceImpl : HelloServiceGrpcKt.HelloServiceCoroutineImplBase() {
             withContext(ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher(), block)
 
         private fun buildReply(message: String): HelloReply =
-            HelloReply.newBuilder().setMessage(message).build()
+            HelloReply.newBuilder().setMessage(
+                message,
+            ).build()
 
         private fun toMessage(message: String): String = "Hello, $message!"
     }

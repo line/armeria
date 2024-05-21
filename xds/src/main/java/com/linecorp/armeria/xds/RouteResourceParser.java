@@ -16,27 +16,32 @@
 
 package com.linecorp.armeria.xds;
 
-import com.google.protobuf.Message;
-
 import io.envoyproxy.envoy.config.route.v3.RouteConfiguration;
 
-final class RouteResourceParser extends ResourceParser {
+final class RouteResourceParser extends ResourceParser<RouteConfiguration, RouteXdsResource> {
 
-    static final RouteResourceParser INSTANCE = new RouteResourceParser();
+    public static final RouteResourceParser INSTANCE = new RouteResourceParser();
 
     private RouteResourceParser() {}
 
     @Override
-    String name(Message message) {
-        if (!(message instanceof RouteConfiguration)) {
-            throw new IllegalArgumentException("message not type of RouteConfiguration");
-        }
-        return ((RouteConfiguration) message).getName();
+    RouteXdsResource parse(RouteConfiguration message) {
+        return new RouteXdsResource(message);
+    }
+
+    @Override
+    String name(RouteConfiguration message) {
+        return message.getName();
     }
 
     @Override
     Class<RouteConfiguration> clazz() {
         return RouteConfiguration.class;
+    }
+
+    @Override
+    boolean isFullStateOfTheWorld() {
+        return false;
     }
 
     @Override

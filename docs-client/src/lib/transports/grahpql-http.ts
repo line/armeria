@@ -16,6 +16,7 @@
 
 import Transport from './transport';
 import { Method } from '../specification';
+import { validateJsonObject } from '../json-util';
 
 export const GRAPHQL_HTTP_MIME_TYPE = 'application/graphql+json';
 
@@ -43,6 +44,9 @@ export default class GraphqlHttpTransport extends Transport {
     hdrs.set('accept', 'application/json');
     for (const [name, value] of Object.entries(headers)) {
       hdrs.set(name, value);
+    }
+    if (bodyJson && bodyJson.trim()) {
+      validateJsonObject(bodyJson, 'request body');
     }
 
     let newPath =

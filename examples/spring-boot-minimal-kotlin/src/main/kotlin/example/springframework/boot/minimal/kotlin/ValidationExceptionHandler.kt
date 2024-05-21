@@ -12,8 +12,11 @@ import java.time.Instant
  * A sample exception handler which handles a [ValidationException].
  */
 class ValidationExceptionHandler : ExceptionHandlerFunction {
-
-    override fun handleException(ctx: ServiceRequestContext, req: HttpRequest, cause: Throwable): HttpResponse {
+    override fun handleException(
+        ctx: ServiceRequestContext,
+        req: HttpRequest,
+        cause: Throwable,
+    ): HttpResponse {
         return if (cause is ValidationException) {
             val status = HttpStatus.BAD_REQUEST
             HttpResponse.ofJson(
@@ -23,8 +26,8 @@ class ValidationExceptionHandler : ExceptionHandlerFunction {
                     cause.message ?: "empty message",
                     req.path(),
                     status.code(),
-                    Instant.now().toString()
-                )
+                    Instant.now().toString(),
+                ),
             )
         } else {
             ExceptionHandlerFunction.fallthrough()
@@ -40,5 +43,5 @@ data class ErrorResponse(
     val message: String,
     val path: String,
     val status: Int,
-    val timestamp: String
+    val timestamp: String,
 )

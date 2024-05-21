@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
@@ -52,6 +53,7 @@ import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ProducesJsonSequences;
@@ -110,6 +112,16 @@ class ObservableResponseConverterFunctionTest {
                     return Maybe.just(HttpResponse.of("a"));
                 }
 
+                @Get("/http-result")
+                public Maybe<HttpResult<String>> httpResult() {
+                    return Maybe.just(HttpResult.of("a"));
+                }
+
+                @Get("/response-entity")
+                public Maybe<ResponseEntity<String>> responseEntity() {
+                    return Maybe.just(ResponseEntity.of("a"));
+                }
+
                 @Post("/defer-empty-post")
                 public Maybe<String> deferEmptyPost() {
                     final RequestContext ctx = RequestContext.current();
@@ -151,6 +163,16 @@ class ObservableResponseConverterFunctionTest {
                 @Get("/http-response")
                 public Single<HttpResponse> httpResponse() {
                     return Single.just(HttpResponse.of("a"));
+                }
+
+                @Get("/http-result")
+                public Single<HttpResult<String>> httpResult() {
+                    return Single.just(HttpResult.of("a"));
+                }
+
+                @Get("/response-entity")
+                public Single<ResponseEntity<String>> responseEntity() {
+                    return Single.just(ResponseEntity.of("a"));
                 }
 
                 @Post("/defer-empty-post")
@@ -361,6 +383,14 @@ class ObservableResponseConverterFunctionTest {
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("a");
 
+        res = client.get("/http-result").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.get("/response-entity").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
+
         res = client.post("/defer-empty-post", "").aggregate().join();
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("a");
@@ -388,6 +418,14 @@ class ObservableResponseConverterFunctionTest {
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
 
         res = client.get("/http-response").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.get("/http-result").aggregate().join();
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("a");
+
+        res = client.get("/response-entity").aggregate().join();
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
         assertThat(res.contentUtf8()).isEqualTo("a");
 

@@ -20,46 +20,112 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static testing.grpc.Messages.PayloadType.COMPRESSABLE;
 
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
+import org.jetbrains.annotations.Nullable;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
+import com.google.protobuf.ByteString;
 
+import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A1Exception;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.BindableService;
 import io.grpc.Metadata;
+import io.grpc.MethodDescriptor.Marshaller;
+import io.grpc.MethodDescriptor.PrototypeMarshaller;
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerMethodDefinition;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.EmptyProtos.Empty;
+import testing.grpc.Messages.Payload;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.MetricsServiceGrpc.MetricsServiceImplBase;
 import testing.grpc.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import testing.grpc.TestServiceGrpc;
+import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class GrpcServiceBuilderTest {
+    private static int requestStreamCallCnt;
+    private static int responseStreamCallCnt;
+    private static int requestParseCallCnt;
+    private static int responseParseCallCnt;
+
+    @BeforeEach
+    void beforeEach() {
+        requestStreamCallCnt = 0;
+        responseStreamCallCnt = 0;
+        requestParseCallCnt = 0;
+        responseParseCallCnt = 0;
+    }
+
+    @RegisterExtension
+    static ServerExtension serverWithUseMethodMarshaller = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            final TestServiceImplBase testService = new TestServiceImpl(
+                    CommonPools.blockingTaskExecutor());
+            final ServerServiceDefinition serviceDefinition = ServerInterceptors.useMarshalledMessages(
+                    testService.bindService(), customRequestMarshaller, customResponseMarshaller);
+            final GrpcService service = GrpcService.builder()
+                                                   .addService(serviceDefinition)
+                                                   .useMethodMarshaller(true)
+                                                   .build();
+            sb.service(service);
+            sb.decorator(LoggingService.builder().newDecorator());
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension serverWithoutUseMethodMarshaller = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            final TestServiceImplBase testService = new TestServiceImpl(
+                    CommonPools.blockingTaskExecutor());
+            final ServerServiceDefinition serviceDefinition = ServerInterceptors.useMarshalledMessages(
+                    testService.bindService(), customRequestMarshaller, customResponseMarshaller);
+            final GrpcService service = GrpcService.builder()
+                                                   .addService(serviceDefinition)
+                                                   .useMethodMarshaller(false)
+                                                   .build();
+            sb.service(service);
+            sb.decorator(LoggingService.builder().newDecorator());
+        }
+    };
 
     @Test
     void mixExceptionMappingAndGrpcExceptionHandlerFunctions() {
@@ -260,6 +326,46 @@ class GrpcServiceBuilderTest {
                 .hasMessageContaining("enableHttpJsonTranscoding");
     }
 
+    @Test
+    void canNotSetUseMethodMarshallerAndUnsafeWrapDeserializedBufferAtTheSameTime() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .unsafeWrapRequestBuffers(true)
+                                            .useMethodMarshaller(true))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive.");
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "true, 1, 1, 1, 1", "false, 1, 0, 0, 1" })
+    void setUseMethodMarshaller(boolean useMethodMarshaller,
+                                int expectedRequestStreamCallCnt, int expectedRequestParseCallCnt,
+                                int expectedResponseStreamCallCnt, int expectedResponseParseCallCnt) {
+        final SimpleRequest request = SimpleRequest.newBuilder()
+                                                   .setResponseSize(1)
+                                                   .setResponseType(COMPRESSABLE)
+                                                   .setPayload(Payload.newBuilder()
+                                                                      .setBody(ByteString.copyFrom(
+                                                                              new byte[1])))
+                                                   .build();
+        if (useMethodMarshaller) {
+            final TestServiceBlockingStub stub = GrpcClients.builder(serverWithUseMethodMarshaller.httpUri())
+                                                            .build(TestServiceBlockingStub.class);
+            stub.unaryCall(request);
+        } else {
+            final TestServiceBlockingStub stub = GrpcClients.builder(serverWithoutUseMethodMarshaller.httpUri())
+                                                            .build(TestServiceBlockingStub.class);
+            stub.unaryCall(request);
+        }
+
+        // About requestStreamCallCnt, one stream(SimpleRequest) call always happens in MethodDescriptor
+        assertThat(requestStreamCallCnt).isEqualTo(expectedRequestStreamCallCnt);
+        assertThat(requestParseCallCnt).isEqualTo(expectedRequestParseCallCnt);
+        assertThat(responseStreamCallCnt).isEqualTo(expectedResponseStreamCallCnt);
+        // About responseParseCallCnt, one parse call always happens
+        assertThat(responseParseCallCnt).isEqualTo(expectedResponseParseCallCnt);
+    }
+
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
 
     private static class ReconnectServiceImpl extends ReconnectServiceImplBase {}
@@ -370,4 +476,55 @@ class GrpcServiceBuilderTest {
                    })
                    .collect(toImmutableList());
     }
+
+    private static final Marshaller<SimpleRequest> customRequestMarshaller =
+            new PrototypeMarshaller<SimpleRequest>() {
+                @Override
+                public Class<SimpleRequest> getMessageClass() {
+                    return null;
+                }
+
+                @Nullable
+                @Override
+                public SimpleRequest getMessagePrototype() {
+                    return SimpleRequest.getDefaultInstance();
+                }
+
+                @Override
+                public InputStream stream(SimpleRequest value) {
+                    requestStreamCallCnt++;
+                    return TestServiceGrpc.getUnaryCallMethod().getRequestMarshaller().stream(value);
+                }
+
+                @Override
+                public SimpleRequest parse(InputStream stream) {
+                    requestParseCallCnt++;
+                    return TestServiceGrpc.getUnaryCallMethod().getRequestMarshaller().parse(stream);
+                }
+            };
+    private static final Marshaller<SimpleResponse> customResponseMarshaller =
+            new PrototypeMarshaller<SimpleResponse>() {
+                @Override
+                public Class<SimpleResponse> getMessageClass() {
+                    return null;
+                }
+
+                @Nullable
+                @Override
+                public SimpleResponse getMessagePrototype() {
+                    return SimpleResponse.getDefaultInstance();
+                }
+
+                @Override
+                public InputStream stream(SimpleResponse value) {
+                    responseStreamCallCnt++;
+                    return TestServiceGrpc.getUnaryCallMethod().getResponseMarshaller().stream(value);
+                }
+
+                @Override
+                public SimpleResponse parse(InputStream stream) {
+                    responseParseCallCnt++;
+                    return TestServiceGrpc.getUnaryCallMethod().getResponseMarshaller().parse(stream);
+                }
+            };
 }

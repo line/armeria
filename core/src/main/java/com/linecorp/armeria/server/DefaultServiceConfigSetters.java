@@ -41,8 +41,11 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A default implementation of {@link ServiceConfigSetters} that stores service related settings
@@ -75,6 +78,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Long requestAutoAbortDelayMillis;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private EventLoopGroup serviceWorkerGroup;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
     private Supplier<? extends AutoCloseable> contextHook = NOOP_CONTEXT_HOOK;
@@ -233,6 +238,22 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                   boolean shutdownOnStop) {
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(serviceWorkerGroup));
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters serviceWorkerGroup(int numThreads) {
+        final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
+        return serviceWorkerGroup(workerGroup, true);
+    }
+
+    @Override
     public ServiceConfigSetters requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
@@ -317,8 +338,11 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         } else {
             // Set the default service name only when the service name is set using @ServiceName.
             // If it's not, the global defaultServiceNaming is used.
-            if (annotatedService != null && annotatedService.serviceNameSetByAnnotation()) {
-                serviceConfigBuilder.defaultServiceName(annotatedService.serviceName());
+            if (annotatedService != null) {
+                final String serviceName = annotatedService.name();
+                if (serviceName != null) {
+                    serviceConfigBuilder.defaultServiceName(serviceName);
+                }
             }
         }
 
@@ -355,6 +379,10 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (multipartUploadsLocation != null) {
             serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
+        }
+        if (serviceWorkerGroup != null) {
+            serviceConfigBuilder.serviceWorkerGroup(serviceWorkerGroup, false);
+            // Set the serviceWorkerGroup as false because it's shut down in ShutdownSupport.
         }
         if (requestIdGenerator != null) {
             serviceConfigBuilder.requestIdGenerator(requestIdGenerator);

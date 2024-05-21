@@ -39,6 +39,7 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
@@ -146,6 +147,23 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Boolean useOpenSsl() {
         return getBoolean("useOpenSsl");
+    }
+
+    @Override
+    public TlsEngineType tlsEngineType() {
+        final String strTlsEngineType = getNormalized("tlsEngineType");
+        if (strTlsEngineType == null) {
+            return null;
+        }
+        switch (strTlsEngineType) {
+            case "jdk":
+                return TlsEngineType.JDK;
+            case "openssl":
+                return TlsEngineType.OPENSSL;
+            default:
+                throw new IllegalArgumentException(
+                        String.format("%s isn't one of 'jdk' or 'openssl'", strTlsEngineType));
+        }
     }
 
     @Override
@@ -271,6 +289,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultServerConnectionDrainDurationMicros() {
         return getLong("defaultServerConnectionDrainDurationMicros");
+    }
+
+    @Override
+    public Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return getLong("defaultClientHttp2GracefulShutdownTimeoutMillis");
     }
 
     @Override
@@ -472,6 +495,16 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultUnhandledExceptionsReportIntervalMillis() {
         return getLong("defaultUnhandledExceptionsReportIntervalMillis");
+    }
+
+    @Override
+    public Long defaultHttp1ConnectionCloseDelayMillis() {
+        return getLong("defaultHttp1ConnectionCloseDelayMillis");
+    }
+
+    @Override
+    public @Nullable Long defaultUnloggedExceptionsReportIntervalMillis() {
+        return getLong("defaultUnloggedExceptionsReportIntervalMillis");
     }
 
     @Nullable

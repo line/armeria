@@ -46,6 +46,7 @@ public final class Main {
                            // See https://github.com/grpc/grpc-java/blob/master/documentation/server-reflection-tutorial.md
                            .addService(ProtoReflectionService.newInstance())
                            .supportedSerializationFormats(GrpcSerializationFormats.values())
+                           .enableHttpJsonTranscoding(true)
                            .enableUnframedRequests(true)
                            // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
                            // methods in the blockingTaskExecutor thread pool.

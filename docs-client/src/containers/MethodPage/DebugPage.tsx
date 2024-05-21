@@ -47,7 +47,7 @@ import Alert from '@material-ui/lab/Alert';
 import { createStyles, makeStyles, Theme } from '@material-ui/core/styles';
 import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
-import jsonPrettify from '../../lib/json-prettify';
+import { jsonPrettify, validateJsonObject } from '../../lib/json-util';
 import {
   extractUrlPath,
   Method,
@@ -88,22 +88,6 @@ interface OwnProps {
 }
 
 type Props = OwnProps & RouteComponentProps;
-
-const validateJsonObject = (jsonObject: string, description: string) => {
-  let parsedJson;
-  try {
-    parsedJson = JSON.parse(jsonObject);
-  } catch (e) {
-    throw new Error(
-      `Failed to parse a JSON object in the ${description}:\n${e}`,
-    );
-  }
-  if (typeof parsedJson !== 'object') {
-    throw new Error(
-      `The ${description} must be a JSON object.\nYou entered: ${typeof parsedJson}`,
-    );
-  }
-};
 
 const copyTextToClipboard = (text: string) => {
   const textArea = document.createElement('textarea');
@@ -280,9 +264,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
         validateJsonObject(additionalHeaders, 'headers');
       }
 
-      const headers =
-        (additionalHeaders && JSON.parse(additionalHeaders)) || {};
-
       // window.location.origin may have compatibility issue
       // https://developer.mozilla.org/en-US/docs/Web/API/Window/location#Browser_compatibility
       const host =
@@ -297,29 +278,28 @@ const DebugPage: React.FunctionComponent<Props> = ({
         serviceType === ServiceType.HTTP ||
         serviceType === ServiceType.GRAPHQL
       ) {
-        const queries = additionalQueries;
+        const queries =
+          additionalQueries.length > 0 ? `?${additionalQueries}` : '';
+
         if (exactPathMapping) {
           endpoint = transport.getDebugMimeTypeEndpoint(method);
           mappedPath =
-            `'${escapeSingleQuote(
-              endpoint.pathMapping.substring('exact:'.length),
-            )}` +
-            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
+            endpoint.pathMapping.substring('exact:'.length) + queries;
         } else {
           endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-          mappedPath =
-            `'${escapeSingleQuote(additionalPath)}` +
-            `${queries.length > 0 ? `?${escapeSingleQuote(queries)}` : ''}'`;
+          mappedPath = additionalPath + queries;
         }
       } else if (additionalPath.length > 0) {
         endpoint = transport.getDebugMimeTypeEndpoint(method, additionalPath);
-        mappedPath = `'${escapeSingleQuote(additionalPath)}'`;
+        mappedPath = additionalPath;
       } else {
         endpoint = transport.getDebugMimeTypeEndpoint(method);
-        mappedPath = `'${escapeSingleQuote(endpoint.pathMapping)}'`;
+        mappedPath = endpoint.pathMapping;
       }
 
-      const uri = host + parseServerRootPath(docServiceRoute) + mappedPath;
+      const uri = `'${escapeSingleQuote(
+        host + parseServerRootPath(docServiceRoute) + mappedPath,
+      )}'`;
 
       const body = transport.getCurlBody(
         endpoint,
@@ -327,22 +307,28 @@ const DebugPage: React.FunctionComponent<Props> = ({
         escapeSingleQuote(requestBody),
       );
 
-      headers['content-type'] = transport.getDebugMimeType();
+      const headers = new Headers();
+      headers.set('content-type', transport.getDebugMimeType());
       if (process.env.WEBPACK_DEV === 'true') {
-        headers[docServiceDebug] = 'true';
+        headers.set(docServiceDebug, 'true');
       }
       if (serviceType === ServiceType.GRAPHQL) {
-        headers.Accept = 'application/json';
+        headers.set('accept', 'application/json');
+      }
+      if (additionalHeaders) {
+        const entries = Object.entries(JSON.parse(additionalHeaders));
+        entries.forEach(([key, value]) => {
+          headers.set(key, String(value));
+        });
       }
 
-      const headerOptions = Object.keys(headers)
-        .map((name) => {
-          return `-H '${name}: ${headers[name]}'`;
-        })
-        .join(' ');
+      const headerOptions: string[] = [];
+      headers.forEach((value, key) => {
+        headerOptions.push(`-H '${key}: ${value}'`);
+      });
 
       const curlCommand =
-        `curl -X${httpMethod} ${headerOptions} ${uri}` +
+        `curl -X${httpMethod} ${headerOptions.join(' ')} ${uri}` +
         `${useRequestBody ? ` -d '${body}'` : ''}`;
 
       copyTextToClipboard(curlCommand);
@@ -442,11 +428,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
 
     try {
       if (useRequestBody) {
-        // Validate requestBody only if it's not empty string.
-        if (requestBody.trim()) {
-          validateJsonObject(requestBody, 'request body');
-        }
-
         // Do not round-trip through JSON.parse to minify the text so as to not lose numeric precision.
         // See: https://github.com/line/armeria/issues/273
 

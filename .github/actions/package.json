@@ -4,7 +4,7 @@
     "comment-build-scan": "ts-node comment-build-scan.ts"
   },
   "dependencies": {
-    "octokit": "^2.1.0",
+    "octokit": "^3.1.2",
     "ts-node": "^10.9.1"
   }
 }

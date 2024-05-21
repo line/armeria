@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeRequest;
+import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -80,6 +82,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     private final ServerConfig cfg;
     private final AsciiString scheme;
+    private SessionProtocol sessionProtocol;
     private final InboundTrafficController inboundTrafficController;
     private ServerHttpObjectEncoder encoder;
     private final HttpServer httpServer;
@@ -94,6 +97,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         ServerHttp1ObjectEncoder encoder, HttpServer httpServer) {
         this.cfg = cfg;
         this.scheme = scheme;
+        sessionProtocol = scheme == SCHEME_HTTP ? SessionProtocol.H1C : SessionProtocol.H1;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         this.encoder = encoder;
         this.httpServer = httpServer;
@@ -176,9 +180,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         return;
                     }
 
-                    // Convert the Netty HttpHeaders into Armeria RequestHeaders.
+                    assert msg instanceof NettyHttp1Request;
+                    // Precompute values that rely on CONNECTION related headers since they will be cleaned
+                    // after ArmeriaHttpUtil#toArmeria is called
+                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
+                    final boolean transferEncodingChunked = HttpUtil.isTransferEncodingChunked(nettyReq);
+
+                    final NettyHttp1Headers nettyHttp1Headers = (NettyHttp1Headers) nettyReq.headers();
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), reqTarget);
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, nettyHttp1Headers.delegate(),
+                                                      cfg, scheme.toString(), reqTarget);
                     // Do not accept unsupported methods.
                     final HttpMethod method = headers.method();
                     switch (method) {
@@ -224,7 +235,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final EventLoop eventLoop = ctx.channel().eventLoop();
 
                     // Close the request early when it is certain there will be neither content nor trailers.
-                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(),
+                    final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), sessionProtocol,
                                                                         headers, reqTarget);
                     if (routingCtx.status().routeMustExist()) {
                         // Find the service that matches the path.
@@ -264,15 +275,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         }
                     }
 
-                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
-                    final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
+                    final boolean endOfStream = contentEmpty && !transferEncodingChunked;
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx);
 
-                    // An aggregating request will be fired after all objects are collected.
-                    if (!req.needsAggregation()) {
-                        ctx.fireChannelRead(req);
-                    }
+                    ctx.fireChannelRead(req);
                 } else {
                     fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
                     return;
@@ -314,7 +321,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         req = null;
                         final boolean shouldReset;
                         if (encoder instanceof ServerHttp1ObjectEncoder) {
-                            keepAliveHandler.disconnectWhenFinished();
+                            if (encoder.isResponseHeadersSent(id, 1)) {
+                                ctx.channel().close();
+                            } else {
+                                keepAliveHandler.disconnectWhenFinished();
+                            }
                             shouldReset = false;
                         } else {
                             // Upgraded to HTTP/2. Reset only if the remote peer is still open.
@@ -325,15 +336,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         // status.
                         final HttpStatusException httpStatusException =
                                 HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-                        if (!decodedReq.isInitialized()) {
-                            assert decodedReq.needsAggregation();
-                            final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
-                                    inboundTrafficController, httpStatusException, shouldReset);
-                            ctx.fireChannelRead(streamingReq);
-                        } else {
-                            decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
-                            decodedReq.abortResponse(httpStatusException, true);
-                        }
+                        decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
+                        decodedReq.abortResponse(httpStatusException, true);
                         return;
                     }
 
@@ -348,11 +352,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                     }
                     decodedReq.close();
-                    if (decodedReq.needsAggregation()) {
-                        assert !decodedReq.isInitialized();
-                        // An aggregated request is now ready to be fired.
-                        ctx.fireChannelRead(decodedReq);
-                    }
                     this.req = null;
                 }
             }
@@ -441,6 +440,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // The HTTP/2 encoder will be used when a protocol violation error occurs after upgrading to HTTP/2
             // that is directly written by 'fail()'.
             encoder = connectionHandler.getOrCreateResponseEncoder(connectionHandlerCtx);
+            sessionProtocol = SessionProtocol.H2C;
 
             // Generate the initial Http2Settings frame,
             // so that the next handler knows the protocol upgrade occurred as well.
