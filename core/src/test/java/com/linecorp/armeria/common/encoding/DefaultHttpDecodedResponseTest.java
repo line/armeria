@@ -324,8 +324,7 @@ class DefaultHttpDecodedResponseTest {
                                                             mock(ByteBufAllocator.class), 100);
 
         assertThatThrownBy(() -> decoder.decode(mockData))
-                .isInstanceOf(UnexpectedDecodeException.class)
-                .hasMessageContaining("Unexpected exception has occurred");
+                .isInstanceOf(DecompressionException.class);
     }
 
     private static HttpResponse newFailingDecodedResponse() {

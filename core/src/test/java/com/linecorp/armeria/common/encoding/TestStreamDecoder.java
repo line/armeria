@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,6 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.common.encoding;
 
 import com.linecorp.armeria.common.ContentTooLargeException;
@@ -49,10 +48,7 @@ class TestStreamDecoder extends AbstractStreamDecoder {
                                               .cause(ex)
                                               .build();
             }
-            throw new UnexpectedDecodeException(
-                    "Unexpected exception has occurred. " +
-                    "This exception is not caused by the buffer reaching max size. Exception message: " +
-                    message);
+            throw ex;
         }
         return fetchDecoderOutput();
     }
