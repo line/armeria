@@ -394,6 +394,42 @@ public class MyAnnotatedService {
 }
 ```
 
+### Getting a custom attribute value
+
+Armeria also provides the <type://@Attribute> annotation to inject a
+custom attribute value of a <type://RequestContext> into the annotated
+parameter. The <type://@Attribute> annotation has two attributes:
+`value` and  `prefix`, as shown in the example below. If both `prefix`
+and `value` are specified, `AttributeKey.valueOf(prefix, value)` will
+be used to look up the `AttributeKey` of the custom attribute.
+If `prefix` is unspecified, the class of the annotated service will be
+tried as the `prefix` (e.g. `Attribute.valueOf(MyAnnotatedService.class, value)`),
+and then if there's no such attribute, `Attribute.valueOf(value)`
+will be tried as a fallback.
+
+```java
+public class MyAttributes {
+    public static final AttributeKey<String> USERNAME =
+            AttributeKey.valueOf(MyAttributes.class, "USERNAME");
+}
+
+public class MyAnnotatedService {
+
+    // Uses `AttributeKey.valueOf(MyAttributes.class, "USERNAME")`
+    @Get("/hello1")
+    public HttpResponse hello1(@Attribute(prefix = MyAttributes.class,
+                                          value = "USERNAME")
+                               String username) { ... }
+
+    // Uses `AttributeKey.valueOf(MyAnnotatedService.class, "USERNAME")`
+    // if possible. If non-existent, use `AttributeKey.valueOf("USERNAME")`.
+    @Post("/hello2")
+    public HttpResponse hello2(@Attribute("USERNAME") String username) { ... }
+}
+```
+
+Note that if no attribute for the specified `AttributeKey` is found in <type://RequestContext>, `IllegalArgumentException` will occur at runtime.
+
 ### Other classes automatically injected
 
 The following classes are automatically injected when you specify them on the parameter list of your method.
@@ -930,7 +966,7 @@ more response types which can be used in the annotated service.
     being sent, exception handlers will handle it. If no message has been sent to the client yet,
     the exception handler can send an <type://HttpResponse> instead.
 
-- <type://HttpResult>
+- <type://ResponseEntity>
 
   - It contains the <type://HttpHeaders> and the object which can be converted into HTTP response body by
     response converters. A user can customize the HTTP status and headers including the trailers, with this type.
@@ -938,7 +974,7 @@ more response types which can be used in the annotated service.
   ```java
   public class MyAnnotatedService {
       @Get("/users")
-      public HttpResult<List<User>> getUsers(@Param int start) {
+      public ResponseEntity<List<User>> getUsers(@Param int start) {
           List<User> users = ...;
           ResponseHeaders headers = ResponseHeaders.builder()
               .status(HttpStatus.OK)
@@ -946,7 +982,7 @@ more response types which can be used in the annotated service.
                    String.format("<https://example.com/users?from=%s>; rel=\"next\"",
                                  start + 10))
               .build();
-          return HttpResult.of(headers, users);
+          return ResponseEntity.of(headers, users);
       }
   }
   ```
@@ -1541,4 +1577,3 @@ for more information about RPC and HTTP service names, and how to use it.
 </Tip>
 
 [Publisher]: https://www.reactive-streams.org/reactive-streams-1.0.2-javadoc/org/reactivestreams/Publisher.html
-

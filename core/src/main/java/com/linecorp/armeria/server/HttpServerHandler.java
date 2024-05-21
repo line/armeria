@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -383,26 +384,32 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
                 req.requestStartTimeNanos(), req.requestStartTimeMicros(), serviceCfg.contextHook());
 
-        final HttpResponse res;
+        HttpResponse res;
         req.init(reqCtx);
         final ServerMetrics serverMetrics = config.serverMetrics();
         final CompletableFuture<Void> whenAggregated = req.whenAggregated();
         if (whenAggregated != null) {
             res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
                 if (serviceEventLoop.inEventLoop()) {
-                    return serve0(req, serviceCfg, service, reqCtx, serverMetrics, req.isHttp1WebSocket());
+                    return serve0(req, service, reqCtx, serverMetrics, req.isHttp1WebSocket());
                 }
-                return serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop,
+                return serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop,
                                                serverMetrics);
             }));
         } else {
             if (serviceEventLoop.inEventLoop()) {
-                res = serve0(req, serviceCfg, service, reqCtx, serverMetrics, req.isHttp1WebSocket());
+                res = serve0(req, service, reqCtx, serverMetrics, req.isHttp1WebSocket());
             } else {
-                res = serveInServiceEventLoop(req, serviceCfg, service, reqCtx, serviceEventLoop,
+                res = serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop,
                                               serverMetrics);
             }
         }
+        res = res.recover(cause -> {
+            reqCtx.logBuilder().responseCause(cause);
+            // Recover the failed response with the error handler.
+            return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+        });
+
         // Keep track of the number of unfinished requests and
         // clean up the request stream when response stream ends.
         final boolean isTransientService =
@@ -456,7 +463,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private static HttpResponse serve0(HttpRequest req,
-                                       ServiceConfig serviceCfg,
                                        HttpService service,
                                        DefaultServiceRequestContext reqCtx,
                                        ServerMetrics serverMetrics,
@@ -486,22 +492,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceResponse = HttpResponse.ofFailure(cause);
             }
 
-            serviceResponse = serviceResponse.recover(cause -> {
-                reqCtx.logBuilder().responseCause(cause);
-                // Recover the failed response with the error handler.
-                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
-            });
             return serviceResponse;
         }
     }
 
     private static HttpResponse serveInServiceEventLoop(DecodedHttpRequest req,
-                                                        ServiceConfig serviceCfg,
                                                         HttpService service,
                                                         DefaultServiceRequestContext reqCtx,
                                                         EventLoop serviceEventLoop,
                                                         ServerMetrics serverMetrics) {
-        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), serviceCfg, service, reqCtx,
+        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), service, reqCtx,
                                             serverMetrics, req.isHttp1WebSocket()),
                                serviceEventLoop)
                            .subscribeOn(serviceEventLoop);
@@ -815,7 +815,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         // Stop receiving new requests.
                         handledLastRequest = true;
                         if (unfinishedRequests.isEmpty()) {
-                            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                            final long closeDelay = Flags.defaultHttp1ConnectionCloseDelayMillis();
+                            if (closeDelay == 0) {
+                                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                            } else {
+                                ctx.channel().eventLoop().schedule(() -> {
+                                    if (ctx.channel().isActive()) {
+                                        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                                    }
+                                }, closeDelay, TimeUnit.MILLISECONDS);
+                            }
                         }
                     }
                 }

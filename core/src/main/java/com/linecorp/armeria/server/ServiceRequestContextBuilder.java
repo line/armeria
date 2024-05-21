@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -178,8 +179,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
 
         // Build a fake server which never starts up.
         final ServerBuilder serverBuilder = Server.builder()
-                                                  .meterRegistry(meterRegistry())
-                                                  .workerGroup(eventLoop(), false);
+                                                  .meterRegistry(meterRegistry());
 
         final ServiceBindingBuilder serviceBindingBuilder;
         if (route != null) {
@@ -228,20 +228,23 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
+        EventLoop eventLoop = eventLoop();
+        if (eventLoop == null) {
+            eventLoop = CommonPools.workerGroup().next();
+        }
+
         final CancellationScheduler requestCancellationScheduler;
         if (timedOut()) {
             requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
             requestCancellationScheduler = CancellationScheduler.ofServer(0);
-            requestCancellationScheduler.initAndStart(eventLoop(), noopCancellationTask);
+            requestCancellationScheduler.initAndStart(eventLoop, noopCancellationTask);
         }
 
-        final EventLoop serviceWorkerGroup = eventLoop();
-
         // Build the context with the properties set by a user and the fake objects.
-        final Channel ch = fakeChannel();
+        final Channel ch = fakeChannel(eventLoop);
         return new DefaultServiceRequestContext(
-                serviceCfg, ch, serviceWorkerGroup, meterRegistry(), sessionProtocol(), id(), routingCtx,
+                serviceCfg, ch, eventLoop, meterRegistry(), sessionProtocol(), id(), routingCtx,
                 routingResult, exchangeType, req, sslSession(), proxiedAddresses,
                 clientAddress, remoteAddress(), localAddress(),
                 requestCancellationScheduler,

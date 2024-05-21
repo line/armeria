@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.server.grpc.UnframedGrpcErrorHandlers.ERROR_DETAILS_MARSHALLER;
+import static com.linecorp.armeria.server.grpc.JsonUnframedGrpcErrorHandler.ERROR_DETAILS_MARSHALLER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -47,8 +47,11 @@ import com.google.rpc.ResourceInfo;
 import com.google.rpc.RetryInfo;
 import com.google.rpc.Status;
 
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.grpc.testing.Error.AuthError;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 class ErrorDetailsMarshallerTest {
 
@@ -122,8 +125,9 @@ class ErrorDetailsMarshallerTest {
 
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
-        UnframedGrpcErrorHandlers.writeErrorDetails(
-                status.getDetailsList(), jsonGenerator, ERROR_DETAILS_MARSHALLER);
+        final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
+        jsonUnframedGrpcErrorHandler.writeErrorDetails(ctx, status.getDetailsList(), jsonGenerator);
         jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
@@ -211,8 +215,10 @@ class ErrorDetailsMarshallerTest {
         final MessageMarshaller jsonMarshaller = ERROR_DETAILS_MARSHALLER.toBuilder()
                                                                          .register(authError)
                                                                          .build();
-        UnframedGrpcErrorHandlers.writeErrorDetails(
-                status.getDetailsList(), jsonGenerator, jsonMarshaller);
+        final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of(
+                UnframedGrpcStatusMappingFunction.of(), jsonMarshaller);
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
+        jsonUnframedGrpcErrorHandler.writeErrorDetails(ctx, status.getDetailsList(), jsonGenerator);
         jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
@@ -232,8 +238,10 @@ class ErrorDetailsMarshallerTest {
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
 
-        assertThatThrownBy(() -> UnframedGrpcErrorHandlers.writeErrorDetails(
-                status.getDetailsList(), jsonGenerator, ERROR_DETAILS_MARSHALLER)).isInstanceOf(
-                IOException.class);
+        final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
+
+        assertThatThrownBy(() -> jsonUnframedGrpcErrorHandler.writeErrorDetails(
+                ctx, status.getDetailsList(), jsonGenerator)).isInstanceOf(IOException.class);
     }
 }

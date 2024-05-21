@@ -323,7 +323,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         req = null;
                         final boolean shouldReset;
                         if (encoder instanceof ServerHttp1ObjectEncoder) {
-                            keepAliveHandler.disconnectWhenFinished();
+                            if (encoder.isResponseHeadersSent(id, 1)) {
+                                ctx.channel().close();
+                            } else {
+                                keepAliveHandler.disconnectWhenFinished();
+                            }
                             shouldReset = false;
                         } else {
                             // Upgraded to HTTP/2. Reset only if the remote peer is still open.

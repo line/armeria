@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
@@ -64,7 +66,6 @@ final class HttpJsonTranscodingPathParser {
             // Consume the start symbol ':'.
             checkArgument(context.read() == ':',
                           "path: %s (invalid verb part at index %s)", context.path(), context.index());
-            // We don't check 'Verb' part because we don't use it when generating a corresponding path pattern.
             segments.add(new VerbPathSegment(context.readAll()));
         }
 
@@ -335,8 +336,14 @@ final class HttpJsonTranscodingPathParser {
 
     static class VerbPathSegment implements PathSegment {
         private final String verb;
+        private static final Pattern VERB_PATTERN = Pattern.compile("([a-zA-Z0-9-_.~%]+)$");
 
         VerbPathSegment(String verb) {
+            final Matcher matcher = VERB_PATTERN.matcher(verb);
+            if (!matcher.matches()) {
+                throw new IllegalArgumentException("The provided verb '" + verb + "' is invalid. " +
+                                                   "It must match the pattern: [a-zA-Z0-9-_.~%]+");
+            }
             this.verb = verb;
         }
 
@@ -473,9 +480,7 @@ final class HttpJsonTranscodingPathParser {
          */
         static String asParameterizedPath(List<PathSegment> segments, boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            final String path = segments.stream()
-                                        .map(segment -> segment.segmentString(PathMappingType.PARAMETERIZED))
-                                        .collect(Collectors.joining("/"));
+            final String path = toPathString(segments, PathMappingType.PARAMETERIZED);
             return withLeadingSlash ? '/' + path : path;
         }
 
@@ -484,10 +489,24 @@ final class HttpJsonTranscodingPathParser {
          */
         static String asGlobPath(List<PathSegment> segments, boolean withLeadingSlash) {
             requireNonNull(segments, "segments");
-            final String path = segments.stream()
-                                        .map(segment -> segment.segmentString(PathMappingType.GLOB))
-                                        .collect(Collectors.joining("/"));
+            final String path = toPathString(segments, PathMappingType.GLOB);
             return withLeadingSlash ? '/' + path : path;
+        }
+
+        private static String toPathString(List<PathSegment> segments, PathMappingType type) {
+            final PathSegment lastSegment = segments.get(segments.size() - 1);
+            if (lastSegment instanceof VerbPathSegment) {
+                final String basePath = concatWithSlash(segments.subList(0, segments.size() - 1), type);
+                return basePath + ':' + lastSegment.segmentString(type);
+            } else {
+                return concatWithSlash(segments, type);
+            }
+        }
+
+        private static String concatWithSlash(List<PathSegment> segments, PathMappingType type) {
+            return segments.stream()
+                           .map(segment -> segment.segmentString(type))
+                           .collect(Collectors.joining("/"));
         }
 
         private Stringifier() {}

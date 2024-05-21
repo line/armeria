@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -62,6 +63,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
@@ -75,8 +77,8 @@ import com.linecorp.armeria.server.annotation.ServiceName;
  * This class is not supposed to be instantiated by a user. Please check out the documentation
  * <a href="https://armeria.dev/docs/server-annotated-service">Annotated HTTP Service</a> to use this.
  */
-public final class AnnotatedService implements HttpService {
-    private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
+final class DefaultAnnotatedService implements AnnotatedService {
+    private static final Logger logger = LoggerFactory.getLogger(DefaultAnnotatedService.class);
 
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
@@ -84,6 +86,7 @@ public final class AnnotatedService implements HttpService {
             NO_AGGREGATION_FUTURE = UnmodifiableFuture.completedFuture(AggregatedResult.EMPTY);
 
     private final Object object;
+    private final Class<?> serviceClass;
     private final Method method;
     private final int overloadId;
     private final MethodHandle methodHandle;
@@ -105,22 +108,23 @@ public final class AnnotatedService implements HttpService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
-    private final String serviceName;
-    private final boolean serviceNameSetByAnnotation;
+    @Nullable
+    private final String name;
 
-    AnnotatedService(Object object, Method method,
-                     int overloadId, List<AnnotatedValueResolver> resolvers,
-                     List<ExceptionHandlerFunction> exceptionHandlers,
-                     List<ResponseConverterFunction> responseConverters,
-                     Route route,
-                     HttpStatus defaultStatus,
-                     HttpHeaders defaultHttpHeaders,
-                     HttpHeaders defaultHttpTrailers,
-                     boolean useBlockingTaskExecutor) {
+    DefaultAnnotatedService(Object object, Method method,
+                            int overloadId, List<AnnotatedValueResolver> resolvers,
+                            List<ExceptionHandlerFunction> exceptionHandlers,
+                            List<ResponseConverterFunction> responseConverters,
+                            Route route,
+                            HttpStatus defaultStatus,
+                            HttpHeaders defaultHttpHeaders,
+                            HttpHeaders defaultHttpTrailers,
+                            boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
         checkArgument(overloadId >= 0, "overloadId: %s (expected: >= 0)", overloadId);
         this.overloadId = overloadId;
+        serviceClass = ClassUtil.getUserClass(object.getClass());
 
         checkArgument(!method.isVarArgs(), "%s#%s declared to take a variable number of arguments",
                       method.getDeclaringClass().getSimpleName(), method.getName());
@@ -164,11 +168,9 @@ public final class AnnotatedService implements HttpService {
             serviceName = AnnotationUtil.findFirst(object.getClass(), ServiceName.class);
         }
         if (serviceName != null) {
-            this.serviceName = serviceName.value();
-            serviceNameSetByAnnotation = true;
+            name = serviceName.value();
         } else {
-            this.serviceName = ClassUtil.getUserClass(object.getClass()).getName();
-            serviceNameSetByAnnotation = false;
+            name = null;
         }
 
         this.method.setAccessible(true);
@@ -192,47 +194,50 @@ public final class AnnotatedService implements HttpService {
             genericReturnType = method.getGenericReturnType();
         }
 
-        if (HttpResult.class.isAssignableFrom(returnType)) {
+        if (HttpResult.class.isAssignableFrom(returnType) ||
+            ResponseEntity.class.isAssignableFrom(returnType)) {
             final ParameterizedType type = (ParameterizedType) genericReturnType;
-            warnIfHttpResponseArgumentExists(type, type);
+            warnIfHttpResponseArgumentExists(type, type, returnType);
             return type.getActualTypeArguments()[0];
         } else {
             return genericReturnType;
         }
     }
 
-    private static void warnIfHttpResponseArgumentExists(Type returnType, ParameterizedType type) {
+    private static void warnIfHttpResponseArgumentExists(Type returnType,
+                                                         ParameterizedType type,
+                                                         Class<?> originalReturnType) {
         for (final Type arg : type.getActualTypeArguments()) {
             if (arg instanceof ParameterizedType) {
-                warnIfHttpResponseArgumentExists(returnType, (ParameterizedType) arg);
+                warnIfHttpResponseArgumentExists(returnType, (ParameterizedType) arg, originalReturnType);
             } else if (arg instanceof Class) {
                 final Class<?> clazz = (Class<?>) arg;
                 if (HttpResponse.class.isAssignableFrom(clazz) ||
                     AggregatedHttpResponse.class.isAssignableFrom(clazz)) {
                     logger.warn("{} in the return type '{}' may take precedence over {}.",
-                                clazz.getSimpleName(), returnType, HttpResult.class.getSimpleName());
+                                clazz.getSimpleName(), returnType, originalReturnType.getSimpleName());
                 }
             }
         }
     }
 
-    public String serviceName() {
-        return serviceName;
+    @Override
+    public String name() {
+        return name;
     }
 
-    public boolean serviceNameSetByAnnotation() {
-        return serviceNameSetByAnnotation;
-    }
-
-    public String methodName() {
-        return method.getName();
-    }
-
-    Object object() {
+    @Override
+    public Object serviceObject() {
         return object;
     }
 
-    Method method() {
+    @Override
+    public Class<?> serviceClass() {
+        return serviceClass;
+    }
+
+    @Override
+    public Method method() {
         return method;
     }
 
@@ -244,12 +249,13 @@ public final class AnnotatedService implements HttpService {
         return resolvers;
     }
 
-    Route route() {
+    @Override
+    public Route route() {
         return route;
     }
 
-    // TODO: Expose through `AnnotatedServiceConfig`, see #5382.
-    HttpStatus defaultStatus() {
+    @Override
+    public HttpStatus defaultStatus() {
         return defaultStatus;
     }
 
@@ -400,7 +406,12 @@ public final class AnnotatedService implements HttpService {
         final ResponseHeaders headers;
         final HttpHeaders trailers;
 
-        if (result instanceof HttpResult) {
+        if (result instanceof ResponseEntity) {
+            final ResponseEntity<?> responseEntity = (ResponseEntity<?>) result;
+            headers = ResponseEntityUtil.buildResponseHeaders(ctx, responseEntity);
+            result = responseEntity.hasContent() ? responseEntity.content() : null;
+            trailers = responseEntity.trailers();
+        } else if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
             headers = HttpResultUtil.buildResponseHeaders(ctx, httpResult);
             result = httpResult.content();
