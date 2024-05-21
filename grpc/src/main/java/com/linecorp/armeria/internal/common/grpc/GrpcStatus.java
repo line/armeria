@@ -48,7 +48,11 @@ import com.linecorp.armeria.common.grpc.ThrowableProto;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.server.RequestTimeoutException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -68,12 +72,18 @@ public final class GrpcStatus {
      * code.proto</a> will be used to convert the {@linkplain Status#getCode() gRPC code} to
      * the {@link HttpStatus}.
      */
-    public static HttpStatus grpcStatusToHttpStatus(Status grpcStatus) {
+    public static HttpStatus grpcStatusToHttpStatus(ServiceRequestContext ctx, Status grpcStatus) {
         if (grpcStatus.getCode() == Code.CANCELLED) {
-            if ("Request timed out".equals(grpcStatus.getDescription())) {
-                // A call was closed by a server-side timeout.
-                return HttpStatus.SERVICE_UNAVAILABLE;
+            final RequestLog log = ctx.log().getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+            if (log != null) {
+                final Throwable responseCause = log.responseCause();
+                if (responseCause != null && (responseCause instanceof RequestTimeoutException ||
+                                              (responseCause.getCause() instanceof RequestTimeoutException))) {
+                    // A call was closed by a server-side timeout.
+                    return HttpStatus.SERVICE_UNAVAILABLE;
+                }
             }
+            // TODO(minwoox): Do not rely on the message to determine the cause of cancellation.
             if ("Completed without a response".equals(grpcStatus.getDescription())) {
                 // A unary call was closed without sending a response.
                 return HttpStatus.INTERNAL_SERVER_ERROR;
