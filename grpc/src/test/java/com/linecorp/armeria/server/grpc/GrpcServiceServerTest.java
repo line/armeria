@@ -936,10 +936,11 @@ class GrpcServiceServerTest {
 
         final RpcResponse rpcResponse = (RpcResponse) log.responseContent();
         final StatusRuntimeException cause = (StatusRuntimeException) rpcResponse.cause();
-        assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
         if (protocol.isMultiplex()) {
+            assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
             assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedStreamException.class);
         } else {
+            assertThat(cause.getStatus().getCode()).isEqualTo(Code.UNKNOWN);
             assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedSessionException.class);
         }
 
