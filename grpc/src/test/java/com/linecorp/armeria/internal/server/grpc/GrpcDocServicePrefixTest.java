@@ -90,7 +90,7 @@ class GrpcDocServicePrefixTest {
                 "/route/innerPrefix/GetMessageV2");
         getMessageV2 = findMethod(httpMethods, "GetMessageV2");
         assertThat(pathMapping(getMessageV2)).containsExactlyInAnyOrder(
-                "/v2/messages/:p0", "/outerPrefix/v2/messages/:p0");
+                "/v2/messages/:message_id", "/outerPrefix/v2/messages/:message_id");
     }
 
     private static JsonNode methods(JsonNode root, String serviceName) {
