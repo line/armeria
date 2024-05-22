@@ -501,8 +501,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     }
 
     @Override
-    public HttpEndpointSpecification
-    httpEndpointSpecification(Route route) {
+    public HttpEndpointSpecification httpEndpointSpecification(Route route) {
         requireNonNull(route, "route");
         final TranscodingSpec spec = routeAndSpecs.get(route);
         if (spec == null) {

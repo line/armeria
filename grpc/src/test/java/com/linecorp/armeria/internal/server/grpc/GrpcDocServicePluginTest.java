@@ -349,10 +349,10 @@ class GrpcDocServicePluginTest {
         // Expected generated routes. See 'transcoding.proto' file.
         final List<Route> routes = ImmutableList.of(
                 Route.builder().methods(HttpMethod.GET).path("/v1/messages/:p0").build(),
-                Route.builder().methods(HttpMethod.GET).path("/v2/messages/{p0}").build(),
-                Route.builder().methods(HttpMethod.GET).path("/v3/messages/{p0}").build(),
-                Route.builder().methods(HttpMethod.PATCH).path("/v1/messages/{p0}").build(),
-                Route.builder().methods(HttpMethod.PATCH).path("/v2/messages/{p0}").build());
+                Route.builder().methods(HttpMethod.GET).path("/v2/messages/{message_id}").build(),
+                Route.builder().methods(HttpMethod.GET).path("/v3/messages/{message_id}").build(),
+                Route.builder().methods(HttpMethod.PATCH).path("/v1/messages/{message_id}").build(),
+                Route.builder().methods(HttpMethod.PATCH).path("/v2/messages/{message_id}").build());
         final List<HttpEndpointSpecification> specs =
                 routes.stream().map(route -> httpEndpointSupport.httpEndpointSpecification(route))
                       .collect(toImmutableList());
@@ -391,7 +391,7 @@ class GrpcDocServicePluginTest {
                                                    .findFirst().get();
         assertThat(getMessageV2.httpMethod()).isEqualTo(HttpMethod.GET);
         assertThat(getMessageV2.endpoints()).containsAll(ImmutableSet.of(
-                EndpointInfo.builder(virtualHostNamePattern, "/v2/messages/:p0")
+                EndpointInfo.builder(virtualHostNamePattern, "/v2/messages/:message_id")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(getMessageV2.parameters()).containsAll(ImmutableList.of(
                 FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
@@ -409,7 +409,7 @@ class GrpcDocServicePluginTest {
                                                    .findFirst().get();
         assertThat(getMessageV3.httpMethod()).isEqualTo(HttpMethod.GET);
         assertThat(getMessageV3.endpoints()).containsAll(ImmutableSet.of(
-                EndpointInfo.builder(virtualHostNamePattern, "/v3/messages/:p0")
+                EndpointInfo.builder(virtualHostNamePattern, "/v3/messages/:message_id")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(getMessageV3.parameters()).containsAll(ImmutableList.of(
                 FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
@@ -425,7 +425,7 @@ class GrpcDocServicePluginTest {
                                                       .findFirst().get();
         assertThat(updateMessageV1.httpMethod()).isEqualTo(HttpMethod.PATCH);
         assertThat(updateMessageV1.endpoints()).containsAll(ImmutableSet.of(
-                EndpointInfo.builder(virtualHostNamePattern, "/v1/messages/:p0")
+                EndpointInfo.builder(virtualHostNamePattern, "/v1/messages/:message_id")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(updateMessageV1.parameters()).containsAll(ImmutableList.of(
                 FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
@@ -439,7 +439,7 @@ class GrpcDocServicePluginTest {
                                                       .findFirst().get();
         assertThat(updateMessageV2.httpMethod()).isEqualTo(HttpMethod.PATCH);
         assertThat(updateMessageV2.endpoints()).containsAll(ImmutableSet.of(
-                EndpointInfo.builder(virtualHostNamePattern, "/v2/messages/:p0")
+                EndpointInfo.builder(virtualHostNamePattern, "/v2/messages/:message_id")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(updateMessageV2.parameters()).containsAll(ImmutableList.of(
                 FieldInfo.builder("message_id", TypeSignature.ofBase(JavaType.STRING.name()))
