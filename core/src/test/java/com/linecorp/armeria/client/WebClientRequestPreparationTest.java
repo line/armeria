@@ -18,17 +18,21 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.TransformingResponsePreparationTest.MyMessage;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -39,30 +43,28 @@ class WebClientRequestPreparationTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/json", (ctx, req) -> HttpResponse.ofJson(new MyMessage("hello")));
+            final String json = "{ \"message\": \"hello\" , \"unexpectedField\": \"hi\" }";
+            sb.service("/json", (ctx, req) -> HttpResponse.of(HttpStatus.OK, MediaType.JSON_UTF_8, json));
         }
     };
 
-    private static WebClient client;
-
-    @BeforeAll
-    static void beforeAll() {
-        client = WebClient.of(server.httpUri());
-    }
-
     @Test
     void prepare_asJson() {
+        final WebClient client = WebClient.of(server.httpUri());
+
         final CompletableFuture<ResponseEntity<MyMessage>> future1 = client.prepare()
                 .get("/json")
                 .asJson(MyMessage.class)
                 .execute();
 
-        final ResponseEntity<MyMessage> response1 = future1.join();
-
-        assertThat(response1.content()).isEqualTo(new MyMessage("hello"));
-        assertThat(response1.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThatThrownBy(future1::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(InvalidHttpResponseException.class)
+                .satisfies(throwable -> assertThat(throwable.getCause().getCause())
+                        .isInstanceOf(UnrecognizedPropertyException.class));
 
         final ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         final CompletableFuture<ResponseEntity<MyMessage>> future2 = client.prepare()
                 .get("/json")
                 .asJson(MyMessage.class, mapper)
