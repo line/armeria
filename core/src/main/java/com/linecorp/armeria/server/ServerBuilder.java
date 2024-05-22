@@ -249,6 +249,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
         virtualHostTemplate.tlsAllowUnsafeCiphers(false);
+        virtualHostTemplate.tlsEngineType(Flags.tlsEngineType());
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
@@ -1183,6 +1184,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     /**
      * The {@link TlsEngineType} that will be used for processing TLS connections.
      */
+    @UnstableApi
     public ServerBuilder tlsEngineType(TlsEngineType tlsEngineType) {
         virtualHostTemplate.tlsEngineType(tlsEngineType);
         return this;

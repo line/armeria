@@ -102,6 +102,7 @@ public final class ClientFactoryOptions
     /**
      * The {@link TlsEngineType} that will be used for processing TLS connections.
      */
+    @UnstableApi
     public static final ClientFactoryOption<TlsEngineType> TLS_ENGINE_TYPE =
             ClientFactoryOption.define("tlsEngineType", Flags.tlsEngineType());
 
@@ -604,6 +605,7 @@ public final class ClientFactoryOptions
     /**
      * Returns the {@link TlsEngineType} that will be used for processing TLS connections.
      */
+    @UnstableApi
     public TlsEngineType tlsEngineType() {
         return get(TLS_ENGINE_TYPE);
     }

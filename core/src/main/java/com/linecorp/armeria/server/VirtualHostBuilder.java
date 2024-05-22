@@ -431,6 +431,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     /**
      * The {@link TlsEngineType} that will be used for processing TLS connections.
      */
+    @UnstableApi
     public VirtualHostBuilder tlsEngineType(TlsEngineType tlsEngineType) {
         requireNonNull(tlsEngineType, "tlsEngineType");
         this.tlsEngineType = tlsEngineType;
@@ -1477,14 +1478,9 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
             boolean sslContextFromThis = false;
 
-            final TlsEngineType tlsEngineType;
-            if (this.tlsEngineType != null) {
-                tlsEngineType = this.tlsEngineType;
-            } else if (template.tlsEngineType != null) {
-                tlsEngineType = template.tlsEngineType;
-            } else {
-                tlsEngineType = Flags.tlsEngineType();
-            }
+            final TlsEngineType tlsEngineType =
+                    this.tlsEngineType != null ? this.tlsEngineType : template.tlsEngineType;
+            assert tlsEngineType != null;
 
             // Build a new SslContext or use a user-specified one for backward compatibility.
             if (sslContextBuilderSupplier != null) {

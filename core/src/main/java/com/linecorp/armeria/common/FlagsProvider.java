@@ -216,6 +216,7 @@ public interface FlagsProvider {
      * the default.</p>
      */
     @Nullable
+    @UnstableApi
     default TlsEngineType tlsEngineType() {
         return null;
     }

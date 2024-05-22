@@ -481,6 +481,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * The {@link TlsEngineType} that will be used for processing TLS connections.
      * @param tlsEngineType the {@link TlsEngineType} to use
      */
+    @UnstableApi
     public ClientFactoryBuilder tlsEngineType(TlsEngineType tlsEngineType) {
         option(ClientFactoryOptions.TLS_ENGINE_TYPE, tlsEngineType);
         return this;
