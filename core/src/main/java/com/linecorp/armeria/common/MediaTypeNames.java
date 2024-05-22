@@ -346,6 +346,18 @@ public final class MediaTypeNames {
      */
     public static final String GEO_JSON = "application/geo+json";
     /**
+     * {@value #GIT_UPLOAD_PACK_ADVERTISEMENT}.
+     */
+    public static final String GIT_UPLOAD_PACK_ADVERTISEMENT = "application/x-git-upload-pack-advertisement";
+    /**
+     * {@value #GIT_UPLOAD_PACK_REQUEST}.
+     */
+    public static final String GIT_UPLOAD_PACK_REQUEST = "application/x-git-upload-pack-request";
+    /**
+     * {@value #GIT_UPLOAD_PACK_RESULT}.
+     */
+    public static final String GIT_UPLOAD_PACK_RESULT = "application/x-git-upload-pack-result";
+    /**
      * {@value #GZIP}.
      */
     public static final String GZIP = "application/x-gzip";
