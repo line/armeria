@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.linecorp.armeria.client.endpoint.EndpointWeightTransition.linear;
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.withCreateTimestamp;
+import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.withCreatedAtNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -392,7 +392,7 @@ final class WeightRampingUpStrategyTest {
                                       .containsExactlyInAnyOrder(Endpoint.of("foo.com"));
 
         // as far as the selector is concerned, the endpoint is added at ticker#get now
-        final Endpoint endpoint = withCreateTimestamp(Endpoint.of("foo.com"), ticker.get());
+        final Endpoint endpoint = withCreatedAtNanos(Endpoint.of("foo.com"), ticker.get());
         endpointGroup.setEndpoints(ImmutableList.of(endpoint));
 
         final long window = selector.windowIndex(ticker.get());

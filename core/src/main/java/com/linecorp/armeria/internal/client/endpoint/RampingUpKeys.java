@@ -24,21 +24,21 @@ import io.netty.util.AttributeKey;
 
 public final class RampingUpKeys {
 
-    private static final AttributeKey<Long> endpointCreateTimestampNanos =
-            AttributeKey.valueOf(RampingUpKeys.class, "getCreateTimestamp");
+    private static final AttributeKey<Long> CREATED_AT_NANOS_KEY =
+            AttributeKey.valueOf(RampingUpKeys.class, "createdAtNanos");
 
-    public static long createTimestamp(Endpoint endpoint) {
-        final Long createdTimestamp = endpoint.attr(endpointCreateTimestampNanos);
-        checkState(createdTimestamp != null, "createdTimestamp doesn't exist for '%s'", endpoint);
-        return createdTimestamp;
+    public static long createdAtNanos(Endpoint endpoint) {
+        final Long createdAtNanos = endpoint.attr(CREATED_AT_NANOS_KEY);
+        checkState(createdAtNanos != null, "createdAtNanos doesn't exist for '%s'", endpoint);
+        return createdAtNanos;
     }
 
-    public static Endpoint withCreateTimestamp(Endpoint endpoint, long timestamp) {
-        return endpoint.withAttr(endpointCreateTimestampNanos, timestamp);
+    public static Endpoint withCreatedAtNanos(Endpoint endpoint, long timestampNanos) {
+        return endpoint.withAttr(CREATED_AT_NANOS_KEY, timestampNanos);
     }
 
-    public static boolean hasCreateTimestamp(Endpoint endpoint) {
-        return endpoint.attr(endpointCreateTimestampNanos) != null;
+    public static boolean hasCreatedAtNanos(Endpoint endpoint) {
+        return endpoint.attr(CREATED_AT_NANOS_KEY) != null;
     }
 
     private RampingUpKeys() {}
