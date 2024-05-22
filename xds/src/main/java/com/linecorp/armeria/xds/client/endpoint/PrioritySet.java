@@ -36,7 +36,7 @@ final class PrioritySet {
         return endpoints;
     }
 
-    public ClusterSnapshot clusterSnapshot() {
+    ClusterSnapshot clusterSnapshot() {
         return clusterSnapshot;
     }
 }
