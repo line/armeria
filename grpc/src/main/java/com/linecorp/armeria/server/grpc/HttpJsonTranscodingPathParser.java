@@ -199,8 +199,8 @@ final class HttpJsonTranscodingPathParser {
             return new VariablePathSegment(fieldPath, parseSegments(context, delimiters));
         } else {
             // Treat '{name}' as '{name=*}' to specify a path variable index.
-            return new VariablePathSegment(
-                    fieldPath, ImmutableList.of(new WildcardPathSegment(context.nextPathVarIndex())));
+            return new VariablePathSegment(fieldPath,
+                                           ImmutableList.of(new WildcardPathSegment(context.nextPathVarIndex())));
         }
     }
 
