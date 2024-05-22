@@ -76,6 +76,7 @@ import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
+import testing.grpc.Transcoding.ConflictMessage;
 import testing.grpc.Transcoding.EchoAnyRequest;
 import testing.grpc.Transcoding.EchoAnyResponse;
 import testing.grpc.Transcoding.EchoFieldMaskRequest;
@@ -331,6 +332,13 @@ public class HttpJsonTranscodingTest {
                                            StreamObserver<EchoNestedMessageResponse> responseObserver) {
             responseObserver
                     .onNext(EchoNestedMessageResponse.newBuilder().setNested(request.getNested()).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void paramNameConflict(ConflictMessage request,
+                                      StreamObserver<ConflictMessage> responseObserver) {
+            responseObserver.onNext(request);
             responseObserver.onCompleted();
         }
     }
@@ -1077,6 +1085,14 @@ public class HttpJsonTranscodingTest {
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(nested).isNotNull().matches(v -> ((TreeNode) v).isObject());
         assertThat(nested.get("name").asText()).isEqualTo("Armeria");
+    }
+
+    @Test
+    void conflictingParamNamesReturnsCorrectly() {
+        final AggregatedHttpResponse res = server.blockingWebClient().get("/v1/conflict/hello/1/a/test");
+        assertThat(res.status().code()).isEqualTo(200);
+        assertThatJson(res.contentUtf8()).node("id").isEqualTo("hello/1");
+        assertThatJson(res.contentUtf8()).node("p0").isEqualTo("a");
     }
 
     public static JsonNode findMethod(JsonNode methods, String name) {
