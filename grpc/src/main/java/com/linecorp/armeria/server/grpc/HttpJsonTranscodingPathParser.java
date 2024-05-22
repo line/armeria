@@ -148,7 +148,7 @@ final class HttpJsonTranscodingPathParser {
                     context.read();
                     segment = new DeepWildcardPathSegment(context.nextPathVarIndex());
                 } else {
-                    segment = new WildcardPathSegment(context.nextPathVarIndex());
+                    segment = new WildcardPathSegment(context.nextPathVarIndex(), null);
                 }
                 // Should 1) no more input or 2) meet a delimiter such as '/', ':' or '}'.
                 checkArgument(!context.hasNext() || delimiters.contains(context.peek()),
@@ -196,11 +196,22 @@ final class HttpJsonTranscodingPathParser {
             // Consume '='.
             context.read();
 
-            return new VariablePathSegment(fieldPath, parseSegments(context, delimiters));
+            final List<PathSegment> segments = parseSegments(context, delimiters);
+
+            // Replace a single WildcardPathSegment with a new one which has a field name
+            // as its identifier in order to make the path variable human-readable.
+            if (segments.size() == 1 && segments.get(0) instanceof WildcardPathSegment) {
+                return new VariablePathSegment(
+                        fieldPath, ImmutableList.of(((WildcardPathSegment) segments.get(0))
+                                                            .withParentFieldPath(fieldPath)));
+            } else {
+                return new VariablePathSegment(fieldPath, segments);
+            }
         } else {
             // Treat '{name}' as '{name=*}' to specify a path variable index.
             return new VariablePathSegment(fieldPath,
-                                           ImmutableList.of(new WildcardPathSegment(context.nextPathVarIndex())));
+                                           ImmutableList.of(new WildcardPathSegment(context.nextPathVarIndex(),
+                                                                                    fieldPath)));
         }
     }
 
@@ -351,9 +362,12 @@ final class HttpJsonTranscodingPathParser {
 
     static class WildcardPathSegment implements PathSegment {
         private final int pathVarIndex;
+        @Nullable
+        private final String parentFieldPath;
 
-        WildcardPathSegment(int pathVarIndex) {
+        WildcardPathSegment(int pathVarIndex, @Nullable String parentFieldPath) {
             this.pathVarIndex = pathVarIndex;
+            this.parentFieldPath = parentFieldPath;
         }
 
         @Override
@@ -365,16 +379,25 @@ final class HttpJsonTranscodingPathParser {
         @Override
         public String pathVariable(PathMappingType type) {
             if (type == PathMappingType.PARAMETERIZED) {
-                return 'p' + StringUtil.toString(pathVarIndex);
+                if (parentFieldPath != null) {
+                    return parentFieldPath;
+                } else {
+                    return 'p' + StringUtil.toString(pathVarIndex);
+                }
             } else {
                 return StringUtil.toString(pathVarIndex);
             }
+        }
+
+        WildcardPathSegment withParentFieldPath(String parentFieldPath) {
+            return new WildcardPathSegment(pathVarIndex, parentFieldPath);
         }
 
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                               .add("pathVarIndex", pathVarIndex)
+                              .add("parentFieldPath", parentFieldPath)
                               .toString();
         }
     }
