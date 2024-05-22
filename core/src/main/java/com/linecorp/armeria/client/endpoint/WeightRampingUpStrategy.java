@@ -40,7 +40,6 @@ import java.util.function.Supplier;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -51,6 +50,7 @@ import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.Ticker;
 
 import io.netty.util.concurrent.EventExecutor;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 
 /**
  * A ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
@@ -131,7 +131,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         final Deque<EndpointsRampingUpEntry> endpointsRampingUp = new ArrayDeque<>();
         @VisibleForTesting
         final Map<Long, EndpointsRampingUpEntry> rampingUpWindowsMap = new HashMap<>();
-        private Map<Endpoint, Long> endpointCreatedTimestamps = ImmutableMap.of();
+        private Object2LongOpenHashMap<Endpoint> endpointCreatedTimestamps = new Object2LongOpenHashMap<>();
 
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
@@ -144,6 +144,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
         @Override
         protected void updateNewEndpoints(List<Endpoint> endpoints) {
+            // Use the executor so the order of endpoints change is guaranteed.
             executor.execute(() -> updateEndpoints(endpoints));
         }
 
@@ -152,7 +153,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 return createdAtNanos(endpoint);
             }
             if (endpointCreatedTimestamps.containsKey(endpoint)) {
-                return endpointCreatedTimestamps.get(endpoint);
+                return endpointCreatedTimestamps.getLong(endpoint);
             }
             return ticker.read();
         }
@@ -177,11 +178,11 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             endpointsFinishedRampingUp.clear();
 
             // We add the new endpoints from this point
-            final ImmutableMap.Builder<Endpoint, Long> createdTimestampsBuilder = ImmutableMap.builder();
+            final Object2LongOpenHashMap<Endpoint> newCreatedTimestamps = new Object2LongOpenHashMap<>();
             for (Endpoint endpoint: newEndpoints) {
                 // Set the cached created timestamps for the next iteration
                 final long createTimestamp = computeCreateTimestamp(endpoint);
-                createdTimestampsBuilder.put(endpoint, createTimestamp);
+                newCreatedTimestamps.put(endpoint, createTimestamp);
 
                 // check if the endpoint is already finished ramping up
                 final int step = numStep(rampingUpIntervalNanos, ticker, createTimestamp);
@@ -210,7 +211,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
                 rampingUpEntry.addEndpoint(endpointAndStep);
             }
-            endpointCreatedTimestamps = createdTimestampsBuilder.buildKeepingLast();
+            endpointCreatedTimestamps = newCreatedTimestamps;
 
             buildEndpointSelector();
         }
