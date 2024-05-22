@@ -22,7 +22,6 @@ import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilde
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.defaultTransition;
 import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.createdAtNanos;
 import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.hasCreatedAtNanos;
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.withCreatedAtNanos;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
@@ -182,11 +181,10 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             for (Endpoint endpoint: newEndpoints) {
                 // Set the cached created timestamps for the next iteration
                 final long createTimestamp = computeCreateTimestamp(endpoint);
-                endpoint = withCreatedAtNanos(endpoint, createTimestamp);
                 createdTimestampsBuilder.put(endpoint, createTimestamp);
 
                 // check if the endpoint is already finished ramping up
-                final int step = numStep(endpoint, rampingUpIntervalNanos, ticker);
+                final int step = numStep(rampingUpIntervalNanos, ticker, createTimestamp);
                 if (step >= totalSteps) {
                     endpointsFinishedRampingUp.add(endpoint);
                     continue;
@@ -281,8 +279,8 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
     }
 
-    private static int numStep(Endpoint endpoint, long rampingUpIntervalNanos, Ticker ticker) {
-        final long timePassed = ticker.read() - createdAtNanos(endpoint);
+    private static int numStep(long rampingUpIntervalNanos, Ticker ticker, long createTimestamp) {
+        final long timePassed = ticker.read() - createTimestamp;
         final int step = Ints.saturatedCast(timePassed / rampingUpIntervalNanos);
         // there's no point in having an endpoint at step 0 (no weight), so we increment by 1
         return step + 1;
