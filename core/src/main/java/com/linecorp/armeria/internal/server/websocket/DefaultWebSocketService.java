@@ -214,6 +214,16 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private HttpResponse failOrFallback(ServiceRequestContext ctx, HttpRequest req,
                                         Supplier<HttpResponse> invalidResponse) throws Exception {
         if (fallbackService != null) {
+            final HttpServiceOptions options = fallbackService.options();
+            if (options.requestTimeoutMillis() > 0) {
+                ctx.setRequestTimeoutMillis(options.requestTimeoutMillis());
+            }
+            if (options.maxRequestLength() >= 0) {
+                ctx.setMaxRequestLength(options.maxRequestLength());
+            }
+            if (options.requestAutoAbortDelayMillis() >= 0) {
+                ctx.setRequestAutoAbortDelayMillis(options.requestAutoAbortDelayMillis());
+            }
             return fallbackService.serve(ctx, req);
         } else {
             return invalidResponse.get();
