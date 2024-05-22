@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
 import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.buildHttpServiceInfos;
+import static com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.convertRegexPath;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
@@ -120,7 +121,9 @@ class GrpcDocServicePluginTest {
                 if (m.examplePaths().isEmpty()) {
                     return;
                 }
-                assertThat(e.pathMapping()).endsWith(m.examplePaths().get(0));
+                assertThat(e.pathMapping()).satisfiesAnyOf(
+                        path -> assertThat(path).endsWith(m.examplePaths().get(0)),
+                        path -> assertThat(convertRegexPath(path)).endsWith(m.examplePaths().get(0)));
             });
         });
     }
@@ -450,5 +453,11 @@ class GrpcDocServicePluginTest {
                 FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
         assertThat(updateMessageV2.useParameterAsRoot()).isFalse();
+    }
+
+    @Test
+    void pathParamRegexIsConvertedCorrectly() {
+        assertThat(GrpcDocServicePlugin.convertRegexPath("/a/(?<p0>[^/]+):get"))
+                .isEqualTo("/a/p0:get");
     }
 }

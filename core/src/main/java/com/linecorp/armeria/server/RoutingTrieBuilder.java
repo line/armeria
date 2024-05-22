@@ -180,6 +180,8 @@ final class RoutingTrieBuilder<V> {
         while (pathReader.hasNext()) {
             final char c = pathReader.read();
             // Find the prefix until the first wildcard ('\0' or '*')
+            // '\0' in this context signifies that the current path segment is a parameter.
+            // See ParameterizedPathMapping for details on how '\0' is determined.
             if (c != '*' && c != '\0') {
                 if (exactPath == null) {
                     exactPath = new StringBuilder();

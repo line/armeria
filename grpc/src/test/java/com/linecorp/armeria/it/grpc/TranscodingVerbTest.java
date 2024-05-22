@@ -17,6 +17,7 @@
 package com.linecorp.armeria.it.grpc;
 
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -48,6 +49,12 @@ class TranscodingVerbTest {
 
         @Override
         public void complexWildcardVerb(Simple request, StreamObserver<Simple> responseObserver) {
+            responseObserver.onNext(request);
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void noParamsVerb(Simple request, StreamObserver<Simple> responseObserver) {
             responseObserver.onNext(request);
             responseObserver.onCompleted();
         }
@@ -85,5 +92,11 @@ class TranscodingVerbTest {
         assertThatJson(response.contentUtf8()).node("first").isEqualTo("a/b/hello/c/d");
         assertThatJson(response.contentUtf8()).node("second").isEqualTo("b/hello/c/d");
         assertThatJson(response.contentUtf8()).node("third").isEqualTo("hello/c/d");
+    }
+
+    @Test
+    void testNoParamsVerb() throws Exception {
+        final AggregatedHttpResponse response = server.blockingWebClient().get("/v1/simple/1/noparam:verb");
+        assertThat(response.contentUtf8()).isEqualTo("{}");
     }
 }

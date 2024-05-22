@@ -24,6 +24,12 @@ service TranscodingVerbService {
       get: "/v1/wildcard/2/{first=*/{second=*/{third=hello/**}}}:verb"
     };
   }
+
+  rpc NoParamsVerb(Simple) returns (Simple) {
+    option (google.api.http) = {
+      get: "/v1/simple/1/noparam:verb"
+    };
+  }
 }
 
 message Simple {

@@ -29,14 +29,17 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -49,6 +52,7 @@ import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
+import com.google.protobuf.util.JsonFormat.Printer;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -91,8 +95,10 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     public static final String HTTP_SERVICE_SUFFIX = "_HTTP";
 
-    private static final JsonFormat.Printer defaultExamplePrinter =
+    private static final Printer defaultExamplePrinter =
             JsonFormat.printer().includingDefaultValueFields();
+
+    private static final Pattern PATH_PARAM_PATTERN = Pattern.compile("\\(\\?<([\\w]+)>[^)]+\\)");
 
     private final GrpcDocStringExtractor docstringExtractor = new GrpcDocStringExtractor();
 
@@ -115,7 +121,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         requireNonNull(descriptiveTypeInfoProvider, "descriptiveTypeInfoProvider");
 
         final Set<GrpcService> addedService = new HashSet<>();
-        final ImmutableList.Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();
+        final Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();
         final ServiceInfosBuilder serviceInfosBuilder = new ServiceInfosBuilder();
         for (ServiceConfig serviceConfig : serviceConfigs) {
             final GrpcService grpcService = serviceConfig.service().as(GrpcService.class);
@@ -238,7 +244,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         httpEndpoints.forEach(
                 httpEndpoint -> byServiceName.put(httpEndpoint.spec().serviceName(), httpEndpoint));
 
-        final ImmutableList.Builder<ServiceInfo> serviceInfos = ImmutableList.builder();
+        final Builder<ServiceInfo> serviceInfos = ImmutableList.builder();
         byServiceName.asMap().forEach(
                 (key, value) -> serviceInfos.add(buildHttpServiceInfo(key + HTTP_SERVICE_SUFFIX, value)));
         return serviceInfos.build();
@@ -255,7 +261,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                  .forEach(entry -> byMethodName.put(entry.spec().methodName() + '/' + entry.httpMethod(),
                                                     entry));
 
-        final ImmutableList.Builder<MethodInfo> methodInfos = ImmutableList.builder();
+        final Builder<MethodInfo> methodInfos = ImmutableList.builder();
         byMethodName.asMap().forEach((name, httpEndpoints) -> {
             final List<HttpEndpoint> sortedEndpoints =
                     httpEndpoints.stream().sorted(Comparator.comparingInt(ep -> ep.spec.order()))
@@ -264,7 +270,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             final HttpEndpoint firstEndpoint = sortedEndpoints.get(0);
             final HttpEndpointSpecification firstSpec = firstEndpoint.spec();
 
-            final ImmutableList.Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
+            final Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
             firstSpec.pathVariables().forEach(paramName -> {
                 @Nullable
                 final Parameter parameter = firstSpec.parameters().get(paramName);
@@ -310,9 +316,14 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
             final List<String> examplePaths =
                     sortedEndpoints.stream()
-                                   .map(httpEndpoint -> httpEndpoint.spec().route())
-                                   .filter(route -> route.pathType() != RoutePathType.REGEX)
-                                   .map(Route::patternString)
+                                   .map(httpEndpoint -> {
+                                       final Route route = httpEndpoint.spec().route();
+                                       if (route.pathType() == RoutePathType.REGEX ||
+                                           route.pathType() == RoutePathType.REGEX_WITH_PREFIX) {
+                                           return convertRegexPath(route.patternString());
+                                       }
+                                       return route.patternString();
+                                   })
                                    .collect(toImmutableList());
 
             final List<String> exampleQueries =
@@ -340,6 +351,12 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         return new ServiceInfo(serviceName, methodInfos.build());
     }
 
+    @VisibleForTesting
+    static String convertRegexPath(String patternString) {
+        // map '/a/(?<p0>[^/]+):get' to '/a/p0:get'
+        return PATH_PARAM_PATTERN.matcher(patternString).replaceAll("$1");
+    }
+
     private static TypeSignature descriptiveMessageSignature(Descriptor descriptor) {
         return TypeSignature.ofStruct(descriptor.getFullName(), descriptor);
     }
@@ -359,8 +376,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                              })
                              .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
                                                              .entrySet().stream())
-                             .collect(toImmutableMap(Map.Entry<String, String>::getKey,
-                                                     (Map.Entry<String, String> entry) ->
+                             .collect(toImmutableMap(Entry<String, String>::getKey,
+                                                     (Entry<String, String> entry) ->
                                                              DescriptionInfo.of(entry.getValue()),
                                                      (a, b) -> a));
     }

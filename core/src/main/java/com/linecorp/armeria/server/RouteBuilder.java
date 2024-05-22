@@ -217,7 +217,7 @@ public final class RouteBuilder {
 
     private RouteBuilder glob(String glob, int numGroupsToSkip) {
         requireNonNull(glob, "glob");
-        return pathMapping(globPathMapping(requireNonNull(glob, "glob"), numGroupsToSkip));
+        return pathMapping(globPathMapping(glob, numGroupsToSkip));
     }
 
     /**

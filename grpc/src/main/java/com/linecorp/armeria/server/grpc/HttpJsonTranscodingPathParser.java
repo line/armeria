@@ -385,17 +385,14 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String pathVariable(PathMappingType type) {
-            if (type == PathMappingType.PARAMETERIZED) {
+            if (type == PathMappingType.PARAMETERIZED || type == PathMappingType.REGEX) {
                 if (parentFieldPath != null) {
                     return parentFieldPath;
                 } else {
                     return 'p' + StringUtil.toString(pathVarIndex);
                 }
-            } else if (type == PathMappingType.GLOB) {
-                return StringUtil.toString(pathVarIndex);
-            } else {
-                return 'p' + StringUtil.toString(pathVarIndex);
             }
+            return StringUtil.toString(pathVarIndex);
         }
 
         WildcardPathSegment withParentFieldPath(String parentFieldPath) {
