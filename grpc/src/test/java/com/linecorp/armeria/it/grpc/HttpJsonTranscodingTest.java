@@ -955,8 +955,8 @@ public class HttpJsonTranscodingTest {
 
         final JsonNode getMessageV1 = findMethod(methods, "GetMessageV1");
         assertThat(getMessageV1.get("httpMethod").asText()).isEqualTo("GET");
-        assertThat(pathMapping(getMessageV1)).containsExactlyInAnyOrder("/v1/messages/:p0",
-                                                                        "/foo/v1/messages/:p0");
+        assertThat(pathMapping(getMessageV1)).containsExactlyInAnyOrder("/v1/messages/:@p0",
+                                                                        "/foo/v1/messages/:@p0");
 
         final JsonNode getMessageV2 = findMethod(methods, "GetMessageV2");
         assertThat(getMessageV2.get("httpMethod").asText()).isEqualTo("GET");
