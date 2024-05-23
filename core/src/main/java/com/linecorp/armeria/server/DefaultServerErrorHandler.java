@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -96,10 +95,8 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
             } else {
                 final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
                 assert ctxExtension != null;
-                final Request request = ctxExtension.originalRequest();
-
-                if (request instanceof DecodedHttpRequest &&
-                    ((DecodedHttpRequest) request).isNormallyClosed()) {
+                final DecodedHttpRequest request = (DecodedHttpRequest) ctxExtension.originalRequest();
+                if (request.isNormallyClosed()) {
                     status = HttpStatus.SERVICE_UNAVAILABLE;
                 } else {
                     // The server didn't receive the request fully yet.
