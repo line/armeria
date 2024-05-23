@@ -16,12 +16,11 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.CANCELLATION_AND_POOLED_OPTIONS;
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.CANCELLATION_OPTION;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.POOLED_OBJECTS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
+import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.toSubscriptionOptions;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -227,15 +226,12 @@ public abstract class FilteredStreamMessage<T, U> extends AggregationSupport imp
     }
 
     private void subscribe(Subscriber<? super U> subscriber, EventExecutor executor,
-                           boolean withPooledObjects,
-                           boolean notifyCancellation) {
+                           boolean withPooledObjects, boolean notifyCancellation) {
         final FilteringSubscriber filteringSubscriber = new FilteringSubscriber(
-                subscriber, withPooledObjects, notifyCancellation);
-        if (filterSupportsPooledObjects) {
-            upstream.subscribe(filteringSubscriber, executor, CANCELLATION_AND_POOLED_OPTIONS);
-        } else {
-            upstream.subscribe(filteringSubscriber, executor, CANCELLATION_OPTION);
-        }
+                subscriber, withPooledObjects);
+        final SubscriptionOption[] options = toSubscriptionOptions(filterSupportsPooledObjects,
+                                                                   notifyCancellation);
+        upstream.subscribe(filteringSubscriber, executor, options);
     }
 
     @Override
@@ -253,28 +249,39 @@ public abstract class FilteredStreamMessage<T, U> extends AggregationSupport imp
         upstream.abort(requireNonNull(cause, "cause"));
     }
 
-    private final class FilteringSubscriber implements Subscriber<T> {
+    private final class FilteringSubscriber implements Subscription, Subscriber<T> {
 
         private final Subscriber<? super U> delegate;
         private final boolean subscribedWithPooledObjects;
-        private final boolean notifyCancellation;
 
         private boolean completed;
         @Nullable
         private Subscription upstream;
 
-        FilteringSubscriber(Subscriber<? super U> delegate, boolean subscribedWithPooledObjects,
-                            boolean notifyCancellation) {
+        FilteringSubscriber(Subscriber<? super U> delegate, boolean subscribedWithPooledObjects) {
             this.delegate = requireNonNull(delegate, "delegate");
             this.subscribedWithPooledObjects = subscribedWithPooledObjects;
-            this.notifyCancellation = notifyCancellation;
+        }
+
+        @Override
+        public void request(long n) {
+            assert upstream != null;
+            upstream.request(n);
+        }
+
+        @Override
+        public void cancel() {
+            assert upstream != null;
+            onCancellation(delegate);
+            completionFuture.completeExceptionally(CancelledSubscriptionException.get());
+            upstream.cancel();
         }
 
         @Override
         public void onSubscribe(Subscription s) {
             upstream = s;
             try {
-                beforeSubscribe(delegate, s);
+                beforeSubscribe(delegate, this);
             } catch (Throwable ex) {
                 s.cancel();
                 logger.warn("Unexpected exception from {}#beforeSubscribe()",
@@ -282,7 +289,7 @@ public abstract class FilteredStreamMessage<T, U> extends AggregationSupport imp
                 return;
             }
 
-            delegate.onSubscribe(s);
+            delegate.onSubscribe(this);
         }
 
         @Override
@@ -310,14 +317,6 @@ public abstract class FilteredStreamMessage<T, U> extends AggregationSupport imp
 
         @Override
         public void onError(Throwable t) {
-            if (t instanceof CancelledSubscriptionException) {
-                onCancellation(delegate);
-                completionFuture.completeExceptionally(t);
-                if (!notifyCancellation) {
-                    return;
-                }
-            }
-
             if (completed) {
                 return;
             }

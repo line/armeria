@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedStreamException;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -97,6 +98,6 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
                                           0, true, ctx().newPromise());
         }
 
-        return newFailedFuture(ClosedStreamException.get());
+        return newFailedFuture(newClosedStreamException(channel()));
     }
 }

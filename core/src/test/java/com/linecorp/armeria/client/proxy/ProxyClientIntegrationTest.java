@@ -47,12 +47,14 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -92,6 +94,7 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import io.netty.util.ReferenceCountUtil;
 
 class ProxyClientIntegrationTest {
@@ -118,6 +121,21 @@ class ProxyClientIntegrationTest {
             sb.port(0, SessionProtocol.HTTP);
             sb.port(0, SessionProtocol.HTTPS);
             sb.tlsSelfSigned();
+            sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
+        }
+    };
+
+    @RegisterExtension
+    @Order(1)
+    static ServerExtension slowBackendServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.port(0, SessionProtocol.HTTP);
+            sb.port(0, SessionProtocol.HTTPS);
+            sb.tlsSelfSigned();
+            sb.childChannelPipelineCustomizer(pipeline -> {
+                pipeline.addFirst(new ChannelTrafficShapingHandler(128, 0));
+            });
             sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
         }
     };
@@ -646,6 +664,36 @@ class ProxyClientIntegrationTest {
                                                     .hasRootCauseInstanceOf(ProxyConnectException.class);
             assertThat(failedAttempts).hasValue(1);
             assertThat(selector.result()).isTrue();
+        }
+    }
+
+    /**
+     * Tests if a request is failed with {@link SessionProtocolNegotiationException} if a session negotiation
+     * with the backend server takes longer than a connection timeout.
+     *
+     * <p>Cleartext protocol are not used because the session could immediately complete when a connection is
+     * established with the proxy server.
+     */
+    @CsvSource({ "H1", "H2", "HTTPS" })
+    @ParameterizedTest
+    void testProxy_sessionTimeout(SessionProtocol protocol) {
+        try (ClientFactory clientFactory =
+                     ClientFactory.builder()
+                                  .proxyConfig(ProxyConfig.socks4(socksProxyServer.address()))
+                                  .connectTimeoutMillis(1000)
+                                  .tlsNoVerify()
+                                  .build()) {
+
+            final WebClient webClient = WebClient.builder(slowBackendServer.uri(protocol))
+                                                 .factory(clientFactory)
+                                                 .decorator(LoggingClient.newDecorator())
+                                                 .build();
+            final CompletableFuture<AggregatedHttpResponse> responseFuture =
+                    webClient.get(PROXY_PATH).aggregate();
+            assertThatThrownBy(responseFuture::join).isInstanceOf(CompletionException.class)
+                                                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                                                    .hasRootCauseInstanceOf(
+                                                            SessionProtocolNegotiationException.class);
         }
     }
 

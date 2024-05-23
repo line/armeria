@@ -1,0 +1,242 @@
+---
+date: 2024-01-30
+---
+
+## 🌟 New features
+
+- **xDS-based EndpointGroup**: You can utilize [xDS protocol](https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol)
+  to create <type://XdsEndpointGroup> for service discovery. #5342 #5336
+  ```java
+  XdsBootstrap bootstrap = XdsBootstrap.of(...);
+  EndpointGroup endpointGroup = XdsEndpointGroup.of(boostrap.listenerRoot("my-envoy-service"));
+  WebClient client = WebClient.of(SessionProtocol.HTTP, endpointGroup);
+  ```
+- **GraphQL Subscriptions over WebSocket**: You can now enable [GraphQL subscriptions over WebSocket](https://github.com/enisdenjo/graphql-ws/blob/master/PROTOCOL.md)
+  for live updates to your clients. #4999 #5280
+  ```java
+  GraphqlService
+    .builder()
+    .enableWebSocket(true)
+    .webSocketServiceCustomizer(ws -> {
+      // Customize the underlying WebSocket service.
+    })
+    .build();
+  ```
+- **Service-specific EventLoopGroup**: You can now assign a different `EventLoopGroup` to each service for
+  finer grained resource control. #4099 #5233
+  ```java
+  Server
+    .builder()
+    .serviceWorkerGroup(globalServiceWorkerGroup)
+    .route()
+       .path("/user")
+       // Use userServiceWorkerGroup for the user service.
+       .serviceWorkerGroup(userServiceWorkerGroup)
+       .build(userService)
+    .route()
+       .path("/api")
+       // Use apiServiceWorkerGroup for the API service.
+       .serviceWorkerGroup(apiServiceWorkerGroup)
+       .build(apiService)
+    .build();
+  ```
+- **Thrift Service Decorators**: You can now use <type://@Decorator> annotations to conveniently apply
+  custom decorators to Thrift services. #4230 #5356
+  ```java
+  @Decorator(ClassDecorator.class)
+  class MyHelloService implements HelloService.AsyncIface {
+    @Decorator(MethodDecorator.class)
+    @Override
+    public void hello(String name, AsyncMethodCallback<String> handler) throws TException {
+      ...
+    }
+  }
+  ```
+- **Sensitive Header Masking**: You can now easily mask request and response headers
+  using <type://HeadersSanitizer>. #5175 #5188
+  ```java
+  HeadersSanitizer<String> headersSanitizer =
+   HeadersSanitizer
+     .builderForText()
+     .sensitiveHeaders("Authorization", "API-Key", "Proxy-Authorization")
+     ...
+     .build();
+  
+  LogFormatter
+    .builderForText()
+    .requestHeadersSanitizer(headersSanitizer)
+    ...
+  ```
+- **Custom Exception Handling for gRPC clients**: You can customize how your gRPC clients respond to exceptions
+  by implementing <type://GrpcExceptionHandlerFunction>. #5347 #5351
+  ```java
+  GrpcClients
+    .builder("https://my-grpc-server.com") 
+    .exceptionHandler((ctx, cause, metadata) -> {
+      // Handle the exception.
+      return Status.INTERNAL.withDescription("Something went wrong");
+    })
+  ```
+- **Kubernetes Client Integration**: You can now use the popular [Fabric Kubernetes client](https://github.com/fabric8io/kubernetes-client)
+  seamlessly on top of Armeria when using the `armeria-kubernetes` module. #5167
+- **WebSocket Service Fallback**: You can now set up a fallback service for 
+  <type://WebSocketService> to handle both WebSocket and non-WebSocket requests on the same path with
+  <type://WebSocketServiceBuilder#fallbackService(HttpService)> #5368
+  ```java
+  WebSocketService webSocketService = 
+    WebSocketService
+      .builder()
+      // The fallback service is used when the request
+      // is not a WebSocket request.
+      .fallbackService(httpService)
+      .build();
+  Server
+    .builder()
+    .service("/ws-or-http", webSocketService)
+    .build();
+  ```
+- **WebSocket Frame Aggregation**: You can now enable to aggregate WebSocket continuation frames for simplified 
+  message processing using <type://WebSocketServiceBuilder#aggregateContinuation(boolean)>. #5357
+  ```java
+  WebSocketService
+    .builder()
+    // Aggregate continuation frames into a single frame.
+    .aggregateContinuation(true)
+    .build(); 
+  ```
+- **Active Connection Monitoring**: You can monitor the number of active connections with 
+  `armeria.client.connections#value{state="active"}` for your clients when using 
+  <type://ConnectionPoolListener#metricCollecting(MeterRegistry)> #4277 #5288
+  ```java
+  ConnectionPoolListener connectionPoolListener =
+    ConnectionPoolListener.metricCollecting(meterRegistry);
+
+  ClientFactory clientFactory =
+    ClientFactory
+      .builder()
+      .connectionPoolListener(connectionPoolListener)
+      .build();
+  ```
+- **Graceful Executor Shutdown**: You can now gracefully terminate a custom `ExecutorService` in sync with the
+  <type://Server>'s shutdown procedure. #5031 #5087
+  ```java
+  ServerListener
+    .builder()
+    // Shutdown the executor service when the server is stopping.
+    .shutdownWhenStopping(preStopExecutorService)
+    // Shutdown the executor service when the server is stopped.
+    .shutdownWhenStopped(postStopExecutorService)
+    .build()
+  ```
+- **Session Protocol in RoutingContext**: You can now acquire <type://SessionProtocol> directly from
+  <type://RoutingContext#sessionProtocol()> for enhanced routing and <type://ExchangeType> decisions.
+- **Eureka Health Check Customization**: You can override the default health check URL when registering a service
+  with Eureka. #5369
+  ```java
+  EurekaUpdatingListener
+    .builder()
+    // Override the default health check path provided by HealthCheckService.
+    .healthCheckUrlPath("/healthcheck")
+    .build();
+  ```
+
+## 📈 Improvements
+
+- Annotated services now support <type://HttpResult> wrapped in RxJava objects. #5380 #5386
+- You can now create <type://HttpFile> with 
+  [Spring Boot nested JAR URL](https://docs.spring.io/spring-boot/docs/current/reference/html/executable-jar.html#appendix.executable-jar.jarfile-class.compatibility). #5390 #5391
+- <type://WebSocketService> is restructured as an interface, allowing for custom implementations. #5368
+- Introduce <type://PreTlsHandshakeException> to better report exceptions occurring before a TLS handshake
+  initiates. #5344
+- Error messages for gRPC client stub generation have been clarified. #5387
+
+## 🛠️ Bug fixes
+
+- The completions of <type://ClientRequestContext#whenResponseCancelling()> and <type://ClientRequestContext#whenResponseCancelled()>
+  are now guaranteed even if <type://RequestContext#cancel()> is invoked before the initialization of 
+  the timeout scheduler. #5212
+- Fixed a leak within <type://WebSocketClient> when an invalid response is received. #5412
+- [`json_name` pseudo-option](https://protobuf.com/docs/language-spec#default-json-names) in protobuf files is 
+  now correctly respected for matching query parameters during gRPC HTTP/JSON transcoding. #5193 #5366
+- Implicit request objects are now correctly converted. #5389 #5393
+- <type://CloseWebSocketFrame> with empty reason phrases are now correctly handled. #5388
+- <type://Flags> now correctly logs all messages when <type://RequestContextExportingAppender> is configured in 
+  `logback.xml`. #5327 #5361
+- You no longer see <type://EndpointSelectionTimeoutException> when <type://HealthCheckedEndpointGroup> is 
+  initialized with duplicate <typeplural://Endpoint>. #5343
+- <type://HttpHeaders#containsBoolean(CharSequence,boolean)> now checks all header entries with the same
+  name. #5319
+- <type://GrpcService> provides more consistent `ServerCall.Listener` behavior under error conditions. #5273
+
+## 📃 Documentation
+
+- Updated [Production Checklist](/docs/advanced-production-checklist) with guidance on 
+  using <type://ClientFactoryBuilder#maxNumEventLoopsPerEndpoint(int)>. This addition will help you mitigate 
+  potential client-side bottlenecks. #5297
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- Apache Curator 5.5.0 → 5.6.0
+- Brave 5.16.0 → 6.0.0
+- Brotli4j 1.12.0 → 1.15.0
+- Envoy control plane 1.0.42 (new)
+- Dropwizard 2.1.8 → 2.1.10
+- Dropwizard Metrics 4.2.21 → 4.2.24
+- GraphQL Java 20.4 → 21.3
+- Fabric Kubernetes client 6.10.0 (new)
+- gRPC Java 1.58.0 → 1.61.0
+- gRPC Kotlin 1.4.0 → 1.4.1
+- Guava 32.1.3 → 33.0.0
+- Jackson 2.15.3 → 2.16.1
+- Jetty 9.4.51 → 9.4.52, 10.0.17 → 10.0.19, 11.0.17 → 11.0.19, 12.0.5 (new)
+- JUnit 5.10.0 → 5.10.1
+- Kafka client 3.6.0 → 3.6.1
+- Kotlin 1.9.0 → 1.9.22
+- krotoDC 1.0.5 - 1.0.6
+- Logback 1.2.11 → 1.2.13, 1.3.11 → 1.3.14, 1.4.11 → 1.4.14
+- Micrometer 1.11.5 → 1.12.2
+- Micrometer Tracing 1.1.6 → 1.2.2
+- Netty 4.1.100 → 4.1.106
+- Netty io_uring 0.0.23 → 0.0.24
+- Protobuf 3.24.0 → 3.25.1
+- Reactor 3.5.11 → 3.6.2
+- Resilience4j 2.1.0 → 2.2.0
+- ScalaPB 0.11.13 → 0.11.15
+- Spring 6.0.11 → 6.1.3
+- Spring Boot 2.7.14 → 2.7.18, 3.1.2 → 3.2.2
+- Tomcat 8.5.94 → 8.5.98, 9.0.82 → 9.0.85, 10.1.15 → 10.1.18
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  '0x1306e6d',
+  'Dogacel',
+  'KarboniteKream',
+  'Lincong',
+  'andreaTP',
+  'chaahc',
+  'cj848',
+  'codefromthecrypt',
+  'eottabom',
+  'gibeom-gwon',
+  'ikhoon',
+  'imasahiro',
+  'injae-kim',
+  'jrhee17',
+  'kezhenxu94',
+  'lujiajing1126',
+  'minwoox',
+  'mynameisjwlee',
+  'seonwoo960000',
+  'spacecowboy',
+  'tomatophobia',
+  'trustin'
+]} />

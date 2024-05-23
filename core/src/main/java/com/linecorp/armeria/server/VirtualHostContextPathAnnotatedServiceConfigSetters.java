@@ -26,11 +26,13 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A {@link VirtualHostContextPathAnnotatedServiceConfigSetters} builder which configures
@@ -242,6 +244,18 @@ public final class VirtualHostContextPathAnnotatedServiceConfigSetters
             long delayMillis) {
         return (VirtualHostContextPathAnnotatedServiceConfigSetters)
                 super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
+    public VirtualHostContextPathAnnotatedServiceConfigSetters serviceWorkerGroup(
+            EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop) {
+        return (VirtualHostContextPathAnnotatedServiceConfigSetters)
+                super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public VirtualHostContextPathAnnotatedServiceConfigSetters serviceWorkerGroup(int numThreads) {
+        return (VirtualHostContextPathAnnotatedServiceConfigSetters) super.serviceWorkerGroup(numThreads);
     }
 
     @Override

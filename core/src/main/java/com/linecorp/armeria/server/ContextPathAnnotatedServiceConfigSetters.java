@@ -27,11 +27,13 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A {@link ContextPathAnnotatedServiceConfigSetters} builder which configures an {@link AnnotatedService}
@@ -227,6 +229,18 @@ public final class ContextPathAnnotatedServiceConfigSetters
     public ContextPathAnnotatedServiceConfigSetters requestAutoAbortDelayMillis(
             long delayMillis) {
         return (ContextPathAnnotatedServiceConfigSetters) super.requestAutoAbortDelayMillis(delayMillis);
+    }
+
+    @Override
+    public ContextPathAnnotatedServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                                       boolean shutdownOnStop) {
+        return (ContextPathAnnotatedServiceConfigSetters)
+                super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public ContextPathAnnotatedServiceConfigSetters serviceWorkerGroup(int numThreads) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.serviceWorkerGroup(numThreads);
     }
 
     @Override

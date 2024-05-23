@@ -56,6 +56,7 @@ public final class HttpHeaderNames {
     // - Added pseudo headers
     // - Added Accept-Patch
     // - Added Content-Base
+    // - Added Git-Protocol
     // - Added Prefer
     // - Removed the ancient CSP headers
     //   - X-Content-Security-Policy
@@ -232,6 +233,11 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString FOLLOW_ONLY_WHEN_PRERENDER_SHOWN =
             create("Follow-Only-When-Prerender-Shown");
+    /**
+     * The HTTP {@code "Git-Protocol"} header field name, as described in
+     * <a href="https://git-scm.com/docs/protocol-v2#_http_transport">HTTP Transport</a>.
+     */
+    public static final AsciiString GIT_PROTOCOL = create("Git-Protocol");
     /**
      * The HTTP {@code "Host"} header field name.
      */
@@ -900,6 +906,20 @@ public final class HttpHeaderNames {
      * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc8586">{@code CDN-Loop}</a> header field name.
      */
     public static final AsciiString CDN_LOOP = create("CDN-Loop");
+
+    /**
+     * The HTTP <a
+     * href="https://wicg.github.io/turtledove/#handling-direct-from-seller-signals">{@code
+     * Sec-Ad-Auction-Fetch}</a> header field name.
+     */
+    public static final AsciiString SEC_AD_AUCTION_FETCH = create("Sec-Ad-Auction-Fetch");
+
+    /**
+     * The HTTP <a
+     * href="https://wicg.github.io/turtledove/#handling-direct-from-seller-signals">{@code
+     * Ad-Auction-Signals}</a> header field name.
+     */
+    public static final AsciiString AD_AUCTION_SIGNALS = create("Ad-Auction-Signals");
 
     private static final Map<CharSequence, AsciiString> map;
     private static final Map<AsciiString, String> inverseMap;

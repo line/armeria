@@ -27,11 +27,13 @@ import kotlin.coroutines.CoroutineContext
 class CustomCoroutineContextProvider : CoroutineContextProvider {
     companion object {
         val dispatcher: ExecutorCoroutineDispatcher
+
         init {
-            val executor: BlockingTaskExecutor = BlockingTaskExecutor.builder()
-                .threadNamePrefix("custom-kotlin-grpc-worker")
-                .numThreads(1)
-                .build()
+            val executor: BlockingTaskExecutor =
+                BlockingTaskExecutor.builder()
+                    .threadNamePrefix("custom-kotlin-grpc-worker")
+                    .numThreads(1)
+                    .build()
             dispatcher = executor.asCoroutineDispatcher()
             ShutdownHooks.addClosingTask { executor.shutdown() }
         }

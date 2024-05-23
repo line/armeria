@@ -29,24 +29,30 @@ import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SIGNATURE;
 import static com.linecorp.armeria.server.saml.SamlHttpParameterNames.SIGNATURE_ALGORITHM;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.build;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.deserialize;
+import static com.linecorp.armeria.server.saml.SamlMessageUtil.serialize;
 import static com.linecorp.armeria.server.saml.SamlMessageUtil.sign;
 import static com.linecorp.armeria.server.saml.SamlMetadataServiceFunction.CONTENT_TYPE_SAML_METADATA;
 import static java.util.Objects.requireNonNull;
+import static net.shibboleth.utilities.java.support.xml.SerializeSupport.nodeToString;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 import org.joda.time.DateTime;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.opensaml.core.criterion.EntityIdCriterion;
@@ -111,32 +117,30 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 @GenerateNativeImageTrace
 class SamlServiceProviderTest {
 
+    private static final AtomicReference<MessageContext<Response>> messageContextHolder =
+            new AtomicReference<>();
+
     private static final String signatureAlgorithm = SignatureConstants.ALGO_ID_SIGNATURE_RSA;
 
     private static final String spHostname = "localhost";
-    // Entity ID can be any form of a string. An URI string is one of the general forms of that.
+    // Entity ID can be any form of a string. A URI string is one of the general forms of that.
     private static final String spEntityId = "http://127.0.0.1";
     private static final CredentialResolver spCredentialResolver;
 
     private static final Credential idpCredential;
+
+    private static final Credential badIdpCredential;
 
     private static final SamlRequestIdManager requestIdManager = new SequentialRequestIdManager();
 
     static {
         try {
             // Create IdP's key store for testing.
-            final KeyStore idpKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            idpKeyStore.load(null, null);
-
             final SelfSignedCertificate idp = new SelfSignedCertificate();
-            idpKeyStore.setKeyEntry("signing", idp.key(), "".toCharArray(),
-                                    new Certificate[] { idp.cert() });
-            final CredentialResolver idpCredentialResolver =
-                    new KeyStoreCredentialResolver(idpKeyStore, ImmutableMap.of("signing", ""));
+            idpCredential = toIdpCredential(idp);
 
-            final CriteriaSet cs = new CriteriaSet();
-            cs.add(new EntityIdCriterion("signing"));
-            idpCredential = idpCredentialResolver.resolveSingle(cs);
+            // Create a bad IdP's key store to ensure our SAML implementation rejects an invalid signature.
+            badIdpCredential = toIdpCredential(new SelfSignedCertificate());
 
             // Create my key store for testing.
             final KeyStore myKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -162,6 +166,22 @@ class SamlServiceProviderTest {
         } catch (Exception e) {
             throw new Error(e);
         }
+    }
+
+    private static Credential toIdpCredential(SelfSignedCertificate ssc) throws Exception {
+        final KeyStore idpKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        idpKeyStore.load(null, null);
+
+        idpKeyStore.setKeyEntry("signing", ssc.key(), "".toCharArray(), new Certificate[] { ssc.cert() });
+        final CredentialResolver idpCredentialResolver =
+                new KeyStoreCredentialResolver(idpKeyStore, ImmutableMap.of("signing", ""));
+
+        final CriteriaSet badCs = new CriteriaSet();
+        badCs.add(new EntityIdCriterion("signing"));
+
+        final Credential credential = idpCredentialResolver.resolveSingle(badCs);
+        assert credential != null;
+        return credential;
     }
 
     @RegisterExtension
@@ -274,6 +294,7 @@ class SamlServiceProviderTest {
         @Override
         public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                         @Nullable MessageContext<Response> message, Throwable cause) {
+            messageContextHolder.set(message);
             // Handle as an error so that a test client can detect the failure.
             return HttpResponse.of(HttpStatus.BAD_REQUEST);
         }
@@ -299,6 +320,11 @@ class SamlServiceProviderTest {
     }
 
     final WebClient client = WebClient.of(server.httpUri());
+
+    @BeforeEach
+    void setup() {
+        messageContextHolder.set(null);
+    }
 
     @Test
     void shouldRespondAuthnRequest_HttpRedirect() throws Exception {
@@ -389,7 +415,8 @@ class SamlServiceProviderTest {
         final Response response =
                 getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/post");
         final AggregatedHttpResponse res = sendViaHttpPostBindingProtocol("/saml/acs/post",
-                                                                          SAML_RESPONSE, response);
+                                                                          SAML_RESPONSE, response,
+                                                                          idpCredential);
 
         assertThat(res.status()).isEqualTo(HttpStatus.FOUND);
         assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/");
@@ -400,10 +427,55 @@ class SamlServiceProviderTest {
         final Response response =
                 getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/redirect");
         final AggregatedHttpResponse res = sendViaHttpRedirectBindingProtocol("/saml/acs/redirect",
-                                                                              SAML_RESPONSE, response);
+                                                                              SAML_RESPONSE, response,
+                                                                              idpCredential);
 
         assertThat(res.status()).isEqualTo(HttpStatus.FOUND);
         assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/");
+    }
+
+    @Test
+    void shouldNotConsumeAssertionWithInvalidSignature_HttpPost() throws Exception {
+        shouldNotConsumeAssertion_HttpPost(badIdpCredential);
+    }
+
+    @Test
+    void shouldNotConsumeAssertionWithInvalidSignature_HttpRedirect() throws Exception {
+        shouldNotConsumeAssertion_HttpRedirect(badIdpCredential);
+    }
+
+    @Test
+    void shouldNotConsumeAssertionWithoutSignature_HttpPost() throws Exception {
+        shouldNotConsumeAssertion_HttpPost(null);
+        final MessageContext<Response> messageContext = messageContextHolder.get();
+        assertThat(messageContext.getMessage().getSignature()).isNull();
+    }
+
+    @Test
+    void shouldNotConsumeAssertionWithoutSignature_HttpRedirect() throws Exception {
+        shouldNotConsumeAssertion_HttpRedirect(null);
+    }
+
+    private void shouldNotConsumeAssertion_HttpPost(@Nullable Credential idpCredential) throws Exception {
+        final Response response =
+                getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/post");
+        final AggregatedHttpResponse res = sendViaHttpPostBindingProtocol("/saml/acs/post",
+                                                                          SAML_RESPONSE, response,
+                                                                          idpCredential);
+
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isNull();
+    }
+
+    private void shouldNotConsumeAssertion_HttpRedirect(@Nullable Credential idpCredential) throws Exception {
+        final Response response =
+                getAuthResponse("http://" + spHostname + ':' + server.httpPort() + "/saml/acs/redirect");
+        final AggregatedHttpResponse res = sendViaHttpRedirectBindingProtocol("/saml/acs/redirect",
+                                                                              SAML_RESPONSE, response,
+                                                                              idpCredential);
+
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isNull();
     }
 
     private static Response getAuthResponse(String recipient) throws Exception {
@@ -472,8 +544,8 @@ class SamlServiceProviderTest {
                 getLogoutRequest("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/post",
                                  "http://idp.example.com/post");
 
-        final AggregatedHttpResponse res = sendViaHttpPostBindingProtocol("/saml/slo/post",
-                                                                          SAML_REQUEST, logoutRequest);
+        final AggregatedHttpResponse res = sendViaHttpPostBindingProtocol("/saml/slo/post", SAML_REQUEST,
+                                                                          logoutRequest, idpCredential);
 
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType()).isEqualTo(MediaType.HTML_UTF_8);
@@ -495,7 +567,8 @@ class SamlServiceProviderTest {
                                  "http://idp.example.com/redirect");
 
         final AggregatedHttpResponse res =
-                sendViaHttpRedirectBindingProtocol("/saml/slo/redirect", SAML_REQUEST, logoutRequest);
+                sendViaHttpRedirectBindingProtocol("/saml/slo/redirect", SAML_REQUEST,
+                                                   logoutRequest, idpCredential);
 
         assertThat(res.status()).isEqualTo(HttpStatus.FOUND);
 
@@ -506,6 +579,52 @@ class SamlServiceProviderTest {
                 "SAMLResponse=([^&]+)&SigAlg=([^&]+)&Signature=(.+)$");
         assertThat(location).isNotNull();
         assertThat(p.matcher(location).matches()).isTrue();
+    }
+
+    @Test
+    void shouldNotConsumeLogoutRequestWithInvalidSignature_HttpPost() throws Exception {
+        shouldNotConsumeLogoutRequest_HttpPost(badIdpCredential);
+    }
+
+    @Test
+    void shouldNotConsumeLogoutRequestWithInvalidSignature_HttpRedirect() throws Exception {
+        shouldNotConsumeLogoutRequest_HttpRedirect(badIdpCredential);
+    }
+
+    @Test
+    void shouldNotConsumeLogoutRequestWithoutSignature_HttpPost() throws Exception {
+        shouldNotConsumeLogoutRequest_HttpPost(null);
+    }
+
+    @Test
+    void shouldNotConsumeLogoutRequestWithoutSignature_HttpRedirect() throws Exception {
+        shouldNotConsumeLogoutRequest_HttpRedirect(null);
+    }
+
+    private void shouldNotConsumeLogoutRequest_HttpPost(@Nullable Credential idpCredential) {
+        final LogoutRequest logoutRequest =
+                getLogoutRequest("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/post",
+                                 "http://idp.example.com/post");
+
+        final AggregatedHttpResponse res = sendViaHttpPostBindingProtocol("/saml/slo/post", SAML_REQUEST,
+                                                                          logoutRequest, idpCredential);
+
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
+        assertThat(res.contentUtf8()).isEqualTo("400 Bad Request");
+    }
+
+    private void shouldNotConsumeLogoutRequest_HttpRedirect(@Nullable Credential idpCredential) {
+        final LogoutRequest logoutRequest =
+                getLogoutRequest("http://" + spHostname + ':' + server.httpPort() + "/saml/slo/redirect",
+                                 "http://idp.example.com/redirect");
+
+        final AggregatedHttpResponse res =
+                sendViaHttpRedirectBindingProtocol("/saml/slo/redirect", SAML_REQUEST,
+                                                   logoutRequest, idpCredential);
+
+        assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.headers().get(HttpHeaderNames.LOCATION)).isNull();
     }
 
     private static LogoutRequest getLogoutRequest(String destination, String issuerId) {
@@ -528,22 +647,33 @@ class SamlServiceProviderTest {
     }
 
     private AggregatedHttpResponse sendViaHttpPostBindingProtocol(
-            String path, String paramName, SignableSAMLObject signableObj) throws Exception {
-        final String encoded = toSignedBase64(signableObj, idpCredential, signatureAlgorithm);
+            String path, String paramName, SignableSAMLObject signableObj, @Nullable Credential idpCredential) {
+        final String encoded;
+        if (idpCredential != null) {
+            encoded = toSignedBase64(signableObj, idpCredential, signatureAlgorithm);
+        } else {
+            // Generate an unsigned message.
+            final String messageStr = nodeToString(serialize(signableObj));
+            encoded = Base64.getEncoder().encodeToString(messageStr.getBytes(StandardCharsets.UTF_8));
+        }
+
         final HttpRequest req = HttpRequest.of(HttpMethod.POST, path, MediaType.FORM_DATA,
                                                QueryParams.of(paramName, encoded).toQueryString());
         return client.execute(req).aggregate().join();
     }
 
     private AggregatedHttpResponse sendViaHttpRedirectBindingProtocol(
-            String path, String paramName, SAMLObject samlObject) throws Exception {
+            String path, String paramName, SAMLObject samlObject, @Nullable Credential idpCredential) {
 
         final QueryParamsBuilder params = QueryParams.builder();
         params.add(paramName, toDeflatedBase64(samlObject));
         params.add(SIGNATURE_ALGORITHM, signatureAlgorithm);
         final String input = params.toQueryString();
-        final String output = generateSignature(idpCredential, signatureAlgorithm, input);
-        params.add(SIGNATURE, output);
+        if (idpCredential != null) {
+            params.add(SIGNATURE, generateSignature(idpCredential, signatureAlgorithm, input));
+        } else {
+            // Generate an unsigned message.
+        }
 
         final HttpRequest req = HttpRequest.of(HttpMethod.POST, path, MediaType.FORM_DATA,
                                                params.toQueryString());

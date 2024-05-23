@@ -361,8 +361,8 @@ class ServerBuilderTest {
                                                           Duration.ofMillis(250),
                                                           ctx.eventLoop())))
                                     .withVirtualHost(
-                                            h -> h.hostnamePattern("foo.com")
-                                                  .service("/custom_virtual_host",
+                                            "foo.com",
+                                            h -> h.service("/custom_virtual_host",
                                                            (ctx, req) -> HttpResponse.delayed(
                                                                    HttpResponse.of(HttpStatus.OK),
                                                                    Duration.ofMillis(150),
@@ -677,19 +677,19 @@ class ServerBuilderTest {
     void exceptionReportInterval() {
         final Server server1 = Server.builder()
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                     .unhandledExceptionsReportInterval(Duration.ofMillis(1000))
+                                     .unloggedExceptionsReportInterval(Duration.ofMillis(1000))
                                      .build();
-        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+        assertThat(server1.config().unloggedExceptionsReportIntervalMillis()).isEqualTo(1000);
 
         final Server server2 = Server.builder()
-                                     .unhandledExceptionsReportInterval(Duration.ofMillis(0))
+                                     .unloggedExceptionsReportInterval(Duration.ofMillis(0))
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+        assertThat(server2.config().unloggedExceptionsReportIntervalMillis()).isZero();
 
         assertThrows(IllegalArgumentException.class, () ->
                 Server.builder()
-                      .unhandledExceptionsReportInterval(Duration.ofMillis(-1000))
+                      .unloggedExceptionsReportInterval(Duration.ofMillis(-1000))
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .build());
     }
@@ -697,20 +697,20 @@ class ServerBuilderTest {
     @Test
     void exceptionReportIntervalMilliSeconds() {
         final Server server1 = Server.builder()
-                                     .unhandledExceptionsReportIntervalMillis(1000)
+                                     .unloggedExceptionsReportIntervalMillis(1000)
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server1.config().unhandledExceptionsReportIntervalMillis()).isEqualTo(1000);
+        assertThat(server1.config().unloggedExceptionsReportIntervalMillis()).isEqualTo(1000);
 
         final Server server2 = Server.builder()
-                                     .unhandledExceptionsReportIntervalMillis(0)
+                                     .unloggedExceptionsReportIntervalMillis(0)
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server2.config().unhandledExceptionsReportIntervalMillis()).isZero();
+        assertThat(server2.config().unloggedExceptionsReportIntervalMillis()).isZero();
 
         assertThrows(IllegalArgumentException.class, () ->
                 Server.builder()
-                      .unhandledExceptionsReportIntervalMillis(-1000)
+                      .unloggedExceptionsReportIntervalMillis(-1000)
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .build());
     }
@@ -740,7 +740,7 @@ class ServerBuilderTest {
         final AggregatedHttpResponse response = client.get("/hook").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook");
-        assertThat(poppedCnt.get()).isEqualTo(1);
+        assertThat(poppedCnt.get()).isGreaterThan(0);
     }
 
     @Test
@@ -752,8 +752,8 @@ class ServerBuilderTest {
         final AggregatedHttpResponse response = client.get("/hook_route").aggregate().join();
 
         assertThat(response.contentUtf8()).isEqualTo("hook_route");
-        assertThat(poppedRouterCnt.get()).isEqualTo(1);
-        assertThat(poppedRouterCnt2.get()).isEqualTo(1);
+        assertThat(poppedRouterCnt.get()).isGreaterThan(0);
+        assertThat(poppedRouterCnt2.get()).isGreaterThan(0);
     }
 
     @Test

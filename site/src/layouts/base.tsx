@@ -36,7 +36,7 @@ const BaseLayout: React.FC<BaseLayoutProps> = (props) => {
   );
   let redirectUrl;
   if (hrefMatches && hrefMatches.length === 2) {
-    redirectUrl = `https://armeria.dev${hrefMatches[1]}`;
+    redirectUrl = `https://armeria.dev/${hrefMatches[1]}`;
     globalHistory.navigate(redirectUrl);
   }
   // Do not index redirect pages.

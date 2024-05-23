@@ -99,6 +99,24 @@ public interface RequestTarget {
     String authority();
 
     /**
+     * Returns the host of this {@link RequestTarget}. Unlike {@link #authority()}, host doesn't include
+     * a port number.
+     *
+     * @return a non-empty string if {@link #form()} is {@link RequestTargetForm#ABSOLUTE}.
+     *         {@code null} otherwise.
+     */
+    @Nullable
+    String host();
+
+    /**
+     * Returns the port of this {@link RequestTarget}.
+     *
+     * @return a positive port number if {@link #form()} is {@link RequestTargetForm#ABSOLUTE} and
+     *         {@link #authority()} has the port number. Zero or a negative value otherwise.
+     */
+    int port();
+
+    /**
      * Returns the path of this {@link RequestTarget}, which always starts with {@code '/'}.
      */
     String path();

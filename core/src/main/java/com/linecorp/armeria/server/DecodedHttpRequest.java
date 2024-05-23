@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -52,7 +54,7 @@ interface DecodedHttpRequest extends HttpRequest {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,
-                            requestStartTimeNanos, requestStartTimeMicros, false);
+                            requestStartTimeNanos, requestStartTimeMicros, false, false);
                 } else {
                     return new AggregatingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, config.maxRequestLength(), routingCtx,
@@ -101,9 +103,18 @@ interface DecodedHttpRequest extends HttpRequest {
     void abortResponse(Throwable cause, boolean cancel);
 
     /**
-     * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
+     * Tells whether {@link #abortResponse(Throwable, boolean)} was called or not.
      */
-    boolean needsAggregation();
+    boolean isResponseAborted();
+
+    /**
+     * Returns a {@link CompletableFuture} that is completed the request is fully aggregated.
+     * {@code null} if the request does not need to be aggregated.
+     */
+    @Nullable
+    default CompletableFuture<Void> whenAggregated() {
+        return null;
+    }
 
     /**
      * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
@@ -126,6 +137,20 @@ interface DecodedHttpRequest extends HttpRequest {
      * Returns whether the request is an HTTP/1.1 webSocket request.
      */
     default boolean isHttp1WebSocket() {
+        return false;
+    }
+
+    /**
+     * Sets whether to send an RST_STREAM after the response sending response when the peer is open state.
+     */
+    default void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
+        // no-op
+    }
+
+    /**
+     * Tells whether to send an RST_STREAM after the response sending response when the peer is open state.
+     */
+    default boolean shouldResetOnlyIfRemoteIsOpen() {
         return false;
     }
 }

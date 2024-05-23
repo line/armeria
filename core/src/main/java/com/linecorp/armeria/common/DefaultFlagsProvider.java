@@ -27,11 +27,13 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 
 /**
  * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
@@ -70,6 +72,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS = 0; // Disabled
     static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS = 0; // Disabled
     static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
+    // Same as server connection drain duration
+    static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = 1000;
     static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_MAX_FRAME_SIZE = 16384; // From HTTP/2 specification
@@ -78,7 +82,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     // parameter values, thus anything greater than 0x7FFFFFFF will break them or make them unhappy.
     static final long DEFAULT_HTTP2_MAX_STREAMS_PER_CONNECTION = Integer.MAX_VALUE;
     static final long DEFAULT_HTTP2_MAX_HEADER_LIST_SIZE = 8192L; // from Netty default maxHeaderSize
-    static final int DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE = 400; // Netty default is 200 for 30 seconds
+    // Netty default is 200 for 30 seconds
+    static final int DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE = 400;
     static final String DEFAULT_BACKOFF_SPEC = "exponential=200:10000,jitter=0.2";
     static final int DEFAULT_MAX_TOTAL_ATTEMPTS = 10;
     static final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS = 0; // No delay.
@@ -89,7 +94,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final String CACHED_HEADERS = ":authority,:scheme,:method,accept-encoding,content-type";
     static final String FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
     static final String DNS_CACHE_SPEC = "maximumSize=4096";
-    static final long DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
+    static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
+    static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS = 3000;
 
     private DefaultFlagsProvider() {}
 
@@ -156,6 +162,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean useOpenSsl() {
         return true;
+    }
+
+    @Override
+    public TlsEngineType tlsEngineType() {
+        return TlsEngineType.OPENSSL;
     }
 
     @Override
@@ -299,6 +310,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    }
+
+    @Override
     public Integer defaultHttp2InitialConnectionWindowSize() {
         return DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE;
     }
@@ -324,8 +340,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Integer defaultHttp2MaxResetFramesPerMinute() {
-        return DEFAULT_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
+    public Integer defaultServerHttp2MaxResetFramesPerMinute() {
+        return DEFAULT_SERVER_HTTP2_MAX_RESET_FRAMES_PER_MINUTE;
     }
 
     @Override
@@ -464,6 +480,21 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public Long defaultUnhandledExceptionsReportIntervalMillis() {
-        return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+        return DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    @Override
+    public Long defaultUnloggedExceptionsReportIntervalMillis() {
+        return DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    @Override
+    public DistributionStatisticConfig distributionStatisticConfig() {
+        return DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG;
+    }
+
+    @Override
+    public Long defaultHttp1ConnectionCloseDelayMillis() {
+        return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
     }
 }

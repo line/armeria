@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcCallOptions;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -97,6 +98,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private final Compressor compressor;
     private final DecompressorRegistry decompressorRegistry;
     private final CallCredentials credentials0;
+    private final GrpcExceptionHandlerFunction exceptionHandler;
+    private final boolean useMethodMarshaller;
 
     ArmeriaChannel(ClientBuilderParams params,
                    HttpClient httpClient,
@@ -117,9 +120,11 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);
         maxInboundMessageSizeBytes = maxInboundMessageSizeBytes(options);
         unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
+        useMethodMarshaller = options.get(GrpcClientOptions.USE_METHOD_MARSHALLER);
         compressor = options.get(GrpcClientOptions.COMPRESSOR);
         decompressorRegistry = options.get(GrpcClientOptions.DECOMPRESSOR_REGISTRY);
         credentials0 = options.get(GrpcClientOptions.CALL_CREDENTIALS);
+        exceptionHandler = options.get(GrpcClientOptions.EXCEPTION_HANDLER);
     }
 
     @Override
@@ -176,7 +181,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 decompressorRegistry,
                 serializationFormat,
                 jsonMarshaller,
-                unsafeWrapResponseBuffers);
+                unsafeWrapResponseBuffers,
+                exceptionHandler,
+                useMethodMarshaller);
     }
 
     @Override

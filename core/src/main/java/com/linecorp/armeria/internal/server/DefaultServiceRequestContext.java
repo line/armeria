@@ -72,6 +72,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 
 /**
@@ -90,6 +91,7 @@ public final class DefaultServiceRequestContext
             DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
 
     private final Channel ch;
+    private final EventLoop eventLoop;
     private final ServiceConfig cfg;
     private final RoutingContext routingContext;
     private final RoutingResult routingResult;
@@ -103,7 +105,7 @@ public final class DefaultServiceRequestContext
     private final InetSocketAddress remoteAddress;
     private final InetSocketAddress localAddress;
 
-    private boolean shouldReportUnhandledExceptions = true;
+    private boolean shouldReportUnloggedExceptions = true;
 
     private final RequestLogBuilder log;
 
@@ -141,22 +143,24 @@ public final class DefaultServiceRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
+            ServiceConfig cfg, Channel ch, EventLoop eventLoop, MeterRegistry meterRegistry,
+            SessionProtocol sessionProtocol, RequestId id, RoutingContext routingContext,
+            RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
             long requestStartTimeNanos, long requestStartTimeMicros,
             Supplier<? extends AutoCloseable> contextHook) {
 
-        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, exchangeType,
-             req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
+        this(cfg, ch, eventLoop, meterRegistry, sessionProtocol, id, routingContext, routingResult,
+             exchangeType, req, sslSession, proxiedAddresses, clientAddress, remoteAddress, localAddress,
              null /* requestCancellationScheduler */, requestStartTimeNanos, requestStartTimeMicros,
              HttpHeaders.of(), HttpHeaders.of(), contextHook);
     }
 
     public DefaultServiceRequestContext(
-            ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
+            ServiceConfig cfg, Channel ch, EventLoop eventLoop, MeterRegistry meterRegistry,
+            SessionProtocol sessionProtocol, RequestId id, RoutingContext routingContext,
+            RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
             InetAddress clientAddress, InetSocketAddress remoteAddress, InetSocketAddress localAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
@@ -170,6 +174,7 @@ public final class DefaultServiceRequestContext
               requireNonNull(req, "req"), null, null, contextHook);
 
         this.ch = requireNonNull(ch, "ch");
+        this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.cfg = requireNonNull(cfg, "cfg");
         this.routingContext = routingContext;
         this.routingResult = routingResult;
@@ -177,7 +182,10 @@ public final class DefaultServiceRequestContext
             this.requestCancellationScheduler = requestCancellationScheduler;
         } else {
             this.requestCancellationScheduler =
-                    CancellationScheduler.of(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+                    CancellationScheduler.ofServer(TimeUnit.MILLISECONDS.toNanos(cfg.requestTimeoutMillis()));
+            // the cancellation scheduler uses channelEventLoop since #start is called
+            // from the netty pipeline logic
+            this.requestCancellationScheduler.init(ch.eventLoop());
         }
         this.sslSession = sslSession;
         this.proxiedAddresses = requireNonNull(proxiedAddresses, "proxiedAddresses");
@@ -300,7 +308,7 @@ public final class DefaultServiceRequestContext
         if (contextAwareEventLoop != null) {
             return contextAwareEventLoop;
         }
-        return contextAwareEventLoop = ContextAwareEventLoop.of(this, ch.eventLoop());
+        return contextAwareEventLoop = ContextAwareEventLoop.of(this, eventLoop);
     }
 
     @Override
@@ -461,12 +469,22 @@ public final class DefaultServiceRequestContext
 
     @Override
     public boolean shouldReportUnhandledExceptions() {
-        return shouldReportUnhandledExceptions;
+        return shouldReportUnloggedExceptions;
     }
 
     @Override
     public void setShouldReportUnhandledExceptions(boolean value) {
-        shouldReportUnhandledExceptions = value;
+        shouldReportUnloggedExceptions = value;
+    }
+
+    @Override
+    public boolean shouldReportUnloggedExceptions() {
+        return shouldReportUnloggedExceptions;
+    }
+
+    @Override
+    public void setShouldReportUnloggedExceptions(boolean value) {
+        shouldReportUnloggedExceptions = value;
     }
 
     @Override

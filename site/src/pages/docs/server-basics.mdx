@@ -159,6 +159,15 @@ You can use the following path patterns to map an HTTP request path to a service
 | Regular expression                       | `regex:^/files/(?<filePath>.\*)$`     |
 +------------------------------------------+---------------------------------------+
 
+<Tip>
+You can append a verb suffix to the path as shown below:
+
+- `/foo/bar:verb`
+- `/users/{userId}:update`
+- `/users/:userId:update`
+
+</Tip>
+
 ## Per service configuration
 
 The examples above are just mapping the path of an HTTP request on a service. If you want to set configuration

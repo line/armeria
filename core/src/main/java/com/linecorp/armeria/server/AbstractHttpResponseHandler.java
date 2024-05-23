@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
@@ -55,7 +56,6 @@ abstract class AbstractHttpResponseHandler {
 
     private final CompletableFuture<Void> completionFuture;
     private boolean isComplete;
-    private boolean needsDisconnection;
 
     AbstractHttpResponseHandler(ChannelHandlerContext ctx,
                                 ServerHttpObjectEncoder responseEncoder,
@@ -76,7 +76,6 @@ abstract class AbstractHttpResponseHandler {
     }
 
     void disconnectWhenFinished() {
-        needsDisconnection = true;
         responseEncoder.keepAliveHandler().disconnectWhenFinished();
     }
 
@@ -91,11 +90,6 @@ abstract class AbstractHttpResponseHandler {
             completionFuture.completeExceptionally(cause);
         }
 
-        // Force shutdown mode: If a user explicitly sets `Connection: close` in the response headers, it is
-        // assumed that the connection should be closed after sending the response.
-        if (needsDisconnection) {
-            ctx.channel().close();
-        }
         return true;
     }
 
@@ -180,15 +174,17 @@ abstract class AbstractHttpResponseHandler {
                              .build();
         }
 
+        final HttpMethod method = reqCtx.method();
         if (!res.informationals().isEmpty()) {
             for (ResponseHeaders informational : res.informationals()) {
                 responseEncoder.writeHeaders(id, streamId, informational,
-                                             false, trailersEmpty);
+                                             false, trailersEmpty, method);
             }
         }
         logBuilder().responseHeaders(headers);
-        ChannelFuture future = responseEncoder.writeHeaders(id, streamId, headers,
-                                                            contentEmpty && trailersEmpty, trailersEmpty);
+        ChannelFuture future =
+                responseEncoder.writeHeaders(id, streamId, headers, contentEmpty && trailersEmpty,
+                                             trailersEmpty, method);
         if (!contentEmpty) {
             logBuilder().increaseResponseLength(content);
             future = responseEncoder.writeData(id, streamId, content, trailersEmpty);
@@ -209,7 +205,7 @@ abstract class AbstractHttpResponseHandler {
         final Throwable cause0 = firstNonNull(cause.getCause(), cause);
         final ServiceConfig serviceConfig = reqCtx.config();
         final AggregatedHttpResponse response = serviceConfig.errorHandler()
-                                                             .renderStatus(serviceConfig, req.headers(), status,
+                                                             .renderStatus(reqCtx, req.headers(), status,
                                                                            null, cause0);
         assert response != null;
         return response;
@@ -232,7 +228,11 @@ abstract class AbstractHttpResponseHandler {
     final void maybeWriteAccessLog() {
         final ServiceConfig config = reqCtx.config();
         if (config.transientServiceOptions().contains(TransientServiceOption.WITH_ACCESS_LOGGING)) {
-            reqCtx.log().whenComplete().thenAccept(config.accessLogWriter()::log);
+            reqCtx.log().whenComplete().thenAccept(log -> {
+                try (SafeCloseable ignored = reqCtx.push()) {
+                    config.accessLogWriter().log(log);
+                }
+            });
         }
     }
 
@@ -241,8 +241,7 @@ abstract class AbstractHttpResponseHandler {
      */
     final void scheduleTimeout() {
         // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
-        reqCtx.requestCancellationScheduler().init(reqCtx.eventLoop(), newCancellationTask(),
-                                                   0, /* server */ true);
+        reqCtx.requestCancellationScheduler().start(newCancellationTask());
     }
 
     /**
@@ -268,6 +267,12 @@ abstract class AbstractHttpResponseHandler {
                     // A stream or connection was already closed by a client
                     fail(cause);
                 } else {
+                    if (reqCtx.sessionProtocol().isMultiplex()) {
+                        req.setShouldResetOnlyIfRemoteIsOpen(true);
+                    } else if (req.isOpen()) {
+                        disconnectWhenFinished();
+                    }
+
                     req.abortResponse(cause, false);
                 }
             }

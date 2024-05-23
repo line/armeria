@@ -103,8 +103,7 @@ public interface ServerConfig {
     List<ServiceConfig> serviceConfigs();
 
     /**
-     * Returns the worker {@link EventLoopGroup} which is responsible for performing socket I/O and running
-     * {@link Service#serve(ServiceRequestContext, Request)}.
+     * Returns the worker {@link EventLoopGroup} which is responsible for performing socket I/O.
      */
     EventLoopGroup workerGroup();
 
@@ -337,7 +336,15 @@ public interface ServerConfig {
     Function<String, String> absoluteUriTransformer();
 
     /**
-     * Returns the interval between reporting unhandled exceptions in milliseconds.
+     * Returns the interval between reporting unlogged exceptions in milliseconds.
+     *
+     * @deprecated Use {@link #unloggedExceptionsReportIntervalMillis()} instead.
      */
+    @Deprecated
     long unhandledExceptionsReportIntervalMillis();
+
+    /**
+     * Returns the interval between reporting unlogged exceptions in milliseconds.
+     */
+    long unloggedExceptionsReportIntervalMillis();
 }

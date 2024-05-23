@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.common.SessionProtocol;
 
 class RouteTest {
 
@@ -44,12 +45,23 @@ class RouteTest {
         Route route;
         Route routeWithPrefix;
 
+        route = Route.builder().path("exact:/foo:bar/biz").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo:bar/biz", "/foo:bar/biz");
+
         route = Route.builder().path("/foo").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/foo", "/foo");
         routeWithPrefix = route.withPrefix("/prefix");
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo", "/prefix/foo");
+
+        route = Route.builder().path("/foo:verb").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo\\:verb", "/foo\\:verb");
+        routeWithPrefix = route.withPrefix("/prefix");
+        assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo\\:verb", "/prefix/foo\\:verb");
 
         route = Route.builder().path("/foo/{bar}").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
@@ -58,6 +70,12 @@ class RouteTest {
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo/:", "/prefix/foo/:");
 
+        route = Route.builder().path("/foo/{bar:biz}").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
+        assertThat(route.paths()).containsExactly("/foo/:", "/foo/:");
+        assertThat(route.paramNames()).hasSize(1);
+        assertThat(route.paramNames()).containsExactly("bar");
+
         route = Route.builder().path("/bar/:baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/bar/:", "/bar/:");
@@ -65,12 +83,45 @@ class RouteTest {
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/bar/:", "/prefix/bar/:");
 
+        route = Route.builder().path("/bar/:baz:").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
+        assertThat(route.paths()).containsExactly("/bar/:", "/bar/:");
+        assertThat(route.paramNames()).hasSize(1);
+        assertThat(route.paramNames()).containsExactly("baz");
+
+        route = Route.builder().path("/bar/:baz:verb").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
+        assertThat(route.paths()).containsExactly("/bar/:\\:verb", "/bar/:\\:verb");
+        routeWithPrefix = route.withPrefix("/prefix");
+        assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/bar/:\\:verb", "/prefix/bar/:\\:verb");
+
+        route = Route.builder().path("/bar/:baz:foo:verb").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
+        assertThat(route.paths()).containsExactly("/bar/:\\:verb", "/bar/:\\:verb");
+        assertThat(route.paramNames()).hasSize(1);
+        assertThat(route.paramNames()).containsExactly("baz");
+
         route = Route.builder().path("exact:/:foo/bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route.paths()).containsExactly("/:foo/bar", "/:foo/bar");
         routeWithPrefix = route.withPrefix("/prefix");
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(routeWithPrefix.paths()).containsExactly("/prefix/:foo/bar", "/prefix/:foo/bar");
+
+        route = Route.builder().path("exact:/:foo/bar:verb").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/:foo/bar:verb", "/:foo/bar:verb");
+        routeWithPrefix = route.withPrefix("/prefix");
+        assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/:foo/bar:verb", "/prefix/:foo/bar:verb");
+
+        route = Route.builder().path("exact:/foo:bar/biz").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo:bar/biz", "/foo:bar/biz");
+        routeWithPrefix = route.withPrefix("/prefix");
+        assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo:bar/biz", "/prefix/foo:bar/biz");
 
         route = Route.builder().path("prefix:/").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PREFIX);
@@ -125,10 +176,20 @@ class RouteTest {
         assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
         assertThat(route.patternString()).isEqualTo("/foo/bar");
 
+        route = Route.builder().path("/foo", "/bar:verb").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo/bar\\:verb", "/foo/bar\\:verb");
+        assertThat(route.patternString()).isEqualTo("/foo/bar:verb");
+
         route = Route.builder().path("/foo", "/bar/{baz}").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
         assertThat(route.paths()).containsExactly("/foo/bar/:", "/foo/bar/:");
         assertThat(route.patternString()).isEqualTo("/foo/bar/:baz");
+
+        route = Route.builder().path("/foo", "/bar/{baz}:verb").build();
+        assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
+        assertThat(route.paths()).containsExactly("/foo/bar/:\\:verb", "/foo/bar/:\\:verb");
+        assertThat(route.patternString()).isEqualTo("/foo/bar/:baz:verb");
 
         route = Route.builder().path("/bar", "/baz/:qux").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
@@ -175,6 +236,14 @@ class RouteTest {
     void invalidRoutePath() {
         assertThatThrownBy(() -> Route.builder().path("foo")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Route.builder().path("foo:/bar")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo:bar/biz")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo/{bar}:verb1:verb2")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo/bar:verb1:verb2")).isInstanceOf(
+                IllegalArgumentException.class);
+        assertThatThrownBy(() -> Route.builder().path("/foo/bar:verb1:verb2")).isInstanceOf(
+                IllegalArgumentException.class);
     }
 
     @Test
@@ -459,21 +528,22 @@ class RouteTest {
 
     private static RoutingContext withMethod(HttpMethod method) {
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        REQ_TARGET, RequestHeaders.of(method, PATH), RoutingStatus.OK);
+                                        REQ_TARGET, RequestHeaders.of(method, PATH), RoutingStatus.OK,
+                                        SessionProtocol.H2C);
     }
 
     private static RoutingContext withConsumeType(HttpMethod method, MediaType contentType) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.CONTENT_TYPE, contentType);
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        REQ_TARGET, headers, RoutingStatus.OK);
+                                        REQ_TARGET, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     private static RoutingContext withAcceptHeader(HttpMethod method, String acceptHeader) {
         final RequestHeaders headers = RequestHeaders.of(method, PATH,
                                                          HttpHeaderNames.ACCEPT, acceptHeader);
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        REQ_TARGET, headers, RoutingStatus.OK);
+                                        REQ_TARGET, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     private static RoutingContext withPath(String path) {
@@ -482,13 +552,13 @@ class RouteTest {
 
         return DefaultRoutingContext.of(virtualHost(), "example.com",
                                         reqTarget, RequestHeaders.of(HttpMethod.GET, path),
-                                        RoutingStatus.OK);
+                                        RoutingStatus.OK, SessionProtocol.H2C);
     }
 
     private static RoutingContext withRequestHeaders(RequestHeaders headers) {
         final RequestTarget reqTarget = RequestTarget.forServer(headers.path());
         assertThat(reqTarget).isNotNull();
         return DefaultRoutingContext.of(virtualHost(), "example.com",
-                                        reqTarget, headers, RoutingStatus.OK);
+                                        reqTarget, headers, RoutingStatus.OK, SessionProtocol.H2C);
     }
 }

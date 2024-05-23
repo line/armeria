@@ -300,7 +300,7 @@ public interface HttpRequest extends Request, HttpMessage {
         if (trailers.isEmpty()) {
             return of(headers, publisher);
         }
-        return of(headers, new SurroundingPublisher<>(null, publisher, trailers));
+        return of(headers, new SurroundingPublisher<>(null, publisher, unused -> trailers));
     }
 
     /**
@@ -809,5 +809,11 @@ public interface HttpRequest extends Request, HttpMessage {
     default HttpRequest peekError(Consumer<? super Throwable> action) {
         requireNonNull(action, "action");
         return of(headers(), HttpMessage.super.peekError(action));
+    }
+
+    @Override
+    default HttpRequest subscribeOn(EventExecutor eventExecutor) {
+        requireNonNull(eventExecutor, "eventExecutor");
+        return of(headers(), HttpMessage.super.subscribeOn(eventExecutor));
     }
 }

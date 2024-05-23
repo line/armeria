@@ -69,6 +69,7 @@ import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.ResolvedAddressTypes;
+import io.netty.resolver.dns.DnsErrorCauseException;
 import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 import io.netty.resolver.dns.DnsServerAddresses;
 import io.netty.util.NetUtil;
@@ -281,7 +282,7 @@ class RefreshingAddressResolverTest {
                         InetSocketAddress.createUnresolved("foo.com", 36462));
                 await().until(future2::isDone);
                 assertThat(future2.cause()).isInstanceOf(UnknownHostException.class)
-                                           .hasNoCause();
+                                           .hasCauseInstanceOf(DnsErrorCauseException.class);
                 // Because it is NXDOMAIN, the result is cached.
                 assertThat(cache.estimatedSize()).isOne();
             }

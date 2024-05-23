@@ -26,6 +26,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -82,6 +83,8 @@ class RequestMetricSupportTest {
                                "service=FooService}", 1.0)
                 .containsEntry("foo.socket.connect.duration#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
+                .containsEntry("foo.tls.handshake.duration#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
                 .containsEntry("foo.pending.acquisition.duration#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
                 .containsEntry("foo.request.length#count{http.status=200,method=POST," +
@@ -106,6 +109,8 @@ class RequestMetricSupportTest {
                                       .dnsResolutionEnd()
                                       .socketConnectStart()
                                       .socketConnectEnd()
+                                      .tlsHandshakeStart()
+                                      .tlsHandshakeEnd()
                                       .pendingAcquisitionStart()
                                       .pendingAcquisitionEnd()
                                       .build();
@@ -164,6 +169,8 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.dns.resolution.duration#count{http.status=500,method=POST,service=none}",
                                1.0)
                 .containsEntry("foo.socket.connect.duration#count{http.status=500,method=POST,service=none}",
+                               1.0)
+                .containsEntry("foo.tls.handshake.duration#count{http.status=500,method=POST,service=none}",
                                1.0)
                 .containsEntry("foo.pending.acquisition.duration#count{http.status=500,method=POST," +
                                "service=none}", 1.0)
@@ -291,7 +298,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
-                                   SuccessFunction.ofDefault());
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
         return ctx;
     }
 
@@ -324,7 +331,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("foo");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, true,
-                                   SuccessFunction.ofDefault());
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
 
         ctx.logBuilder().requestFirstBytesTransferred();
         ctx.logBuilder().responseHeaders(ResponseHeaders.of(503)); // 503 when request timed out
@@ -363,7 +370,7 @@ class RequestMetricSupportTest {
 
         final MeterIdPrefixFunction meterIdPrefixFunction = MeterIdPrefixFunction.ofDefault("bar");
         RequestMetricSupport.setup(ctx, REQUEST_METRICS_SET, meterIdPrefixFunction, false,
-                                   SuccessFunction.ofDefault());
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
 
         ctx.logBuilder().name("BarService", "baz");
 
@@ -383,7 +390,7 @@ class RequestMetricSupportTest {
 
         RequestMetricSupport.setup(sctx, REQUEST_METRICS_SET,
                                    MeterIdPrefixFunction.ofDefault("foo"), true,
-                                   SuccessFunction.ofDefault());
+                                   SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
         sctx.logBuilder().endRequest();
         try (SafeCloseable ignored = sctx.push()) {
             final ClientRequestContext cctx =
@@ -394,7 +401,7 @@ class RequestMetricSupportTest {
                                         .build();
             RequestMetricSupport.setup(cctx, AttributeKey.valueOf("differentKey"),
                                        MeterIdPrefixFunction.ofDefault("bar"), false,
-                                       SuccessFunction.ofDefault());
+                                       SuccessFunction.ofDefault(), Flags.distributionStatisticConfig());
             cctx.logBuilder().endRequest();
             cctx.logBuilder().responseHeaders(ResponseHeaders.of(200));
             cctx.logBuilder().endResponse();
@@ -451,8 +458,10 @@ class RequestMetricSupportTest {
             final int statusCode = log.responseHeaders().status().code();
             return (statusCode >= 200 && statusCode < 400) || statusCode == 409;
         };
-        RequestMetricSupport.setup(ctx1, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction);
-        RequestMetricSupport.setup(ctx2, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction);
+        RequestMetricSupport.setup(ctx1, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction,
+                                   Flags.distributionStatisticConfig());
+        RequestMetricSupport.setup(ctx2, REQUEST_METRICS_SET, meterIdPrefixFunction, false, successFunction,
+                                   Flags.distributionStatisticConfig());
 
         ctx1.logBuilder().responseHeaders(ResponseHeaders.of(409));
         ctx1.logBuilder().endRequest();

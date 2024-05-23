@@ -32,28 +32,30 @@ import testing.grpc.TestServiceGrpcKt
 import java.io.Serial
 
 class TestServiceImpl : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
-
     /**
      * Sends a [HelloReply] with a small amount of blocking time using `ArmeriaBlockingContext`.
      *
      * @see [Blocking service implementation](https://armeria.dev/docs/server-grpc#blocking-service-implementation)
      */
-    override suspend fun shortBlockingHello(request: HelloRequest): HelloReply = withArmeriaBlockingContext {
-        try { // Simulate a blocking API call.
-            Thread.sleep(10)
-        } catch (ignored: Exception) { // Do nothing.
-        }
+    override suspend fun shortBlockingHello(request: HelloRequest): HelloReply =
+        withArmeriaBlockingContext {
+            try {
+                // Simulate a blocking API call.
+                Thread.sleep(10)
+            } catch (ignored: Exception) {
+                // Do nothing.
+            }
 
-        withContext(blockingDispatcher()) {
-            // A request context is propagated by ArmeriaRequestCoroutineContext.
-            Thread.sleep(10)
+            withContext(blockingDispatcher()) {
+                // A request context is propagated by ArmeriaRequestCoroutineContext.
+                Thread.sleep(10)
+                // Make sure that current thread is request context aware
+                ServiceRequestContext.current()
+            }
             // Make sure that current thread is request context aware
-            ServiceRequestContext.current()
+            ServiceRequestContext.current().addAdditionalResponseHeader("foo", "bar")
+            buildReply(toMessage(request.name))
         }
-        // Make sure that current thread is request context aware
-        ServiceRequestContext.current().addAdditionalResponseHeader("foo", "bar")
-        buildReply(toMessage(request.name))
-    }
 
     /**
      * Sends 5 [HelloReply] responses using [armeriaBlockingDispatcher] when receiving a request.
@@ -110,7 +112,9 @@ class TestServiceImpl : TestServiceGrpcKt.TestServiceCoroutineImplBase() {
             withContext(ServiceRequestContext.current().blockingTaskExecutor().asCoroutineDispatcher(), block)
 
         private fun buildReply(message: String): HelloReply =
-            HelloReply.newBuilder().setMessage(message).build()
+            HelloReply.newBuilder().setMessage(
+                message,
+            ).build()
 
         private fun toMessage(message: String): String = "Hello, $message!"
     }

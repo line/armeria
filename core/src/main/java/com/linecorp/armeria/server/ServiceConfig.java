@@ -46,6 +46,8 @@ import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * An {@link HttpService} configuration.
  *
@@ -79,6 +81,8 @@ public final class ServiceConfig {
 
     private final long requestAutoAbortDelayMillis;
     private final Path multipartUploadsLocation;
+    private final EventLoopGroup serviceWorkerGroup;
+
     private final List<ShutdownSupport> shutdownSupports;
     private final HttpHeaders defaultHeaders;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
@@ -94,7 +98,8 @@ public final class ServiceConfig {
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
                   BlockingTaskExecutor blockingTaskExecutor,
                   SuccessFunction successFunction, long requestAutoAbortDelayMillis,
-                  Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports,
+                  Path multipartUploadsLocation, EventLoopGroup serviceWorkerGroup,
+                  List<ShutdownSupport> shutdownSupports,
                   HttpHeaders defaultHeaders,
                   Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
                   ServiceErrorHandler serviceErrorHandler, Supplier<? extends AutoCloseable> contextHook) {
@@ -102,7 +107,7 @@ public final class ServiceConfig {
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
-             multipartUploadsLocation, shutdownSupports, defaultHeaders,
+             multipartUploadsLocation, serviceWorkerGroup, shutdownSupports, defaultHeaders,
                      requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
@@ -119,6 +124,7 @@ public final class ServiceConfig {
                           SuccessFunction successFunction,
                           long requestAutoAbortDelayMillis,
                           Path multipartUploadsLocation,
+                          EventLoopGroup serviceWorkerGroup,
                           List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders,
                           Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
                           ServiceErrorHandler serviceErrorHandler,
@@ -139,6 +145,7 @@ public final class ServiceConfig {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
         this.defaultHeaders = defaultHeaders;
         @SuppressWarnings("unchecked")
@@ -185,7 +192,7 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
-                                 multipartUploadsLocation, shutdownSupports, defaultHeaders,
+                                 multipartUploadsLocation, serviceWorkerGroup, shutdownSupports, defaultHeaders,
                                  requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
@@ -196,7 +203,7 @@ public final class ServiceConfig {
                                  maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
-                                 multipartUploadsLocation, shutdownSupports, defaultHeaders,
+                                 multipartUploadsLocation, serviceWorkerGroup, shutdownSupports, defaultHeaders,
                                  requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
@@ -206,7 +213,7 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
-                                 multipartUploadsLocation, shutdownSupports, defaultHeaders,
+                                 multipartUploadsLocation, serviceWorkerGroup, shutdownSupports, defaultHeaders,
                                  requestIdGenerator, serviceErrorHandler, contextHook);
     }
 
@@ -450,6 +457,14 @@ public final class ServiceConfig {
 
     List<ShutdownSupport> shutdownSupports() {
         return shutdownSupports;
+    }
+
+    /**
+     * Returns the {@link EventLoopGroup} dedicated to the execution of services' methods.
+     */
+    @UnstableApi
+    public EventLoopGroup serviceWorkerGroup() {
+        return serviceWorkerGroup;
     }
 
     /**

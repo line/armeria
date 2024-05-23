@@ -29,7 +29,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.ResponseCancellationException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
@@ -57,14 +60,16 @@ class ServiceRequestCancellationTest {
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
     @ParameterizedTest
     void shouldCompleteLogWhenCancelledByClient(SessionProtocol protocol) {
-        final ClientFactory factory = ClientFactory.builder().build();
         final WebClient client = WebClient.builder(server.uri(protocol))
-                                          .factory(factory)
                                           .build();
-
-        final CompletableFuture<AggregatedHttpResponse> responseFuture = client.get("/reset").aggregate();
+        final CompletableFuture<AggregatedHttpResponse> responseFuture;
+        final ClientRequestContext clientRequestContext;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            responseFuture = client.get("/reset").aggregate();
+            clientRequestContext = captor.get();
+        }
         await().untilAtomic(ctxRef, Matchers.notNullValue());
-        factory.close();
+        clientRequestContext.cancel();
         final RequestLog log = ctxRef.get().log().whenComplete().join();
 
         if (protocol.isMultiplex()) {
@@ -74,14 +79,14 @@ class ServiceRequestCancellationTest {
 
             assertThatThrownBy(responseFuture::join)
                     .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(ClosedStreamException.class);
+                    .hasCauseInstanceOf(ResponseCancellationException.class);
         } else {
             assertThat(log.responseCause())
                     .isInstanceOf(ClosedSessionException.class);
 
             assertThatThrownBy(responseFuture::join)
                     .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(ClosedSessionException.class);
+                    .hasCauseInstanceOf(ResponseCancellationException.class);
         }
 
         ctxRef.set(null);

@@ -20,11 +20,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.CALL_CREDENTIALS;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.COMPRESSOR;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.DECOMPRESSOR_REGISTRY;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.EXCEPTION_HANDLER;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.INTERCEPTORS;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.USE_METHOD_MARSHALLER;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -66,11 +69,13 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallCredentials;
@@ -78,7 +83,9 @@ import io.grpc.ClientInterceptor;
 import io.grpc.Codec;
 import io.grpc.Compressor;
 import io.grpc.DecompressorRegistry;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
+import io.grpc.Status;
 
 /**
  * Creates a new gRPC client that connects to the specified {@link URI} using the builder pattern.
@@ -96,6 +103,8 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     @Nullable
     private String prefix;
     private Scheme scheme;
+    @Nullable
+    private GrpcExceptionHandlerFunction exceptionHandler;
 
     GrpcClientBuilder(URI uri) {
         requireNonNull(uri, "uri");
@@ -278,7 +287,29 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
      */
     @UnstableApi
     public GrpcClientBuilder enableUnsafeWrapResponseBuffers(boolean enableUnsafeWrapResponseBuffers) {
+        final ClientOptions options = buildOptions();
+        if (options.get(USE_METHOD_MARSHALLER)) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
         return option(UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(enableUnsafeWrapResponseBuffers));
+    }
+
+    /**
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}.
+     * If disabled, the default marshaller will be used, which is more efficient.
+     * This property is disabled by default.
+     */
+    @UnstableApi
+    public GrpcClientBuilder useMethodMarshaller(boolean useMethodMarshaller) {
+        final ClientOptions options = buildOptions();
+        if (options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS)) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
+        return option(USE_METHOD_MARSHALLER.newValue(useMethodMarshaller));
     }
 
     /**
@@ -385,7 +416,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
 
         final List<ClientInterceptor> clientInterceptors = interceptors.build();
         if (!clientInterceptors.isEmpty()) {
-            option(GrpcClientOptions.INTERCEPTORS.newValue(clientInterceptors));
+            option(INTERCEPTORS.newValue(clientInterceptors));
+        }
+        if (exceptionHandler != null) {
+            option(EXCEPTION_HANDLER.newValue(new UnwrappingGrpcExceptionHandleFunction(exceptionHandler.orElse(
+                    GrpcExceptionHandlerFunction.of()))));
         }
 
         final Object client;
@@ -560,5 +595,19 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     public GrpcClientBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (GrpcClientBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    /**
+     * Sets the specified {@link GrpcExceptionHandlerFunction} that maps a {@link Throwable}
+     * to a gRPC {@link Status}.
+     */
+    public GrpcClientBuilder exceptionHandler(GrpcExceptionHandlerFunction exceptionHandler) {
+        requireNonNull(exceptionHandler, "exceptionHandler");
+        if (this.exceptionHandler == null) {
+            this.exceptionHandler = exceptionHandler;
+        } else {
+            this.exceptionHandler = this.exceptionHandler.orElse(exceptionHandler);
+        }
+        return this;
     }
 }

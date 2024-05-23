@@ -43,6 +43,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final long requestStartTimeNanos;
     private final long requestStartTimeMicros;
     private final boolean http1WebSocket;
+    private boolean shouldResetOnlyIfRemoteIsOpen;
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -50,13 +51,14 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     @Nullable
     private HttpResponse response;
-    private boolean isResponseAborted;
+    @Nullable
+    private Throwable abortResponseCause;
 
     StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
                                 long requestStartTimeNanos, long requestStartTimeMicros,
-                                boolean http1WebSocket) {
+                                boolean http1WebSocket, boolean shouldResetOnlyIfRemoteIsOpen) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -71,6 +73,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
         this.http1WebSocket = http1WebSocket;
+        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
     }
 
     @Override
@@ -164,10 +167,10 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     @Override
     public void setResponse(HttpResponse response) {
-        if (isResponseAborted) {
+        if (abortResponseCause != null) {
             // This means that we already tried to close the request, so abort the response immediately.
             if (!response.isComplete()) {
-                response.abort();
+                response.abort(abortResponseCause);
             }
         } else {
             this.response = response;
@@ -176,7 +179,10 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     @Override
     public void abortResponse(Throwable cause, boolean cancel) {
-        isResponseAborted = true;
+        if (abortResponseCause != null) {
+            return;
+        }
+        abortResponseCause = cause;
 
         // Make sure to invoke the ServiceRequestContext.whenRequestCancelling() and whenRequestCancelled()
         // by cancelling a request
@@ -184,16 +190,14 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
             ctx.cancel(cause);
         }
 
-        // Try to close the request first, then abort the response if it is already closed.
-        if (!tryClose(cause) &&
-            response != null && !response.isComplete()) {
+        if (response != null && !response.isComplete()) {
             response.abort(cause);
         }
     }
 
     @Override
-    public boolean needsAggregation() {
-        return false;
+    public boolean isResponseAborted() {
+        return abortResponseCause != null;
     }
 
     @Override
@@ -214,5 +218,15 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public boolean isHttp1WebSocket() {
         return http1WebSocket;
+    }
+
+    @Override
+    public void setShouldResetOnlyIfRemoteIsOpen(boolean shouldResetOnlyIfRemoteIsOpen) {
+        this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
+    }
+
+    @Override
+    public boolean shouldResetOnlyIfRemoteIsOpen() {
+        return shouldResetOnlyIfRemoteIsOpen;
     }
 }
