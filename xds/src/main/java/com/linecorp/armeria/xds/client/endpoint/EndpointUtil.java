@@ -18,6 +18,9 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import java.time.Instant;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.protobuf.Duration;
 
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -31,12 +34,18 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster.SlowStartConfig;
 
 final class EndpointUtil {
 
+    private static final Logger logger = LoggerFactory.getLogger(EndpointUtil.class);
+
     static EndpointSelectionStrategy selectionStrategy(Cluster cluster) {
         final SlowStartConfig slowStartConfig = slowStartConfig(cluster);
         switch (cluster.getLbPolicy()) {
             case RANDOM:
                 return EndpointSelectionStrategy.roundRobin();
             default:
+                if (cluster.getLbPolicy() != LbPolicy.ROUND_ROBIN) {
+                    logger.warn("The supported 'Cluster.LbPolicy' are ('RANDOM', `ROUND_ROBIN`) for now." +
+                                " Falling back to 'ROUND_ROBIN'.");
+                }
                 if (slowStartConfig != null) {
                     return rampingUpSelectionStrategy(slowStartConfig);
                 }

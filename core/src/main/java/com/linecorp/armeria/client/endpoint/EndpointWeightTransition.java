@@ -38,7 +38,7 @@ public interface EndpointWeightTransition {
     }
 
     /**
-     * Returns a {@link EndpointWeightTransition} which returns a non-linearly increasing weight
+     * Returns an {@link EndpointWeightTransition} which returns a non-linearly increasing weight
      * based on an aggression factor. Higher aggression factors will assign higher weights for lower steps.
      * You may also specify a {@code minWeightPercent} to specify a lower bound for the computed weights.
      * Refer to the following

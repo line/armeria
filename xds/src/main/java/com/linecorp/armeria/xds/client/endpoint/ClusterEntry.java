@@ -36,7 +36,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class ClusterEntry implements AsyncCloseable {
 
-    private final DelegatingEndpointGroup endpointGroup = new DelegatingEndpointGroup(this);
+    private final EndpointPool endpointPool;
     private final LoadBalancer loadBalancer = new SubsetLoadBalancer();
     private final ClusterManager clusterManager;
     private final EventExecutor eventExecutor;
@@ -46,6 +46,7 @@ final class ClusterEntry implements AsyncCloseable {
                  ClusterManager clusterManager, EventExecutor eventExecutor) {
         this.clusterManager = clusterManager;
         this.eventExecutor = eventExecutor;
+        endpointPool = new EndpointPool(this, eventExecutor);
         updateClusterSnapshot(clusterSnapshot);
     }
 
@@ -57,16 +58,15 @@ final class ClusterEntry implements AsyncCloseable {
     void updateClusterSnapshot(ClusterSnapshot clusterSnapshot) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         assert endpointSnapshot != null;
-        endpointGroup.updateClusterSnapshot(clusterSnapshot);
+        endpointPool.updateClusterSnapshot(clusterSnapshot);
     }
 
-    public void accept(ClusterSnapshot clusterSnapshot, Collection<Endpoint> endpoints) {
-        eventExecutor.execute(() -> {
-            this.endpoints = ImmutableList.copyOf(endpoints);
-            final PrioritySet prioritySet = new PrioritySet(this.endpoints, clusterSnapshot);
-            loadBalancer.prioritySetUpdated(prioritySet);
-            clusterManager.notifyListeners();
-        });
+    void accept(ClusterSnapshot clusterSnapshot, Collection<Endpoint> endpoints) {
+        assert eventExecutor.inEventLoop();
+        this.endpoints = ImmutableList.copyOf(endpoints);
+        final PrioritySet prioritySet = new PrioritySet(this.endpoints, clusterSnapshot);
+        loadBalancer.prioritySetUpdated(prioritySet);
+        clusterManager.notifyListeners();
     }
 
     List<Endpoint> allEndpoints() {
@@ -75,18 +75,18 @@ final class ClusterEntry implements AsyncCloseable {
 
     @Override
     public CompletableFuture<?> closeAsync() {
-        return endpointGroup.closeAsync();
+        return endpointPool.closeAsync();
     }
 
     @Override
     public void close() {
-        endpointGroup.close();
+        endpointPool.close();
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("endpointGroup", endpointGroup)
+                          .add("endpointPool", endpointPool)
                           .add("loadBalancer", loadBalancer)
                           .add("numEndpoints", endpoints.size())
                           .add("endpoints", truncate(endpoints, 10))

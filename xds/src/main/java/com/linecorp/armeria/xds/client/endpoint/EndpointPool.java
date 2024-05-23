@@ -22,24 +22,30 @@ import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.withCr
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
-final class DelegatingEndpointGroup extends DynamicEndpointGroup {
+import io.netty.util.concurrent.EventExecutor;
+
+final class EndpointPool implements AsyncCloseable {
 
     private EndpointGroup delegate = EndpointGroup.of();
     private Map<Endpoint, Endpoint> endpoints = ImmutableMap.of();
     private final ClusterEntry clusterEntry;
+    private final EventExecutor eventExecutor;
     private Consumer<List<Endpoint>> listener = ignored -> {};
 
-    DelegatingEndpointGroup(ClusterEntry clusterEntry) {
+    EndpointPool(ClusterEntry clusterEntry, EventExecutor eventExecutor) {
         this.clusterEntry = clusterEntry;
+        this.eventExecutor = eventExecutor;
     }
 
     void updateClusterSnapshot(ClusterSnapshot newSnapshot) {
@@ -49,7 +55,8 @@ final class DelegatingEndpointGroup extends DynamicEndpointGroup {
 
         // set the new endpoint and listener
         delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot);
-        listener = endpoints -> attachTimestampsAndDelegate(newSnapshot, endpoints);
+        listener = endpoints -> eventExecutor.execute(
+                () -> attachTimestampsAndDelegate(newSnapshot, endpoints));
         delegate.addListener(listener, true);
     }
 
@@ -67,7 +74,23 @@ final class DelegatingEndpointGroup extends DynamicEndpointGroup {
             builder.put(endpointWithTimestamp, endpointWithTimestamp);
         }
         this.endpoints = builder.buildKeepingLast();
-        setEndpoints(this.endpoints.values());
         clusterEntry.accept(clusterSnapshot, this.endpoints.values());
+    }
+
+    @Override
+    public CompletableFuture<?> closeAsync() {
+        return delegate.closeAsync();
+    }
+
+    @Override
+    public void close() {
+        delegate.close();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("delegate", delegate)
+                          .toString();
     }
 }
