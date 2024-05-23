@@ -36,7 +36,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class ClusterEntry implements AsyncCloseable {
 
-    private final EndpointPool endpointPool;
+    private final EndpointsPool endpointsPool;
     private final LoadBalancer loadBalancer = new SubsetLoadBalancer();
     private final ClusterManager clusterManager;
     private final EventExecutor eventExecutor;
@@ -46,7 +46,7 @@ final class ClusterEntry implements AsyncCloseable {
                  ClusterManager clusterManager, EventExecutor eventExecutor) {
         this.clusterManager = clusterManager;
         this.eventExecutor = eventExecutor;
-        endpointPool = new EndpointPool(this, eventExecutor);
+        endpointsPool = new EndpointsPool(this, eventExecutor);
         updateClusterSnapshot(clusterSnapshot);
     }
 
@@ -58,7 +58,7 @@ final class ClusterEntry implements AsyncCloseable {
     void updateClusterSnapshot(ClusterSnapshot clusterSnapshot) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         assert endpointSnapshot != null;
-        endpointPool.updateClusterSnapshot(clusterSnapshot);
+        endpointsPool.updateClusterSnapshot(clusterSnapshot);
     }
 
     void accept(ClusterSnapshot clusterSnapshot, Collection<Endpoint> endpoints) {
@@ -75,18 +75,18 @@ final class ClusterEntry implements AsyncCloseable {
 
     @Override
     public CompletableFuture<?> closeAsync() {
-        return endpointPool.closeAsync();
+        return endpointsPool.closeAsync();
     }
 
     @Override
     public void close() {
-        endpointPool.close();
+        endpointsPool.close();
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("endpointPool", endpointPool)
+                          .add("endpointsPool", endpointsPool)
                           .add("loadBalancer", loadBalancer)
                           .add("numEndpoints", endpoints.size())
                           .add("endpoints", truncate(endpoints, 10))

@@ -35,7 +35,7 @@ import com.linecorp.armeria.xds.ClusterSnapshot;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class EndpointPool implements AsyncCloseable {
+final class EndpointsPool implements AsyncCloseable {
 
     private EndpointGroup delegate = EndpointGroup.of();
     private Map<Endpoint, Endpoint> endpoints = ImmutableMap.of();
@@ -43,7 +43,7 @@ final class EndpointPool implements AsyncCloseable {
     private final EventExecutor eventExecutor;
     private Consumer<List<Endpoint>> listener = ignored -> {};
 
-    EndpointPool(ClusterEntry clusterEntry, EventExecutor eventExecutor) {
+    EndpointsPool(ClusterEntry clusterEntry, EventExecutor eventExecutor) {
         this.clusterEntry = clusterEntry;
         this.eventExecutor = eventExecutor;
     }
