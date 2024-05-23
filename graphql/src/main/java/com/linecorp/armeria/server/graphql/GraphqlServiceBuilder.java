@@ -106,13 +106,10 @@ public final class GraphqlServiceBuilder {
      * Sets the {@link GraphQL}.
      */
     public GraphqlServiceBuilder graphql(GraphQL graphql) {
-        // TODO(minwoox): Consider deprecating setters for GraphQLSchema and DataLoaderRegistry so that users
-        //                can just build GraphQL using its own builder.
         checkState(executionIdGenerator == null && instrumentations == null &&
                    graphqlBuilderConsumers == null && schema == null &&
                    schemaUrls == null && runtimeWiringConfigurators == null &&
-                   typeVisitors == null &&
-                   dataLoaderRegistryConsumers == null && dataLoaderRegistryFactory == null,
+                   typeVisitors == null,
                    "graphql() and setting properties for a GraphQL are mutually exclusive.");
         this.graphql = requireNonNull(graphql, "graphql");
         return this;
@@ -121,7 +118,12 @@ public final class GraphqlServiceBuilder {
     /**
      * Adds the schema {@link File}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can create a {@link TypeDefinitionRegistry}
+     *             using {@link SchemaParser}, and then create {@link GraphQLSchema} using a
+     *             {@link SchemaGenerator}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schemaFile(File... schemaFiles) {
         return schemaFile(ImmutableList.copyOf(requireNonNull(schemaFiles, "schemaFiles")));
     }
@@ -129,7 +131,12 @@ public final class GraphqlServiceBuilder {
     /**
      * Adds the schema {@link File}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can create a {@link TypeDefinitionRegistry}
+     *             using {@link SchemaParser}, and then create {@link GraphQLSchema} using a
+     *             {@link SchemaGenerator}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schemaFile(Iterable<? extends File> schemaFiles) {
         requireNonNull(schemaFiles, "schemaFiles");
         return schemaUrls0(Streams.stream(schemaFiles)
@@ -145,7 +152,12 @@ public final class GraphqlServiceBuilder {
     /**
      * Adds the schema loaded from the given URLs.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can create a {@link TypeDefinitionRegistry}
+     *             using {@link SchemaParser}, and then create {@link GraphQLSchema} using a
+     *             {@link SchemaGenerator}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schemaUrls(String... schemaUrls) {
         return schemaUrls(ImmutableList.copyOf(requireNonNull(schemaUrls, "schemaUrls")));
     }
@@ -153,7 +165,12 @@ public final class GraphqlServiceBuilder {
     /**
      * Adds the schema loaded from the given URLs.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can create a {@link TypeDefinitionRegistry}
+     *             using {@link SchemaParser}, and then create {@link GraphQLSchema} using a
+     *             {@link SchemaGenerator}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schemaUrls(Iterable<String> schemaUrls) {
         requireNonNull(schemaUrls, "schemaUrls");
         return schemaUrls0(Streams.stream(schemaUrls)
@@ -177,7 +194,11 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Sets the {@link GraphQLSchema}.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. Set the {@link GraphQLSchema} to a
+     *             {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schema(GraphQLSchema schema) {
         checkState(graphql == null, "graphql() and schema() are mutually exclusive.");
         this.schema = requireNonNull(schema, "schema");
@@ -189,7 +210,6 @@ public final class GraphqlServiceBuilder {
      */
     public GraphqlServiceBuilder dataLoaderRegistry(
             Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory) {
-        checkState(graphql == null, "graphql() and dataLoaderRegistry() are mutually exclusive.");
         checkState(dataLoaderRegistryConsumers == null,
                    "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
         this.dataLoaderRegistryFactory =
@@ -216,7 +236,6 @@ public final class GraphqlServiceBuilder {
     @Deprecated
     public GraphqlServiceBuilder configureDataLoaderRegistry(
             Iterable<? extends Consumer<? super DataLoaderRegistry>> configurers) {
-        checkState(graphql == null, "graphql() and configureDataLoaderRegistry() are mutually exclusive.");
         checkState(dataLoaderRegistryFactory == null,
                    "configureDataLoaderRegistry() and dataLoaderRegistry() are mutually exclusive.");
         if (dataLoaderRegistryConsumers == null) {
@@ -228,7 +247,12 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link RuntimeWiringConfigurator}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can specify a {@link RuntimeWiringConfigurator}
+     *             to {@link SchemaGenerator#makeExecutableSchema(TypeDefinitionRegistry, RuntimeWiring)}
+     *             when creating a {@link GraphQLSchema}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder runtimeWiring(RuntimeWiringConfigurator... runtimeWiringConfigurators) {
         requireNonNull(runtimeWiringConfigurators, "runtimeWiringConfigurators");
         return runtimeWiring(ImmutableList.copyOf(runtimeWiringConfigurators));
@@ -236,7 +260,12 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link RuntimeWiringConfigurator}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can specify a {@link RuntimeWiringConfigurator}
+     *             to {@link SchemaGenerator#makeExecutableSchema(TypeDefinitionRegistry, RuntimeWiring)}
+     *             when creating a {@link GraphQLSchema}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder runtimeWiring(Iterable<? extends RuntimeWiringConfigurator> configurators) {
         checkState(graphql == null, "graphql() and runtimeWiring() are mutually exclusive.");
         if (runtimeWiringConfigurators == null) {
@@ -248,14 +277,24 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link GraphQLTypeVisitor}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can transform a {@link GraphQLSchema}
+     *             using {@link SchemaTransformer#transformSchema(GraphQLSchema, GraphQLTypeVisitor)}.
+     *             Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder typeVisitors(GraphQLTypeVisitor... typeVisitors) {
         return typeVisitors(ImmutableList.copyOf(requireNonNull(typeVisitors, "typeVisitors")));
     }
 
     /**
      * Adds the {@link GraphQLTypeVisitor}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can transform a {@link GraphQLSchema}
+     *             using {@link SchemaTransformer#transformSchema(GraphQLSchema, GraphQLTypeVisitor)}.
+     *             Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder typeVisitors(Iterable<? extends GraphQLTypeVisitor> typeVisitors) {
         checkState(graphql == null, "graphql() and typeVisitors() are mutually exclusive.");
         if (this.typeVisitors == null) {
@@ -267,7 +306,11 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link Instrumentation}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can specify a {@link Instrumentation} to
+     *             {@link GraphQL.Builder#instrumentation(Instrumentation)}.
      */
+    @Deprecated
     public GraphqlServiceBuilder instrumentation(Instrumentation... instrumentations) {
         requireNonNull(instrumentations, "instrumentations");
         return instrumentation(ImmutableList.copyOf(instrumentations));
@@ -275,7 +318,11 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link Instrumentation}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can specify a {@link Instrumentation} to
+     *             {@link GraphQL.Builder#instrumentation(Instrumentation)}.
      */
+    @Deprecated
     public GraphqlServiceBuilder instrumentation(Iterable<? extends Instrumentation> instrumentations) {
         checkState(graphql == null, "graphql() and instrumentation() are mutually exclusive.");
         requireNonNull(instrumentations, "instrumentations");
@@ -288,14 +335,20 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link GraphqlConfigurator} consumers.
+     *
+     * @deprecated Use {@link GraphQL.Builder} directly.
      */
+    @Deprecated
     public GraphqlServiceBuilder configureGraphql(GraphqlConfigurator... configurers) {
         return configureGraphql(ImmutableList.copyOf(requireNonNull(configurers, "configurers")));
     }
 
     /**
      * Adds the {@link GraphqlConfigurator} consumers.
+     *
+     * @deprecated Use {@link GraphQL.Builder} directly.
      */
+    @Deprecated
     public GraphqlServiceBuilder configureGraphql(
             Iterable<? extends GraphqlConfigurator> configurers) {
         checkState(graphql == null, "graphql() and configureGraphql() are mutually exclusive.");
