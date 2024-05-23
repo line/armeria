@@ -179,7 +179,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
             // We add the new endpoints from this point
             final Object2LongOpenHashMap<Endpoint> newCreatedTimestamps = new Object2LongOpenHashMap<>();
-            for (Endpoint endpoint: newEndpoints) {
+            for (Endpoint endpoint : newEndpoints) {
                 // Set the cached created timestamps for the next iteration
                 final long createTimestamp = computeCreateTimestamp(endpoint);
                 newCreatedTimestamps.put(endpoint, createTimestamp);
