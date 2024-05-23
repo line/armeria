@@ -29,6 +29,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpData;
@@ -152,6 +153,7 @@ class ByteStreamMessageOutputStreamTest {
 
     @Test
     void writeAfterStreamClosed() throws InterruptedException {
+        final CountDownLatch abortWait = new CountDownLatch(1);
         final CountDownLatch wait = new CountDownLatch(1);
         final CountDownLatch end = new CountDownLatch(1);
         final ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
@@ -160,6 +162,7 @@ class ByteStreamMessageOutputStreamTest {
                     if (i < 2) {
                         os.write(i);
                     } else {
+                        abortWait.countDown();
                         wait.await();
                         assertThatThrownBy(() -> os.write(0))
                                 .isInstanceOf(IOException.class)
@@ -175,6 +178,13 @@ class ByteStreamMessageOutputStreamTest {
 
         StepVerifier.create(byteStreamMessage, 2)
                     .expectNext(httpData(0), httpData(1))
+                    .then(() -> {
+                        try {
+                            abortWait.await();
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
                     .then(byteStreamMessage::abort)
                     .then(() -> {
                         // Wait for the abortion to be completed.
