@@ -172,7 +172,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         private void updateEndpoints(List<Endpoint> newEndpoints) {
 
             // clean up existing entries
-            for (EndpointsRampingUpEntry entry: rampingUpWindowsMap.values()) {
+            for (EndpointsRampingUpEntry entry : rampingUpWindowsMap.values()) {
                 entry.endpointAndSteps().clear();
             }
             endpointsFinishedRampingUp.clear();
