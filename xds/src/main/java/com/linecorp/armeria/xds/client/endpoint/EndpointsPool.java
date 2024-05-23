@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -38,7 +39,7 @@ import io.netty.util.concurrent.EventExecutor;
 final class EndpointsPool implements AsyncCloseable {
 
     private EndpointGroup delegate = EndpointGroup.of();
-    private Map<Endpoint, Endpoint> endpoints = ImmutableMap.of();
+    private Map<Endpoint, Long> createdTimestamps = ImmutableMap.of();
     private final ClusterEntry clusterEntry;
     private final EventExecutor eventExecutor;
     private Consumer<List<Endpoint>> listener = ignored -> {};
@@ -62,19 +63,22 @@ final class EndpointsPool implements AsyncCloseable {
 
     private void attachTimestampsAndDelegate(ClusterSnapshot clusterSnapshot, List<Endpoint> endpoints) {
         final long defaultTimestamp = System.nanoTime();
-        final ImmutableMap.Builder<Endpoint, Endpoint> builder = ImmutableMap.builder();
+        final ImmutableMap.Builder<Endpoint, Long> timestampsBuilder = ImmutableMap.builder();
+        final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();
         for (Endpoint endpoint: endpoints) {
             final Endpoint endpointWithTimestamp;
-            if (this.endpoints.containsKey(endpoint) && !hasCreatedAtNanos(endpoint)) {
-                final Endpoint pooledEndpoint = this.endpoints.get(endpoint);
-                endpointWithTimestamp = withCreatedAtNanos(endpoint, createdAtNanos(pooledEndpoint));
+            final long timestamp;
+            if (hasCreatedAtNanos(endpoint)) {
+                timestamp = createdAtNanos(endpoint);
             } else {
-                endpointWithTimestamp = withCreatedAtNanos(endpoint, defaultTimestamp);
-            }
-            builder.put(endpointWithTimestamp, endpointWithTimestamp);
+                timestamp = createdTimestamps.getOrDefault(endpoint, defaultTimestamp);
+            };
+            endpointWithTimestamp = withCreatedAtNanos(endpoint, timestamp);
+            timestampsBuilder.put(endpointWithTimestamp, timestamp);
+            endpointsBuilder.add(endpointWithTimestamp);
         }
-        this.endpoints = builder.buildKeepingLast();
-        clusterEntry.accept(clusterSnapshot, this.endpoints.values());
+        createdTimestamps = timestampsBuilder.buildKeepingLast();
+        clusterEntry.accept(clusterSnapshot, endpointsBuilder.build());
     }
 
     @Override

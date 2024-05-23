@@ -18,7 +18,6 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -61,10 +60,10 @@ final class ClusterEntry implements AsyncCloseable {
         endpointsPool.updateClusterSnapshot(clusterSnapshot);
     }
 
-    void accept(ClusterSnapshot clusterSnapshot, Collection<Endpoint> endpoints) {
+    void accept(ClusterSnapshot clusterSnapshot, List<Endpoint> endpoints) {
         assert eventExecutor.inEventLoop();
-        this.endpoints = ImmutableList.copyOf(endpoints);
-        final PrioritySet prioritySet = new PrioritySet(this.endpoints, clusterSnapshot);
+        this.endpoints = endpoints;
+        final PrioritySet prioritySet = new PrioritySet(endpoints, clusterSnapshot);
         loadBalancer.prioritySetUpdated(prioritySet);
         clusterManager.notifyListeners();
     }
