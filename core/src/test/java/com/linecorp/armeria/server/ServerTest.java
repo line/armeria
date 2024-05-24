@@ -69,7 +69,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -107,7 +107,7 @@ class ServerTest {
         protected void configure(ServerBuilder sb) throws Exception {
 
             sb.channelOption(ChannelOption.SO_BACKLOG, 1024);
-            sb.meterRegistry(PrometheusMeterRegistries.newRegistry());
+            sb.meterRegistry(PrometheusVersion1MeterRegistries.newRegistry());
 
             final HttpService immediateResponseOnIoThread =
                     new EchoService().decorate(LoggingService.newDecorator());

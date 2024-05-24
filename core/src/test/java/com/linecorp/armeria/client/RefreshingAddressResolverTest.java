@@ -52,7 +52,7 @@ import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
 import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
@@ -930,7 +930,7 @@ class RefreshingAddressResolverTest {
                         Stream.of(servers).map(TestDnsServer::addr).collect(toImmutableList())).stream();
         final DnsResolverGroupBuilder builder = new DnsResolverGroupBuilder()
                 .serverAddressStreamProvider(dnsServerAddressStreamProvider)
-                .meterRegistry(PrometheusMeterRegistries.newRegistry())
+                .meterRegistry(PrometheusVersion1MeterRegistries.newRegistry())
                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_ONLY)
                 .traceEnabled(false);
         if (withCacheOption) {

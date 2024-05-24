@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -21,43 +21,42 @@ import com.linecorp.armeria.internal.server.TransientServiceOptionsBuilder;
 import com.linecorp.armeria.server.TransientServiceBuilder;
 import com.linecorp.armeria.server.TransientServiceOption;
 
-import io.prometheus.client.CollectorRegistry;
+import io.prometheus.metrics.model.registry.PrometheusRegistry;
 
 /**
- * Builds a {@link PrometheusExpositionService}.
- *
- * @deprecated Use {@link PrometheusVersion1ExpositionServiceBuilder} instead.
+ * Builds a {@link PrometheusVersion1ExpositionService}.
  */
-@Deprecated
-public final class PrometheusExpositionServiceBuilder implements TransientServiceBuilder {
+public final class PrometheusVersion1ExpositionServiceBuilder implements TransientServiceBuilder {
 
-    private final CollectorRegistry collectorRegistry;
+    private final PrometheusRegistry prometheusRegistry;
 
     private final TransientServiceOptionsBuilder
             transientServiceOptionsBuilder = new TransientServiceOptionsBuilder();
 
-    PrometheusExpositionServiceBuilder(CollectorRegistry collectorRegistry) {
-        this.collectorRegistry = requireNonNull(collectorRegistry, "collectorRegistry");
+    PrometheusVersion1ExpositionServiceBuilder(PrometheusRegistry prometheusRegistry) {
+        this.prometheusRegistry = requireNonNull(prometheusRegistry, "prometheusRegistry");
     }
 
     @Override
-    public PrometheusExpositionServiceBuilder transientServiceOptions(
+    public PrometheusVersion1ExpositionServiceBuilder transientServiceOptions(
             TransientServiceOption... transientServiceOptions) {
         transientServiceOptionsBuilder.transientServiceOptions(transientServiceOptions);
         return this;
     }
 
     @Override
-    public PrometheusExpositionServiceBuilder transientServiceOptions(
+    public PrometheusVersion1ExpositionServiceBuilder transientServiceOptions(
             Iterable<TransientServiceOption> transientServiceOptions) {
         transientServiceOptionsBuilder.transientServiceOptions(transientServiceOptions);
         return this;
     }
 
     /**
-     * Returns a newly-created {@link PrometheusExpositionService} based on the properties of this builder.
+     * Returns a newly-created {@link PrometheusVersion1ExpositionService} based on the properties
+     * of this builder.
      */
-    public PrometheusExpositionService build() {
-        return new PrometheusExpositionService(collectorRegistry, transientServiceOptionsBuilder.build());
+    public PrometheusVersion1ExpositionService build() {
+        return new PrometheusVersion1ExpositionService(prometheusRegistry,
+                                                       transientServiceOptionsBuilder.build());
     }
 }

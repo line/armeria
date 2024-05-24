@@ -66,7 +66,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -316,10 +316,10 @@ class ArmeriaReactiveWebServerFactoryTest {
         RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
         beanFactory.registerBeanDefinition("armeriaSettings", rbd);
 
-        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusVersion1MeterRegistries::newRegistry);
         beanFactory.registerBeanDefinition("meterRegistry1", rbd);
 
-        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusVersion1MeterRegistries::newRegistry);
         beanFactory.registerBeanDefinition("meterRegistry2", rbd);
 
         assertThatThrownBy(() -> runEchoServer(factory, server -> fail("Should never reach here")))
@@ -333,10 +333,10 @@ class ArmeriaReactiveWebServerFactoryTest {
         RootBeanDefinition rbd = new RootBeanDefinition(ArmeriaSettings.class);
         beanFactory.registerBeanDefinition("armeriaSettings", rbd);
 
-        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusVersion1MeterRegistries::newRegistry);
         beanFactory.registerBeanDefinition("meterRegistry1", rbd);
 
-        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusMeterRegistries::newRegistry);
+        rbd = new RootBeanDefinition(MeterRegistry.class, PrometheusVersion1MeterRegistries::newRegistry);
         rbd.setPrimary(true);
         beanFactory.registerBeanDefinition("meterRegistry2", rbd);
 

@@ -42,7 +42,7 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.server.metric.PrometheusExpositionService;
+import com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
@@ -73,7 +73,7 @@ public class ArmeriaReactiveWebServerFactoryAutoConfiguration {
 
     /**
      * Creates internal services that should not be exposed to the external network such as {@link DocService},
-     * {@link PrometheusExpositionService} and {@link HealthCheckService}.
+     * {@link PrometheusVersion1ExpositionService} and {@link HealthCheckService}.
      *
      * <p>Note that if a service path is either {@code null} or empty, the associated service will not be
      * initiated. For example, {@link ArmeriaSettings#getHealthCheckPath()} is {@code null},

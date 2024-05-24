@@ -36,7 +36,7 @@ import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -62,7 +62,7 @@ class HealthCheckedEndpointGroupIntegrationTest {
         }
     }
 
-    private final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+    private final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
 
     @RegisterExtension
     static final ServerExtension serverOne = new HealthCheckServerExtension();

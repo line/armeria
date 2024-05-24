@@ -34,7 +34,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ServerListenerTest {
@@ -47,7 +47,7 @@ class ServerListenerTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.meterRegistry(PrometheusMeterRegistries.newRegistry())
+            sb.meterRegistry(PrometheusVersion1MeterRegistries.newRegistry())
               .service("/", (req, ctx) -> HttpResponse.of("Hello!"));
 
             // Record when the method triggered

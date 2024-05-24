@@ -48,7 +48,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -58,7 +58,7 @@ import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import io.micrometer.core.instrument.Statistic;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import testing.grpc.EmptyProtos.Empty;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
@@ -90,7 +90,7 @@ class GrpcMeterIdPrefixFunctionTest {
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
     @ParameterizedTest
     void emptyCall_trailersOnly(SerializationFormat serializationFormat) {
-        final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final PrometheusMeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final TestServiceBlockingStub client = newClient(serializationFormat, registry);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -121,7 +121,7 @@ class GrpcMeterIdPrefixFunctionTest {
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
     @ParameterizedTest
     void unaryCall_trailers(SerializationFormat serializationFormat) {
-        final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final PrometheusMeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final TestServiceBlockingStub client = newClient(serializationFormat, registry);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -157,7 +157,7 @@ class GrpcMeterIdPrefixFunctionTest {
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
     @ParameterizedTest
     void unaryCall2(SerializationFormat serializationFormat) {
-        final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final PrometheusMeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final TestServiceBlockingStub client = newClient(serializationFormat, registry);
 
         assertThat(client.unaryCall2(SimpleRequest.getDefaultInstance()))

@@ -43,18 +43,18 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.prometheus.client.exporter.common.TextFormat;
 
-class PrometheusExpositionServiceTest {
+class PrometheusVersion1ExpositionServiceTest {
 
-    private static final PrometheusMeterRegistry registry = PrometheusMeterRegistries.defaultRegistry();
+    private static final PrometheusMeterRegistry registry = PrometheusVersion1MeterRegistries.defaultRegistry();
 
     private static final Queue<RequestLog> logs = new ConcurrentLinkedQueue<>();
 
@@ -67,11 +67,12 @@ class PrometheusExpositionServiceTest {
             sb.route().path("/api").defaultServiceName("Hello").build((ctx, req) -> HttpResponse.of(200));
             sb.meterRegistry(registry)
               .decorator(MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("foo")))
-              .service("/disabled", PrometheusExpositionService.of(registry.getPrometheusRegistry()))
+              .service("/disabled", PrometheusVersion1ExpositionService.of(registry.getPrometheusRegistry()))
               .service("/enabled",
-                       PrometheusExpositionService.builder(registry.getPrometheusRegistry())
-                                                  .transientServiceOptions(TransientServiceOption.allOf())
-                                                  .build());
+                       PrometheusVersion1ExpositionService.builder(registry.getPrometheusRegistry())
+                                                          .transientServiceOptions(
+                                                                  TransientServiceOption.allOf())
+                                                          .build());
             sb.accessLogWriter(logs::add, false);
             sb.decorator(LoggingService.builder()
                                        .logWriter(LogWriter.of(logger))
@@ -100,8 +101,9 @@ class PrometheusExpositionServiceTest {
             assertThat(measurements)
                     .containsEntry("foo.active.requests#value{hostname.pattern=*,method=GET,service=Hello}",
                                    0.0)
-                    .doesNotContainKey("foo.active.requests#value{hostname.pattern=*,method=GET,service=" +
-                                       "com.linecorp.armeria.server.metric.PrometheusExpositionService}");
+                    .doesNotContainKey(
+                            "foo.active.requests#value{hostname.pattern=*,method=GET,service=" +
+                            "com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService}");
         });
         // Access log is not written.
         await().pollDelay(500, TimeUnit.MILLISECONDS).then().until(() -> logs.size() == 1);
@@ -116,7 +118,8 @@ class PrometheusExpositionServiceTest {
                     .containsEntry("foo.active.requests#value{hostname.pattern=*,method=GET,service=Hello}",
                                    0.0)
                     .containsEntry("foo.active.requests#value{hostname.pattern=*,method=GET,service=" +
-                                   "com.linecorp.armeria.server.metric.PrometheusExpositionService}", 0.0);
+                                   "com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService}",
+                                   0.0);
         });
         // Access log is written.
         await().pollDelay(500, TimeUnit.MILLISECONDS).until(() -> logs.size() == 2);

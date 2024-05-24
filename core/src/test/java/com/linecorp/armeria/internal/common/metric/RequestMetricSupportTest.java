@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.RequestTimeoutException;
@@ -49,7 +49,7 @@ class RequestMetricSupportTest {
 
     @Test
     void httpSuccess() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         // FIXME(trustin): In reality, most HTTP requests will not have any name.
@@ -118,7 +118,7 @@ class RequestMetricSupportTest {
 
     @Test
     void httpFailure() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         ctx.logBuilder().requestFirstBytesTransferred();
@@ -142,7 +142,7 @@ class RequestMetricSupportTest {
 
     @Test
     void actualRequestsIncreasedWhenRetrying() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         addLogInfoInDerivedCtx(ctx, 500);
@@ -184,7 +184,7 @@ class RequestMetricSupportTest {
 
     @Test
     void allRetryingRequestFailed() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         addLogInfoInDerivedCtx(ctx, 500);
@@ -214,7 +214,7 @@ class RequestMetricSupportTest {
 
     @Test
     void firstRetryingRequestFailedAndTheSecondOneSuccess() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         addLogInfoInDerivedCtx(ctx, 500);
@@ -244,7 +244,7 @@ class RequestMetricSupportTest {
 
     @Test
     void responseTimedOutInClientSide() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         ctx.logBuilder().requestFirstBytesTransferred();
@@ -267,7 +267,7 @@ class RequestMetricSupportTest {
 
     @Test
     void writeTimedOutInClientSide() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
         ctx.logBuilder().endRequest(WriteTimeoutException.get());
@@ -321,7 +321,7 @@ class RequestMetricSupportTest {
 
     @Test
     void requestTimedOutInServerSide() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ServiceRequestContext ctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
@@ -360,7 +360,7 @@ class RequestMetricSupportTest {
 
     @Test
     void rpc() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ClientRequestContext ctx =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/bar"))
                                     .meterRegistry(registry)
@@ -380,7 +380,7 @@ class RequestMetricSupportTest {
 
     @Test
     void serviceAndClientContext() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ServiceRequestContext sctx =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                      .meterRegistry(registry)
@@ -437,7 +437,7 @@ class RequestMetricSupportTest {
 
     @Test
     void customSuccessFunction() {
-        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
         final ClientRequestContext ctx1 =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.POST, "/foo"))
                                     .meterRegistry(registry)

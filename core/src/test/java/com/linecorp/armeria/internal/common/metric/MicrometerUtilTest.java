@@ -22,14 +22,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
 class MicrometerUtilTest {
 
     private static final MeterIdPrefix ID_PREFIX_A = new MeterIdPrefix("a");
-    private static final MeterRegistry metrics = PrometheusMeterRegistries.newRegistry();
+    private static final MeterRegistry metrics = PrometheusVersion1MeterRegistries.newRegistry();
 
     @Test
     void getOrCreateGroup() {

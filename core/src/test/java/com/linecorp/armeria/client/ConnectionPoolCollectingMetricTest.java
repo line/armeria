@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AttributeMap;
@@ -37,7 +37,7 @@ class ConnectionPoolCollectingMetricTest {
     @BeforeEach
     void setUp() {
         // PrometheusMeterRegistry is preferred for testing because it has additional validation.
-        registry = PrometheusMeterRegistries.newRegistry();
+        registry = PrometheusVersion1MeterRegistries.newRegistry();
         connectionPoolListener = ConnectionPoolListener.metricCollecting(registry);
     }
 

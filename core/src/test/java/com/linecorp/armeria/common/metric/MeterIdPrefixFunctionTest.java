@@ -79,10 +79,10 @@ class MeterIdPrefixFunctionTest {
         };
         final MeterIdPrefixFunction f2 = f.andThen(
                 (registry, log, id) -> id.appendWithTags("bar", "log.name", log.name()));
-        assertThat(f2.completeRequestPrefix(PrometheusMeterRegistries.newRegistry(),
+        assertThat(f2.completeRequestPrefix(PrometheusVersion1MeterRegistries.newRegistry(),
                                             ctx.log().ensureComplete()))
                 .isEqualTo(new MeterIdPrefix("foo.bar", "log.name", "doFoo"));
-        assertThat(f2.activeRequestPrefix(PrometheusMeterRegistries.newRegistry(),
+        assertThat(f2.activeRequestPrefix(PrometheusVersion1MeterRegistries.newRegistry(),
                                           ctx.log().ensureRequestComplete()))
                 .isEqualTo(new MeterIdPrefix("oof.bar", "log.name", "doFoo"));
     }

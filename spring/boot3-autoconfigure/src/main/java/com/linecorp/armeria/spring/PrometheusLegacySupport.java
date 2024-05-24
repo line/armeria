@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,32 +15,33 @@
  */
 package com.linecorp.armeria.spring;
 
+import static com.linecorp.armeria.spring.PrometheusSupport.find;
+
 import java.util.Optional;
 import java.util.Set;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService;
+import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
-import io.prometheus.metrics.model.registry.PrometheusRegistry;
+import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.prometheus.client.CollectorRegistry;
 
-final class PrometheusSupport {
+final class PrometheusLegacySupport {
 
     @Nullable
-    static PrometheusVersion1ExpositionService newExpositionService(MeterRegistry meterRegistry) {
+    static PrometheusExpositionService newExpositionService(MeterRegistry meterRegistry) {
         for (;;) {
             if (meterRegistry instanceof PrometheusMeterRegistry) {
-                final PrometheusRegistry prometheusRegistry =
+                final CollectorRegistry prometheusRegistry =
                         ((PrometheusMeterRegistry) meterRegistry).getPrometheusRegistry();
-                return PrometheusVersion1ExpositionService.of(prometheusRegistry);
+                return PrometheusExpositionService.of(prometheusRegistry);
             }
 
             if (meterRegistry instanceof CompositeMeterRegistry) {
                 final Set<MeterRegistry> childRegistries =
                         ((CompositeMeterRegistry) meterRegistry).getRegistries();
-
                 final Optional<PrometheusMeterRegistry> opt =
                         find(PrometheusMeterRegistry.class, childRegistries);
                 if (opt.isPresent()) {
@@ -55,12 +56,5 @@ final class PrometheusSupport {
         }
     }
 
-    static <T> Optional<T> find(Class<T> type, Set<MeterRegistry> childRegistries) {
-        return childRegistries.stream()
-                              .filter(type::isInstance)
-                              .map(type::cast)
-                              .findAny();
-    }
-
-    private PrometheusSupport() {}
+    private PrometheusLegacySupport() {}
 }

@@ -27,15 +27,15 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 
 class MetricCollectingServiceTest {
 
-    private static final PrometheusMeterRegistry registry = PrometheusMeterRegistries.defaultRegistry();
+    private static final PrometheusMeterRegistry registry = PrometheusVersion1MeterRegistries.defaultRegistry();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {

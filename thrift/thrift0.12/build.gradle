@@ -23,7 +23,7 @@ dependencies {
     // Dropwizard and Prometheus, for testing metrics integration
     testImplementation libs.dropwizard.metrics.core
     testImplementation libs.micrometer.prometheus
-    testImplementation libs.prometheus
+    testImplementation libs.prometheus.metrics.exposition.formats
 
     // micrometer tracing
     testImplementation (libs.micrometer.tracing.integration.test) {
