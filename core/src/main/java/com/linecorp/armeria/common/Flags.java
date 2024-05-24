@@ -281,6 +281,10 @@ public final class Flags {
             getValue(FlagsProvider::defaultServerConnectionDrainDurationMicros,
                      "defaultServerConnectionDrainDurationMicros", value -> value >= 0);
 
+    private static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+            getValue(FlagsProvider::defaultClientHttp2GracefulShutdownTimeoutMillis,
+                     "defaultClientHttp2GracefulShutdownTimeoutMillis", value -> value >= 0);
+
     private static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             getValue(FlagsProvider::defaultHttp2InitialConnectionWindowSize,
                      "defaultHttp2InitialConnectionWindowSize", value -> value > 0);
@@ -1032,6 +1036,24 @@ public final class Flags {
      */
     public static long defaultServerConnectionDrainDurationMicros() {
         return DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
+    }
+
+    /**
+     * Returns the default client-side graceful connection shutdown timeout in milliseconds.
+     * {@code 0} disables the timeout and closes the connection immediately after sending a GOAWAY frame.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientHttp2GracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value.
+     * After the drain period end client will close all the connections.
+     * </p>
+     *
+     * @see ClientFactoryBuilder#http2GracefulShutdownTimeout(Duration)
+     * @see ClientFactoryBuilder#http2GracefulShutdownTimeoutMillis(long)
+     */
+    public static long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     }
 
     /**

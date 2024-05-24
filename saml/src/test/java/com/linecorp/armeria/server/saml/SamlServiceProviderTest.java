@@ -45,12 +45,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 import org.joda.time.DateTime;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.opensaml.core.criterion.EntityIdCriterion;
@@ -114,6 +116,9 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 @GenerateNativeImageTrace
 class SamlServiceProviderTest {
+
+    private static final AtomicReference<MessageContext<Response>> messageContextHolder =
+            new AtomicReference<>();
 
     private static final String signatureAlgorithm = SignatureConstants.ALGO_ID_SIGNATURE_RSA;
 
@@ -289,6 +294,7 @@ class SamlServiceProviderTest {
         @Override
         public HttpResponse loginFailed(ServiceRequestContext ctx, AggregatedHttpRequest req,
                                         @Nullable MessageContext<Response> message, Throwable cause) {
+            messageContextHolder.set(message);
             // Handle as an error so that a test client can detect the failure.
             return HttpResponse.of(HttpStatus.BAD_REQUEST);
         }
@@ -314,6 +320,11 @@ class SamlServiceProviderTest {
     }
 
     final WebClient client = WebClient.of(server.httpUri());
+
+    @BeforeEach
+    void setup() {
+        messageContextHolder.set(null);
+    }
 
     @Test
     void shouldRespondAuthnRequest_HttpRedirect() throws Exception {
@@ -436,6 +447,8 @@ class SamlServiceProviderTest {
     @Test
     void shouldNotConsumeAssertionWithoutSignature_HttpPost() throws Exception {
         shouldNotConsumeAssertion_HttpPost(null);
+        final MessageContext<Response> messageContext = messageContextHolder.get();
+        assertThat(messageContext.getMessage().getSignature()).isNull();
     }
 
     @Test

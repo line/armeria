@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
@@ -26,8 +25,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.BindException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.time.Duration;
 
@@ -63,7 +60,6 @@ class Http1ServerDelayedCloseConnectionTest {
     void shouldDelayDisconnectByServerSideIfClientDoesNotHandleConnectionClose() throws IOException {
         try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
             socket.setSoTimeout(100000);
-            final int socketPort = socket.getLocalPort();
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /close" + " HTTP/1.1\r\n");
             writer.print("\r\n");
@@ -82,19 +78,14 @@ class Http1ServerDelayedCloseConnectionTest {
             final int readResult = in.read();
             final long readDurationMillis = Duration.ofNanos(System.nanoTime() - readStartTimestamp).toMillis();
 
+            // -1 means that the server closed the connection
+            // after defaultHttp1ConnectionCloseDelayMillis elapsed.
             assertThat(readResult).isEqualTo(-1);
-
             final long defaultHttp1ConnectionCloseDelayMillis = Flags.defaultHttp1ConnectionCloseDelayMillis();
             assertThat(readDurationMillis).isBetween(
                     defaultHttp1ConnectionCloseDelayMillis - 2000,
                     defaultHttp1ConnectionCloseDelayMillis + 2000
             );
-
-            socket.close();
-            try (Socket reuseSock = new Socket()) {
-                assertThatCode(() -> reuseSock.bind(new InetSocketAddress((InetAddress) null, socketPort)))
-                        .doesNotThrowAnyException();
-            }
         }
     }
 

@@ -250,6 +250,13 @@ public final class ClientFactoryOptions
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
 
     /**
+     * The graceful connection shutdown timeout in milliseconds..
+     */
+    public static final ClientFactoryOption<Long> HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+            ClientFactoryOption.define("HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
+                                       Flags.defaultClientHttp2GracefulShutdownTimeoutMillis());
+
+    /**
      * The {@link MeterRegistry} which collects various stats.
      */
     public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
@@ -563,6 +570,13 @@ public final class ClientFactoryOptions
      */
     public ConnectionPoolListener connectionPoolListener() {
         return get(CONNECTION_POOL_LISTENER);
+    }
+
+    /**
+     * Returns the graceful connection shutdown timeout in milliseconds.
+     */
+    public long http2GracefulShutdownTimeoutMillis() {
+        return get(HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
     }
 
     /**

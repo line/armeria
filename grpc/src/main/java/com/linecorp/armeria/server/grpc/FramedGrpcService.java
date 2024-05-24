@@ -60,7 +60,6 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
@@ -241,8 +240,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(exceptionHandler, ctx, e, metadata),
-                                    metadata));
+                                    exceptionHandler.apply(ctx, e, metadata), metadata));
                 }
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(AbstractUnframedGrpcService.IS_UNFRAMED_GRPC))) {

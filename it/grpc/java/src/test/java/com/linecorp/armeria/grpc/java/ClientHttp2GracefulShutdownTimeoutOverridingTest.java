@@ -39,7 +39,7 @@ import testing.grpc.TestServiceGrpc.TestServiceFutureStub;
 class ClientHttp2GracefulShutdownTimeoutOverridingTest {
 
     @Test
-    void idleTimeoutIsUsedForHttp2GracefulShutdownTimeout() throws Exception {
+    void http2GracefulShutdownTimeout() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
         final Server server = ServerBuilder.forPort(0)
                                            .addService(new TestSleepService(latch))
@@ -48,7 +48,7 @@ class ClientHttp2GracefulShutdownTimeoutOverridingTest {
 
         try (ClientFactory factory = ClientFactory.builder()
                                                   // Set greater than 40 seconds for HTTP/2 graceful shutdown.
-                                                  .idleTimeout(Duration.ofSeconds(50))
+                                                  .http2GracefulShutdownTimeout(Duration.ofSeconds(50))
                                                   .build()) {
             final TestServiceFutureStub client =
                     GrpcClients.builder("http://127.0.0.1:" + server.getPort())

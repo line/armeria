@@ -583,6 +583,22 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default client-side graceful connection shutdown timeout in microseconds.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#http2GracefulShutdownTimeoutMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientHttp2GracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
+     */
+    @Nullable
+    default Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return null;
+    }
+
+    /**
      * Returns the default server-side max age of a connection for keep-alive in milliseconds.
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.

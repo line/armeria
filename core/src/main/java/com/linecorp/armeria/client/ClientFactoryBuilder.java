@@ -804,6 +804,28 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the graceful connection shutdown timeout in milliseconds.
+     * {@code 0} disables the timeout and closes the connection immediately after sending a GOAWAY frame.
+     */
+    public ClientFactoryBuilder http2GracefulShutdownTimeout(Duration duration) {
+        requireNonNull(duration, "duration");
+        return http2GracefulShutdownTimeoutMillis(duration.toMillis());
+    }
+
+    /**
+     * Sets the graceful connection shutdown timeout in milliseconds.
+     * {@code 0} disables the timeout and closes the connection immediately after sending a GOAWAY frame.
+     */
+    public ClientFactoryBuilder http2GracefulShutdownTimeoutMillis(long http2GracefulShutdownTimeoutMillis) {
+        checkArgument(http2GracefulShutdownTimeoutMillis >= 0,
+                      "http2GracefulShutdownTimeoutMillis: %s (expected: >= 0)",
+                      http2GracefulShutdownTimeoutMillis);
+        option(ClientFactoryOptions.HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS,
+               http2GracefulShutdownTimeoutMillis);
+        return this;
+    }
+
+    /**
      * Sets the {@link MeterRegistry} which collects various stats.
      */
     public ClientFactoryBuilder meterRegistry(MeterRegistry meterRegistry) {
