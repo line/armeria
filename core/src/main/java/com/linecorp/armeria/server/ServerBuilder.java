@@ -2191,13 +2191,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
             unloggedExceptionsReporter = null;
         }
 
-        final ServerErrorHandler errorHandler;
-        if (this.errorHandler == null) {
-            errorHandler = ServerErrorHandler.ofDefault();
-        } else {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = this.errorHandler.orElse(ServerErrorHandler.ofDefault());
-        }
+        final ServerErrorHandler errorHandler =
+                new CorsServerErrorHandler(
+                        this.errorHandler == null ? ServerErrorHandler.ofDefault()
+                                                  : this.errorHandler.orElse(ServerErrorHandler.ofDefault()));
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
                                                 unloggedExceptionsReporter, errorHandler);

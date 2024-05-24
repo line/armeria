@@ -292,6 +292,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return getLong("defaultClientHttp2GracefulShutdownTimeoutMillis");
+    }
+
+    @Override
     public Integer defaultHttp2InitialConnectionWindowSize() {
         return getInt("defaultHttp2InitialConnectionWindowSize");
     }

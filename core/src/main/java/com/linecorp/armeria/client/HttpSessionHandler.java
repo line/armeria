@@ -523,9 +523,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             }
             if (proxyDestinationAddress != null) {
                 channelPool.connect(proxyDestinationAddress, retryProtocol, serializationFormat,
-                                    poolKey, sessionPromise);
+                                    poolKey, sessionPromise, null);
             } else {
-                channelPool.connect(remoteAddress, retryProtocol, serializationFormat, poolKey, sessionPromise);
+                channelPool.connect(remoteAddress, retryProtocol, serializationFormat, poolKey, sessionPromise,
+                                    null);
             }
         } else {
             // Fail all pending responses.

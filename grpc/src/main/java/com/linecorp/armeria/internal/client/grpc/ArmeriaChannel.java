@@ -99,6 +99,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private final DecompressorRegistry decompressorRegistry;
     private final CallCredentials credentials0;
     private final GrpcExceptionHandlerFunction exceptionHandler;
+    private final boolean useMethodMarshaller;
 
     ArmeriaChannel(ClientBuilderParams params,
                    HttpClient httpClient,
@@ -119,6 +120,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);
         maxInboundMessageSizeBytes = maxInboundMessageSizeBytes(options);
         unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
+        useMethodMarshaller = options.get(GrpcClientOptions.USE_METHOD_MARSHALLER);
         compressor = options.get(GrpcClientOptions.COMPRESSOR);
         decompressorRegistry = options.get(GrpcClientOptions.DECOMPRESSOR_REGISTRY);
         credentials0 = options.get(GrpcClientOptions.CALL_CREDENTIALS);
@@ -180,7 +182,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 serializationFormat,
                 jsonMarshaller,
                 unsafeWrapResponseBuffers,
-                exceptionHandler);
+                exceptionHandler,
+                useMethodMarshaller);
     }
 
     @Override
