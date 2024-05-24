@@ -49,6 +49,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.BiConsumer;
+import java.util.regex.Pattern;
 
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
@@ -248,8 +249,29 @@ public final class ArmeriaHttpUtil {
     private static final Set<AsciiString> CACHED_HEADERS = Flags.cachedHeaders().stream().map(AsciiString::of)
                                                                 .collect(toImmutableSet());
 
+    /**
+     * Validator for the scheme part of the URI, as defined in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1">the section 3.1 of RFC3986</a>.
+     */
+    private static final Pattern SCHEME_PATTERN = Pattern.compile("^([a-zA-Z][a-zA-Z0-9+\\-.]*)");
+
     private static LoadingCache<AsciiString, String> buildCache(String spec) {
         return Caffeine.from(spec).build(AsciiString::toString);
+    }
+
+    /**
+     * Returns normalized scheme.
+     *
+     * @throws IllegalArgumentException if the provided {@code scheme} does not conform to the criteria
+     *                                  specified in RFC 3986.
+     */
+    public static String schemeValidateAndNormalize(String scheme) {
+        final boolean isValidScheme = SCHEME_PATTERN.matcher(scheme).matches();
+        if (isValidScheme) {
+            return Ascii.toLowerCase(scheme);
+        } else {
+            throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
+        }
     }
 
     /**
@@ -670,21 +692,18 @@ public final class ArmeriaHttpUtil {
      * {@link ExtensionHeaderNames#PATH} is ignored and instead extracted from the {@code Request-Line}.
      */
     public static RequestHeaders toArmeria(
-            ChannelHandlerContext ctx, HttpRequest in,
+            ChannelHandlerContext ctx, HttpRequest in, RequestHeadersBuilder out,
             ServerConfig cfg, String scheme, RequestTarget reqTarget) throws URISyntaxException {
 
         final io.netty.handler.codec.http.HttpHeaders inHeaders = in.headers();
-        final RequestHeadersBuilder out = RequestHeaders.builder();
-        out.sizeHint(inHeaders.size());
         out.method(firstNonNull(HttpMethod.tryParse(in.method().name()), HttpMethod.UNKNOWN))
            .scheme(scheme)
            .path(reqTarget.toString());
 
-        // Add the HTTP headers which have not been consumed above
-        toArmeria(inHeaders, out);
         if (!out.contains(HttpHeaderNames.HOST)) {
             out.add(HttpHeaderNames.HOST, defaultAuthority(ctx, cfg));
         }
+        purgeHttp1OnlyHeaders(inHeaders, out);
         return out.build();
     }
 
@@ -717,6 +736,8 @@ public final class ArmeriaHttpUtil {
 
     /**
      * Converts the specified Netty HTTP/1 headers into Armeria HTTP/2 headers.
+     * Functionally, this method is expected to behavior in the same way as
+     * {@link #purgeHttp1OnlyHeaders(io.netty.handler.codec.http.HttpHeaders, HttpHeadersBuilder)}.
      */
     public static void toArmeria(io.netty.handler.codec.http.HttpHeaders inHeaders, HttpHeadersBuilder out) {
         final Iterator<Entry<CharSequence, CharSequence>> iter = inHeaders.iteratorCharSequence();
@@ -760,6 +781,90 @@ public final class ArmeriaHttpUtil {
         }
 
         maybeSetContentLengthUnknown(inHeaders.contains(HttpHeaderNames.CONTENT_LENGTH), out);
+    }
+
+    /**
+     * Removes HTTP/1 specified headers from a mutable headers map.
+     * Functionally this method is expected to behave the same as
+     * {@link #toArmeria(io.netty.handler.codec.http.HttpHeaders, HttpHeadersBuilder)}.
+     * This method should be preferred going forward as we continue implementing zero-copy
+     * for HTTP1 en/decoders.
+     */
+    private static void purgeHttp1OnlyHeaders(io.netty.handler.codec.http.HttpHeaders inHeaders,
+                                             HttpHeadersBuilder out) {
+        //TODO(minwoox): dedup the logic between these method and toArmeria
+        maybeSetTeHeader(inHeaders, out);
+        maybeRemoveConnectionHeaders(inHeaders, out);
+        maybeSetCookie(inHeaders, out);
+        maybeSetContentLengthUnknown(inHeaders.contains(HttpHeaderNames.CONTENT_LENGTH), out);
+    }
+
+    private static void maybeRemoveConnectionHeaders(io.netty.handler.codec.http.HttpHeaders inHeaders,
+                                                     HttpHeadersBuilder out) {
+        final CaseInsensitiveMap connectionDisallowedList =
+                toLowercaseMap(inHeaders.valueCharSequenceIterator(HttpHeaderNames.CONNECTION), 8);
+        final boolean isWebSocketUpgrade = isWebSocketUpgrade(inHeaders);
+        connectionDisallowedList.forEach(entry -> out.remove(entry.getKey()));
+        HTTP_TO_HTTP2_HEADER_DISALLOWED_LIST.forEach(entry -> out.remove(entry.getKey()));
+        if (isWebSocketUpgrade) {
+            out.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString());
+            out.set(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString());
+        }
+    }
+
+    private static void maybeSetCookie(io.netty.handler.codec.http.HttpHeaders inHeaders,
+                                       HttpHeadersBuilder out) {
+        // Cookies must be concatenated into a single octet string.
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.5
+        if (out.contains(HttpHeaderNames.COOKIE)) {
+            final StringJoiner cookieJoiner = new StringJoiner(COOKIE_SEPARATOR);
+            inHeaders.getAll(HttpHeaderNames.COOKIE).forEach(
+                    value -> COOKIE_SPLITTER.split(value).forEach(cookieJoiner::add));
+            out.set(HttpHeaderNames.COOKIE, cookieJoiner.toString());
+        }
+    }
+
+    private static void maybeSetTeHeader(io.netty.handler.codec.http.HttpHeaders inHeaders,
+                                         HttpHeadersBuilder out) {
+        if (!inHeaders.contains(HttpHeaderNames.TE)) {
+            return;
+        }
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2 makes a special exception for TE
+        final boolean hasTrailersTe = findDelimitedIgnoreCase(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS,
+                                                              inHeaders);
+        if (hasTrailersTe) {
+            out.set(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString());
+        } else {
+            out.remove(HttpHeaderNames.TE);
+        }
+    }
+
+    private static boolean isWebSocketUpgrade(io.netty.handler.codec.http.HttpHeaders inHeaders) {
+        final boolean isUpgrade = findDelimitedIgnoreCase(HttpHeaderNames.CONNECTION,
+                                                          HttpHeaderValues.UPGRADE, inHeaders);
+        final boolean isWebsocket = findDelimitedIgnoreCase(HttpHeaderNames.UPGRADE,
+                                                            HttpHeaderValues.WEBSOCKET, inHeaders);
+        return isUpgrade && isWebsocket;
+    }
+
+    private static boolean findDelimitedIgnoreCase(AsciiString targetName, AsciiString targetValue,
+                                                   io.netty.handler.codec.http.HttpHeaders httpHeaders) {
+        final List<String> allValues = httpHeaders.getAll(targetName);
+        if (allValues.isEmpty()) {
+            return false;
+        }
+        for (String value: allValues) {
+            if (targetValue.contentEqualsIgnoreCase(value)) {
+                return true;
+            }
+            final List<CharSequence> values = StringUtil.unescapeCsvFields(value);
+            for (CharSequence field : values) {
+                if (targetValue.contentEqualsIgnoreCase(AsciiString.trim(field))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static void maybeSetContentLengthUnknown(boolean hasContentLength, HttpHeadersBuilder out) {

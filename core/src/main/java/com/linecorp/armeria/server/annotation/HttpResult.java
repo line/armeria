@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -28,8 +29,11 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * and it would be converted into response body by a {@link ResponseConverterFunction}.
  *
  * @param <T> the type of a content which is to be converted into response body
+ *
+ * @deprecated Use {@link ResponseEntity} instead.
  */
 @FunctionalInterface
+@Deprecated
 public interface HttpResult<T> {
 
     /**

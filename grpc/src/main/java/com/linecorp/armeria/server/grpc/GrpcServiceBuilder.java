@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
@@ -146,6 +147,8 @@ public final class GrpcServiceBuilder {
     private boolean unsafeWrapRequestBuffers;
 
     private boolean useClientTimeoutHeader = true;
+
+    private boolean useMethodMarshaller;
 
     private boolean enableHealthCheckService;
 
@@ -749,6 +752,11 @@ public final class GrpcServiceBuilder {
      * {@link GrpcSerializationFormats#PROTO_WEB_TEXT}.
      */
     public GrpcServiceBuilder unsafeWrapRequestBuffers(boolean unsafeWrapRequestBuffers) {
+        if (unsafeWrapRequestBuffers && useMethodMarshaller) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         return this;
     }
@@ -821,6 +829,21 @@ public final class GrpcServiceBuilder {
     @UnstableApi
     public GrpcServiceBuilder autoCompression(boolean autoCompression) {
         this.autoCompression = autoCompression;
+        return this;
+    }
+
+    /**
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}
+     * If not set, will use the default(false), which use more efficient way that reduce copy operation.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder useMethodMarshaller(boolean useMethodMarshaller) {
+        if (unsafeWrapRequestBuffers && useMethodMarshaller) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
+        this.useMethodMarshaller = useMethodMarshaller;
         return this;
     }
 
@@ -974,16 +997,16 @@ public final class GrpcServiceBuilder {
             registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
 
-        final GrpcExceptionHandlerFunction grpcExceptionHandler;
+        GrpcExceptionHandlerFunction grpcExceptionHandler;
         if (exceptionMappingsBuilder != null) {
-            grpcExceptionHandler = exceptionMappingsBuilder.build();
+            grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(GrpcExceptionHandlerFunction.of());
+        } else if (exceptionHandler != null) {
+            grpcExceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
         } else {
-            grpcExceptionHandler = exceptionHandler;
+            grpcExceptionHandler = GrpcExceptionHandlerFunction.of();
         }
-
-        if (grpcExceptionHandler != null) {
-            registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
-        }
+        grpcExceptionHandler = new UnwrappingGrpcExceptionHandleFunction(grpcExceptionHandler);
+        registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
 
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
@@ -1016,7 +1039,8 @@ public final class GrpcServiceBuilder {
                 useClientTimeoutHeader,
                 enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
                 grpcHealthCheckService,
-                autoCompression);
+                autoCompression,
+                useMethodMarshaller);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,

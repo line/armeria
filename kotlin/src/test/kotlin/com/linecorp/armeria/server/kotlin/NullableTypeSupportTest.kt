@@ -40,18 +40,20 @@ class NullableTypeSupportTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "/value-resolver/of-query-param",
-            "/value-resolver/of-request-converter",
-            "/value-resolver/of-bean-constructor",
-            "/value-resolver/of-bean-field",
-            "/value-resolver/of-bean-method",
+            "/of-query-param",
+            "/of-request-converter",
+            "/of-bean-constructor",
+            "/of-bean-field",
+            "/of-bean-method",
         ],
     )
     fun test_nullableParameters(testPath: String) {
-        testNullableParameters("/nullable-type/$testPath")
+        testNullableParameters("/nullable-type/value-resolver/$testPath")
+        testNullableParameters("/nullable-type/value-resolver/suspend/$testPath")
 
         // Check for backward-compatibility
-        testNullableParameters("/nullable-annot/$testPath")
+        testNullableParameters("/nullable-annot/value-resolver/$testPath")
+        testNullableParameters("/nullable-annot/value-resolver/suspend/$testPath")
     }
 
     private fun testNullableParameters(testPath: String) {
@@ -89,6 +91,12 @@ class NullableTypeSupportTest {
                                     @Param b: String?,
                                 ) = HttpResponse.of("a: $a, b: $b")
 
+                                @Get("/suspend/of-query-param")
+                                suspend fun suspendOfQueryParam(
+                                    @Param a: String,
+                                    @Param b: String?,
+                                ) = HttpResponse.of("a: $a, b: $b")
+
                                 @Get("/of-request-converter")
                                 @RequestConverter(FooBarRequestConverter::class)
                                 fun ofRequestConverter(
@@ -96,14 +104,33 @@ class NullableTypeSupportTest {
                                     bar: Bar?,
                                 ) = HttpResponse.of("a: ${foo.value}, b: ${bar?.value}")
 
+                                @Get("/suspend/of-request-converter")
+                                @RequestConverter(FooBarRequestConverter::class)
+                                suspend fun suspendOfRequestConverter(
+                                    foo: Foo,
+                                    bar: Bar?,
+                                ) = HttpResponse.of("a: ${foo.value}, b: ${bar?.value}")
+
                                 @Get("/of-bean-constructor")
                                 fun ofBeanConstructor(baz: Baz) = HttpResponse.of("a: ${baz.a}, b: ${baz.b}")
+
+                                @Get("/suspend/of-bean-constructor")
+                                suspend fun suspendOfBeanConstructor(baz: Baz) =
+                                    HttpResponse.of("a: ${baz.a}, b: ${baz.b}")
 
                                 @Get("/of-bean-field")
                                 fun ofBeanField(qux: Qux) = HttpResponse.of("a: ${qux.a}, b: ${qux.b}")
 
+                                @Get("/suspend/of-bean-field")
+                                suspend fun suspendOfBeanField(qux: Qux) =
+                                    HttpResponse.of("a: ${qux.a}, b: ${qux.b}")
+
                                 @Get("/of-bean-method")
                                 fun ofBeanMethod(quux: Quux) = HttpResponse.of("a: ${quux.a}, b: ${quux.b}")
+
+                                @Get("/suspend/of-bean-method")
+                                suspend fun suspendOfBeanMethod(quux: Quux) =
+                                    HttpResponse.of("a: ${quux.a}, b: ${quux.b}")
                             },
                         )
                         sb.annotatedService(
@@ -117,6 +144,14 @@ class NullableTypeSupportTest {
                                     b: String?,
                                 ) = HttpResponse.of("a: $a, b: $b")
 
+                                @Get("/suspend/of-query-param")
+                                suspend fun suspendOfQueryParam(
+                                    @Param a: String,
+                                    @Nullable
+                                    @Param
+                                    b: String?,
+                                ) = HttpResponse.of("a: $a, b: $b")
+
                                 @Get("/of-request-converter")
                                 @RequestConverter(FooBarRequestConverter::class)
                                 fun ofRequestConverter(
@@ -124,14 +159,33 @@ class NullableTypeSupportTest {
                                     @Nullable bar: Bar?,
                                 ) = HttpResponse.of("a: ${foo.value}, b: ${bar?.value}")
 
+                                @Get("/suspend/of-request-converter")
+                                @RequestConverter(FooBarRequestConverter::class)
+                                suspend fun suspendOfRequestConverter(
+                                    foo: Foo,
+                                    @Nullable bar: Bar?,
+                                ) = HttpResponse.of("a: ${foo.value}, b: ${bar?.value}")
+
                                 @Get("/of-bean-constructor")
                                 fun ofBeanConstructor(baz: Baz0) = HttpResponse.of("a: ${baz.a}, b: ${baz.b}")
+
+                                @Get("/suspend/of-bean-constructor")
+                                suspend fun suspendOfBeanConstructor(baz: Baz0) =
+                                    HttpResponse.of("a: ${baz.a}, b: ${baz.b}")
 
                                 @Get("/of-bean-field")
                                 fun ofBeanField(qux: Qux0) = HttpResponse.of("a: ${qux.a}, b: ${qux.b}")
 
+                                @Get("/suspend/of-bean-field")
+                                suspend fun suspendOfBeanField(qux: Qux0) =
+                                    HttpResponse.of("a: ${qux.a}, b: ${qux.b}")
+
                                 @Get("/of-bean-method")
                                 fun ofBeanMethod(quux: Quux0) = HttpResponse.of("a: ${quux.a}, b: ${quux.b}")
+
+                                @Get("/suspend/of-bean-method")
+                                suspend fun suspendOfBeanMethod(quux: Quux0) =
+                                    HttpResponse.of("a: ${quux.a}, b: ${quux.b}")
                             },
                         )
                     }

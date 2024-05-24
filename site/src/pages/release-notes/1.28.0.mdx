@@ -1,0 +1,205 @@
+---
+date: 2024-04-12
+---
+
+## 🌟 New features
+
+- You can now create a Spring HTTP Interface backed by Armeria's <type://WebClient>. #5370
+  ```java
+  WebClient webClient = ...;
+  ArmeriaHttpExchangeAdapter adapter = ArmeriaHttpExchangeAdapter.of(webClient);
+  MyService myService = HttpServiceProxyFactory.builderFor(adapter)
+    .build()
+    .createClient(MyService.class);
+  myService.hello();
+  ```
+- You can use <type://KubernetesEndpointGroup> to perform client-side load-balancing when sending requests to a K8s cluster. #4497 #5001
+  ```java
+  KubernetesClient kubernetesClient = new KubernetesClientBuilder().build();
+  EndpointGroup endpointGroup = KubernetesEndpointGroup
+    .builder(kubernetesClient)
+    .namespace("default")
+    .serviceName("my-service")
+    .build();
+  WebClient.of(HTTP, endpointGroup).get("/");
+  ```
+- You can now conditionally deserialize a JSON response depending on a predicate. #4382 #5002
+  ```java
+  ResponseEntity<MyResponse> response =
+    RestClient
+      .of("http://my-endpoint.com")
+      .get("/")
+      .execute(ResponseAs.<MyResponse>json(SuccessMessage.class, !res -> res.status().isError())
+                         .orElseJson(EmptyMessage.class, res -> res.status().isInformational())
+                         .orElseJson(ErrorMessage.class)).join();
+  ```
+- You can specify allowed CORS origins via regular expressions or predicates. #4982
+  ```java
+  CorsService.builderForOriginRegex(".*example.*")
+             .andForOrigin(origin -> origin.contains("armeria"))
+  ```
+- You can specify a Micrometer `DistributionStatisticConfig` for <type://MetricCollectingClient> and
+  <type://MetricCollectingService>. #4781 #4829
+  ```java
+  DistributionStatisticConfig config = ...;
+  MetricCollectingService.builder(MeterIdPrefixFunction.ofDefault("test"))
+                         .distributionStatisticConfig(config)
+  ```
+- <type://HealthChecker#ofCpu(double,double)> can be used to reflect CPU load in health check status. #4673
+  ```java
+  Server.builder()
+        .service("/hc", HealthCheckService.of(HealthChecker.ofCpu(0.5, 0.5), ...));
+  ```
+- You can flatten multiple <typeplural://StreamMessage> using <type://StreamMessage#flatMap(Function)>. #3966 #4227
+- Armeria's Spring integration now registers <type://ServerErrorHandler> type beans automatically. #5443 #5446
+  ```java
+  @Bean
+  public ServerErrorHandler serverErrorHandler() {
+    return myServerErrorHandler;
+  }
+  ```
+- OAuth 2.0 modules have been refactored #5476
+  - You can now easily implement your own [OAuth 2.0 Extension Grants](https://datatracker.ietf.org/doc/html/rfc6749#section-4.5) by extending <type://AccessTokenRequest>.
+  - You can now use [JSON Web Token](https://datatracker.ietf.org/doc/html/rfc7523) to obtain OAuth 2.0 access tokens.
+- Armeria JARs are now compatible with Java modules. #5543
+- <type://ServerBuilder#virtualHost(String)> returns a cached <type://VirtualHostBuilder> if available. #5418
+  ```java
+  assert Server.builder().virtualHost("a.com") ==
+      Server.builder().virtualHost("a.com");
+  ```
+- <type://AuthService> now records metrics for authentication results. #5074 #5017
+- You can add custom `details` when throwing an `ArmeriaStatusException` in an <type://AbstractUnsafeUnaryGrpcService>. #4306 #4341
+- <type://XdsEndpointGroup> now supports [Strict DNS](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/service_discovery#strict-dns)
+  and [health checking](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/health_checking). #5503
+- <type://XdsBootstrap> now supports `SelfConfigSource`. #5459
+- <type://AccessLogWriter#log(RequestLog)> is now called with the <type://ServiceRequestContext> set on the calling thread. #5500
+- You can now pass <type://RequestOnlyLog#authenticatedUser()> to Logback's MDC easily using `authenticated.user`. #5499
+
+## 🛠️ Bug fixes
+
+- Specifying <type://WebClientBuilder#followRedirects()> now correctly throws an exception when a cyclic redirection occurs. #5491 #5548
+- <type://Service#serviceAdded(ServiceConfig)> is now correctly invoked for decorators. #5544
+- Armeria client is now more tolerant to poorly encoded `Location` header values when following redirects. #5477
+- You can now use Kotlin value classes in annotated services. #5294 #5449
+- <type://ExchangeType> is guessed correctly even if it is not set in <type://RequestOptions>. #5517
+- Fixed a bug where Thrift client requests were leaking byte buffers when aborted early. #5535
+- <type://LoggingClient> and <type://LoggingService> now correctly mask default sensitive headers. #5519
+- <type://GrpcService> now correctly handles `InvalidProtocolBufferException`. #5379 #5554
+- Armeria server no longer incorrectly logs a duplicate route warning for routes with arbitrary parameter or header predicates. #5469
+- Annotated services annotated with <type://@Param> and <type://@Default> now returns sensible values when an empty value is received. #5515 #5534
+- <type://WebSocketFrame#ofPong()> now correctly generates a `PONG` Frame. #5533
+- The `Complete` message in the GraphQL over WebSocket Protocol is now constructed securely. #5531
+- <type://ClientFactory> no longer throws an intermittent exception when shutting down. #5494 #5524
+- <type://DocService> now also supports JSON streaming requests. #5218 #5381
+- Fixed a possible memory leak when a custom gRPC marshaller is used. #5523
+
+## ☢️ Breaking changes
+
+- The `armeria-brave` module has been fully removed. #5453
+  - To upgrade to `armeria-brave6`, see the [brave6 release notes](https://github.com/openzipkin/brave/releases/tag/6.0.0).
+  - If you wish to retain the previous module functionality, use `armeria-brave5`.
+- <type://LogWriterBuilder#responseCauseFilter(BiPredicate)> now accepts a `BiPredicate`
+  with <type://RequestContext> as its first parameter.
+- <type://XdsEndpointGroup> has been moved from `com.linecorp.armeria.xds.client` to `com.linecorp.armeria.xds.client.endpoint`.
+
+## 📈 Improvements
+
+- Server-side HTTP/1.1 request headers are converted to Armeria headers with zero-copy. #4853 #4863
+- Armeria's Spring integration now applies beans in order of priority. #5527 #5573
+- Armeria's native image build configuration has been updated #5516
+- <type://HttpHeaderNames#SEC_AD_AUCTION_FETCH> and <type://HttpHeaderNames#AD_AUCTION_SIGNALS> are added. #5492 #5505
+
+## 📃 Documentation
+
+- Armeria's REST, gRPC and Thrift [tutorials](https://armeria.dev/tutorials) has been revamped with a new format. #5445
+- A wrong import statement in the code examples has been fixed. #5560
+- <type://CircuitBreaker> documentation has been updated to avoid usage of deprecated methods. #5472
+- Broken links in Kotlin and context propagation related documents have been updated. #5437
+
+## 🏚️ Deprecations
+
+- <type://Flags#useOpenSsl()> is deprecated in favor of <type://Flags#tlsEngineType()> #5029
+- <type://ServerBuilder#virtualHost(String,String)>, <type://ServerBuilder#withVirtualHost(Consumer)>,
+  <type://VirtualHostBuilder#hostnamePattern(String)> have been deprecated as they don't support <type://VirtualHostBuilder> re-usability.
+- <type://ClientAuthorization> and OAuth2 grant related classes have been deprecated in favor of a newer API. #5476
+
+## 🙌 Miscellaneous
+
+- An Armeria project icon for IntelliJ has been added. #5467
+
+## ⛓ Dependencies
+
+🚨 Please use at least `Netty 4.1.108.Final` with this release.
+
+- Brave 6.0.0 → 6.0.2
+- Brotli4j 1.15.0 → 1.16.0
+- java-control-plane 1.0.42 → 1.0.44
+- Dropwizard 2.1.10 → 2.1.12
+- Dropwizard Metrics 4.2.24 → 4.2.25
+- Eureka 2.0.1 → 2.0.2
+- fastUtil 8.5.12 → 8.5.13
+- gRPC-Java 1.61.0 → 1.63.0
+- Guava 33.0.0-jre → 33.1.0-jre
+- Jackson 2.16.1 → 2.17.0
+- JCTools 4.0.2 → 4.0.3
+- Jetty
+  - 9.4.52.v20230823 → 9.4.54.v20240208
+  - 10.0.19 → 10.0.20
+  - 11.0.19 → 11.0.20
+  - 12.0.5 → 12.0.8
+- Kotlin 1.9.22 → 1.9.23
+- Kubernetes Client 6.10.0 → 6.11.0
+- Micrometer 1.12.2 → 1.12.4
+- Micrometer Tracing 1.2.2 → 1.2.4
+- Netty 4.1.106.Final → 4.1.108.Final
+- Netty io_uring 0.0.24.Final → 0.0.25.Final
+- protobuf-jackson 2.2.0 → 2.5.0
+- Reactor 3.6.2 → 3.6.4
+- RESTEasy 5.0.7.Final → 5.0.9.Final
+- Retrofit 2.9.0 → 2.11.0
+- Sangria 4.0.2 → 4.1.0
+- Scala
+  - 2.12.18 → 2.12.19
+  - 2.13.12 → 2.13.13
+  - 3.3.0 → 3.4.1
+- Spring 6.1.3 → 6.1.5
+- Spring-Boot 3.2.2 → 3.2.4
+- Tomcat
+  - 8.5.98 → 8.5.100
+  - 9.0.85 → 9.0.87
+  - 10.1.18 → 10.1.20
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Bue-von-hon',
+  'Dogacel',
+  'KonaEspresso94',
+  'Lincong',
+  'cirusthenter',
+  'codefromthecrypt',
+  'echo304',
+  'facewise',
+  'haneepark',
+  'heowc',
+  'ikhoon',
+  'jaeseung-bae',
+  'jrhee17',
+  'kezhenxu94',
+  'kojilin',
+  'kth496',
+  'mauhiz',
+  'minwoox',
+  'moromin',
+  'my4-dev',
+  'seonwoo960000',
+  'sh-cho',
+  'sleeplesslord',
+  'srasul',
+  'thachlp',
+  'trustin',
+  'xhanin',
+  'yashmurty',
+  'yejinio',
+  'yeojin-dev'
+]} />

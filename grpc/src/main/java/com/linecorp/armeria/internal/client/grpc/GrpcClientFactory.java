@@ -162,7 +162,6 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         } else {
             jsonMarshaller = null;
         }
-
         final ArmeriaChannel armeriaChannel =
                 new ArmeriaChannel(newParams, httpClient, meterRegistry(), scheme.sessionProtocol(),
                                    serializationFormat, jsonMarshaller, simpleMethodNames);
