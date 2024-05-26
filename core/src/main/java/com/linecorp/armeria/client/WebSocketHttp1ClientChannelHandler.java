@@ -25,12 +25,10 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.math.LongMath;
 
-import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
@@ -84,8 +82,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
         // - a Ping frame is not sent by the keepAliveHandler but by the upper layer.
         // TODO(minwoox): Provide a dedicated KeepAliveHandler to the upper layer (e.g. WebSocketClient)
         //                that handles Ping frames for WebSocket.
-        keepAliveHandler = new NoopKeepAliveHandler(channel, ConnectionEventListener.noop(),
-                                                    SessionProtocol.H1);
+        keepAliveHandler = new NoopKeepAliveHandler();
     }
 
     @Override

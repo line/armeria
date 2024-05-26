@@ -36,7 +36,6 @@ import java.util.function.Predicate;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
@@ -72,7 +71,6 @@ final class DefaultServerConfig implements ServerConfig {
     private final EventLoopGroup workerGroup;
     private final boolean shutdownWorkerGroupOnStop;
     private final Executor startStopExecutor;
-    private final ConnectionEventListener connectionEventListener;
     private final int maxNumConnections;
 
     private final long idleTimeoutMillis;
@@ -129,7 +127,6 @@ final class DefaultServerConfig implements ServerConfig {
             Iterable<ServerPort> ports,
             VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop, Executor startStopExecutor,
-            ConnectionEventListener connectionEventListener,
             int maxNumConnections, long idleTimeoutMillis, boolean keepAliveOnPing, long pingIntervalMillis,
             long maxConnectionAgeMillis,
             int maxNumRequestsPerConnection, long connectionDrainDurationMicros,
@@ -163,7 +160,6 @@ final class DefaultServerConfig implements ServerConfig {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
         this.shutdownWorkerGroupOnStop = shutdownWorkerGroupOnStop;
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
-        this.connectionEventListener = requireNonNull(connectionEventListener, "connectionEventListener");
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         this.idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeoutMillis);
         this.keepAliveOnPing = keepAliveOnPing;
@@ -503,11 +499,6 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public ConnectionEventListener connectionEventListener() {
-        return connectionEventListener;
-    }
-
-    @Override
     public int maxNumConnections() {
         return maxNumConnections;
     }
@@ -700,7 +691,7 @@ final class DefaultServerConfig implements ServerConfig {
         if (strVal == null) {
             this.strVal = strVal = toString(
                     getClass(), ports(), null, virtualHosts(),
-                    workerGroup(), shutdownWorkerGroupOnStop(), connectionEventListener(),
+                    workerGroup(), shutdownWorkerGroupOnStop(),
                     maxNumConnections(), idleTimeoutMillis(),
                     http2InitialConnectionWindowSize(), http2InitialStreamWindowSize(),
                     http2MaxStreamsPerConnection(), http2MaxFrameSize(), http2MaxHeaderListSize(),
@@ -721,9 +712,8 @@ final class DefaultServerConfig implements ServerConfig {
             @Nullable Class<?> type, Iterable<ServerPort> ports,
             @Nullable VirtualHost defaultVirtualHost, List<VirtualHost> virtualHosts,
             EventLoopGroup workerGroup, boolean shutdownWorkerGroupOnStop,
-            ConnectionEventListener connectionEventListener, int maxNumConnections, long idleTimeoutMillis,
-            int http2InitialConnectionWindowSize, int http2InitialStreamWindowSize,
-            long http2MaxStreamsPerConnection, int http2MaxFrameSize,
+            int maxNumConnections, long idleTimeoutMillis, int http2InitialConnectionWindowSize,
+            int http2InitialStreamWindowSize, long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
@@ -780,8 +770,6 @@ final class DefaultServerConfig implements ServerConfig {
         buf.append(workerGroup);
         buf.append(" (shutdownOnStop=");
         buf.append(shutdownWorkerGroupOnStop);
-        buf.append("), connectionEventListener: ");
-        buf.append(connectionEventListener);
         buf.append("), maxNumConnections: ");
         buf.append(maxNumConnections);
         buf.append(", idleTimeout: ");

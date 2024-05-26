@@ -47,7 +47,6 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.ConnectionEventKey;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -423,12 +422,6 @@ final class HttpChannelPool implements AsyncCloseable {
 
                     assert localAddress != null;
 
-                    final ConnectionEventKey connectionEventKey = new ConnectionEventKey(remoteInetAddress,
-                                                                                         localAddress,
-                                                                                         desiredProtocol);
-
-                    ChannelUtil.setConnectionEventKey(channel, connectionEventKey);
-
                     listener.connectionPending(desiredProtocol,
                                                remoteInetAddress,
                                                localAddress,
@@ -502,6 +495,25 @@ final class HttpChannelPool implements AsyncCloseable {
 
                 allChannels.put(channel, Boolean.TRUE);
 
+                final InetSocketAddress remoteAddr = ChannelUtil.remoteAddress(channel);
+                final InetSocketAddress localAddr = ChannelUtil.localAddress(channel);
+                assert remoteAddr != null && localAddr != null
+                        : "raddr: " + remoteAddr + ", laddr: " + localAddr;
+                try {
+                    listener.connectionOpened(
+                            desiredProtocol,
+                            protocol,
+                            remoteAddr,
+                            localAddr,
+                            channel
+                    );
+                } catch (Throwable e) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("{} Exception handling {}.connectionOpen()",
+                                    channel, listener.getClass().getName(), e);
+                    }
+                }
+
                 final HttpSession session = HttpSession.get(channel);
                 if (session.incrementNumUnfinishedResponses()) {
                     if (protocol.isMultiplex()) {
@@ -533,6 +545,14 @@ final class HttpChannelPool implements AsyncCloseable {
                         }
                     }
 
+                    try {
+                        listener.connectionClosed(protocol, remoteAddr, localAddr, channel);
+                    } catch (Throwable e) {
+                        if (logger.isWarnEnabled()) {
+                            logger.warn("{} Exception handling {}.connectionClosed()",
+                                        channel, listener.getClass().getName(), e);
+                        }
+                    }
                 });
             } else {
                 final Throwable throwable = future.cause();

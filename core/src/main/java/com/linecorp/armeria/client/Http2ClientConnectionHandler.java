@@ -63,16 +63,16 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
         if (!needsKeepAliveHandler) {
-            return new NoopKeepAliveHandler(channel, clientFactory.connectionEventListener(), protocol);
+            return new NoopKeepAliveHandler();
         }
 
         final Timer keepAliveTimer =
                 MoreMeters.newTimer(clientFactory.meterRegistry(), "armeria.client.connections.lifespan",
                                     ImmutableList.of(Tag.of("protocol", protocol.uriText())));
         return new Http2ClientKeepAliveHandler(
-                channel, encoder.frameWriter(), keepAliveTimer, clientFactory.connectionEventListener(),
-                protocol, idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
-                maxNumRequestsPerConnection, keepAliveOnPing);
+                channel, encoder.frameWriter(), keepAliveTimer,
+                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                keepAliveOnPing);
     }
 
     Http2ResponseDecoder responseDecoder() {

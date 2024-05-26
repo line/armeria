@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.ConnectionEventListener;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
@@ -27,13 +25,11 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 
 final class Http2ServerKeepAliveHandler extends Http2KeepAliveHandler {
     Http2ServerKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Timer keepAliveTimer,
-                                ConnectionEventListener connectionEventListener, SessionProtocol protocol,
                                 long idleTimeoutMillis, long pingIntervalMillis,
                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
                                 boolean keepAliveOnPing) {
-        super(channel, frameWriter, "server", keepAliveTimer, connectionEventListener,
-              protocol, idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis,
-              maxNumRequestsPerConnection,
+        super(channel, frameWriter, "server", keepAliveTimer,
+              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
               keepAliveOnPing);
     }
 

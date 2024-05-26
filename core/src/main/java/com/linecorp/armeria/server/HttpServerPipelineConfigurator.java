@@ -50,7 +50,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
-import com.linecorp.armeria.internal.common.HttpProtocolUpgradeHandler;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
@@ -68,6 +67,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
@@ -206,14 +206,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final KeepAliveHandler keepAliveHandler;
         if (needsKeepAliveHandler) {
             final Timer keepAliveTimer = newKeepAliveTimer(H1C);
-            keepAliveHandler = new Http1ServerKeepAliveHandler(p.channel(), keepAliveTimer,
-                                                               config.connectionEventListener(),
-                                                               H1C,
-                                                               idleTimeoutMillis,
+            keepAliveHandler = new Http1ServerKeepAliveHandler(p.channel(), keepAliveTimer, idleTimeoutMillis,
                                                                maxConnectionAgeMillis,
                                                                maxNumRequestsPerConnection);
         } else {
-            keepAliveHandler = new NoopKeepAliveHandler(p.channel(), config.connectionEventListener(), H1C);
+            keepAliveHandler = new NoopKeepAliveHandler();
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), H1C, keepAliveHandler, config.http1HeaderNaming()
@@ -293,7 +290,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         return settings;
     }
 
-    private final class ProtocolDetectionHandler extends HttpProtocolUpgradeHandler {
+    private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
 
         private final EnumSet<SessionProtocol> candidates;
         @Nullable
@@ -517,13 +514,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
             final KeepAliveHandler keepAliveHandler;
             if (needsKeepAliveHandler) {
-                keepAliveHandler = new Http1ServerKeepAliveHandler(ch, newKeepAliveTimer(H1),
-                                                                   config.connectionEventListener(),
-                                                                   H1, idleTimeoutMillis,
+                keepAliveHandler = new Http1ServerKeepAliveHandler(ch, newKeepAliveTimer(H1), idleTimeoutMillis,
                                                                    maxConnectionAgeMillis,
                                                                    maxNumRequestsPerConnection);
             } else {
-                keepAliveHandler = new NoopKeepAliveHandler(ch, config.connectionEventListener(), H1);
+                keepAliveHandler = new NoopKeepAliveHandler();
             }
 
             final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
@@ -635,7 +630,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
     }
 
-    private final class Http2PrefaceOrHttpHandler extends HttpProtocolUpgradeHandler {
+    private final class Http2PrefaceOrHttpHandler extends ByteToMessageDecoder {
 
         private final ServerHttp1ObjectEncoder responseEncoder;
         private final KeepAliveHandler keepAliveHandler;

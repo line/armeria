@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -29,7 +28,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -38,7 +36,6 @@ import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
-import io.netty.channel.embedded.EmbeddedChannel;
 import reactor.test.StepVerifier;
 
 class HttpResponseWrapperTest {
@@ -167,11 +164,7 @@ class HttpResponseWrapperTest {
     }
 
     private static class TestHttpResponseDecoder extends AbstractHttpResponseDecoder {
-        private final KeepAliveHandler keepAliveHandler = new NoopKeepAliveHandler(
-                new EmbeddedChannel(),
-                ConnectionEventListener.noop(),
-                SessionProtocol.H1
-        );
+        private final KeepAliveHandler keepAliveHandler = new NoopKeepAliveHandler();
 
         TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
             super(channel, inboundTrafficController);

@@ -28,7 +28,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
@@ -144,11 +143,6 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public Consumer<? super ChannelPipeline> childChannelPipelineCustomizer() {
         return delegate.childChannelPipelineCustomizer();
-    }
-
-    @Override
-    public ConnectionEventListener connectionEventListener() {
-        return delegate.connectionEventListener();
     }
 
     @Override

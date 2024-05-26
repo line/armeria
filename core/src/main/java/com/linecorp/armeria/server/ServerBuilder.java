@@ -70,7 +70,6 @@ import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
@@ -201,7 +200,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private Consumer<ChannelPipeline> childChannelPipelineCustomizer =
             DEFAULT_CHILD_CHANNEL_PIPELINE_CUSTOMIZER;
-    private ConnectionEventListener connectionEventListener = ConnectionEventListener.noop();
     private int maxNumConnections = Flags.maxNumConnections();
     private long idleTimeoutMillis = Flags.defaultServerIdleTimeoutMillis();
     private boolean keepAliveOnPing = Flags.defaultServerKeepAliveOnPing();
@@ -576,14 +574,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      */
     public ServerBuilder startStopExecutor(Executor startStopExecutor) {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
-        return this;
-    }
-
-    /**
-     * Sets the {@link ConnectionEventListener} which listens to the life cycle of a connection.
-     */
-    public ServerBuilder connectionEventListener(ConnectionEventListener connectionEventListener) {
-        this.connectionEventListener = requireNonNull(connectionEventListener, "connectionEventListener");
         return this;
     }
 
@@ -2303,8 +2293,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
 
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
-                virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor,
-                connectionEventListener, maxNumConnections,
+                virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, keepAliveOnPing, pingIntervalMillis, maxConnectionAgeMillis,
                 maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,

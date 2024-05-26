@@ -32,6 +32,5 @@ public class ConnectionEventListenerAdapter implements ConnectionEventListener {
     public void connectionClosed(SessionProtocol protocol,
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
-                                 boolean isIdle,
                                  AttributeMap attrs) throws Exception {}
 }

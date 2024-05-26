@@ -28,9 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 
-import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.Flags;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.micrometer.core.instrument.Timer;
@@ -70,13 +68,11 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
     private long lastPingPayload;
 
     protected Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, String name,
-                                    Timer keepAliveTimer,
-                                    ConnectionEventListener connectionEventListener,
-                                    SessionProtocol protocol, long idleTimeoutMillis,
-                                    long pingIntervalMillis, long maxConnectionAgeMillis,
-                                    int maxNumRequestsPerConnection, boolean keepAliveOnPing) {
-        super(channel, name, keepAliveTimer, connectionEventListener, protocol, idleTimeoutMillis,
-              pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
+                                    Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
+                                    long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
+                                    boolean keepAliveOnPing) {
+        super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
+              maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
         this.channel = requireNonNull(channel, "channel");
         this.frameWriter = requireNonNull(frameWriter, "frameWriter");
     }

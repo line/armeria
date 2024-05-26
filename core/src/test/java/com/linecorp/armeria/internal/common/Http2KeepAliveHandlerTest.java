@@ -25,8 +25,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import java.net.InetSocketAddress;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -34,16 +32,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 
-import com.linecorp.armeria.common.ConnectionEventKey;
-import com.linecorp.armeria.common.ConnectionEventListener;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
-import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -67,20 +59,12 @@ class Http2KeepAliveHandlerTest {
     void setup(boolean keepAliveOnPing) throws Exception {
         ctx = mock(ChannelHandlerContext.class);
         channel = spy(new EmbeddedChannel());
-        ChannelUtil.setConnectionEventKey(channel, new ConnectionEventKey(
-                new InetSocketAddress("localhost", 8080),
-                new InetSocketAddress("localhost", 8081),
-                SessionProtocol.H2
-        ).setProtocol(SessionProtocol.H2));
-        final EmbeddedSessionHandler embeddedSessionHandler = mock(EmbeddedSessionHandler.class);
-        channel.pipeline().addLast(embeddedSessionHandler);
         when(channel.eventLoop()).thenReturn(eventLoop.get());
         when(ctx.channel()).thenReturn(channel);
 
         keepAliveHandler = new Http2KeepAliveHandler(
                 channel, frameWriter, "test", NoopMeterRegistry.get().timer(""),
-                ConnectionEventListener.noop(),
-                SessionProtocol.H2, idleTimeoutMillis, pingIntervalMillis,
+                idleTimeoutMillis, pingIntervalMillis,
                 /* maxConnectionAgeMillis */ 0, /* maxNumRequestsPerConnection */ 0,
                 keepAliveOnPing) {
             @Override
@@ -131,6 +115,4 @@ class Http2KeepAliveHandlerTest {
         Thread.sleep(idleTimeoutMillis / 2 + 1000);
         assertThat(keepAliveHandler.state()).isEqualTo(expectedState);
     }
-
-    interface EmbeddedSessionHandler extends HttpSession, ChannelHandler {}
 }

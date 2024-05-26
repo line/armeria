@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -235,8 +234,6 @@ public class HttpClientMaxConcurrentStreamTest {
     }
 
     @Test
-    @Disabled
-        // TODO : Temporally disabled due to flakiness
     void exceededMaxStreamsPropagatesFailureCorrectly() throws Exception {
         final Queue<ClientConnectionTimings> connectionTimings = new ConcurrentLinkedQueue<>();
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))

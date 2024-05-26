@@ -60,7 +60,6 @@ import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
-import com.linecorp.armeria.internal.common.HttpProtocolUpgradeHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -74,6 +73,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -679,7 +679,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      * A handler that closes an HTTP/2 connection when the server responds with an HTTP/1 response, so that
      * HTTP/1 is used instead of HTTP/2 on next connection attempt.
      */
-    private final class DowngradeHandler extends HttpProtocolUpgradeHandler {
+    private final class DowngradeHandler extends ByteToMessageDecoder {
 
         private boolean handledResponse;
 

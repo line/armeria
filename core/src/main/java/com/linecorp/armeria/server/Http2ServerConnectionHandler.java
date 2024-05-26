@@ -16,12 +16,8 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.common.SessionProtocol.H2;
-import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
-import static com.linecorp.armeria.server.HttpServerPipelineConfigurator.SCHEME_HTTP;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.GracefulConnectionShutdownHandler;
@@ -52,8 +48,8 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
                                  Http2Settings initialSettings, Channel channel, ServerConfig cfg,
                                  Timer keepAliveTimer, GracefulShutdownSupport gracefulShutdownSupport,
                                  AsciiString scheme) {
-        super(decoder, encoder, initialSettings, newKeepAliveHandler(encoder, channel, cfg, keepAliveTimer,
-                                                                     scheme == SCHEME_HTTP ? H2C : H2));
+
+        super(decoder, encoder, initialSettings, newKeepAliveHandler(encoder, channel, cfg, keepAliveTimer));
 
         this.cfg = cfg;
         this.gracefulShutdownSupport = gracefulShutdownSupport;
@@ -67,8 +63,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     private static KeepAliveHandler newKeepAliveHandler(
-            Http2ConnectionEncoder encoder, Channel channel, ServerConfig cfg, Timer keepAliveTimer,
-            SessionProtocol protocol) {
+            Http2ConnectionEncoder encoder, Channel channel, ServerConfig cfg, Timer keepAliveTimer) {
 
         final long idleTimeoutMillis = cfg.idleTimeoutMillis();
         final boolean keepAliveOnPing = cfg.keepAliveOnPing();
@@ -79,13 +74,12 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
         if (!needsKeepAliveHandler) {
-            return new NoopKeepAliveHandler(channel, cfg.connectionEventListener(), protocol);
+            return new NoopKeepAliveHandler();
         }
 
         return new Http2ServerKeepAliveHandler(
-                channel, encoder.frameWriter(), keepAliveTimer, cfg.connectionEventListener(), protocol,
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
-                keepAliveOnPing);
+                channel, encoder.frameWriter(), keepAliveTimer, idleTimeoutMillis,
+                pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
     }
 
     ServerHttp2ObjectEncoder getOrCreateResponseEncoder(ChannelHandlerContext connectionHandlerCtx) {

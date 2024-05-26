@@ -64,6 +64,5 @@ public interface ConnectionEventListener {
     void connectionClosed(SessionProtocol protocol,
                           InetSocketAddress remoteAddress,
                           InetSocketAddress localAddress,
-                          boolean isIdle,
                           AttributeMap attrs) throws Exception;
 }
