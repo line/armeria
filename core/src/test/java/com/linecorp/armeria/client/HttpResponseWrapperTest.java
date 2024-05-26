@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -157,7 +158,8 @@ class HttpResponseWrapperTest {
         final InboundTrafficController controller = InboundTrafficController.disabled();
         final Channel channel = cctx.log().ensureAvailable(RequestLogProperty.SESSION).channel();
         assertThat(channel).isNotNull();
-        final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
+        final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller,
+                                                                            ConnectionEventListener.noop());
 
         res.init(controller);
         return decoder.addResponse(1, res, cctx, cctx.eventLoop());
@@ -166,8 +168,9 @@ class HttpResponseWrapperTest {
     private static class TestHttpResponseDecoder extends AbstractHttpResponseDecoder {
         private final KeepAliveHandler keepAliveHandler = new NoopKeepAliveHandler();
 
-        TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
-            super(channel, inboundTrafficController);
+        TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController,
+                                ConnectionEventListener connectionEventListener) {
+            super(channel, inboundTrafficController, connectionEventListener, false);
         }
 
         @Override

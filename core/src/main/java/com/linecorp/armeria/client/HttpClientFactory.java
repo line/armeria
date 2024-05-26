@@ -300,6 +300,7 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     /**
+     * Returns the {@link ConnectionPoolListener} which is notified on {@link HttpChannelPool} events.
      * @deprecated Use {@link #connectionEventListener()} instead.
      */
     @Deprecated

@@ -784,11 +784,23 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the listener which is notified on a connection pool event.
+     * @deprecated Use {@link #connectionEventListener} instead.
      */
+    @Deprecated
     public ClientFactoryBuilder connectionPoolListener(
             ConnectionPoolListener connectionPoolListener) {
         option(ClientFactoryOptions.CONNECTION_POOL_LISTENER,
                requireNonNull(connectionPoolListener, "connectionPoolListener"));
+        return this;
+    }
+
+    /**
+     * Sets the listener which is notified on a connection event.
+     */
+    public ClientFactoryBuilder connectionEventListener(
+            ClientConnectionEventListener connectionEventListener) {
+        option(ClientFactoryOptions.CONNECTION_EVENT_LISTENER,
+               requireNonNull(connectionEventListener, "connectionEventListener"));
         return this;
     }
 

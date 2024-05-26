@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.common.util;
 
+import static com.linecorp.armeria.common.ConnectionEventKey.CONNECTION_EVENT_KEY;
+
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.net.InetSocketAddress;
@@ -35,6 +37,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.ConnectionEventKey;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -330,6 +333,25 @@ public final class ChannelUtil {
         } else {
             return (InetSocketAddress) ch.remoteAddress();
         }
+    }
+
+    @Nullable
+    public static ConnectionEventKey connectionEventKey(@Nullable Channel ch) {
+        if (ch == null) {
+            return null;
+        }
+
+        final Attribute<ConnectionEventKey> attr = ch.attr(CONNECTION_EVENT_KEY);
+
+        if (attr != null) {
+            return attr.get();
+        }
+
+        return null;
+    }
+
+    public static void setConnectionEventKey(Channel ch, @Nullable ConnectionEventKey key) {
+        ch.attr(CONNECTION_EVENT_KEY).set(key);
     }
 
     @Nullable
