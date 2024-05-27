@@ -134,7 +134,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
         this.resolvers = requireNonNull(resolvers, "resolvers");
         parameters = resolvers.stream()
                               .map(AnnotatedValueResolver::httpElementName)
-                              .collect(Collectors.toList());
+                              .collect(toImmutableList());
 
         requireNonNull(exceptionHandlers, "exceptionHandlers");
         if (exceptionHandlers.isEmpty()) {
