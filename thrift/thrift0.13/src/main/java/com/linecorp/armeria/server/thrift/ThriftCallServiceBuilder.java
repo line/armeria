@@ -23,17 +23,18 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 
 import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.Multimaps;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A fluent builder to build an instance of {@link ThriftCallService}.
  *
  * <h2>Example</h2>
- *  * <pre>{@code
- *  * ThriftCallService service = ThriftCallService
+ * <pre>{@code
+ * ThriftCallService service = ThriftCallService
  *                 .builder()
- *                 .addService(defaultServiceImpl) // Adds an service
- *                 .addService("foo", fooServiceImpl) // Adds an service with a key
+ *                 .addService(defaultServiceImpl) // Adds a service
+ *                 .addService("foo", fooServiceImpl) // Adds a service with a key
  *                 .addService("foobar", fooServiceImpl)  // Adds multiple services to the same key
  *                 .addService("foobar", barServiceImpl)
  *                 .addService("foobarOnce", fooServiceImpl, barServiceImpl) // Adds multiple services at once
@@ -45,10 +46,11 @@ import com.google.common.collect.Multimaps;
  *                 .addServices(ImmutableMap.of("fooIterableMap",
  *                                              ImmutableList.of(fooServiceImpl, barServiceImpl)))
  *                 .build();
- *  * }</pre>
+ * }</pre>
  *
  * @see ThriftCallService
  */
+@UnstableApi
 public final class ThriftCallServiceBuilder {
     private final ImmutableListMultimap.Builder<String, Object> servicesBuilder =
             ImmutableListMultimap.builder();
@@ -76,7 +78,7 @@ public final class ThriftCallServiceBuilder {
     }
 
     /**
-     * Adds an service for {@link ThriftServiceEntry}.
+     * Adds a service for {@link ThriftServiceEntry}.
      */
     public ThriftCallServiceBuilder addService(Object... service) {
         requireNonNull(service, "service");
@@ -84,9 +86,10 @@ public final class ThriftCallServiceBuilder {
     }
 
     /**
-     * Adds an service with a key for {@link ThriftServiceEntry}.
+     * Adds a service with a key for {@link ThriftServiceEntry}.
      */
     public ThriftCallServiceBuilder addService(String key, Object... service) {
+        requireNonNull(key, "key");
         requireNonNull(service, "service");
         servicesBuilder.putAll(key, service);
         return this;
@@ -96,6 +99,8 @@ public final class ThriftCallServiceBuilder {
      * Adds services with key by iterable for {@link ThriftServiceEntry}.
      */
     public ThriftCallServiceBuilder addService(String key, Iterable<?> service) {
+        requireNonNull(key, "key");
+        requireNonNull(service, "service");
         if (!service.iterator().hasNext()) {
             throw new IllegalArgumentException("service should not be empty");
         }
@@ -119,7 +124,7 @@ public final class ThriftCallServiceBuilder {
      */
     public ThriftCallService build() {
         return new ThriftCallService(
-                Multimaps.asMap(servicesBuilder.build()).entrySet().stream().collect(
+                servicesBuilder.build().asMap().entrySet().stream().collect(
                         toImmutableMap(Map.Entry::getKey, ThriftServiceEntry::new)),
                 useBlockingTaskExecutor
         );

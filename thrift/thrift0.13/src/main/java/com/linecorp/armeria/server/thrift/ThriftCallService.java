@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -73,6 +74,7 @@ public final class ThriftCallService implements RpcService {
      * Creates a new instance of {@link ThriftCallServiceBuilder} which can build
      * an instance of {@link ThriftCallService} fluently.
      */
+    @UnstableApi
     public static ThriftCallServiceBuilder builder() {
         return new ThriftCallServiceBuilder();
     }
