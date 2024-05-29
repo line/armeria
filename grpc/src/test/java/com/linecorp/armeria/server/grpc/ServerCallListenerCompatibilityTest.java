@@ -139,14 +139,7 @@ class ServerCallListenerCompatibilityTest {
                     client.unaryCall(SimpleRequest.newBuilder().setPayload(payload).build());
                 } catch (Throwable ex) {
                     final StatusRuntimeException statusException = (StatusRuntimeException) ex;
-                    // Armeria returns a RESOURCE_EXHAUSTED when maxInboundMessageSize is exceeded
-                    // whereas upstream returns a CANCELLED. Armeria's behavior seems to make more
-                    // sense so leaving as is.
-                    if (i == 0) {
-                        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.CANCELLED);
-                    } else {
-                        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
-                    }
+                    assertThat(statusException.getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
                 }
                 Thread.sleep(1000);
                 // Waits 1 second for events to be fully collected.
@@ -263,14 +256,7 @@ class ServerCallListenerCompatibilityTest {
                     }
                 } catch (Throwable ex) {
                     final StatusRuntimeException statusException = (StatusRuntimeException) ex;
-                    // Armeria returns a RESOURCE_EXHAUSTED when maxInboundMessageSize is exceeded
-                    // whereas upstream returns a CANCELLED. Armeria's behavior seems to make more
-                    // sense so leaving as is.
-                    if (i == 0) {
-                        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.CANCELLED);
-                    } else {
-                        assertThat(statusException.getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
-                    }
+                    assertThat(statusException.getStatus().getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
                 }
                 // Waits 1 second for events to be fully collected.
                 Thread.sleep(1000);
