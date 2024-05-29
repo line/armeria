@@ -82,6 +82,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     private RoutingResult routingResult;
     @Nullable
     private ProxiedAddresses proxiedAddresses;
+    private boolean useCancellationScheduler = false;
 
     ServiceRequestContextBuilder(HttpRequest request) {
         super(true, request);
@@ -166,6 +167,15 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     }
 
     /**
+     * Enable CancellationScheduler option.
+     * See: <a href="https://github.com/line/armeria/issues/5683">line/armeria#5683</a>
+     */
+    public ServiceRequestContextBuilder useCancellationScheduler(boolean useCancellationScheduler) {
+        this.useCancellationScheduler = useCancellationScheduler;
+        return this;
+    }
+
+    /**
      * Returns a new {@link ServiceRequestContext} created with the properties of this builder.
      */
     public ServiceRequestContext build() {
@@ -234,7 +244,9 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         }
 
         final CancellationScheduler requestCancellationScheduler;
-        if (timedOut()) {
+        if (!useCancellationScheduler) {
+            requestCancellationScheduler = CancellationScheduler.noop();
+        } else if (timedOut()) {
             requestCancellationScheduler = CancellationScheduler.finished(true);
         } else {
             requestCancellationScheduler = CancellationScheduler.ofServer(0);

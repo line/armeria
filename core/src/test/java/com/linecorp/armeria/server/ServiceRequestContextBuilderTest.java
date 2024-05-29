@@ -29,10 +29,13 @@ class ServiceRequestContextBuilderTest {
     void testTimeout() {
         final ServiceRequestContext ctx1 = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .timedOut(true)
+                                                                .useCancellationScheduler(true)
                                                                 .build();
         assertThat(ctx1.isTimedOut()).isTrue();
 
-        final ServiceRequestContext ctx2 = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ServiceRequestContext ctx2 = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                                                .useCancellationScheduler(true)
+                                                                .build();
         assertThat(ctx2.isTimedOut()).isFalse();
     }
 }
