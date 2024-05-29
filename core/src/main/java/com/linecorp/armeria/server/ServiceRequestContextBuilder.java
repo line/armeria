@@ -82,7 +82,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
     private RoutingResult routingResult;
     @Nullable
     private ProxiedAddresses proxiedAddresses;
-    private boolean useCancellationScheduler = false;
+    private boolean useCancellationScheduler;
 
     ServiceRequestContextBuilder(HttpRequest request) {
         super(true, request);
