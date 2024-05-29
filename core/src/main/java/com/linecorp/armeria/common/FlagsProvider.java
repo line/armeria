@@ -582,6 +582,22 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default client-side graceful connection shutdown timeout in microseconds.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#http2GracefulShutdownTimeoutMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientHttp2GracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
+     */
+    @Nullable
+    default Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return null;
+    }
+
+    /**
      * Returns the default server-side max age of a connection for keep-alive in milliseconds.
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.
@@ -1173,6 +1189,22 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default DistributionStatisticConfig distributionStatisticConfig() {
+        return null;
+    }
+
+    /**
+     * Returns the default time in milliseconds to wait before closing an HTTP/1 connection when a server needs
+     * to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state
+     * instead of CLOSED when a connection is closed.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultHttp1ConnectionCloseDelayMillis=<long>} JVM option to
+     * override the default value. {@code 0} closes the connection immediately. </p>
+     */
+    @Nullable
+    @UnstableApi
+    default Long defaultHttp1ConnectionCloseDelayMillis() {
         return null;
     }
 }

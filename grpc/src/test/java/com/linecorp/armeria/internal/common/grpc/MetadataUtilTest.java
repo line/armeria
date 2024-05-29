@@ -49,8 +49,8 @@ class MetadataUtilTest {
     private static final Metadata.Key<byte[]> TEST_BIN_KEY =
             Metadata.Key.of("testBinary-bin", Metadata.BINARY_BYTE_MARSHALLER);
 
-    private static final ThrowableProto THROWABLE_PROTO =
-            GrpcStatus.serializeThrowable(new RuntimeException("test"));
+    private static final ThrowableProto THROWABLE_PROTO = GrpcStatus.serializeThrowable(
+            new RuntimeException("test"));
 
     @Test
     void fillHeadersTest() {

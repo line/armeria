@@ -44,7 +44,6 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     private final RequestContext ctx;
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
-    @Nullable
     private final GrpcExceptionHandlerFunction exceptionHandler;
 
     @Nullable
@@ -56,7 +55,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             DecompressorRegistry decompressorRegistry,
             RequestContext ctx,
             TransportStatusListener transportStatusListener,
-            @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+            GrpcExceptionHandlerFunction exceptionHandler,
             int maxMessageLength, boolean grpcWebText, boolean server) {
         super(maxMessageLength, ctx.alloc(), grpcWebText);
         this.ctx = requireNonNull(ctx, "ctx");
@@ -121,9 +120,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
                 final Metadata metadata = new Metadata();
-                transportStatusListener.transportReportStatus(
-                        GrpcStatus.fromThrowable(exceptionHandler, ctx, t, metadata),
-                        metadata);
+                transportStatusListener.transportReportStatus(exceptionHandler.apply(ctx, t, metadata),
+                                                              metadata);
                 return;
             }
         }
@@ -150,8 +148,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     @Override
     public void processOnError(Throwable cause) {
         final Metadata metadata = new Metadata();
-        transportStatusListener.transportReportStatus(
-                GrpcStatus.fromThrowable(exceptionHandler, ctx, cause, metadata), metadata);
+        transportStatusListener.transportReportStatus(exceptionHandler.apply(ctx, cause, metadata), metadata);
     }
 
     @Override
