@@ -15,16 +15,60 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assumptions.assumeThat;
+
 import java.security.Security;
-import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
 class MinifiedBouncyCastleProviderTest {
+
+    @BeforeEach
+    void ensureNoBouncyCastle() {
+        assertThat(Security.getProviders()).doesNotHaveAnyElementsOfTypes(BouncyCastleProvider.class,
+                                                                          MinifiedBouncyCastleProvider.class);
+    }
+
+    @Test
+    void relocatedPackagePrefix() {
+        //noinspection ConstantValue - The assumption will meet when the test is run with shading enabled.
+        assumeThat(BouncyCastleProvider.class.getName().contains(".internal.shaded.")).isTrue();
+        assertThat(MinifiedBouncyCastleProvider.BC_PACKAGE_PREFIX)
+                .isEqualTo("com.linecorp.armeria.internal.shaded.bouncycastle.");
+    }
+
+    @Test
+    void classNameShouldBeChecked() {
+        final MinifiedBouncyCastleProvider provider = new MinifiedBouncyCastleProvider();
+        assertThatThrownBy(() -> provider.addAlgorithm("foo", "incorrect.bouncycastle.class.name"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Unexpected Bouncy Castle class name");
+    }
+
+    @Test
+    void callIsCalled() {
+        final AtomicBoolean called = new AtomicBoolean();
+
+        // Test call(Runnable):
+        MinifiedBouncyCastleProvider.call(() -> {
+            assertMinifiedBouncyCastleProviderExists();
+            called.set(true);
+        });
+        assertThat(called).isTrue();
+
+        // Test call(Callable):
+        assertThat(MinifiedBouncyCastleProvider.call(() -> {
+            assertMinifiedBouncyCastleProviderExists();
+            return 42;
+        })).isEqualTo(42);
+    }
 
     /**
      * Tests if a SSLeay PKCS#5 private key is accepted.
@@ -47,9 +91,6 @@ class MinifiedBouncyCastleProviderTest {
      */
     @Test
     void bouncyCastlePreInstalled() {
-        Assumptions.assumeTrue(Arrays.stream(Security.getProviders())
-                                     .noneMatch(p -> BouncyCastleProvider.PROVIDER_NAME.equals(p.getName())));
-
         Security.addProvider(new BouncyCastleProvider());
         try {
             MinifiedBouncyCastleProvider.call(this::loadPkcs5);
@@ -76,5 +117,9 @@ class MinifiedBouncyCastleProviderTest {
         SslContextBuilder.forServer(getClass().getResourceAsStream("/testing/core/ServerBuilderTest/cert.pem"),
                                     getClass().getResourceAsStream(privateKeyPath),
                                     null);
+    }
+
+    private static void assertMinifiedBouncyCastleProviderExists() {
+        assertThat(Security.getProviders()).hasAtLeastOneElementOfType(MinifiedBouncyCastleProvider.class);
     }
 }

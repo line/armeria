@@ -36,7 +36,6 @@ import io.netty.handler.codec.http2.Http2Settings;
 
 final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler {
 
-    private final HttpClientFactory clientFactory;
     private final Http2ResponseDecoder responseDecoder;
 
     Http2ClientConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
@@ -45,7 +44,6 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
         super(decoder, encoder, initialSettings,
               newKeepAliveHandler(encoder, channel, clientFactory, protocol));
-        this.clientFactory = clientFactory;
 
         responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAliveHandler());
         connection().addListener(responseDecoder);
@@ -110,8 +108,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return clientFactory.isClosing() ||
-               responseDecoder.goAwayHandler().receivedErrorGoAway() ||
+        return responseDecoder.goAwayHandler().receivedErrorGoAway() ||
                keepAliveHandler().isClosing();
     }
 

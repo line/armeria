@@ -56,7 +56,6 @@ abstract class AbstractHttpResponseHandler {
 
     private final CompletableFuture<Void> completionFuture;
     private boolean isComplete;
-    private boolean needsDisconnection;
 
     AbstractHttpResponseHandler(ChannelHandlerContext ctx,
                                 ServerHttpObjectEncoder responseEncoder,
@@ -77,7 +76,6 @@ abstract class AbstractHttpResponseHandler {
     }
 
     void disconnectWhenFinished() {
-        needsDisconnection = true;
         responseEncoder.keepAliveHandler().disconnectWhenFinished();
     }
 
@@ -92,11 +90,6 @@ abstract class AbstractHttpResponseHandler {
             completionFuture.completeExceptionally(cause);
         }
 
-        // Force shutdown mode: If a user explicitly sets `Connection: close` in the response headers, it is
-        // assumed that the connection should be closed after sending the response.
-        if (needsDisconnection) {
-            ctx.channel().close();
-        }
         return true;
     }
 

@@ -613,15 +613,33 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns whether exceptions should be reported.
-     * When {@link LoggingService} handles exceptions, this is set to false.
+     * When {@link LoggingService} logs exceptions, this is set to false.
+     *
+     * @deprecated Use {@link #shouldReportUnloggedExceptions()} instead.
      */
+    @Deprecated
     boolean shouldReportUnhandledExceptions();
 
     /**
      * Sets whether to report exceptions.
-     * @param value whether to report unhandled exceptions
+     * @param value whether to report unlogged exceptions
+     *
+     * @deprecated Use {@link #setShouldReportUnloggedExceptions(boolean)} instead.
      */
+    @Deprecated
     void setShouldReportUnhandledExceptions(boolean value);
+
+    /**
+     * Returns whether exceptions should be reported.
+     * When {@link LoggingService} logs exceptions, this is set to false.
+     */
+    boolean shouldReportUnloggedExceptions();
+
+    /**
+     * Sets whether to report exceptions.
+     * @param value whether to report unlogged exceptions
+     */
+    void setShouldReportUnloggedExceptions(boolean value);
 
     /**
      * Initiates graceful connection shutdown with a given drain duration in microseconds and returns

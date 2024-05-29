@@ -223,16 +223,24 @@ final class RoutingTrie<V> {
                 break;
             case PARAMETER:
                 // Consume characters until the delimiter '/' as a path variable.
-                final int delim = path.indexOf('/', begin);
-                if (delim < 0) {
-                    // No more delimiter.
-                    return node;
+                final int delimSlash = path.indexOf('/', begin);
+
+                if (delimSlash < 0) {
+                    final String pathVerb = findVerb(path, begin);
+                    if (pathVerb == null) {
+                        // No more delimiter.
+                        return node;
+                    } else {
+                        final Node<V> verb = node.children.get(':');
+                        return verb != null && verb.path.equals(pathVerb) ? verb : node;
+                    }
                 }
-                if (path.length() == delim + 1) {
+
+                if (path.length() == delimSlash + 1) {
                     final Node<V> trailingSlashNode = node.children.get('/');
                     return trailingSlashNode != null ? trailingSlashNode : node;
                 }
-                next.value = delim;
+                next.value = delimSlash;
                 break;
             default:
                 throw new Error("Should not reach here");
@@ -251,6 +259,20 @@ final class RoutingTrie<V> {
     private void dump(PrintWriter p, Node<V> node, int depth) {
         p.printf("<%d> %s%n", depth, node);
         node.children.values().forEach(child -> dump(p, child, depth + 1));
+    }
+
+    /**
+     * Returns the substring from the last colon ':' found after 'begin', including the colon.
+     * Returns {@code null} if no colon is found after the 'begin' index.
+     */
+    @Nullable
+    private static String findVerb(String path, int begin) {
+        for (int i = path.length() - 1; i >= begin; i--) {
+            if (path.charAt(i) == ':') {
+                return path.substring(i);
+            }
+        }
+        return null;
     }
 
     /**
