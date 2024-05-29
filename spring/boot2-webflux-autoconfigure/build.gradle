@@ -85,6 +85,7 @@ task generateSources(type: Copy) {
         exclude '**/AbstractServerHttpRequestVersionSpecific.java'
         exclude '**/package-info.java'
         exclude '**/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
+        exclude '**/TlsUtil.java'
     }
 
     into "${project.ext.genSrcDir}"
