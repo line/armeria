@@ -307,8 +307,8 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Properties for internal services such as {@link DocService}, {@link PrometheusExpositionService},
-     * and {@link HealthCheckService}.
+     * Properties for internal services such as {@link DocService}, {@link PrometheusExpositionService}, and
+     * {@link HealthCheckService}.
      */
     public static class InternalServiceProperties extends Port {
 
@@ -690,9 +690,8 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Returns the path of the metrics exposition service. {@link PrometheusExpositionService} will be
-     * used if {@link PrometheusMeterRegistry} is available.
-     * Otherwise, Dropwizard's {@link MetricsModule} will be used
+     * Returns the path of the metrics exposition service. {@link PrometheusExpositionService} will be used if
+     * {@link PrometheusMeterRegistry} is available. Otherwise, Dropwizard's {@link MetricsModule} will be used
      * if {@link DropwizardMeterRegistry} is available.
      */
     @Nullable
@@ -701,9 +700,8 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Sets the path of the metrics exposition service. {@link PrometheusExpositionService} will be
-     * used if {@link PrometheusMeterRegistry} is available.
-     * Otherwise, Dropwizard's {@link MetricsModule} will be used
+     * Sets the path of the metrics exposition service. {@link PrometheusExpositionService} will be used if
+     * {@link PrometheusMeterRegistry} is available. Otherwise, Dropwizard's {@link MetricsModule} will be used
      * if {@link DropwizardMeterRegistry} is available.
      */
     public void setMetricsPath(@Nullable String metricsPath) {
