@@ -85,10 +85,11 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                         @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
                         ResponseHeaders defaultHeaders,
                         @Nullable GrpcExceptionHandlerFunction exceptionHandler,
-                        @Nullable Executor blockingExecutor, boolean autoCompress) {
+                        @Nullable Executor blockingExecutor, boolean autoCompress,
+                        boolean useMethodMarshaller) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              defaultHeaders, exceptionHandler, blockingExecutor, autoCompress);
+              defaultHeaders, exceptionHandler, blockingExecutor, autoCompress, useMethodMarshaller);
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");

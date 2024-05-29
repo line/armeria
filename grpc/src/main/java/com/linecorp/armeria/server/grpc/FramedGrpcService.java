@@ -60,7 +60,6 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
@@ -133,6 +132,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final boolean useClientTimeoutHeader;
+    private final boolean useMethodMarshaller;
     private final String advertisedEncodingsHeader;
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
     @Nullable
@@ -154,7 +154,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useClientTimeoutHeader,
                       boolean lookupMethodFromAttribute,
                       @Nullable GrpcHealthCheckService grpcHealthCheckService,
-                      boolean autoCompression) {
+                      boolean autoCompression, boolean useMethodMarshaller) {
         this.registry = requireNonNull(registry, "registry");
         routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
         exchangeTypes = registry.methods().entrySet().stream()
@@ -173,6 +173,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.lookupMethodFromAttribute = lookupMethodFromAttribute;
         this.autoCompression = autoCompression;
+        this.useMethodMarshaller = useMethodMarshaller;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -239,8 +240,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(exceptionHandler, ctx, e, metadata),
-                                    metadata));
+                                    exceptionHandler.apply(ctx, e, metadata), metadata));
                 }
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(AbstractUnframedGrpcService.IS_UNFRAMED_GRPC))) {
@@ -356,7 +356,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     defaultHeaders.get(serializationFormat),
                     exceptionHandler,
                     blockingExecutor,
-                    autoCompression);
+                    autoCompression,
+                    useMethodMarshaller);
         } else {
             return new StreamingServerCall<>(
                     req,
@@ -374,7 +375,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     defaultHeaders.get(serializationFormat),
                     exceptionHandler,
                     blockingExecutor,
-                    autoCompression);
+                    autoCompression,
+                    useMethodMarshaller);
         }
     }
 

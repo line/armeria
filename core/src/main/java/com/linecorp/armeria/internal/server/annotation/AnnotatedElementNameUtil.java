@@ -21,50 +21,27 @@ import static java.util.Objects.requireNonNull;
 import java.lang.reflect.Field;
 import java.lang.reflect.Parameter;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.CaseFormat;
 
+import com.linecorp.armeria.server.annotation.Attribute;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 
 final class AnnotatedElementNameUtil {
 
     /**
-     * Returns the value of the {@link Param} annotation which is specified on the {@code element} if
-     * the value is not blank. If the value is blank, it returns the name of the specified
-     * {@code nameRetrievalTarget} object which is an instance of {@link Parameter} or {@link Field}.
+     * Returns the value of {@link Header}, {@link Param}, {@link Attribute} if the value is not blank.
+     * If the value is blank, it returns the name of the specified {@code nameRetrievalTarget} object
+     * which is an instance of {@link Header}, {@link Param}, {@link Attribute} or {@link Field}.
      */
-    static String findName(Param param, Object nameRetrievalTarget) {
+    static String findName(Object nameRetrievalTarget, String value) {
         requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
-
-        final String value = param.value();
         if (DefaultValues.isSpecified(value)) {
             checkArgument(!value.isEmpty(), "value is empty.");
             return value;
         }
         return getName(nameRetrievalTarget);
-    }
-
-    /**
-     * Returns the value of the {@link Header} annotation which is specified on the {@code element} if
-     * the value is not blank. If the value is blank, it returns the name of the specified
-     * {@code nameRetrievalTarget} object which is an instance of {@link Parameter} or {@link Field}.
-     *
-     * <p>Note that the name of the specified {@code nameRetrievalTarget} will be converted as
-     * {@link CaseFormat#LOWER_HYPHEN} that the string elements are separated with one hyphen({@code -})
-     * character. The value of the {@link Header} annotation will not be converted because it is clearly
-     * specified by a user.
-     */
-    static String findName(Header header, Object nameRetrievalTarget) {
-        requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
-
-        final String value = header.value();
-        if (DefaultValues.isSpecified(value)) {
-            checkArgument(!value.isEmpty(), "value is empty.");
-            return value;
-        }
-        return toHeaderName(getName(nameRetrievalTarget));
     }
 
     /**
@@ -89,8 +66,7 @@ final class AnnotatedElementNameUtil {
                 throw new IllegalArgumentException(
                         "cannot obtain the name of the parameter or field automatically. " +
                         "Please make sure you compiled your code with '-parameters' option. " +
-                        "If not, you need to specify parameter and header names with @" +
-                        Param.class.getSimpleName() + " and @" + Header.class.getSimpleName() + '.');
+                        "Alternatively, you could specify the name explicitly in the annotation.");
             }
             return parameter.getName();
         }
@@ -100,7 +76,6 @@ final class AnnotatedElementNameUtil {
         throw new IllegalArgumentException("cannot find the name: " + element.getClass().getName());
     }
 
-    @VisibleForTesting
     static String toHeaderName(String name) {
         requireNonNull(name, "name");
         checkArgument(!name.isEmpty(), "name is empty.");
