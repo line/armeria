@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
@@ -26,8 +28,6 @@ import java.util.Map.Entry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-
-import com.google.common.io.ByteStreams;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -121,7 +121,11 @@ class HttpServerPathTest {
         try (Socket s = new Socket(NetUtil.LOCALHOST, server.httpPort())) {
             s.setSoTimeout(10000);
             s.getOutputStream().write(requestString.getBytes(StandardCharsets.US_ASCII));
-            assertThat(new String(ByteStreams.toByteArray(s.getInputStream()), StandardCharsets.US_ASCII))
+            final BufferedReader in = new BufferedReader(
+                    new InputStreamReader(s.getInputStream(), StandardCharsets.US_ASCII));
+            // only reads a first line because it only needs to check the expected status
+            // and does not wait for the server to close the connection
+            assertThat(in.readLine())
                     .as(path)
                     .startsWith("HTTP/1.1 " + expected);
         }

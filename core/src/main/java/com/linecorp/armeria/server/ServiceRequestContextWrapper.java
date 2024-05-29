@@ -244,6 +244,16 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public boolean shouldReportUnloggedExceptions() {
+        return unwrap().shouldReportUnloggedExceptions();
+    }
+
+    @Override
+    public void setShouldReportUnloggedExceptions(boolean value) {
+        unwrap().setShouldReportUnloggedExceptions(value);
+    }
+
+    @Override
     public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
         return unwrap().initiateConnectionShutdown(drainDurationMicros);
     }

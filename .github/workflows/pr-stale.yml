@@ -1,0 +1,20 @@
+name: 'Mark inactive PRs as stale'
+on:
+  schedule:
+    # Update at 10:00 AM UTC+9
+    - cron: '0 1 * * *'
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          # Mark PRs as stale if they are open and inactive for 30 days.
+          days-before-pr-stale: 30
+          # Do not leave a message when marking PRs as stale.
+          stale-pr-message: ''
+          # Do not mark issues as stale.
+          days-before-issue-stale: -1
+          # Do not close PRs automatically.
+          days-before-close: -1

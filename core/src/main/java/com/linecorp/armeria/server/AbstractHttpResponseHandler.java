@@ -56,7 +56,6 @@ abstract class AbstractHttpResponseHandler {
 
     private final CompletableFuture<Void> completionFuture;
     private boolean isComplete;
-    private boolean needsDisconnection;
 
     AbstractHttpResponseHandler(ChannelHandlerContext ctx,
                                 ServerHttpObjectEncoder responseEncoder,
@@ -77,7 +76,6 @@ abstract class AbstractHttpResponseHandler {
     }
 
     void disconnectWhenFinished() {
-        needsDisconnection = true;
         responseEncoder.keepAliveHandler().disconnectWhenFinished();
     }
 
@@ -92,11 +90,6 @@ abstract class AbstractHttpResponseHandler {
             completionFuture.completeExceptionally(cause);
         }
 
-        // Force shutdown mode: If a user explicitly sets `Connection: close` in the response headers, it is
-        // assumed that the connection should be closed after sending the response.
-        if (needsDisconnection) {
-            ctx.channel().close();
-        }
         return true;
     }
 
@@ -212,7 +205,7 @@ abstract class AbstractHttpResponseHandler {
         final Throwable cause0 = firstNonNull(cause.getCause(), cause);
         final ServiceConfig serviceConfig = reqCtx.config();
         final AggregatedHttpResponse response = serviceConfig.errorHandler()
-                                                             .renderStatus(serviceConfig, req.headers(), status,
+                                                             .renderStatus(reqCtx, req.headers(), status,
                                                                            null, cause0);
         assert response != null;
         return response;
@@ -274,6 +267,12 @@ abstract class AbstractHttpResponseHandler {
                     // A stream or connection was already closed by a client
                     fail(cause);
                 } else {
+                    if (reqCtx.sessionProtocol().isMultiplex()) {
+                        req.setShouldResetOnlyIfRemoteIsOpen(true);
+                    } else if (req.isOpen()) {
+                        disconnectWhenFinished();
+                    }
+
                     req.abortResponse(cause, false);
                 }
             }

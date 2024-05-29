@@ -17,7 +17,7 @@ updates:
           timezone: "Asia/Seoul"
       open-pull-requests-limit: 10
       allow:
-          - dependency-name: "com.gradle.enterprise"
+          - dependency-name: "com.gradle.develocity"
             dependency-type: "production"
           - dependency-name: "com.gradle.common-custom-user-data-gradle-plugin"
             dependency-type: "production"
@@ -34,4 +34,4 @@ updates:
       directory: "/"
       schedule:
         interval: "monthly"
-        versioning-strategy: increase
+      versioning-strategy: increase

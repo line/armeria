@@ -108,9 +108,11 @@ class RoutingTrieTest {
         final Object value7 = new Object();
         final Object value8 = new Object();
         final Object value9 = new Object();
+        final Object value10 = new Object();
 
         builder.add("/users/:", value0);
         builder.add("/users/:", value1);
+        builder.add("/users/:\\:update", value10);
         builder.add("/users/:/movies", value2);
         builder.add("/users/:/books", value3);
         builder.add("/users/:/books/harry_potter", value4);
@@ -131,11 +133,13 @@ class RoutingTrieTest {
         //           |                        |                             |
         //          Nil                      Nil               `:`(param, values=[0,1])
         //                                                                  |
-        //                                                        `/`(exact, values=[])
+        //                      +-------------------------------------------+
+        //                      |                                           |
+        //         `:update`(exact, values=[10])                  `/`(exact, values=[])
         //                                                                  |
         //                           +----------------------------------------------+
         //                           |                                              |
-        //           `movies`(exact, values=[2])                     `books`(exact, values=[3])
+        //             `movies`(exact, values=[2])                      `books`(exact, values=[3])
         //                           |                                              |
         //                 `/`(exact, values=[])                          `/`(exact, values=[])
         //                           |                                              |
@@ -159,12 +163,14 @@ class RoutingTrieTest {
         testNodeWithCheckingParentPath(trie, "/faq", "/", value8);
         testNodeWithCheckingParentPath(trie, "/events/2017", "/", value9);
         testNodeWithCheckingParentPath(trie, "/", "/", value9);
+        testNodeWithCheckingParentPath(trie, "/users/tom:update", ":", value10);
+        testNodeWithCheckingParentPath(trie, "/users/11:00:update", ":", value10);
     }
 
     @ParameterizedTest
     @MethodSource("generateFindStrategyData")
     void testFindAll(String path, int findFirst, List<Integer> findAll) {
-        final ImmutableList<Object> values = IntStream.range(0, 10).mapToObj(i -> new Object() {
+        final ImmutableList<Object> values = IntStream.range(0, 13).mapToObj(i -> new Object() {
             @Override
             public String toString() {
                 return "value" + i;
@@ -182,6 +188,9 @@ class RoutingTrieTest {
         builder.add("/users/:/movies/*", values.get(7));
         builder.add("/:", values.get(8));
         builder.add("/*", values.get(9));
+        builder.add("/users/:/books/:\\:update", values.get(10));
+        builder.add("/users/:/books/harry_potter\\:update", values.get(11));
+        builder.add("/users/bob\\:no-verb", values.get(12));
 
         final RoutingTrie<Object> trie = builder.build();
         List<Object> found;
@@ -197,7 +206,15 @@ class RoutingTrieTest {
     static Stream<Arguments> generateFindStrategyData() {
         return Stream.of(
                 Arguments.of("/users/1", 0, ImmutableList.of(0, 1, 9)),
-                Arguments.of("/users/1/movies/1", 7, ImmutableList.of(7, 1, 9))
+                Arguments.of("/users/1/movies/1", 7, ImmutableList.of(7, 1, 9)),
+                Arguments.of("/users/1/books/1:update", 10, ImmutableList.of(10,1,9)),
+                Arguments.of("/users/1:2/books/1", 6, ImmutableList.of(6,1,9)),
+                Arguments.of("/users/1:2/books/1:update", 10, ImmutableList.of(10,1,9)),
+                Arguments.of("/users/1:2/books/1:no-verb", 6, ImmutableList.of(6,1,9)),
+                Arguments.of("/users/1/books/harry_potter:update", 11, ImmutableList.of(11,1,9)),
+                Arguments.of("/users/1:2/books/harry_potter:update", 11, ImmutableList.of(11,1,9)),
+                Arguments.of("/users/:2/books/harry_potter:update", 11, ImmutableList.of(11,1,9)),
+                Arguments.of("/users/bob:no-verb", 12, ImmutableList.of(12,0,1,9))
         );
     }
 

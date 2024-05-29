@@ -80,6 +80,7 @@ import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
 import com.linecorp.armeria.server.annotation.AdditionalTrailer;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Decorator;
@@ -291,8 +292,10 @@ public final class AnnotatedServiceFactory {
                                                queryDelimiter);
             return new AnnotatedServiceElement(
                     route,
-                    new AnnotatedService(object, method, overloadId, resolvers, eh, res, route, defaultStatus,
-                                         responseHeaders, responseTrailers, needToUseBlockingTaskExecutor),
+                    new DefaultAnnotatedService(object, method, overloadId,
+                                                resolvers, eh, res, route, defaultStatus,
+                                                responseHeaders, responseTrailers,
+                                                needToUseBlockingTaskExecutor),
                     decorator(method, clazz, dependencyInjector));
         }).collect(toImmutableList());
     }
@@ -591,7 +594,7 @@ public final class AnnotatedServiceFactory {
      */
     static DescriptionInfo findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
-        final Description description = AnnotationUtil.findFirst(annotatedElement, Description.class);
+        final Description description = AnnotationUtil.findFirstDescription(annotatedElement);
         if (description != null) {
             final String value = description.value();
             if (DefaultValues.isSpecified(value)) {

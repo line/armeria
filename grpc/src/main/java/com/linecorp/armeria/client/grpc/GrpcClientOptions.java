@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.internal.client.grpc.NullCallCredentials;
 import com.linecorp.armeria.internal.client.grpc.NullGrpcClientStubFactory;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
+import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallCredentials;
@@ -45,6 +45,7 @@ import io.grpc.ClientInterceptor;
 import io.grpc.Codec;
 import io.grpc.Compressor;
 import io.grpc.DecompressorRegistry;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 
@@ -173,8 +174,16 @@ public final class GrpcClientOptions {
      * to a gRPC {@link Status}.
      */
     public static final ClientOption<GrpcExceptionHandlerFunction> EXCEPTION_HANDLER =
-            ClientOption.define("EXCEPTION_HANDLER",
-                                (ctx, cause, metadata) -> GrpcStatus.fromThrowable(cause));
+            ClientOption.define("EXCEPTION_HANDLER", new UnwrappingGrpcExceptionHandleFunction(
+                    GrpcExceptionHandlerFunction.of()));
+
+    /**
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}.
+     * If disabled, the default marshaller will be used, which is more efficient.
+     * This option is disabled by default.
+     */
+    public static final ClientOption<Boolean> USE_METHOD_MARSHALLER =
+            ClientOption.define("USE_METHOD_MARSHALLER", false);
 
     private GrpcClientOptions() {}
 }

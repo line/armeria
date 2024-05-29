@@ -105,7 +105,7 @@ public final class DefaultServiceRequestContext
     private final InetSocketAddress remoteAddress;
     private final InetSocketAddress localAddress;
 
-    private boolean shouldReportUnhandledExceptions = true;
+    private boolean shouldReportUnloggedExceptions = true;
 
     private final RequestLogBuilder log;
 
@@ -469,12 +469,22 @@ public final class DefaultServiceRequestContext
 
     @Override
     public boolean shouldReportUnhandledExceptions() {
-        return shouldReportUnhandledExceptions;
+        return shouldReportUnloggedExceptions;
     }
 
     @Override
     public void setShouldReportUnhandledExceptions(boolean value) {
-        shouldReportUnhandledExceptions = value;
+        shouldReportUnloggedExceptions = value;
+    }
+
+    @Override
+    public boolean shouldReportUnloggedExceptions() {
+        return shouldReportUnloggedExceptions;
+    }
+
+    @Override
+    public void setShouldReportUnloggedExceptions(boolean value) {
+        shouldReportUnloggedExceptions = value;
     }
 
     @Override

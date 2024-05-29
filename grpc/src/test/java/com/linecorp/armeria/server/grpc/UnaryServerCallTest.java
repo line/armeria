@@ -331,7 +331,8 @@ class UnaryServerCallTest {
                                        .build(),
                         /* exceptionMappings */ null,
                         /* blockingExecutor */ null,
-                        /* autoCompress */ false);
+                        /* autoCompress */ false,
+                        /* useMethodMarshaller */ false);
 
         final AtomicReference<SimpleRequest> requestCaptor = new AtomicReference<>();
         final AtomicBoolean completed = new AtomicBoolean();
@@ -376,6 +377,7 @@ class UnaryServerCallTest {
                                .build(),
                 /* exceptionMappings */ null,
                 /* blockingExecutor */ null,
-                /* autoCompress */ false);
+                /* autoCompress */ false,
+                /* useMethodMarshaller */ false);
     }
 }

@@ -160,7 +160,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             SerializationFormat serializationFormat,
             @Nullable GrpcJsonMarshaller jsonMarshaller,
             boolean unsafeWrapResponseBuffers,
-            GrpcExceptionHandlerFunction exceptionHandler) {
+            GrpcExceptionHandlerFunction exceptionHandler,
+            boolean useMethodMarshaller) {
         this.ctx = ctx;
         this.endpointGroup = endpointGroup;
         this.httpClient = httpClient;
@@ -184,7 +185,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         requestFramer = new ArmeriaMessageFramer(ctx.alloc(), maxOutboundMessageSizeBytes, grpcWebText);
         marshaller = new GrpcMessageMarshaller<>(ctx.alloc(), serializationFormat, method, jsonMarshaller,
-                                                 unsafeWrapResponseBuffers);
+                                                 unsafeWrapResponseBuffers, useMethodMarshaller);
 
         if (callOptions.getExecutor() == null) {
             executor = MoreExecutors.directExecutor();
@@ -247,10 +248,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(compressor, metadata, remainingNanos);
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
-                (unused, cause) -> HttpResponse.ofFailure(
-                        GrpcStatus.fromThrowable(exceptionHandler, ctx, cause, metadata)
-                                  .withDescription(cause.getMessage())
-                                  .asRuntimeException());
+                (unused, cause) -> HttpResponse.ofFailure(exceptionHandler.apply(ctx, cause, metadata)
+                                                                          .withDescription(cause.getMessage())
+                                                                          .asRuntimeException());
         final HttpResponse res = initContextAndExecuteWithFallback(
                 httpClient, ctx, endpointGroup, HttpResponse::of, errorResponseFactory);
 
@@ -454,7 +454,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             });
         } catch (Throwable t) {
             final Metadata metadata = new Metadata();
-            close(GrpcStatus.fromThrowable(exceptionHandler, ctx, t, metadata), metadata);
+            close(exceptionHandler.apply(ctx, t, metadata), metadata);
         }
     }
 
@@ -511,7 +511,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private void closeWhenListenerThrows(Throwable t) {
         final Metadata metadata = new Metadata();
-        closeWhenEos(GrpcStatus.fromThrowable(exceptionHandler, ctx, t, metadata), metadata);
+        closeWhenEos(exceptionHandler.apply(ctx, t, metadata), metadata);
     }
 
     private void closeWhenEos(Status status, Metadata metadata) {

@@ -142,12 +142,15 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
                 skeletonJoiner.add(token);
                 continue;
             }
+            // The paramName should not include colons.
+            // TODO: Implement param options expressed like `{bar:type=int,range=[0,10]}`.
+            final String colonRemovedParamName = removeColonAndFollowing(paramName);
             final boolean captureRestPathMatching = isCaptureRestPathMatching(token);
-            final int paramNameIdx = paramNames.indexOf(paramName);
+            final int paramNameIdx = paramNames.indexOf(colonRemovedParamName);
             if (paramNameIdx < 0) {
                 // If the given token appeared first time, add it to the set and
                 // replace it with a capturing group expression in regex.
-                paramNames.add(paramName);
+                paramNames.add(colonRemovedParamName);
                 if (captureRestPathMatching) {
                     patternJoiner.add("(.*)");
                 } else {
@@ -159,7 +162,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
                 patternJoiner.add("\\" + (paramNameIdx + 1));
             }
 
-            normalizedPatternJoiner.add((captureRestPathMatching ? ":*" : ':') + paramName);
+            normalizedPatternJoiner.add((captureRestPathMatching ? ":*" : ':') + colonRemovedParamName);
             skeletonJoiner.add(captureRestPathMatching ? "*" : ":");
         }
 
@@ -196,6 +199,17 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         }
 
         return null;
+    }
+
+    /**
+     * Removes the portion of the specified string following a colon (:).
+     */
+    private static String removeColonAndFollowing(String paramName) {
+        final int index = paramName.indexOf(':');
+        if (index == -1) {
+            return paramName;
+        }
+        return paramName.substring(0, index);
     }
 
     /**

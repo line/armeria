@@ -424,6 +424,10 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
            .handle((aReq, cause) -> {
                if (cause != null) {
+                   cause = Exceptions.peel(cause);
+                   if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+                       return HttpResponse.ofFailure(cause);
+                   }
                    final HttpResponse errorRes;
                    if (ctx.config().verboseResponses()) {
                        errorRes = HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR,

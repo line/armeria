@@ -254,34 +254,10 @@ final class Routers {
             final List<Route> existingRoutes =
                     triePath2Routes.computeIfAbsent(triePath, unused -> new ArrayList<>());
             for (Route existingRoute : existingRoutes) {
-                if (route.complexity() != existingRoute.complexity()) {
-                    continue;
+                if (route.hasConflicts(existingRoute)) {
+                    rejectionHandler.accept(route, existingRoute);
+                    return;
                 }
-
-                if (route.getClass() != existingRoute.getClass()) {
-                    continue;
-                }
-
-                if (route.methods().stream().noneMatch(
-                        method -> existingRoute.methods().contains(method))) {
-                    // No overlap in supported methods.
-                    continue;
-                }
-                if (!route.consumes().isEmpty() &&
-                    route.consumes().stream().noneMatch(
-                            mediaType -> existingRoute.consumes().contains(mediaType))) {
-                    // No overlap in consume types.
-                    continue;
-                }
-                if (!route.produces().isEmpty() &&
-                    route.produces().stream().noneMatch(
-                            mediaType -> existingRoute.produces().contains(mediaType))) {
-                    // No overlap in produce types.
-                    continue;
-                }
-
-                rejectionHandler.accept(route, existingRoute);
-                return;
             }
 
             existingRoutes.add(route);
