@@ -945,9 +945,6 @@ version.ref = "netty-incubator-transport-native-io_uring"
 module = "info.picocli:picocli"
 version.ref = "picocli"
 
-[libraries.prometheus]
-module = "io.prometheus:simpleclient_common"
-version.ref = "prometheus-legacy"
 [libraries.prometheus-metrics-exposition-formats]
 module = "io.prometheus:prometheus-metrics-exposition-formats"
 version.ref = "prometheus"
