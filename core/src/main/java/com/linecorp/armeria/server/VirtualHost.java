@@ -494,6 +494,10 @@ public final class VirtualHost {
                     // CorsService will handle the preflight request
                     // even if the service does not handle an OPTIONS method.
                     return routed;
+                } else {
+                    // `handlesCorsPreflight()` is false if `CorsService` is set as a route decorator.
+                    // However, this is not a problem because the CorsService is chosen and applied by
+                    // `InitialDispatcherService` regardless of the target service.
                 }
                 break;
             default:
