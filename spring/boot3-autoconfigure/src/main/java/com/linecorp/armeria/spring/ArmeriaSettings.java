@@ -691,7 +691,7 @@ public class ArmeriaSettings {
 
     /**
      * Returns the path of the metrics exposition service. {@link PrometheusExpositionService} will be used if
-     * {@link PrometheusMeterRegistry} is available. Otherwise, Dropwizard's {@link MetricsModule} will be used
+     * {@code armeria-prometheus1} module is added. Otherwise, Dropwizard's {@link MetricsModule} will be used
      * if {@link DropwizardMeterRegistry} is available.
      */
     @Nullable
@@ -701,7 +701,7 @@ public class ArmeriaSettings {
 
     /**
      * Sets the path of the metrics exposition service. {@link PrometheusExpositionService} will be used if
-     * {@link PrometheusMeterRegistry} is available. Otherwise, Dropwizard's {@link MetricsModule} will be used
+     * {@code armeria-prometheus1} module is added. Otherwise, Dropwizard's {@link MetricsModule} will be used
      * if {@link DropwizardMeterRegistry} is available.
      */
     public void setMetricsPath(@Nullable String metricsPath) {

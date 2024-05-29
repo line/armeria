@@ -99,7 +99,8 @@ public final class InternalServices {
                     "io.micrometer.prometheusmetrics.PrometheusMeterRegistry";
             final boolean hasPrometheus = hasAllClasses(
                     prometheusMeterRegistryClassName,
-                    "io.prometheus.metrics.model.registry.PrometheusRegistry");
+                    "io.prometheus.metrics.model.registry.PrometheusRegistry",
+                    "com.linecorp.armeria.server.prometheus.PrometheusExpositionService");
 
             if (hasPrometheus) {
                 expositionService = PrometheusSupport.newExpositionService(meterRegistry);
