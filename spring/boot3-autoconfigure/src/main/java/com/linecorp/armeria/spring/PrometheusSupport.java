@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
@@ -29,12 +29,12 @@ import io.prometheus.metrics.model.registry.PrometheusRegistry;
 final class PrometheusSupport {
 
     @Nullable
-    static PrometheusVersion1ExpositionService newExpositionService(MeterRegistry meterRegistry) {
+    static PrometheusExpositionService newExpositionService(MeterRegistry meterRegistry) {
         for (;;) {
             if (meterRegistry instanceof PrometheusMeterRegistry) {
                 final PrometheusRegistry prometheusRegistry =
                         ((PrometheusMeterRegistry) meterRegistry).getPrometheusRegistry();
-                return PrometheusVersion1ExpositionService.of(prometheusRegistry);
+                return PrometheusExpositionService.of(prometheusRegistry);
             }
 
             if (meterRegistry instanceof CompositeMeterRegistry) {

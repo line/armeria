@@ -27,7 +27,7 @@ import org.assertj.core.api.AbstractDoubleAssert;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
 import io.micrometer.core.instrument.Gauge;
@@ -43,7 +43,7 @@ public class ServerTlsCertificateMetricsTest {
 
     @Test
     void noTlsMetricGivenNoTlsSetup() {
-        final MeterRegistry meterRegistry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .meterRegistry(meterRegistry)
@@ -59,7 +59,7 @@ public class ServerTlsCertificateMetricsTest {
     @Test
     void tlsMetricGivenConfiguredCertificateNotExpired() throws CertificateException {
         final SelfSignedCertificate ssc = new SelfSignedCertificate("localhost");
-        final MeterRegistry meterRegistry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .meterRegistry(meterRegistry)
@@ -72,7 +72,7 @@ public class ServerTlsCertificateMetricsTest {
 
     @Test
     void tlsMetricGivenSelfSignCertificateNotExpired() {
-        final MeterRegistry meterRegistry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .meterRegistry(meterRegistry)
@@ -93,7 +93,7 @@ public class ServerTlsCertificateMetricsTest {
         final String commonName = "*.virtual.com";
         final String hostnamePattern = "foo.virtual.com";
         final SelfSignedCertificate ssc = new SelfSignedCertificate(commonName);
-        final MeterRegistry meterRegistry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
 
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
@@ -134,7 +134,7 @@ public class ServerTlsCertificateMetricsTest {
                 RESOURCE_PATH_PREFIX + "certificate-chain.pem");
         final InputStream pk = getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "pk.key");
 
-        final MeterRegistry meterRegistry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .meterRegistry(meterRegistry)
@@ -156,7 +156,7 @@ public class ServerTlsCertificateMetricsTest {
         final Date notBefore = calendar.getTime();
         final SelfSignedCertificate ssc = new SelfSignedCertificate("localhost", notBefore, notAfter);
 
-        final MeterRegistry meterRegistry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .meterRegistry(meterRegistry)
@@ -173,7 +173,7 @@ public class ServerTlsCertificateMetricsTest {
                 .getResourceAsStream(RESOURCE_PATH_PREFIX + "expired-certificate-chain.pem");
         final InputStream pk = getClass().getResourceAsStream(RESOURCE_PATH_PREFIX + "expire-pk.key");
 
-        final MeterRegistry meterRegistry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .meterRegistry(meterRegistry)

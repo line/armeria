@@ -7,7 +7,7 @@ dependencies {
     }
     implementation project(':logback')
 
-    optionalApi libs.micrometer.prometheus
+    optionalApi project(':prometheus1')
     optionalApi libs.micrometer.prometheus.legacy
     optionalApi libs.dropwizard.metrics.json
 

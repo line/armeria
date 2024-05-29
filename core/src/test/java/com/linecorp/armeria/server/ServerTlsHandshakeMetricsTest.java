@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.core.instrument.Counter;
@@ -43,7 +43,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 class ServerTlsHandshakeMetricsTest {
 
-    private static final MeterRegistry meterRegistry = PrometheusVersion1MeterRegistries.newRegistry();
+    private static final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {

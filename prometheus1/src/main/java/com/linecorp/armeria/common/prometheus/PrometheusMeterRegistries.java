@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.metric;
+package com.linecorp.armeria.common.prometheus;
 
 import static java.util.Objects.requireNonNull;
 
@@ -29,7 +29,7 @@ import io.prometheus.metrics.model.registry.PrometheusRegistry;
  * Provides the convenient factory methods for {@link PrometheusMeterRegistry}.
  */
 @UnstableApi
-public final class PrometheusVersion1MeterRegistries {
+public final class PrometheusMeterRegistries {
 
     private static final PrometheusMeterRegistry defaultRegistry =
             newRegistry(PrometheusRegistry.defaultRegistry);
@@ -65,5 +65,5 @@ public final class PrometheusVersion1MeterRegistries {
                 PrometheusConfig.DEFAULT, requireNonNull(registry, "registry"), requireNonNull(clock, "clock"));
     }
 
-    private PrometheusVersion1MeterRegistries() {}
+    private PrometheusMeterRegistries() {}
 }

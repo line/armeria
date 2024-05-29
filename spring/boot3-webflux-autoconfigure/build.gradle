@@ -22,7 +22,7 @@ dependencies {
     implementation libs.jakarta.websocket
     implementation libs.jakarta.websocket.client
 
-    optionalApi libs.micrometer.prometheus
+    optionalApi project(':prometheus1')
     optionalApi libs.micrometer.prometheus.legacy
     optionalApi libs.dropwizard.metrics.json
 

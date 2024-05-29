@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -79,10 +80,10 @@ class MeterIdPrefixFunctionTest {
         };
         final MeterIdPrefixFunction f2 = f.andThen(
                 (registry, log, id) -> id.appendWithTags("bar", "log.name", log.name()));
-        assertThat(f2.completeRequestPrefix(PrometheusVersion1MeterRegistries.newRegistry(),
+        assertThat(f2.completeRequestPrefix(PrometheusMeterRegistries.newRegistry(),
                                             ctx.log().ensureComplete()))
                 .isEqualTo(new MeterIdPrefix("foo.bar", "log.name", "doFoo"));
-        assertThat(f2.activeRequestPrefix(PrometheusVersion1MeterRegistries.newRegistry(),
+        assertThat(f2.activeRequestPrefix(PrometheusMeterRegistries.newRegistry(),
                                           ctx.log().ensureRequestComplete()))
                 .isEqualTo(new MeterIdPrefix("oof.bar", "log.name", "doFoo"));
     }

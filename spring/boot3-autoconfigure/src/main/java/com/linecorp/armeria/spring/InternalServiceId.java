@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.docs.DocService;
-import com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 
 /**
  * Defines the IDs of internal {@code HttpService}s that should not be exposed to the external network.
@@ -39,7 +39,7 @@ public enum InternalServiceId {
      */
     HEALTH,
     /**
-     * The ID of {@link PrometheusVersion1ExpositionService}.
+     * The ID of {@link PrometheusExpositionService}.
      */
     METRICS,
     /**

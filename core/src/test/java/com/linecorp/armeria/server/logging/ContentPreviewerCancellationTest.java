@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.internal.logging.ContentPreviewingUtil;
@@ -51,7 +51,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
@@ -62,7 +62,7 @@ class ContentPreviewerCancellationTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final PrometheusMeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+            final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
             sb.meterRegistry(registry)
               .decorator(
                       MetricCollectingService.newDecorator(
@@ -78,7 +78,7 @@ class ContentPreviewerCancellationTest {
               )
               .annotatedService(new TestService())
               .service("/metrics",
-                       PrometheusVersion1ExpositionService.of(registry.getPrometheusRegistry()));
+                       PrometheusExpositionService.of(registry.getPrometheusRegistry()));
         }
     };
 

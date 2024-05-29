@@ -29,6 +29,8 @@ import org.junit.jupiter.api.Test;
 
 import com.codahale.metrics.MetricRegistry;
 
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
+
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
@@ -120,7 +122,7 @@ class DropwizardMeterRegistriesTest {
     @Test
     void filteredGaugesDoNotAffectOthers() {
         final CompositeMeterRegistry micrometer = new CompositeMeterRegistry();
-        final PrometheusMeterRegistry prometheus = PrometheusVersion1MeterRegistries.newRegistry();
+        final PrometheusMeterRegistry prometheus = PrometheusMeterRegistries.newRegistry();
         final DropwizardMeterRegistry dropwizard = DropwizardMeterRegistries.newRegistry();
         micrometer.add(prometheus).add(dropwizard);
         final DistributionSummary summary = DistributionSummary.builder("summary")

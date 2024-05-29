@@ -26,7 +26,7 @@ import io.prometheus.client.CollectorRegistry;
 /**
  * Builds a {@link PrometheusExpositionService}.
  *
- * @deprecated Use {@link PrometheusVersion1ExpositionServiceBuilder} instead.
+ * @deprecated Use {@code PrometheusExpositionServiceBuilder} in {@code armeria-prometheus1} module instead.
  */
 @Deprecated
 public final class PrometheusExpositionServiceBuilder implements TransientServiceBuilder {

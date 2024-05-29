@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcMeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.testing.GenerateNativeImageTrace;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -64,7 +64,7 @@ import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 @GenerateNativeImageTrace
 public class GrpcMetricsIntegrationTest {
 
-    private static final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+    private static final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
     private static class TestServiceImpl extends TestServiceImplBase {
         @Override

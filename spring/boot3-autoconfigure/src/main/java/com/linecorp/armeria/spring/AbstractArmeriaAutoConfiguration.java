@@ -45,7 +45,7 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -120,7 +120,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
 
     /**
      * Creates internal services that should not be exposed to the external network such as {@link DocService},
-     * {@link PrometheusVersion1ExpositionService} and {@link HealthCheckService}.
+     * {@link PrometheusExpositionService} and {@link HealthCheckService}.
      *
      * <p>Note that if a service path is either {@code null} or empty, the associated service will not be
      * initiated. For example, {@link ArmeriaSettings#getHealthCheckPath()} is {@code null},

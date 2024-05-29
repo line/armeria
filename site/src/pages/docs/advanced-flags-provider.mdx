@@ -70,7 +70,7 @@ public class MyFlagsProvider implements FlagsProvider {
 
   @Override
   public MeterRegistry meterRegistry() {
-      return PrometheusVersion1MeterRegistries.newRegistry();
+      return PrometheusMeterRegistries.newRegistry();
   }
 
 }

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.metric;
+package com.linecorp.armeria.server.prometheus;
 
 import static com.linecorp.armeria.common.metric.MoreMeters.measureAll;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,18 +43,20 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.LogWriter;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
-import io.prometheus.client.exporter.common.TextFormat;
+import io.prometheus.metrics.expositionformats.OpenMetricsTextFormatWriter;
+import io.prometheus.metrics.expositionformats.PrometheusTextFormatWriter;
 
-class PrometheusVersion1ExpositionServiceTest {
+class PrometheusExpositionServiceTest {
 
-    private static final PrometheusMeterRegistry registry = PrometheusVersion1MeterRegistries.defaultRegistry();
+    private static final PrometheusMeterRegistry registry = PrometheusMeterRegistries.defaultRegistry();
 
     private static final Queue<RequestLog> logs = new ConcurrentLinkedQueue<>();
 
@@ -67,12 +69,12 @@ class PrometheusVersion1ExpositionServiceTest {
             sb.route().path("/api").defaultServiceName("Hello").build((ctx, req) -> HttpResponse.of(200));
             sb.meterRegistry(registry)
               .decorator(MetricCollectingService.newDecorator(MeterIdPrefixFunction.ofDefault("foo")))
-              .service("/disabled", PrometheusVersion1ExpositionService.of(registry.getPrometheusRegistry()))
+              .service("/disabled", PrometheusExpositionService.of(registry.getPrometheusRegistry()))
               .service("/enabled",
-                       PrometheusVersion1ExpositionService.builder(registry.getPrometheusRegistry())
-                                                          .transientServiceOptions(
+                       PrometheusExpositionService.builder(registry.getPrometheusRegistry())
+                                                  .transientServiceOptions(
                                                                   TransientServiceOption.allOf())
-                                                          .build());
+                                                  .build());
             sb.accessLogWriter(logs::add, false);
             sb.decorator(LoggingService.builder()
                                        .logWriter(LogWriter.of(logger))
@@ -103,7 +105,7 @@ class PrometheusVersion1ExpositionServiceTest {
                                    0.0)
                     .doesNotContainKey(
                             "foo.active.requests#value{hostname.pattern=*,method=GET,service=" +
-                            "com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService}");
+                            "com.linecorp.armeria.server.prometheus.PrometheusExpositionService}");
         });
         // Access log is not written.
         await().pollDelay(500, TimeUnit.MILLISECONDS).then().until(() -> logs.size() == 1);
@@ -118,7 +120,7 @@ class PrometheusVersion1ExpositionServiceTest {
                     .containsEntry("foo.active.requests#value{hostname.pattern=*,method=GET,service=Hello}",
                                    0.0)
                     .containsEntry("foo.active.requests#value{hostname.pattern=*,method=GET,service=" +
-                                   "com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService}",
+                                   "com.linecorp.armeria.server.prometheus.PrometheusExpositionService}",
                                    0.0);
         });
         // Access log is written.
@@ -134,11 +136,12 @@ class PrometheusVersion1ExpositionServiceTest {
             final WebClient client = WebClient.of(server.httpUri());
             final HttpRequest request = HttpRequest.builder()
                                                    .get("/enabled")
-                                                   .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_004)
+                                                   .header(HttpHeaderNames.ACCEPT,
+                                                           PrometheusTextFormatWriter.CONTENT_TYPE)
                                                    .build();
             final AggregatedHttpResponse response = client.execute(request).aggregate().join();
             assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE))
-                    .isEqualTo(TextFormat.CONTENT_TYPE_004);
+                    .isEqualTo(PrometheusTextFormatWriter.CONTENT_TYPE);
         }
 
         @Test
@@ -147,11 +150,11 @@ class PrometheusVersion1ExpositionServiceTest {
             final HttpRequest request = HttpRequest.builder()
                                                    .get("/enabled")
                                                    .header(HttpHeaderNames.ACCEPT,
-                                                           TextFormat.CONTENT_TYPE_OPENMETRICS_100)
+                                                           OpenMetricsTextFormatWriter.CONTENT_TYPE)
                                                    .build();
             final AggregatedHttpResponse response = client.execute(request).aggregate().join();
             assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE))
-                    .isEqualTo(TextFormat.CONTENT_TYPE_OPENMETRICS_100);
+                    .isEqualTo(OpenMetricsTextFormatWriter.CONTENT_TYPE);
         }
     }
 }

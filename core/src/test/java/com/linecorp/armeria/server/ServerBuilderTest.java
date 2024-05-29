@@ -52,7 +52,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.MinifiedBouncyCastleProvider;
@@ -557,7 +557,7 @@ class ServerBuilderTest {
 
     @Test
     void monitorBlockingTaskExecutorAndSchedulersTogetherWithPrometheus() {
-        final PrometheusMeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+        final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         Metrics.addRegistry(registry);
         Server.builder()
               .meterRegistry(registry)

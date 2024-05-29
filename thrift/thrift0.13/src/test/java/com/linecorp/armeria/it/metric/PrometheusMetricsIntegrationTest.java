@@ -49,10 +49,10 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
@@ -63,7 +63,7 @@ import testing.thrift.main.HelloService.Iface;
 public class PrometheusMetricsIntegrationTest {
 
     private static final Logger logger = LoggerFactory.getLogger(PrometheusMetricsIntegrationTest.class);
-    private static final PrometheusMeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+    private static final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {
@@ -85,7 +85,7 @@ public class PrometheusMetricsIntegrationTest {
                     MetricCollectingService.newDecorator(new MeterIdPrefixFunctionImpl("server", "Bar"))));
 
             sb.service("/internal/prometheus/metrics",
-                       PrometheusVersion1ExpositionService.of(registry.getPrometheusRegistry()));
+                       PrometheusExpositionService.of(registry.getPrometheusRegistry()));
         }
     };
 

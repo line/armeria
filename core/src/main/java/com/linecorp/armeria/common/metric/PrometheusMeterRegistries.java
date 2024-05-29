@@ -28,7 +28,7 @@ import io.prometheus.client.CollectorRegistry;
  * Provides the convenient factory methods for {@link PrometheusMeterRegistry} with more sensible defaults for
  * {@link NamingConvention}.
  *
- * @deprecated Use {@link PrometheusVersion1MeterRegistries} instead.
+ * @deprecated Use {@code PrometheusMeterRegistries} in {@code armeria-prometheus1} module instead.
  */
 @Deprecated
 public final class PrometheusMeterRegistries {

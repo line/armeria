@@ -37,7 +37,7 @@ import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusVersion1ExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
@@ -307,7 +307,7 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Properties for internal services such as {@link DocService}, {@link PrometheusVersion1ExpositionService},
+     * Properties for internal services such as {@link DocService}, {@link PrometheusExpositionService},
      * and {@link HealthCheckService}.
      */
     public static class InternalServiceProperties extends Port {
@@ -344,7 +344,7 @@ public class ArmeriaSettings {
          *     </tr>
          *     <tr>
          *       <td>{@code metrics}</td>
-         *       <td>{@link PrometheusVersion1ExpositionService}</td>
+         *       <td>{@link PrometheusExpositionService}</td>
          *     </tr>
          *     <tr>
          *       <td>{@code health}</td>
@@ -690,7 +690,7 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Returns the path of the metrics exposition service. {@link PrometheusVersion1ExpositionService} will be
+     * Returns the path of the metrics exposition service. {@link PrometheusExpositionService} will be
      * used if {@link PrometheusMeterRegistry} is available.
      * Otherwise, Dropwizard's {@link MetricsModule} will be used
      * if {@link DropwizardMeterRegistry} is available.
@@ -701,7 +701,7 @@ public class ArmeriaSettings {
     }
 
     /**
-     * Sets the path of the metrics exposition service. {@link PrometheusVersion1ExpositionService} will be
+     * Sets the path of the metrics exposition service. {@link PrometheusExpositionService} will be
      * used if {@link PrometheusMeterRegistry} is available.
      * Otherwise, Dropwizard's {@link MetricsModule} will be used
      * if {@link DropwizardMeterRegistry} is available.

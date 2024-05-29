@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server.metric;
+package com.linecorp.armeria.server.prometheus;
 
 import static java.util.Objects.requireNonNull;
 
@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.TransientHttpService;
@@ -42,39 +43,40 @@ import io.prometheus.metrics.model.registry.PrometheusRegistry;
  * Exposes Prometheus metrics in <a href="https://prometheus.io/docs/instrumenting/exposition_formats/">
  * EXPOSITION FORMATS</a>.
  */
-public final class PrometheusVersion1ExpositionService extends AbstractHttpService
+@UnstableApi
+public final class PrometheusExpositionService extends AbstractHttpService
         implements TransientHttpService {
 
     /**
-     * Returns a new {@link PrometheusVersion1ExpositionService} that exposes Prometheus metrics from
+     * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from
      * {@link PrometheusRegistry#defaultRegistry}.
      */
-    public static PrometheusVersion1ExpositionService of() {
+    public static PrometheusExpositionService of() {
         return of(PrometheusRegistry.defaultRegistry);
     }
 
     /**
-     * Returns a new {@link PrometheusVersion1ExpositionService} that exposes Prometheus metrics from
+     * Returns a new {@link PrometheusExpositionService} that exposes Prometheus metrics from
      * the specified {@link PrometheusRegistry}.
      */
-    public static PrometheusVersion1ExpositionService of(PrometheusRegistry prometheusRegistry) {
+    public static PrometheusExpositionService of(PrometheusRegistry prometheusRegistry) {
         return builder(prometheusRegistry).build();
     }
 
     /**
-     * Returns a new {@link PrometheusVersion1ExpositionServiceBuilder} created with
+     * Returns a new {@link PrometheusExpositionServiceBuilder} created with
      * {@link PrometheusRegistry#defaultRegistry}.
      */
-    public static PrometheusVersion1ExpositionServiceBuilder builder() {
+    public static PrometheusExpositionServiceBuilder builder() {
         return builder(PrometheusRegistry.defaultRegistry);
     }
 
     /**
-     * Returns a new {@link PrometheusVersion1ExpositionServiceBuilder} created with the specified
+     * Returns a new {@link PrometheusExpositionServiceBuilder} created with the specified
      * {@link PrometheusRegistry}.
      */
-    public static PrometheusVersion1ExpositionServiceBuilder builder(PrometheusRegistry prometheusRegistry) {
-        return new PrometheusVersion1ExpositionServiceBuilder(
+    public static PrometheusExpositionServiceBuilder builder(PrometheusRegistry prometheusRegistry) {
+        return new PrometheusExpositionServiceBuilder(
                 requireNonNull(prometheusRegistry, "prometheusRegistry"));
     }
 
@@ -82,8 +84,8 @@ public final class PrometheusVersion1ExpositionService extends AbstractHttpServi
     private final ExpositionFormats expositionFormats = ExpositionFormats.init();
     private final Set<TransientServiceOption> transientServiceOptions;
 
-    PrometheusVersion1ExpositionService(PrometheusRegistry prometheusRegistry,
-                                        Set<TransientServiceOption> transientServiceOptions) {
+    PrometheusExpositionService(PrometheusRegistry prometheusRegistry,
+                                Set<TransientServiceOption> transientServiceOptions) {
         this.prometheusRegistry = prometheusRegistry;
         this.transientServiceOptions = ImmutableSet.copyOf(transientServiceOptions);
     }

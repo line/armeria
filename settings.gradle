@@ -112,6 +112,7 @@ includeWithFlags ':logback14',                           'java11', 'publish', 'r
 project(':logback14').projectDir = file('logback/logback14')
 includeWithFlags ':native-image-config'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate', 'native'
+includeWithFlags ':prometheus1',                         'java', 'publish', 'relocate', 'native'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':resilience4j2',                       'java17', 'publish', 'relocate', 'native'

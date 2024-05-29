@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -30,7 +30,7 @@ public class ServerConfiguration {
 
     @Bean
     public PrometheusMeterRegistry prometheusMeterRegistry() {
-        return PrometheusVersion1MeterRegistries.newRegistry();
+        return PrometheusMeterRegistries.newRegistry();
     }
 
     @Bean

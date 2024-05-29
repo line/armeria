@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -29,7 +29,7 @@ class MetricCollectingCircuitBreakerListenerTest {
 
     @Test
     void test() throws Exception {
-        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final CircuitBreakerListener l = CircuitBreakerListener.metricCollecting(registry, "foo");
 
         // Note: We only use the name of the circuit breaker.

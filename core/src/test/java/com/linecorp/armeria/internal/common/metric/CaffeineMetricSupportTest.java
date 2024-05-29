@@ -39,7 +39,7 @@ import com.github.benmanes.caffeine.cache.stats.CacheStats;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusVersion1MeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 
@@ -58,7 +58,7 @@ class CaffeineMetricSupportTest {
     void test() {
         final MockLoadingCache cache = new MockLoadingCache(1, 2, 3, 4, 5, 6, 7, 8);
         final AtomicLong ticker = new AtomicLong();
-        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         CaffeineMetricSupport.setup(registry, new MeterIdPrefix("foo"), cache, ticker::get);
         assertThat(registry.getMeters()).isNotEmpty();
 
@@ -102,7 +102,7 @@ class CaffeineMetricSupportTest {
     void testNonLoadingCache() {
         final MockCache cache = new MockCache(1, 2, 3, 4, 5);
         final AtomicLong ticker = new AtomicLong();
-        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         CaffeineMetricSupport.setup(registry, new MeterIdPrefix("bar"), cache, ticker::get);
 
         assertThat(cache.statsCalls()).isOne();
@@ -126,7 +126,7 @@ class CaffeineMetricSupportTest {
     void aggregation() {
         final MockLoadingCache cache1 = new MockLoadingCache(1, 2, 3, 4, 5, 6, 7, 8);
         final MockLoadingCache cache2 = new MockLoadingCache(9, 10, 11, 12, 13, 14, 15, 16);
-        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final MeterIdPrefix idPrefix = new MeterIdPrefix("baz");
 
         // Register two caches at the same meter ID.
@@ -149,7 +149,7 @@ class CaffeineMetricSupportTest {
     void aggregationAfterGC() throws Exception {
         final MockCache cache1 = new MockCache(1, 2, 3, 4, 5);
         Object cache2 = new MockLoadingCache(6, 7, 8, 9, 10, 11, 12, 13);
-        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final AtomicLong ticker = new AtomicLong();
         final MeterIdPrefix idPrefix = new MeterIdPrefix("baz");
 
@@ -190,7 +190,7 @@ class CaffeineMetricSupportTest {
     @Test
     void sameCacheTwice() {
         final MockCache cache = new MockCache(1, 2, 3, 4, 5);
-        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final MeterIdPrefix idPrefix = new MeterIdPrefix("baz");
 
         // Register the same cache twice at the same meter ID.
@@ -211,7 +211,7 @@ class CaffeineMetricSupportTest {
         when(policy.isRecordingStats()).thenReturn(false);
         final MockLoadingCache cache = new MockLoadingCache(1, 2, 3, 4, 5, 6, 7, 8);
         final AtomicLong ticker = new AtomicLong();
-        final MeterRegistry registry = PrometheusVersion1MeterRegistries.newRegistry();
+        final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         CaffeineMetricSupport.setup(registry, new MeterIdPrefix("foo"), cache, ticker::get);
         assertThat(registry.getMeters()).isEmpty();
     }

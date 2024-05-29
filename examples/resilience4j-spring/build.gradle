@@ -1,4 +1,5 @@
 dependencies {
+    api project(':prometheus1')
     implementation project(':resilience4j2')
     implementation project(':spring:boot2-starter')
     runtimeOnly project(':spring:boot2-actuator-starter')
