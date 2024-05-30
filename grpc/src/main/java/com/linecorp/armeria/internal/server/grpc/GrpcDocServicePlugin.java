@@ -38,7 +38,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -268,7 +267,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             final HttpEndpoint firstEndpoint = sortedEndpoints.get(0);
             final HttpEndpointSpecification firstSpec = firstEndpoint.spec();
 
-            final Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
+            final ImmutableList.Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
             firstSpec.pathVariables().forEach(paramName -> {
                 @Nullable
                 final Parameter parameter = firstSpec.parameters().get(paramName);
