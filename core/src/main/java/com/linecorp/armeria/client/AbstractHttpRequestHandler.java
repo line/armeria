@@ -113,6 +113,10 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         return ch;
     }
 
+    ClientRequestContext ctx() {
+        return ctx;
+    }
+
     final int id() {
         return id;
     }
@@ -145,6 +149,11 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                     responseWrapper.initTimeout();
                 }
 
+                if (state == State.NEEDS_100_CONTINUE) {
+                    assert responseWrapper != null;
+                    responseWrapper.initTimeout();
+                }
+
                 onWriteSuccess();
                 return;
             }
@@ -160,26 +169,22 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     final boolean tryInitialize(boolean incrementNumUnfinishedResponses) {
         final HttpSession session = HttpSession.get(ch);
         id = session.incrementAndGetNumRequestsSent();
-        if (incrementNumUnfinishedResponses) {
-            // Repeating the request after getting 417 expectation so just increment the number of requests.
-            assert session.incrementNumUnfinishedResponses();
-        } else {
-            if (id >= MAX_NUM_REQUESTS_SENT || !session.canSendRequest()) {
-                final ClosedSessionException exception;
-                if (id >= MAX_NUM_REQUESTS_SENT) {
-                    exception = new ClosedSessionException(
-                            "Can't send requests more than " + MAX_NUM_REQUESTS_SENT +
-                            " in one connection. ID: " + id);
-                } else {
-                    exception = new ClosedSessionException(
-                            "Can't send requests. ID: " + id + ", session active: " +
-                            session.isAcquirable(responseDecoder.keepAliveHandler()));
-                }
-                session.deactivate();
-                // No need to send RST because we didn't send any packet and this will be disconnected anyway.
-                fail(UnprocessedRequestException.of(exception));
-                return false;
+        if ((incrementNumUnfinishedResponses && !session.incrementNumUnfinishedResponses()) ||
+            id >= MAX_NUM_REQUESTS_SENT || !session.canSendRequest()) {
+            final ClosedSessionException exception;
+            if (id >= MAX_NUM_REQUESTS_SENT) {
+                exception = new ClosedSessionException(
+                        "Can't send requests more than " + MAX_NUM_REQUESTS_SENT +
+                        " in one connection. ID: " + id);
+            } else {
+                exception = new ClosedSessionException(
+                        "Can't send requests. ID: " + id + ", session active: " +
+                        session.isAcquirable(responseDecoder.keepAliveHandler()));
             }
+            session.deactivate();
+            // No need to send RST because we didn't send any packet and this will be disconnected anyway.
+            fail(UnprocessedRequestException.of(exception));
+            return false;
         }
 
         this.session = session;
@@ -192,6 +197,18 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
         return true;
+    }
+
+    RequestHeaders mergedRequestHeaders(RequestHeaders headers) {
+        final HttpHeaders internalHeaders;
+        final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExtension == null) {
+            internalHeaders = HttpHeaders.of();
+        } else {
+            internalHeaders = ctxExtension.internalRequestHeaders();
+        }
+        return mergeRequestHeaders(
+                headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders(), internalHeaders);
     }
 
     /**
@@ -214,16 +231,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             state = State.NEEDS_DATA;
         }
 
-        final HttpHeaders internalHeaders;
-        final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
-        if (ctxExtension == null) {
-            internalHeaders = HttpHeaders.of();
-        } else {
-            internalHeaders = ctxExtension.internalRequestHeaders();
-        }
-        final RequestHeaders merged = mergeRequestHeaders(
-                headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders(), internalHeaders);
-        logBuilder.requestHeaders(merged);
+        logBuilder.requestHeaders(headers);
 
         final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
         if (CLOSE_STRING.equalsIgnoreCase(connectionOption) || !keepAlive) {
@@ -239,7 +247,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         // Attach a listener first to make the listener early handle a cause raised while writing headers
         // before any other callbacks like `onStreamClosed()` are invoked.
         promise.addListener(this);
-        encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
+        encoder.writeHeaders(id, streamId(), headers, headersOnly, promise);
     }
 
     static boolean shouldExpect100ContinueHeader(RequestHeaders headers) {
@@ -259,12 +267,12 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
     abstract void doResume();
 
-    void repeat() {
+    boolean repeat() {
         state = State.NEEDS_TO_WRITE_FIRST_HEADER;
-        doRepeat();
+        return doRepeat();
     }
 
-    abstract void doRepeat();
+    abstract boolean doRepeat();
 
     void discardRequestBody() {
         state = State.DONE;

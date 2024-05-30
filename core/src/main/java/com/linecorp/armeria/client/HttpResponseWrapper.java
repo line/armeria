@@ -342,8 +342,8 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         requestHandler.discardRequestBody();
     }
 
-    void repeat() {
+    boolean repeat() {
         assert requestHandler != null;
-        requestHandler.repeat();
+        return requestHandler.repeat();
     }
 }

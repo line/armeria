@@ -202,7 +202,6 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                         assert res != null;
                         this.res = res;
 
-                        res.startResponse();
                         final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                         final HttpStatus status = responseHeaders.status();
 
@@ -210,14 +209,20 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                             if (status == HttpStatus.CONTINUE) {
                                 res.resume();
                             } else if (status == HttpStatus.EXPECTATION_FAILED) {
+                                // Remove the response and do not close the HttpResponseWrapper in order not to
+                                // close the original response.
                                 removeResponse(resId++);
-                                state = State.DISCARD_DATA_OR_TRAILERS;
+                                // repeat can't fail for HTTP/1.1 because it doesn't use
+                                // settings frame to reduce the number of max concurrent streams.
                                 res.repeat();
+                                state = State.DISCARD_DATA_OR_TRAILERS;
+                                // TODO(minwoox): reset timeout
                                 return;
                             } else {
                                 res.discardRequestBody();
                             }
                         }
+                        res.startResponse();
 
                         final boolean written;
                         if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {

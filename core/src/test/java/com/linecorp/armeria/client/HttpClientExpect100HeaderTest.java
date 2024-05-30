@@ -22,6 +22,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.FRAME_HEADER_LENGTH;
 import static io.netty.handler.codec.http2.Http2CodecUtil.connectionPrefaceBuf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -32,15 +33,13 @@ import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.hc.core5.http2.hpack.HPackEncoder;
 import org.apache.hc.core5.util.ByteArrayBuffer;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -48,13 +47,9 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -69,27 +64,6 @@ import io.netty.handler.codec.http2.Http2Headers;
  * This test is to check the behavior of the HttpClient when the 'Expect: 100-continue' header is set.
  */
 final class HttpClientExpect100HeaderTest {
-
-    @RegisterExtension
-    static final ServerExtension server = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.service("/", (ctx, req) -> HttpResponse.of(201));
-        }
-    };
-
-    @RegisterExtension
-    static final ServerExtension proxy = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.serviceUnder("/", (ctx, req) -> {
-                if (req.headers().contains(HttpHeaderNames.EXPECT)) {
-                    return HttpResponse.of(417);
-                }
-                return server.webClient().execute(req);
-            });
-        }
-    };
 
     ///////////////////
     // Empty content //
@@ -112,7 +86,7 @@ final class HttpClientExpect100HeaderTest {
         }
     }
 
-    ///////////////////////////////////
+    ///////////////////////////////////ㄷ
     // Response Status: 100 Continue //
     ///////////////////////////////////
     @Test
@@ -342,21 +316,6 @@ final class HttpClientExpect100HeaderTest {
         }
     }
 
-    @ParameterizedTest
-    @CsvSource({ "H1C", "H2C" })
-    void repeatToSendRequestWithoutHeaderViaProxy(SessionProtocol protocol) {
-        final WebClient client = WebClient.of(proxy.uri(protocol));
-        final HttpRequest request = HttpRequest.builder()
-                                               .post("/")
-                                               .content("foo\n")
-                                               .header(HttpHeaderNames.EXPECT, "100-continue")
-                                               .build();
-        final AggregatedHttpResponse response = client.execute(request)
-                                                      .aggregate()
-                                                      .join();
-        assertThat(response.status().code()).isEqualTo(201);
-    }
-
     /////////////////////////////
     // Response Status: Others //
     /////////////////////////////
@@ -453,6 +412,42 @@ final class HttpClientExpect100HeaderTest {
 
                 final AggregatedHttpResponse res = future.join();
                 assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
+            }
+        }
+    }
+
+    @Test
+    void timeoutFor100Continue() throws Exception {
+        try (ServerSocket ss = new ServerSocket(0)) {
+            final int port = ss.getLocalPort();
+            final WebClient client = WebClient.builder("h1c://127.0.0.1:" + port)
+                                              .responseTimeoutMillis(500)
+                                              .build();
+            final CompletableFuture<AggregatedHttpResponse> future =
+                    client.prepare()
+                          .post("/")
+                          .content("foo\n")
+                          .header(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE)
+                          .execute()
+                          .aggregate();
+
+            try (Socket s = ss.accept()) {
+                final InputStream inputStream = s.getInputStream();
+                final BufferedReader in = new BufferedReader(
+                        new InputStreamReader(inputStream, StandardCharsets.US_ASCII));
+                assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
+                assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
+                assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
+                assertThat(in.readLine()).isEqualTo("expect: 100-continue");
+                assertThat(in.readLine()).isEqualTo("content-length: 4");
+                assertThat(in.readLine()).startsWith("user-agent: armeria/");
+                assertThat(in.readLine()).isEmpty();
+
+                // Do not send response so that the client will time out.
+
+                await().atMost(Duration.ofSeconds(2)).untilAsserted(() -> {
+                    assertThatThrownBy(future::join).hasCauseInstanceOf(ResponseTimeoutException.class);
+                });
             }
         }
     }

@@ -214,7 +214,9 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
                     res.resume();
                 } else if (status == HttpStatus.EXPECTATION_FAILED) {
                     removeResponse(streamIdToId(streamId));
-                    res.repeat();
+                    if (res.repeat()) {
+                        // TODO(minwoox): reset timeout
+                    }
                     return;
                 } else {
                     res.discardRequestBody();

@@ -24,8 +24,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 
 import io.netty.channel.Channel;
@@ -70,14 +70,15 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
             return;
         }
 
-        final RequestHeaders headers = request.headers();
-        final boolean shouldExpect100ContinueHeader = shouldExpect100ContinueHeader(headers);
+        final RequestHeaders merged = mergedRequestHeaders(request.headers());
+        final boolean shouldExpect100ContinueHeader = shouldExpect100ContinueHeader(merged);
         if (shouldExpect100ContinueHeader && request.content().isEmpty()) {
+            request.content().close();
             failAndReset(new IllegalArgumentException(
                     "an empty content is not allowed with Expect: 100-continue header"));
             return;
         }
-        writeHeaders(headers, shouldExpect100ContinueHeader);
+        writeHeaders(merged, shouldExpect100ContinueHeader);
         if (cancelled) {
             request.content().close();
             // If the headers size exceeds the limit, the headers write fails immediately.
@@ -126,23 +127,24 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     }
 
     @Override
-    void doRepeat() {
+    boolean doRepeat() {
         writeData(EMPTY_EOS);
         channel().flush();
 
         assert aReq != null;
         cancelTimeout();
 
-        final boolean initialized = tryInitialize(true);
-        assert initialized;
+        if (!tryInitialize(true)) {
+            return false;
+        }
 
-        final RequestHeadersBuilder builder = aReq.headers().toBuilder();
-        builder.remove(HttpHeaderNames.EXPECT);
-        final RequestHeaders newHeaders = builder.build();
-
+        final RequestHeaders newHeaders = ctx().log().ensureAvailable(RequestLogProperty.REQUEST_HEADERS)
+                                               .requestHeaders().toBuilder()
+                                               .removeAndThen(HttpHeaderNames.EXPECT).build();
         writeHeaders(newHeaders, false);
         writeDataOrTrailers();
         channel().flush();
+        return true;
     }
 
     @Override

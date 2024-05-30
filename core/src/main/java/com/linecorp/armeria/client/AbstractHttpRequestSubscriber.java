@@ -88,14 +88,8 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         // NB: This must be invoked at the end of this method because otherwise the callback methods in this
         //     class can be called before the member fields (subscription, id, responseWrapper and
         //     timeoutFuture) are initialized.
-        //     It is because the successful write of the first headers will trigger subscription.request(1).
-        //     And it ignores `Expect: 100-continue` header because it is not common to use the header
-        //     with the reactive streams API.
-        final RequestHeaders headers = mapHeaders(request.headers());
-        if (shouldExpect100ContinueHeader(headers)) {
-            logger.warn("'Expect: 100-continue' header is not supported by Armeria client " +
-                        "when using a streaming request. Therefore, this header will be ignored.");
-        }
+        final RequestHeaders headers = mergedRequestHeaders(mapHeaders(request.headers()));
+        // TODO(minwoox): handle in the follow-up PR for 100 continue.
         writeHeaders(headers, false);
         channel().flush();
     }
@@ -144,8 +138,9 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     }
 
     @Override
-    final void doRepeat() {
+    final boolean doRepeat() {
         // TODO(minwoox): handle in the follow-up PR.
+        return false;
     }
 
     @Override
