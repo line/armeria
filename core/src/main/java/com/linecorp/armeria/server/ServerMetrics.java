@@ -19,12 +19,16 @@ package com.linecorp.armeria.server;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
+import com.google.common.base.MoreObjects;
+
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A class that holds metrics related server.
  */
+@UnstableApi
 public final class ServerMetrics {
 
-    private final LongAdder pendingRequests = new LongAdder();
     private final LongAdder pendingHttp1Requests = new LongAdder();
     private final LongAdder pendingHttp2Requests = new LongAdder();
     private final LongAdder activeHttp1WebSocketRequests = new LongAdder();
@@ -36,8 +40,7 @@ public final class ServerMetrics {
      */
     private final AtomicInteger activeConnections = new AtomicInteger();
 
-    ServerMetrics() {
-    }
+    ServerMetrics() {}
 
     /**
      * Returns the number of all pending requests.
@@ -143,5 +146,17 @@ public final class ServerMetrics {
 
     void decreaseActiveConnections() {
         activeConnections.decrementAndGet();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("pendingHttp1Requests", pendingHttp1Requests)
+                          .add("activeHttp1WebSocketRequests", activeHttp1WebSocketRequests)
+                          .add("activeHttp1Requests", activeHttp1Requests)
+                          .add("pendingHttp2Requests", pendingHttp2Requests)
+                          .add("activeHttp2Requests", activeHttp2Requests)
+                          .add("activeConnections", activeConnections)
+                          .toString();
     }
 }

@@ -789,6 +789,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     requestOrResponseComplete = true;
                     return;
                 }
+                if (req.isHttp1WebSocket()) {
+                    config.serverMetrics().decreaseActiveHttp1WebSocketRequests();
+                } else if (protocol.isExplicitHttp1()) {
+                    config.serverMetrics().decreaseActiveHttp1Requests();
+                } else if (protocol.isExplicitHttp2()) {
+                    config.serverMetrics().decreaseActiveHttp2Requests();
+                }
+
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber.
                 if (!isTransientService) {
                     gracefulShutdownSupport.dec();

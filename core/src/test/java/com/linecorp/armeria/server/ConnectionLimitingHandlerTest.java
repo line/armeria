@@ -50,18 +50,15 @@ class ConnectionLimitingHandlerTest {
 
     @Test
     void testMaxNumConnectionsRange() {
-        final Server server = Server.builder()
-                                    .service("/", (ctx, req) -> HttpResponse.of(200))
-                                    .build();
+        final ServerMetrics serverMetrics = new ServerMetrics();
         final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE,
-                                                                                server.config()
-                                                                                      .serverMetrics());
+                                                                                serverMetrics);
         assertThat(handler.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(0, server.config().serverMetrics()))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(0, serverMetrics))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1, server.config().serverMetrics()))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1, serverMetrics))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }
