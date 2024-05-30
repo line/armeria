@@ -66,14 +66,13 @@ final class EndpointsPool implements AsyncCloseable {
         final ImmutableMap.Builder<Endpoint, Long> timestampsBuilder = ImmutableMap.builder();
         final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();
         for (Endpoint endpoint: endpoints) {
-            final Endpoint endpointWithTimestamp;
             final long timestamp;
             if (hasCreatedAtNanos(endpoint)) {
                 timestamp = createdAtNanos(endpoint);
             } else {
                 timestamp = createdTimestamps.getOrDefault(endpoint, defaultTimestamp);
-            };
-            endpointWithTimestamp = withCreatedAtNanos(endpoint, timestamp);
+            }
+            final Endpoint endpointWithTimestamp = withCreatedAtNanos(endpoint, timestamp);
             timestampsBuilder.put(endpointWithTimestamp, timestamp);
             endpointsBuilder.add(endpointWithTimestamp);
         }
