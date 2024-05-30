@@ -251,6 +251,12 @@ public final class ContextPathAnnotatedServiceConfigSetters
     }
 
     @Override
+    public ContextPathAnnotatedServiceConfigSetters multipartRemovalStrategy(
+            MultipartRemovalStrategy removalStrategy) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.multipartRemovalStrategy(removalStrategy);
+    }
+
+    @Override
     public ContextPathAnnotatedServiceConfigSetters requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         return (ContextPathAnnotatedServiceConfigSetters) super.requestIdGenerator(requestIdGenerator);

@@ -266,6 +266,13 @@ public final class VirtualHostContextPathAnnotatedServiceConfigSetters
     }
 
     @Override
+    public VirtualHostContextPathAnnotatedServiceConfigSetters multipartRemovalStrategy(
+            MultipartRemovalStrategy removalStrategy) {
+        return (VirtualHostContextPathAnnotatedServiceConfigSetters) super.multipartRemovalStrategy(
+                removalStrategy);
+    }
+
+    @Override
     public VirtualHostContextPathAnnotatedServiceConfigSetters requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         return (VirtualHostContextPathAnnotatedServiceConfigSetters)

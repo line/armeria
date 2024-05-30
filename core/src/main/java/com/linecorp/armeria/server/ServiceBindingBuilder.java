@@ -294,6 +294,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        return (ServiceBindingBuilder) super.multipartRemovalStrategy(removalStrategy);
+    }
+
+    @Override
     public ServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
                                                     boolean shutdownOnStop) {
         return (ServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);

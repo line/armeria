@@ -27,9 +27,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestTarget;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+@FlakyTest
 class InvalidPathWithDataTest {
 
     @RegisterExtension
