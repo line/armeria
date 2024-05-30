@@ -282,6 +282,14 @@ abstract class AbstractAnnotatedServiceConfigSetters implements AnnotatedService
         return this;
     }
 
+    @UnstableApi
+    @Override
+    public AbstractAnnotatedServiceConfigSetters multipartRemovalStrategy(
+            MultipartRemovalStrategy removalStrategy) {
+        defaultServiceConfigSetters.multipartRemovalStrategy(removalStrategy);
+        return this;
+    }
+
     @Override
     public ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop) {
         defaultServiceConfigSetters.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);

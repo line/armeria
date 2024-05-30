@@ -225,6 +225,11 @@ public final class AnnotatedServiceBindingBuilder extends AbstractAnnotatedServi
     }
 
     @Override
+    public AnnotatedServiceBindingBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        return (AnnotatedServiceBindingBuilder) super.multipartRemovalStrategy(removalStrategy);
+    }
+
+    @Override
     public AnnotatedServiceBindingBuilder requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         return (AnnotatedServiceBindingBuilder) super.requestIdGenerator(requestIdGenerator);
