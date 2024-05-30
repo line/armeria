@@ -890,8 +890,7 @@ class GrpcServiceServerTest {
             assertThat(rpcReq.method()).isEqualTo("StreamClientCancels");
             assertThat(rpcReq.params()).containsExactly(SimpleRequest.getDefaultInstance());
             assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(protocol.startsWith("h2") ? Code.CANCELLED
-                                                                                 : Code.UNKNOWN);
+            assertThat(grpcStatus.getCode()).isEqualTo(Code.CANCELLED);
         });
     }
 

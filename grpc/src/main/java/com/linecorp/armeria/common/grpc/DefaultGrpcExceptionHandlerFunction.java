@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.RequestTimeoutException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
@@ -51,6 +52,11 @@ enum DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction
         }
 
         if (cause instanceof ClosedSessionException || cause instanceof ClosedChannelException) {
+            if (ctx instanceof ServiceRequestContext) {
+                // Upstream uses CANCELLED
+                // https://github.com/grpc/grpc-java/blob/2c83ef06327adabd8e234850a5dc9dbd9ac063b0/stub/src/main/java/io/grpc/stub/ServerCalls.java#L289-L291
+                return Status.CANCELLED.withCause(cause);
+            }
             // ClosedChannelException is used any time the Netty channel is closed. Proper error
             // processing requires remembering the error that occurred before this one and using it
             // instead.
