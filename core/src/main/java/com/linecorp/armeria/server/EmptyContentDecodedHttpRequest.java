@@ -67,7 +67,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
                                    ExchangeType exchangeType, long requestStartTimeNanos,
-                                   long requestStartTimeMicros) {
+                                   long requestStartTimeMicros, ServerMetrics serverMetrics) {
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
@@ -77,6 +77,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         this.exchangeType = exchangeType;
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
+        if (routingContext.sessionProtocol().isMultiplex()) {
+            serverMetrics.increaseActiveHttp2Requests();
+        } else {
+            serverMetrics.increaseActiveHttp1Requests();
+        }
     }
 
     @Override

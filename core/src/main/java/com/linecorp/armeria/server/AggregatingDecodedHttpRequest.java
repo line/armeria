@@ -41,6 +41,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private final int streamId;
     private final boolean keepAlive;
     private final long maxRequestLength;
+    private final ServerMetrics serverMetrics;
     private final RequestHeaders headers;
     private final RoutingContext routingCtx;
     private final ExchangeType exchangeType;
@@ -61,7 +62,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
                                   RoutingContext routingCtx, ExchangeType exchangeType,
-                                  long requestStartTimeNanos, long requestStartTimeMicros) {
+                                  long requestStartTimeNanos, long requestStartTimeMicros,
+                                  ServerMetrics serverMetrics) {
         super(4);
         this.headers = headers;
         this.eventLoop = eventLoop;
@@ -74,6 +76,12 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         this.exchangeType = exchangeType;
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
+        this.serverMetrics = serverMetrics;
+        if (routingCtx.sessionProtocol().isMultiplex()) {
+            serverMetrics.increasePendingHttp2Requests();
+        } else {
+            serverMetrics.increasePendingHttp1Requests();
+        }
     }
 
     @Override
@@ -186,34 +194,46 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
         // Complete aggregationFuture first to execute the aborted request with the service and decorators and
         // then abort the response.
-        aggregationFuture.complete(null);
+        completeAggregationFuture();
         if (response != null && !response.isComplete()) {
             response.abort(cause);
+        }
+    }
+
+    private void completeAggregationFuture() {
+        if (aggregationFuture.complete(null)) {
+            if (routingCtx.sessionProtocol().isMultiplex()) {
+                serverMetrics.decreasePendingHttp2Requests();
+                serverMetrics.increaseActiveHttp2Requests();
+            } else {
+                serverMetrics.decreasePendingHttp1Requests();
+                serverMetrics.decreaseActiveHttp1Requests();
+            }
         }
     }
 
     @Override
     public void close() {
         super.close();
-        aggregationFuture.complete(null);
+        completeAggregationFuture();
     }
 
     @Override
     public void close(Throwable cause) {
         super.close(cause);
-        aggregationFuture.complete(null);
+        completeAggregationFuture();
     }
 
     @Override
     public void abort() {
         super.abort();
-        aggregationFuture.complete(null);
+        completeAggregationFuture();
     }
 
     @Override
     public void abort(Throwable cause) {
         super.abort(cause);
-        aggregationFuture.complete(null);
+        completeAggregationFuture();
     }
 
     @Override
