@@ -168,22 +168,24 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
     final boolean tryInitialize(boolean incrementNumUnfinishedResponses) {
         final HttpSession session = HttpSession.get(ch);
+        if (incrementNumUnfinishedResponses && !session.incrementNumUnfinishedResponses()) {
+            deactivateSessionAndFail(session, new ClosedSessionException(
+                    "Can't send requests. ID: " + id + ", session active: " +
+                    session.isAcquirable(responseDecoder.keepAliveHandler())));
+            return false;
+        }
+
         id = session.incrementAndGetNumRequestsSent();
-        if ((incrementNumUnfinishedResponses && !session.incrementNumUnfinishedResponses()) ||
-            id >= MAX_NUM_REQUESTS_SENT || !session.canSendRequest()) {
-            final ClosedSessionException exception;
-            if (id >= MAX_NUM_REQUESTS_SENT) {
-                exception = new ClosedSessionException(
-                        "Can't send requests more than " + MAX_NUM_REQUESTS_SENT +
-                        " in one connection. ID: " + id);
-            } else {
-                exception = new ClosedSessionException(
-                        "Can't send requests. ID: " + id + ", session active: " +
-                        session.isAcquirable(responseDecoder.keepAliveHandler()));
-            }
-            session.deactivate();
-            // No need to send RST because we didn't send any packet and this will be disconnected anyway.
-            fail(UnprocessedRequestException.of(exception));
+        if (id >= MAX_NUM_REQUESTS_SENT) {
+            deactivateSessionAndFail(session, new ClosedSessionException(
+                    "Can't send requests more than " + MAX_NUM_REQUESTS_SENT +
+                    " in one connection. ID: " + id));
+            return false;
+        }
+        if (!session.canSendRequest()) {
+            deactivateSessionAndFail(session, new ClosedSessionException(
+                    "Can't send requests. ID: " + id + ", session active: " +
+                    session.isAcquirable(responseDecoder.keepAliveHandler())));
             return false;
         }
 
@@ -197,6 +199,12 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
         return true;
+    }
+
+    private void deactivateSessionAndFail(HttpSession session, ClosedSessionException exception) {
+        session.deactivate();
+        // No need to send RST because we didn't send any packet and this will be disconnected anyway.
+        fail(UnprocessedRequestException.of(exception));
     }
 
     RequestHeaders mergedRequestHeaders(RequestHeaders headers) {
