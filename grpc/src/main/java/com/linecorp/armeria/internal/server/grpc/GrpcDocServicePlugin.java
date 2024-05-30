@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -52,7 +51,6 @@ import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
-import com.google.protobuf.util.JsonFormat.Printer;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
@@ -95,7 +93,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     public static final String HTTP_SERVICE_SUFFIX = "_HTTP";
 
-    private static final Printer defaultExamplePrinter =
+    private static final JsonFormat.Printer defaultExamplePrinter =
             JsonFormat.printer().includingDefaultValueFields();
 
     private static final Pattern PATH_PARAM_PATTERN = Pattern.compile("\\(\\?<([\\w]+)>[^)]+\\)");
@@ -121,7 +119,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         requireNonNull(descriptiveTypeInfoProvider, "descriptiveTypeInfoProvider");
 
         final Set<GrpcService> addedService = new HashSet<>();
-        final Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();
+        final ImmutableList.Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();
         final ServiceInfosBuilder serviceInfosBuilder = new ServiceInfosBuilder();
         for (ServiceConfig serviceConfig : serviceConfigs) {
             final GrpcService grpcService = serviceConfig.service().as(GrpcService.class);
@@ -244,7 +242,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         httpEndpoints.forEach(
                 httpEndpoint -> byServiceName.put(httpEndpoint.spec().serviceName(), httpEndpoint));
 
-        final Builder<ServiceInfo> serviceInfos = ImmutableList.builder();
+        final ImmutableList.Builder<ServiceInfo> serviceInfos = ImmutableList.builder();
         byServiceName.asMap().forEach(
                 (key, value) -> serviceInfos.add(buildHttpServiceInfo(key + HTTP_SERVICE_SUFFIX, value)));
         return serviceInfos.build();
@@ -261,7 +259,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                  .forEach(entry -> byMethodName.put(entry.spec().methodName() + '/' + entry.httpMethod(),
                                                     entry));
 
-        final Builder<MethodInfo> methodInfos = ImmutableList.builder();
+        final ImmutableList.Builder<MethodInfo> methodInfos = ImmutableList.builder();
         byMethodName.asMap().forEach((name, httpEndpoints) -> {
             final List<HttpEndpoint> sortedEndpoints =
                     httpEndpoints.stream().sorted(Comparator.comparingInt(ep -> ep.spec.order()))
@@ -376,8 +374,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                              })
                              .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
                                                              .entrySet().stream())
-                             .collect(toImmutableMap(Entry<String, String>::getKey,
-                                                     (Entry<String, String> entry) ->
+                             .collect(toImmutableMap(Map.Entry<String, String>::getKey,
+                                                     (Map.Entry<String, String> entry) ->
                                                              DescriptionInfo.of(entry.getValue()),
                                                      (a, b) -> a));
     }
