@@ -19,13 +19,8 @@ package com.linecorp.armeria.internal.common.metric;
 import static com.linecorp.armeria.common.metric.MoreMeters.newDistributionSummary;
 import static com.linecorp.armeria.common.metric.MoreMeters.newTimer;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
-import java.util.function.Consumer;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
@@ -44,7 +39,6 @@ import com.linecorp.armeria.server.RequestTimeoutException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 import io.netty.util.AttributeKey;
@@ -172,11 +166,7 @@ public final class RequestMetricSupport {
 
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
-            updateRetryingClientMetrics(metrics, childrenSize, isSuccess);
-        }
-
-        for (RequestLogAccess child: log.children()) {
-            child.whenComplete().thenAccept(recordCausesOfFailedAttempts(metrics)).join();
+            updateRetryingClientMetrics(metrics, log, isSuccess);
         }
     }
 
@@ -197,26 +187,20 @@ public final class RequestMetricSupport {
     }
 
     private static void updateRetryingClientMetrics(
-            ClientRequestMetrics metrics, int childrenSize, boolean isSuccess) {
-
+            ClientRequestMetrics metrics, RequestLog log, boolean isSuccess) {
+        final int childrenSize = log.children().size();
         metrics.actualRequests().increment(childrenSize);
-
         if (isSuccess) {
             metrics.successAttempts().record(childrenSize);
         } else {
             metrics.failureAttempts().record(childrenSize);
         }
-    }
 
-    private static Consumer<RequestLog> recordCausesOfFailedAttempts(ClientRequestMetrics metrics) {
-        return requestLog -> {
-            final Throwable error = requestLog.responseCause();
-            if (error != null) {
-                metrics.failureAttempts(error).increment();
-            } else {
-                metrics.failureAttempts(requestLog.responseStatus()).increment();
-            }
-        };
+        for (RequestLogAccess child: log.children()) {
+            child.whenComplete().thenAccept(
+                    childLog -> metrics.actualRequestsCause(childLog.responseCause(),
+                                                            childLog.responseStatus()).increment());
+        }
     }
 
     private RequestMetricSupport() {}
@@ -259,9 +243,7 @@ public final class RequestMetricSupport {
 
         DistributionSummary failureAttempts();
 
-        Counter failureAttempts(Throwable error);
-
-        Counter failureAttempts(HttpStatus httpStatus);
+        Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status);
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -363,9 +345,6 @@ public final class RequestMetricSupport {
         @Nullable
         private DistributionSummary failureAttempts;
 
-        private final Map<String, Counter> failureAttemptsWithCause;
-        private final Map<HttpStatus, Counter> failureAttemptsWithHttpStatus;
-
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix,
                                     DistributionStatisticConfig distributionStatisticConfig) {
             super(parent, idPrefix, distributionStatisticConfig);
@@ -391,9 +370,6 @@ public final class RequestMetricSupport {
             final String timeouts = idPrefix.name("timeouts");
             writeTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "WriteTimeoutException"));
             responseTimeouts = parent.counter(timeouts, idPrefix.tags("cause", "ResponseTimeoutException"));
-
-            failureAttemptsWithCause = new HashMap<>();
-            failureAttemptsWithHttpStatus = new HashMap<>();
         }
 
         @Override
@@ -462,32 +438,11 @@ public final class RequestMetricSupport {
         }
 
         @Override
-        public Counter failureAttempts(Throwable error) {
-            final String causeName = error.getClass().getSimpleName();
-
-            if (failureAttemptsWithCause.containsKey(causeName)) {
-                return failureAttemptsWithCause.get(causeName);
-            }
-
-            final Counter counter = parent.counter(
-                    idPrefix.name("actual.requests.attempts.errors"),
-                    ImmutableList.of(Tag.of("result", "failure"), Tag.of("cause", causeName)));
-            failureAttemptsWithCause.put(causeName, counter);
-            return counter;
-        }
-
-        @Override
-        public Counter failureAttempts(HttpStatus httpStatus) {
-            if (failureAttemptsWithHttpStatus.containsKey(httpStatus)) {
-                return failureAttemptsWithHttpStatus.get(httpStatus);
-            }
-
-            final Counter counter = parent.counter(
-                    idPrefix.name("actual.requests.attempts.errors"),
-                    ImmutableList.of(
-                            Tag.of("result", "failure"), Tag.of("http.status", httpStatus.codeAsText())));
-            failureAttemptsWithHttpStatus.put(httpStatus, counter);
-            return counter;
+        public Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status) {
+            final String causeStr = cause != null ? cause.getClass().getSimpleName() : "null";
+            return parent.counter(
+                    idPrefix.name("actual.requests.cause"),
+                    idPrefix.tags("cause", causeStr, "http.status", status.codeAsText()));
         }
     }
 

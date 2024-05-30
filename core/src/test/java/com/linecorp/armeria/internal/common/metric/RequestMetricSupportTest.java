@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
+import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -223,16 +224,21 @@ class RequestMetricSupportTest {
         addLogInfoInDerivedCtx(ctx, 502);
         addLogInfoInDerivedCtxWithCause(ctx, 503, ResponseCancellationException.get());
 
-        ctx.logBuilder().endResponseWithLastChild();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        // 500 will be overwritten for children logs
+        logBuilder.responseHeaders(ResponseHeaders.of(500));
+        logBuilder.endResponseWithLastChild();
 
         final Map<String, Double>  measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.actual.requests.attempts.errors#" +
-                               "count{cause=ResponseCancellationException,result=failure}", 1.0)
-                .containsEntry("foo.actual.requests.attempts.errors#" +
-                               "count{http.status=502,result=failure}", 1.0)
-                .containsEntry("foo.actual.requests.attempts.errors#" +
-                               "count{cause=InvalidResponseException,result=failure}", 1.0);
+                .containsEntry("foo.actual.requests.cause#" +
+                               "count{cause=InvalidResponseException," +
+                               "http.status=501,method=POST,service=none}", 1.0)
+                .containsEntry("foo.actual.requests.cause#" +
+                               "count{cause=ResponseCancellationException," +
+                               "http.status=503,method=POST,service=none}", 1.0)
+                .containsEntry("foo.actual.requests.cause#" +
+                               "count{cause=null,http.status=502,method=POST,service=none}", 1.0);
     }
 
     @Test
