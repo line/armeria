@@ -40,7 +40,6 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
-import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.netty.channel.EventLoopGroup;
 
 /**
