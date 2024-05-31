@@ -88,6 +88,8 @@ interface DecodedHttpRequest extends HttpRequest {
 
     void close(Throwable cause);
 
+    boolean isClosedSuccessfully();
+
     /**
      * Sets the specified {@link HttpResponse} which responds to this request. This is always called
      * by the {@link HttpServerHandler} after the handler gets the {@link HttpResponse} from an

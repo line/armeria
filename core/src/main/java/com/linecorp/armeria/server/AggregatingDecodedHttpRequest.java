@@ -57,6 +57,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Nullable
     private Throwable abortResponseCause;
 
+    private boolean isNormallyClosed;
+
     private final CompletableFuture<Void> aggregationFuture = new CompletableFuture<>();
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
@@ -214,6 +216,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     @Override
     public void close() {
+        isNormallyClosed = true;
         super.close();
         completeAggregationFuture();
     }
@@ -222,6 +225,11 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     public void close(Throwable cause) {
         super.close(cause);
         completeAggregationFuture();
+    }
+
+    @Override
+    public boolean isClosedSuccessfully() {
+        return isNormallyClosed;
     }
 
     @Override
