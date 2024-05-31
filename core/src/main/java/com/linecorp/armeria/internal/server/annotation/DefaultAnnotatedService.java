@@ -236,7 +236,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
         }
     }
 
-    private HttpServiceOptions buildHttpServiceOptions(HttpServiceOption httpServiceOption) {
+    private static HttpServiceOptions buildHttpServiceOptions(HttpServiceOption httpServiceOption) {
         final HttpServiceOptionsBuilder builder = HttpServiceOptions.builder();
         if (httpServiceOption.requestTimeoutMillis() >= 0) {
             builder.requestTimeoutMillis(httpServiceOption.requestTimeoutMillis());

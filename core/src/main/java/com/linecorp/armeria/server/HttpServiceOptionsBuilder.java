@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * Creates a new {@link HttpServiceOptions} with the specified parameters.
  */
+@UnstableApi
 public final class HttpServiceOptionsBuilder {
     private long requestTimeoutMillis = -1;
     private long maxRequestLength = -1;
