@@ -203,15 +203,16 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     private void completeAggregationFuture() {
-        if (aggregationFuture.complete(null)) {
+        if (!aggregationFuture.isDone()) {
             if (routingCtx.sessionProtocol().isMultiplex()) {
                 serverMetrics.decreasePendingHttp2Requests();
                 serverMetrics.increaseActiveHttp2Requests();
             } else {
                 serverMetrics.decreasePendingHttp1Requests();
-                serverMetrics.decreaseActiveHttp1Requests();
+                serverMetrics.increaseActiveHttp1Requests();
             }
         }
+        aggregationFuture.complete(null);
     }
 
     @Override

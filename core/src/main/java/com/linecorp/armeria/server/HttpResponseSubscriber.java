@@ -33,9 +33,8 @@ final class HttpResponseSubscriber extends AbstractHttpResponseSubscriber {
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx,
-                           DecodedHttpRequest req, CompletableFuture<Void> completionFuture,
-                           ServerMetrics serverMetrics) {
-        super(ctx, responseEncoder, reqCtx, req, completionFuture, serverMetrics);
+                           DecodedHttpRequest req, CompletableFuture<Void> completionFuture) {
+        super(ctx, responseEncoder, reqCtx, req, completionFuture);
     }
 
     @Override

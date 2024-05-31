@@ -50,8 +50,8 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     AggregatedHttpResponseHandler(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
                                   DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
-                                  CompletableFuture<Void> completionFuture, ServerMetrics serverMetrics) {
-        super(ctx, responseEncoder, reqCtx, req, completionFuture, serverMetrics);
+                                  CompletableFuture<Void> completionFuture) {
+        super(ctx, responseEncoder, reqCtx, req, completionFuture);
         scheduleTimeout();
     }
 

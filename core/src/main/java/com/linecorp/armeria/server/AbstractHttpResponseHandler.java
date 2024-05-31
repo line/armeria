@@ -55,20 +55,17 @@ abstract class AbstractHttpResponseHandler {
     final DecodedHttpRequest req;
 
     private final CompletableFuture<Void> completionFuture;
-    private final ServerMetrics serverMetrics;
     private boolean isComplete;
 
     AbstractHttpResponseHandler(ChannelHandlerContext ctx,
                                 ServerHttpObjectEncoder responseEncoder,
                                 DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
-                                CompletableFuture<Void> completionFuture,
-                                ServerMetrics serverMetrics) {
+                                CompletableFuture<Void> completionFuture) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.reqCtx = reqCtx;
         this.req = req;
         this.completionFuture = completionFuture;
-        this.serverMetrics = serverMetrics;
     }
 
     /**

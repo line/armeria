@@ -391,17 +391,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (whenAggregated != null) {
             res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
                 if (serviceEventLoop.inEventLoop()) {
-                    return serve0(req, service, reqCtx, serverMetrics, req.isHttp1WebSocket());
+                    return serve0(req, service, reqCtx);
                 }
-                return serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop,
-                                               serverMetrics);
+                return serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop);
             }));
         } else {
             if (serviceEventLoop.inEventLoop()) {
-                res = serve0(req, service, reqCtx, serverMetrics, req.isHttp1WebSocket());
+                res = serve0(req, service, reqCtx);
             } else {
-                res = serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop,
-                                              serverMetrics);
+                res = serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop);
             }
         }
         res = res.recover(cause -> {
@@ -445,18 +443,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (req.isHttp1WebSocket()) {
             assert responseEncoder instanceof Http1ObjectEncoder;
             final WebSocketHttp1ResponseSubscriber resSubscriber =
-                    new WebSocketHttp1ResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture,
-                                                         serverMetrics);
+                    new WebSocketHttp1ResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
             res.subscribe(resSubscriber, channelEventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
         } else if (reqCtx.exchangeType().isResponseStreaming()) {
             final AbstractHttpResponseSubscriber resSubscriber =
-                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture,
-                                               serverMetrics);
+                    new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
             res.subscribe(resSubscriber, channelEventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
         } else {
             final AggregatedHttpResponseHandler resHandler =
-                    new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture,
-                                                      serverMetrics);
+                    new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture);
             res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), channelEventLoop))
                .handle(resHandler);
         }
@@ -464,24 +459,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private static HttpResponse serve0(HttpRequest req,
                                        HttpService service,
-                                       DefaultServiceRequestContext reqCtx,
-                                       ServerMetrics serverMetrics,
-                                       boolean isHttp1WebSocket) {
+                                       DefaultServiceRequestContext reqCtx) {
         try (SafeCloseable ignored = reqCtx.push()) {
-            HttpResponse serviceResponse;
             try {
-                if (isHttp1WebSocket) {
-                    serverMetrics.increaseActiveHttp1WebSocketRequests();
-                    serverMetrics.decreasePendingHttp1Requests();
-                } else if (reqCtx.sessionProtocol().isExplicitHttp1()) {
-                    serverMetrics.increaseActiveHttp1Requests();
-                    serverMetrics.decreasePendingHttp1Requests();
-                } else if (reqCtx.sessionProtocol().isExplicitHttp2()) {
-                    serverMetrics.increaseActiveHttp2Requests();
-                    serverMetrics.decreasePendingHttp2Requests();
-                }
-
-                serviceResponse = service.serve(reqCtx, req);
+                return service.serve(reqCtx, req);
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.
                 if (cause instanceof HttpResponseException || cause instanceof HttpStatusException) {
@@ -489,20 +470,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 } else {
                     req.abort(cause);
                 }
-                serviceResponse = HttpResponse.ofFailure(cause);
+                return HttpResponse.ofFailure(cause);
             }
-
-            return serviceResponse;
         }
     }
 
     private static HttpResponse serveInServiceEventLoop(DecodedHttpRequest req,
                                                         HttpService service,
                                                         DefaultServiceRequestContext reqCtx,
-                                                        EventLoop serviceEventLoop,
-                                                        ServerMetrics serverMetrics) {
-        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), service, reqCtx,
-                                            serverMetrics, req.isHttp1WebSocket()),
+                                                        EventLoop serviceEventLoop) {
+        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), service, reqCtx),
                                serviceEventLoop)
                            .subscribeOn(serviceEventLoop);
     }

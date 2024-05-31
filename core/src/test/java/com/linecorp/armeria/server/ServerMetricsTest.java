@@ -46,27 +46,17 @@ class ServerMetricsTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.requestTimeoutMillis(0)
-              .service("/ok/http1", new HttpService() {
+              .requestAutoAbortDelayMillis(0)
+              .service("/ok/http", new HttpService() {
                   @Override
                   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                       final ServerMetrics serverMetrics = server.server().config().serverMetrics();
                       assertThat(serverMetrics.pendingRequests()).isZero();
-                      assertThat(serverMetrics.activeHttp1Requests()).isOne();
-                      assertThat(serverMetrics.activeRequests()).isOne();
-                      return HttpResponse.of("Hello, world!");
-                  }
-
-                  @Override
-                  public ExchangeType exchangeType(RoutingContext routingContext) {
-                      return ExchangeType.UNARY;
-                  }
-              })
-              .service("/ok/http2", new HttpService() {
-                  @Override
-                  public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      final ServerMetrics serverMetrics = server.server().config().serverMetrics();
-                      assertThat(serverMetrics.pendingRequests()).isZero();
-                      assertThat(serverMetrics.activeHttp2Requests()).isOne();
+                      if (ctx.sessionProtocol().isMultiplex()) {
+                          assertThat(serverMetrics.activeHttp2Requests()).isOne();
+                      } else {
+                          assertThat(serverMetrics.activeHttp1Requests()).isOne();
+                      }
                       assertThat(serverMetrics.activeRequests()).isOne();
                       return HttpResponse.of("Hello, world!");
                   }
@@ -104,27 +94,16 @@ class ServerMetricsTest {
                   public ExchangeType exchangeType(RoutingContext routingContext) {
                       return ExchangeType.UNARY;
                   }
-              }).service("/request-timeout/http1", new HttpService() {
+              }).service("/request-timeout/http", new HttpService() {
                   @Override
                   public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                       final ServerMetrics serverMetrics = server.server().config().serverMetrics();
                       assertThat(serverMetrics.pendingRequests()).isZero();
-                      assertThat(serverMetrics.activeHttp1Requests()).isOne();
-                      assertThat(serverMetrics.activeRequests()).isOne();
-                      ctx.timeoutNow();
-                      return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
-                  }
-
-                  @Override
-                  public ExchangeType exchangeType(RoutingContext routingContext) {
-                      return ExchangeType.UNARY;
-                  }
-              }).service("/request-timeout/http2", new HttpService() {
-                  @Override
-                  public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                      final ServerMetrics serverMetrics = server.server().config().serverMetrics();
-                      assertThat(serverMetrics.pendingRequests()).isZero();
-                      assertThat(serverMetrics.activeHttp2Requests()).isOne();
+                      if (ctx.sessionProtocol().isMultiplex()) {
+                          assertThat(serverMetrics.activeHttp2Requests()).isOne();
+                      } else {
+                          assertThat(serverMetrics.activeHttp1Requests()).isOne();
+                      }
                       assertThat(serverMetrics.activeRequests()).isOne();
                       ctx.timeoutNow();
                       return HttpResponse.delayed(HttpResponse.of(200), Duration.ofSeconds(1));
@@ -178,9 +157,9 @@ class ServerMetricsTest {
         assertThat(serverMetrics.activeRequests()).isZero();
     }
 
-    @CsvSource({ "H1C, /ok/http1, 1, 0", "H2C, /ok/http2, 0, 1" })
+    @CsvSource({ "H1C, 1, 0", "H2C, 0, 1" })
     @ParameterizedTest
-    void checkWhenOk(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request,
+    void checkWhenOk(SessionProtocol sessionProtocol, long expectedPendingHttp1Request,
                      long expectedPendingHttp2Request) throws InterruptedException {
         // maxConnectionAgeMillis() method is for testing whether activeConnections is decreased.
         final ClientFactory clientFactory = ClientFactory.builder()
@@ -190,7 +169,7 @@ class ServerMetricsTest {
                                              .factory(clientFactory)
                                              .build();
 
-        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, path);
+        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, "/ok/http");
         final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request)
                                                                             .aggregate();
 
@@ -247,9 +226,9 @@ class ServerMetricsTest {
         clientFactory.close();
     }
 
-    @CsvSource({ "H1C, /request-timeout/http1, 1, 0", "H2C, /request-timeout/http2, 0, 1" })
+    @CsvSource({ "H1C, 1, 0", "H2C, 0, 1" })
     @ParameterizedTest
-    void checkWhenRequestTimeout(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request,
+    void checkWhenRequestTimeout(SessionProtocol sessionProtocol, long expectedPendingHttp1Request,
                                  long expectedPendingHttp2Request) throws InterruptedException {
         final ClientFactory clientFactory = ClientFactory.builder()
                                                          .maxConnectionAgeMillis(1000)
@@ -259,7 +238,7 @@ class ServerMetricsTest {
                                              .factory(clientFactory)
                                              .build();
 
-        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, path);
+        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, "/request-timeout/http");
         final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request)
                                                                             .aggregate();
 
@@ -274,8 +253,7 @@ class ServerMetricsTest {
 
         final AggregatedHttpResponse result = response.join();
 
-        // TODO: 2024/04/26 Need to change HttpStatus with SERVICE_UNAVAILABLE
-        assertThat(result.status()).isSameAs(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(result.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(serverMetrics.pendingRequests()).isZero();
         assertThat(serverMetrics.activeRequests()).isZero();
         await().until(() -> serverMetrics.activeConnections() == 0);
