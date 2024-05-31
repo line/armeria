@@ -96,7 +96,7 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
                 final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
                 assert ctxExtension != null;
                 final DecodedHttpRequest request = (DecodedHttpRequest) ctxExtension.originalRequest();
-                if (request.isNormallyClosed()) {
+                if (request.isClosedSuccessfully()) {
                     status = HttpStatus.SERVICE_UNAVAILABLE;
                 } else {
                     // The server didn't receive the request fully yet.

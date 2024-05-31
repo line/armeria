@@ -193,7 +193,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     public void close(Throwable cause) {}
 
     @Override
-    public boolean isNormallyClosed() {
+    public boolean isClosedSuccessfully() {
         return true;
     }
 

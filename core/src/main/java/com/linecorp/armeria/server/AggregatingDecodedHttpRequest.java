@@ -208,7 +208,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
-    public boolean isNormallyClosed() {
+    public boolean isClosedSuccessfully() {
         return isNormallyClosed;
     }
 

@@ -174,7 +174,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
-    public boolean isNormallyClosed() {
+    public boolean isClosedSuccessfully() {
         return isNormallyClosed;
     }
 

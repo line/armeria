@@ -88,7 +88,7 @@ interface DecodedHttpRequest extends HttpRequest {
 
     void close(Throwable cause);
 
-    boolean isNormallyClosed();
+    boolean isClosedSuccessfully();
 
     /**
      * Sets the specified {@link HttpResponse} which responds to this request. This is always called
