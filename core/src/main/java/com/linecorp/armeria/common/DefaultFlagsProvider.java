@@ -72,6 +72,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS = 0; // Disabled
     static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS = 0; // Disabled
     static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
+    // Same as server connection drain duration
+    static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = 1000;
     static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_MAX_FRAME_SIZE = 16384; // From HTTP/2 specification
@@ -93,6 +95,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final String FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
     static final String DNS_CACHE_SPEC = "maximumSize=4096";
     static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
+    static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS = 3000;
 
     private DefaultFlagsProvider() {}
 
@@ -307,6 +310,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    }
+
+    @Override
     public Integer defaultHttp2InitialConnectionWindowSize() {
         return DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE;
     }
@@ -483,5 +491,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public DistributionStatisticConfig distributionStatisticConfig() {
         return DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG;
+    }
+
+    @Override
+    public Long defaultHttp1ConnectionCloseDelayMillis() {
+        return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
     }
 }
