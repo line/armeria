@@ -36,6 +36,12 @@ final class Http2ClientConnectionHandlerBuilder
         this.protocol = protocol;
         // Disable RST frames limit for HTTP/2 clients.
         decoderEnforceMaxRstFramesPerWindow(0, 0);
+        final long gracefulShutdownTimeoutMillis = clientFactory.http2GracefulShutdownTimeoutMillis();
+        if (gracefulShutdownTimeoutMillis == Long.MAX_VALUE) {
+            gracefulShutdownTimeoutMillis(-1);
+        } else {
+            gracefulShutdownTimeoutMillis(gracefulShutdownTimeoutMillis);
+        }
     }
 
     @Override

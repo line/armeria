@@ -70,6 +70,7 @@
 *.frusky.de
 *.futurecms.at
 *.gateway.dev
+*.hosted.app
 *.hosting.myjino.ru
 *.hosting.ovh.net
 *.id.pub
@@ -2562,6 +2563,7 @@ execute-api.us-west-2.amazonaws.com
 exnet.su
 expert
 experts-comptables.fr
+expo.app
 exposed
 express
 express.aero
@@ -3650,6 +3652,7 @@ hvaler.no
 hyatt
 hyllestad.no
 hyogo.jp
+hypernode.io
 hyuga.miyazaki.jp
 hyundai
 hzc.io
@@ -7933,6 +7936,7 @@ stackit.run
 stackit.zone
 stada
 stage.nodeart.io
+staging.expo.app
 staging.onred.one
 staging.replit.dev
 stalowa-wola.pl
@@ -9060,6 +9064,7 @@ withyoutube.com
 wiw.gov.pl
 wix.run
 wixsite.com
+wixstudio.com
 wixstudio.io
 wjg.jp
 wkz.gov.pl

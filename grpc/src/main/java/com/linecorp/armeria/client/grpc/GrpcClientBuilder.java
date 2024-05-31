@@ -27,6 +27,7 @@ import static com.linecorp.armeria.client.grpc.GrpcClientOptions.INTERCEPTORS;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES;
 import static com.linecorp.armeria.client.grpc.GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS;
+import static com.linecorp.armeria.client.grpc.GrpcClientOptions.USE_METHOD_MARSHALLER;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -74,6 +75,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
 import io.grpc.CallCredentials;
@@ -81,6 +83,7 @@ import io.grpc.ClientInterceptor;
 import io.grpc.Codec;
 import io.grpc.Compressor;
 import io.grpc.DecompressorRegistry;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 
@@ -284,7 +287,29 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
      */
     @UnstableApi
     public GrpcClientBuilder enableUnsafeWrapResponseBuffers(boolean enableUnsafeWrapResponseBuffers) {
+        final ClientOptions options = buildOptions();
+        if (options.get(USE_METHOD_MARSHALLER)) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
         return option(UNSAFE_WRAP_RESPONSE_BUFFERS.newValue(enableUnsafeWrapResponseBuffers));
+    }
+
+    /**
+     * Sets whether to respect the marshaller specified in gRPC {@link MethodDescriptor}.
+     * If disabled, the default marshaller will be used, which is more efficient.
+     * This property is disabled by default.
+     */
+    @UnstableApi
+    public GrpcClientBuilder useMethodMarshaller(boolean useMethodMarshaller) {
+        final ClientOptions options = buildOptions();
+        if (options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS)) {
+            throw new IllegalStateException(
+                    "'unsafeWrapRequestBuffers' and 'useMethodMarshaller' are mutually exclusive."
+            );
+        }
+        return option(USE_METHOD_MARSHALLER.newValue(useMethodMarshaller));
     }
 
     /**
@@ -394,7 +419,8 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
             option(INTERCEPTORS.newValue(clientInterceptors));
         }
         if (exceptionHandler != null) {
-            option(EXCEPTION_HANDLER.newValue(exceptionHandler));
+            option(EXCEPTION_HANDLER.newValue(new UnwrappingGrpcExceptionHandleFunction(exceptionHandler.orElse(
+                    GrpcExceptionHandlerFunction.of()))));
         }
 
         final Object client;

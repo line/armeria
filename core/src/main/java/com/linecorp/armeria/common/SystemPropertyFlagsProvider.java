@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
@@ -292,6 +293,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return getLong("defaultClientHttp2GracefulShutdownTimeoutMillis");
+    }
+
+    @Override
     public Integer defaultHttp2InitialConnectionWindowSize() {
         return getInt("defaultHttp2InitialConnectionWindowSize");
     }
@@ -471,6 +477,24 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Path defaultMultipartUploadsLocation() {
         return getAndParse("defaultMultipartUploadsLocation", Paths::get);
+    }
+
+    @Nullable
+    @Override
+    public MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
+        final String multipartRemovalStrategy = getNormalized("defaultMultipartRemovalStrategy");
+        if (multipartRemovalStrategy == null) {
+            return null;
+        }
+        switch (multipartRemovalStrategy) {
+            case "never":
+                return MultipartRemovalStrategy.NEVER;
+            case "on_response_completion":
+                return MultipartRemovalStrategy.ON_RESPONSE_COMPLETION;
+            default:
+                throw new IllegalArgumentException(
+                        multipartRemovalStrategy + " isn't a MultipartRemovalStrategy");
+        }
     }
 
     @Override
