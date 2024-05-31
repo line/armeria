@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -89,19 +88,14 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
 
         if (cause instanceof RequestTimeoutException) {
             final HttpStatus status;
-            if (ctx.method() == HttpMethod.GET) {
-                // Consider GET requests as having received the request fully.
+            final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+            assert ctxExtension != null;
+            final DecodedHttpRequest request = (DecodedHttpRequest) ctxExtension.originalRequest();
+            if (request.isClosedSuccessfully()) {
                 status = HttpStatus.SERVICE_UNAVAILABLE;
             } else {
-                final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
-                assert ctxExtension != null;
-                final DecodedHttpRequest request = (DecodedHttpRequest) ctxExtension.originalRequest();
-                if (request.isClosedSuccessfully()) {
-                    status = HttpStatus.SERVICE_UNAVAILABLE;
-                } else {
-                    // The server didn't receive the request fully yet.
-                    status = HttpStatus.REQUEST_TIMEOUT;
-                }
+                // The server didn't receive the request fully yet.
+                status = HttpStatus.REQUEST_TIMEOUT;
             }
             return internalRenderStatus(ctx, ctx.request().headers(), status, cause);
         }
