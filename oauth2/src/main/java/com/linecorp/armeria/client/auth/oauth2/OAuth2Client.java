@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.auth.oauth2;
 
-import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
@@ -29,6 +28,8 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
  * Decorates a {@link HttpClient} with an OAuth 2.0 Authorization Grant flow.
@@ -60,12 +61,18 @@ public final class OAuth2Client extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final CompletionStage<HttpResponse> future = authorizationGrant.getAccessToken().thenApply(token -> {
-            final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().set(
-                    HttpHeaderNames.AUTHORIZATION, token.authorization()).build());
-            ctx.updateRequest(newReq);
-            return executeWithFallback(unwrap(), ctx, (context, cause) -> HttpResponse.ofFailure(cause));
-        });
+        final CompletionStage<HttpResponse> future =
+                authorizationGrant.getAccessToken().thenApply(token -> {
+                    final HttpRequest newReq = req.withHeaders(req.headers().toBuilder().set(
+                            HttpHeaderNames.AUTHORIZATION, token.authorization()).build());
+                    ctx.updateRequest(newReq);
+
+                    try (SafeCloseable ignored = ctx.push()) {
+                        return unwrap().execute(ctx, newReq);
+                    } catch (Exception e) {
+                        return Exceptions.throwUnsafely(e);
+                    }
+                });
         return HttpResponse.of(future);
     }
 }
