@@ -266,7 +266,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
                             final ChannelPipeline pipeline = ctx.pipeline();
                             pipeline.replace(this, null, new WebSocketServiceChannelHandler(
-                                    webSocketRequest, encoder, serviceConfig));
+                                    webSocketRequest, encoder, serviceConfig, cfg));
                             if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
                                 pipeline.remove(HttpServerUpgradeHandler.class);
                             }

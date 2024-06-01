@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,9 +27,11 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -36,6 +40,7 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.ScheduledFuture;
 
 final class WebSocketServiceChannelHandler extends ChannelDuplexHandler {
 
@@ -44,12 +49,18 @@ final class WebSocketServiceChannelHandler extends ChannelDuplexHandler {
     private final StreamingDecodedHttpRequest req;
     private final ServerHttpObjectEncoder encoder;
     private final ServiceConfig serviceConfig;
+    private final long idleTimeoutMillis;
+
+    @Nullable
+    private ScheduledFuture<?> timeoutFuture;
 
     WebSocketServiceChannelHandler(StreamingDecodedHttpRequest req, ServerHttpObjectEncoder encoder,
-                                   ServiceConfig serviceConfig) {
+                                   ServiceConfig serviceConfig, ServerConfig serverConfig) {
         this.req = req;
         this.encoder = encoder;
         this.serviceConfig = serviceConfig;
+
+        idleTimeoutMillis = serverConfig.idleTimeoutMillis();
     }
 
     @Override
@@ -86,6 +97,7 @@ final class WebSocketServiceChannelHandler extends ChannelDuplexHandler {
             final ByteBuf data = (ByteBuf) msg;
             final int dataLength = data.readableBytes();
             if (dataLength != 0) {
+                resetTimeout(ctx.channel());
                 req.increaseTransferredBytes(dataLength);
                 final long maxContentLength = req.maxRequestLength();
                 final long transferredLength = req.transferredBytes();
@@ -119,6 +131,7 @@ final class WebSocketServiceChannelHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        resetTimeout(ctx.channel());
         if (msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
             final HttpResponseStatus status = response.status();
@@ -134,5 +147,22 @@ final class WebSocketServiceChannelHandler extends ChannelDuplexHandler {
             return;
         }
         ctx.write(msg, promise);
+    }
+
+    private void resetTimeout(Channel channel) {
+        if (idleTimeoutMillis == 0) {
+            //disables the timeout
+            return;
+        }
+
+        final ScheduledFuture<?> timeoutFuture = this.timeoutFuture;
+        if (timeoutFuture != null) {
+            timeoutFuture.cancel(false);
+        }
+        this.timeoutFuture = channel.eventLoop().schedule(
+                () -> {
+                    channel.close();
+                },
+                idleTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 }
