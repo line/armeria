@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
+import com.linecorp.armeria.internal.client.RetryFilter;
 
 /**
  * A builder for creating a new {@link RetryRule}.
@@ -77,11 +77,11 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
             totalDurationFilter() == null) {
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
-        final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
-                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), totalDurationFilter(), false);
-        return build(ruleFilter, decision, requiresResponseTrailers());
+        final RetryFilter retryFilter =
+                RetryFilter.of(requestHeadersFilter(), responseHeadersFilter(),
+                               responseTrailersFilter(), grpcTrailersFilter(),
+                               exceptionFilter(), totalDurationFilter(), false);
+        return build(retryFilter, decision, requiresResponseTrailers());
     }
 
     static RetryRule build(BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter,

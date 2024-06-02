@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
+import com.linecorp.armeria.internal.client.RetryFilter;
 
 /**
  * A builder for creating a new {@link CircuitBreakerRuleWithContent}.
@@ -75,10 +75,10 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
                 ? extends CompletionStage<Boolean>> responseFilter = responseFilter();
         final boolean hasResponseFilter = responseFilter != null;
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
-                AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), grpcTrailersFilter(),
-                                                    exceptionFilter(), totalDurationFilter(),
-                                                    hasResponseFilter);
+                RetryFilter.of(requestHeadersFilter(), responseHeadersFilter(),
+                               responseTrailersFilter(), grpcTrailersFilter(),
+                               exceptionFilter(), totalDurationFilter(),
+                               hasResponseFilter);
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(
                 ruleFilter, decision, requiresResponseTrailers());
         if (!hasResponseFilter) {
