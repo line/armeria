@@ -34,13 +34,13 @@ import com.linecorp.armeria.internal.common.InternalGrpcWebTrailers;
 
 import io.netty.util.AttributeKey;
 
-public final class RetryFilter implements BiFunction<ClientRequestContext, Throwable, Boolean> {
+public final class RuleFilter implements BiFunction<ClientRequestContext, Throwable, Boolean> {
 
-    public static final AttributeKey<ResponseHeaders> RETRY_RESPONSE_HEADERS_KEY =
-            AttributeKey.valueOf(RetryFilter.class, "RETRY_RESPONSE_HEADERS");
+    public static final AttributeKey<ResponseHeaders> RULE_RESPONSE_HEADERS_KEY =
+            AttributeKey.valueOf(RuleFilter.class, "RULE_RESPONSE_HEADERS");
 
-    public static final AttributeKey<HttpHeaders> RETRY_RESPONSE_TRAILERS_KEY =
-            AttributeKey.valueOf(RetryFilter.class, "RETRY_RESPONSE_TRAILERS");
+    public static final AttributeKey<HttpHeaders> RULE_RESPONSE_TRAILERS_KEY =
+            AttributeKey.valueOf(RuleFilter.class, "RULE_RESPONSE_TRAILERS");
 
     /**
      * Merges the filters of {@link AbstractRuleBuilder} that returns {@code true}
@@ -48,7 +48,7 @@ public final class RetryFilter implements BiFunction<ClientRequestContext, Throw
      * a given {@link ClientRequestContext} and {@link Throwable}.
      */
     // TODO(ikhoon): Use BiPredicate.
-    public static RetryFilter of(
+    public static RuleFilter of(
             BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
             @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
             @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
@@ -57,9 +57,9 @@ public final class RetryFilter implements BiFunction<ClientRequestContext, Throw
             @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter,
             boolean hasResponseFilter) {
 
-        return new RetryFilter(requestHeadersFilter, exceptionFilter, responseHeadersFilter,
-                               responseTrailersFilter, grpcTrailersFilter, totalDurationFilter,
-                               hasResponseFilter);
+        return new RuleFilter(requestHeadersFilter, exceptionFilter, responseHeadersFilter,
+                              responseTrailersFilter, grpcTrailersFilter, totalDurationFilter,
+                              hasResponseFilter);
     }
 
     private final BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter;
@@ -70,13 +70,13 @@ public final class RetryFilter implements BiFunction<ClientRequestContext, Throw
     private final @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter;
     private final boolean hasResponseFilter;
 
-    private RetryFilter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
-                        @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
-                        @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
-                        @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
-                        @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
-                        @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter,
-                        boolean hasResponseFilter) {
+    private RuleFilter(BiPredicate<ClientRequestContext, RequestHeaders> requestHeadersFilter,
+                       @Nullable BiPredicate<ClientRequestContext, Throwable> exceptionFilter,
+                       @Nullable BiPredicate<ClientRequestContext, ResponseHeaders> responseHeadersFilter,
+                       @Nullable BiPredicate<ClientRequestContext, HttpHeaders> responseTrailersFilter,
+                       @Nullable BiPredicate<ClientRequestContext, HttpHeaders> grpcTrailersFilter,
+                       @Nullable BiPredicate<ClientRequestContext, Duration> totalDurationFilter,
+                       boolean hasResponseFilter) {
         this.requestHeadersFilter = requestHeadersFilter;
         this.exceptionFilter = exceptionFilter;
         this.responseHeadersFilter = responseHeadersFilter;
@@ -110,14 +110,14 @@ public final class RetryFilter implements BiFunction<ClientRequestContext, Throw
             return true;
         }
 
-        final ResponseHeaders responseHeaders = ctx.attr(RETRY_RESPONSE_HEADERS_KEY);
+        final ResponseHeaders responseHeaders = ctx.attr(RULE_RESPONSE_HEADERS_KEY);
         if (responseHeadersFilter != null && responseHeaders != null) {
             if (responseHeadersFilter.test(ctx, responseHeaders)) {
                 return true;
             }
         }
 
-        final HttpHeaders responseTrailers = ctx.attr(RETRY_RESPONSE_TRAILERS_KEY);
+        final HttpHeaders responseTrailers = ctx.attr(RULE_RESPONSE_TRAILERS_KEY);
         if (responseTrailersFilter != null && responseTrailers != null) {
             if (responseTrailersFilter.test(ctx, responseTrailers)) {
                 return true;

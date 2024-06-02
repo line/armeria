@@ -19,8 +19,8 @@ package com.linecorp.armeria.client.retry;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
-import static com.linecorp.armeria.internal.client.RetryFilter.RETRY_RESPONSE_HEADERS_KEY;
-import static com.linecorp.armeria.internal.client.RetryFilter.RETRY_RESPONSE_TRAILERS_KEY;
+import static com.linecorp.armeria.internal.client.RuleFilter.RULE_RESPONSE_HEADERS_KEY;
+import static com.linecorp.armeria.internal.client.RuleFilter.RULE_RESPONSE_TRAILERS_KEY;
 
 import java.time.Duration;
 import java.util.Date;
@@ -334,9 +334,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     handleResponseWithoutContent(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                                                  future, derivedCtx, HttpResponse.ofFailure(cause), cause);
                 } else {
-                    derivedCtx.setAttr(RETRY_RESPONSE_HEADERS_KEY, aggregated.headers());
+                    derivedCtx.setAttr(RULE_RESPONSE_HEADERS_KEY, aggregated.headers());
                     if (!aggregated.trailers().isEmpty()) {
-                        derivedCtx.setAttr(RETRY_RESPONSE_TRAILERS_KEY, aggregated.trailers());
+                        derivedCtx.setAttr(RULE_RESPONSE_TRAILERS_KEY, aggregated.trailers());
                     }
                     handleAggregatedResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future,
                                              derivedCtx, aggregated);
@@ -384,7 +384,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final SplitHttpResponse splitResponse = response.split();
         splitResponse.headers().handle((headers, responseCause) -> {
             if (headers != null) {
-                derivedCtx.setAttr(RETRY_RESPONSE_HEADERS_KEY, headers);
+                derivedCtx.setAttr(RULE_RESPONSE_HEADERS_KEY, headers);
             }
             if (retryConfig.needsContentInRule() && responseCause == null) {
                 final HttpResponse response0 = HttpResponse.of(headers, splitResponse.body());
@@ -504,7 +504,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     }
 
     private static long getRetryAfterMillis(ClientRequestContext ctx) {
-        final ResponseHeaders responseHeaders = ctx.attr(RETRY_RESPONSE_HEADERS_KEY);
+        final ResponseHeaders responseHeaders = ctx.attr(RULE_RESPONSE_HEADERS_KEY);
         final String value = responseHeaders != null ? responseHeaders.get(HttpHeaderNames.RETRY_AFTER) : null;
 
         if (value != null) {

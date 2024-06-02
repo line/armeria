@@ -17,6 +17,8 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.client.RuleFilter.RULE_RESPONSE_HEADERS_KEY;
+import static com.linecorp.armeria.internal.client.RuleFilter.RULE_RESPONSE_TRAILERS_KEY;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
@@ -33,6 +35,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
@@ -348,6 +351,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         ctx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable resCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
+            setHeadersAndTrailers(ctx, log);
             reportSuccessOrFailure(callback, rule().shouldReportAsSuccess(ctx, resCause), ctx, resCause);
         });
     }
@@ -364,6 +368,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         duplicator.close();
 
         ctx.log().whenAvailable(logProperty).thenAccept(log -> {
+            setHeadersAndTrailers(ctx, log);
             try {
                 final CompletionStage<CircuitBreakerDecision> f =
                         ruleWithContent().shouldReportAsSuccess(ctx, truncatingHttpResponse, null);
@@ -378,5 +383,14 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         });
 
         return duplicate;
+    }
+
+    private static void setHeadersAndTrailers(ClientRequestContext ctx, RequestLog log) {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_HEADERS)) {
+            ctx.setAttr(RULE_RESPONSE_HEADERS_KEY, log.responseHeaders());
+        }
+        if (log.isAvailable(RequestLogProperty.RESPONSE_TRAILERS)) {
+            ctx.setAttr(RULE_RESPONSE_TRAILERS_KEY, log.responseTrailers());
+        }
     }
 }

@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.internal.client.RetryFilter;
+import com.linecorp.armeria.internal.client.RuleFilter;
 
 /**
  * A builder for creating a new {@link RetryRuleWithContent}.
@@ -89,13 +89,13 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
             throw new IllegalStateException("Should set at least one retry rule if a backoff was set.");
         }
 
-        final RetryFilter retryFilter =
-                RetryFilter.of(requestHeadersFilter(), responseHeadersFilter(),
-                               responseTrailersFilter(), grpcTrailersFilter(),
-                               exceptionFilter(), totalDurationFilter(),
-                               hasResponseFilter);
+        final RuleFilter ruleFilter =
+                RuleFilter.of(requestHeadersFilter(), responseHeadersFilter(),
+                              responseTrailersFilter(), grpcTrailersFilter(),
+                              exceptionFilter(), totalDurationFilter(),
+                              hasResponseFilter);
         final RetryRule first = RetryRuleBuilder.build(
-                retryFilter, decision, requiresResponseTrailers());
+                ruleFilter, decision, requiresResponseTrailers());
 
         if (!hasResponseFilter) {
             return RetryRuleUtil.fromRetryRule(first);
