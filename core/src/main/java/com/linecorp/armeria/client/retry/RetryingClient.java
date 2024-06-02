@@ -329,16 +329,23 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
         final RetryConfig<HttpResponse> config = mappedRetryConfig(ctx);
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
-            response.aggregate().handle((aggregated, cause) -> {
+            response.aggregate().handleAsync((aggregated, cause) -> {
+                // RequestLogProperty.RESPONSE_* is not set if the response is returned by a decorator.
+                final RequestLogBuilder logBuilder = derivedCtx.logBuilder();
                 if (cause != null) {
+                    logBuilder.endResponse(cause);
                     handleResponseWithoutContent(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                                                  future, derivedCtx, HttpResponse.ofFailure(cause), cause);
                 } else {
+                    logBuilder.responseHeaders(aggregated.headers());
+                    logBuilder.responseTrailers(aggregated.trailers());
                     handleAggregatedResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future,
                                              derivedCtx, aggregated);
                 }
                 return null;
-            });
+                // RequestLog is completed right after the response is fully received.
+                // So, we need to reschedule to get a complete RequestLog.
+            }, ctx.eventLoop());
         } else {
             handleStreamingResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                                     future, derivedCtx, response);
@@ -376,6 +383,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                          HttpResponse response) {
         final SplitHttpResponse splitResponse = response.split();
         splitResponse.headers().handle((headers, responseCause) -> {
+            if (headers != null) {
+                // RequestLogProperty.RESPONSE_HEADERS is not set if the response is returned by a decorator.
+                derivedCtx.logBuilder().responseHeaders(headers);
+            }
             if (retryConfig.needsContentInRule() && responseCause == null) {
                 final HttpResponse response0 = HttpResponse.of(headers, splitResponse.body());
                 final HttpResponseDuplicator duplicator =
