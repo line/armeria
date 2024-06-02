@@ -52,6 +52,11 @@ public final class ConnectionEventKey {
     private SessionProtocol desiredProtocol;
 
     /**
+     * Whether the connection is active.
+     */
+    private boolean isActive;
+
+    /**
      * Creates a new instance.
      */
     public ConnectionEventKey(InetSocketAddress remoteAddress,
@@ -76,6 +81,14 @@ public final class ConnectionEventKey {
      */
     public ConnectionEventKey setProtocol(SessionProtocol protocol) {
         this.protocol = protocol;
+        return this;
+    }
+
+    /**
+     * Sets whether the connection is active.
+     */
+    public ConnectionEventKey setActive(boolean isActive) {
+        this.isActive = isActive;
         return this;
     }
 
@@ -107,5 +120,12 @@ public final class ConnectionEventKey {
     @Nullable
     public SessionProtocol desiredProtocol() {
         return desiredProtocol;
+    }
+
+    /**
+     * Returns whether the connection is active or not.
+     */
+    public boolean isActive() {
+        return isActive;
     }
 }

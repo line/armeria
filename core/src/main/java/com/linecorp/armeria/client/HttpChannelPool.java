@@ -417,22 +417,19 @@ final class HttpChannelPool implements AsyncCloseable {
                 });
                 channel.connect(remoteAddress, connectionPromise);
 
+                final InetSocketAddress remoteInetAddress = poolKey.endpoint.toSocketAddress(-1);
+                final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
+
+                assert localAddress != null;
+
+                final ConnectionEventKey connectionEventKey = new ConnectionEventKey(remoteInetAddress,
+                                                                                     localAddress,
+                                                                                     desiredProtocol);
+
+                ChannelUtil.setConnectionEventKey(channel, connectionEventKey);
+
                 try {
-                    final InetSocketAddress remoteInetAddress = poolKey.endpoint.toSocketAddress(-1);
-                    final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
-
-                    assert localAddress != null;
-
-                    final ConnectionEventKey connectionEventKey = new ConnectionEventKey(remoteInetAddress,
-                                                                                         localAddress,
-                                                                                         desiredProtocol);
-
-                    ChannelUtil.setConnectionEventKey(channel, connectionEventKey);
-
-                    listener.connectionPending(desiredProtocol,
-                                               remoteInetAddress,
-                                               localAddress,
-                                               channel);
+                    listener.connectionPending(desiredProtocol, remoteInetAddress, localAddress, channel);
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception from {}.connectionPending()",
                                 ClientConnectionEventListener.class.getSimpleName(), t);
@@ -506,6 +503,30 @@ final class HttpChannelPool implements AsyncCloseable {
                 allChannels.put(channel, Boolean.TRUE);
 
                 final HttpSession session = HttpSession.get(channel);
+
+                final ConnectionEventKey connectionEventKey = ChannelUtil.connectionEventKey(channel);
+
+                assert connectionEventKey != null;
+
+                final InetSocketAddress remoteAddr = connectionEventKey.remoteAddress();
+                final InetSocketAddress localAddr = connectionEventKey.localAddress();
+                connectionEventKey.setProtocol(protocol);
+
+                try {
+                    listener.connectionOpened(
+                            desiredProtocol,
+                            protocol,
+                            remoteAddr,
+                            localAddr,
+                            channel
+                    );
+                } catch (Throwable e) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("{} Exception handling {}.connectionOpen()",
+                                    channel, listener.getClass().getName(), e);
+                    }
+                }
+
                 if (session.incrementNumUnfinishedResponses()) {
                     if (protocol.isMultiplex()) {
                         final Http2PooledChannel pooledChannel = new Http2PooledChannel(channel, protocol);
@@ -514,36 +535,11 @@ final class HttpChannelPool implements AsyncCloseable {
                     } else {
                         promise.complete(new Http1PooledChannel(channel, protocol, key));
                     }
-
-                    final ConnectionEventKey connectionEventKey = ChannelUtil.connectionEventKey(channel);
-
-                    assert connectionEventKey != null;
-
-                    final InetSocketAddress remoteAddr = connectionEventKey.remoteAddress();
-                    final InetSocketAddress localAddr = connectionEventKey.localAddress();
-                    connectionEventKey.setProtocol(protocol);
-
-                    try {
-                        listener.connectionOpened(
-                                desiredProtocol,
-                                protocol,
-                                remoteAddr,
-                                localAddr,
-                                channel
-                        );
-                    } catch (Throwable e) {
-                        if (logger.isWarnEnabled()) {
-                            logger.warn("{} Exception handling {}.connectionOpen()",
-                                        channel, listener.getClass().getName(), e);
-                        }
-                    }
                 } else {
                     // Server set MAX_CONCURRENT_STREAMS to 0, which means we can't send anything.
                     channel.close();
-                    final UnprocessedRequestException cause =
-                            UnprocessedRequestException.of(RefusedStreamException.get());
-                    promise.completeExceptionally(cause);
-                    notifyConnectionFailed(channel, cause);
+                    promise.completeExceptionally(
+                            UnprocessedRequestException.of(RefusedStreamException.get()));
                 }
 
                 channel.closeFuture().addListener(f -> {
@@ -558,6 +554,16 @@ final class HttpChannelPool implements AsyncCloseable {
                                 break;
                             }
                             queue.removeFirst();
+                        }
+                    }
+
+                    try {
+                        listener.connectionClosed(protocol, remoteAddr, localAddr,
+                                                  connectionEventKey.isActive(), channel);
+                    } catch (Throwable e) {
+                        if (logger.isWarnEnabled()) {
+                            logger.warn("{} Exception handling {}.connectionClosed()",
+                                        channel, listener.getClass().getName(), e);
                         }
                     }
                 });

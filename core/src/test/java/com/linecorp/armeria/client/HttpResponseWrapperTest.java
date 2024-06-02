@@ -18,9 +18,12 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.InetSocketAddress;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.ConnectionEventKey;
 import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -29,6 +32,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -175,6 +179,14 @@ class HttpResponseWrapperTest {
 
         @Override
         void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {}
+
+        @Override
+        protected ConnectionEventKey connectionEventKey() {
+            return new ConnectionEventKey(
+                    InetSocketAddress.createUnresolved("foo.com", 36462),
+                    InetSocketAddress.createUnresolved("bar.com", 36462),
+                    SessionProtocol.H1C);
+        }
 
         @Override
         public KeepAliveHandler keepAliveHandler() {

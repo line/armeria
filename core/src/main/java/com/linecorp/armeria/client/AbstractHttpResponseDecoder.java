@@ -18,10 +18,12 @@ package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
 import java.util.Iterator;
+import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.ConnectionEventKey;
 import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ContentTooLargeExceptionBuilder;
@@ -45,6 +47,8 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
     private final ConnectionEventListener connectionEventListener;
+    @Nullable
+    private ConnectionEventKey connectionEventKey;
 
     @Nullable
     private HttpSession httpSession;
@@ -52,8 +56,6 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
     private int unfinishedResponses;
     private boolean closing;
     final boolean needsKeepAliveHandler;
-    private boolean isActive = true;
-    private boolean hasOpened;
 
     AbstractHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController,
                                 ConnectionEventListener connectionEventListener,
@@ -62,28 +64,6 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
         this.inboundTrafficController = inboundTrafficController;
         this.connectionEventListener = connectionEventListener;
         this.needsKeepAliveHandler = needsKeepAliveHandler;
-
-        channel.closeFuture().addListener(future -> {
-            if (!hasOpened) {
-                return;
-            }
-
-            try {
-                final InetSocketAddress remoteAddress = ChannelUtil.remoteAddress(channel);
-                final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
-                final SessionProtocol protocol = HttpSession.get(channel).protocol();
-
-                assert remoteAddress != null && localAddress != null && protocol != null;
-
-                connectionEventListener.connectionClosed(protocol, remoteAddress, localAddress, isActive,
-                                                         channel);
-            } catch (Throwable e) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("{} Exception handling {}.connectionClosed()",
-                                channel, connectionEventListener.getClass().getName(), e);
-                }
-            }
-        });
     }
 
     @Override
@@ -131,14 +111,14 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
             unfinishedResponses--;
             assert unfinishedResponses >= 0 : unfinishedResponses;
 
-            if (needsKeepAliveHandler && unfinishedResponses == 0) {
-                isActive = false;
+            final ConnectionEventKey key = connectionEventKey();
 
-                final InetSocketAddress remoteAddress = ChannelUtil.remoteAddress(channel);
-                final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
-                final SessionProtocol protocol = session().protocol();
+            if (needsKeepAliveHandler && unfinishedResponses == 0 && key.isActive()) {
+                key.setActive(false);
 
-                assert remoteAddress != null && localAddress != null && protocol != null;
+                final InetSocketAddress remoteAddress = key.remoteAddress();
+                final InetSocketAddress localAddress = key.localAddress();
+                final SessionProtocol protocol = Objects.requireNonNull(key.protocol());
 
                 try {
                     connectionEventListener.connectionIdle(protocol, localAddress, remoteAddress, channel);
@@ -164,18 +144,24 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
             return false;
         }
 
-        hasOpened = true;
-
         unfinishedResponses++;
 
-        if (unfinishedResponses == 1) {
-            isActive = true;
+        final ConnectionEventKey key = connectionEventKey();
 
-            final InetSocketAddress remoteAddress = ChannelUtil.remoteAddress(channel);
-            final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
-            final SessionProtocol protocol = session().protocol();
+        /*
+            If the protocol is null, it means that the protocol is undetermined.
+            e.g. HTTP protocol upgrade
+         */
+        if (key.protocol() == null) {
+            return true;
+        }
 
-            assert remoteAddress != null && localAddress != null && protocol != null;
+        if (!key.isActive() || unfinishedResponses == 1) {
+            key.setActive(true);
+
+            final InetSocketAddress remoteAddress = key.remoteAddress();
+            final InetSocketAddress localAddress = key.localAddress();
+            final SessionProtocol protocol = key.protocol();
 
             try {
                 connectionEventListener.connectionActive(protocol, localAddress, remoteAddress, channel);
@@ -218,6 +204,18 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
             return httpSession;
         }
         return httpSession = HttpSession.get(channel);
+    }
+
+    protected ConnectionEventKey connectionEventKey() {
+        if (connectionEventKey != null) {
+            return connectionEventKey;
+        }
+
+        connectionEventKey = ChannelUtil.connectionEventKey(channel);
+
+        assert connectionEventKey != null;
+
+        return connectionEventKey;
     }
 
     static ContentTooLargeException contentTooLargeException(HttpResponseWrapper res, long transferred) {

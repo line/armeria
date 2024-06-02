@@ -350,7 +350,7 @@ public final class ChannelUtil {
         return null;
     }
 
-    public static void setConnectionEventKey(Channel ch, @Nullable ConnectionEventKey key) {
+    public static void setConnectionEventKey(Channel ch, ConnectionEventKey key) {
         ch.attr(CONNECTION_EVENT_KEY).set(key);
     }
 
