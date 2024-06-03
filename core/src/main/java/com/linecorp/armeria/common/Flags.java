@@ -438,6 +438,7 @@ public final class Flags {
     private static final long DEFAULT_CLIENT_FACTORY_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
             getValue(FlagsProvider::defaultClientFactoryGracefulShutdownTimeoutMillis,
                     "defaultClientFactoryGracefulShutdownTimeoutMillis", value -> value >= 0);
+
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
      * trace of the exceptions that are thrown frequently by Armeria. A sampled exception will have the stack
