@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.RequestTimeoutException;

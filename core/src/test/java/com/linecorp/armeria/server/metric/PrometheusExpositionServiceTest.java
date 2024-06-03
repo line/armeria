@@ -130,9 +130,9 @@ class PrometheusExpositionServiceTest {
         void prometheusRequestsPrometheusFormat() throws InterruptedException {
             final WebClient client = WebClient.of(server.httpUri());
             final HttpRequest request = HttpRequest.builder()
-                    .get("/enabled")
-                    .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_004)
-                    .build();
+                                                   .get("/enabled")
+                                                   .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_004)
+                                                   .build();
             final AggregatedHttpResponse response = client.execute(request).aggregate().join();
             assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE))
                     .isEqualTo(TextFormat.CONTENT_TYPE_004);
@@ -142,9 +142,10 @@ class PrometheusExpositionServiceTest {
         void prometheusRequestsOpenMetricsFormat() throws InterruptedException {
             final WebClient client = WebClient.of(server.httpUri());
             final HttpRequest request = HttpRequest.builder()
-                    .get("/enabled")
-                    .header(HttpHeaderNames.ACCEPT, TextFormat.CONTENT_TYPE_OPENMETRICS_100)
-                    .build();
+                                                   .get("/enabled")
+                                                   .header(HttpHeaderNames.ACCEPT,
+                                                           TextFormat.CONTENT_TYPE_OPENMETRICS_100)
+                                                   .build();
             final AggregatedHttpResponse response = client.execute(request).aggregate().join();
             assertThat(response.headers().get(HttpHeaderNames.CONTENT_TYPE))
                     .isEqualTo(TextFormat.CONTENT_TYPE_OPENMETRICS_100);
