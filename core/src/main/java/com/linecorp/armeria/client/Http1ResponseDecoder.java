@@ -212,11 +212,13 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                                 // Remove the response and do not close the HttpResponseWrapper in order not to
                                 // close the original response.
                                 removeResponse(resId++);
-                                // repeat can't fail for HTTP/1.1 because it doesn't use
-                                // settings frame to reduce the number of max concurrent streams.
-                                res.repeat();
-                                state = State.DISCARD_DATA_OR_TRAILERS;
-                                // TODO(minwoox): reset timeout
+                                if (res.repeat()) {
+                                    state = State.DISCARD_DATA_OR_TRAILERS;
+                                    // TODO(minwoox): reset timeout
+                                } else {
+                                    // session is not acquirable.
+                                    state = State.DISCARD;
+                                }
                                 return;
                             } else {
                                 res.discardRequestBody();

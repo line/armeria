@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
@@ -33,8 +31,6 @@ import io.netty.channel.Channel;
 
 abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         implements Subscriber<HttpObject> {
-
-    private static final Logger logger = LoggerFactory.getLogger(AbstractHttpRequestSubscriber.class);
 
     private static final HttpData EMPTY_EOS = HttpData.empty().withEndOfStream();
 

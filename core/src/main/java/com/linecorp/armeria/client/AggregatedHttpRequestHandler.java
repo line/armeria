@@ -132,8 +132,6 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         channel().flush();
 
         assert aReq != null;
-        cancelTimeout();
-
         if (!tryInitialize(true)) {
             return false;
         }
