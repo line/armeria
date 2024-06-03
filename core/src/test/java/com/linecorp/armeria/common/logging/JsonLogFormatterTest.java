@@ -27,11 +27,14 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -60,6 +63,22 @@ class JsonLogFormatterTest {
         assertThat(responseLog)
                 .matches("^\\{\"type\":\"response\",\"startTime\":\".+\",\"length\":\".+\"," +
                          "\"duration\":\".+\",\"totalDuration\":\".+\",\"headers\":\\{\".+\"}}$");
+    }
+
+    @Test
+    void derivedLog() {
+        final LogFormatter logFormatter = LogFormatter.ofJson();
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/format");
+        final ClientRequestContext ctx = ClientRequestContext.of(request);
+        final ClientRequestContext derivedCtx =
+                ctx.newDerivedContext(RequestId.of(1), request, null, Endpoint.of("127.0.0.1"), 1);
+        final DefaultRequestLog log = (DefaultRequestLog) derivedCtx.log();
+        log.endRequest();
+        final String requestLog = logFormatter.formatRequest(log);
+        assertThat(requestLog)
+                .matches("^\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
+                         "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}" +
+                         ",\"currentAttempt\":1}$");
     }
 
     @Test

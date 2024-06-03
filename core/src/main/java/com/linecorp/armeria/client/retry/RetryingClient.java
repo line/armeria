@@ -304,7 +304,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final ClientRequestContext derivedCtx;
         try {
-            derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
+            derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), totalAttempts);
         } catch (Throwable t) {
             handleException(ctx, rootReqDuplicator, future, t, initialAttempt);
             return;

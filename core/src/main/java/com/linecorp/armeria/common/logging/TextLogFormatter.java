@@ -184,6 +184,10 @@ final class TextLogFormatter implements LogFormatter {
             }
             buf.append('}');
 
+            if (log.currentAttempt() >= 1) {
+                buf.append(", {currentAttempt=").append(log.currentAttempt()).append('}');
+            }
+
             return buf.toString();
         }
     }

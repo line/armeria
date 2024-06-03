@@ -59,7 +59,7 @@ class DerivedClientRequestContextClientTest {
         parent.init(group);
         assertThat(parent.endpoint()).isEqualTo(endpointA);
         final ClientRequestContext child =
-                ClientUtil.newDerivedContext(parent, request, null, false);
+                ClientUtil.newDerivedContext(parent, request, null, 2);
         assertThat(child.endpoint()).isEqualTo(endpointB);
         assertThat(parent.endpoint()).isNotSameAs(child.endpoint());
         assertThat(parent.eventLoop().withoutContext()).isNotSameAs(child.eventLoop().withoutContext());
@@ -74,26 +74,26 @@ class DerivedClientRequestContextClientTest {
         parent.init(group);
         assertThat(parent.endpoint()).isEqualTo(endpointA);
         final ClientRequestContext childA0 =
-                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, true);
+                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, 1);
         assertThat(childA0.endpoint()).isEqualTo(endpointA);
         final ClientRequestContext childB0 =
-                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, 2);
         assertThat(childB0.endpoint()).isEqualTo(endpointB);
         final ClientRequestContext childC0 =
-                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, 3);
         assertThat(childC0.endpoint()).isEqualTo(endpointC);
 
         for (int i = 0; i < 3; i++) {
             final ClientRequestContext childA1 =
-                    ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+                    ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, 4);
             assertThat(childA1.endpoint()).isEqualTo(endpointA);
             assertThat(childA1.eventLoop().withoutContext()).isSameAs(childA0.eventLoop().withoutContext());
             final ClientRequestContext childB1 =
-                    ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+                    ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, 5);
             assertThat(childB1.endpoint()).isEqualTo(endpointB);
             assertThat(childB1.eventLoop().withoutContext()).isSameAs(childB0.eventLoop().withoutContext());
             final ClientRequestContext childC1 =
-                    ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, false);
+                    ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, 6);
             assertThat(childC1.endpoint()).isEqualTo(endpointC);
             assertThat(childC1.eventLoop().withoutContext()).isSameAs(childC0.eventLoop().withoutContext());
         }
@@ -108,7 +108,7 @@ class DerivedClientRequestContextClientTest {
         parent.init(group);
         assertThat(parent.endpoint()).isEqualTo(endpointA);
         final ClientRequestContext child =
-                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, true);
+                ClientUtil.newDerivedContext(parent, HttpRequest.of(HttpMethod.GET, "/"), null, 1);
         assertThat(child.endpoint()).isEqualTo(endpointA);
         assertThat(parent.endpoint()).isSameAs(child.endpoint());
         assertThat(parent.eventLoop().withoutContext()).isSameAs(child.eventLoop().withoutContext());

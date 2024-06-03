@@ -272,6 +272,12 @@ public interface RequestOnlyLog extends RequestLogAccess {
     HttpHeaders requestTrailers();
 
     /**
+     * Returns the current attempt number of the {@link Request} if the corresponding context is created in
+     * a retrying client. Otherwise, it returns {@code -1}.
+     */
+    int currentAttempt();
+
+    /**
      * Returns the string representation of the {@link Request}, with no sanitization of headers or content.
      * This method is a shortcut for:
      * <pre>{@code
