@@ -69,6 +69,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
@@ -899,6 +900,10 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     /**
      * Sets the amount of time to wait after calling {@link Server#stop()} for
      * requests to go away before actually shutting down.
+     *
+     * <p>When setting this value, it is recommended to appropriately adjust
+     * {@link Flags#defaultClientFactoryGracefulShutdownTimeoutMillis()} to prevent {@link Client}s from
+     * terminating during processing requests.
      *
      * @param quietPeriod the number of milliseconds to wait for active
      *                    requests to go end before shutting down. {@link Duration#ZERO} means

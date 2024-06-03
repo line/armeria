@@ -97,6 +97,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final String DNS_CACHE_SPEC = "maximumSize=4096";
     static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
     static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS = 3000;
+    static final long DEFAULT_CLIENT_FACTORY_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = 10000;
 
     private DefaultFlagsProvider() {}
 
@@ -502,5 +503,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultHttp1ConnectionCloseDelayMillis() {
         return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
+    }
+
+    @Override
+    public Long defaultClientFactoryGracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_FACTORY_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     }
 }

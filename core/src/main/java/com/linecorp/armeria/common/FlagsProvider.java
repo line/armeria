@@ -32,6 +32,7 @@ import javax.net.ssl.SSLException;
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 
 import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
@@ -1215,6 +1216,26 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default Long defaultHttp1ConnectionCloseDelayMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the default time in milliseconds to wait before closing the
+     * {@linkplain ClientFactory#ofDefault() default ClientFactory} that is closed by JVM
+     * {@linkplain Runtime#addShutdownHook(Thread) shutdown hook}.
+     *
+     * <p>This option is ignored if you manually close the default {@linkplain ClientFactory} with
+     * {@link ClientFactory#closeDefault()} or you disable the shutdown hook with
+     * {@link ClientFactory#disableShutdownHook()}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_FACTORY_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultClientFactoryGracefulShutdownTimeoutMillis=<long>} JVM option to
+     * override the default value. {@code 0} closes the default {@link ClientFactory} immediately.
+     */
+    @Nullable
+    @UnstableApi
+    default Long defaultClientFactoryGracefulShutdownTimeoutMillis() {
         return null;
     }
 }
