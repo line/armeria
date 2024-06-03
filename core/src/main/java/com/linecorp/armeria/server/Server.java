@@ -576,18 +576,12 @@ public final class Server implements ListenableAsyncCloseable {
 
         private void setupServerMetrics() {
             final MeterRegistry meterRegistry = config.meterRegistry();
-            final ServerMetrics serverMetrics = config.serverMetrics();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
             meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
                                 GracefulShutdownSupport::pendingResponses);
-            meterRegistry.gauge("armeria.server.connections", serverMetrics,
-                                ServerMetrics::activeConnections);
-            meterRegistry.gauge("armeria.server.pending.requests", serverMetrics,
-                                ServerMetrics::pendingRequests);
-            meterRegistry.gauge("armeria.server.active.requests", serverMetrics,
-                                ServerMetrics::activeRequests);
+            config.serverMetrics().bindTo(meterRegistry);
         }
 
         @Override

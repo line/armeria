@@ -20,14 +20,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.binder.MeterBinder;
 
 /**
  * A class that holds metrics related server.
  */
 @UnstableApi
-public final class ServerMetrics {
+public final class ServerMetrics implements MeterBinder {
 
     private final LongAdder pendingHttp1Requests = new LongAdder();
     private final LongAdder pendingHttp2Requests = new LongAdder();
@@ -46,7 +51,7 @@ public final class ServerMetrics {
      * Returns the number of all pending requests.
      */
     public long pendingRequests() {
-        return pendingHttp1Requests.longValue() + pendingHttp2Requests.longValue();
+        return pendingHttp1Requests() + pendingHttp2Requests();
     }
 
     /**
@@ -67,9 +72,9 @@ public final class ServerMetrics {
      * Returns the number of all active requests.
      */
     public long activeRequests() {
-        return activeHttp1WebSocketRequests.longValue() +
-               activeHttp1Requests.longValue() +
-               activeHttp2Requests.longValue();
+        return activeHttp1WebSocketRequests() +
+               activeHttp1Requests() +
+               activeHttp2Requests();
     }
 
     /**
@@ -146,6 +151,24 @@ public final class ServerMetrics {
 
     void decreaseActiveConnections() {
         activeConnections.decrementAndGet();
+    }
+
+    @Override
+    public void bindTo(MeterRegistry meterRegistry) {
+        meterRegistry.gauge("armeria.server.connections", activeConnections);
+        // pending requests
+        meterRegistry.gauge("armeria.server.pending.requests",
+                            ImmutableList.of(Tag.of("protocol", "http1")), pendingHttp1Requests);
+        meterRegistry.gauge("armeria.server.pending.requests",
+                            ImmutableList.of(Tag.of("protocol", "http2")), pendingHttp2Requests);
+        // Active requests
+        meterRegistry.gauge("armeria.server.active.requests", ImmutableList.of(Tag.of("protocol", "http1")),
+                            activeHttp1Requests);
+        meterRegistry.gauge("armeria.server.active.requests", ImmutableList.of(Tag.of("protocol", "http2")),
+                            activeHttp2Requests);
+        meterRegistry.gauge("armeria.server.active.requests",
+                            ImmutableList.of(Tag.of("protocol", "http1.websocket")),
+                            activeHttp1WebSocketRequests);
     }
 
     @Override
