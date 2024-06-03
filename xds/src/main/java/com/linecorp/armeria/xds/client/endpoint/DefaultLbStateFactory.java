@@ -333,7 +333,8 @@ final class DefaultLbStateFactory {
                     return new PriorityAndAvailability(priority, HostAvailability.DEGRADED);
                 }
             }
-            throw new Error("shouldn't reach here");
+            // Shouldn't reach here
+            throw new IllegalStateException("Unable to select a priority for given hash.");
         }
     }
 

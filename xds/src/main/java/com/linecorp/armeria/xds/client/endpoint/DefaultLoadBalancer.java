@@ -50,7 +50,8 @@ final class DefaultLoadBalancer implements LoadBalancer {
             return null;
         }
         if (!prioritySet.hostSets().containsKey(hostsSource.priority)) {
-            return null;
+            // shouldn't reach here
+            throw new IllegalStateException("Priority selected but corresponding host set not found.");
         }
         final HostSet hostSet = prioritySet.hostSets().get(hostsSource.priority);
         switch (hostsSource.sourceType) {
