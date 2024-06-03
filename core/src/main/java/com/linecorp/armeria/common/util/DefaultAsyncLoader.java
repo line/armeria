@@ -43,20 +43,21 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     @Nullable
     private final Duration expireAfterLoad;
     @Nullable
-    private final Predicate<@Nullable T> expireIf;
+    private final Predicate<? super @Nullable T> expireIf;
     @Nullable
-    private final Predicate<@Nullable T> refreshIf;
+    private final Predicate<? super @Nullable T> refreshIf;
     @Nullable
-    private final BiFunction<Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler;
+    private final BiFunction<? super Throwable, ? super @Nullable T,
+            ? extends @Nullable CompletableFuture<T>> exceptionHandler;
 
     private volatile RefreshingFuture<T> loadFuture = RefreshingFuture.completedFuture();
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
                        @Nullable Duration expireAfterLoad,
-                       @Nullable Predicate<@Nullable T> expireIf,
-                       @Nullable Predicate<@Nullable T> refreshIf,
-                       @Nullable BiFunction<
-                               Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler) {
+                       @Nullable Predicate<? super @Nullable T> expireIf,
+                       @Nullable Predicate<? super @Nullable T> refreshIf,
+                       @Nullable BiFunction<? super Throwable, ? super @Nullable T,
+                               ? extends @Nullable CompletableFuture<T>> exceptionHandler) {
         requireNonNull(loader, "loader");
         this.loader = loader;
         this.expireAfterLoad = expireAfterLoad;
@@ -83,15 +84,10 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                 final CacheEntry<T> cacheEntry0 = loadFuture.join();
                 if (isValid(cacheEntry0)) {
                     cacheEntry = cacheEntry0;
-                    final boolean needsRefresh = needsRefresh(cacheEntry);
-                    if (!needsRefresh || loadFuture.refreshing) {
-                        if (needsRefresh) {
-                            logger.debug("Refreshing already in progress, " +
-                                    "so not refresh it again. cacheEntry {}", cacheEntry);
-                        }
+                    if (!needsRefresh(cacheEntry) || loadFuture.refreshing) {
                         return loadFuture;
                     }
-                    logger.debug("Refresh cacheEntry {}", cacheEntry);
+                    logger.debug("Pre-fetching a new value. loader: {}, cache: {}", loader, cacheEntry.value);
                 }
             }
 
@@ -184,14 +180,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         if (expireAfterLoad != null) {
             final long elapsed = System.nanoTime() - cacheEntry.cachedAt;
             if (elapsed >= expireAfterLoad.toNanos()) {
-                logger.debug("CacheEntry {} is expired due to expireAfterLoad {}",
-                        cacheEntry, expireAfterLoad);
+                logger.debug("The cached value expired after {} ms. cache: {}",
+                             expireAfterLoad.toMillis(), cacheEntry.value);
                 return false;
             }
         }
 
         if (expireIf != null && expireIf.test(cacheEntry.value)) {
-            logger.debug("CacheEntry {} is expired due to expireIf matches", cacheEntry);
+            logger.debug("The cached value expired due to 'expireIf' condition. cache: {}", cacheEntry.value);
             return false;
         }
 

@@ -38,11 +38,12 @@ public final class AsyncLoaderBuilder<T> {
     @Nullable
     private Duration expireAfterLoad;
     @Nullable
-    private Predicate<@Nullable T> expireIf;
+    private Predicate<? super @Nullable T> expireIf;
     @Nullable
-    private Predicate<@Nullable T> refreshIf;
+    private Predicate<? super @Nullable T> refreshIf;
     @Nullable
-    private BiFunction<Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler;
+    private BiFunction<? super Throwable, ? super @Nullable T,
+            ? extends @Nullable CompletableFuture<T>> exceptionHandler;
 
     AsyncLoaderBuilder(Function<@Nullable T, CompletableFuture<T>> loader) {
         requireNonNull(loader, "loader");
@@ -63,7 +64,7 @@ public final class AsyncLoaderBuilder<T> {
      * Expires loaded value if predicate matches.
      * New value will be loaded by loader on next {@link AsyncLoader#get()}.
      */
-    public AsyncLoaderBuilder<T> expireIf(Predicate<@Nullable T> expireIf) {
+    public AsyncLoaderBuilder<T> expireIf(Predicate<? super @Nullable T> expireIf) {
         requireNonNull(expireIf, "expireIf");
         this.expireIf = expireIf;
         return this;
@@ -72,11 +73,8 @@ public final class AsyncLoaderBuilder<T> {
     /**
      * Refreshes loaded value which is not expired yet asynchronously if predicate matches.
      * This pre-fetch strategy can remove an additional loading time on a cache miss.
-     *
-     * <p>Note that if 1 refresh is in progress, other refreshes will be bypassed.
-     * Only 1 refresh is executed at the same time.
      */
-    public AsyncLoaderBuilder<T> refreshIf(Predicate<@Nullable T> refreshIf) {
+    public AsyncLoaderBuilder<T> refreshIf(Predicate<? super @Nullable T> refreshIf) {
         requireNonNull(refreshIf, "refreshIf");
         this.refreshIf = refreshIf;
         return this;
@@ -86,8 +84,8 @@ public final class AsyncLoaderBuilder<T> {
      * Handles exception thrown by loader.
      * If exception handler returns {@code null}, complete {@link AsyncLoader#get()} exceptionally.
      */
-    public AsyncLoaderBuilder<T> exceptionHandler(BiFunction<
-            Throwable, @Nullable T, @Nullable CompletableFuture<T>> exceptionHandler) {
+    public AsyncLoaderBuilder<T> exceptionHandler(BiFunction<? super Throwable, ? super @Nullable T,
+            ? extends @Nullable CompletableFuture<T>> exceptionHandler) {
         requireNonNull(exceptionHandler, "exceptionHandler");
         this.exceptionHandler = exceptionHandler;
         return this;

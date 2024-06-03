@@ -23,6 +23,26 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A loader which atomically loads, caches and updates value.
+ *
+ * <pre>{@code
+ * AtomicInteger loadCounter = new AtomicInteger();
+ * Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
+ *     UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
+ * AsyncLoader<Integer> loader = AsyncLoader
+ *     .builder(loadFunc)
+ *     .expireAfterLoad(Duration.ofSeconds(3))
+ *     .build();
+ *
+ * for (int i = 0; i < 5; i++) {
+ *     assert loader.get().join() == 1;
+ * }
+ *
+ * Thread.sleep(3500);
+
+ * for (int i = 0; i < 5; i++) {
+ *     assert loader.get().join() == 2;
+ * }
+ * }</pre>
  */
 @FunctionalInterface
 public interface AsyncLoader<T> {
