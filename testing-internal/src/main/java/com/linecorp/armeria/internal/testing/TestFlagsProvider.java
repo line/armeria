@@ -26,7 +26,7 @@ public final class TestFlagsProvider implements FlagsProvider {
 
     @Override
     public Long defaultClientFactoryGracefulShutdownTimeoutMillis() {
-        // Disable the graceful shutdown timeout for faster tests.
+        // Disable the graceful shutdown timeout for rapid iterative testing.
         // It's not recommended to disable the graceful shutdown timeout in production.
         return 0L;
     }
