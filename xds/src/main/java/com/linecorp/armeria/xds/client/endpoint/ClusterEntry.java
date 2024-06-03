@@ -71,9 +71,6 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
         this.endpoints = ImmutableList.copyOf(endpoints);
         final PriorityStateManager priorityStateManager =
                 new PriorityStateManager(cluster, clusterLoadAssignment, endpoints);
-        for (Endpoint endpoint: endpoints) {
-            priorityStateManager.registerEndpoint(endpoint);
-        }
         final PrioritySet prioritySet = priorityStateManager.build();
         loadBalancer.prioritySetUpdated(prioritySet);
     }

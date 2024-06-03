@@ -400,21 +400,31 @@ public final class XdsTestResources {
     }
 
     public static LocalityLbEndpoints localityLbEndpoints(Locality locality,
-                                                          Collection<LbEndpoint> endpoints,
-                                                          Integer priority) {
-        return LocalityLbEndpoints.newBuilder()
-                                  .addAllLbEndpoints(endpoints)
-                                  .setLocality(locality)
-                                  .setPriority(priority)
-                                  .build();
+                                                          Collection<LbEndpoint> endpoints) {
+        return localityLbEndpoints(locality, endpoints, -1, 0);
     }
 
     public static LocalityLbEndpoints localityLbEndpoints(Locality locality,
-                                                          Collection<LbEndpoint> endpoints) {
-        return LocalityLbEndpoints.newBuilder()
-                                  .addAllLbEndpoints(endpoints)
-                                  .setLocality(locality)
-                                  .build();
+                                                          Collection<LbEndpoint> endpoints,
+                                                          Integer priority) {
+        return localityLbEndpoints(locality, endpoints, priority, 0);
+    }
+
+    public static LocalityLbEndpoints localityLbEndpoints(Locality locality,
+                                                          Collection<LbEndpoint> endpoints,
+                                                          int priority,
+                                                          int loadBalancingWeight) {
+        final LocalityLbEndpoints.Builder builder = LocalityLbEndpoints.newBuilder()
+                                                                       .addAllLbEndpoints(endpoints)
+                                                                       .setLocality(locality);
+        if (priority >= 0) {
+            builder.setPriority(priority);
+        }
+        if (loadBalancingWeight > 0) {
+            builder.setLoadBalancingWeight(UInt32Value.of(loadBalancingWeight));
+        }
+
+        return builder.build();
     }
 
     public static LocalityLbEndpoints localityLbEndpoints(Locality locality, LbEndpoint... endpoints) {

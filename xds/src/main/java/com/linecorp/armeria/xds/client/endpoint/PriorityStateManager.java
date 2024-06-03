@@ -40,9 +40,12 @@ final class PriorityStateManager {
         this.cluster = cluster;
         this.clusterLoadAssignment = clusterLoadAssignment;
         this.origEndpoints = origEndpoints;
+        for (Endpoint endpoint : origEndpoints) {
+            registerEndpoint(endpoint);
+        }
     }
 
-    void registerEndpoint(Endpoint endpoint) {
+    private void registerEndpoint(Endpoint endpoint) {
         final PriorityState.PriorityStateBuilder priorityStateBuilder =
                 priorityStateMap.computeIfAbsent(priority(endpoint),
                                                  ignored -> new PriorityState.PriorityStateBuilder(cluster));

@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.linecorp.armeria.xds.client.endpoint.EndpointGroupUtil.endpointsByLocality;
 import static com.linecorp.armeria.xds.client.endpoint.EndpointUtil.locality;
+import static com.linecorp.armeria.xds.client.endpoint.EndpointUtil.localityLoadBalancingWeight;
 import static com.linecorp.armeria.xds.client.endpoint.EndpointUtil.selectionStrategy;
 
 import java.util.List;
@@ -59,8 +60,8 @@ final class PriorityState {
         void addEndpoint(Endpoint endpoint) {
             hostsBuilder.add(endpoint);
             if (locality(endpoint) != Locality.getDefaultInstance() &&
-                EndpointUtil.hasLoadBalancingWeight(endpoint)) {
-                localityWeightsBuilder.put(locality(endpoint), endpoint.weight());
+                EndpointUtil.hasLocalityLoadBalancingWeight(endpoint)) {
+                localityWeightsBuilder.put(locality(endpoint), localityLoadBalancingWeight(endpoint));
             }
         }
 

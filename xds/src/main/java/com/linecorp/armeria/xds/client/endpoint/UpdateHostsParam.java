@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import static com.linecorp.armeria.xds.client.endpoint.EndpointGroupUtil.filter;
 import static com.linecorp.armeria.xds.client.endpoint.EndpointGroupUtil.filterByLocality;
 import static com.linecorp.armeria.xds.client.endpoint.EndpointUtil.coarseHealth;
 
@@ -45,14 +46,14 @@ class UpdateHostsParam {
                      Map<Locality, List<Endpoint>> endpointsPerLocality,
                      Map<Locality, Integer> localityWeightsMap,
                      EndpointSelectionStrategy strategy) {
-        hosts = EndpointGroupUtil.filter(endpoints, strategy, ignored -> true);
+        hosts = EndpointGroup.of(strategy, endpoints);
         hostsPerLocality = filterByLocality(endpointsPerLocality, strategy, ignored -> true);
-        healthyHosts = EndpointGroupUtil.filter(endpoints, strategy,
-                                                endpoint -> coarseHealth(endpoint) == CoarseHealth.HEALTHY);
+        healthyHosts = filter(endpoints, strategy,
+                              endpoint -> coarseHealth(endpoint) == CoarseHealth.HEALTHY);
         healthyHostsPerLocality = filterByLocality(endpointsPerLocality, strategy,
                                                    endpoint -> coarseHealth(endpoint) == CoarseHealth.HEALTHY);
-        degradedHosts = EndpointGroupUtil.filter(endpoints, strategy,
-                                                 endpoint -> coarseHealth(endpoint) == CoarseHealth.DEGRADED);
+        degradedHosts = filter(endpoints, strategy,
+                               endpoint -> coarseHealth(endpoint) == CoarseHealth.DEGRADED);
         degradedHostsPerLocality = filterByLocality(
                 endpointsPerLocality, strategy,
                 endpoint -> coarseHealth(endpoint) == CoarseHealth.DEGRADED);

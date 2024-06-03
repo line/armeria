@@ -127,9 +127,12 @@ final class HostSet {
         final EndpointGroup localityEligibleHosts =
                 eligibleHostsPerLocality.getOrDefault(locality, EndpointGroup.of());
         final int hostCount = allHostsPerLocality.getOrDefault(locality, EndpointGroup.of()).endpoints().size();
-        if (hostCount <= 0) {
+        if (hostCount == 0) {
             return 0;
         }
+        // We compute the availability of a locality via:
+        // (overProvisioningFactor) * (# healthy/degraded of hosts) / (# total hosts)
+        // https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/locality_weight.html
         final double localityAvailabilityRatio = 1.0 * localityEligibleHosts.endpoints().size() / hostCount;
         final int weight = localityWeightsMap.getOrDefault(locality, 0);
         final double effectiveLocalityAvailabilityRatio =

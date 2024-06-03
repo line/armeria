@@ -54,7 +54,9 @@ final class EndpointUtil {
 
     static int hash(ClientRequestContext ctx) {
         if (ctx.hasAttr(XdsAttributesKeys.SELECTION_HASH)) {
-            return ctx.attr(XdsAttributesKeys.SELECTION_HASH);
+            final Integer selectionHash = ctx.attr(XdsAttributesKeys.SELECTION_HASH);
+            assert selectionHash != null;
+            return Math.max(0, selectionHash);
         }
         return ThreadLocalRandom.current().nextInt(0, Integer.MAX_VALUE);
     }
@@ -63,8 +65,12 @@ final class EndpointUtil {
         return localityLbEndpoints(endpoint).getPriority();
     }
 
-    static boolean hasLoadBalancingWeight(Endpoint endpoint) {
-        return lbEndpoint(endpoint).hasLoadBalancingWeight();
+    static boolean hasLocalityLoadBalancingWeight(Endpoint endpoint) {
+        return localityLbEndpoints(endpoint).hasLoadBalancingWeight();
+    }
+
+    static int localityLoadBalancingWeight(Endpoint endpoint) {
+        return localityLbEndpoints(endpoint).getLoadBalancingWeight().getValue();
     }
 
     private static LbEndpoint lbEndpoint(Endpoint endpoint) {
@@ -98,17 +104,12 @@ final class EndpointUtil {
             return 140;
         }
         final Policy policy = clusterLoadAssignment.getPolicy();
-        final int overProvisionFactor;
-        overProvisionFactor =
-                policy.hasOverprovisioningFactor() ? policy.getOverprovisioningFactor().getValue() : 140;
-        return overProvisionFactor;
+        return policy.hasOverprovisioningFactor() ? policy.getOverprovisioningFactor().getValue() : 140;
     }
 
     static boolean weightedPriorityHealth(ClusterLoadAssignment clusterLoadAssignment) {
-        final boolean weightedPriorityHealth;
-        final Policy policy = clusterLoadAssignment.getPolicy();
-        weightedPriorityHealth = policy.getWeightedPriorityHealth();
-        return weightedPriorityHealth;
+        return clusterLoadAssignment.hasPolicy() ?
+               clusterLoadAssignment.getPolicy().getWeightedPriorityHealth() : false;
     }
 
     static int panicThreshold(Cluster cluster) {
