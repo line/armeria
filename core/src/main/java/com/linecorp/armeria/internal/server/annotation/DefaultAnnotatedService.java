@@ -59,6 +59,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Ag
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationType;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpServiceOption;
 import com.linecorp.armeria.server.HttpServiceOptions;
 import com.linecorp.armeria.server.HttpServiceOptionsBuilder;
 import com.linecorp.armeria.server.Route;
@@ -70,7 +71,6 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.HttpResult;
-import com.linecorp.armeria.server.HttpServiceOption;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ServiceName;
