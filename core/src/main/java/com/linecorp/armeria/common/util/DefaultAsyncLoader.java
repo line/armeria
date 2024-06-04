@@ -68,7 +68,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     @Override
     public CompletableFuture<T> get() {
-        return maybeLoad().thenApply(f -> f.value);
+        return maybeLoad().thenApply(cacheEntry -> cacheEntry.value);
     }
 
     private CompletableFuture<CacheEntry<T>> maybeLoad() {
@@ -153,11 +153,11 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                 return;
             }
 
-            fallback.handle((val, cause1) -> {
-                if (cause1 != null) {
+            fallback.handle((val, cause0) -> {
+                if (cause0 != null) {
                     logger.warn("Failed to load a new value from exceptionHandler: {}. " +
-                                "cache: {}", exceptionHandler, cache, cause1);
-                    future.completeExceptionally(cause1);
+                                "cache: {}", exceptionHandler, cache, cause0);
+                    future.completeExceptionally(cause0);
                 } else {
                     future.complete(new CacheEntry<>(val));
                 }

@@ -30,20 +30,21 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * Function<String, CompletableFuture<String>> loader = (cache) -> {
  *     // Fetch new data from the remote server.
  *     ResponseEntity<String> response =
- *         client.prepare().get("/bar").asString().execute();
+ *         client.prepare().get("/api/v1/items").asString().execute();
  *     return response.thenApply(res -> res.content());
  * };
  *
- * AsyncLoader<String> asyncLoader = AsyncLoader
- *     .builder(loader)
- *     .expireAfterLoad(Duration.ofSeconds(60))  // The loaded value is expired after 60 seconds.
- *     .build();
+ * AsyncLoader<String> asyncLoader =
+ *     AsyncLoader
+ *         .builder(loader)
+ *         .expireAfterLoad(Duration.ofSeconds(60))  // The loaded value is expired after 60 seconds.
+ *         .build();
  *
  * // Fetch the value. This will call the loader function because the cache is empty.
  * String value1 = asyncLoader.get().join();
  * System.out.println("Loaded value: " + value1);
  *
- * // Fetch the value again. This will return the cached value because it's not expired yet.
+ * // This will return the cached value because it's not expired yet.
  * String value2 = asyncLoader.get().join();
  * assert value1 == value2;
  *
