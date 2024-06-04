@@ -1,5 +1,3 @@
-final def DROPWIZARD_VERSION = '1.3.29'
-
 dependencies {
     implementation project(':jetty9')
     // Dropwizard

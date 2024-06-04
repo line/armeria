@@ -207,6 +207,13 @@ interface ServiceConfigSetters<SELF extends ServiceConfigSetters<SELF>> {
     @UnstableApi
     SELF multipartUploadsLocation(Path multipartUploadsLocation);
 
+    /**
+     * Sets the {@link MultipartRemovalStrategy} that determines when to remove temporary files created
+     * for multipart requests.
+     */
+    @UnstableApi
+    SELF multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy);
+
      /**
       * Sets a {@linkplain EventLoopGroup worker group} to be used when serving a {@link Service}.
       *

@@ -95,13 +95,25 @@ public final class InternalServices {
 
         HttpService expositionService = null;
         if (settings.isEnableMetrics() && !Strings.isNullOrEmpty(settings.getMetricsPath())) {
-            final String prometheusMeterRegistryClassName = "io.micrometer.prometheus.PrometheusMeterRegistry";
+            final String prometheusMeterRegistryClassName =
+                    "io.micrometer.prometheusmetrics.PrometheusMeterRegistry";
             final boolean hasPrometheus = hasAllClasses(
                     prometheusMeterRegistryClassName,
-                    "io.prometheus.client.CollectorRegistry");
+                    "io.prometheus.metrics.model.registry.PrometheusRegistry",
+                    "com.linecorp.armeria.server.prometheus.PrometheusExpositionService");
 
             if (hasPrometheus) {
                 expositionService = PrometheusSupport.newExpositionService(meterRegistry);
+            }
+
+            final String legacyPrometheusMeterRegistryClassName =
+                    "io.micrometer.prometheus.PrometheusMeterRegistry";
+            final boolean hasLegacyPrometheus = hasAllClasses(
+                    legacyPrometheusMeterRegistryClassName,
+                    "io.prometheus.client.CollectorRegistry");
+
+            if (hasLegacyPrometheus) {
+                expositionService = PrometheusLegacySupport.newExpositionService(meterRegistry);
             }
 
             final String dropwizardMeterRegistryClassName =
@@ -117,7 +129,7 @@ public final class InternalServices {
             }
             if (expositionService == null) {
                 logger.debug("Failed to expose metrics to '{}' with {} (expected: either {} or {})",
-                             settings.getMetricsPath(), meterRegistry, prometheusMeterRegistryClassName,
+                             settings.getMetricsPath(), meterRegistry, legacyPrometheusMeterRegistryClassName,
                              dropwizardMeterRegistryClassName);
             }
         }

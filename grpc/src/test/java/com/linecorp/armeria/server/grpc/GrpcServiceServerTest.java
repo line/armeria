@@ -54,8 +54,9 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.StringValue;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
@@ -854,31 +855,34 @@ class GrpcServiceServerTest {
     }
 
     private static void clientSocketClosedBeforeHalfClose(String protocol) throws Exception {
-        final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
                 GrpcClients.builder(protocol + "://127.0.0.1:" + server.httpPort() + '/')
-                           .factory(factory)
                            .decorator(LoggingClient.newDecorator())
                            .build(UnitTestServiceStub.class);
         final AtomicReference<SimpleResponse> response = new AtomicReference<>();
-        final StreamObserver<SimpleRequest> stream = stub.streamClientCancels(
-                new StreamObserver<SimpleResponse>() {
-                    @Override
-                    public void onNext(SimpleResponse value) {
-                        response.set(value);
-                    }
+        final StreamObserver<SimpleRequest> stream;
+        final ClientRequestContext clientRequestContext;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            stream = stub.streamClientCancels(
+                    new StreamObserver<SimpleResponse>() {
+                        @Override
+                        public void onNext(SimpleResponse value) {
+                            response.set(value);
+                        }
 
-                    @Override
-                    public void onError(Throwable t) {
-                    }
+                        @Override
+                        public void onError(Throwable t) {
+                        }
 
-                    @Override
-                    public void onCompleted() {
-                    }
-                });
+                        @Override
+                        public void onCompleted() {
+                        }
+                    });
+            clientRequestContext = captor.get();
+        }
         stream.onNext(SimpleRequest.getDefaultInstance());
         await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
-        factory.close();
+        clientRequestContext.cancel();
         await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
@@ -886,8 +890,7 @@ class GrpcServiceServerTest {
             assertThat(rpcReq.method()).isEqualTo("StreamClientCancels");
             assertThat(rpcReq.params()).containsExactly(SimpleRequest.getDefaultInstance());
             assertThat(grpcStatus).isNotNull();
-            assertThat(grpcStatus.getCode()).isEqualTo(protocol.startsWith("h2") ? Code.CANCELLED
-                                                                                 : Code.UNKNOWN);
+            assertThat(grpcStatus.getCode()).isEqualTo(Code.CANCELLED);
         });
     }
 
@@ -896,31 +899,33 @@ class GrpcServiceServerTest {
     void clientSocketClosedAfterHalfCloseBeforeCloseCancels(SessionProtocol protocol)
             throws Exception {
 
-        final ClientFactory factory = ClientFactory.builder().build();
         final UnitTestServiceStub stub =
                 GrpcClients.builder(server.uri(protocol))
-                           .factory(factory)
                            .build(UnitTestServiceStub.class);
         final AtomicReference<SimpleResponse> response = new AtomicReference<>();
-        stub.streamClientCancelsBeforeResponseClosedCancels(
-                SimpleRequest.getDefaultInstance(),
-                new StreamObserver<SimpleResponse>() {
-                    @Override
-                    public void onNext(SimpleResponse value) {
-                        response.set(value);
-                    }
+        final ClientRequestContext clientRequestContext;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            stub.streamClientCancelsBeforeResponseClosedCancels(
+                    SimpleRequest.getDefaultInstance(),
+                    new StreamObserver<SimpleResponse>() {
+                        @Override
+                        public void onNext(SimpleResponse value) {
+                            response.set(value);
+                        }
 
-                    @Override
-                    public void onError(Throwable t) {
-                    }
+                        @Override
+                        public void onError(Throwable t) {
+                        }
 
-                    @Override
-                    public void onCompleted() {
-                    }
-                });
+                        @Override
+                        public void onCompleted() {
+                        }
+                    });
+            clientRequestContext = captor.get();
+        }
         await().untilAsserted(() -> assertThat(response).hasValue(SimpleResponse.getDefaultInstance()));
 
-        factory.close();
+        clientRequestContext.cancel();
         CLIENT_CLOSED.set(true);
         await().untilAsserted(() -> assertThat(COMPLETED).hasValue(true));
 

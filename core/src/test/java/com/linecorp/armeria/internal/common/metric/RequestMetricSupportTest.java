@@ -33,7 +33,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.ImmediateEventLoop;
 import com.linecorp.armeria.server.RequestTimeoutException;
@@ -83,6 +83,8 @@ class RequestMetricSupportTest {
                                "service=FooService}", 1.0)
                 .containsEntry("foo.socket.connect.duration#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
+                .containsEntry("foo.tls.handshake.duration#count{http.status=200,method=POST," +
+                               "service=FooService}", 1.0)
                 .containsEntry("foo.pending.acquisition.duration#count{http.status=200,method=POST," +
                                "service=FooService}", 1.0)
                 .containsEntry("foo.request.length#count{http.status=200,method=POST," +
@@ -107,6 +109,8 @@ class RequestMetricSupportTest {
                                       .dnsResolutionEnd()
                                       .socketConnectStart()
                                       .socketConnectEnd()
+                                      .tlsHandshakeStart()
+                                      .tlsHandshakeEnd()
                                       .pendingAcquisitionStart()
                                       .pendingAcquisitionEnd()
                                       .build();
@@ -165,6 +169,8 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.dns.resolution.duration#count{http.status=500,method=POST,service=none}",
                                1.0)
                 .containsEntry("foo.socket.connect.duration#count{http.status=500,method=POST,service=none}",
+                               1.0)
+                .containsEntry("foo.tls.handshake.duration#count{http.status=500,method=POST,service=none}",
                                1.0)
                 .containsEntry("foo.pending.acquisition.duration#count{http.status=500,method=POST," +
                                "service=none}", 1.0)

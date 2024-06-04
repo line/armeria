@@ -79,6 +79,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters<DefaultS
     @Nullable
     private Path multipartUploadsLocation;
     @Nullable
+    private MultipartRemovalStrategy multipartRemovalStrategy;
+    @Nullable
     private EventLoopGroup serviceWorkerGroup;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
@@ -240,6 +242,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters<DefaultS
     }
 
     @Override
+    public DefaultServiceConfigSetters multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        multipartRemovalStrategy = requireNonNull(removalStrategy, "removalStrategy");
+        return this;
+    }
+
+    @Override
     public DefaultServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
                                                           boolean shutdownOnStop) {
         this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
@@ -381,6 +389,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters<DefaultS
         }
         if (multipartUploadsLocation != null) {
             serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
+        }
+        if (multipartRemovalStrategy != null) {
+            serviceConfigBuilder.multipartRemovalStrategy(multipartRemovalStrategy);
         }
         if (serviceWorkerGroup != null) {
             serviceConfigBuilder.serviceWorkerGroup(serviceWorkerGroup, false);

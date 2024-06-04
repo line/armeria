@@ -348,7 +348,7 @@ class GrpcDocServicePluginTest {
 
         // Expected generated routes. See 'transcoding.proto' file.
         final List<Route> routes = ImmutableList.of(
-                Route.builder().methods(HttpMethod.GET).path("/v1/messages/:p0").build(),
+                Route.builder().methods(HttpMethod.GET).path("/v1/messages/:@p0").build(),
                 Route.builder().methods(HttpMethod.GET).path("/v2/messages/{message_id}").build(),
                 Route.builder().methods(HttpMethod.GET).path("/v3/messages/{message_id}").build(),
                 Route.builder().methods(HttpMethod.PATCH).path("/v1/messages/{message_id}").build(),
@@ -379,7 +379,7 @@ class GrpcDocServicePluginTest {
                                                    .findFirst().get();
         assertThat(getMessageV1.httpMethod()).isEqualTo(HttpMethod.GET);
         assertThat(getMessageV1.endpoints()).containsAll(ImmutableSet.of(
-                EndpointInfo.builder(virtualHostNamePattern, "/v1/messages/:p0")
+                EndpointInfo.builder(virtualHostNamePattern, "/v1/messages/:@p0")
                             .availableMimeTypes(MediaType.JSON_UTF_8).build()));
         assertThat(getMessageV1.parameters()).containsAll(ImmutableList.of(
                 FieldInfo.builder("name", TypeSignature.ofBase(JavaType.STRING.name()))

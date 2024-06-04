@@ -98,6 +98,7 @@ public final class VirtualHost {
     private final long requestAutoAbortDelayMillis;
     private final SuccessFunction successFunction;
     private final Path multipartUploadsLocation;
+    private final MultipartRemovalStrategy multipartRemovalStrategy;
     private final EventLoopGroup serviceWorkerGroup;
     private final List<ShutdownSupport> shutdownSupports;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
@@ -117,6 +118,7 @@ public final class VirtualHost {
                 long requestAutoAbortDelayMillis,
                 SuccessFunction successFunction,
                 Path multipartUploadsLocation,
+                MultipartRemovalStrategy multipartRemovalStrategy,
                 EventLoopGroup serviceWorkerGroup,
                 List<ShutdownSupport> shutdownSupports,
                 Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
@@ -141,6 +143,7 @@ public final class VirtualHost {
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         this.successFunction = successFunction;
         this.multipartUploadsLocation = multipartUploadsLocation;
+        this.multipartRemovalStrategy = multipartRemovalStrategy;
         this.serviceWorkerGroup = serviceWorkerGroup;
         this.shutdownSupports = shutdownSupports;
         @SuppressWarnings("unchecked")
@@ -168,7 +171,8 @@ public final class VirtualHost {
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
-                               successFunction, multipartUploadsLocation, serviceWorkerGroup,
+                               successFunction, multipartUploadsLocation, multipartRemovalStrategy,
+                               serviceWorkerGroup,
                                shutdownSupports, requestIdGenerator);
     }
 
@@ -494,6 +498,10 @@ public final class VirtualHost {
                     // CorsService will handle the preflight request
                     // even if the service does not handle an OPTIONS method.
                     return routed;
+                } else {
+                    // `handlesCorsPreflight()` is false if `CorsService` is set as a route decorator.
+                    // However, this is not a problem because the CorsService is chosen and applied by
+                    // `InitialDispatcherService` regardless of the target service.
                 }
                 break;
             default:
@@ -544,6 +552,15 @@ public final class VirtualHost {
         return multipartUploadsLocation;
     }
 
+    /**
+     * Returns the {@link MultipartRemovalStrategy} that specifies when to remove the temporary files created
+     * for multipart requests.
+     */
+    @UnstableApi
+    public MultipartRemovalStrategy multipartRemovalStrategy() {
+        return multipartRemovalStrategy;
+    }
+
     VirtualHost decorate(@Nullable Function<? super HttpService, ? extends HttpService> decorator) {
         if (decorator == null) {
             return this;
@@ -562,7 +579,8 @@ public final class VirtualHost {
                                host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
                                requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
-                               serviceWorkerGroup, shutdownSupports, requestIdGenerator);
+                               multipartRemovalStrategy, serviceWorkerGroup, shutdownSupports,
+                               requestIdGenerator);
     }
 
     @Override

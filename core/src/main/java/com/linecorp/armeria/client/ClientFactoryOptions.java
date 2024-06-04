@@ -208,6 +208,12 @@ public final class ClientFactoryOptions
     /**
      * Whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
+     *
+     * <p>Note that this option is only effective when the {@link SessionProtocol} of the {@link Endpoint} is
+     * {@link SessionProtocol#HTTP}.
+     * If the {@link SessionProtocol} is {@link SessionProtocol#HTTPS} or {@link SessionProtocol#H2}, ALPN will
+     * be used. If the {@link SessionProtocol} is {@link SessionProtocol#H2C}, the client will
+     * always use HTTP/2 connection preface.
      */
     public static final ClientFactoryOption<Boolean> USE_HTTP2_PREFACE =
             ClientFactoryOption.define("USE_HTTP2_PREFACE", Flags.defaultUseHttp2Preface());
@@ -240,6 +246,13 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<ConnectionPoolListener> CONNECTION_POOL_LISTENER =
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
+
+    /**
+     * The graceful connection shutdown timeout in milliseconds..
+     */
+    public static final ClientFactoryOption<Long> HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+            ClientFactoryOption.define("HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
+                                       Flags.defaultClientHttp2GracefulShutdownTimeoutMillis());
 
     /**
      * The {@link MeterRegistry} which collects various stats.
@@ -520,6 +533,12 @@ public final class ClientFactoryOptions
     /**
      * Returns whether to send an HTTP/2 preface string instead of an HTTP/1 upgrade request to negotiate
      * the protocol version of a cleartext HTTP connection.
+     *
+     * <p>Note that this option is only effective when the {@link SessionProtocol} of the {@link Endpoint} is
+     * {@link SessionProtocol#HTTP}.
+     * If the {@link SessionProtocol} is {@link SessionProtocol#HTTPS} or {@link SessionProtocol#H2}, ALPN will
+     * be used. If the {@link SessionProtocol} is {@link SessionProtocol#H2C}, the client will always use
+     * HTTP/2 connection preface.
      */
     public boolean useHttp2Preface() {
         return get(USE_HTTP2_PREFACE);
@@ -555,6 +574,13 @@ public final class ClientFactoryOptions
      */
     public ConnectionPoolListener connectionPoolListener() {
         return get(CONNECTION_POOL_LISTENER);
+    }
+
+    /**
+     * Returns the graceful connection shutdown timeout in milliseconds.
+     */
+    public long http2GracefulShutdownTimeoutMillis() {
+        return get(HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
     }
 
     /**

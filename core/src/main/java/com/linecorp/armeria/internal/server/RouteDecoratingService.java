@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Routed;
 import com.linecorp.armeria.server.Router;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -162,7 +163,7 @@ public final class RouteDecoratingService implements HttpService {
                           .toString();
     }
 
-    private static class InitialDispatcherService extends SimpleDecoratingHttpService {
+    public static final class InitialDispatcherService extends SimpleDecoratingHttpService {
 
         private final Router<RouteDecoratingService> router;
         private final List<RouteDecoratingService> routeDecoratingServices;
@@ -199,6 +200,20 @@ public final class RouteDecoratingService implements HttpService {
             ctx.setAttr(DECORATOR_KEY, serviceChain);
             assert service != null;
             return service.serve(ctx, req);
+        }
+
+        @Nullable
+        public <T extends HttpService> T findService(ServiceRequestContext ctx,
+                                                     Class<? extends T> serviceClass) {
+            for (Routed<RouteDecoratingService> routed : router.findAll(ctx.routingContext())) {
+                if (routed.isPresent()) {
+                    final T service = routed.value().decorator().as(serviceClass);
+                    if (service != null) {
+                        return service;
+                    }
+                }
+            }
+            return unwrap().as(serviceClass);
         }
 
         @Override
