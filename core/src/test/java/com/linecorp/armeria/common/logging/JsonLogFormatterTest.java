@@ -260,48 +260,48 @@ class JsonLogFormatterTest {
         logBuilder.endRequest();
         final String formatted = logFormatter.formatRequest(logBuilder.partial());
         if (timings == null) {
-            assertThatJson(formatted).node("connection").isAbsent();
+            assertThatJson(formatted).node("clientConnection").isAbsent();
             return;
         }
 
         assertThatJson(formatted)
-                .node("connection.startTime")
+                .node("clientConnection.startTime")
                 .isEqualTo(epochMicros(timings.connectionAcquisitionStartTimeMicros()).toString());
 
         if (timings.dnsResolutionDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("connection.dnsResolutionStartTime")
+                    .node("clientConnection.dnsResolutionStartTime")
                     .isEqualTo(epochMicros(timings.dnsResolutionStartTimeMicros()).toString());
         } else {
-            assertThatJson(formatted).node("connection.dnsResolutionStartTime").isAbsent();
+            assertThatJson(formatted).node("clientConnection.dnsResolutionStartTime").isAbsent();
         }
 
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("connection.pendingAcquisitionStartTime")
+                    .node("clientConnection.pendingAcquisitionStartTime")
                     .isEqualTo(epochMicros(timings.pendingAcquisitionStartTimeMicros()).toString());
         } else {
-            assertThatJson(formatted).node("connection.pendingAcquisitionStartTime").isAbsent();
+            assertThatJson(formatted).node("clientConnection.pendingAcquisitionStartTime").isAbsent();
         }
 
         if (timings.socketConnectDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("connection.socketConnectStartTime")
+                    .node("clientConnection.socketConnectStartTime")
                     .isEqualTo(epochMicros(timings.socketConnectStartTimeMicros()).toString());
         } else {
-            assertThatJson(formatted).node("connection.socketConnectStartTime").isAbsent();
+            assertThatJson(formatted).node("clientConnection.socketConnectStartTime").isAbsent();
         }
 
         if (timings.tlsHandshakeDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("connection.tlsHandshakeStartTime")
+                    .node("clientConnection.tlsHandshakeStartTime")
                     .isEqualTo(epochMicros(timings.tlsHandshakeStartTimeMicros()).toString());
         } else {
-            assertThatJson(formatted).node("connection.tlsHandshakeStartTime").isAbsent();
+            assertThatJson(formatted).node("clientConnection.tlsHandshakeStartTime").isAbsent();
         }
 
         assertThatJson(formatted)
-                .node("connection.endTime")
+                .node("clientConnection.endTime")
                 .isEqualTo(epochMicros(timings.connectionAcquisitionEndTimeMicros()).toString());
     }
 }

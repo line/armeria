@@ -283,16 +283,16 @@ class TextLogFormatterTest {
         final String formatted = logFormatter.formatRequest(logBuilder.partial());
 
         final Matcher connStartMatcher = Pattern.compile("Connection startTime=([^\\s]+), ").matcher(formatted);
-        if (timings != null) {
-            assertThat(connStartMatcher.find()).isTrue();
-            assertThat(connStartMatcher.group(1)).isEqualTo(
-                    epochMicros(timings.connectionAcquisitionStartTimeMicros()).toString());
-        } else {
+        if (timings == null) {
             assertThat(connStartMatcher.find()).isFalse();
+            return;
         }
+        assertThat(connStartMatcher.find()).isTrue();
+        assertThat(connStartMatcher.group(1)).isEqualTo(
+                epochMicros(timings.connectionAcquisitionStartTimeMicros()).toString());
 
         final Matcher dnsMatcher = Pattern.compile("dnsResolutionStartTime=([^\\s]+), ").matcher(formatted);
-        if (timings != null && timings.dnsResolutionDurationNanos() >= 0) {
+        if (timings.dnsResolutionDurationNanos() >= 0) {
             assertThat(dnsMatcher.find()).isTrue();
             assertThat(dnsMatcher.group(1)).isEqualTo(
                     epochMicros(timings.dnsResolutionStartTimeMicros()).toString());
@@ -302,7 +302,7 @@ class TextLogFormatterTest {
 
         final Matcher pendingMatcher = Pattern.compile("pendingAcquisitionStartTime=([^\\s]+), ")
                                               .matcher(formatted);
-        if (timings != null && timings.pendingAcquisitionDurationNanos() >= 0) {
+        if (timings.pendingAcquisitionDurationNanos() >= 0) {
             assertThat(pendingMatcher.find()).isTrue();
             assertThat(pendingMatcher.group(1)).isEqualTo(
                     epochMicros(timings.pendingAcquisitionStartTimeMicros()).toString());
@@ -311,7 +311,7 @@ class TextLogFormatterTest {
         }
 
         final Matcher socketMatcher = Pattern.compile("socketConnectStartTime=([^\\s]+), ").matcher(formatted);
-        if (timings != null && timings.pendingAcquisitionDurationNanos() >= 0) {
+        if (timings.pendingAcquisitionDurationNanos() >= 0) {
             assertThat(socketMatcher.find()).isTrue();
             assertThat(socketMatcher.group(1)).isEqualTo(
                     epochMicros(timings.socketConnectStartTimeMicros()).toString());
@@ -320,7 +320,7 @@ class TextLogFormatterTest {
         }
 
         final Matcher tlsMatcher = Pattern.compile("tlsHandshakeStartTime=([^\\s]+), ").matcher(formatted);
-        if (timings != null && timings.tlsHandshakeDurationNanos() >= 0) {
+        if (timings.tlsHandshakeDurationNanos() >= 0) {
             assertThat(tlsMatcher.find()).isTrue();
             assertThat(tlsMatcher.group(1)).isEqualTo(
                     epochMicros(timings.tlsHandshakeStartTimeMicros()).toString());
@@ -329,7 +329,7 @@ class TextLogFormatterTest {
         }
 
         final Matcher connEndMatcher = Pattern.compile("endTime=([^\\s]+)}").matcher(formatted);
-        if (timings != null && timings.tlsHandshakeDurationNanos() >= 0) {
+        if (timings.tlsHandshakeDurationNanos() >= 0) {
             assertThat(connEndMatcher.find()).isTrue();
             assertThat(connEndMatcher.group(1)).isEqualTo(
                     epochMicros(timings.connectionAcquisitionEndTimeMicros()).toString());

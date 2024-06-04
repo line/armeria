@@ -197,7 +197,7 @@ final class TextLogFormatter implements LogFormatter {
         if (timings == null) {
             return;
         }
-        buf.append(", {Connection startTime=");
+        buf.append(", {ClientConnection startTime=");
         TextFormatter.appendEpochMicros(buf, timings.connectionAcquisitionStartTimeMicros());
         if (timings.dnsResolutionDurationNanos() >= 0) {
             buf.append(", dnsResolutionStartTime=");
