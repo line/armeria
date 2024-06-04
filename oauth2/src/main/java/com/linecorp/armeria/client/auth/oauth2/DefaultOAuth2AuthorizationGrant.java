@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.auth.oauth2.GrantedOAuth2AccessToken;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2Request;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2ResponseHandler;
 import com.linecorp.armeria.common.util.AsyncLoader;
+import com.linecorp.armeria.common.util.AsyncLoaderBuilder;
 import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Endpoint;
 
 /**
@@ -108,9 +109,13 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
             return newTokenFuture;
         };
 
-        return AsyncLoader.builder(loader)
-                          .expireIf(token -> !isValidToken(token))
-                          .build();
+        final AsyncLoaderBuilder<GrantedOAuth2AccessToken> loaderBuilder =
+                AsyncLoader.builder(loader)
+                           .expireIf(token -> !isValidToken(token));
+        if (!refreshBefore.isZero()) {
+            loaderBuilder.refreshIf(this::shouldRefresh);
+        }
+        return loaderBuilder.build();
     }
 
     /**
@@ -134,8 +139,12 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
         return tokenLoader.get();
     }
 
-    private boolean isValidToken(@Nullable GrantedOAuth2AccessToken token) {
-        return token != null && token.isValid(Instant.now().plus(refreshBefore));
+    private static boolean isValidToken(@Nullable GrantedOAuth2AccessToken token) {
+        return token != null && token.isValid(Instant.now());
+    }
+
+    private boolean shouldRefresh(GrantedOAuth2AccessToken token) {
+        return !token.isValid(Instant.now().plus(refreshBefore));
     }
 
     private void obtainAccessToken(CompletableFuture<GrantedOAuth2AccessToken> future) {
@@ -143,7 +152,7 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
     }
 
     private void refreshAccessToken(GrantedOAuth2AccessToken token,
-                            CompletableFuture<GrantedOAuth2AccessToken> future) {
+                                    CompletableFuture<GrantedOAuth2AccessToken> future) {
         final AccessTokenRequest accessTokenRequest = accessTokenRequest();
         final ClientAuthentication clientAuthentication = accessTokenRequest.clientAuthentication();
         final String refreshToken = token.refreshToken();
