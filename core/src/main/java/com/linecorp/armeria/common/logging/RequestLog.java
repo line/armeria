@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.Client;
@@ -46,14 +48,8 @@ public interface RequestLog extends RequestOnlyLog {
      * Returns a newly created {@link RequestLogBuilder}.
      */
     static RequestLogBuilder builder(RequestContext ctx) {
+        requireNonNull(ctx, "ctx");
         return new DefaultRequestLog(ctx);
-    }
-
-    /**
-     * Returns a newly created {@link RequestLogBuilder} with the specified {@code currentAttempt}.
-     */
-    static RequestLogBuilder builder(RequestContext ctx, int currentAttempt) {
-        return new DefaultRequestLog(ctx, currentAttempt);
     }
 
     /**

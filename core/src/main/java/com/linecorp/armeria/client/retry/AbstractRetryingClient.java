@@ -242,27 +242,13 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     /**
      * Creates a new derived {@link ClientRequestContext}, replacing the requests.
      * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
-     *
-     * @deprecated Use {@link ClientUtil#newDerivedContext(ClientRequestContext, HttpRequest, RpcRequest, int)}.
-     */
-    @Deprecated
-    protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
-                                                            @Nullable HttpRequest req,
-                                                            @Nullable RpcRequest rpcReq,
-                                                            boolean unused) {
-        return ClientUtil.newDerivedContext(ctx, req, rpcReq, getTotalAttempts(ctx));
-    }
-
-    /**
-     * Creates a new derived {@link ClientRequestContext}, replacing the requests.
-     * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
      */
     @UnstableApi
     protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
                                                             @Nullable HttpRequest req,
                                                             @Nullable RpcRequest rpcReq,
-                                                            int totalAttempts) {
-        return ClientUtil.newDerivedContext(ctx, req, rpcReq, totalAttempts);
+                                                            boolean initialAttempt) {
+        return ClientUtil.newDerivedContext(ctx, req, rpcReq, initialAttempt);
     }
 
     private static final class State {

@@ -503,7 +503,7 @@ public final class DefaultClientRequestContext
                                         @Nullable RpcRequest rpcReq,
                                         @Nullable Endpoint endpoint, @Nullable EndpointGroup endpointGroup,
                                         SessionProtocol sessionProtocol, HttpMethod method,
-                                        RequestTarget reqTarget, int currentAttempt) {
+                                        RequestTarget reqTarget) {
         super(ctx.meterRegistry(), sessionProtocol, id, method, reqTarget, ctx.exchangeType(),
               ctx.requestAutoAbortDelayMillis(), req, rpcReq, getAttributes(ctx.root()), ctx.hook());
 
@@ -519,11 +519,7 @@ public final class DefaultClientRequestContext
         options = ctx.options();
         root = ctx.root();
 
-        if (currentAttempt < 0) {
-            log = RequestLog.builder(this);
-        } else {
-            log = RequestLog.builder(this, currentAttempt);
-        }
+        log = RequestLog.builder(this);
         log.startRequest();
         responseCancellationScheduler =
                 CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
@@ -585,15 +581,6 @@ public final class DefaultClientRequestContext
                                                   @Nullable HttpRequest req,
                                                   @Nullable RpcRequest rpcReq,
                                                   @Nullable Endpoint endpoint) {
-        return newDerivedContext(id, req, rpcReq, endpoint, -1);
-    }
-
-    @Override
-    public ClientRequestContext newDerivedContext(RequestId id,
-                                                  @Nullable HttpRequest req,
-                                                  @Nullable RpcRequest rpcReq,
-                                                  @Nullable Endpoint endpoint,
-                                                  int currentAttempt) {
         if (req != null) {
             final RequestHeaders newHeaders = req.headers();
             final String oldPath = requestTarget().pathAndQuery();
@@ -606,8 +593,7 @@ public final class DefaultClientRequestContext
                 if (reqTarget.form() != RequestTargetForm.ABSOLUTE) {
                     // Not an absolute URI.
                     return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, null,
-                                                           sessionProtocol(), newHeaders.method(), reqTarget,
-                                                           currentAttempt);
+                                                           sessionProtocol(), newHeaders.method(), reqTarget);
                 }
 
                 // Recalculate protocol and endpoint from the absolute URI.
@@ -622,13 +608,11 @@ public final class DefaultClientRequestContext
                                                               .toBuilder()
                                                               .path(reqTarget.pathAndQuery()));
                 return new DefaultClientRequestContext(this, id, newReq, rpcReq, newEndpoint, null,
-                                                       protocol, newHeaders.method(), reqTarget,
-                                                       currentAttempt);
+                                                       protocol, newHeaders.method(), reqTarget);
             }
         }
         return new DefaultClientRequestContext(this, id, req, rpcReq, endpoint, endpointGroup(),
-                                               sessionProtocol(), method(), requestTarget(),
-                                               currentAttempt);
+                                               sessionProtocol(), method(), requestTarget());
     }
 
     @Override

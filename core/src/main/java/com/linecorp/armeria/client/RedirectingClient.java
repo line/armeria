@@ -141,7 +141,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final RedirectContext redirectCtx = new RedirectContext(ctx, req, res, responseFuture);
         if (ctx.exchangeType().isRequestStreaming()) {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
-            execute0(ctx, redirectCtx, reqDuplicator, 1);
+            execute0(ctx, redirectCtx, reqDuplicator, true);
         } else {
             req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
                .handle((agg, cause) -> {
@@ -149,7 +149,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                        handleException(ctx, null, responseFuture, cause, true);
                    } else {
                        final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
-                       execute0(ctx, redirectCtx, reqDuplicator, 1);
+                       execute0(ctx, redirectCtx, reqDuplicator, true);
                    }
                    return null;
                });
@@ -158,12 +158,12 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     }
 
     private void execute0(ClientRequestContext ctx, RedirectContext redirectCtx,
-                          HttpRequestDuplicator reqDuplicator, int currentAttempt) {
+                          HttpRequestDuplicator reqDuplicator, boolean initialAttempt) {
         final CompletableFuture<Void> originalReqWhenComplete = redirectCtx.request().whenComplete();
         final CompletableFuture<HttpResponse> responseFuture = redirectCtx.responseFuture();
         if (originalReqWhenComplete.isCompletedExceptionally()) {
             originalReqWhenComplete.exceptionally(cause -> {
-                handleException(ctx, reqDuplicator, responseFuture, cause, currentAttempt == 1);
+                handleException(ctx, reqDuplicator, responseFuture, cause, initialAttempt);
                 return null;
             });
             return;
@@ -177,7 +177,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 } else {
                     abortCause = AbortedStreamException.get();
                 }
-                handleException(ctx, reqDuplicator, responseFuture, abortCause, currentAttempt == 1);
+                handleException(ctx, reqDuplicator, responseFuture, abortCause, initialAttempt);
                 return null;
             });
             return;
@@ -186,9 +186,9 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         final HttpRequest duplicateReq = reqDuplicator.duplicate();
         final ClientRequestContext derivedCtx;
         try {
-            derivedCtx = ClientUtil.newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), currentAttempt);
+            derivedCtx = ClientUtil.newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
-            handleException(ctx, reqDuplicator, responseFuture, t, currentAttempt == 1);
+            handleException(ctx, reqDuplicator, responseFuture, t, initialAttempt);
             return;
         }
 
@@ -278,7 +278,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                     handleException(ctx, derivedCtx, reqDuplicator, responseFuture, response, cause);
                     return null;
                 }
-                execute0(ctx, redirectCtx, newReqDuplicator, currentAttempt + 1);
+                execute0(ctx, redirectCtx, newReqDuplicator, false);
                 return null;
             }, ctx.eventLoop());
         });
@@ -438,12 +438,12 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     private static void handleException(ClientRequestContext ctx, @Nullable HttpRequestDuplicator reqDuplicator,
                                         CompletableFuture<HttpResponse> future, Throwable cause,
-                                        boolean endRequestLog) {
+                                        boolean initialAttempt) {
         future.completeExceptionally(cause);
         if (reqDuplicator != null) {
             reqDuplicator.abort(cause);
         }
-        if (endRequestLog) {
+        if (initialAttempt) {
             ctx.logBuilder().endRequest(cause);
         }
         ctx.logBuilder().endResponse(cause);

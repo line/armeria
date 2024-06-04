@@ -53,13 +53,6 @@ public class ClientRequestContextWrapper
     }
 
     @Override
-    public ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req,
-                                                  @Nullable RpcRequest rpcReq, @Nullable Endpoint endpoint,
-                                                  int currentAttempt) {
-        return unwrap().newDerivedContext(id, req, rpcReq, endpoint, currentAttempt);
-    }
-
-    @Override
     public EndpointGroup endpointGroup() {
         return unwrap().endpointGroup();
     }

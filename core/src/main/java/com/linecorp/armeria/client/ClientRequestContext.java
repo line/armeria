@@ -242,23 +242,9 @@ public interface ClientRequestContext extends RequestContext {
      * {@link RequestLog}.
      *
      * <p>Note that this method does not copy the {@link RequestLog} properties to the derived context.
-     *
-     * @deprecated Use {@link #newDerivedContext(RequestId, HttpRequest, RpcRequest, Endpoint, int)}.
      */
-    @Deprecated
     ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
                                            @Nullable Endpoint endpoint);
-
-    /**
-     * Creates a new {@link ClientRequestContext} whose properties and {@link Attribute}s are copied from this
-     * {@link ClientRequestContext}, except having different {@link Request}, {@link Endpoint} and its own
-     * {@link RequestLog}. The {@code currentAttempt} indicates that the derived context is the N-th attempt.
-     *
-     * <p>Note that this method does not copy the {@link RequestLog} properties to the derived context.
-     */
-    @UnstableApi
-    ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-                                           @Nullable Endpoint endpoint, int currentAttempt);
 
     /**
      * Returns the {@link EndpointGroup} used for the current {@link Request}.

@@ -179,15 +179,14 @@ public final class ClientUtil {
     public static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
                                                          @Nullable HttpRequest req,
                                                          @Nullable RpcRequest rpcReq,
-                                                         int totalAttempts) {
+                                                         boolean initialAttempt) {
         final RequestId id = ctx.options().requestIdGenerator().get();
         final EndpointGroup endpointGroup = ctx.endpointGroup();
         final ClientRequestContext derived;
-        if (endpointGroup != null && totalAttempts > 1) {
-            derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.selectNow(ctx), totalAttempts);
+        if (endpointGroup != null && !initialAttempt) {
+            derived = ctx.newDerivedContext(id, req, rpcReq, endpointGroup.selectNow(ctx));
         } else {
-            // initial attempt
-            derived = ctx.newDerivedContext(id, req, rpcReq, ctx.endpoint(), totalAttempts);
+            derived = ctx.newDerivedContext(id, req, rpcReq, ctx.endpoint());
         }
 
         final RequestLogAccess parentLog = ctx.log();
