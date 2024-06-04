@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.util;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -38,9 +39,9 @@ public final class AsyncLoaderBuilder<T> {
     @Nullable
     private Duration expireAfterLoad;
     @Nullable
-    private Predicate<? super @Nullable T> expireIf;
+    private Predicate<? super T> expireIf;
     @Nullable
-    private Predicate<? super @Nullable T> refreshIf;
+    private Predicate<? super T> refreshIf;
     @Nullable
     private BiFunction<? super Throwable, ? super @Nullable T,
             ? extends @Nullable CompletableFuture<T>> exceptionHandler;
@@ -51,38 +52,39 @@ public final class AsyncLoaderBuilder<T> {
     }
 
     /**
-     * Expires loaded value after duration since it was loaded.
-     * New value will be loaded by loader on next {@link AsyncLoader#get()}.
+     * Expires The loaded value after the duration since it was loaded.
+     * New value will be loaded by the loader function on next {@link AsyncLoader#get()}.
      */
     public AsyncLoaderBuilder<T> expireAfterLoad(Duration expireAfterLoad) {
         requireNonNull(expireAfterLoad, "expireAfterLoad");
+        checkState(!expireAfterLoad.isNegative(), "expireAfterLoad: %s (expected: >= 0)", expireAfterLoad);
         this.expireAfterLoad = expireAfterLoad;
         return this;
     }
 
     /**
-     * Expires loaded value if predicate matches.
-     * New value will be loaded by loader on next {@link AsyncLoader#get()}.
+     * Expires the loaded value if the predicate matches.
+     * New value will be loaded by the loader function on next {@link AsyncLoader#get()}.
      */
-    public AsyncLoaderBuilder<T> expireIf(Predicate<? super @Nullable T> expireIf) {
+    public AsyncLoaderBuilder<T> expireIf(Predicate<? super T> expireIf) {
         requireNonNull(expireIf, "expireIf");
         this.expireIf = expireIf;
         return this;
     }
 
     /**
-     * Refreshes loaded value which is not expired yet asynchronously if predicate matches.
+     * Asynchronously refreshes the loaded value which has not yet expired if the predicate matches.
      * This pre-fetch strategy can remove an additional loading time on a cache miss.
      */
-    public AsyncLoaderBuilder<T> refreshIf(Predicate<? super @Nullable T> refreshIf) {
+    public AsyncLoaderBuilder<T> refreshIf(Predicate<? super T> refreshIf) {
         requireNonNull(refreshIf, "refreshIf");
         this.refreshIf = refreshIf;
         return this;
     }
 
     /**
-     * Handles exception thrown by loader.
-     * If exception handler returns {@code null}, complete {@link AsyncLoader#get()} exceptionally.
+     * Handles the exception thrown by the loader function.
+     * If the exception handler returns {@code null}, {@link AsyncLoader#get()} completes exceptionally.
      */
     public AsyncLoaderBuilder<T> exceptionHandler(BiFunction<? super Throwable, ? super @Nullable T,
             ? extends @Nullable CompletableFuture<T>> exceptionHandler) {
@@ -94,11 +96,11 @@ public final class AsyncLoaderBuilder<T> {
     /**
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
      *
-     * @throws IllegalStateException if expiration is not set.
+     * @throws IllegalStateException if no expiration is set.
      */
     public AsyncLoader<T> build() {
         if (expireAfterLoad == null && expireIf == null) {
-            throw new IllegalStateException("Must set AsyncLoader's expiration.");
+            throw new IllegalStateException("Must set at least one of 'expireAfterLoad()` and 'expireIf()'.");
         }
         return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, refreshIf, exceptionHandler);
     }

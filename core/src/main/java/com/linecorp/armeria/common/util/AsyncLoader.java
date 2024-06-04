@@ -24,24 +24,35 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * A loader which atomically loads, caches and updates value.
  *
+ * <p>Example usage:
  * <pre>{@code
- * AtomicInteger loadCounter = new AtomicInteger();
- * Function<Integer, CompletableFuture<Integer>> loadFunc = i ->
- *     UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
- * AsyncLoader<Integer> loader = AsyncLoader
- *     .builder(loadFunc)
- *     .expireAfterLoad(Duration.ofSeconds(3))
+ * WebClient client = WebClient.of("https://example.com");
+ * Function<String, CompletableFuture<String>> loader = (cache) -> {
+ *     // Fetch new data from the remote server.
+ *     ResponseEntity<String> response =
+ *         client.prepare().get("/bar").asString().execute();
+ *     return response.thenApply(res -> res.content());
+ * };
+ *
+ * AsyncLoader<String> asyncLoader = AsyncLoader
+ *     .builder(loader)
+ *     .expireAfterLoad(Duration.ofSeconds(60))  // The loaded value is expired after 60 seconds.
  *     .build();
  *
- * for (int i = 0; i < 5; i++) {
- *     assert loader.get().join() == 1;
- * }
+ * // Fetch the value. This will call the loader function because the cache is empty.
+ * String value1 = asyncLoader.get().join();
+ * System.out.println("Loaded value: " + value1);
  *
- * Thread.sleep(3500);
-
- * for (int i = 0; i < 5; i++) {
- *     assert loader.get().join() == 2;
- * }
+ * // Fetch the value again. This will return the cached value because it's not expired yet.
+ * String value2 = asyncLoader.get().join();
+ * assert value1 == value2;
+ *
+ * // Wait for more than 60 seconds so that the cache is expired.
+ * Thread.sleep(61000);
+ *
+ * // Fetch the value again. This will call the loader function because the cache has expired.
+ * String value3 = asyncLoader.get().join();
+ * assert value1 != value3;
  * }</pre>
  */
 @FunctionalInterface
@@ -59,8 +70,8 @@ public interface AsyncLoader<T> {
     }
 
     /**
-     * Returns a {@link CompletableFuture} which emits loaded value.
-     * Loads new value by loader only if nothing is cached or loaded value is expired.
+     * Returns a {@link CompletableFuture} which will be completed with the loaded value.
+     * A new value is fetched by the loader only if nothing is cached or the cache value has expired.
      */
     CompletableFuture<T> get();
 }

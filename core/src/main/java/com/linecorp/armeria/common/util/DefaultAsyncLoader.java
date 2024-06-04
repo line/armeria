@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -40,12 +41,11 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             .newUpdater(DefaultAsyncLoader.class, RefreshingFuture.class, "loadFuture");
 
     private final Function<@Nullable T, CompletableFuture<T>> loader;
+    private final long expireAfterLoadNanos;
     @Nullable
-    private final Duration expireAfterLoad;
+    private final Predicate<? super T> expireIf;
     @Nullable
-    private final Predicate<? super @Nullable T> expireIf;
-    @Nullable
-    private final Predicate<? super @Nullable T> refreshIf;
+    private final Predicate<? super T> refreshIf;
     @Nullable
     private final BiFunction<? super Throwable, ? super @Nullable T,
             ? extends @Nullable CompletableFuture<T>> exceptionHandler;
@@ -54,13 +54,13 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
                        @Nullable Duration expireAfterLoad,
-                       @Nullable Predicate<? super @Nullable T> expireIf,
-                       @Nullable Predicate<? super @Nullable T> refreshIf,
+                       @Nullable Predicate<? super T> expireIf,
+                       @Nullable Predicate<? super T> refreshIf,
                        @Nullable BiFunction<? super Throwable, ? super @Nullable T,
                                ? extends @Nullable CompletableFuture<T>> exceptionHandler) {
         requireNonNull(loader, "loader");
         this.loader = loader;
-        this.expireAfterLoad = expireAfterLoad;
+        expireAfterLoadNanos = expireAfterLoad != null ? expireAfterLoad.toNanos() : 0;
         this.expireIf = expireIf;
         this.refreshIf = refreshIf;
         this.exceptionHandler = exceptionHandler;
@@ -74,7 +74,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private CompletableFuture<CacheEntry<T>> maybeLoad() {
         RefreshingFuture<T> future;
         CacheEntry<T> cacheEntry = null;
-        for (;;) {
+        for (; ; ) {
             final RefreshingFuture<T> loadFuture = this.loadFuture;
             if (!loadFuture.isDone()) {
                 return loadFuture;
@@ -103,6 +103,25 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         return future;
     }
 
+    private void load(@Nullable T cache, CompletableFuture<CacheEntry<T>> future) {
+        try {
+            requireNonNull(loader.apply(cache), "loader.apply() returned null")
+                    .handle((val, cause) -> {
+                        if (cause != null) {
+                            logger.warn("Failed to load a new value from loader: {}. cache: {}",
+                                        loader, cache, cause);
+                            handleException(cause, cache, future);
+                        } else {
+                            future.complete(new CacheEntry<>(val));
+                        }
+                        return null;
+                    });
+        } catch (Exception e) {
+            logger.warn("Unexpected exception from loader.apply()", e);
+            handleException(e, cache, future);
+        }
+    }
+
     @Nullable
     private boolean needsRefresh(@Nullable CacheEntry<T> cacheEntry) {
         if (cacheEntry == null) {
@@ -120,55 +139,33 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         return refresh;
     }
 
-    private void load(@Nullable T cache, CompletableFuture<CacheEntry<T>> future) {
-        try {
-            requireNonNull(loader.apply(cache), "loader.apply() returned null")
-                    .handle((val, cause) -> {
-                        if (cause != null) {
-                            logger.warn("Failed to load a new value from loader: {}. the previous value: {}",
-                                        loader, cache, cause);
-                            handleException(cause, cache, future);
-                        } else {
-                            future.complete(new CacheEntry<>(val));
-                        }
-                        return null;
-                    });
-        } catch (Exception e) {
-            logger.warn("Unexpected exception from loader.apply()", e);
-            handleException(e, cache, future);
-        }
-    }
-
     private void handleException(Throwable cause, @Nullable T cache,
                                  CompletableFuture<CacheEntry<T>> future) {
-        if (exceptionHandler != null) {
-            handleByExceptionHandler(cause, cache, future);
-        } else {
+        if (exceptionHandler == null) {
             future.completeExceptionally(cause);
+            return;
         }
-    }
 
-    private void handleByExceptionHandler(Throwable originCause, @Nullable T cache,
-                                          CompletableFuture<CacheEntry<T>> future) {
         try {
-            final CompletableFuture<T> fallback = exceptionHandler.apply(originCause, cache);
-            if (fallback != null) {
-                fallback.handle((val, cause) -> {
-                    if (cause != null) {
-                        logger.warn("Failed to load a new value from exceptionHandler: {}." +
-                                    "the previous value: {}", exceptionHandler, cache, cause);
-                        future.completeExceptionally(cause);
-                    } else {
-                        future.complete(new CacheEntry<>(val));
-                    }
-                    return null;
-                });
-            } else {
-                future.completeExceptionally(originCause);
+            final CompletableFuture<T> fallback = exceptionHandler.apply(cause, cache);
+            if (fallback == null) {
+                future.completeExceptionally(cause);
+                return;
             }
+
+            fallback.handle((val, cause1) -> {
+                if (cause1 != null) {
+                    logger.warn("Failed to load a new value from exceptionHandler: {}. " +
+                                "cache: {}", exceptionHandler, cache, cause1);
+                    future.completeExceptionally(cause1);
+                } else {
+                    future.complete(new CacheEntry<>(val));
+                }
+                return null;
+            });
         } catch (Exception e) {
             logger.warn("Unexpected exception from exceptionHandler.apply()", e);
-            future.completeExceptionally(originCause);
+            future.completeExceptionally(cause);
         }
     }
 
@@ -177,11 +174,13 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             return false;
         }
 
-        if (expireAfterLoad != null) {
+        if (expireAfterLoadNanos > 0) {
             final long elapsed = System.nanoTime() - cacheEntry.cachedAt;
-            if (elapsed >= expireAfterLoad.toNanos()) {
-                logger.debug("The cached value expired after {} ms. cache: {}",
-                             expireAfterLoad.toMillis(), cacheEntry.value);
+            if (elapsed >= expireAfterLoadNanos) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("The cached value expired after {} ms. cache: {}",
+                                 TimeUnit.NANOSECONDS.toMillis(expireAfterLoadNanos), cacheEntry.value);
+                }
                 return false;
             }
         }
@@ -244,8 +243,9 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         @Override
         public boolean completeExceptionally(Throwable ex) {
             refreshing = false;
+            final CacheEntry<U> cacheEntry = this.cacheEntry;
             if (cacheEntry != null) {
-                logger.warn("Failed to refresh a new value. the previous value: {}", cacheEntry.value, ex);
+                logger.warn("Failed to refresh a new value. cache: {}", cacheEntry.value, ex);
             } else {
                 obtrudeException(ex);
             }
