@@ -16,21 +16,29 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.linecorp.armeria.common.util.TextFormatter.epochMicros;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class TextLogFormatterTest {
@@ -234,5 +242,99 @@ class TextLogFormatterTest {
         final Matcher matcher3 = Pattern.compile("cache-control=(.*?)[,\\]]").matcher(responseLog);
         assertThat(matcher3.find()).isTrue();
         assertThat(matcher3.group(1)).isEqualTo("no-cache");
+    }
+
+    static Stream<Arguments> connectionTimingsAreLoggedIfExistParams() {
+        return Stream.of(
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .build()),
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .dnsResolutionEnd()
+                                                    .build()),
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .tlsHandshakeStart()
+                                                    .tlsHandshakeEnd()
+                                                    .build()),
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .dnsResolutionEnd()
+                                                    .pendingAcquisitionStart()
+                                                    .pendingAcquisitionEnd()
+                                                    .socketConnectStart()
+                                                    .socketConnectEnd()
+                                                    .tlsHandshakeStart()
+                                                    .tlsHandshakeEnd()
+                                                    .build())
+        );
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @MethodSource("connectionTimingsAreLoggedIfExistParams")
+    void connectionTimingsAreLoggedIfExist(@Nullable ClientConnectionTimings timings) {
+        final LogFormatter logFormatter = TextLogFormatter.DEFAULT_INSTANCE;
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"));
+        final ClientRequestContextBuilder builder = ClientRequestContext.builder(req);
+        if (timings != null) {
+            builder.connectionTimings(timings);
+        }
+        final ClientRequestContext ctx = builder.build();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.endRequest();
+        final String formatted = logFormatter.formatRequest(logBuilder.partial());
+
+        final Matcher connStartMatcher = Pattern.compile("Connection startTime=([^\\s]+), ").matcher(formatted);
+        if (timings != null) {
+            assertThat(connStartMatcher.find()).isTrue();
+            assertThat(connStartMatcher.group(1)).isEqualTo(
+                    epochMicros(timings.connectionAcquisitionStartTimeMicros()).toString());
+        } else {
+            assertThat(connStartMatcher.find()).isFalse();
+        }
+
+        final Matcher dnsMatcher = Pattern.compile("dnsResolutionStartTime=([^\\s]+), ").matcher(formatted);
+        if (timings != null && timings.dnsResolutionDurationNanos() >= 0) {
+            assertThat(dnsMatcher.find()).isTrue();
+            assertThat(dnsMatcher.group(1)).isEqualTo(
+                    epochMicros(timings.dnsResolutionStartTimeMicros()).toString());
+        } else {
+            assertThat(dnsMatcher.find()).isFalse();
+        }
+
+        final Matcher pendingMatcher = Pattern.compile("pendingAcquisitionStartTime=([^\\s]+), ")
+                                              .matcher(formatted);
+        if (timings != null && timings.pendingAcquisitionDurationNanos() >= 0) {
+            assertThat(pendingMatcher.find()).isTrue();
+            assertThat(pendingMatcher.group(1)).isEqualTo(
+                    epochMicros(timings.pendingAcquisitionStartTimeMicros()).toString());
+        } else {
+            assertThat(pendingMatcher.find()).isFalse();
+        }
+
+        final Matcher socketMatcher = Pattern.compile("socketConnectStartTime=([^\\s]+), ").matcher(formatted);
+        if (timings != null && timings.pendingAcquisitionDurationNanos() >= 0) {
+            assertThat(socketMatcher.find()).isTrue();
+            assertThat(socketMatcher.group(1)).isEqualTo(
+                    epochMicros(timings.socketConnectStartTimeMicros()).toString());
+        } else {
+            assertThat(socketMatcher.find()).isFalse();
+        }
+
+        final Matcher tlsMatcher = Pattern.compile("tlsHandshakeStartTime=([^\\s]+), ").matcher(formatted);
+        if (timings != null && timings.tlsHandshakeDurationNanos() >= 0) {
+            assertThat(tlsMatcher.find()).isTrue();
+            assertThat(tlsMatcher.group(1)).isEqualTo(
+                    epochMicros(timings.tlsHandshakeStartTimeMicros()).toString());
+        } else {
+            assertThat(tlsMatcher.find()).isFalse();
+        }
+
+        final Matcher connEndMatcher = Pattern.compile("endTime=([^\\s]+)}").matcher(formatted);
+        if (timings != null && timings.tlsHandshakeDurationNanos() >= 0) {
+            assertThat(connEndMatcher.find()).isTrue();
+            assertThat(connEndMatcher.group(1)).isEqualTo(
+                    epochMicros(timings.connectionAcquisitionEndTimeMicros()).toString());
+        } else {
+            assertThat(tlsMatcher.find()).isFalse();
+        }
     }
 }

@@ -140,6 +140,10 @@ final class TextLogFormatter implements LogFormatter {
             buf.append("Request: {startTime=");
             TextFormatter.appendEpochMicros(buf, log.requestStartTimeMicros());
 
+            if (RequestLogProperty.SESSION.isAvailable(flags)) {
+                maybeAppendConnectionTimings(log.connectionTimings(), buf);
+            }
+
             if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
                 buf.append(", length=");
                 TextFormatter.appendSize(buf, log.requestLength());
@@ -186,6 +190,34 @@ final class TextLogFormatter implements LogFormatter {
 
             return buf.toString();
         }
+    }
+
+    private static void maybeAppendConnectionTimings(@Nullable ClientConnectionTimings timings,
+                                                     StringBuilder buf) {
+        if (timings == null) {
+            return;
+        }
+        buf.append(", {Connection startTime=");
+        TextFormatter.appendEpochMicros(buf, timings.connectionAcquisitionStartTimeMicros());
+        if (timings.dnsResolutionDurationNanos() >= 0) {
+            buf.append(", dnsResolutionStartTime=");
+            TextFormatter.appendEpochMicros(buf, timings.dnsResolutionStartTimeMicros());
+        }
+        if (timings.pendingAcquisitionDurationNanos() >= 0) {
+            buf.append(", pendingAcquisitionStartTime=");
+            TextFormatter.appendEpochMicros(buf, timings.pendingAcquisitionStartTimeMicros());
+        }
+        if (timings.socketConnectDurationNanos() >= 0) {
+            buf.append(", socketConnectStartTime=");
+            TextFormatter.appendEpochMicros(buf, timings.socketConnectStartTimeMicros());
+        }
+        if (timings.tlsHandshakeDurationNanos() >= 0) {
+            buf.append(", tlsHandshakeStartTime=");
+            TextFormatter.appendEpochMicros(buf, timings.tlsHandshakeStartTimeMicros());
+        }
+        buf.append(", endTime=");
+        TextFormatter.appendEpochMicros(buf, timings.connectionAcquisitionEndTimeMicros());
+        buf.append('}');
     }
 
     @Override

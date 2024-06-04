@@ -131,6 +131,14 @@ final class JsonLogFormatter implements LogFormatter {
             objectNode.put("startTime",
                            TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
 
+            if (RequestLogProperty.SESSION.isAvailable(flags)) {
+                final ObjectNode connectionNode =
+                        maybeCreateConnectionTimings(log.connectionTimings(), objectMapper);
+                if (connectionNode != null) {
+                    objectNode.set("connection", connectionNode);
+                }
+            }
+
             if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
                 objectNode.put("length", TextFormatter.size(log.requestLength()).toString());
             }
@@ -175,6 +183,38 @@ final class JsonLogFormatter implements LogFormatter {
             logger.warn("Unexpected exception while formatting a request log: {}", log, e);
             return "{}";
         }
+    }
+
+    @Nullable
+    private static ObjectNode maybeCreateConnectionTimings(@Nullable ClientConnectionTimings timings,
+                                                           ObjectMapper objectMapper) {
+        if (timings == null) {
+            return null;
+        }
+
+        final ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("startTime",
+                       TextFormatter.epochMicros(timings.connectionAcquisitionStartTimeMicros()).toString());
+
+        if (timings.dnsResolutionDurationNanos() >= 0) {
+            objectNode.put("dnsResolutionStartTime",
+                           TextFormatter.epochMicros(timings.dnsResolutionStartTimeMicros()).toString());
+        }
+        if (timings.pendingAcquisitionDurationNanos() >= 0) {
+            objectNode.put("pendingAcquisitionStartTime",
+                           TextFormatter.epochMicros(timings.pendingAcquisitionStartTimeMicros()).toString());
+        }
+        if (timings.socketConnectDurationNanos() >= 0) {
+            objectNode.put("socketConnectStartTime",
+                           TextFormatter.epochMicros(timings.socketConnectStartTimeMicros()).toString());
+        }
+        if (timings.tlsHandshakeDurationNanos() >= 0) {
+            objectNode.put("tlsHandshakeStartTime",
+                           TextFormatter.epochMicros(timings.tlsHandshakeStartTimeMicros()).toString());
+        }
+        objectNode.put("endTime",
+                       TextFormatter.epochMicros(timings.connectionAcquisitionEndTimeMicros()).toString());
+        return objectNode;
     }
 
     @Override

@@ -94,6 +94,17 @@ public final class ClientConnectionTimings {
     }
 
     /**
+     * Returns the time when the client finished to acquire a connection, in microseconds since the epoch.
+     */
+    public long connectionAcquisitionEndTimeMicros() {
+        if (connectionAcquisitionStartTimeMicros == -1) {
+            return -1;
+        }
+        return connectionAcquisitionStartTimeMicros +
+               TimeUnit.NANOSECONDS.toMicros(connectionAcquisitionDurationNanos);
+    }
+
+    /**
      * Returns the time when the client started to resolve a domain name, in microseconds since the epoch.
      *
      * @return the start time, or {@code -1} if there was no action to resolve a domain name.
