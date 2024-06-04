@@ -34,12 +34,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 @UnstableApi
 public interface WebSocketService extends HttpService {
-    HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions
-            .builder()
-            .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
-            .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
-            .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
-            .build();
 
     /**
      * Returns a new {@link WebSocketService} with the {@link WebSocketServiceHandler}.
