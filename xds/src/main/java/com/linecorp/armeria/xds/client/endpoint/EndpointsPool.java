@@ -40,16 +40,14 @@ final class EndpointsPool implements AsyncCloseable {
 
     private EndpointGroup delegate = EndpointGroup.of();
     private Map<Endpoint, Long> createdTimestamps = ImmutableMap.of();
-    private final ClusterEntry clusterEntry;
     private final EventExecutor eventExecutor;
     private Consumer<List<Endpoint>> listener = ignored -> {};
 
-    EndpointsPool(ClusterEntry clusterEntry, EventExecutor eventExecutor) {
-        this.clusterEntry = clusterEntry;
+    EndpointsPool(EventExecutor eventExecutor) {
         this.eventExecutor = eventExecutor;
     }
 
-    void updateClusterSnapshot(ClusterSnapshot newSnapshot) {
+    void updateClusterSnapshot(ClusterSnapshot newSnapshot, Consumer<List<Endpoint>> endpointsListener) {
         // clean up the old endpoint and listener
         delegate.removeListener(listener);
         delegate.closeAsync();
@@ -57,11 +55,11 @@ final class EndpointsPool implements AsyncCloseable {
         // set the new endpoint and listener
         delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot);
         listener = endpoints -> eventExecutor.execute(
-                () -> attachTimestampsAndDelegate(newSnapshot, endpoints));
+                () -> endpointsListener.accept(attachTimestampsAndDelegate(endpoints)));
         delegate.addListener(listener, true);
     }
 
-    private void attachTimestampsAndDelegate(ClusterSnapshot clusterSnapshot, List<Endpoint> endpoints) {
+    private List<Endpoint> attachTimestampsAndDelegate(List<Endpoint> endpoints) {
         final long defaultTimestamp = System.nanoTime();
         final ImmutableMap.Builder<Endpoint, Long> timestampsBuilder = ImmutableMap.builder();
         final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();
@@ -77,7 +75,7 @@ final class EndpointsPool implements AsyncCloseable {
             endpointsBuilder.add(endpointWithTimestamp);
         }
         createdTimestamps = timestampsBuilder.buildKeepingLast();
-        clusterEntry.accept(clusterSnapshot, endpointsBuilder.build());
+        return endpointsBuilder.build();
     }
 
     @Override

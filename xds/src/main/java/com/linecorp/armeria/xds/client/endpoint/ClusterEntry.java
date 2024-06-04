@@ -45,7 +45,7 @@ final class ClusterEntry implements AsyncCloseable {
                  ClusterManager clusterManager, EventExecutor eventExecutor) {
         this.clusterManager = clusterManager;
         this.eventExecutor = eventExecutor;
-        endpointsPool = new EndpointsPool(this, eventExecutor);
+        endpointsPool = new EndpointsPool(eventExecutor);
         updateClusterSnapshot(clusterSnapshot);
     }
 
@@ -57,7 +57,9 @@ final class ClusterEntry implements AsyncCloseable {
     void updateClusterSnapshot(ClusterSnapshot clusterSnapshot) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         assert endpointSnapshot != null;
-        endpointsPool.updateClusterSnapshot(clusterSnapshot);
+        endpointsPool.updateClusterSnapshot(clusterSnapshot, endpoints -> {
+            accept(clusterSnapshot, endpoints);
+        });
     }
 
     void accept(ClusterSnapshot clusterSnapshot, List<Endpoint> endpoints) {

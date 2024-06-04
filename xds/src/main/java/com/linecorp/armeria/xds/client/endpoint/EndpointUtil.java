@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import java.time.Instant;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,8 +70,8 @@ final class EndpointUtil {
         if (slowStartConfig.hasSlowStartWindow()) {
             final Duration slowStartWindow = slowStartConfig.getSlowStartWindow();
             final long totalWindowMillis =
-                    Instant.ofEpochSecond(slowStartWindow.getSeconds(), slowStartWindow.getNanos())
-                           .toEpochMilli();
+                    java.time.Duration.ofSeconds(slowStartWindow.getSeconds(),
+                                                 slowStartWindow.getNanos()).toMillis();
             if (totalWindowMillis > 0) {
                 // just use 10 steps for now
                 final long windowMillis = totalWindowMillis / 10;
