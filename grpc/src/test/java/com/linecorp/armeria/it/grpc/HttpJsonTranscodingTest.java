@@ -554,7 +554,7 @@ public class HttpJsonTranscodingTest {
         final String duration = "1.000340012s";
 
         final AggregatedHttpResponse response =
-                webClient.get("/v1/echo/" + timestamp + '/' + duration).aggregate().join();
+                webClient.get("/v1/echo/timestamp/" + timestamp + '/' + duration).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
@@ -566,7 +566,7 @@ public class HttpJsonTranscodingTest {
         final String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
         final AggregatedHttpResponse response =
-                webClient.post("/v1/echo/" + timestamp + ":get", "").aggregate().join();
+                webClient.post("/v1/echo/timestamp/" + timestamp + ":get", "").aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);

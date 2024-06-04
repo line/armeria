@@ -20,8 +20,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class ParameterizedPathMappingTest {
     @Test
@@ -103,22 +107,19 @@ class ParameterizedPathMappingTest {
         final ParameterizedPathMapping ppm =
                 new ParameterizedPathMapping("/service/{value}/test/:value2/something/{value3}");
 
-        assertThat(ppm.skeleton()).isEqualTo("/service/:/test/:/something/:");
+        assertThat(ppm.skeleton()).isEqualTo("/service/\0/test/\0/something/\0");
 
         final ParameterizedPathMapping ppm2 = new ParameterizedPathMapping("/service/{*value}");
         assertThat(ppm2.skeleton()).isEqualTo("/service/*");
 
         final ParameterizedPathMapping ppm3 =
                 new ParameterizedPathMapping("/service/{value1}/:value2/{*value3}");
-        assertThat(ppm3.skeleton()).isEqualTo("/service/:/:/*");
+        assertThat(ppm3.skeleton()).isEqualTo("/service/\0/\0/*");
     }
 
     @Test
     void testInvalidPattern() throws Exception {
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/{value}/test/{value2"))
-                .isInstanceOf(IllegalArgumentException.class);
-
-        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/:value/test/value2}"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -239,10 +240,22 @@ class ParameterizedPathMappingTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ParameterizedPathMapping("/service/:* "))
                 .isInstanceOf(IllegalArgumentException.class);
-        // "{*...}" or ":*..." can only be preceded by a path separator.
-        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/foo{*value}"))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new ParameterizedPathMapping("/service/foo:*value"))
-                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private static Stream<Arguments> colonAllowedArgs() {
+        return Stream.of(
+                Arguments.of("/foo:bar", "/foo:bar"),
+                Arguments.of("/a:/b:asdf", "/a:/b:asdf"),
+                Arguments.of("/\\:/\\:asdf:", "/:/:asdf:")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("colonAllowedArgs")
+    void colonAllowed(String pathPattern, String reqPath) {
+        final ParameterizedPathMapping m = new ParameterizedPathMapping(pathPattern);
+        final RoutingResult res = m.apply(create(reqPath)).build();
+        assertThat(res.path()).isEqualTo(reqPath);
+        assertThat(res.pathParams()).isEmpty();
     }
 }

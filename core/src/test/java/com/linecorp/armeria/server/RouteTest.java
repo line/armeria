@@ -58,49 +58,49 @@ class RouteTest {
 
         route = Route.builder().path("/foo:verb").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
-        assertThat(route.paths()).containsExactly("/foo\\:verb", "/foo\\:verb");
+        assertThat(route.paths()).containsExactly("/foo:verb", "/foo:verb");
         routeWithPrefix = route.withPrefix("/prefix");
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.EXACT);
-        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo\\:verb", "/prefix/foo\\:verb");
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo:verb", "/prefix/foo:verb");
 
         route = Route.builder().path("/foo/{bar}").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(route.paths()).containsExactly("/foo/:", "/foo/:");
+        assertThat(route.paths()).containsExactly("/foo/\0", "/foo/\0");
         routeWithPrefix = route.withPrefix("/prefix");
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo/:", "/prefix/foo/:");
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/foo/\0", "/prefix/foo/\0");
 
         route = Route.builder().path("/foo/{bar:biz}").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(route.paths()).containsExactly("/foo/:", "/foo/:");
+        assertThat(route.paths()).containsExactly("/foo/\0", "/foo/\0");
         assertThat(route.paramNames()).hasSize(1);
-        assertThat(route.paramNames()).containsExactly("bar");
+        assertThat(route.paramNames()).containsExactly("bar:biz");
 
         route = Route.builder().path("/bar/:baz").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(route.paths()).containsExactly("/bar/:", "/bar/:");
+        assertThat(route.paths()).containsExactly("/bar/\0", "/bar/\0");
         routeWithPrefix = route.withPrefix("/prefix");
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/bar/:", "/prefix/bar/:");
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/bar/\0", "/prefix/bar/\0");
 
         route = Route.builder().path("/bar/:baz:").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(route.paths()).containsExactly("/bar/:", "/bar/:");
+        assertThat(route.paths()).containsExactly("/bar/\0", "/bar/\0");
         assertThat(route.paramNames()).hasSize(1);
-        assertThat(route.paramNames()).containsExactly("baz");
+        assertThat(route.paramNames()).containsExactly("baz:");
 
         route = Route.builder().path("/bar/:baz:verb").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(route.paths()).containsExactly("/bar/:\\:verb", "/bar/:\\:verb");
+        assertThat(route.paths()).containsExactly("/bar/\0", "/bar/\0");
         routeWithPrefix = route.withPrefix("/prefix");
         assertThat(routeWithPrefix.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/bar/:\\:verb", "/prefix/bar/:\\:verb");
+        assertThat(routeWithPrefix.paths()).containsExactly("/prefix/bar/\0", "/prefix/bar/\0");
 
         route = Route.builder().path("/bar/:baz:foo:verb").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(route.paths()).containsExactly("/bar/:\\:verb", "/bar/:\\:verb");
+        assertThat(route.paths()).containsExactly("/bar/\0", "/bar/\0");
         assertThat(route.paramNames()).hasSize(1);
-        assertThat(route.paramNames()).containsExactly("baz");
+        assertThat(route.paramNames()).containsExactly("baz:foo:verb");
 
         route = Route.builder().path("exact:/:foo/bar").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
@@ -178,22 +178,17 @@ class RouteTest {
 
         route = Route.builder().path("/foo", "/bar:verb").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
-        assertThat(route.paths()).containsExactly("/foo/bar\\:verb", "/foo/bar\\:verb");
+        assertThat(route.paths()).containsExactly("/foo/bar:verb", "/foo/bar:verb");
         assertThat(route.patternString()).isEqualTo("/foo/bar:verb");
 
         route = Route.builder().path("/foo", "/bar/{baz}").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(route.paths()).containsExactly("/foo/bar/:", "/foo/bar/:");
+        assertThat(route.paths()).containsExactly("/foo/bar/\0", "/foo/bar/\0");
         assertThat(route.patternString()).isEqualTo("/foo/bar/:baz");
-
-        route = Route.builder().path("/foo", "/bar/{baz}:verb").build();
-        assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(route.paths()).containsExactly("/foo/bar/:\\:verb", "/foo/bar/:\\:verb");
-        assertThat(route.patternString()).isEqualTo("/foo/bar/:baz:verb");
 
         route = Route.builder().path("/bar", "/baz/:qux").build();
         assertThat(route.pathType()).isSameAs(RoutePathType.PARAMETERIZED);
-        assertThat(route.paths()).containsExactly("/bar/baz/:", "/bar/baz/:");
+        assertThat(route.paths()).containsExactly("/bar/baz/\0", "/bar/baz/\0");
         assertThat(route.patternString()).isEqualTo("/bar/baz/:qux");
 
         route = Route.builder().path("/foo", "exact:/:bar/baz").build();
@@ -236,13 +231,7 @@ class RouteTest {
     void invalidRoutePath() {
         assertThatThrownBy(() -> Route.builder().path("foo")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Route.builder().path("foo:/bar")).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> Route.builder().path("/foo:bar/biz")).isInstanceOf(
-                IllegalArgumentException.class);
         assertThatThrownBy(() -> Route.builder().path("/foo/{bar}:verb1:verb2")).isInstanceOf(
-                IllegalArgumentException.class);
-        assertThatThrownBy(() -> Route.builder().path("/foo/bar:verb1:verb2")).isInstanceOf(
-                IllegalArgumentException.class);
-        assertThatThrownBy(() -> Route.builder().path("/foo/bar:verb1:verb2")).isInstanceOf(
                 IllegalArgumentException.class);
     }
 
