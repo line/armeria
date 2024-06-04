@@ -40,6 +40,7 @@ import java.util.function.Supplier;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.math.IntMath;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -205,20 +206,13 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 }
                 final EndpointsRampingUpEntry rampingUpEntry = rampingUpWindowsMap.get(window);
 
-                final EndpointAndStep endpointAndStep = new EndpointAndStep(endpoint, step);
-                final int currentWeight = computeWeight(endpoint, step);
-                endpointAndStep.currentWeight(currentWeight);
-
+                final EndpointAndStep endpointAndStep =
+                        new EndpointAndStep(endpoint, weightTransition, step, totalSteps);
                 rampingUpEntry.addEndpoint(endpointAndStep);
             }
             endpointCreatedTimestamps = newCreatedTimestamps;
 
             buildEndpointSelector();
-        }
-
-        private int computeWeight(Endpoint endpoint, int step) {
-            final int calculated = weightTransition.compute(endpoint, step, totalSteps);
-            return Ints.constrainToRange(calculated, 0, endpoint.weight());
         }
 
         private void buildEndpointSelector() {
@@ -268,9 +262,6 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
                 if (step >= totalSteps) {
                     endpointsFinishedRampingUp.add(endpoint);
                     i.remove();
-                } else {
-                    final int currentWeight = computeWeight(endpoint, step);
-                    endpointAndStep.currentWeight(currentWeight);
                 }
             }
         }
@@ -284,7 +275,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         final long timePassed = ticker.read() - createTimestamp;
         final int step = Ints.saturatedCast(timePassed / rampingUpIntervalNanos);
         // there's no point in having an endpoint at step 0 (no weight), so we increment by 1
-        return step + 1;
+        return IntMath.saturatedAdd(step, 1);
     }
 
     @VisibleForTesting
@@ -326,24 +317,30 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         static final class EndpointAndStep {
 
             private final Endpoint endpoint;
+            private final EndpointWeightTransition weightTransition;
             private int step;
+            private final int totalSteps;
             private int currentWeight;
 
-            EndpointAndStep(Endpoint endpoint, int step) {
+            EndpointAndStep(Endpoint endpoint, EndpointWeightTransition weightTransition,
+                            int step, int totalSteps) {
                 this.endpoint = endpoint;
+                this.weightTransition = weightTransition;
                 this.step = step;
+                this.totalSteps = totalSteps;
             }
 
             int incrementAndGetStep() {
                 return ++step;
             }
 
-            void currentWeight(int currentWeight) {
-                this.currentWeight = currentWeight;
+            int currentWeight() {
+                return currentWeight = computeWeight(endpoint, step);
             }
 
-            int currentWeight() {
-                return currentWeight;
+            private int computeWeight(Endpoint endpoint, int step) {
+                final int calculated = weightTransition.compute(endpoint, step, totalSteps);
+                return Ints.constrainToRange(calculated, 0, endpoint.weight());
             }
 
             int step() {
@@ -358,8 +355,10 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             public String toString() {
                 return MoreObjects.toStringHelper(this)
                                   .add("endpoint", endpoint)
-                                  .add("step", step)
                                   .add("currentWeight", currentWeight)
+                                  .add("weightTransition", weightTransition)
+                                  .add("step", step)
+                                  .add("totalSteps", totalSteps)
                                   .toString();
             }
         }
