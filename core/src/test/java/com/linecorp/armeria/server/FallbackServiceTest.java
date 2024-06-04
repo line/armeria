@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.base.Strings;
 
@@ -45,7 +44,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-@SetSystemProperty(key = "com.linecorp.armeria.allowSemicolonInPathComponent", value = "true")
 class FallbackServiceTest {
 
     @Nullable
@@ -128,13 +126,6 @@ class FallbackServiceTest {
         assertThat(res.headers().status()).isSameAs(HttpStatus.FORBIDDEN);
         assertThat(lastRouteWasFallback).isTrue();
         assertThat(res.headers().get("x-trace-id")).isEqualTo("foo");
-    }
-
-    @Test
-    void fallbackServiceShouldNotRaiseExceptionWhenPathContainsSemicolon() {
-        // See https://github.com/line/armeria/issues/5726 for more information.
-        assertThat(webClient.get("/;").status()).isSameAs(HttpStatus.NOT_FOUND);
-        assertThat(lastRouteWasFallback).isTrue();
     }
 
     @ValueSource(strings = { "H1C", "H2C" })
