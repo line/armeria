@@ -82,9 +82,4 @@ final class GraphqlWebSocketService implements GraphqlService, WebSocketService,
         in.subscribe(new GraphqlWebSocketSubscriber(protocol, outgoing));
         return outgoing;
     }
-
-    @Override
-    public HttpServiceOptions options() {
-        return DEFAULT_OPTIONS;
-    }
 }

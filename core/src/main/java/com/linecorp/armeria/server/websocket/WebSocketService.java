@@ -20,7 +20,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.websocket.WebSocket;
+import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpServiceOptions;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -32,6 +34,12 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 @UnstableApi
 public interface WebSocketService extends HttpService {
+    HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions
+            .builder()
+            .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
+            .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
+            .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
+            .build();
 
     /**
      * Returns a new {@link WebSocketService} with the {@link WebSocketServiceHandler}.
@@ -68,4 +76,9 @@ public interface WebSocketService extends HttpService {
      * Returns the {@link WebSocketProtocolHandler} of this service.
      */
     WebSocketProtocolHandler protocolHandler();
+
+    @Override
+    default HttpServiceOptions options() {
+        return DEFAULT_OPTIONS;
+    }
 }

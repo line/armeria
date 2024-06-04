@@ -416,9 +416,4 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     public WebSocketProtocolHandler protocolHandler() {
         return this;
     }
-
-    @Override
-    public HttpServiceOptions options() {
-        return DEFAULT_OPTIONS;
-    }
 }
