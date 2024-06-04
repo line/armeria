@@ -180,7 +180,9 @@ public final class RequestMetricSupport {
             metrics.failureAttempts().record(childrenSize);
         }
 
-        for (RequestLogAccess child: log.children()) {
+        final int failedAttempts = isSuccess ? childrenSize - 1 : childrenSize;
+        for (int i = 0; i < failedAttempts ; i++) {
+            final RequestLogAccess child = log.children().get(i);
             child.whenComplete().thenAccept(
                     childLog -> metrics.actualRequestsCause(childLog.responseCause(),
                                                             childLog.responseStatus()).increment());
@@ -425,7 +427,7 @@ public final class RequestMetricSupport {
         public Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status) {
             final String causeStr = cause != null ? cause.getClass().getSimpleName() : "null";
             return parent.counter(
-                    idPrefix.name("actual.requests.cause"),
+                    idPrefix.name("actual.requests.failure"),
                     idPrefix.tags("cause", causeStr, "http.status", status.codeAsText()));
         }
     }

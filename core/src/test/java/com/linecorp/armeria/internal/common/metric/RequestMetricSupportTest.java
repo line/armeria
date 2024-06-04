@@ -229,15 +229,15 @@ class RequestMetricSupportTest {
         logBuilder.responseHeaders(ResponseHeaders.of(500));
         logBuilder.endResponseWithLastChild();
 
-        final Map<String, Double>  measurements = measureAll(registry);
+        final Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements)
-                .containsEntry("foo.actual.requests.cause#" +
+                .containsEntry("foo.actual.requests.failure#" +
                                "count{cause=InvalidResponseException," +
                                "http.status=501,method=POST,service=none}", 1.0)
-                .containsEntry("foo.actual.requests.cause#" +
+                .containsEntry("foo.actual.requests.failure#" +
                                "count{cause=ResponseCancellationException," +
                                "http.status=503,method=POST,service=none}", 1.0)
-                .containsEntry("foo.actual.requests.cause#" +
+                .containsEntry("foo.actual.requests.failure#" +
                                "count{cause=null,http.status=502,method=POST,service=none}", 1.0);
     }
 
@@ -268,7 +268,12 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.actual.requests.attempts#count{http.status=200,method=POST," +
                                "result=success,service=none}", 1.0)
                 .containsEntry("foo.actual.requests.attempts#total{http.status=200,method=POST," +
-                               "result=success,service=none}", 2.0);
+                               "result=success,service=none}", 2.0)
+                .containsEntry("foo.actual.requests.failure#" +
+                               "count{cause=null,http.status=500,method=POST,service=none}", 1.0)
+                // Should not contain the successful attempt.
+                .doesNotContainKey("foo.actual.requests.failure#" +
+                                   "count{cause=null,http.status=200,method=POST,service=none}");
     }
 
     @Test
