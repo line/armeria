@@ -110,14 +110,14 @@ class HttpServiceOptionsTest {
             }
         };
 
-        final long DEFAULT_REQUEST_TIMEOUT_MILLIS = 30001;
-        final long DEFAULT_MAX_REQUEST_LENGTH = 30002;
-        final long DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS = 30003;
+        final long defaultRequestTimeoutMillis = 30001;
+        final long defaultMaxRequestLength = 30002;
+        final long defaultRequestAutoAbortDelayMillis = 30003;
         try (Server server = Server.builder()
                                    .service("/test", httpService1)
-                                   .requestTimeoutMillis(DEFAULT_REQUEST_TIMEOUT_MILLIS)
-                                   .maxRequestLength(DEFAULT_MAX_REQUEST_LENGTH)
-                                   .requestAutoAbortDelayMillis(DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
+                                   .requestTimeoutMillis(defaultRequestTimeoutMillis)
+                                   .maxRequestLength(defaultMaxRequestLength)
+                                   .requestAutoAbortDelayMillis(defaultRequestAutoAbortDelayMillis)
                                    .build()) {
 
             final ServiceConfig sc1 = server.serviceConfigs()

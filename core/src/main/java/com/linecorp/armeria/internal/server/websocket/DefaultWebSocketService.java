@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
@@ -216,7 +217,7 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
             if (requestTimeoutMillis < 0) {
                 requestTimeoutMillis = ctx.config().virtualHost().requestTimeoutMillis();
             }
-            ctx.setRequestTimeoutMillis(requestTimeoutMillis);
+            ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, requestTimeoutMillis);
 
             long maxRequestLength = options.maxRequestLength();
             if (maxRequestLength < 0) {
