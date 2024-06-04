@@ -20,6 +20,8 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Map;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -51,7 +53,9 @@ final class DefaultLoadBalancer implements LoadBalancer {
         }
         if (!prioritySet.hostSets().containsKey(hostsSource.priority)) {
             // shouldn't reach here
-            throw new IllegalStateException("Priority selected but corresponding host set not found.");
+            throw new IllegalStateException("Unable to select a priority for cluster(" +
+                                            prioritySet.cluster().getName() + "), hostsSource(" +
+                                            hostsSource + ')');
         }
         final HostSet hostSet = prioritySet.hostSets().get(hostsSource.priority);
         switch (hostsSource.sourceType) {
@@ -178,6 +182,15 @@ final class DefaultLoadBalancer implements LoadBalancer {
             this.priority = priority;
             this.sourceType = sourceType;
             this.locality = locality;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("priority", priority)
+                              .add("sourceType", sourceType)
+                              .add("locality", locality)
+                              .toString();
         }
     }
 

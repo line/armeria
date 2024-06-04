@@ -19,6 +19,7 @@ package com.linecorp.armeria.xds.client.endpoint;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
@@ -100,6 +101,19 @@ final class HostSet {
 
     int overProvisioningFactor() {
         return overProvisioningFactor;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("hostsEndpointGroup", hostsEndpointGroup)
+                          .add("healthyHostsEndpointGroup", healthyHostsEndpointGroup)
+                          .add("healthyEndpointGroupPerLocality", healthyEndpointGroupPerLocality)
+                          .add("degradedHostsEndpointGroup", degradedHostsEndpointGroup)
+                          .add("degradedEndpointGroupPerLocality", degradedEndpointGroupPerLocality)
+                          .add("weightedPriorityHealth", weightedPriorityHealth)
+                          .add("overProvisioningFactor", overProvisioningFactor)
+                          .toString();
     }
 
     private static WeightedRandomDistributionSelector<LocalityEntry> rebuildLocalityScheduler(

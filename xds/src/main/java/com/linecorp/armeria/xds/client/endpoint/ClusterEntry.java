@@ -22,6 +22,9 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
@@ -37,6 +40,8 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
+
+    private static final Logger logger = LoggerFactory.getLogger(ClusterEntry.class);
 
     private final EndpointGroup endpointGroup;
     private final Cluster cluster;
@@ -72,6 +77,9 @@ final class ClusterEntry implements Consumer<List<Endpoint>>, AsyncCloseable {
         final PriorityStateManager priorityStateManager =
                 new PriorityStateManager(cluster, clusterLoadAssignment, endpoints);
         final PrioritySet prioritySet = priorityStateManager.build();
+        if (logger.isTraceEnabled()) {
+            logger.trace("XdsEndpointGroup is using a new PrioritySet({})", prioritySet);
+        }
         loadBalancer.prioritySetUpdated(prioritySet);
     }
 

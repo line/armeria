@@ -21,6 +21,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 import com.google.common.math.IntMath;
@@ -33,6 +37,8 @@ import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.HostAvailabi
 import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.PriorityAndAvailability;
 
 final class DefaultLbStateFactory {
+
+    private static final Logger logger = LoggerFactory.getLogger(DefaultLbStateFactory.class);
 
     static DefaultLbState newInstance(PrioritySet prioritySet) {
         final ImmutableMap.Builder<Integer, Integer> perPriorityHealthBuilder =
@@ -51,8 +57,15 @@ final class DefaultLbStateFactory {
         final PerPriorityPanic perPriorityPanic =
                 recalculatePerPriorityPanic(prioritySet,
                                             perPriorityLoad.normalizedTotalAvailability());
+
+        logger.debug("XdsEndpointGroup load balancer priorities for cluster({}) has been updated with" +
+                     " perPriorityLoad({}), perPriorityPanic({}).",
+                     prioritySet.cluster().getName(), perPriorityLoad, perPriorityPanic);
+
         if (perPriorityPanic.totalPanic()) {
             perPriorityLoad = recalculateLoadInTotalPanic(prioritySet);
+            logger.debug("XdsEndpointGroup load balancer in panic for cluster({}) with perPriorityLoad({}).",
+                         prioritySet.cluster().getName(), perPriorityLoad);
         }
         return new DefaultLbState(prioritySet, perPriorityLoad, perPriorityPanic);
     }
@@ -202,8 +215,8 @@ final class DefaultLbStateFactory {
         final int remainingLoad = totalLoad;
         healthyPriorityLoad.computeIfPresent(firstNoEmpty, (k, v) -> v + remainingLoad);
         final int priorityLoadSum = priorityLoadSum(healthyPriorityLoad, degradedPriorityLoad);
-        assert priorityLoadSum == 100
-                : "The priority loads not summing up to 100 (" + priorityLoadSum + ')';
+        assert priorityLoadSum == 100 : "The priority loads not summing up to 100 (" + priorityLoadSum +
+                                        ") for cluster (" + prioritySet.cluster().getName() + ')';
         return new PerPriorityLoad(healthyPriorityLoad, degradedPriorityLoad, 100);
     }
 
@@ -255,6 +268,16 @@ final class DefaultLbStateFactory {
         boolean forceEmptyEndpoint() {
             return forceEmptyEndpoint;
         }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("healthyPriorityLoad", healthyPriorityLoad)
+                              .add("degradedPriorityLoad", degradedPriorityLoad)
+                              .add("normalizedTotalAvailability", normalizedTotalAvailability)
+                              .add("forceEmptyEndpoint", forceEmptyEndpoint)
+                              .toString();
+        }
     }
 
     static class PerPriorityPanic {
@@ -286,6 +309,15 @@ final class DefaultLbStateFactory {
 
         boolean forceEmptyEndpoint() {
             return forceEmptyEndpoint;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("perPriorityPanic", perPriorityPanic)
+                              .add("totalPanic", totalPanic)
+                              .add("forceEmptyEndpoint", forceEmptyEndpoint)
+                              .toString();
         }
     }
 
@@ -334,7 +366,8 @@ final class DefaultLbStateFactory {
                 }
             }
             // Shouldn't reach here
-            throw new IllegalStateException("Unable to select a priority for given hash.");
+            throw new IllegalStateException("Unable to select a priority for cluster(" +
+                                            prioritySet.cluster().getName() + "), hash(" + hash + ')');
         }
     }
 

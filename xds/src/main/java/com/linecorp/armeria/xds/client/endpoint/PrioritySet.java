@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -92,6 +93,18 @@ final class PrioritySet {
      */
     List<Endpoint> endpoints() {
         return origEndpoints;
+    }
+
+    Cluster cluster() {
+        return cluster;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("hostSets", hostSets)
+                          .add("cluster", cluster)
+                          .toString();
     }
 
     static final class PrioritySetBuilder {
