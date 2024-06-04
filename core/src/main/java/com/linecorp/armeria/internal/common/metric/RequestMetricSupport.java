@@ -181,7 +181,7 @@ public final class RequestMetricSupport {
         }
 
         final int failedAttempts = isSuccess ? childrenSize - 1 : childrenSize;
-        for (int i = 0; i < failedAttempts ; i++) {
+        for (int i = 0; i < failedAttempts; i++) {
             final RequestLogAccess child = log.children().get(i);
             child.whenComplete().thenAccept(
                     childLog -> metrics.actualRequestsCause(childLog.responseCause(),
