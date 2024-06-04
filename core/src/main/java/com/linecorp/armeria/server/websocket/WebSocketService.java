@@ -79,6 +79,6 @@ public interface WebSocketService extends HttpService {
 
     @Override
     default HttpServiceOptions options() {
-        return DEFAULT_OPTIONS;
+        return WebSocketServiceBuilder.DEFAULT_OPTIONS;
     }
 }

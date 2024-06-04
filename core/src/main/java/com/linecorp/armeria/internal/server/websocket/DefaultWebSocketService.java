@@ -47,7 +47,6 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
-import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceOptions;
@@ -89,13 +88,6 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     // Server-side encoder do not mask the payloads.
     private static final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(false);
 
-    private static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions
-            .builder()
-            .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
-            .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
-            .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
-            .build();
-
     private final WebSocketServiceHandler handler;
     @Nullable
     private final HttpService fallbackService;
@@ -106,12 +98,14 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     @Nullable
     private final Predicate<? super String> originPredicate;
     private final boolean aggregateContinuation;
+    @Nullable
+    private final HttpServiceOptions serviceOptions;
 
     public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
                                    int maxFramePayloadLength, boolean allowMaskMismatch,
                                    Set<String> subprotocols, boolean allowAnyOrigin,
                                    @Nullable Predicate<? super String> originPredicate,
-                                   boolean aggregateContinuation) {
+                                   boolean aggregateContinuation, @Nullable HttpServiceOptions serviceOptions) {
         this.handler = handler;
         this.fallbackService = fallbackService;
         this.maxFramePayloadLength = maxFramePayloadLength;
@@ -120,6 +114,7 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         this.allowAnyOrigin = allowAnyOrigin;
         this.originPredicate = originPredicate;
         this.aggregateContinuation = aggregateContinuation;
+        this.serviceOptions = serviceOptions;
     }
 
     @Override
@@ -214,16 +209,27 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private HttpResponse failOrFallback(ServiceRequestContext ctx, HttpRequest req,
                                         Supplier<HttpResponse> invalidResponse) throws Exception {
         if (fallbackService != null) {
+            // Try to apply HttpServiceOptions from fallbackService first. If not set, use the settings of the
+            // virtual host.
             final HttpServiceOptions options = fallbackService.options();
-            if (options.requestTimeoutMillis() > 0) {
-                ctx.setRequestTimeoutMillis(options.requestTimeoutMillis());
+            long requestTimeoutMillis = options.requestTimeoutMillis();
+            if (requestTimeoutMillis < 0) {
+                requestTimeoutMillis = ctx.config().virtualHost().requestTimeoutMillis();
             }
-            if (options.maxRequestLength() >= 0) {
-                ctx.setMaxRequestLength(options.maxRequestLength());
+            ctx.setRequestTimeoutMillis(requestTimeoutMillis);
+
+            long maxRequestLength = options.maxRequestLength();
+            if (maxRequestLength < 0) {
+                maxRequestLength = ctx.config().virtualHost().maxRequestLength();
             }
-            if (options.requestAutoAbortDelayMillis() >= 0) {
-                ctx.setRequestAutoAbortDelayMillis(options.requestAutoAbortDelayMillis());
+            ctx.setMaxRequestLength(maxRequestLength);
+
+            long requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
+            if (requestAutoAbortDelayMillis < 0) {
+                requestAutoAbortDelayMillis = ctx.config().virtualHost().requestAutoAbortDelayMillis();
             }
+            ctx.setRequestAutoAbortDelayMillis(requestAutoAbortDelayMillis);
+
             return fallbackService.serve(ctx, req);
         } else {
             return invalidResponse.get();
@@ -415,5 +421,13 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     @Override
     public WebSocketProtocolHandler protocolHandler() {
         return this;
+    }
+
+    @Override
+    public HttpServiceOptions options() {
+        if (serviceOptions != null) {
+            return serviceOptions;
+        }
+        return WebSocketService.super.options();
     }
 }

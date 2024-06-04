@@ -70,7 +70,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
 import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.HttpResult;
-import com.linecorp.armeria.server.annotation.HttpServiceOption;
+import com.linecorp.armeria.server.HttpServiceOption;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ServiceName;

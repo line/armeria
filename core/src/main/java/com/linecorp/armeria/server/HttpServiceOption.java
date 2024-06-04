@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.server;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -23,8 +23,6 @@ import java.lang.annotation.Target;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.HttpServiceOptions;
 
 /**
  * An annotation used to configure {@link HttpServiceOptions} of an {@link HttpService}.

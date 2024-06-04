@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpServiceOptions;
 import com.linecorp.armeria.server.ServiceConfig;
 
 /**
@@ -61,6 +62,13 @@ public final class WebSocketServiceBuilder {
 
     static final int DEFAULT_MAX_FRAME_PAYLOAD_LENGTH = 65535; // 64 * 1024 -1
 
+    static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions
+            .builder()
+            .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
+            .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
+            .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
+            .build();
+
     private final WebSocketServiceHandler handler;
 
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
@@ -73,6 +81,8 @@ public final class WebSocketServiceBuilder {
     private boolean aggregateContinuation;
     @Nullable
     private HttpService fallbackService;
+    @Nullable
+    private HttpServiceOptions serviceOptions;
 
     WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -203,11 +213,23 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
+     * Sets the {@link HttpServiceOptions} for the {@link WebSocketService}.
+     * If not set, {@link WebSocketService#options()} is used.
+     */
+    public WebSocketServiceBuilder serviceOptions(HttpServiceOptions serviceOptions) {
+        requireNonNull(serviceOptions, "serviceOptions");
+        this.serviceOptions = serviceOptions;
+        return this;
+    }
+
+    /**
      * Sets the fallback {@link HttpService} to use when the request is not a valid WebSocket upgrade request.
      * This is useful when you want to serve both WebSocket and HTTP requests at the same path.
      */
     public WebSocketServiceBuilder fallbackService(HttpService fallbackService) {
         this.fallbackService = requireNonNull(fallbackService, "fallbackService");
+        checkArgument(!(fallbackService instanceof WebSocketService),
+                      "fallbackService must not be a WebSocketService.");
         return this;
     }
 
@@ -225,7 +247,7 @@ public final class WebSocketServiceBuilder {
             originPredicate = this.originPredicate;
         }
         return new DefaultWebSocketService(handler, fallbackService, maxFramePayloadLength, allowMaskMismatch,
-                                           subprotocols, allowAnyOrigin,
-                                           originPredicate, aggregateContinuation);
+                                           subprotocols, allowAnyOrigin, originPredicate, aggregateContinuation,
+                                           serviceOptions);
     }
 }

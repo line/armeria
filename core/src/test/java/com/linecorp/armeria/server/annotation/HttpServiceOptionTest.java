@@ -21,6 +21,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.server.HttpServiceOption;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceConfig;
 
