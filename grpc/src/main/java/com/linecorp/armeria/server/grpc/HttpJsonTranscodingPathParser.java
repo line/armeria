@@ -389,7 +389,11 @@ final class HttpJsonTranscodingPathParser {
                 if (parentFieldPath != null) {
                     return parentFieldPath;
                 } else {
-                    return "@p" + StringUtil.toString(pathVarIndex);
+                    if (type == PathMappingType.REGEX) {
+                        return 'p' + StringUtil.toString(pathVarIndex);
+                    } else {
+                        return "@p" + StringUtil.toString(pathVarIndex);
+                    }
                 }
             }
             return StringUtil.toString(pathVarIndex);
