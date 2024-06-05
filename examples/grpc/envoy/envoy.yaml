@@ -42,4 +42,4 @@ static_resources:
                   address:
                     socket_address:
                       address: host.docker.internal
-                      port_value: 8080
+                      port_value: 18080

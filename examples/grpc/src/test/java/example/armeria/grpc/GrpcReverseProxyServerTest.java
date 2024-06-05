@@ -29,7 +29,7 @@ class GrpcReverseProxyServerTest {
     @BeforeAll
     static void startServer() {
         server = Server.builder()
-                .http(8080)
+                .http(18080)
                 .service(GrpcService.builder()
                         .addService(new HelloServiceImpl())
                         .build())
