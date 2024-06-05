@@ -18,6 +18,10 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
+/**
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.EventCount} instead.
+ */
+@Deprecated
 interface EventCounter {
 
     /**

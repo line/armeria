@@ -36,7 +36,10 @@ import com.linecorp.armeria.common.Request;
  * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to a combination of host, method and/or
  * path. If there is no circuit breaker bound to the key, a new one is created by using the given circuit
  * breaker factory.
+ *
+ * @deprecated use {@link com.linecorp.armeria.common.circuitbreaker.KeyedCircuitBreakerMapping} instead.
  */
+@Deprecated
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
     static final CircuitBreakerMapping hostMapping = new KeyedCircuitBreakerMapping(

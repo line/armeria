@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,17 +16,19 @@
 
 package com.linecorp.armeria.common.circuitbreaker;
 
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.circuitbreaker.CircuitBreakerService;
+import com.linecorp.armeria.server.circuitbreaker.CircuitBreakerServiceHandler;
 
 /**
- * A callback that is invoked for each request by {@link CircuitBreakerClient}.
- * Users may implement this class in conjunction with {@link CircuitBreakerClientHandler} to
- * use arbitrary circuit breaker implementations with {@link CircuitBreakerClient}.
+ * A callback that is invoked for each request by {@link CircuitBreakerClient} or {@link CircuitBreakerService}.
+ * Users may implement this class in conjunction with {@link CircuitBreakerClientHandler} or
+ * {@link CircuitBreakerServiceHandler} to use arbitrary circuit breaker implementations with
+ * {@link CircuitBreakerClient} or {@link CircuitBreakerService}.
  *
  * @see CircuitBreakerClientHandler
  */
@@ -34,12 +36,12 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface CircuitBreakerCallback {
 
     /**
-     * Invoked by {@link CircuitBreakerClient} if a request has succeeded.
+     * Invoked by {@link CircuitBreakerClient} or {@link CircuitBreakerService} if a request has succeeded.
      */
     void onSuccess(RequestContext ctx);
 
     /**
-     * Invoked by {@link CircuitBreakerClient} if a request has failed.
+     * Invoked by {@link CircuitBreakerClient} or {@link CircuitBreakerService} if a request has failed.
      *
      * @param throwable a hint for why a request has failed. A {@link CircuitBreaker} may use this value to
      *                  make more informed decisions on how to record a failure event.

@@ -19,7 +19,10 @@ package com.linecorp.armeria.client.circuitbreaker;
 /**
  * A skeletal {@link CircuitBreakerListener} implementation in order for a user to implement only the methods
  * what he or she really needs.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerListener} instead.
  */
+@Deprecated
 public class CircuitBreakerListenerAdapter implements CircuitBreakerListener {
 
     @Override

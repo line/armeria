@@ -25,7 +25,10 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Stores configurations of circuit breaker.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerConfig} instead.
  */
+@Deprecated
 final class CircuitBreakerConfig {
 
     @Nullable

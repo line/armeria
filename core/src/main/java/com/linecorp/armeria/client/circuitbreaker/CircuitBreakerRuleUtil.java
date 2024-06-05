@@ -26,6 +26,12 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
+/**
+ * A utility class that provides common {@link CircuitBreakerRule} implementations.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleUtil} instead.
+ */
+@Deprecated
 final class CircuitBreakerRuleUtil {
 
     static final CompletableFuture<CircuitBreakerDecision> SUCCESS_DECISION =

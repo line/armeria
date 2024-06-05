@@ -33,7 +33,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * Provides {@link CircuitBreaker} stats.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerMetrics} instead.
  */
+@Deprecated
 final class CircuitBreakerMetrics {
 
     private final AtomicReference<EventCount> latestEventCount = new AtomicReference<>(EventCount.ZERO);

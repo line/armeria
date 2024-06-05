@@ -30,7 +30,10 @@ import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * An {@link EventCounter} that accumulates the count of events within a time window.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.SlidingWindowCounter} instead.
  */
+@Deprecated
 final class SlidingWindowCounter implements EventCounter {
 
     private final Ticker ticker;

@@ -42,7 +42,10 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
  * A builder for creating a new {@link CircuitBreakerRule}.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerRuleBuilder} instead.
  */
+@Deprecated
 public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
 
     CircuitBreakerRuleBuilder(
@@ -110,6 +113,7 @@ public final class CircuitBreakerRuleBuilder extends AbstractRuleBuilder {
     }
 
     // Override the return type and Javadoc of chaining methods in superclass.
+
     /**
      * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRule}.
      * If the specified {@code responseHeadersFilter} returns {@code true},

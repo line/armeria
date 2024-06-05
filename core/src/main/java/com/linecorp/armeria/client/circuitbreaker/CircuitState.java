@@ -18,7 +18,10 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 /**
  * Defines the states of <a href="https://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker</a>.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitState} instead.
  */
+@Deprecated
 public enum CircuitState {
     /**
      * Initial state. All requests are sent to the remote service.

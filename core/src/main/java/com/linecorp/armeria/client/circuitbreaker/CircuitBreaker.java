@@ -21,7 +21,10 @@ import java.time.Duration;
 /**
  * A <a href="https://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker</a>, which tracks the number of
  * success/failure requests and detects a remote service failure.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreaker} instead.
  */
+@Deprecated
 public interface CircuitBreaker {
 
     /**

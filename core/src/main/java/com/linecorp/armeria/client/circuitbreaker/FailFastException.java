@@ -22,8 +22,11 @@ import com.linecorp.armeria.common.Flags;
 
 /**
  * An exception indicating that a request has been failed by circuit breaker.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.FailFastException} instead.
  */
-public final class FailFastException extends RuntimeException {
+@Deprecated
+public class FailFastException extends RuntimeException {
 
     private static final long serialVersionUID = -946827349873835165L;
 

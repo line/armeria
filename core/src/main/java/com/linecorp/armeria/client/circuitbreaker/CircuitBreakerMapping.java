@@ -26,8 +26,11 @@ import com.linecorp.armeria.common.Request;
 
 /**
  * Returns a {@link CircuitBreaker} instance from remote invocation parameters.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerMapping} instead.
  */
 @FunctionalInterface
+@Deprecated
 public interface CircuitBreakerMapping extends ClientCircuitBreakerGenerator<CircuitBreaker> {
 
     /**

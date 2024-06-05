@@ -21,7 +21,10 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * The listener interface for receiving {@link CircuitBreaker} events.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.circuitbreaker.CircuitBreakerListener} instead.
  */
+@Deprecated
 public interface CircuitBreakerListener {
 
     /**
