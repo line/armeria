@@ -165,7 +165,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * @see VirtualHostBuilder
  */
-public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
+public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<ServerBuilder> {
     private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     // Defaults to no graceful shutdown.
@@ -255,6 +255,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.requestAutoAbortDelayMillis(0);
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
+        virtualHostTemplate.multipartRemovalStrategy(Flags.defaultMultipartRemovalStrategy());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
 
@@ -950,6 +951,18 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     public ServerBuilder multipartUploadsLocation(Path path) {
         requireNonNull(path, "path");
         virtualHostTemplate.multipartUploadsLocation(path);
+        return this;
+    }
+
+    /**
+     * Sets the {@link MultipartRemovalStrategy} that determines when to remove temporary files created
+     * for multipart requests.
+     * If not set, {@link MultipartRemovalStrategy#ON_RESPONSE_COMPLETION} is used by default.
+     */
+    @UnstableApi
+    public ServerBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        requireNonNull(removalStrategy, "removalStrategy");
+        virtualHostTemplate.multipartRemovalStrategy(removalStrategy);
         return this;
     }
 

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.stream;
 
 import java.io.InputStream;
-import java.util.concurrent.ExecutorService;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -27,7 +26,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * and publishes using {@link HttpData}.
  */
 @UnstableApi
-public final class InputStreamStreamMessageBuilder extends AbstractByteStreamMessageBuilder {
+public final class InputStreamStreamMessageBuilder
+        extends AbstractByteStreamMessageBuilder<InputStreamStreamMessageBuilder> {
 
     private final InputStream inputStream;
 
@@ -38,17 +38,5 @@ public final class InputStreamStreamMessageBuilder extends AbstractByteStreamMes
     @Override
     public ByteStreamMessage build() {
         return new InputStreamStreamMessage(inputStream, executor(), bufferSize());
-    }
-
-    // Override the return type of the chaining methods in the superclass.
-
-    @Override
-    public InputStreamStreamMessageBuilder executor(ExecutorService executor) {
-        return (InputStreamStreamMessageBuilder) super.executor(executor);
-    }
-
-    @Override
-    public InputStreamStreamMessageBuilder bufferSize(int bufferSize) {
-        return (InputStreamStreamMessageBuilder) super.bufferSize(bufferSize);
     }
 }

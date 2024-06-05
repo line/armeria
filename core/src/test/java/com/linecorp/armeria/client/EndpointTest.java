@@ -529,6 +529,11 @@ class EndpointTest {
         // ipAddr is omitted if hostname is an IP address.
         assertThat(Endpoint.of("127.0.0.1").toString()).isEqualTo("Endpoint{127.0.0.1, weight=1000}");
         assertThat(Endpoint.of("::1").toString()).isEqualTo("Endpoint{[::1], weight=1000}");
+
+        // attributes
+        final Endpoint endpointWithAttr = Endpoint.of("127.0.0.1").withAttr(AttributeKey.valueOf("test"), 1);
+        assertThat(endpointWithAttr.toString())
+                .isEqualTo("Endpoint{127.0.0.1, weight=1000, attributes=[test=1]}");
     }
 
     @Test

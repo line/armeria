@@ -116,6 +116,11 @@ public final class XdsTestResources {
                                     .build();
     }
 
+    public static ClusterLoadAssignment loadAssignment(String clusterName) {
+        return ClusterLoadAssignment.newBuilder().setClusterName(clusterName)
+                                    .build();
+    }
+
     public static Cluster bootstrapCluster(URI uri, String bootstrapClusterName) {
         final ClusterLoadAssignment loadAssignment =
                 loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());

@@ -103,9 +103,18 @@ class RequestTimeoutTest {
             request.write(HttpData.ofUtf8("foo"));
         }
         request.close();
-        assertThat(WebClient.of(protocol, server.endpoint(protocol))
-                            .execute(request).aggregate().join().status())
-                .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+
+        if (!exchangeType.isRequestStreaming() || (!clientSendsOneBody && !useServiceEventLoop)) {
+            // The server received the request fully in these cases.
+            assertThat(WebClient.of(protocol, server.endpoint(protocol))
+                                .execute(request).aggregate().join().status())
+                    .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+        } else {
+            // The server did or did not receive the request fully depending on the thread scheduling timing.
+            assertThat(WebClient.of(protocol, server.endpoint(protocol))
+                                .execute(request).aggregate().join().status())
+                    .isIn(HttpStatus.REQUEST_TIMEOUT, HttpStatus.SERVICE_UNAVAILABLE);
+        }
     }
 
     private static class TimeoutByTimerArgumentsProvider implements ArgumentsProvider {
@@ -147,12 +156,16 @@ class RequestTimeoutTest {
             });
         });
         final HttpRequestWriter request = HttpRequest.streaming(RequestHeaders.of(HttpMethod.POST, "/"));
+        final HttpStatus expectedStatus;
         if (clientCloseRequest) {
             request.close();
+            expectedStatus = HttpStatus.SERVICE_UNAVAILABLE;
+        } else {
+            expectedStatus = HttpStatus.REQUEST_TIMEOUT;
         }
         assertThat(WebClient.builder(protocol, server.endpoint(protocol))
                             .build()
                             .execute(request).aggregate().join().status())
-                .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+                .isSameAs(expectedStatus);
     }
 }

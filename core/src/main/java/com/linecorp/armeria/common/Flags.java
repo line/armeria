@@ -45,6 +45,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -58,6 +59,7 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
@@ -415,6 +417,9 @@ public final class Flags {
 
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
+
+    private static final MultipartRemovalStrategy DEFAULT_MULTIPART_REMOVAL_STRATEGY =
+            getValue(FlagsProvider::defaultMultipartRemovalStrategy, "defaultMultipartRemovalStrategy");
 
     private static final Sampler<? super RequestContext> REQUEST_CONTEXT_LEAK_DETECTION_SAMPLER =
             getValue(FlagsProvider::requestContextLeakDetectionSampler, "requestContextLeakDetectionSampler");
@@ -870,8 +875,11 @@ public final class Flags {
      * If disabled, the {@code OPTIONS * HTTP/1.1} request with {@code "Upgrade: h2c"} header is sent for
      * a cleartext HTTP/2 connection. Consider disabling this flag if your HTTP servers have issues
      * handling or rejecting the HTTP/2 connection preface without a upgrade request.
-     * Note that this option does not affect ciphertext HTTP/2 connections, which use ALPN for protocol
-     * negotiation, and it has no effect if a user specified the value explicitly via
+     *
+     * <p>Note that this option is only effective when the {@link SessionProtocol} of the {@link Endpoint} is
+     * {@link SessionProtocol#HTTP}. This option does not affect ciphertext HTTP/2 connections, which use ALPN
+     * for protocol negotiation, or {@link SessionProtocol#H2C}, which will always use HTTP/2 connection
+     * preface. This option is ignored if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#useHttp2Preface(boolean)}.
      *
      * <p>This flag is enabled by default. Specify the
@@ -1475,6 +1483,15 @@ public final class Flags {
      */
     public static Path defaultMultipartUploadsLocation() {
         return DEFAULT_MULTIPART_UPLOADS_LOCATION;
+    }
+
+    /**
+     * Returns the {@link MultipartRemovalStrategy} that is used to determine how to remove the uploaded files
+     * from {@code multipart/form-data}.
+     */
+    @UnstableApi
+    public static MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
+        return DEFAULT_MULTIPART_REMOVAL_STRATEGY;
     }
 
     /**

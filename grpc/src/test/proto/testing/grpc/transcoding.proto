@@ -74,13 +74,13 @@ service HttpJsonTranscodingTestService {
 
   rpc EchoTimestampAndDuration(EchoTimestampAndDurationRequest) returns (EchoTimestampAndDurationResponse) {
     option (google.api.http) = {
-      get: "/v1/echo/{timestamp}/{duration}"
+      get: "/v1/echo/timestamp/{timestamp}/{duration}"
     };
   }
 
   rpc EchoTimestamp(EchoTimestampRequest) returns (EchoTimestampResponse) {
     option (google.api.http) = {
-      post: "/v1/echo/{timestamp}:get",
+      post: "/v1/echo/timestamp/{timestamp}:get",
       body: "*"
     };
   }
