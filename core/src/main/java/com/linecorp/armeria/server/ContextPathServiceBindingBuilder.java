@@ -161,15 +161,18 @@ public final class ContextPathServiceBindingBuilder
     }
 
     @Override
-    public ContextPathServiceBindingBuilder requestAutoAbortDelayMillis(
-            long delayMillis) {
+    public ContextPathServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
         return (ContextPathServiceBindingBuilder) super.requestAutoAbortDelayMillis(delayMillis);
     }
 
     @Override
-    public ContextPathServiceBindingBuilder multipartUploadsLocation(
-            Path multipartUploadsLocation) {
+    public ContextPathServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (ContextPathServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public ContextPathServiceBindingBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        return (ContextPathServiceBindingBuilder) super.multipartRemovalStrategy(removalStrategy);
     }
 
     @Override

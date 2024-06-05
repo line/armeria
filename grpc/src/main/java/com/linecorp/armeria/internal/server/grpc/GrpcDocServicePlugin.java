@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -93,6 +94,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
     private static final JsonFormat.Printer defaultExamplePrinter =
             JsonFormat.printer().includingDefaultValueFields();
+
+    private static final Pattern PATH_PARAM_PATTERN = Pattern.compile("\\(\\?<([\\w]+)>[^)]+\\)");
 
     private final GrpcDocStringExtractor docstringExtractor = new GrpcDocStringExtractor();
 
@@ -309,7 +312,15 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                            .build()).collect(toImmutableList());
 
             final List<String> examplePaths =
-                    sortedEndpoints.stream().map(httpEndpoint -> httpEndpoint.spec().route().patternString())
+                    sortedEndpoints.stream()
+                                   .map(httpEndpoint -> {
+                                       final Route route = httpEndpoint.spec().route();
+                                       if (route.pathType() == RoutePathType.REGEX ||
+                                           route.pathType() == RoutePathType.REGEX_WITH_PREFIX) {
+                                           return convertRegexPath(route.patternString());
+                                       }
+                                       return route.patternString();
+                                   })
                                    .collect(toImmutableList());
 
             final List<String> exampleQueries =
@@ -335,6 +346,12 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                     firstEndpoint.httpMethod(), DescriptionInfo.empty()));
         });
         return new ServiceInfo(serviceName, methodInfos.build());
+    }
+
+    @VisibleForTesting
+    static String convertRegexPath(String patternString) {
+        // map '/a/(?<p0>[^/]+):get' to '/a/p0:get'
+        return PATH_PARAM_PATTERN.matcher(patternString).replaceAll("$1");
     }
 
     private static TypeSignature descriptiveMessageSignature(Descriptor descriptor) {

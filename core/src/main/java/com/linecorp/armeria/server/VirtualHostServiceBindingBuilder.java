@@ -318,6 +318,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
+    public VirtualHostServiceBindingBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        return (VirtualHostServiceBindingBuilder) super.multipartRemovalStrategy(removalStrategy);
+    }
+
+    @Override
     public VirtualHostServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
                                                                boolean shutdownOnStop) {
         return (VirtualHostServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);

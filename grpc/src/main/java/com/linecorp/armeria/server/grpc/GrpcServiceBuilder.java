@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
@@ -996,16 +997,16 @@ public final class GrpcServiceBuilder {
             registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
 
-        final GrpcExceptionHandlerFunction grpcExceptionHandler;
+        GrpcExceptionHandlerFunction grpcExceptionHandler;
         if (exceptionMappingsBuilder != null) {
-            grpcExceptionHandler = exceptionMappingsBuilder.build();
+            grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(GrpcExceptionHandlerFunction.of());
+        } else if (exceptionHandler != null) {
+            grpcExceptionHandler = exceptionHandler.orElse(GrpcExceptionHandlerFunction.of());
         } else {
-            grpcExceptionHandler = exceptionHandler;
+            grpcExceptionHandler = GrpcExceptionHandlerFunction.of();
         }
-
-        if (grpcExceptionHandler != null) {
-            registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
-        }
+        grpcExceptionHandler = new UnwrappingGrpcExceptionHandleFunction(grpcExceptionHandler);
+        registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
 
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();

@@ -61,6 +61,7 @@ final class WeightRampingUpStrategyTest {
     private static final Queue<ScheduledFuture<?>> scheduledFutures = new ConcurrentLinkedQueue<>();
     private static final long rampingUpIntervalNanos = TimeUnit.MILLISECONDS.toNanos(20000);
     private static final long rampingUpTaskWindowNanos = TimeUnit.MILLISECONDS.toNanos(1000);
+    private static final EndpointWeightTransition weightTransition = linear();
 
     @BeforeEach
     void setUp() {
@@ -88,7 +89,8 @@ final class WeightRampingUpStrategyTest {
     @Test
     void rampingUpIsDoneAfterNumberOfSteps() {
         final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 2);
+        final int steps = 2;
+        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
         ticker.addAndGet(rampingUpIntervalNanos);
         final long windowIndex = selector.windowIndex(ticker.get());
         endpointGroup.addEndpoint(Endpoint.of("bar.com"));
@@ -96,7 +98,7 @@ final class WeightRampingUpStrategyTest {
         final Set<EndpointAndStep> endpointAndSteps =
                 selector.rampingUpWindowsMap.get(windowIndex).endpointAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE).containsExactly(
-                endpointAndStep(Endpoint.of("bar.com"), 1, 500));
+                endpointAndStep(Endpoint.of("bar.com"), 1, steps));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
@@ -123,7 +125,7 @@ final class WeightRampingUpStrategyTest {
         final int steps = 10;
         final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
 
-        addSecondEndpoints(endpointGroup, selector);
+        addSecondEndpoints(endpointGroup, selector, steps);
 
         ticker.addAndGet(rampingUpTaskWindowNanos - 1);
 
@@ -136,10 +138,10 @@ final class WeightRampingUpStrategyTest {
                 selector.rampingUpWindowsMap.get(windowIndex).endpointAndSteps();
         assertThat(endpointAndSteps1).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                      .containsExactlyInAnyOrder(
-                                             endpointAndStep(Endpoint.of("bar.com"), 1, 100),
-                                             endpointAndStep(Endpoint.of("bar1.com"), 1, 100),
-                                             endpointAndStep(Endpoint.of("baz.com"), 1, 100),
-                                             endpointAndStep(Endpoint.of("baz1.com"), 1, 100));
+                                             endpointAndStep(Endpoint.of("bar.com"), 1, steps),
+                                             endpointAndStep(Endpoint.of("bar1.com"), 1, steps),
+                                             endpointAndStep(Endpoint.of("baz.com"), 1, steps),
+                                             endpointAndStep(Endpoint.of("baz1.com"), 1, steps));
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
@@ -157,7 +159,7 @@ final class WeightRampingUpStrategyTest {
         final int steps = 10;
         final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
 
-        addSecondEndpoints(endpointGroup, selector);
+        addSecondEndpoints(endpointGroup, selector, steps);
 
         ticker.addAndGet(steps * rampingUpIntervalNanos);
 
@@ -169,8 +171,8 @@ final class WeightRampingUpStrategyTest {
                 selector.rampingUpWindowsMap.get(window).endpointAndSteps();
         assertThat(endpointAndSteps1).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                      .containsExactlyInAnyOrder(
-                                             endpointAndStep(Endpoint.of("baz.com"), 1, 100),
-                                             endpointAndStep(Endpoint.of("baz1.com"), 1, 100));
+                                             endpointAndStep(Endpoint.of("baz.com"), 1, steps),
+                                             endpointAndStep(Endpoint.of("baz1.com"), 1, steps));
     }
 
     @Test
@@ -180,7 +182,7 @@ final class WeightRampingUpStrategyTest {
         final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
 
         long window = selector.windowIndex(ticker.get());
-        addSecondEndpoints(endpointGroup, selector);
+        addSecondEndpoints(endpointGroup, selector, steps);
 
         // Add 19 seconds so now it's within the window of second ramping up of bar.com and bar1.com.
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(19));
@@ -190,8 +192,8 @@ final class WeightRampingUpStrategyTest {
                 selector.rampingUpWindowsMap.get(window).endpointAndSteps();
         assertThat(endpointAndSteps1).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                      .containsExactlyInAnyOrder(
-                                             endpointAndStep(Endpoint.of("bar.com"), 1, 100),
-                                             endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
+                                             endpointAndStep(Endpoint.of("bar.com"), 1, steps),
+                                             endpointAndStep(Endpoint.of("bar1.com"), 1, steps));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
@@ -213,10 +215,10 @@ final class WeightRampingUpStrategyTest {
                 selector.rampingUpWindowsMap.get(window).endpointAndSteps();
         assertThat(endpointAndSteps2).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                      .containsExactlyInAnyOrder(
-                                             endpointAndStep(Endpoint.of("bar.com"), 2, 200),
-                                             endpointAndStep(Endpoint.of("bar1.com"), 2, 200),
-                                             endpointAndStep(Endpoint.of("qux.com"), 1, 100),
-                                             endpointAndStep(Endpoint.of("qux1.com"), 1, 100));
+                                             endpointAndStep(Endpoint.of("bar.com"), 2, steps),
+                                             endpointAndStep(Endpoint.of("bar1.com"), 2, steps),
+                                             endpointAndStep(Endpoint.of("qux.com"), 1, steps),
+                                             endpointAndStep(Endpoint.of("qux1.com"), 1, steps));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
@@ -258,7 +260,7 @@ final class WeightRampingUpStrategyTest {
                 selector.rampingUpWindowsMap.get(window).endpointAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
-                                            endpointAndStep(Endpoint.of("bar.com"), 1, 100));
+                                            endpointAndStep(Endpoint.of("bar.com"), 1, steps));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
@@ -275,7 +277,7 @@ final class WeightRampingUpStrategyTest {
         endpointAndSteps = selector.rampingUpWindowsMap.get(window).endpointAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
-                                            endpointAndStep(Endpoint.of("bar.com"), 2, 200));
+                                            endpointAndStep(Endpoint.of("bar.com"), 2, steps));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry)
                 .usingElementComparator(EndpointComparator.INSTANCE)
@@ -291,7 +293,7 @@ final class WeightRampingUpStrategyTest {
                                                     Endpoint.of("bar.com")));
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE).containsExactly(
-                endpointAndStep(Endpoint.of("bar.com"), 2, 200));
+                endpointAndStep(Endpoint.of("bar.com"), 2, steps));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
@@ -306,7 +308,7 @@ final class WeightRampingUpStrategyTest {
         final int steps = 10;
         final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
 
-        addSecondEndpoints(endpointGroup, selector);
+        addSecondEndpoints(endpointGroup, selector, steps);
 
         final long window = selector.windowIndex(ticker.get());
         // bar1.com is removed and the weight of bar.com is ramped up.
@@ -317,7 +319,7 @@ final class WeightRampingUpStrategyTest {
         final Set<EndpointAndStep> endpointAndSteps =
                 selector.rampingUpWindowsMap.get(window).endpointAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE).containsExactly(
-                endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, 300));
+                endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, steps));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
@@ -346,7 +348,7 @@ final class WeightRampingUpStrategyTest {
         final int steps = 10;
         final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
 
-        addSecondEndpoints(endpointGroup, selector);
+        addSecondEndpoints(endpointGroup, selector, steps);
 
         final long window = selector.windowIndex(ticker.get());
         // The three bar.com are converted into onw bar.com with 3000 weight.
@@ -359,10 +361,10 @@ final class WeightRampingUpStrategyTest {
                 selector.rampingUpWindowsMap.get(window).endpointAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
-                                            endpointAndStep(Endpoint.of("bar.com"), 1, 100),
-                                            endpointAndStep(Endpoint.of("bar.com"), 1, 100),
-                                            endpointAndStep(Endpoint.of("bar.com"), 1, 100),
-                                            endpointAndStep(Endpoint.of("bar1.com"), 1, 100)
+                                            endpointAndStep(Endpoint.of("bar.com"), 1, steps),
+                                            endpointAndStep(Endpoint.of("bar.com"), 1, steps),
+                                            endpointAndStep(Endpoint.of("bar.com"), 1, steps),
+                                            endpointAndStep(Endpoint.of("bar1.com"), 1, steps)
                                     );
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
@@ -401,7 +403,7 @@ final class WeightRampingUpStrategyTest {
                 selector.rampingUpWindowsMap.get(window).endpointAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
-                                            endpointAndStep(Endpoint.of("foo.com"), 1, 100));
+                                            endpointAndStep(Endpoint.of("foo.com"), 1, steps));
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(Endpoint.of("foo.com").withWeight(100));
@@ -415,7 +417,7 @@ final class WeightRampingUpStrategyTest {
 
         ticker.addAndGet(steps * rampingUpIntervalNanos);
 
-        addSecondEndpoints(endpointGroup, selector);
+        addSecondEndpoints(endpointGroup, selector, steps);
         assertThat(scheduledFutures).hasSize(2);
 
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(steps));
@@ -465,7 +467,7 @@ final class WeightRampingUpStrategyTest {
         final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final WeightRampingUpStrategy strategy =
                 new WeightRampingUpStrategy(
-                        linear(), ImmediateExecutor::new,
+                        weightTransition, ImmediateExecutor::new,
                         TimeUnit.NANOSECONDS.toMillis(intervalNanos), totalSteps,
                         TimeUnit.NANOSECONDS.toMillis(windowNanos), ticker::get);
         final RampingUpEndpointWeightSelector selector =
@@ -482,7 +484,7 @@ final class WeightRampingUpStrategyTest {
                                                                        int numberOfSteps) {
         final WeightRampingUpStrategy strategy =
                 new WeightRampingUpStrategy(
-                        linear(), ImmediateExecutor::new,
+                        weightTransition, ImmediateExecutor::new,
                         TimeUnit.NANOSECONDS.toMillis(rampingUpIntervalNanos), numberOfSteps,
                         TimeUnit.NANOSECONDS.toMillis(rampingUpTaskWindowNanos), ticker::get);
 
@@ -517,7 +519,8 @@ final class WeightRampingUpStrategyTest {
     }
 
     private void addSecondEndpoints(DynamicEndpointGroup endpointGroup,
-                                    RampingUpEndpointWeightSelector selector) {
+                                    RampingUpEndpointWeightSelector selector,
+                                    int steps) {
         endpointGroup.addEndpoint(Endpoint.of("bar.com"));
         endpointGroup.addEndpoint(Endpoint.of("bar1.com"));
 
@@ -527,8 +530,8 @@ final class WeightRampingUpStrategyTest {
                 selector.rampingUpWindowsMap.get(windowIndex).endpointAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
-                                            endpointAndStep(Endpoint.of("bar.com"), 1, 100),
-                                            endpointAndStep(Endpoint.of("bar1.com"), 1, 100));
+                                            endpointAndStep(Endpoint.of("bar.com"), 1, steps),
+                                            endpointAndStep(Endpoint.of("bar1.com"), 1, steps));
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
@@ -539,10 +542,8 @@ final class WeightRampingUpStrategyTest {
                                       );
     }
 
-    private static EndpointAndStep endpointAndStep(Endpoint endpoint, int step, int currentWeight) {
-        final EndpointAndStep endpointAndStep = new EndpointAndStep(endpoint, step);
-        endpointAndStep.currentWeight(currentWeight);
-        return endpointAndStep;
+    private static EndpointAndStep endpointAndStep(Endpoint endpoint, int step, int totalSteps) {
+        return new EndpointAndStep(endpoint, weightTransition, step, totalSteps);
     }
 
     /**

@@ -45,7 +45,7 @@ import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.server.metric.PrometheusExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.micrometer.core.instrument.MeterRegistry;
