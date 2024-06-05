@@ -162,102 +162,99 @@ class ServerMetricsTest {
     void checkWhenOk(SessionProtocol sessionProtocol, long expectedPendingHttp1Request,
                      long expectedPendingHttp2Request) throws InterruptedException {
         // maxConnectionAgeMillis() method is for testing whether activeConnections is decreased.
-        final ClientFactory clientFactory = ClientFactory.builder()
-                                                         .maxConnectionAgeMillis(1000)
-                                                         .build();
-        final WebClient webClient = WebClient.builder(server.uri(sessionProtocol))
-                                             .factory(clientFactory)
-                                             .build();
+        try (ClientFactory clientFactory = ClientFactory.builder()
+                                                        .maxConnectionAgeMillis(1000)
+                                                        .build()) {
+            final WebClient webClient = WebClient.builder(server.uri(sessionProtocol))
+                                                 .factory(clientFactory)
+                                                 .build();
 
-        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, "/ok/http");
-        final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request)
-                                                                            .aggregate();
+            final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, "/ok/http");
+            final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request)
+                                                                                .aggregate();
 
-        final ServerMetrics serverMetrics = server.server()
-                                                  .config()
-                                                  .serverMetrics();
-        await().until(() -> serverMetrics.pendingRequests() == 1);
-        assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
-        assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
-        assertThat(serverMetrics.activeConnections()).isOne();
-        request.close();
+            final ServerMetrics serverMetrics = server.server()
+                                                      .config()
+                                                      .serverMetrics();
+            await().until(() -> serverMetrics.pendingRequests() == 1);
+            assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
+            assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
+            assertThat(serverMetrics.activeConnections()).isOne();
+            request.close();
 
-        final AggregatedHttpResponse result = response.join();
+            final AggregatedHttpResponse result = response.join();
 
-        assertThat(result.status()).isSameAs(HttpStatus.OK);
-        assertThat(serverMetrics.pendingRequests()).isZero();
-        assertThat(serverMetrics.activeRequests()).isZero();
-        await().until(() -> serverMetrics.activeConnections() == 0);
-
-        clientFactory.close();
+            assertThat(result.status()).isSameAs(HttpStatus.OK);
+            assertThat(serverMetrics.pendingRequests()).isZero();
+            assertThat(serverMetrics.activeRequests()).isZero();
+            await().until(() -> serverMetrics.activeConnections() == 0);
+        }
     }
 
     @CsvSource({ "H1C, /server-error/http1, 1, 0", "H2C, /server-error/http2, 0, 1" })
     @ParameterizedTest
     void checkWhenServerError(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request,
                               long expectedPendingHttp2Request) throws InterruptedException {
-        final ClientFactory clientFactory = ClientFactory.builder()
-                                                         .maxConnectionAgeMillis(1000)
-                                                         .build();
-        final WebClient webClient = WebClient.builder(server.uri(sessionProtocol))
-                                             .factory(clientFactory)
-                                             .build();
+        try (final ClientFactory clientFactory = ClientFactory.builder()
+                                                              .maxConnectionAgeMillis(1000)
+                                                              .build()) {
+            final WebClient webClient = WebClient.builder(server.uri(sessionProtocol))
+                                                 .factory(clientFactory)
+                                                 .build();
 
-        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, path);
-        final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request)
-                                                                            .aggregate();
+            final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, path);
+            final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request)
+                                                                                .aggregate();
 
-        final ServerMetrics serverMetrics = server.server()
-                                                  .config()
-                                                  .serverMetrics();
-        await().until(() -> serverMetrics.pendingRequests() == 1);
-        assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
-        assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
-        assertThat(serverMetrics.activeConnections()).isOne();
-        request.close();
+            final ServerMetrics serverMetrics = server.server()
+                                                      .config()
+                                                      .serverMetrics();
+            await().until(() -> serverMetrics.pendingRequests() == 1);
+            assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
+            assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
+            assertThat(serverMetrics.activeConnections()).isOne();
+            request.close();
 
-        final AggregatedHttpResponse result = response.join();
+            final AggregatedHttpResponse result = response.join();
 
-        assertThat(result.status()).isSameAs(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(serverMetrics.pendingRequests()).isZero();
-        assertThat(serverMetrics.activeRequests()).isZero();
-        await().until(() -> serverMetrics.activeConnections() == 0);
-
-        clientFactory.close();
+            assertThat(result.status()).isSameAs(HttpStatus.INTERNAL_SERVER_ERROR);
+            assertThat(serverMetrics.pendingRequests()).isZero();
+            assertThat(serverMetrics.activeRequests()).isZero();
+            await().until(() -> serverMetrics.activeConnections() == 0);
+        }
     }
 
     @CsvSource({ "H1C, 1, 0", "H2C, 0, 1" })
     @ParameterizedTest
     void checkWhenRequestTimeout(SessionProtocol sessionProtocol, long expectedPendingHttp1Request,
                                  long expectedPendingHttp2Request) throws InterruptedException {
-        final ClientFactory clientFactory = ClientFactory.builder()
-                                                         .maxConnectionAgeMillis(1000)
-                                                         .build();
-        final WebClient webClient = WebClient.builder(server.uri(sessionProtocol))
-                                             .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
-                                             .factory(clientFactory)
-                                             .build();
+        try (final ClientFactory clientFactory = ClientFactory.builder()
+                                                              .maxConnectionAgeMillis(1000)
+                                                              .build()) {
+            final WebClient webClient = WebClient.builder(server.uri(sessionProtocol))
+                                                 .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
+                                                 .factory(clientFactory)
+                                                 .build();
 
-        final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, "/request-timeout/http");
-        final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request)
-                                                                            .aggregate();
+            final HttpRequestWriter request = HttpRequest.streaming(HttpMethod.POST, "/request-timeout/http");
+            final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request)
+                                                                                .aggregate();
 
-        final ServerMetrics serverMetrics = server.server()
-                                                  .config()
-                                                  .serverMetrics();
-        await().until(() -> serverMetrics.pendingRequests() == 1);
-        assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
-        assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
-        assertThat(serverMetrics.activeConnections()).isOne();
-        request.close();
+            final ServerMetrics serverMetrics = server.server()
+                                                      .config()
+                                                      .serverMetrics();
+            await().until(() -> serverMetrics.pendingRequests() == 1);
+            assertThat(serverMetrics.pendingHttp1Requests()).isEqualTo(expectedPendingHttp1Request);
+            assertThat(serverMetrics.pendingHttp2Requests()).isEqualTo(expectedPendingHttp2Request);
+            assertThat(serverMetrics.activeConnections()).isOne();
+            request.close();
 
-        final AggregatedHttpResponse result = response.join();
+            final AggregatedHttpResponse result = response.join();
 
-        assertThat(result.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(serverMetrics.pendingRequests()).isZero();
-        assertThat(serverMetrics.activeRequests()).isZero();
-        await().until(() -> serverMetrics.activeConnections() == 0);
-
-        clientFactory.close();
+            assertThat(result.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+            assertThat(serverMetrics.pendingRequests()).isZero();
+            assertThat(serverMetrics.activeRequests()).isZero();
+            await().until(() -> serverMetrics.activeConnections() == 0);
+        }
     }
 }

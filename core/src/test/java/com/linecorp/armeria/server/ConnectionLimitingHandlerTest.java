@@ -20,19 +20,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.HttpResponse;
-
 import io.netty.channel.embedded.EmbeddedChannel;
 
 class ConnectionLimitingHandlerTest {
 
     @Test
     void testExceedMaxNumConnections() {
-        final Server server = Server.builder()
-                                    .service("/", (ctx, req) -> HttpResponse.of(200))
-                                    .build();
+        final ServerMetrics serverMetrics = new ServerMetrics();
         final ConnectionLimitingHandler handler =
-                new ConnectionLimitingHandler(1, server.config().serverMetrics());
+                new ConnectionLimitingHandler(1, serverMetrics);
 
         final EmbeddedChannel ch1 = new EmbeddedChannel(handler);
         ch1.writeInbound(ch1);

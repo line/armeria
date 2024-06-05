@@ -386,7 +386,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         HttpResponse res;
         req.init(reqCtx);
-        final ServerMetrics serverMetrics = config.serverMetrics();
         final CompletableFuture<Void> whenAggregated = req.whenAggregated();
         if (whenAggregated != null) {
             res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
