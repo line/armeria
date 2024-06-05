@@ -18,10 +18,8 @@ package com.linecorp.armeria.server.zookeeper;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.function.Consumer;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
 import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
 import com.linecorp.armeria.server.Server;
@@ -54,7 +52,8 @@ import com.linecorp.armeria.server.Server;
  * sb.serverListener(listener);
  * }</pre>
  * */
-public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrameworkBuilder {
+public final class ZooKeeperUpdatingListenerBuilder
+        extends AbstractCuratorFrameworkBuilder<ZooKeeperUpdatingListenerBuilder> {
 
     private final ZooKeeperRegistrationSpec spec;
 
@@ -92,32 +91,5 @@ public final class ZooKeeperUpdatingListenerBuilder extends AbstractCuratorFrame
         final boolean internalClient = !isUserSpecifiedCuratorFramework();
 
         return new ZooKeeperUpdatingListener(client, znodePath(), spec, internalClient);
-    }
-
-    // Override the return type of the chaining methods in the superclass.
-
-    @Override
-    public ZooKeeperUpdatingListenerBuilder connectTimeout(Duration connectTimeout) {
-        return (ZooKeeperUpdatingListenerBuilder) super.connectTimeout(connectTimeout);
-    }
-
-    @Override
-    public ZooKeeperUpdatingListenerBuilder connectTimeoutMillis(long connectTimeoutMillis) {
-        return (ZooKeeperUpdatingListenerBuilder) super.connectTimeoutMillis(connectTimeoutMillis);
-    }
-
-    @Override
-    public ZooKeeperUpdatingListenerBuilder sessionTimeout(Duration sessionTimeout) {
-        return (ZooKeeperUpdatingListenerBuilder) super.sessionTimeout(sessionTimeout);
-    }
-
-    @Override
-    public ZooKeeperUpdatingListenerBuilder sessionTimeoutMillis(long sessionTimeoutMillis) {
-        return (ZooKeeperUpdatingListenerBuilder) super.sessionTimeoutMillis(sessionTimeoutMillis);
-    }
-
-    @Override
-    public ZooKeeperUpdatingListenerBuilder customizer(Consumer<? super Builder> customizer) {
-        return (ZooKeeperUpdatingListenerBuilder) super.customizer(customizer);
     }
 }

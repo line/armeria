@@ -46,7 +46,9 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 /**
  * A skeletal builder implementation for creating a new {@link HealthCheckedEndpointGroup}.
  */
-public abstract class AbstractHealthCheckedEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+public abstract class AbstractHealthCheckedEndpointGroupBuilder
+        <SELF extends AbstractHealthCheckedEndpointGroupBuilder<SELF>>
+        extends AbstractDynamicEndpointGroupBuilder<SELF> {
 
     static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
 
@@ -79,17 +81,17 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      * same as the {@link ClientFactory} used when creating a {@link Client} stub using the
      * {@link EndpointGroup}.
      */
-    public AbstractHealthCheckedEndpointGroupBuilder clientFactory(ClientFactory clientFactory) {
+    public SELF clientFactory(ClientFactory clientFactory) {
         clientOptionsBuilder.factory(requireNonNull(clientFactory, "clientFactory"));
-        return this;
+        return self();
     }
 
     /**
      * Sets the {@link SessionProtocol} to be used when making health check requests.
      */
-    public AbstractHealthCheckedEndpointGroupBuilder protocol(SessionProtocol protocol) {
+    public SELF protocol(SessionProtocol protocol) {
         this.protocol = requireNonNull(protocol, "protocol");
-        return this;
+        return self();
     }
 
     /**
@@ -97,17 +99,17 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      * specified by {@link EndpointGroup}'s {@link Endpoint}s. This property is useful when your
      * server listens to health check requests on a different port.
      */
-    public AbstractHealthCheckedEndpointGroupBuilder port(int port) {
+    public SELF port(int port) {
         checkArgument(port > 0 && port <= 65535,
                       "port: %s (expected: 1-65535)", port);
         this.port = port;
-        return this;
+        return self();
     }
 
     /**
      * Sets the interval between health check requests. Must be positive.
      */
-    public AbstractHealthCheckedEndpointGroupBuilder retryInterval(Duration retryInterval) {
+    public SELF retryInterval(Duration retryInterval) {
         requireNonNull(retryInterval, "retryInterval");
         checkArgument(!retryInterval.isNegative() && !retryInterval.isZero(),
                       "retryInterval: %s (expected: > 0)", retryInterval);
@@ -117,7 +119,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
     /**
      * Sets the interval between health check requests in milliseconds. Must be positive.
      */
-    public AbstractHealthCheckedEndpointGroupBuilder retryIntervalMillis(long retryIntervalMillis) {
+    public SELF retryIntervalMillis(long retryIntervalMillis) {
         checkArgument(retryIntervalMillis > 0,
                       "retryIntervalMillis: %s (expected: > 0)", retryIntervalMillis);
         return retryBackoff(Backoff.fixed(retryIntervalMillis).withJitter(0.2));
@@ -126,9 +128,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
     /**
      * Sets the backoff between health check requests.
      */
-    public AbstractHealthCheckedEndpointGroupBuilder retryBackoff(Backoff retryBackoff) {
+    public SELF retryBackoff(Backoff retryBackoff) {
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
-        return this;
+        return self();
     }
 
     /**
@@ -141,9 +143,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      * builder.clientOptions(myClient.options());
      * }</pre>
      */
-    public AbstractHealthCheckedEndpointGroupBuilder clientOptions(ClientOptions clientOptions) {
+    public SELF clientOptions(ClientOptions clientOptions) {
         clientOptionsBuilder.options(requireNonNull(clientOptions, "clientOptions"));
-        return this;
+        return self();
     }
 
     /**
@@ -156,19 +158,18 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      * });
      * }</pre>
      */
-    public AbstractHealthCheckedEndpointGroupBuilder withClientOptions(
-            Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
+    public SELF withClientOptions(Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
         final ClientOptionsBuilder newBuilder =
                 requireNonNull(configurator, "configurator").apply(clientOptionsBuilder);
         checkState(newBuilder != null, "configurator returned null.");
         clientOptionsBuilder = newBuilder;
-        return this;
+        return self();
     }
 
     /**
      * Sets the maximum endpoint ratio of target selected candidates.
      */
-    public AbstractHealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
+    public SELF maxEndpointRatio(double maxEndpointRatio) {
         if (maxEndpointCount != null) {
             throw new IllegalArgumentException("Maximum endpoint count is already set.");
         }
@@ -178,13 +179,13 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
                       maxEndpointRatio);
 
         this.maxEndpointRatio = maxEndpointRatio;
-        return this;
+        return self();
     }
 
     /**
      * Sets the maximum endpoint count of target selected candidates.
      */
-    public AbstractHealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
+    public SELF maxEndpointCount(int maxEndpointCount) {
         if (maxEndpointRatio != null) {
             throw new IllegalArgumentException("Maximum endpoint ratio is already set.");
         }
@@ -192,21 +193,16 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
         checkArgument(maxEndpointCount > 0, "maxEndpointCount: %s (expected: > 0)", maxEndpointCount);
 
         this.maxEndpointCount = maxEndpointCount;
-        return this;
+        return self();
     }
 
     /**
      * Sets the {@link AuthToken} header using {@link HttpHeaderNames#AUTHORIZATION}.
      */
-    public AbstractHealthCheckedEndpointGroupBuilder auth(AuthToken token) {
+    public SELF auth(AuthToken token) {
         requireNonNull(token, "token");
         clientOptionsBuilder.auth(token);
-        return this;
-    }
-
-    @Override
-    public AbstractHealthCheckedEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return (AbstractHealthCheckedEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+        return self();
     }
 
     /**
@@ -241,7 +237,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      */
     @UnstableApi
     @Override
-    public AbstractHealthCheckedEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+    public SELF selectionTimeout(Duration selectionTimeout) {
         return selectionTimeout(selectionTimeout, selectionTimeout);
     }
 
@@ -279,8 +275,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                         default.
      */
     @UnstableApi
-    public AbstractHealthCheckedEndpointGroupBuilder selectionTimeout(Duration initialSelectionTimeout,
-                                                                      Duration selectionTimeout) {
+    public SELF selectionTimeout(Duration initialSelectionTimeout, Duration selectionTimeout) {
         requireNonNull(initialSelectionTimeout, "initialSelectionTimeout");
         requireNonNull(selectionTimeout, "selectionTimeout");
         return selectionTimeoutMillis(initialSelectionTimeout.toMillis(), selectionTimeout.toMillis());
@@ -319,7 +314,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      */
     @UnstableApi
     @Override
-    public AbstractHealthCheckedEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+    public SELF selectionTimeoutMillis(long selectionTimeoutMillis) {
         return selectionTimeoutMillis(selectionTimeoutMillis, selectionTimeoutMillis);
     }
 
@@ -357,8 +352,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                         default.
      */
     @UnstableApi
-    public AbstractHealthCheckedEndpointGroupBuilder selectionTimeoutMillis(long initialSelectionTimeoutMillis,
-                                                                            long selectionTimeoutMillis) {
+    public SELF selectionTimeoutMillis(long initialSelectionTimeoutMillis, long selectionTimeoutMillis) {
         checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
                       selectionTimeoutMillis);
         checkArgument(initialSelectionTimeoutMillis >= 0, "initialSelectionTimeoutMillis: %s (expected: >= 0)",
@@ -371,7 +365,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
         }
         this.initialSelectionTimeoutMillis = initialSelectionTimeoutMillis;
         this.selectionTimeoutMillis = selectionTimeoutMillis;
-        return this;
+        return self();
     }
 
     /**
