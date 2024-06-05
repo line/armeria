@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.linecorp.armeria.common.util.TextFormatter.epochMicrosAndDuration;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -193,27 +194,30 @@ final class JsonLogFormatter implements LogFormatter {
         }
 
         final ObjectNode objectNode = objectMapper.createObjectNode();
-        objectNode.put("startTime",
-                       TextFormatter.epochMicros(timings.connectionAcquisitionStartTimeMicros()).toString());
+        objectNode.put("total",
+                       epochMicrosAndDuration(timings.connectionAcquisitionStartTimeMicros(),
+                                              timings.connectionAcquisitionDurationNanos()).toString());
 
         if (timings.dnsResolutionDurationNanos() >= 0) {
-            objectNode.put("dnsResolutionStartTime",
-                           TextFormatter.epochMicros(timings.dnsResolutionStartTimeMicros()).toString());
+            objectNode.put("dns",
+                           epochMicrosAndDuration(timings.dnsResolutionStartTimeMicros(),
+                                                  timings.dnsResolutionDurationNanos()).toString());
         }
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
-            objectNode.put("pendingAcquisitionStartTime",
-                           TextFormatter.epochMicros(timings.pendingAcquisitionStartTimeMicros()).toString());
+            objectNode.put("pending",
+                           epochMicrosAndDuration(timings.pendingAcquisitionStartTimeMicros(),
+                                                  timings.pendingAcquisitionDurationNanos()).toString());
         }
         if (timings.socketConnectDurationNanos() >= 0) {
-            objectNode.put("socketConnectStartTime",
-                           TextFormatter.epochMicros(timings.socketConnectStartTimeMicros()).toString());
+            objectNode.put("socket",
+                           epochMicrosAndDuration(timings.socketConnectStartTimeMicros(),
+                                                  timings.socketConnectDurationNanos()).toString());
         }
         if (timings.tlsHandshakeDurationNanos() >= 0) {
-            objectNode.put("tlsHandshakeStartTime",
-                           TextFormatter.epochMicros(timings.tlsHandshakeStartTimeMicros()).toString());
+            objectNode.put("tls",
+                           epochMicrosAndDuration(timings.tlsHandshakeStartTimeMicros(),
+                                                  timings.tlsHandshakeDurationNanos()).toString());
         }
-        objectNode.put("endTime",
-                       TextFormatter.epochMicros(timings.connectionAcquisitionEndTimeMicros()).toString());
         return objectNode;
     }
 

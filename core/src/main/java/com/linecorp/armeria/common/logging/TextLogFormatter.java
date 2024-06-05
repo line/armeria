@@ -197,26 +197,29 @@ final class TextLogFormatter implements LogFormatter {
         if (timings == null) {
             return;
         }
-        buf.append(", {ClientConnection startTime=");
-        TextFormatter.appendEpochMicros(buf, timings.connectionAcquisitionStartTimeMicros());
+        buf.append(", {ClientConnection total=");
+        TextFormatter.appendEpochMicrosAndDuration(buf, timings.connectionAcquisitionStartTimeMicros(),
+                                                   timings.connectionAcquisitionDurationNanos());
         if (timings.dnsResolutionDurationNanos() >= 0) {
-            buf.append(", dnsResolutionStartTime=");
-            TextFormatter.appendEpochMicros(buf, timings.dnsResolutionStartTimeMicros());
+            buf.append(", dns=");
+            TextFormatter.appendEpochMicrosAndDuration(buf, timings.dnsResolutionStartTimeMicros(),
+                                                       timings.dnsResolutionDurationNanos());
         }
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
-            buf.append(", pendingAcquisitionStartTime=");
-            TextFormatter.appendEpochMicros(buf, timings.pendingAcquisitionStartTimeMicros());
+            buf.append(", pending=");
+            TextFormatter.appendEpochMicrosAndDuration(buf, timings.pendingAcquisitionStartTimeMicros(),
+                                                       timings.pendingAcquisitionDurationNanos());
         }
         if (timings.socketConnectDurationNanos() >= 0) {
-            buf.append(", socketConnectStartTime=");
-            TextFormatter.appendEpochMicros(buf, timings.socketConnectStartTimeMicros());
+            buf.append(", socket=");
+            TextFormatter.appendEpochMicrosAndDuration(buf, timings.socketConnectStartTimeMicros(),
+                                                       timings.socketConnectDurationNanos());
         }
         if (timings.tlsHandshakeDurationNanos() >= 0) {
-            buf.append(", tlsHandshakeStartTime=");
-            TextFormatter.appendEpochMicros(buf, timings.tlsHandshakeStartTimeMicros());
+            buf.append(", tls=");
+            TextFormatter.appendEpochMicrosAndDuration(buf, timings.tlsHandshakeStartTimeMicros(),
+                                                       timings.tlsHandshakeDurationNanos());
         }
-        buf.append(", endTime=");
-        TextFormatter.appendEpochMicros(buf, timings.connectionAcquisitionEndTimeMicros());
         buf.append('}');
     }
 

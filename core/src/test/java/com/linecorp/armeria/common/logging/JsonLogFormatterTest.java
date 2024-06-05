@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.util.TextFormatter.epochMicros;
+import static com.linecorp.armeria.common.util.TextFormatter.epochMicrosAndDuration;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -265,43 +265,44 @@ class JsonLogFormatterTest {
         }
 
         assertThatJson(formatted)
-                .node("clientConnection.startTime")
-                .isEqualTo(epochMicros(timings.connectionAcquisitionStartTimeMicros()).toString());
+                .node("clientConnection.total")
+                .isEqualTo(epochMicrosAndDuration(timings.connectionAcquisitionStartTimeMicros(),
+                                                  timings.connectionAcquisitionDurationNanos()).toString());
 
         if (timings.dnsResolutionDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("clientConnection.dnsResolutionStartTime")
-                    .isEqualTo(epochMicros(timings.dnsResolutionStartTimeMicros()).toString());
+                    .node("clientConnection.dns")
+                    .isEqualTo(epochMicrosAndDuration(timings.dnsResolutionStartTimeMicros(),
+                                                      timings.dnsResolutionDurationNanos()).toString());
         } else {
-            assertThatJson(formatted).node("clientConnection.dnsResolutionStartTime").isAbsent();
+            assertThatJson(formatted).node("clientConnection.dns").isAbsent();
         }
 
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("clientConnection.pendingAcquisitionStartTime")
-                    .isEqualTo(epochMicros(timings.pendingAcquisitionStartTimeMicros()).toString());
+                    .node("clientConnection.pending")
+                    .isEqualTo(epochMicrosAndDuration(timings.pendingAcquisitionStartTimeMicros(),
+                                                      timings.pendingAcquisitionDurationNanos()).toString());
         } else {
-            assertThatJson(formatted).node("clientConnection.pendingAcquisitionStartTime").isAbsent();
+            assertThatJson(formatted).node("clientConnection.pending").isAbsent();
         }
 
         if (timings.socketConnectDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("clientConnection.socketConnectStartTime")
-                    .isEqualTo(epochMicros(timings.socketConnectStartTimeMicros()).toString());
+                    .node("clientConnection.socket")
+                    .isEqualTo(epochMicrosAndDuration(timings.socketConnectStartTimeMicros(),
+                                                      timings.socketConnectDurationNanos()).toString());
         } else {
-            assertThatJson(formatted).node("clientConnection.socketConnectStartTime").isAbsent();
+            assertThatJson(formatted).node("clientConnection.socket").isAbsent();
         }
 
         if (timings.tlsHandshakeDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("clientConnection.tlsHandshakeStartTime")
-                    .isEqualTo(epochMicros(timings.tlsHandshakeStartTimeMicros()).toString());
+                    .node("clientConnection.tls")
+                    .isEqualTo(epochMicrosAndDuration(timings.tlsHandshakeStartTimeMicros(),
+                                                      timings.tlsHandshakeDurationNanos()).toString());
         } else {
-            assertThatJson(formatted).node("clientConnection.tlsHandshakeStartTime").isAbsent();
+            assertThatJson(formatted).node("clientConnection.tls").isAbsent();
         }
-
-        assertThatJson(formatted)
-                .node("clientConnection.endTime")
-                .isEqualTo(epochMicros(timings.connectionAcquisitionEndTimeMicros()).toString());
     }
 }
