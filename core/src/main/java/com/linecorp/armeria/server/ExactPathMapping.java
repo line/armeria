@@ -22,6 +22,7 @@ import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -31,6 +32,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 final class ExactPathMapping extends AbstractPathMapping {
 
+    private static final Pattern ESCAPE_COLON = Pattern.compile("/\\\\:");
     private final String prefix;
     private final String exactPath;
     private final List<String> paths;
@@ -45,7 +47,9 @@ final class ExactPathMapping extends AbstractPathMapping {
             checkArgument(exactPath.indexOf(';') < 0, "exactPath: %s (expected not to have a ';')", exactPath);
         }
         this.prefix = prefix;
-        this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
+        ensureAbsolutePath(exactPath, "exactPath");
+        exactPath = ESCAPE_COLON.matcher(exactPath).replaceAll("/:");
+        this.exactPath = exactPath;
         paths = ImmutableList.of(exactPath, exactPath);
     }
 

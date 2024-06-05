@@ -263,7 +263,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         // Pre-generate the authority.
         authority = generateAuthority(type, host, port);
         // Pre-generate toString() value.
-        strVal = generateToString(type, authority, ipAddr, weight);
+        strVal = generateToString(type, authority, ipAddr, weight, attributes);
         this.attributes = attributes;
     }
 
@@ -290,14 +290,18 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     private static String generateToString(Type type, String authority, @Nullable String ipAddr,
-                                           int weight) {
+                                           int weight, @Nullable Attributes attributes) {
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
             buf.append("Endpoint{").append(authority);
             if (type == Type.HOSTNAME_AND_IP) {
                 buf.append(", ipAddr=").append(ipAddr);
             }
-            return buf.append(", weight=").append(weight).append('}').toString();
+            buf.append(", weight=").append(weight);
+            if (attributes != null) {
+                buf.append(", attributes=").append(attributes);
+            }
+            return buf.append('}').toString();
         }
     }
 
