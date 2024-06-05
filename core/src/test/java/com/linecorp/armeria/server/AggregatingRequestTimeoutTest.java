@@ -91,6 +91,6 @@ class AggregatingRequestTimeoutTest {
         // The service waits for the full request body and then responds.
         assertThat(WebClient.of(protocol, server.endpoint(protocol))
                             .execute(request).aggregate().join().status())
-                .isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
+                .isSameAs(HttpStatus.REQUEST_TIMEOUT);
     }
 }

@@ -336,6 +336,41 @@ class AnnotatedServiceTest {
         public CompletionStage<Void> voidFutureJson204() {
             return UnmodifiableFuture.completedFuture(null);
         }
+
+        @Get("/verb/test:verb")
+        public String verbTestExact() {
+            return "/verb/test:verb";
+        }
+
+        @Get("/verb/:param")
+        public String noVerbTest(@Param String param) {
+            return "no-verb";
+        }
+
+        @Get("/\\:colon:literal:/:param")
+        public String colonLiteralParam(@Param String param) {
+            return "colon-literal-" + param;
+        }
+
+        @Get("/\\:colon:literal:exact:implicit")
+        public String colonLiteralExactImplicit() {
+            return "colon-literal-exact-implicit";
+        }
+
+        @Get("exact:/\\:colon:literal:exact:explicit")
+        public String colonLiteralExactExplicit() {
+            return "colon-literal-exact-explicit";
+        }
+
+        @Get("glob:/:colon:literal:glob:/**")
+        public String colonLiteralGlob() {
+            return "colon-literal-glob";
+        }
+
+        @Get("regex:/:colon:literal:regex:/(?<param>[^/]+)$")
+        public String colonLiteralRegex(@Param String param) {
+            return "colon-literal-" + param;
+        }
     }
 
     static class VoidTo200ResponseConverter implements ResponseConverterFunction {
@@ -915,6 +950,15 @@ class AnnotatedServiceTest {
             // Exceptions in business logic
             testStatusCode(hc, get("/1/exception/42"), 500);
             testStatusCode(hc, get("/1/exception-async/1"), 500);
+
+            // colon in a path
+            testBody(hc, get("/1/verb/test:verb"), "String[/verb/test:verb]");
+            testBody(hc, get("/1/verb/test:no-verb"), "String[no-verb]");
+            testBody(hc, get("/1/:colon:literal:/hello"), "String[colon-literal-hello]");
+            testBody(hc, get("/1/:colon:literal:exact:implicit"), "String[colon-literal-exact-implicit]");
+            testBody(hc, get("/1/:colon:literal:exact:explicit"), "String[colon-literal-exact-explicit]");
+            testBody(hc, get("/1/:colon:literal:glob:/a/b/c"), "String[colon-literal-glob]");
+            testBody(hc, get("/1/:colon:literal:regex:/regex"), "String[colon-literal-regex]");
 
             testBody(hc, get("/2/int/42"), "Number[42]");
             testBody(hc, post("/2/long/42"), "Number[42]");

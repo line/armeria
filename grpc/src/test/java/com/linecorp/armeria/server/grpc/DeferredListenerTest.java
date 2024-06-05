@@ -112,7 +112,7 @@ class DeferredListenerTest {
                                      DecompressorRegistry.getDefaultInstance(),
                                      HttpResponse.streaming(), new CompletableFuture<>(), 0, 0, ctx,
                                      GrpcSerializationFormats.PROTO, null, false,
-                                     ResponseHeaders.of(200), null, blockingTaskExecutor, false);
+                                     ResponseHeaders.of(200), null, blockingTaskExecutor, false, false);
     }
 
     private static class TestListener extends ServerCall.Listener<SimpleRequest> {

@@ -24,11 +24,13 @@ import java.util.concurrent.atomic.LongAdder;
 
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.WriteTimeoutException;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -126,6 +128,10 @@ public final class RequestMetricSupport {
             if (socketConnectDurationNanos >= 0) {
                 metrics.socketConnectDuration().record(socketConnectDurationNanos, TimeUnit.NANOSECONDS);
             }
+            final long tlsHandshakeDurationNanos = timings.tlsHandshakeDurationNanos();
+            if (tlsHandshakeDurationNanos >= 0) {
+                metrics.tlsHandshakeDuration().record(tlsHandshakeDurationNanos, TimeUnit.NANOSECONDS);
+            }
             final long pendingAcquisitionDurationNanos = timings.pendingAcquisitionDurationNanos();
             if (pendingAcquisitionDurationNanos >= 0) {
                 metrics.pendingAcquisitionDuration().record(pendingAcquisitionDurationNanos,
@@ -144,7 +150,7 @@ public final class RequestMetricSupport {
 
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
-            updateRetryingClientMetrics(metrics, childrenSize, isSuccess);
+            updateRetryingClientMetrics(metrics, log, isSuccess);
         }
     }
 
@@ -165,14 +171,21 @@ public final class RequestMetricSupport {
     }
 
     private static void updateRetryingClientMetrics(
-            ClientRequestMetrics metrics, int childrenSize, boolean isSuccess) {
-
+            ClientRequestMetrics metrics, RequestLog log, boolean isSuccess) {
+        final int childrenSize = log.children().size();
         metrics.actualRequests().increment(childrenSize);
-
         if (isSuccess) {
             metrics.successAttempts().record(childrenSize);
         } else {
             metrics.failureAttempts().record(childrenSize);
+        }
+
+        final int failedAttempts = isSuccess ? childrenSize - 1 : childrenSize;
+        for (int i = 0; i < failedAttempts; i++) {
+            final RequestLogAccess child = log.children().get(i);
+            child.whenComplete().thenAccept(
+                    childLog -> metrics.actualRequestsCause(childLog.responseCause(),
+                                                            childLog.responseStatus()).increment());
         }
     }
 
@@ -204,6 +217,8 @@ public final class RequestMetricSupport {
 
         Timer socketConnectDuration();
 
+        Timer tlsHandshakeDuration();
+
         Timer pendingAcquisitionDuration();
 
         Counter writeTimeouts();
@@ -213,6 +228,8 @@ public final class RequestMetricSupport {
         DistributionSummary successAttempts();
 
         DistributionSummary failureAttempts();
+
+        Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status);
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -299,6 +316,7 @@ public final class RequestMetricSupport {
         private final Timer connectionAcquisitionDuration;
         private final Timer dnsResolutionDuration;
         private final Timer socketConnectDuration;
+        private final Timer tlsHandshakeDuration;
         private final Timer pendingAcquisitionDuration;
 
         private final Counter writeTimeouts;
@@ -327,6 +345,9 @@ public final class RequestMetricSupport {
                     distributionStatisticConfig);
             socketConnectDuration = newTimer(
                     parent, idPrefix.name("socket.connect.duration"), idPrefix.tags(),
+                    distributionStatisticConfig);
+            tlsHandshakeDuration = newTimer(
+                    parent, idPrefix.name("tls.handshake.duration"), idPrefix.tags(),
                     distributionStatisticConfig);
             pendingAcquisitionDuration = newTimer(
                     parent, idPrefix.name("pending.acquisition.duration"), idPrefix.tags(),
@@ -358,6 +379,11 @@ public final class RequestMetricSupport {
         @Override
         public Timer socketConnectDuration() {
             return socketConnectDuration;
+        }
+
+        @Override
+        public Timer tlsHandshakeDuration() {
+            return tlsHandshakeDuration;
         }
 
         @Override
@@ -395,6 +421,14 @@ public final class RequestMetricSupport {
                                                             idPrefix.name("actual.requests.attempts"),
                                                             idPrefix.tags("result", "failure"),
                                                             distributionStatisticConfig());
+        }
+
+        @Override
+        public Counter actualRequestsCause(@Nullable Throwable cause, HttpStatus status) {
+            final String causeStr = cause != null ? cause.getClass().getSimpleName() : "null";
+            return parent.counter(
+                    idPrefix.name("actual.requests.failure"),
+                    idPrefix.tags("cause", causeStr, "http.status", status.codeAsText()));
         }
     }
 

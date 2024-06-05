@@ -71,6 +71,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
+import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
@@ -281,7 +282,8 @@ final class HandlerRegistry {
             grpcExceptionHandler.ifPresent(exceptionHandler -> {
                 GrpcExceptionHandlerFunction grpcExceptionHandler0 = exceptionHandler;
                 if (defaultExceptionHandler != null) {
-                    grpcExceptionHandler0 = exceptionHandler.orElse(defaultExceptionHandler);
+                    grpcExceptionHandler0 = new UnwrappingGrpcExceptionHandleFunction(
+                            exceptionHandler.orElse(defaultExceptionHandler));
                 }
                 grpcExceptionHandlersBuilder.put(methodDefinition, grpcExceptionHandler0);
             });

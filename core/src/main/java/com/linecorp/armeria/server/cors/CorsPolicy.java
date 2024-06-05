@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.cors;
 
-import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
+import static com.linecorp.armeria.internal.server.CorsHeaderUtil.DELIMITER;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
@@ -29,9 +29,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -41,10 +39,10 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
+import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 
@@ -54,9 +52,6 @@ import io.netty.util.AsciiString;
  * Contains information of the CORS policy with the specified origins.
  */
 public final class CorsPolicy {
-
-    private static final String DELIMITER = ",";
-    private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
 
     /**
      * Returns a new {@link CorsPolicyBuilder}.
@@ -110,8 +105,7 @@ public final class CorsPolicy {
     private final Set<HttpMethod> allowedRequestMethods;
     private final boolean allowAllRequestHeaders;
     private final Set<AsciiString> allowedRequestHeaders;
-    private final String joinedExposedHeaders;
-    private final String joinedAllowedRequestHeaders;
+
     private final String joinedAllowedRequestMethods;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
@@ -131,10 +125,8 @@ public final class CorsPolicy {
         this.allowedRequestMethods = ImmutableSet.copyOf(allowedRequestMethods);
         this.allowAllRequestHeaders = allowAllRequestHeaders;
         this.allowedRequestHeaders = ImmutableSet.copyOf(allowedRequestHeaders);
-        joinedExposedHeaders = HEADER_JOINER.join(this.exposedHeaders);
         joinedAllowedRequestMethods = this.allowedRequestMethods
                 .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
-        joinedAllowedRequestHeaders = HEADER_JOINER.join(this.allowedRequestHeaders);
         if (preflightResponseHeadersDisabled) {
             this.preflightResponseHeaders = Collections.emptyMap();
         } else if (preflightResponseHeaders.isEmpty()) {
@@ -156,7 +148,7 @@ public final class CorsPolicy {
      */
     @Deprecated
     public String origin() {
-        return Iterables.getFirst(origins, ANY_ORIGIN);
+        return Iterables.getFirst(origins, CorsHeaderUtil.ANY_ORIGIN);
     }
 
     /**
@@ -301,51 +293,22 @@ public final class CorsPolicy {
         headers.add(generatePreflightResponseHeaders());
     }
 
-    void setCorsAllowCredentials(ResponseHeadersBuilder headers) {
-        // The string "*" cannot be used for a resource that supports credentials.
-        // https://www.w3.org/TR/cors/#resource-requests
-        if (credentialsAllowed &&
-            !ANY_ORIGIN.equals(headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))) {
-            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
-        }
-    }
-
-    void setCorsExposeHeaders(ResponseHeadersBuilder headers) {
-        if (exposedHeaders.isEmpty()) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, joinedExposedHeaders);
+    /**
+     * Determines whether all request headers are allowed.
+     *
+     * @return true if all request headers are allowed,
+     *         false if only specific request headers are allowed.
+     */
+    public boolean shouldAllowAllRequestHeaders() {
+        return allowAllRequestHeaders;
     }
 
     void setCorsAllowMethods(ResponseHeadersBuilder headers) {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, joinedAllowedRequestMethods);
     }
 
-    void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
-        if (allowAllRequestHeaders) {
-            copyCorsAllowHeaders(requestHeaders, headers);
-            return;
-        }
-
-        if (allowedRequestHeaders.isEmpty()) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, joinedAllowedRequestHeaders);
-    }
-
     void setCorsMaxAge(ResponseHeadersBuilder headers) {
         headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
-    }
-
-    private static void copyCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
-        final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
-        if (Strings.isNullOrEmpty(header)) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
     }
 
     @Override
