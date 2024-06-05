@@ -26,7 +26,6 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A utility class to format things as a {@link String} with ease.
@@ -182,28 +181,6 @@ public final class TextFormatter {
     public static void appendEpochMicros(StringBuilder buf, long timeMicros) {
         buf.append(dateTimeFormatter.format(Instant.ofEpochMilli(TimeUnit.MICROSECONDS.toMillis(timeMicros))))
            .append('(').append(timeMicros).append(')');
-    }
-
-    /**
-     * Formats the given epoch time in microseconds and duration in nanos to the format
-     * "epochMicros[durationNanos]".
-     */
-    @UnstableApi
-    public static StringBuilder epochMicrosAndDuration(long timeMicros, long durationNanos) {
-        final StringBuilder buf = new StringBuilder();
-        appendEpochMicrosAndDuration(buf, timeMicros, durationNanos);
-        return buf;
-    }
-
-    /**
-     * Formats the given epoch time in microseconds and duration in nanos to the format
-     * "epochMicros[durationNanos]" and appends it to the specified {@link StringBuilder}.
-     */
-    @UnstableApi
-    public static void appendEpochMicrosAndDuration(StringBuilder buf, long timeMicros, long durationNanos) {
-        buf.append(timeMicros).append('[');
-        appendElapsed(buf, durationNanos);
-        buf.append(']');
     }
 
     /**

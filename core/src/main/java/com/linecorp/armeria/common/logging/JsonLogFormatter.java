@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.util.TextFormatter.epochMicrosAndDuration;
+import static com.linecorp.armeria.common.util.TextFormatter.elapsed;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
@@ -195,28 +196,23 @@ final class JsonLogFormatter implements LogFormatter {
 
         final ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("total",
-                       epochMicrosAndDuration(timings.connectionAcquisitionStartTimeMicros(),
-                                              timings.connectionAcquisitionDurationNanos()).toString());
+                       elapsed(timings.connectionAcquisitionDurationNanos(), TimeUnit.NANOSECONDS).toString());
 
         if (timings.dnsResolutionDurationNanos() >= 0) {
             objectNode.put("dns",
-                           epochMicrosAndDuration(timings.dnsResolutionStartTimeMicros(),
-                                                  timings.dnsResolutionDurationNanos()).toString());
+                           elapsed(timings.dnsResolutionDurationNanos(), TimeUnit.NANOSECONDS).toString());
         }
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
-            objectNode.put("pending",
-                           epochMicrosAndDuration(timings.pendingAcquisitionStartTimeMicros(),
-                                                  timings.pendingAcquisitionDurationNanos()).toString());
+            objectNode.put("pending", elapsed(timings.pendingAcquisitionDurationNanos(),
+                                              TimeUnit.NANOSECONDS).toString());
         }
         if (timings.socketConnectDurationNanos() >= 0) {
             objectNode.put("socket",
-                           epochMicrosAndDuration(timings.socketConnectStartTimeMicros(),
-                                                  timings.socketConnectDurationNanos()).toString());
+                           elapsed(timings.socketConnectDurationNanos(), TimeUnit.NANOSECONDS).toString());
         }
         if (timings.tlsHandshakeDurationNanos() >= 0) {
             objectNode.put("tls",
-                           epochMicrosAndDuration(timings.tlsHandshakeStartTimeMicros(),
-                                                  timings.tlsHandshakeDurationNanos()).toString());
+                           elapsed(timings.tlsHandshakeDurationNanos(), TimeUnit.NANOSECONDS).toString());
         }
         return objectNode;
     }

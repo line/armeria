@@ -16,10 +16,11 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.util.TextFormatter.epochMicrosAndDuration;
+import static com.linecorp.armeria.common.util.TextFormatter.elapsed;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -266,14 +267,14 @@ class JsonLogFormatterTest {
 
         assertThatJson(formatted)
                 .node("clientConnection.total")
-                .isEqualTo(epochMicrosAndDuration(timings.connectionAcquisitionStartTimeMicros(),
-                                                  timings.connectionAcquisitionDurationNanos()).toString());
+                .isEqualTo(elapsed(timings.connectionAcquisitionDurationNanos(),
+                                   TimeUnit.NANOSECONDS).toString());
 
         if (timings.dnsResolutionDurationNanos() >= 0) {
             assertThatJson(formatted)
                     .node("clientConnection.dns")
-                    .isEqualTo(epochMicrosAndDuration(timings.dnsResolutionStartTimeMicros(),
-                                                      timings.dnsResolutionDurationNanos()).toString());
+                    .isEqualTo(elapsed(timings.dnsResolutionDurationNanos(),
+                                       TimeUnit.NANOSECONDS).toString());
         } else {
             assertThatJson(formatted).node("clientConnection.dns").isAbsent();
         }
@@ -281,8 +282,8 @@ class JsonLogFormatterTest {
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
             assertThatJson(formatted)
                     .node("clientConnection.pending")
-                    .isEqualTo(epochMicrosAndDuration(timings.pendingAcquisitionStartTimeMicros(),
-                                                      timings.pendingAcquisitionDurationNanos()).toString());
+                    .isEqualTo(elapsed(timings.pendingAcquisitionDurationNanos(),
+                                       TimeUnit.NANOSECONDS).toString());
         } else {
             assertThatJson(formatted).node("clientConnection.pending").isAbsent();
         }
@@ -290,8 +291,8 @@ class JsonLogFormatterTest {
         if (timings.socketConnectDurationNanos() >= 0) {
             assertThatJson(formatted)
                     .node("clientConnection.socket")
-                    .isEqualTo(epochMicrosAndDuration(timings.socketConnectStartTimeMicros(),
-                                                      timings.socketConnectDurationNanos()).toString());
+                    .isEqualTo(elapsed(timings.socketConnectDurationNanos(),
+                                       TimeUnit.NANOSECONDS).toString());
         } else {
             assertThatJson(formatted).node("clientConnection.socket").isAbsent();
         }
@@ -299,8 +300,8 @@ class JsonLogFormatterTest {
         if (timings.tlsHandshakeDurationNanos() >= 0) {
             assertThatJson(formatted)
                     .node("clientConnection.tls")
-                    .isEqualTo(epochMicrosAndDuration(timings.tlsHandshakeStartTimeMicros(),
-                                                      timings.tlsHandshakeDurationNanos()).toString());
+                    .isEqualTo(elapsed(timings.tlsHandshakeDurationNanos(),
+                                       TimeUnit.NANOSECONDS).toString());
         } else {
             assertThatJson(formatted).node("clientConnection.tls").isAbsent();
         }

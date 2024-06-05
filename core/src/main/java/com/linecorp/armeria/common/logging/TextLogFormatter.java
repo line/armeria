@@ -198,27 +198,22 @@ final class TextLogFormatter implements LogFormatter {
             return;
         }
         buf.append(", {ClientConnection total=");
-        TextFormatter.appendEpochMicrosAndDuration(buf, timings.connectionAcquisitionStartTimeMicros(),
-                                                   timings.connectionAcquisitionDurationNanos());
+        TextFormatter.appendElapsed(buf, timings.connectionAcquisitionDurationNanos());
         if (timings.dnsResolutionDurationNanos() >= 0) {
             buf.append(", dns=");
-            TextFormatter.appendEpochMicrosAndDuration(buf, timings.dnsResolutionStartTimeMicros(),
-                                                       timings.dnsResolutionDurationNanos());
+            TextFormatter.appendElapsed(buf, timings.dnsResolutionDurationNanos());
         }
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
             buf.append(", pending=");
-            TextFormatter.appendEpochMicrosAndDuration(buf, timings.pendingAcquisitionStartTimeMicros(),
-                                                       timings.pendingAcquisitionDurationNanos());
+            TextFormatter.appendElapsed(buf, timings.pendingAcquisitionDurationNanos());
         }
         if (timings.socketConnectDurationNanos() >= 0) {
             buf.append(", socket=");
-            TextFormatter.appendEpochMicrosAndDuration(buf, timings.socketConnectStartTimeMicros(),
-                                                       timings.socketConnectDurationNanos());
+            TextFormatter.appendElapsed(buf, timings.socketConnectDurationNanos());
         }
         if (timings.tlsHandshakeDurationNanos() >= 0) {
             buf.append(", tls=");
-            TextFormatter.appendEpochMicrosAndDuration(buf, timings.tlsHandshakeStartTimeMicros(),
-                                                       timings.tlsHandshakeDurationNanos());
+            TextFormatter.appendElapsed(buf, timings.tlsHandshakeDurationNanos());
         }
         buf.append('}');
     }

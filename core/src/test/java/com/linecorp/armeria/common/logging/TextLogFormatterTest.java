@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.util.TextFormatter.epochMicrosAndDuration;
+import static com.linecorp.armeria.common.util.TextFormatter.elapsed;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -289,15 +290,13 @@ class TextLogFormatterTest {
         }
         assertThat(connStartMatcher.find()).isTrue();
         assertThat(connStartMatcher.group(1)).isEqualTo(
-                epochMicrosAndDuration(timings.connectionAcquisitionStartTimeMicros(),
-                                       timings.connectionAcquisitionDurationNanos()).toString());
+                elapsed(timings.connectionAcquisitionDurationNanos(), TimeUnit.NANOSECONDS).toString());
 
         final Matcher dnsMatcher = Pattern.compile("dns=([^\\s,}]+)").matcher(formatted);
         if (timings.dnsResolutionDurationNanos() >= 0) {
             assertThat(dnsMatcher.find()).isTrue();
             assertThat(dnsMatcher.group(1)).isEqualTo(
-                    epochMicrosAndDuration(timings.dnsResolutionStartTimeMicros(),
-                                           timings.dnsResolutionDurationNanos()).toString());
+                    elapsed(timings.dnsResolutionDurationNanos(), TimeUnit.NANOSECONDS).toString());
         } else {
             assertThat(dnsMatcher.find()).isFalse();
         }
@@ -307,8 +306,7 @@ class TextLogFormatterTest {
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
             assertThat(pendingMatcher.find()).isTrue();
             assertThat(pendingMatcher.group(1)).isEqualTo(
-                    epochMicrosAndDuration(timings.pendingAcquisitionStartTimeMicros(),
-                                           timings.pendingAcquisitionDurationNanos()).toString());
+                    elapsed(timings.pendingAcquisitionDurationNanos(), TimeUnit.NANOSECONDS).toString());
         } else {
             assertThat(pendingMatcher.find()).isFalse();
         }
@@ -317,8 +315,7 @@ class TextLogFormatterTest {
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
             assertThat(socketMatcher.find()).isTrue();
             assertThat(socketMatcher.group(1)).isEqualTo(
-                    epochMicrosAndDuration(timings.socketConnectStartTimeMicros(),
-                                           timings.socketConnectDurationNanos()).toString());
+                    elapsed(timings.socketConnectDurationNanos(), TimeUnit.NANOSECONDS).toString());
         } else {
             assertThat(socketMatcher.find()).isFalse();
         }
@@ -327,8 +324,7 @@ class TextLogFormatterTest {
         if (timings.tlsHandshakeDurationNanos() >= 0) {
             assertThat(tlsMatcher.find()).isTrue();
             assertThat(tlsMatcher.group(1)).isEqualTo(
-                    epochMicrosAndDuration(timings.tlsHandshakeStartTimeMicros(),
-                                           timings.tlsHandshakeDurationNanos()).toString());
+                    elapsed(timings.tlsHandshakeDurationNanos(), TimeUnit.NANOSECONDS).toString());
         } else {
             assertThat(tlsMatcher.find()).isFalse();
         }
