@@ -244,6 +244,7 @@ configure(projectsWithFlags('java')) {
         testRuntimeOnly libs.checkerframework // Required by guava-testlib
         testImplementation libs.assertj
         testImplementation libs.mockito
+        testImplementation libs.mockito.inline
         testImplementation libs.apache.httpclient5
         testImplementation libs.hamcrest
         testImplementation libs.hamcrest.library
