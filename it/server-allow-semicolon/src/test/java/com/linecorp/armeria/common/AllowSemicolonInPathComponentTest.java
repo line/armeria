@@ -49,7 +49,9 @@ class AllowSemicolonInPathComponentTest {
     @Test
     void fallbackServiceShouldNotRaiseExceptionWhenPathContainsSemicolon() {
         // See https://github.com/line/armeria/issues/5726 for more information.
-        assertThat(server.blockingWebClient().get("/;").status()).isSameAs(HttpStatus.NOT_FOUND);
+        final AggregatedHttpResponse res = server.blockingWebClient().get("/;");
+        assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
+        assertThat(res.headers().get("x-trace-id")).isEqualTo("foo");
         assertThat(lastRouteWasFallback).isTrue();
     }
 }
