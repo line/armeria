@@ -52,7 +52,7 @@ import io.netty.channel.EventLoopGroup;
  * and provides a method {@link DefaultServiceConfigSetters#toServiceConfigBuilder(Route, String, HttpService)}
  * to build {@link ServiceConfigBuilder}.
  */
-final class DefaultServiceConfigSetters implements ServiceConfigSetters {
+final class DefaultServiceConfigSetters implements ServiceConfigSetters<DefaultServiceConfigSetters> {
 
     @Nullable
     private String defaultServiceName;
@@ -91,36 +91,37 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator;
 
     @Override
-    public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
+    public DefaultServiceConfigSetters requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }
 
     @Override
-    public ServiceConfigSetters requestTimeoutMillis(long requestTimeoutMillis) {
+    public DefaultServiceConfigSetters requestTimeoutMillis(long requestTimeoutMillis) {
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         return this;
     }
 
     @Override
-    public ServiceConfigSetters maxRequestLength(long maxRequestLength) {
+    public DefaultServiceConfigSetters maxRequestLength(long maxRequestLength) {
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         return this;
     }
 
     @Override
-    public ServiceConfigSetters verboseResponses(boolean verboseResponses) {
+    public DefaultServiceConfigSetters verboseResponses(boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
         return this;
     }
 
     @Override
-    public ServiceConfigSetters accessLogFormat(String accessLogFormat) {
+    public DefaultServiceConfigSetters accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
                                true);
     }
 
     @Override
-    public ServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
+    public DefaultServiceConfigSetters accessLogWriter(
+            AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
         requireNonNull(accessLogWriter, "accessLogWriter");
         if (this.accessLogWriter != null) {
             this.accessLogWriter = this.accessLogWriter.andThen(accessLogWriter);
@@ -134,7 +135,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator) {
+    public DefaultServiceConfigSetters decorator(
+            Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         if (this.decorator != null) {
             this.decorator = this.decorator.andThen(decorator);
@@ -153,13 +155,13 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
     @Override
     @SafeVarargs
-    public final ServiceConfigSetters decorators(
+    public final DefaultServiceConfigSetters decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
         return decorators(ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
     }
 
     @Override
-    public ServiceConfigSetters decorators(
+    public DefaultServiceConfigSetters decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(decorators, "decorators");
         for (Function<? super HttpService, ? extends HttpService> decorator : decorators) {
@@ -170,7 +172,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters defaultServiceName(String defaultServiceName) {
+    public DefaultServiceConfigSetters defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
         defaultServiceNaming = ServiceNaming.of(defaultServiceName);
@@ -178,28 +180,28 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+    public DefaultServiceConfigSetters defaultServiceNaming(ServiceNaming defaultServiceNaming) {
         defaultServiceName = null;
         this.defaultServiceNaming = requireNonNull(defaultServiceNaming, "defaultServiceNaming");
         return this;
     }
 
     @Override
-    public ServiceConfigSetters defaultLogName(String defaultLogName) {
+    public DefaultServiceConfigSetters defaultLogName(String defaultLogName) {
         this.defaultLogName = requireNonNull(defaultLogName, "defaultLogName");
         return this;
     }
 
     @Override
-    public ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
-                                                     boolean shutdownOnStop) {
+    public DefaultServiceConfigSetters blockingTaskExecutor(
+            ScheduledExecutorService blockingTaskExecutor, boolean shutdownOnStop) {
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         return blockingTaskExecutor(BlockingTaskExecutor.of(blockingTaskExecutor), shutdownOnStop);
     }
 
     @Override
-    public ServiceConfigSetters blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
-                                                     boolean shutdownOnStop) {
+    public DefaultServiceConfigSetters blockingTaskExecutor(
+            BlockingTaskExecutor blockingTaskExecutor, boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         if (shutdownOnStop) {
             shutdownSupports.add(ShutdownSupport.of(blockingTaskExecutor));
@@ -208,7 +210,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters blockingTaskExecutor(int numThreads) {
+    public DefaultServiceConfigSetters blockingTaskExecutor(int numThreads) {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
                                                                   .numThreads(numThreads)
@@ -217,37 +219,37 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters successFunction(SuccessFunction successFunction) {
+    public DefaultServiceConfigSetters successFunction(SuccessFunction successFunction) {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         return this;
     }
 
     @Override
-    public ServiceConfigSetters requestAutoAbortDelay(Duration delay) {
+    public DefaultServiceConfigSetters requestAutoAbortDelay(Duration delay) {
         return requestAutoAbortDelayMillis(requireNonNull(delay, "delay").toMillis());
     }
 
     @Override
-    public ServiceConfigSetters requestAutoAbortDelayMillis(long delayMillis) {
+    public DefaultServiceConfigSetters requestAutoAbortDelayMillis(long delayMillis) {
         requestAutoAbortDelayMillis = delayMillis;
         return this;
     }
 
     @Override
-    public ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation) {
+    public DefaultServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation) {
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         return this;
     }
 
     @Override
-    public ServiceConfigSetters multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
-        this.multipartRemovalStrategy = requireNonNull(removalStrategy, "removalStrategy");
+    public DefaultServiceConfigSetters multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        multipartRemovalStrategy = requireNonNull(removalStrategy, "removalStrategy");
         return this;
     }
 
     @Override
-    public ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
-                                                   boolean shutdownOnStop) {
+    public DefaultServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                          boolean shutdownOnStop) {
         this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
         if (shutdownOnStop) {
             shutdownSupports.add(ShutdownSupport.of(serviceWorkerGroup));
@@ -256,20 +258,20 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters serviceWorkerGroup(int numThreads) {
+    public DefaultServiceConfigSetters serviceWorkerGroup(int numThreads) {
         final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
         return serviceWorkerGroup(workerGroup, true);
     }
 
     @Override
-    public ServiceConfigSetters requestIdGenerator(
+    public DefaultServiceConfigSetters requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         return this;
     }
 
     @Override
-    public ServiceConfigSetters addHeader(CharSequence name, Object value) {
+    public DefaultServiceConfigSetters addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         ensureNoPseudoHeader(name);
@@ -278,7 +280,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters addHeaders(
+    public DefaultServiceConfigSetters addHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
         requireNonNull(defaultHeaders, "defaultHeaders");
         ensureNoPseudoHeader(defaultHeaders);
@@ -287,7 +289,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters setHeader(CharSequence name, Object value) {
+    public DefaultServiceConfigSetters setHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         ensureNoPseudoHeader(name);
@@ -296,7 +298,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters setHeaders(
+    public DefaultServiceConfigSetters setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
         requireNonNull(defaultHeaders, "defaultHeaders");
         ensureNoPseudoHeader(defaultHeaders);
@@ -305,7 +307,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler) {
+    public DefaultServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler) {
         requireNonNull(serviceErrorHandler, "serviceErrorHandler");
         if (this.serviceErrorHandler == null) {
             this.serviceErrorHandler = serviceErrorHandler;
@@ -316,7 +318,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook) {
+    public DefaultServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
         this.contextHook = mergeHooks(this.contextHook, contextHook);
         return this;

@@ -54,7 +54,7 @@ import com.linecorp.armeria.server.annotation.MatchesParam;
 /**
  * An abstract builder class for binding something to a {@link Route} fluently.
  */
-abstract class AbstractBindingBuilder {
+abstract class AbstractBindingBuilder<SELF extends AbstractBindingBuilder<SELF>> {
     static final Set<String> EMPTY_CONTEXT_PATHS = ImmutableSet.of("/");
 
     private Set<HttpMethod> methods = ImmutableSet.of();
@@ -76,6 +76,11 @@ abstract class AbstractBindingBuilder {
         return contextPaths;
     }
 
+    @SuppressWarnings("unchecked")
+    SELF self() {
+        return (SELF) this;
+    }
+
     /**
      * Sets the path pattern that an {@link HttpService} will be bound to.
      * Please refer to the <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
@@ -83,9 +88,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder path(String pathPattern) {
+    public SELF path(String pathPattern) {
         pathBuilders.add(Route.builder().path(requireNonNull(pathPattern, "pathPattern")));
-        return this;
+        return self();
     }
 
     /**
@@ -94,9 +99,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder pathPrefix(String prefix) {
+    public SELF pathPrefix(String prefix) {
         pathBuilders.add(Route.builder().pathPrefix(requireNonNull(prefix, "prefix")));
-        return this;
+        return self();
     }
 
     /**
@@ -107,9 +112,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder get(String pathPattern) {
+    public SELF get(String pathPattern) {
         addRouteBuilder(pathPattern, GET);
-        return this;
+        return self();
     }
 
     /**
@@ -120,9 +125,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder post(String pathPattern) {
+    public SELF post(String pathPattern) {
         addRouteBuilder(pathPattern, POST);
-        return this;
+        return self();
     }
 
     /**
@@ -133,9 +138,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder put(String pathPattern) {
+    public SELF put(String pathPattern) {
         addRouteBuilder(pathPattern, PUT);
-        return this;
+        return self();
     }
 
     /**
@@ -146,9 +151,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder patch(String pathPattern) {
+    public SELF patch(String pathPattern) {
         addRouteBuilder(pathPattern, PATCH);
-        return this;
+        return self();
     }
 
     /**
@@ -159,9 +164,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder delete(String pathPattern) {
+    public SELF delete(String pathPattern) {
         addRouteBuilder(pathPattern, DELETE);
-        return this;
+        return self();
     }
 
     /**
@@ -172,9 +177,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder options(String pathPattern) {
+    public SELF options(String pathPattern) {
         addRouteBuilder(pathPattern, OPTIONS);
-        return this;
+        return self();
     }
 
     /**
@@ -185,9 +190,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder head(String pathPattern) {
+    public SELF head(String pathPattern) {
         addRouteBuilder(pathPattern, HEAD);
-        return this;
+        return self();
     }
 
     /**
@@ -198,9 +203,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder trace(String pathPattern) {
+    public SELF trace(String pathPattern) {
         addRouteBuilder(pathPattern, TRACE);
-        return this;
+        return self();
     }
 
     /**
@@ -211,9 +216,9 @@ abstract class AbstractBindingBuilder {
      *
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
-    public AbstractBindingBuilder connect(String pathPattern) {
+    public SELF connect(String pathPattern) {
         addRouteBuilder(pathPattern, CONNECT);
-        return this;
+        return self();
     }
 
     private void addRouteBuilder(String pathPattern, HttpMethod method) {
@@ -239,7 +244,7 @@ abstract class AbstractBindingBuilder {
      * @see #path(String)
      * @see #pathPrefix(String)
      */
-    public AbstractBindingBuilder methods(HttpMethod... methods) {
+    public SELF methods(HttpMethod... methods) {
         return methods(ImmutableSet.copyOf(requireNonNull(methods, "methods")));
     }
 
@@ -250,30 +255,30 @@ abstract class AbstractBindingBuilder {
      * @see #path(String)
      * @see #pathPrefix(String)
      */
-    public AbstractBindingBuilder methods(Iterable<HttpMethod> methods) {
+    public SELF methods(Iterable<HttpMethod> methods) {
         requireNonNull(methods, "methods");
         checkArgument(!Iterables.isEmpty(methods), "methods can't be empty.");
         this.methods = Sets.immutableEnumSet(methods);
-        return this;
+        return self();
     }
 
     /**
      * Sets {@link MediaType}s that an {@link HttpService} will consume. If not set, the {@link HttpService}
      * will accept all media types.
      */
-    public AbstractBindingBuilder consumes(MediaType... consumeTypes) {
+    public SELF consumes(MediaType... consumeTypes) {
         consumes(ImmutableSet.copyOf(requireNonNull(consumeTypes, "consumeTypes")));
-        return this;
+        return self();
     }
 
     /**
      * Sets {@link MediaType}s that an {@link HttpService} will consume. If not set, the {@link HttpService}
      * will accept all media types.
      */
-    public AbstractBindingBuilder consumes(Iterable<MediaType> consumeTypes) {
+    public SELF consumes(Iterable<MediaType> consumeTypes) {
         ensureUniqueMediaTypes(consumeTypes, "consumeTypes");
         this.consumeTypes = ImmutableSet.copyOf(consumeTypes);
-        return this;
+        return self();
     }
 
     /**
@@ -281,9 +286,9 @@ abstract class AbstractBindingBuilder {
      * content negotiation. See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
-    public AbstractBindingBuilder produces(MediaType... produceTypes) {
+    public SELF produces(MediaType... produceTypes) {
         produces(ImmutableSet.copyOf(requireNonNull(produceTypes, "produceTypes")));
-        return this;
+        return self();
     }
 
     /**
@@ -291,10 +296,10 @@ abstract class AbstractBindingBuilder {
      * content negotiation. See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept header</a>
      * for more information.
      */
-    public AbstractBindingBuilder produces(Iterable<MediaType> produceTypes) {
+    public SELF produces(Iterable<MediaType> produceTypes) {
         ensureUniqueMediaTypes(produceTypes, "produceTypes");
         this.produceTypes = ImmutableSet.copyOf(produceTypes);
-        return this;
+        return self();
     }
 
     /**
@@ -316,7 +321,7 @@ abstract class AbstractBindingBuilder {
      *
      * @see MatchesParam
      */
-    public AbstractBindingBuilder matchesParams(String... paramPredicates) {
+    public SELF matchesParams(String... paramPredicates) {
         return matchesParams(ImmutableList.copyOf(requireNonNull(paramPredicates, "paramPredicates")));
     }
 
@@ -339,21 +344,21 @@ abstract class AbstractBindingBuilder {
      *
      * @see MatchesParam
      */
-    public AbstractBindingBuilder matchesParams(Iterable<String> paramPredicates) {
+    public SELF matchesParams(Iterable<String> paramPredicates) {
         this.paramPredicates.addAll(RoutingPredicate.copyOfParamPredicates(
                 requireNonNull(paramPredicates, "paramPredicates")));
-        return this;
+        return self();
     }
 
     /**
      * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
      * {@code true} with the value of the specified {@code paramName} parameter.
      */
-    public AbstractBindingBuilder matchesParams(String paramName, Predicate<? super String> valuePredicate) {
+    public SELF matchesParams(String paramName, Predicate<? super String> valuePredicate) {
         requireNonNull(paramName, "paramName");
         requireNonNull(valuePredicate, "valuePredicate");
         paramPredicates.add(RoutingPredicate.ofParams(paramName, valuePredicate));
-        return this;
+        return self();
     }
 
     /**
@@ -371,7 +376,7 @@ abstract class AbstractBindingBuilder {
      *
      * @see MatchesHeader
      */
-    public AbstractBindingBuilder matchesHeaders(String... headerPredicates) {
+    public SELF matchesHeaders(String... headerPredicates) {
         return matchesHeaders(ImmutableList.copyOf(requireNonNull(headerPredicates, "headerPredicates")));
     }
 
@@ -390,30 +395,30 @@ abstract class AbstractBindingBuilder {
      *
      * @see MatchesHeader
      */
-    public AbstractBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
+    public SELF matchesHeaders(Iterable<String> headerPredicates) {
         this.headerPredicates.addAll(RoutingPredicate.copyOfHeaderPredicates(
                 requireNonNull(headerPredicates, "headerPredicates")));
-        return this;
+        return self();
     }
 
     /**
      * Sets the {@link Route} to accept a request when the specified {@code valuePredicate} evaluates
      * {@code true} with the value of the specified {@code headerName} header.
      */
-    public AbstractBindingBuilder matchesHeaders(CharSequence headerName,
-                                                 Predicate<? super String> valuePredicate) {
+    public SELF matchesHeaders(CharSequence headerName,
+                               Predicate<? super String> valuePredicate) {
         requireNonNull(headerName, "headerName");
         requireNonNull(valuePredicate, "valuePredicate");
         headerPredicates.add(RoutingPredicate.ofHeaders(headerName, valuePredicate));
-        return this;
+        return self();
     }
 
     /**
      * Specifies an additional {@link Route} that should be matched.
      */
-    public AbstractBindingBuilder addRoute(Route route) {
+    public SELF addRoute(Route route) {
         additionalRoutes.add(requireNonNull(route, "route"));
-        return this;
+        return self();
     }
 
     /**
@@ -422,19 +427,19 @@ abstract class AbstractBindingBuilder {
      * Please refer to <a href="https://armeria.dev/docs/server-basics#path-patterns">Path patterns</a>
      * to learn more about path pattern syntax.
      */
-    public AbstractBindingBuilder exclude(String pathPattern) {
+    public SELF exclude(String pathPattern) {
         requireNonNull(pathPattern, "pathPattern");
         excludedRoutes.add(Route.builder().path(pathPattern).build());
-        return this;
+        return self();
     }
 
     /**
      * Adds a {@link Route} that is supposed to be excluded from the {@link Route}s built by this
      * {@link AbstractBindingBuilder}.
      */
-    public AbstractBindingBuilder exclude(Route excludedRoute) {
+    public SELF exclude(Route excludedRoute) {
         excludedRoutes.add(requireNonNull(excludedRoute, "excludedRoute"));
-        return this;
+        return self();
     }
 
     /**
