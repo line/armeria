@@ -251,14 +251,5 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             }
             return true;
         }
-
-        @Override
-        public CacheEntry<U> join() {
-            final CacheEntry<U> cacheEntry = this.cacheEntry;
-            if (cacheEntry != null) {
-                return cacheEntry;
-            }
-            return super.join();
-        }
     }
 }
