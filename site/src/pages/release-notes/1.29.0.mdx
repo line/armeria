@@ -4,6 +4,31 @@ date: 2024-06-05
 
 ## 🌟 New features
 
+- You can now use an <type://AsyncLoader> to load a value atomically and asynchronously. #5506 #5590
+  ```java
+  Function<String, CompletableFuture<String>> loader = cache -> {
+    ResponseEntity<String> response =
+      client.prepare().get("/api/v1/items").asString().execute();
+      return response.thenApply(res -> res.content());
+  };
+
+  AsyncLoader<String> asyncLoader =
+    AsyncLoader
+      .builder(loader)
+      .expireAfterLoad(Duration.ofSeconds(60))
+      .build();
+  asyncLoader.get().join();
+  ```
+- Armeria [HTTP/JSON to GRPC transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) service now
+  supports [Custom methods](https://cloud.google.com/apis/design/custom_methods). #5613
+  ```protobuf
+  rpc Watch(WatchRequest) returns (WatchResponse) {
+    option (google.api.http) = {
+      post: "/v1:watch" // 👈👈👈
+      body: "*"
+    };
+  }
+  ```
 - You can now specify when to remove multipart temporary files using <type://MultipartRemovalStrategy>. #5652 #5653
   ```java
   Server
@@ -44,11 +69,6 @@ date: 2024-06-05
   metrics.pendingRequests();
   metrics.activeRequests();
   ```
-- You can now specify a [Custom methods](https://cloud.google.com/apis/design/custom_methods) on HTTP endpoint. #5613
-  ```java
-  ServerBuilder builder = ...
-  builder.service("/v1/some/resource/name:customVerb", customService);
-  ```
 - You can now use a <type://CoroutineHttpService> that runs your service in a coroutine scope. #5442 #5603
   ```kotlin
   ServerBuilder sb = ...
@@ -58,7 +78,7 @@ date: 2024-06-05
       HttpResponse.of("hello world")
     })
   ```
-- You can now specify options for an <type://HttpService> via <type://HttpServiceOptions>. #5071 #5574
+- You can now specify options for an <type://HttpService> via <type://ServiceOptions>. #5071 #5574
   ```java
   HttpService httpService = new HttpService() {
     ...
@@ -70,7 +90,7 @@ date: 2024-06-05
 
   // Or use annotation for an annotated service.
   class MyService {
-      @HttpServiceOption(requestTimeoutMillis = 10000, maxRequestLength = 1024)
+      @ServiceOption(requestTimeoutMillis = 10000, maxRequestLength = 1024)
       @Get("/hello")
       public HttpResponse hello() {
           return HttpResponse.of("Hello!");
@@ -89,7 +109,8 @@ date: 2024-06-05
 
     @Get("/hello")
     public HttpResponse hello(
-      @Attribute(prefix = MyAttributes.class, value = "USERNAME") String username) { ... }
+      @Attribute(prefix = MyAttributes.class, value = "USERNAME") // 👈👈👈
+        String username) { ... }
   }
   ```
 - You can now specify a graceful shutdown timeout for a <type://ClientFactory>. #5470 #5489
@@ -102,7 +123,8 @@ date: 2024-06-05
 - You can now specify an <type://EndpointGroup> to build a <type://ClientRequestContext>. #5292 #5298
   ```java
   ClientRequestContext ctx =
-    ClientRequestContext.builder(request)
+    ClientRequestContext
+      .builder(request)
       .endpointGroup(endpointGroup)
       .build();
   ```
@@ -143,7 +165,6 @@ date: 2024-06-05
 - <type://ArmeriaServerConfigurator> now properly overrides the properties set by <type://ArmeriaSettings>. #5009 #5692
 - Armeria server now returns a 408 status if a service didn't receive the request fully and
   the request times out. #5579 #5680
-- You can now specify a field for gRPC transcoding with `p{\d}` pattern. #5679
 - A `NullPointerException` isn't raised anymore when running Armeria with a self-signed certificate. #5669
   It happened when the following conditions are all met:
   - DEBUG-level logging of JDK security event is enabled.
@@ -157,7 +178,7 @@ date: 2024-06-05
 ## 🏚️ Deprecations
 
 - <type://PrometheusMeterRegistries> and <type://PrometheusExpositionService> are deprecated. #5698
-  - Use the same classes in the `armeria-promehteus1` module.
+  - Use the same classes in the `armeria-prometheus1` module.
 - <type://HttpResult> is deprecated. Use <type://ResponseEntity> instead. #4910 #5586
 - <type://GraphqlConfigurator> and various setter methods for building a `GraphQL` instance are deprecated.
   - Use <type://GraphqlServiceBuilder#graphql(GraphQL)> instead. #5269
@@ -167,7 +188,7 @@ date: 2024-06-05
 - Micrometer 1.13.0 uses Prometheus Java client 1.x. #5698
   - If you want to keep the old behavior that uses Prometheus Java client 0.x,
     use the `io.micrometer:micrometer-registry-prometheus-simpleclient:1.13.0` module.
-  - If you want to use Prometheus Java client 1.x, add `com.linecorp.armeria:armeria-promehteus1` module.
+  - If you want to use Prometheus Java client 1.x, add `com.linecorp.armeria:armeria-prometheus1` module.
   - More details can be found in the [migration guide](https://github.com/micrometer-metrics/micrometer/wiki/1.13-Migration-Guide).
 
 ## ⛓ Dependencies
