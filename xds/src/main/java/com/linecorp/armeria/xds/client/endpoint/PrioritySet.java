@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.ClusterSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
@@ -35,11 +36,13 @@ final class PrioritySet {
     private final Map<Integer, HostSet> hostSets;
     private final SortedSet<Integer> priorities;
     private final List<Endpoint> origEndpoints;
+    private final ClusterSnapshot clusterSnapshot;
     private final Cluster cluster;
     private final int panicThreshold;
 
-    PrioritySet(Cluster cluster, Map<Integer, HostSet> hostSets, List<Endpoint> origEndpoints) {
-        this.cluster = cluster;
+    PrioritySet(ClusterSnapshot clusterSnapshot, Map<Integer, HostSet> hostSets, List<Endpoint> origEndpoints) {
+        this.clusterSnapshot = clusterSnapshot;
+        cluster = clusterSnapshot.xdsResource().resource();
         panicThreshold = EndpointUtil.panicThreshold(cluster);
         this.hostSets = hostSets;
         priorities = new TreeSet<>(hostSets.keySet());
@@ -97,6 +100,10 @@ final class PrioritySet {
 
     Cluster cluster() {
         return cluster;
+    }
+
+    ClusterSnapshot clusterSnapshot() {
+        return clusterSnapshot;
     }
 
     @Override
