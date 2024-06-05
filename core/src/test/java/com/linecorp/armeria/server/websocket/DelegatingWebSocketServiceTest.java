@@ -27,7 +27,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.client.BlockingWebClient;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.websocket.WebSocketClient;
 import com.linecorp.armeria.client.websocket.WebSocketSession;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -62,12 +61,6 @@ class DelegatingWebSocketServiceTest {
 
     @Test
     void shouldReturnMessageInUpperCase() {
-        WebClient.of("foo")
-                 .prepare()
-                 .get("/bar")
-                 .asString()
-                 .execute()
-                 .thenApply(res -> res.content());
         final WebSocketClient client = WebSocketClient.of(server.httpUri());
         final WebSocketSession session = client.connect("/ws-or-http").join();
         final WebSocketWriter outbound = session.outbound();
