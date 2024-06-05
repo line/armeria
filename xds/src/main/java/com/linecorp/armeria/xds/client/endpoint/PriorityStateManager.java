@@ -24,21 +24,16 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import com.linecorp.armeria.client.Endpoint;
-
-import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import com.linecorp.armeria.xds.ClusterSnapshot;
 
 final class PriorityStateManager {
 
     private final SortedMap<Integer, PriorityState.PriorityStateBuilder> priorityStateMap = new TreeMap<>();
-    private final Cluster cluster;
-    private final ClusterLoadAssignment clusterLoadAssignment;
+    private final ClusterSnapshot clusterSnapshot;
     private final List<Endpoint> origEndpoints;
 
-    PriorityStateManager(Cluster cluster, ClusterLoadAssignment clusterLoadAssignment,
-                         List<Endpoint> origEndpoints) {
-        this.cluster = cluster;
-        this.clusterLoadAssignment = clusterLoadAssignment;
+    PriorityStateManager(ClusterSnapshot clusterSnapshot, List<Endpoint> origEndpoints) {
+        this.clusterSnapshot = clusterSnapshot;
         this.origEndpoints = origEndpoints;
         for (Endpoint endpoint : origEndpoints) {
             registerEndpoint(endpoint);
@@ -47,14 +42,15 @@ final class PriorityStateManager {
 
     private void registerEndpoint(Endpoint endpoint) {
         final PriorityState.PriorityStateBuilder priorityStateBuilder =
-                priorityStateMap.computeIfAbsent(priority(endpoint),
-                                                 ignored -> new PriorityState.PriorityStateBuilder(cluster));
+                priorityStateMap.computeIfAbsent(
+                        priority(endpoint),
+                        ignored -> new PriorityState.PriorityStateBuilder(clusterSnapshot));
         priorityStateBuilder.addEndpoint(endpoint);
     }
 
     PrioritySet build() {
         final PrioritySet.PrioritySetBuilder prioritySetBuilder =
-                new PrioritySet.PrioritySetBuilder(cluster, clusterLoadAssignment, origEndpoints);
+                new PrioritySet.PrioritySetBuilder(clusterSnapshot, origEndpoints);
         for (Entry<Integer, PriorityState.PriorityStateBuilder> entry: priorityStateMap.entrySet()) {
             final Integer priority = entry.getKey();
             final PriorityState priorityState = entry.getValue().build();

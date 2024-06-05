@@ -34,8 +34,6 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
-import io.envoyproxy.envoy.config.cluster.v3.Cluster;
-import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.netty.util.concurrent.EventExecutor;
 
 final class ClusterEntry implements AsyncCloseable {
@@ -76,22 +74,15 @@ final class ClusterEntry implements AsyncCloseable {
     void accept(ClusterSnapshot clusterSnapshot, List<Endpoint> endpoints) {
         assert eventExecutor.inEventLoop();
         this.endpoints = ImmutableList.copyOf(endpoints);
-        final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-        assert endpointSnapshot != null;
-        final Cluster cluster = clusterSnapshot.xdsResource().resource();
-        final ClusterLoadAssignment clusterLoadAssignment = endpointSnapshot.xdsResource().resource();
-        final PriorityStateManager priorityStateManager =
-                new PriorityStateManager(cluster, clusterLoadAssignment, endpoints);
-        final PrioritySet prioritySet = priorityStateManager.build();
+        final PrioritySet prioritySet = new PriorityStateManager(clusterSnapshot, endpoints).build();
         if (logger.isTraceEnabled()) {
             logger.trace("XdsEndpointGroup is using a new PrioritySet({})", prioritySet);
         }
-        if (cluster.hasLbSubsetConfig()) {
-            loadBalancer = new SubsetLoadBalancer(clusterSnapshot);
+        if (clusterSnapshot.xdsResource().resource().hasLbSubsetConfig()) {
+            loadBalancer = new SubsetLoadBalancer(prioritySet);
         } else {
-            loadBalancer = new DefaultLoadBalancer();
+            loadBalancer = new DefaultLoadBalancer(prioritySet);
         }
-        loadBalancer.prioritySetUpdated(prioritySet);
         clusterManager.notifyListeners();
     }
 

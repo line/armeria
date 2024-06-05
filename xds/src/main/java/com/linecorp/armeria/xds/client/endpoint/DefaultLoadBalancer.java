@@ -32,16 +32,15 @@ import io.envoyproxy.envoy.config.core.v3.Locality;
 
 final class DefaultLoadBalancer implements LoadBalancer {
 
-    @Nullable
-    private DefaultLbStateFactory.DefaultLbState lbState;
+    private final DefaultLbStateFactory.DefaultLbState lbState;
+
+    DefaultLoadBalancer(PrioritySet prioritySet) {
+        lbState = DefaultLbStateFactory.newInstance(prioritySet);
+    }
 
     @Override
     @Nullable
     public Endpoint selectNow(ClientRequestContext ctx) {
-        final DefaultLbState lbState = this.lbState;
-        if (lbState == null) {
-            return null;
-        }
         final PrioritySet prioritySet = lbState.prioritySet();
         if (prioritySet.priorities().isEmpty()) {
             return null;
@@ -147,11 +146,6 @@ final class DefaultLoadBalancer implements LoadBalancer {
                 throw new Error();
         }
         return sourceType;
-    }
-
-    @Override
-    public void prioritySetUpdated(PrioritySet prioritySet) {
-        lbState = DefaultLbStateFactory.newInstance(prioritySet);
     }
 
     static class PriorityAndAvailability {

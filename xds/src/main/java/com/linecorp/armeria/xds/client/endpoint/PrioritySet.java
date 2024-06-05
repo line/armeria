@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
@@ -117,15 +118,16 @@ final class PrioritySet {
     static final class PrioritySetBuilder {
 
         private final ImmutableMap.Builder<Integer, HostSet> hostSetsBuilder = ImmutableMap.builder();
-        private final Cluster cluster;
-        private final ClusterLoadAssignment clusterLoadAssignment;
+        private final ClusterSnapshot clusterSnapshot;
         private final List<Endpoint> origEndpoints;
+        private final ClusterLoadAssignment clusterLoadAssignment;
 
-        PrioritySetBuilder(Cluster cluster, ClusterLoadAssignment clusterLoadAssignment,
-                           List<Endpoint> origEndpoints) {
-            this.cluster = cluster;
-            this.clusterLoadAssignment = clusterLoadAssignment;
+        PrioritySetBuilder(ClusterSnapshot clusterSnapshot, List<Endpoint> origEndpoints) {
+            this.clusterSnapshot = clusterSnapshot;
             this.origEndpoints = origEndpoints;
+            final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
+            assert endpointSnapshot != null;
+            clusterLoadAssignment = endpointSnapshot.xdsResource().resource();
         }
 
         void createHostSet(int priority, UpdateHostsParam params) {
@@ -134,7 +136,7 @@ final class PrioritySet {
         }
 
         PrioritySet build() {
-            return new PrioritySet(cluster, hostSetsBuilder.build(), origEndpoints);
+            return new PrioritySet(clusterSnapshot, hostSetsBuilder.build(), origEndpoints);
         }
     }
 }
