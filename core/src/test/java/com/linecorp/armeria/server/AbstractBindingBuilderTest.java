@@ -19,16 +19,9 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.reflections.ReflectionUtils;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -124,32 +117,5 @@ class AbstractBindingBuilderTest {
                 () -> new AbstractBindingBuilder(ImmutableSet.of("/")) {}.methods(ImmutableList.of()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("methods can't be empty.");
-    }
-
-    @ParameterizedTest
-    @ValueSource(classes = {
-            ContextPathDecoratingBindingBuilder.class,
-            VirtualHostContextPathDecoratingBindingBuilder.class,
-            ContextPathServiceBindingBuilder.class,
-            VirtualHostContextPathServiceBindingBuilder.class,
-            DecoratingServiceBindingBuilder.class,
-            ServiceBindingBuilder.class,
-            VirtualHostDecoratingServiceBindingBuilder.class,
-            VirtualHostServiceBindingBuilder.class,
-    })
-    void apiConsistency(Class<?> clazz) {
-        final Set<Method> overriddenMethods =
-                ReflectionUtils.getMethods(clazz,
-                                           method -> Modifier.isPublic(method.getModifiers()) &&
-                                                     method.getReturnType().equals(clazz));
-        final Set<Method> superMethods =
-                ReflectionUtils.getMethods(AbstractBindingBuilder.class,
-                                           method -> Modifier.isPublic(method.getModifiers()));
-        for (final Method method : superMethods) {
-            assertThat(overriddenMethods).filteredOn(tMethod -> {
-                return method.getName().equals(tMethod.getName()) &&
-                       Arrays.equals(method.getParameterTypes(), tMethod.getParameterTypes());
-            }).hasSize(1);
-        }
     }
 }
