@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.auth.oauth2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.spy;
 
 import java.time.Duration;
@@ -229,7 +230,7 @@ class OAuth2ClientCredentialsGrantTest {
         final List<AggregatedHttpResponse> responses =
                 getConcurrently(client, "/resource-read/", 10).join();
         validateResponses(responses, HttpStatus.OK);
-        assertThat(newTokenCounter.get()).isEqualTo(2);
+        await().untilAsserted(() -> assertThat(newTokenCounter.get()).isEqualTo(2));
     }
 
     private static CompletableFuture<List<AggregatedHttpResponse>> getConcurrently(
