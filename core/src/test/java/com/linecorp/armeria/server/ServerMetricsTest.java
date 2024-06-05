@@ -195,9 +195,9 @@ class ServerMetricsTest {
     @ParameterizedTest
     void checkWhenServerError(SessionProtocol sessionProtocol, String path, long expectedPendingHttp1Request,
                               long expectedPendingHttp2Request) throws InterruptedException {
-        try (final ClientFactory clientFactory = ClientFactory.builder()
-                                                              .maxConnectionAgeMillis(1000)
-                                                              .build()) {
+        try (ClientFactory clientFactory = ClientFactory.builder()
+                                                        .maxConnectionAgeMillis(1000)
+                                                        .build()) {
             final WebClient webClient = WebClient.builder(server.uri(sessionProtocol))
                                                  .factory(clientFactory)
                                                  .build();
@@ -228,9 +228,9 @@ class ServerMetricsTest {
     @ParameterizedTest
     void checkWhenRequestTimeout(SessionProtocol sessionProtocol, long expectedPendingHttp1Request,
                                  long expectedPendingHttp2Request) throws InterruptedException {
-        try (final ClientFactory clientFactory = ClientFactory.builder()
-                                                              .maxConnectionAgeMillis(1000)
-                                                              .build()) {
+        try (ClientFactory clientFactory = ClientFactory.builder()
+                                                        .maxConnectionAgeMillis(1000)
+                                                        .build()) {
             final WebClient webClient = WebClient.builder(server.uri(sessionProtocol))
                                                  .option(ClientOptions.RESPONSE_TIMEOUT_MILLIS.newValue(0L))
                                                  .factory(clientFactory)
