@@ -62,7 +62,7 @@ final class EndpointUtil {
     }
 
     @Nullable
-    private static Cluster.SlowStartConfig slowStartConfig(Cluster cluster) {
+    private static SlowStartConfig slowStartConfig(Cluster cluster) {
         if (cluster.getLbPolicy() == LbPolicy.ROUND_ROBIN) {
             if (cluster.hasRoundRobinLbConfig() && cluster.getRoundRobinLbConfig().hasSlowStartConfig()) {
                 return cluster.getRoundRobinLbConfig().getSlowStartConfig();

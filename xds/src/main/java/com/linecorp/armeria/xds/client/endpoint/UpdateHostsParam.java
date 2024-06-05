@@ -33,7 +33,8 @@ import io.envoyproxy.envoy.config.core.v3.Locality;
 /**
  * Hosts per partition.
  */
-class UpdateHostsParam {
+final class UpdateHostsParam {
+
     private final EndpointGroup hosts;
     private final EndpointGroup healthyHosts;
     private final EndpointGroup degradedHosts;
