@@ -106,13 +106,13 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private void load(@Nullable T cache, CompletableFuture<CacheEntry<T>> future) {
         try {
             requireNonNull(loader.apply(cache), "loader.apply() returned null")
-                    .handle((val, cause) -> {
+                    .handle((value, cause) -> {
                         if (cause != null) {
                             logger.warn("Failed to load a new value from loader: {}. cache: {}",
                                         loader, cache, cause);
                             handleException(cause, cache, future);
                         } else {
-                            future.complete(new CacheEntry<>(val));
+                            future.complete(new CacheEntry<>(value));
                         }
                         return null;
                     });
@@ -122,12 +122,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         }
     }
 
-    @Nullable
-    private boolean needsRefresh(@Nullable CacheEntry<T> cacheEntry) {
-        if (cacheEntry == null) {
-            return false;
-        }
-
+    private boolean needsRefresh(CacheEntry<T> cacheEntry) {
         boolean refresh = false;
         final T cache = cacheEntry.value;
         try {
@@ -153,13 +148,13 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
                 return;
             }
 
-            fallback.handle((val, cause0) -> {
+            fallback.handle((value, cause0) -> {
                 if (cause0 != null) {
                     logger.warn("Failed to load a new value from exceptionHandler: {}. " +
                                 "cache: {}", exceptionHandler, cache, cause0);
                     future.completeExceptionally(cause0);
                 } else {
-                    future.complete(new CacheEntry<>(val));
+                    future.complete(new CacheEntry<>(value));
                 }
                 return null;
             });
@@ -185,9 +180,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             }
         }
 
-        if (expireIf != null && expireIf.test(cacheEntry.value)) {
-            logger.debug("The cached value expired due to 'expireIf' condition. cache: {}", cacheEntry.value);
-            return false;
+        try {
+            if (expireIf != null && expireIf.test(cacheEntry.value)) {
+                logger.debug("The cached value expired due to 'expireIf' condition. cache: {}",
+                             cacheEntry.value);
+                return false;
+            }
+        } catch (Exception e) {
+            logger.warn("Unexpected exception from expireIf.test()", e);
         }
 
         return true;

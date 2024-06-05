@@ -26,6 +26,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A builder for creating a new {@link AsyncLoader}.
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * <p>Expiration should be set by {@link #expireAfterLoad(Duration)} or {@link #expireIf(Predicate)}.
  * If expiration is not set, {@link #build()} will throw {@link IllegalStateException}.
  */
+@UnstableApi
 public final class AsyncLoaderBuilder<T> {
 
     private final Function<@Nullable T, CompletableFuture<T>> loader;

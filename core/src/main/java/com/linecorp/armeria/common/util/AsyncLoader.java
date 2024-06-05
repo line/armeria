@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A loader which atomically loads, caches and updates value.
@@ -27,7 +28,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * <p>Example usage:
  * <pre>{@code
  * WebClient client = WebClient.of("https://example.com");
- * Function<String, CompletableFuture<String>> loader = (cache) -> {
+ * Function<String, CompletableFuture<String>> loader = cache -> {
  *     // Fetch new data from the remote server.
  *     ResponseEntity<String> response =
  *         client.prepare().get("/api/v1/items").asString().execute();
@@ -57,6 +58,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * }</pre>
  */
 @FunctionalInterface
+@UnstableApi
 public interface AsyncLoader<T> {
 
     /**

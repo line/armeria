@@ -81,7 +81,7 @@ class DefaultAsyncLoaderTest {
                 UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
         final AsyncLoader<Integer> loader = AsyncLoader
                 .builder(loadFunc)
-                .expireAfterLoad(Duration.ofSeconds(3))
+                .expireAfterLoad(Duration.ofSeconds(1))
                 .build();
 
         assertThat(loadCounter.get()).isZero();
@@ -90,7 +90,7 @@ class DefaultAsyncLoaderTest {
             assertThat(loadCounter.get()).isOne();
         }
 
-        Thread.sleep(3500);
+        Thread.sleep(1500);
 
         for (int i = 0; i < 5; i++) {
             assertThat(loader.get().join()).isEqualTo(2);
@@ -105,7 +105,7 @@ class DefaultAsyncLoaderTest {
                 UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
         final AsyncLoader<Integer> loader = AsyncLoader
                 .builder(loadFunc)
-                .expireAfterLoad(Duration.ofSeconds(3))
+                .expireAfterLoad(Duration.ofSeconds(1))
                 .build();
         final ExecutorService service = Executors.newFixedThreadPool(5);
         final CountDownLatch latch = new CountDownLatch(5);
@@ -120,7 +120,7 @@ class DefaultAsyncLoaderTest {
         }
         latch.await();
 
-        Thread.sleep(3500);
+        Thread.sleep(1500);
 
         final CountDownLatch latch2 = new CountDownLatch(5);
         for (int i = 0; i < 5; i++) {
@@ -212,7 +212,7 @@ class DefaultAsyncLoaderTest {
         final AtomicBoolean expired = new AtomicBoolean();
         final AsyncLoader<Integer> loader = AsyncLoader
                 .builder(loadFunc)
-                .expireAfterLoad(Duration.ofSeconds(3))
+                .expireAfterLoad(Duration.ofSeconds(1))
                 .expireIf(i -> expired.get())
                 .build();
 
@@ -222,7 +222,7 @@ class DefaultAsyncLoaderTest {
             assertThat(loadCounter.get()).isOne();
         }
 
-        Thread.sleep(3500);
+        Thread.sleep(1500);
 
         for (int i = 0; i < 5; i++) {
             assertThat(loader.get().join()).isEqualTo(2);
@@ -239,7 +239,7 @@ class DefaultAsyncLoaderTest {
         assertThat(loader.get().join()).isEqualTo(4);
         assertThat(loadCounter.get()).isEqualTo(4);
 
-        Thread.sleep(3500);
+        Thread.sleep(1500);
 
         for (int i = 0; i < 5; i++) {
             assertThat(loader.get().join()).isEqualTo(5);
@@ -255,7 +255,7 @@ class DefaultAsyncLoaderTest {
         final AtomicBoolean expired = new AtomicBoolean();
         final AsyncLoader<Integer> loader = AsyncLoader
                 .builder(loadFunc)
-                .expireAfterLoad(Duration.ofSeconds(3))
+                .expireAfterLoad(Duration.ofSeconds(1))
                 .expireIf(i -> expired.get())
                 .build();
         final ExecutorService service = Executors.newFixedThreadPool(5);
@@ -281,7 +281,7 @@ class DefaultAsyncLoaderTest {
         assertThat(loader.get().join()).isEqualTo(3);
         assertThat(loadCounter.get()).isEqualTo(3);
 
-        Thread.sleep(3500);
+        Thread.sleep(1500);
 
         final CountDownLatch latch2 = new CountDownLatch(5);
         for (int i = 0; i < 5; i++) {
@@ -516,7 +516,7 @@ class DefaultAsyncLoaderTest {
                 UnmodifiableFuture.completedFuture(loadCounter.incrementAndGet());
         final AsyncLoader<Integer> loader = AsyncLoader
                 .builder(loadFunc)
-                .expireAfterLoad(Duration.ofSeconds(3))
+                .expireAfterLoad(Duration.ofSeconds(1))
                 .refreshIf(i -> {
                     throw new IllegalStateException();
                 })
@@ -528,7 +528,7 @@ class DefaultAsyncLoaderTest {
             assertThat(loadCounter.get()).isOne();
         }
 
-        Thread.sleep(3500);
+        Thread.sleep(1500);
 
         for (int i = 0; i < 5; i++) {
             assertThat(loader.get().join()).isEqualTo(2);

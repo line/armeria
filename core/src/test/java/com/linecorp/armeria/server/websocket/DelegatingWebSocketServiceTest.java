@@ -63,11 +63,11 @@ class DelegatingWebSocketServiceTest {
     @Test
     void shouldReturnMessageInUpperCase() {
         WebClient.of("foo")
-                .prepare()
-                .get("/bar")
-                .asString()
-                .execute()
-                .thenApply(res -> res.content());
+                 .prepare()
+                 .get("/bar")
+                 .asString()
+                 .execute()
+                 .thenApply(res -> res.content());
         final WebSocketClient client = WebSocketClient.of(server.httpUri());
         final WebSocketSession session = client.connect("/ws-or-http").join();
         final WebSocketWriter outbound = session.outbound();
