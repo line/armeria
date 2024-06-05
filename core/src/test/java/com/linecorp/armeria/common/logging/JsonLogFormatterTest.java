@@ -261,49 +261,49 @@ class JsonLogFormatterTest {
         logBuilder.endRequest();
         final String formatted = logFormatter.formatRequest(logBuilder.partial());
         if (timings == null) {
-            assertThatJson(formatted).node("clientConnection").isAbsent();
+            assertThatJson(formatted).node("connection").isAbsent();
             return;
         }
 
         assertThatJson(formatted)
-                .node("clientConnection.total")
+                .node("connection.total")
                 .isEqualTo(elapsed(timings.connectionAcquisitionDurationNanos(),
                                    TimeUnit.NANOSECONDS).toString());
 
         if (timings.dnsResolutionDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("clientConnection.dns")
+                    .node("connection.dns")
                     .isEqualTo(elapsed(timings.dnsResolutionDurationNanos(),
                                        TimeUnit.NANOSECONDS).toString());
         } else {
-            assertThatJson(formatted).node("clientConnection.dns").isAbsent();
+            assertThatJson(formatted).node("connection.dns").isAbsent();
         }
 
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("clientConnection.pending")
+                    .node("connection.pending")
                     .isEqualTo(elapsed(timings.pendingAcquisitionDurationNanos(),
                                        TimeUnit.NANOSECONDS).toString());
         } else {
-            assertThatJson(formatted).node("clientConnection.pending").isAbsent();
+            assertThatJson(formatted).node("connection.pending").isAbsent();
         }
 
         if (timings.socketConnectDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("clientConnection.socket")
+                    .node("connection.socket")
                     .isEqualTo(elapsed(timings.socketConnectDurationNanos(),
                                        TimeUnit.NANOSECONDS).toString());
         } else {
-            assertThatJson(formatted).node("clientConnection.socket").isAbsent();
+            assertThatJson(formatted).node("connection.socket").isAbsent();
         }
 
         if (timings.tlsHandshakeDurationNanos() >= 0) {
             assertThatJson(formatted)
-                    .node("clientConnection.tls")
+                    .node("connection.tls")
                     .isEqualTo(elapsed(timings.tlsHandshakeDurationNanos(),
                                        TimeUnit.NANOSECONDS).toString());
         } else {
-            assertThatJson(formatted).node("clientConnection.tls").isAbsent();
+            assertThatJson(formatted).node("connection.tls").isAbsent();
         }
     }
 }

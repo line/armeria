@@ -137,7 +137,7 @@ final class JsonLogFormatter implements LogFormatter {
                 final ObjectNode connectionNode =
                         maybeCreateConnectionTimings(log.connectionTimings(), objectMapper);
                 if (connectionNode != null) {
-                    objectNode.set("clientConnection", connectionNode);
+                    objectNode.set("connection", connectionNode);
                 }
             }
 

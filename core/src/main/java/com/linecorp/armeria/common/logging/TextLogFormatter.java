@@ -197,7 +197,7 @@ final class TextLogFormatter implements LogFormatter {
         if (timings == null) {
             return;
         }
-        buf.append(", {ClientConnection total=");
+        buf.append(", Connection: {total=");
         TextFormatter.appendElapsed(buf, timings.connectionAcquisitionDurationNanos());
         if (timings.dnsResolutionDurationNanos() >= 0) {
             buf.append(", dns=");

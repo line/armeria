@@ -283,7 +283,7 @@ class TextLogFormatterTest {
         logBuilder.endRequest();
         final String formatted = logFormatter.formatRequest(logBuilder.partial());
 
-        final Matcher connStartMatcher = Pattern.compile("Connection total=([^\\s,}]+)").matcher(formatted);
+        final Matcher connStartMatcher = Pattern.compile("Connection: \\{total=([^\\s,}]+)").matcher(formatted);
         if (timings == null) {
             assertThat(connStartMatcher.find()).isFalse();
             return;
