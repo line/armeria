@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.Stringifier.segmentsToPath;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -47,6 +49,11 @@ class HttpJsonTranscodingPathParserTest {
                                            PathMappingType typeAnswer,
                                            Map<String, String> pathParams,
                                            Map<String, String> pathVariablesAnswer) {
+        if (typeAnswer == PathMappingType.REGEX) {
+            // Make sure the generated path is a valid regex pattern.
+            assertThatCode(() -> Pattern.compile(generatedPathAnswer))
+                    .doesNotThrowAnyException();
+        }
         final List<HttpJsonTranscodingPathParser.PathSegment> segments =
                 HttpJsonTranscodingPathParser.parse(originalPath);
 
@@ -82,9 +89,9 @@ class HttpJsonTranscodingPathParserTest {
                               ImmutableMap.of("user_id", "1", "message_id", "2"),
                               ImmutableMap.of("user_id", "1", "message_id", "2")),
                     arguments("/v1/{name=messages/*}",
-                              "/v1/messages/:P0",
+                              "/v1/messages/:p0",
                               PathMappingType.PARAMETERIZED,
-                              ImmutableMap.of("P0", "1"),
+                              ImmutableMap.of("p0", "1"),
                               ImmutableMap.of("name", "messages/1")),
                     arguments("/v1/{name=messages/{name2=*}}",
                               "/v1/messages/:name2",
@@ -92,24 +99,24 @@ class HttpJsonTranscodingPathParserTest {
                               ImmutableMap.of("name2", "1"),
                               ImmutableMap.of("name", "messages/1", "name2", "1")),
                     arguments("/v1/{name=messages/{name2=*/foo/{name3=*}}}",
-                              "/v1/messages/:P0/foo/:name3",
+                              "/v1/messages/:p0/foo/:name3",
                               PathMappingType.PARAMETERIZED,
-                              ImmutableMap.of("P0", "1", "name3", "2"),
+                              ImmutableMap.of("p0", "1", "name3", "2"),
                               ImmutableMap.of("name", "messages/1/foo/2", "name2", "1/foo/2", "name3", "2")),
                     arguments("/v1/messages/{message_id}:verb",
-                              "/v1/messages/(?<message_id>[^/]+):verb",
+                              "/v1/messages/(?<p0>[^/]+):verb",
                               PathMappingType.REGEX,
-                              ImmutableMap.of("message_id", "1"),
+                              ImmutableMap.of("p0", "1"),
                               ImmutableMap.of("message_id", "1")),
                     arguments("/v1/messages/{message_id=hello/*}:verb",
-                              "/v1/messages/hello/(?<P0>[^/]+):verb",
+                              "/v1/messages/hello/(?<p0>[^/]+):verb",
                               PathMappingType.REGEX,
-                              ImmutableMap.of("P0", "1"),
+                              ImmutableMap.of("p0", "1"),
                               ImmutableMap.of("message_id", "hello/1")),
                     arguments("/v1/messages/{first=a/{second=b/*/{third}}}:verb",
-                              "/v1/messages/a/b/(?<P0>[^/]+)/(?<third>[^/]+):verb",
+                              "/v1/messages/a/b/(?<p0>[^/]+)/(?<p1>[^/]+):verb",
                               PathMappingType.REGEX,
-                              ImmutableMap.of("P0", "1", "third", "2"),
+                              ImmutableMap.of("p0", "1", "p1", "2"),
                               ImmutableMap.of("first", "a/b/1/2", "second", "b/1/2", "third", "2")),
                     arguments("/v1/messages/{name=**}",
                               "/v1/messages/**",

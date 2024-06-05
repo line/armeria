@@ -385,12 +385,19 @@ final class HttpJsonTranscodingPathParser {
 
         @Override
         public String pathVariable(PathMappingType type) {
-            if (type == PathMappingType.PARAMETERIZED || type == PathMappingType.REGEX) {
-                if (parentFieldPath != null) {
-                    return parentFieldPath;
-                } else {
-                        return 'P' + StringUtil.toString(pathVarIndex);
-                }
+            switch (type) {
+                case PARAMETERIZED:
+                    if (parentFieldPath != null) {
+                        return parentFieldPath;
+                    } else {
+                        return 'p' + StringUtil.toString(pathVarIndex);
+                    }
+                case GLOB:
+                    return StringUtil.toString(pathVarIndex);
+                case REGEX:
+                    // A group name for regex must start with a letter and contain only letters, digits.
+                    // parentFieldPath may contain non-alphanumeric characters, so we prepend 'p' to the index.
+                    return 'p' + StringUtil.toString(pathVarIndex);
             }
             return StringUtil.toString(pathVarIndex);
         }
@@ -433,7 +440,7 @@ final class HttpJsonTranscodingPathParser {
             if (type == PathMappingType.GLOB) {
                 return StringUtil.toString(pathVarIndex);
             } else {
-                return 'P' + StringUtil.toString(pathVarIndex);
+                return 'p' + StringUtil.toString(pathVarIndex);
             }
         }
 
