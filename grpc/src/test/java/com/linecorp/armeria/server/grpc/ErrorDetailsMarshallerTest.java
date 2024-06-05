@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.JsonUnframedGrpcErrorHandler.ERROR_DETAILS_MARSHALLER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.io.StringWriter;
 
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -45,7 +47,11 @@ import com.google.rpc.ResourceInfo;
 import com.google.rpc.RetryInfo;
 import com.google.rpc.Status;
 
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.grpc.testing.Error.AuthError;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 class ErrorDetailsMarshallerTest {
 
@@ -119,7 +125,9 @@ class ErrorDetailsMarshallerTest {
 
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
-        UnframedGrpcErrorHandlers.writeErrorDetails(status.getDetailsList(), jsonGenerator);
+        final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
+        jsonUnframedGrpcErrorHandler.writeErrorDetails(ctx, status.getDetailsList(), jsonGenerator);
         jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
@@ -192,13 +200,48 @@ class ErrorDetailsMarshallerTest {
     }
 
     @Test
+    void convertCustomErrorDetailToJsonNodeTest() throws IOException {
+        final AuthError authError = AuthError.newBuilder()
+                                             .setCode(401)
+                                             .setMessage("Auth error.")
+                                             .build();
+        final Status status = Status.newBuilder()
+                                    .setCode(Code.UNKNOWN.getNumber())
+                                    .setMessage("Unknown Exceptions Test")
+                                    .addDetails(Any.pack(authError))
+                                    .build();
+        final StringWriter jsonObjectWriter = new StringWriter();
+        final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
+        final MessageMarshaller jsonMarshaller = ERROR_DETAILS_MARSHALLER.toBuilder()
+                                                                         .register(authError)
+                                                                         .build();
+        final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of(
+                UnframedGrpcStatusMappingFunction.of(), jsonMarshaller);
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
+        jsonUnframedGrpcErrorHandler.writeErrorDetails(ctx, status.getDetailsList(), jsonGenerator);
+        jsonGenerator.flush();
+        final String expectedJsonString =
+                "[\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/armeria.grpc.testing.AuthError\",\n" +
+                "    \"code\": 401," +
+                "    \"message\": \"Auth error.\"" +
+                "  }\n" +
+                ']';
+        assertThatJson(mapper.readTree(jsonObjectWriter.toString())).isEqualTo(expectedJsonString);
+    }
+
+    @Test
     void shouldThrowIOException() throws IOException {
         final Empty empty = Empty.getDefaultInstance();
         final Status status = Status.newBuilder().addDetails(Any.pack(empty)).build();
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
 
-        assertThatThrownBy(() -> UnframedGrpcErrorHandlers.writeErrorDetails(
-                status.getDetailsList(), jsonGenerator)).isInstanceOf(IOException.class);
+        final JsonUnframedGrpcErrorHandler jsonUnframedGrpcErrorHandler = JsonUnframedGrpcErrorHandler.of();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/test"));
+
+        assertThatThrownBy(() -> jsonUnframedGrpcErrorHandler.writeErrorDetails(
+                ctx, status.getDetailsList(), jsonGenerator)).isInstanceOf(IOException.class);
     }
 }

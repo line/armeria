@@ -79,6 +79,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private Path multipartUploadsLocation;
     @Nullable
+    private MultipartRemovalStrategy multipartRemovalStrategy;
+    @Nullable
     private EventLoopGroup serviceWorkerGroup;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
@@ -214,7 +216,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
-        this.multipartUploadsLocation = multipartUploadsLocation;
+        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        multipartRemovalStrategy = requireNonNull(removalStrategy, "removalStrategy");
         return this;
     }
 
@@ -329,18 +337,19 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         SuccessFunction defaultSuccessFunction,
                         long defaultRequestAutoAbortDelayMillis,
                         Path defaultMultipartUploadsLocation,
+                        MultipartRemovalStrategy defaultMultipartRemovalStrategy,
                         EventLoopGroup defaultServiceWorkerGroup,
                         HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
-                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
+                        @Nullable UnloggedExceptionsReporter unloggedExceptionsReporter,
                         String baseContextPath, Supplier<AutoCloseable> contextHook) {
         ServiceErrorHandler errorHandler =
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler;
-        if (unhandledExceptionsReporter != null) {
+        if (unloggedExceptionsReporter != null) {
             errorHandler = new ExceptionReportingServiceErrorHandler(errorHandler,
-                                                                     unhandledExceptionsReporter);
+                                                                     unloggedExceptionsReporter);
         }
 
         final boolean webSocket = service.as(DefaultWebSocketService.class) != null;
@@ -388,6 +397,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 successFunction != null ? successFunction : defaultSuccessFunction,
                 requestAutoAbortDelayMillis,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
+                multipartRemovalStrategy != null ? multipartRemovalStrategy : defaultMultipartRemovalStrategy,
                 serviceWorkerGroup != null ? serviceWorkerGroup : defaultServiceWorkerGroup,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),

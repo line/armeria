@@ -64,6 +64,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.server.metric.MetricCollectingServiceBuilder;
@@ -110,6 +111,7 @@ public final class ArmeriaConfigurationUtil {
             MeterIdPrefixFunction meterIdPrefixFunction,
             List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators,
             List<DependencyInjector> dependencyInjectors,
+            List<ServerErrorHandler> serverErrorHandlers,
             BeanFactory beanFactory) {
 
         requireNonNull(server, "server");
@@ -135,10 +137,7 @@ public final class ArmeriaConfigurationUtil {
         final List<Port> internalPorts = dedupPorts(internalPortsBuilder.build());
         configurePorts(server, dedupPorts(settings.getPorts()));
         configurePorts(server, internalPorts);
-
         configureSettings(server, settings);
-        armeriaServerConfigurators.forEach(configurator -> configurator.configure(server));
-        armeriaServerBuilderConsumers.forEach(consumer -> consumer.accept(server));
 
         if (settings.getGracefulShutdownQuietPeriodMillis() >= 0 &&
             settings.getGracefulShutdownTimeoutMillis() >= 0) {
@@ -167,6 +166,19 @@ public final class ArmeriaConfigurationUtil {
 
         server.meterRegistry(meterRegistry);
 
+        if (settings.getSsl() != null) {
+            configureTls(server, settings.getSsl());
+        }
+
+        final ArmeriaSettings.Compression compression = settings.getCompression();
+        if (compression != null && compression.isEnabled()) {
+            final int minBytesToForceChunkedAndEncoding =
+                    Ints.saturatedCast(parseDataSize(compression.getMinResponseSize()));
+            server.decorator(contentEncodingDecorator(compression.getMimeTypes(),
+                                                      compression.getExcludedUserAgents(),
+                                                      minBytesToForceChunkedAndEncoding));
+        }
+
         if (settings.isEnableMetrics()) {
             if (!metricCollectingServiceConfigurators.isEmpty()) {
                 final MetricCollectingServiceBuilder builder = MetricCollectingService
@@ -184,25 +196,22 @@ public final class ArmeriaConfigurationUtil {
                                      internalServiceIds, false);
         }
 
-        if (settings.getSsl() != null) {
-            configureTls(server, settings.getSsl());
-        }
-
-        final ArmeriaSettings.Compression compression = settings.getCompression();
-        if (compression != null && compression.isEnabled()) {
-            final int minBytesToForceChunkedAndEncoding =
-                    Ints.saturatedCast(parseDataSize(compression.getMinResponseSize()));
-            server.decorator(contentEncodingDecorator(compression.getMimeTypes(),
-                                                      compression.getExcludedUserAgents(),
-                                                      minBytesToForceChunkedAndEncoding));
-        }
-
+        // dependencyInjectors from beans are added first, which will be used first thing,
+        // then from armeriaServerConfigurators and armeriaServerBuilderConsumers.
         dependencyInjectors.forEach(injector -> {
             server.dependencyInjector(injector, false); // The injector is closed by Spring.
         });
         if (settings.isEnableAutoInjection()) {
             server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
         }
+        // serverErrorHandlers from beans are added first, which will be used first thing,
+        // then from armeriaServerConfigurators and armeriaServerBuilderConsumers.
+        serverErrorHandlers.forEach(server::errorHandler);
+
+        // armeriaServerConfigurators and armeriaServerBuilderConsumers will override the properties set
+        // via ArmeriaSettings.
+        armeriaServerConfigurators.forEach(configurator -> configurator.configure(server));
+        armeriaServerBuilderConsumers.forEach(consumer -> consumer.accept(server));
     }
 
     private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,

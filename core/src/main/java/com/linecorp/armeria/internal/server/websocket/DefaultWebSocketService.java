@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.net.HostAndPort;
 
@@ -289,17 +290,18 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
                                    "missing the origin header");
         }
 
+        final String lowerCaseOrigin = Ascii.toLowerCase(origin);
         if (originPredicate == null) {
             // Only the same-origin is allowed.
-            if (!isSameOrigin(ctx, headers, origin)) {
+            if (!isSameOrigin(ctx, headers, lowerCaseOrigin)) {
                 return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
-                                       "not allowed origin: " + origin);
+                                       "not allowed origin: " + lowerCaseOrigin);
             }
             return null;
         }
-        if (!originPredicate.test(origin)) {
+        if (!originPredicate.test(lowerCaseOrigin)) {
             return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
-                                   "not allowed origin: " + origin);
+                                   "not allowed origin: " + lowerCaseOrigin);
         }
         return null;
     }

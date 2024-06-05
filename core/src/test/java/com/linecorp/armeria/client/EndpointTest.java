@@ -79,6 +79,17 @@ class EndpointTest {
         assertThat(barWithUserInfo.hasIpAddr()).isFalse();
         assertThat(barWithUserInfo.hasPort()).isTrue();
         assertThat(barWithUserInfo.toUri("none+http").toString()).isEqualTo("none+http://bar:80");
+
+        final Endpoint barWithoutPort = Endpoint.parse("foo@bar:");
+        assertThat(barWithoutPort).isEqualTo(Endpoint.of("bar"));
+        assertThat(barWithoutPort.type()).isSameAs(Type.HOSTNAME_ONLY);
+        assertThatThrownBy(barWithoutPort::port).isInstanceOf(IllegalStateException.class);
+        assertThat(barWithoutPort.weight()).isEqualTo(1000);
+        assertThat(barWithoutPort.ipAddr()).isNull();
+        assertThat(barWithoutPort.ipFamily()).isNull();
+        assertThat(barWithoutPort.hasIpAddr()).isFalse();
+        assertThat(barWithoutPort.hasPort()).isFalse();
+        assertThat(barWithoutPort.toUri("none+http").toString()).isEqualTo("none+http://bar");
     }
 
     @Test
@@ -518,6 +529,11 @@ class EndpointTest {
         // ipAddr is omitted if hostname is an IP address.
         assertThat(Endpoint.of("127.0.0.1").toString()).isEqualTo("Endpoint{127.0.0.1, weight=1000}");
         assertThat(Endpoint.of("::1").toString()).isEqualTo("Endpoint{[::1], weight=1000}");
+
+        // attributes
+        final Endpoint endpointWithAttr = Endpoint.of("127.0.0.1").withAttr(AttributeKey.valueOf("test"), 1);
+        assertThat(endpointWithAttr.toString())
+                .isEqualTo("Endpoint{127.0.0.1, weight=1000, attributes=[test=1]}");
     }
 
     @Test

@@ -42,7 +42,7 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.EventLoopGroup;
@@ -78,6 +78,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Long requestAutoAbortDelayMillis;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private MultipartRemovalStrategy multipartRemovalStrategy;
     @Nullable
     private EventLoopGroup serviceWorkerGroup;
     @Nullable
@@ -238,6 +240,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigSetters multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        this.multipartRemovalStrategy = requireNonNull(removalStrategy, "removalStrategy");
+        return this;
+    }
+
+    @Override
     public ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
                                                    boolean shutdownOnStop) {
         this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
@@ -338,8 +346,11 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         } else {
             // Set the default service name only when the service name is set using @ServiceName.
             // If it's not, the global defaultServiceNaming is used.
-            if (annotatedService != null && annotatedService.serviceNameSetByAnnotation()) {
-                serviceConfigBuilder.defaultServiceName(annotatedService.serviceName());
+            if (annotatedService != null) {
+                final String serviceName = annotatedService.name();
+                if (serviceName != null) {
+                    serviceConfigBuilder.defaultServiceName(serviceName);
+                }
             }
         }
 
@@ -376,6 +387,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (multipartUploadsLocation != null) {
             serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
+        }
+        if (multipartRemovalStrategy != null) {
+            serviceConfigBuilder.multipartRemovalStrategy(multipartRemovalStrategy);
         }
         if (serviceWorkerGroup != null) {
             serviceConfigBuilder.serviceWorkerGroup(serviceWorkerGroup, false);

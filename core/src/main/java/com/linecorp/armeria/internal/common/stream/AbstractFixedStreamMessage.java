@@ -151,7 +151,7 @@ abstract class AbstractFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public final void abort() {
+    public void abort() {
         if (isDone()) {
             return;
         }
@@ -160,7 +160,7 @@ abstract class AbstractFixedStreamMessage<T> extends FixedStreamMessage<T> {
     }
 
     @Override
-    public final void abort(Throwable cause) {
+    public void abort(Throwable cause) {
         if (isDone()) {
             return;
         }

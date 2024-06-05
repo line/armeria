@@ -72,9 +72,11 @@ import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
+import testing.grpc.Transcoding.ConflictMessage;
 import testing.grpc.Transcoding.EchoAnyRequest;
 import testing.grpc.Transcoding.EchoAnyResponse;
 import testing.grpc.Transcoding.EchoFieldMaskRequest;
@@ -91,6 +93,8 @@ import testing.grpc.Transcoding.EchoStructRequest;
 import testing.grpc.Transcoding.EchoStructResponse;
 import testing.grpc.Transcoding.EchoTimestampAndDurationRequest;
 import testing.grpc.Transcoding.EchoTimestampAndDurationResponse;
+import testing.grpc.Transcoding.EchoTimestampRequest;
+import testing.grpc.Transcoding.EchoTimestampResponse;
 import testing.grpc.Transcoding.EchoValueRequest;
 import testing.grpc.Transcoding.EchoValueResponse;
 import testing.grpc.Transcoding.EchoWrappersRequest;
@@ -152,10 +156,10 @@ public class HttpJsonTranscodingTest {
         @Override
         public void getMessageV5(GetMessageRequestV5 request, StreamObserver<Message> responseObserver) {
             final String text = request.getMessageId() + ':' +
-                    request.getQueryParameter() + ':' +
-                    request.getQueryField1() + ':' +
-                    request.getParentField().getChildField() + ':' +
-                    request.getParentField().getChildField2();
+                                request.getQueryParameter() + ':' +
+                                request.getQueryField1() + ':' +
+                                request.getParentField().getChildField() + ':' +
+                                request.getParentField().getChildField2();
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
         }
@@ -185,6 +189,16 @@ public class HttpJsonTranscodingTest {
                                                                     .setTimestamp(request.getTimestamp())
                                                                     .setDuration(request.getDuration())
                                                                     .build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoTimestamp(
+                EchoTimestampRequest request,
+                StreamObserver<EchoTimestampResponse> responseObserver) {
+            responseObserver.onNext(EchoTimestampResponse.newBuilder()
+                                                         .setTimestamp(request.getTimestamp())
+                                                         .build());
             responseObserver.onCompleted();
         }
 
@@ -320,6 +334,13 @@ public class HttpJsonTranscodingTest {
                     .onNext(EchoNestedMessageResponse.newBuilder().setNested(request.getNested()).build());
             responseObserver.onCompleted();
         }
+
+        @Override
+        public void paramNameConflict(ConflictMessage request,
+                                      StreamObserver<ConflictMessage> responseObserver) {
+            responseObserver.onNext(request);
+            responseObserver.onCompleted();
+        }
     }
 
     @RegisterExtension
@@ -395,6 +416,16 @@ public class HttpJsonTranscodingTest {
     @ValueSource(strings = { "/", "/foo/" })
     void shouldGetMessageV1ByWebClient(String prefix) throws JsonProcessingException {
         final AggregatedHttpResponse response = webClient.get(prefix + "v1/messages/1").aggregate().join();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(root.get("text").asText()).isEqualTo("messages/1");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/", "/foo/" })
+    void shouldPostMessageV1ByWebClient(String prefix) throws JsonProcessingException {
+        final AggregatedHttpResponse response = webClient.post(prefix + "v1/messages/1:get", "").aggregate()
+                                                         .join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
@@ -523,11 +554,22 @@ public class HttpJsonTranscodingTest {
         final String duration = "1.000340012s";
 
         final AggregatedHttpResponse response =
-                webClient.get("/v1/echo/" + timestamp + '/' + duration).aggregate().join();
+                webClient.get("/v1/echo/timestamp/" + timestamp + '/' + duration).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
         assertThat(root.get("duration").asText()).isEqualTo(duration);
+    }
+
+    @Test
+    void shouldAcceptRfc3339TimeFormat() throws JsonProcessingException {
+        final String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
+
+        final AggregatedHttpResponse response =
+                webClient.post("/v1/echo/timestamp/" + timestamp + ":get", "").aggregate().join();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
     }
 
     @Test
@@ -816,6 +858,21 @@ public class HttpJsonTranscodingTest {
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "{\"int32Val\": 1.1}",
+            "{\"int64Val\": 2.2}",
+            "{\"uint32Val\": 3.3}",
+            "{\"uint64Val\": 4.4}"
+    })
+    void shouldDenyTypeMismatchedValue(String jsonContent)
+            throws JsonProcessingException {
+        final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/wrappers", jsonContent);
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(root.get("code").asInt()).isEqualTo(Code.INVALID_ARGUMENT.value());
+    }
+
     @Test
     void shouldDenyMissingContentType() {
         final String validJson = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"} }";
@@ -898,8 +955,8 @@ public class HttpJsonTranscodingTest {
 
         final JsonNode getMessageV1 = findMethod(methods, "GetMessageV1");
         assertThat(getMessageV1.get("httpMethod").asText()).isEqualTo("GET");
-        assertThat(pathMapping(getMessageV1)).containsExactlyInAnyOrder("/v1/messages/:p0",
-                                                                        "/foo/v1/messages/:p0");
+        assertThat(pathMapping(getMessageV1)).containsExactlyInAnyOrder("/v1/messages/:@p0",
+                                                                        "/foo/v1/messages/:@p0");
 
         final JsonNode getMessageV2 = findMethod(methods, "GetMessageV2");
         assertThat(getMessageV2.get("httpMethod").asText()).isEqualTo("GET");
@@ -997,19 +1054,19 @@ public class HttpJsonTranscodingTest {
     void supportJsonName() {
         final QueryParams query =
                 QueryParams.builder()
-                        .add("query_parameter", "query")
-                        .add("second_query", "query2")
-                        .add("parent.child_field", "childField")
-                        .add("parent.second_field", "childField2")
-                        .build();
+                           .add("query_parameter", "query")
+                           .add("second_query", "query2")
+                           .add("parent.child_field", "childField")
+                           .add("parent.second_field", "childField2")
+                           .build();
 
         final JsonNode response =
                 webClientCamelCaseQueryAndOriginalParameters.prepare()
-                        .get("/v5/messages/1")
-                        .queryParams(query)
-                        .asJson(JsonNode.class)
-                        .execute()
-                        .content();
+                                                            .get("/v5/messages/1")
+                                                            .queryParams(query)
+                                                            .asJson(JsonNode.class)
+                                                            .execute()
+                                                            .content();
         assertThat(response.get("text").asText()).isEqualTo("1:query:query2:childField:childField2");
     }
 
@@ -1028,6 +1085,14 @@ public class HttpJsonTranscodingTest {
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(nested).isNotNull().matches(v -> ((TreeNode) v).isObject());
         assertThat(nested.get("name").asText()).isEqualTo("Armeria");
+    }
+
+    @Test
+    void conflictingParamNamesReturnsCorrectly() {
+        final AggregatedHttpResponse res = server.blockingWebClient().get("/v1/conflict/hello/1/a/test");
+        assertThat(res.status().code()).isEqualTo(200);
+        assertThatJson(res.contentUtf8()).node("id").isEqualTo("hello/1");
+        assertThatJson(res.contentUtf8()).node("p0").isEqualTo("a");
     }
 
     public static JsonNode findMethod(JsonNode methods, String name) {

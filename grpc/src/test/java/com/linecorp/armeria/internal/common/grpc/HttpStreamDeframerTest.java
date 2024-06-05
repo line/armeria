@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -57,7 +58,9 @@ class HttpStreamDeframerTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final TransportStatusListener statusListener = (status, metadata) -> statusRef.set(status);
         deframer = new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), ctx, statusListener,
-                                          null, Integer.MAX_VALUE, false, true);
+                                          new UnwrappingGrpcExceptionHandleFunction(
+                                                  GrpcExceptionHandlerFunction.of()), Integer.MAX_VALUE,
+                                          false, true);
     }
 
     @Test

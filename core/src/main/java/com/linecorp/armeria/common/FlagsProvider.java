@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -582,6 +583,22 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default client-side graceful connection shutdown timeout in microseconds.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#http2GracefulShutdownTimeoutMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientHttp2GracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
+     */
+    @Nullable
+    default Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return null;
+    }
+
+    /**
      * Returns the default server-side max age of a connection for keep-alive in milliseconds.
      * If the value of this flag is greater than {@code 0}, a connection is disconnected after the specified
      * amount of the time since the connection was established.
@@ -1096,6 +1113,15 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the {@link MultipartRemovalStrategy} that is used to determine how to remove the uploaded files
+     * from {@code multipart/form-data}.
+     */
+    @Nullable
+    default MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
+        return null;
+    }
+
+    /**
      * Returns the {@link Sampler} that determines whether to trace the stack trace of request contexts leaks
      * and how frequently to keeps stack trace. A sampled exception will have the stack trace while the others
      * will have an empty stack trace to eliminate the cost of capturing the stack trace.
@@ -1126,13 +1152,29 @@ public interface FlagsProvider {
      * Returns the default interval in milliseconds between the reports on unhandled exceptions.
      *
      * <p>The default value of this flag is
-     * {@value DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@value DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
      * {@code -Dcom.linecorp.armeria.defaultUnhandledExceptionsReportIntervalMillis=<long>} JVM option to
+     * override the default value.</p>
+     *
+     * @deprecated Use {@link #defaultUnloggedExceptionsReportIntervalMillis()} instead.
+     */
+    @Nullable
+    @Deprecated
+    default Long defaultUnhandledExceptionsReportIntervalMillis() {
+        return null;
+    }
+
+    /**
+     * Returns the default interval in milliseconds between the reports on unhandled exceptions.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUnloggedExceptionsReportIntervalMillis=<long>} JVM option to
      * override the default value.</p>
      */
     @Nullable
     @UnstableApi
-    default Long defaultUnhandledExceptionsReportIntervalMillis() {
+    default Long defaultUnloggedExceptionsReportIntervalMillis() {
         return null;
     }
 
@@ -1157,6 +1199,22 @@ public interface FlagsProvider {
     @Nullable
     @UnstableApi
     default DistributionStatisticConfig distributionStatisticConfig() {
+        return null;
+    }
+
+    /**
+     * Returns the default time in milliseconds to wait before closing an HTTP/1 connection when a server needs
+     * to close the connection. This allows to avoid a server socket from remaining in the TIME_WAIT state
+     * instead of CLOSED when a connection is closed.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultHttp1ConnectionCloseDelayMillis=<long>} JVM option to
+     * override the default value. {@code 0} closes the connection immediately. </p>
+     */
+    @Nullable
+    @UnstableApi
+    default Long defaultHttp1ConnectionCloseDelayMillis() {
         return null;
     }
 }

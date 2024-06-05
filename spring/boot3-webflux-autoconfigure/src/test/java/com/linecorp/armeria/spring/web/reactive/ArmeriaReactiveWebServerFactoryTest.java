@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.RootBeanDefinition;
@@ -62,12 +63,14 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.HttpStatusException;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
@@ -566,5 +569,25 @@ class ArmeriaReactiveWebServerFactoryTest {
                                  .textValue())
                     .isEqualTo("/hello/foo");
         }
+    }
+
+    @Test
+    void testServerErrorHandlerRegistration() {
+        beanFactory.registerBeanDefinition("armeriaSettings", new RootBeanDefinition(ArmeriaSettings.class));
+        registerInternalServices(beanFactory);
+
+        // Add ServerErrorHandler @Bean which handles all exceptions and returns 200 with empty string content.
+        final ServerErrorHandler handler = (ctx, req) -> HttpResponse.of("");
+        final BeanDefinition rbd2 = new RootBeanDefinition(ServerErrorHandler.class, () -> handler);
+        beanFactory.registerBeanDefinition("serverErrorHandler", rbd2);
+
+        final ArmeriaReactiveWebServerFactory factory = factory();
+        runServer(factory, (req, res) -> {
+            throw new IllegalArgumentException(); // Always raise exception handler
+        }, server -> {
+            final WebClient client = httpClient(server);
+            final AggregatedHttpResponse res1 = client.post("/hello", "hello").aggregate().join();
+            assertThat(res1.status()).isEqualTo(com.linecorp.armeria.common.HttpStatus.OK);
+        });
     }
 }

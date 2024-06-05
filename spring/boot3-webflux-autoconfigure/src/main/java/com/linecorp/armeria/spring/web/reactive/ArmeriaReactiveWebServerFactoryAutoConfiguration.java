@@ -15,10 +15,12 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.net.InetAddress;
-import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
@@ -34,15 +36,13 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
 import org.springframework.core.env.Environment;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.healthcheck.HealthChecker;
-import com.linecorp.armeria.server.metric.PrometheusExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.DocServiceConfigurator;
 import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
@@ -87,16 +87,16 @@ public class ArmeriaReactiveWebServerFactoryAutoConfiguration {
     public InternalServices internalServices(
             ArmeriaSettings settings,
             Optional<MeterRegistry> meterRegistry,
-            Optional<List<HealthChecker>> healthCheckers,
-            Optional<List<HealthCheckServiceConfigurator>> healthCheckServiceConfigurators,
-            Optional<List<DocServiceConfigurator>> docServiceConfigurators,
+            ObjectProvider<HealthChecker> healthCheckers,
+            ObjectProvider<HealthCheckServiceConfigurator> healthCheckServiceConfigurators,
+            ObjectProvider<DocServiceConfigurator> docServiceConfigurators,
             @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort,
             @Value("${management.server.address:#{null}}") @Nullable InetAddress managementServerAddress,
             @Value("${management.server.ssl.enabled:#{false}}") boolean enableManagementServerSsl) {
         return InternalServices.of(settings, meterRegistry.orElse(Flags.meterRegistry()),
-                                   healthCheckers.orElse(ImmutableList.of()),
-                                   healthCheckServiceConfigurators.orElse(ImmutableList.of()),
-                                   docServiceConfigurators.orElse(ImmutableList.of()),
+                                   healthCheckers.orderedStream().collect(toImmutableList()),
+                                   healthCheckServiceConfigurators.orderedStream().collect(toImmutableList()),
+                                   docServiceConfigurators.orderedStream().collect(toImmutableList()),
                                    managementServerPort, managementServerAddress, enableManagementServerSsl);
     }
 }

@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
-import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -248,6 +248,12 @@ public final class ContextPathAnnotatedServiceConfigSetters
             Path multipartUploadsLocation) {
         return (ContextPathAnnotatedServiceConfigSetters)
                 super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public ContextPathAnnotatedServiceConfigSetters multipartRemovalStrategy(
+            MultipartRemovalStrategy removalStrategy) {
+        return (ContextPathAnnotatedServiceConfigSetters) super.multipartRemovalStrategy(removalStrategy);
     }
 
     @Override

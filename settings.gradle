@@ -6,20 +6,19 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.enterprise' version '3.16.2'
+    id 'com.gradle.develocity' version '3.17.3'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.13'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.1'
 }
 
-import com.gradle.scan.plugin.PublishedBuildScan
+import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
 
 def isCi = System.getenv("CI") != null
 
-gradleEnterprise {
+develocity {
     server = "https://ge.armeria.dev"
     buildScan {
-        publishIfAuthenticated()
-        publishAlways()
+        publishing.onlyIf { it.authenticated }
         uploadInBackground = !isCi
         if (isCi) {
             buildScanPublished { PublishedBuildScan scan ->
@@ -53,10 +52,6 @@ gradleEnterprise {
                 tag jobName
             }
         }
-
-        capture {
-            taskInputFiles = true
-        }
     }
 }
 
@@ -64,10 +59,10 @@ buildCache {
     local {
         enabled = true
     }
-    remote(gradleEnterprise.buildCache) {
+    remote(develocity.buildCache) {
         enabled = true
         // also check access key to avoid warning logs
-        def accessKey = System.getenv("GRADLE_ENTERPRISE_ACCESS_KEY")
+        def accessKey = System.getenv("DEVELOCITY_ACCESS_KEY")
         push = isCi && accessKey != null && !accessKey.isEmpty()
     }
 }
@@ -117,6 +112,7 @@ includeWithFlags ':logback14',                           'java11', 'publish', 'r
 project(':logback14').projectDir = file('logback/logback14')
 includeWithFlags ':native-image-config'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate', 'native'
+includeWithFlags ':prometheus1',                         'java', 'publish', 'relocate', 'native'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':resilience4j2',                       'java17', 'publish', 'relocate', 'native'
@@ -205,7 +201,6 @@ includeWithFlags ':it:jackson-provider',                       'java', 'relocate
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'
 includeWithFlags ':it:kubernetes-chaos-tests',                 'java', 'relocate'
 includeWithFlags ':it:logback1.4',                             'java11', 'relocate'
-includeWithFlags ':it:micrometer1.3',                          'java', 'relocate'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'

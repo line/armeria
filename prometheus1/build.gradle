@@ -1,0 +1,5 @@
+dependencies {
+    api libs.micrometer.prometheus
+
+    implementation libs.prometheus.metrics.exposition.formats
+}

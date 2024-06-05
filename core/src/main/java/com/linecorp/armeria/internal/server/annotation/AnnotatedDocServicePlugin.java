@@ -62,6 +62,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
@@ -142,11 +143,11 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, DescriptionInfo> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
-            final AnnotatedService service = sc.service().as(AnnotatedService.class);
+            final DefaultAnnotatedService service = sc.service().as(DefaultAnnotatedService.class);
             if (service != null) {
-                final Class<?> serviceClass = ClassUtil.getUserClass(service.object().getClass());
+                final Class<?> serviceClass = service.serviceClass();
                 final String className = serviceClass.getName();
-                final String methodName = service.method().getName();
+                final String methodName = service.methodName();
                 if (!filter.test(name(), className, methodName)) {
                     return;
                 }
@@ -164,8 +165,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
-                                      String hostnamePattern, AnnotatedService service,
+                                      String hostnamePattern, DefaultAnnotatedService service,
                                       Class<?> serviceClass) {
+
         final Route route = service.route();
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Method method = service.method();

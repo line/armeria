@@ -211,6 +211,13 @@ interface ServiceConfigSetters {
     @UnstableApi
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
 
+    /**
+     * Sets the {@link MultipartRemovalStrategy} that determines when to remove temporary files created
+     * for multipart requests.
+     */
+    @UnstableApi
+    ServiceConfigSetters multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy);
+
      /**
       * Sets a {@linkplain EventLoopGroup worker group} to be used when serving a {@link Service}.
       *

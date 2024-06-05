@@ -178,6 +178,12 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
+    public AbstractServiceBindingBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        defaultServiceConfigSetters.multipartRemovalStrategy(removalStrategy);
+        return this;
+    }
+
+    @Override
     public AbstractServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
                                                             boolean shutdownOnStop) {
         defaultServiceConfigSetters.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);

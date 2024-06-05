@@ -31,11 +31,7 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
-import static java.util.Objects.requireNonNull;
-
-import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.nio.channels.ClosedChannelException;
 import java.util.Base64;
 
 import org.slf4j.Logger;
@@ -44,34 +40,23 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.client.circuitbreaker.FailFastException;
-import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.TimeoutException;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
-import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.grpc.ThrowableProto;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.RequestTimeoutException;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.Status.Code;
-import io.netty.handler.codec.http2.Http2Error;
-import io.netty.handler.codec.http2.Http2Exception;
 
 /**
  * Utilities for handling {@link Status} in Armeria.
@@ -81,143 +66,24 @@ public final class GrpcStatus {
     private static final Logger logger = LoggerFactory.getLogger(GrpcStatus.class);
 
     /**
-     * Converts the {@link Throwable} to a {@link Status}, taking into account exceptions specific to Armeria as
-     * well and the protocol package.
-     */
-    public static Status fromThrowable(Throwable t) {
-        t = peelAndUnwrap(requireNonNull(t, "t"));
-        return statusFromThrowable(t);
-    }
-
-    /**
-     * Converts the {@link Throwable} to a {@link Status}.
-     * If the specified {@code statusFunction} returns {@code null},
-     * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
-     * and the protocol package, is used by default.
-     */
-    public static Status fromThrowable(@Nullable GrpcStatusFunction statusFunction, RequestContext ctx,
-                                       Throwable t, Metadata metadata) {
-        final GrpcExceptionHandlerFunction exceptionHandler =
-                statusFunction != null ? statusFunction::apply : null;
-        return fromThrowable(exceptionHandler, ctx, t, metadata);
-    }
-
-    /**
-     * Converts the {@link Throwable} to a {@link Status}.
-     * If the specified {@link GrpcExceptionHandlerFunction} returns {@code null},
-     * the built-in exception mapping rule, which takes into account exceptions specific to Armeria as well
-     * and the protocol package, is used by default.
-     */
-    public static Status fromThrowable(@Nullable GrpcExceptionHandlerFunction exceptionHandler,
-                                       RequestContext ctx, Throwable t, Metadata metadata) {
-        t = peelAndUnwrap(requireNonNull(t, "t"));
-
-        if (exceptionHandler != null) {
-            final Status status = exceptionHandler.apply(ctx, t, metadata);
-            if (status != null) {
-                return status;
-            }
-        }
-
-        return statusFromThrowable(t);
-    }
-
-    private static Status statusFromThrowable(Throwable t) {
-        final Status s = Status.fromThrowable(t);
-        if (s.getCode() != Code.UNKNOWN) {
-            return s;
-        }
-
-        if (t instanceof ClosedSessionException || t instanceof ClosedChannelException) {
-            // ClosedChannelException is used any time the Netty channel is closed. Proper error
-            // processing requires remembering the error that occurred before this one and using it
-            // instead.
-            return s;
-        }
-        if (t instanceof ClosedStreamException || t instanceof RequestTimeoutException) {
-            return Status.CANCELLED.withCause(t);
-        }
-        if (t instanceof UnprocessedRequestException ||
-            t instanceof IOException ||
-            t instanceof FailFastException) {
-            return Status.UNAVAILABLE.withCause(t);
-        }
-        if (t instanceof Http2Exception) {
-            if (t instanceof Http2Exception.StreamException &&
-                ((Http2Exception.StreamException) t).error() == Http2Error.CANCEL) {
-                return Status.CANCELLED;
-            }
-            return Status.INTERNAL.withCause(t);
-        }
-        if (t instanceof TimeoutException) {
-            return Status.DEADLINE_EXCEEDED.withCause(t);
-        }
-        if (t instanceof ContentTooLargeException) {
-            return Status.RESOURCE_EXHAUSTED.withCause(t);
-        }
-        return s;
-    }
-
-    /**
-     * Converts the specified {@link Status} to a new user-specified {@link Status}
-     * using the specified {@link GrpcStatusFunction}.
-     * Returns the given {@link Status} as is if the {@link GrpcStatusFunction} returns {@code null}.
-     */
-    public static Status fromStatusFunction(@Nullable GrpcStatusFunction statusFunction,
-                                            RequestContext ctx, Status status, Metadata metadata) {
-        final GrpcExceptionHandlerFunction exceptionHandler =
-                statusFunction != null ? statusFunction::apply : null;
-        return fromExceptionHandler(exceptionHandler, ctx, status, metadata);
-    }
-
-    /**
-     * Converts the specified {@link Status} to a new user-specified {@link Status}
-     * using the specified {@link GrpcExceptionHandlerFunction}.
-     * Returns the given {@link Status} as is if the {@link GrpcExceptionHandlerFunction} returns {@code null}.
-     */
-    public static Status fromExceptionHandler(@Nullable GrpcExceptionHandlerFunction exceptionHandler,
-                                              RequestContext ctx, Status status, Metadata metadata) {
-        requireNonNull(status, "status");
-
-        if (exceptionHandler != null) {
-            final Throwable cause = status.getCause();
-            if (cause != null) {
-                final Throwable unwrapped = peelAndUnwrap(cause);
-                final Status newStatus = exceptionHandler.apply(ctx, unwrapped, metadata);
-                if (newStatus != null) {
-                    return newStatus;
-                }
-            }
-        }
-        return status;
-    }
-
-    private static Throwable peelAndUnwrap(Throwable t) {
-        t = Exceptions.peel(t);
-        Throwable cause = t;
-        while (cause != null) {
-            if (cause instanceof ArmeriaStatusException) {
-                t = StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
-                break;
-            }
-            cause = cause.getCause();
-        }
-        return t;
-    }
-
-    /**
      * Maps gRPC {@link Status} to {@link HttpStatus}. If there is no matched rule for the specified
      * {@link Status}, the mapping rules defined in upstream Google APIs
      * <a href="https://github.com/googleapis/googleapis/blob/b2a7d2709887e38bcd3b5142424e563b0b386b6f/google/rpc/code.proto">
      * code.proto</a> will be used to convert the {@linkplain Status#getCode() gRPC code} to
      * the {@link HttpStatus}.
      */
-    public static HttpStatus grpcStatusToHttpStatus(Status grpcStatus) {
+    public static HttpStatus grpcStatusToHttpStatus(ServiceRequestContext ctx, Status grpcStatus) {
         if (grpcStatus.getCode() == Code.CANCELLED) {
-            if ("Request timed out".equals(grpcStatus.getDescription())) {
-                // A call was closed by a server-side timeout.
-                return HttpStatus.SERVICE_UNAVAILABLE;
+            final RequestLog log = ctx.log().getIfAvailable(RequestLogProperty.RESPONSE_CAUSE);
+            if (log != null) {
+                final Throwable responseCause = log.responseCause();
+                if (responseCause != null && (responseCause instanceof RequestTimeoutException ||
+                                              (responseCause.getCause() instanceof RequestTimeoutException))) {
+                    // A call was closed by a server-side timeout.
+                    return HttpStatus.SERVICE_UNAVAILABLE;
+                }
             }
+            // TODO(minwoox): Do not rely on the message to determine the cause of cancellation.
             if ("Completed without a response".equals(grpcStatus.getDescription())) {
                 // A unary call was closed without sending a response.
                 return HttpStatus.INTERNAL_SERVER_ERROR;
