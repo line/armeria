@@ -74,7 +74,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private CompletableFuture<CacheEntry<T>> maybeLoad() {
         RefreshingFuture<T> future;
         CacheEntry<T> cacheEntry = null;
-        for (; ; ) {
+        for (;;) {
             final RefreshingFuture<T> loadFuture = this.loadFuture;
             if (!loadFuture.isDone()) {
                 return loadFuture;

@@ -67,7 +67,7 @@ class DelegatingWebSocketServiceTest {
                 .get("/bar")
                 .asString()
                 .execute()
-                .thenApply(res -> res.content())
+                .thenApply(res -> res.content());
         final WebSocketClient client = WebSocketClient.of(server.httpUri());
         final WebSocketSession session = client.connect("/ws-or-http").join();
         final WebSocketWriter outbound = session.outbound();
