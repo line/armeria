@@ -30,10 +30,21 @@ service TranscodingVerbService {
       get: "/v1/simple/1/noparam:verb"
     };
   }
+
+  rpc UnderScoreVerb(UnderScore) returns (UnderScore) {
+    option (google.api.http) = {
+      get: "/v1/underscore/{first_message}/{second_message}:verb"
+    };
+  }
 }
 
 message Simple {
   string first = 1;
   string second = 2;
   string third = 3;
+}
+
+message UnderScore {
+  string first_message = 1;
+  string second_message = 2;
 }
