@@ -41,7 +41,7 @@ public abstract class SimpleDecoratingHttpService extends SimpleDecoratingServic
     }
 
     @Override
-    public HttpServiceOptions options() {
+    public ServiceOptions options() {
         return ((HttpService) unwrap()).options();
     }
 }

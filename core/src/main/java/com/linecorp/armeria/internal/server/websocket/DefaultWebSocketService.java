@@ -50,8 +50,8 @@ import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.HttpServiceOptions;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolHandler;
 import com.linecorp.armeria.server.websocket.WebSocketService;
@@ -100,13 +100,13 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private final Predicate<? super String> originPredicate;
     private final boolean aggregateContinuation;
     @Nullable
-    private final HttpServiceOptions serviceOptions;
+    private final ServiceOptions serviceOptions;
 
     public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
                                    int maxFramePayloadLength, boolean allowMaskMismatch,
                                    Set<String> subprotocols, boolean allowAnyOrigin,
                                    @Nullable Predicate<? super String> originPredicate,
-                                   boolean aggregateContinuation, @Nullable HttpServiceOptions serviceOptions) {
+                                   boolean aggregateContinuation, @Nullable ServiceOptions serviceOptions) {
         this.handler = handler;
         this.fallbackService = fallbackService;
         this.maxFramePayloadLength = maxFramePayloadLength;
@@ -210,9 +210,9 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private HttpResponse failOrFallback(ServiceRequestContext ctx, HttpRequest req,
                                         Supplier<HttpResponse> invalidResponse) throws Exception {
         if (fallbackService != null) {
-            // Try to apply HttpServiceOptions from fallbackService first. If not set, use the settings of the
+            // Try to apply ServiceOptions from fallbackService first. If not set, use the settings of the
             // virtual host.
-            final HttpServiceOptions options = fallbackService.options();
+            final ServiceOptions options = fallbackService.options();
             long requestTimeoutMillis = options.requestTimeoutMillis();
             if (requestTimeoutMillis < 0) {
                 requestTimeoutMillis = ctx.config().virtualHost().requestTimeoutMillis();
@@ -425,7 +425,7 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     }
 
     @Override
-    public HttpServiceOptions options() {
+    public ServiceOptions options() {
         if (serviceOptions != null) {
             return serviceOptions;
         }

@@ -29,28 +29,28 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * You can override the default options by implementing {@link HttpService#options()}.
  */
 @UnstableApi
-public final class HttpServiceOptions {
-    private static final HttpServiceOptions DEFAULT_OPTIONS = builder().build();
+public final class ServiceOptions {
+    private static final ServiceOptions DEFAULT_OPTIONS = builder().build();
 
     /**
-     * Returns the default {@link HttpServiceOptions}.
+     * Returns the default {@link ServiceOptions}.
      */
-    public static HttpServiceOptions of() {
+    public static ServiceOptions of() {
         return DEFAULT_OPTIONS;
     }
 
     /**
-     * Returns a new {@link HttpServiceOptionsBuilder}.
+     * Returns a new {@link ServiceOptionsBuilder}.
      */
-    public static HttpServiceOptionsBuilder builder() {
-        return new HttpServiceOptionsBuilder();
+    public static ServiceOptionsBuilder builder() {
+        return new ServiceOptionsBuilder();
     }
 
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
     private final long requestAutoAbortDelayMillis;
 
-    HttpServiceOptions(long requestTimeoutMillis, long maxRequestLength, long requestAutoAbortDelayMillis) {
+    ServiceOptions(long requestTimeoutMillis, long maxRequestLength, long requestAutoAbortDelayMillis) {
         this.requestTimeoutMillis = requestTimeoutMillis;
         this.maxRequestLength = maxRequestLength;
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
@@ -87,7 +87,7 @@ public final class HttpServiceOptions {
             return false;
         }
 
-        final HttpServiceOptions that = (HttpServiceOptions) o;
+        final ServiceOptions that = (ServiceOptions) o;
 
         return requestTimeoutMillis == that.requestTimeoutMillis &&
                maxRequestLength == that.maxRequestLength &&

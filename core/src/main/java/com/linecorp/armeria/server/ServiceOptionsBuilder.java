@@ -23,20 +23,20 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Creates a new {@link HttpServiceOptions} with the specified parameters.
+ * Creates a new {@link ServiceOptions} with the specified parameters.
  */
 @UnstableApi
-public final class HttpServiceOptionsBuilder {
+public final class ServiceOptionsBuilder {
     private long requestTimeoutMillis = -1;
     private long maxRequestLength = -1;
     private long requestAutoAbortDelayMillis = -1;
 
-    HttpServiceOptionsBuilder() {}
+    ServiceOptionsBuilder() {}
 
     /**
      * Returns the server-side timeout of a request in milliseconds.
      */
-    public HttpServiceOptionsBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+    public ServiceOptionsBuilder requestTimeoutMillis(long requestTimeoutMillis) {
         checkArgument(requestTimeoutMillis >= 0, "requestTimeoutMillis: %s (expected: >= 0)",
                       requestTimeoutMillis);
         this.requestTimeoutMillis = requestTimeoutMillis;
@@ -46,7 +46,7 @@ public final class HttpServiceOptionsBuilder {
     /**
      * Returns the server-side maximum length of a request.
      */
-    public HttpServiceOptionsBuilder maxRequestLength(long maxRequestLength) {
+    public ServiceOptionsBuilder maxRequestLength(long maxRequestLength) {
         checkArgument(maxRequestLength >= 0, "maxRequestLength: %s (expected: >= 0)", maxRequestLength);
         this.maxRequestLength = maxRequestLength;
         return this;
@@ -56,7 +56,7 @@ public final class HttpServiceOptionsBuilder {
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when its corresponding
      * {@link HttpResponse} is complete.
      */
-    public HttpServiceOptionsBuilder requestAutoAbortDelayMillis(long requestAutoAbortDelayMillis) {
+    public ServiceOptionsBuilder requestAutoAbortDelayMillis(long requestAutoAbortDelayMillis) {
         checkArgument(requestAutoAbortDelayMillis >= 0, "requestAutoAbortDelayMillis: %s (expected: >= 0)",
                       requestAutoAbortDelayMillis);
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
@@ -64,9 +64,9 @@ public final class HttpServiceOptionsBuilder {
     }
 
     /**
-     * Returns a newly created {@link HttpServiceOptions} based on the properties of this builder.
+     * Returns a newly created {@link ServiceOptions} based on the properties of this builder.
      */
-    public HttpServiceOptions build() {
-        return new HttpServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis);
+    public ServiceOptions build() {
+        return new ServiceOptions(requestTimeoutMillis, maxRequestLength, requestAutoAbortDelayMillis);
     }
 }

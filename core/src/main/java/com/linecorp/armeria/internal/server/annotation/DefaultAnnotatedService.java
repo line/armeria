@@ -59,11 +59,11 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Ag
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationType;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.HttpServiceOption;
-import com.linecorp.armeria.server.HttpServiceOptions;
-import com.linecorp.armeria.server.HttpServiceOptionsBuilder;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
+import com.linecorp.armeria.server.ServiceOption;
+import com.linecorp.armeria.server.ServiceOptions;
+import com.linecorp.armeria.server.ServiceOptionsBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.AnnotatedService;
@@ -114,7 +114,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
     @Nullable
     private final String name;
 
-    private final HttpServiceOptions options;
+    private final ServiceOptions options;
 
     DefaultAnnotatedService(Object object, Method method,
                             int overloadId, List<AnnotatedValueResolver> resolvers,
@@ -182,14 +182,14 @@ final class DefaultAnnotatedService implements AnnotatedService {
         // following must be called only after method.setAccessible(true)
         methodHandle = asMethodHandle(method, object);
 
-        HttpServiceOption httpServiceOption = AnnotationUtil.findFirst(method, HttpServiceOption.class);
-        if (httpServiceOption == null) {
-            httpServiceOption = AnnotationUtil.findFirst(object.getClass(), HttpServiceOption.class);
+        ServiceOption serviceOption = AnnotationUtil.findFirst(method, ServiceOption.class);
+        if (serviceOption == null) {
+            serviceOption = AnnotationUtil.findFirst(object.getClass(), ServiceOption.class);
         }
-        if (httpServiceOption != null) {
-            options = buildHttpServiceOptions(httpServiceOption);
+        if (serviceOption != null) {
+            options = buildServiceOptions(serviceOption);
         } else {
-            options = HttpServiceOptions.of();
+            options = ServiceOptions.of();
         }
     }
 
@@ -236,16 +236,16 @@ final class DefaultAnnotatedService implements AnnotatedService {
         }
     }
 
-    private static HttpServiceOptions buildHttpServiceOptions(HttpServiceOption httpServiceOption) {
-        final HttpServiceOptionsBuilder builder = HttpServiceOptions.builder();
-        if (httpServiceOption.requestTimeoutMillis() >= 0) {
-            builder.requestTimeoutMillis(httpServiceOption.requestTimeoutMillis());
+    private static ServiceOptions buildServiceOptions(ServiceOption serviceOption) {
+        final ServiceOptionsBuilder builder = ServiceOptions.builder();
+        if (serviceOption.requestTimeoutMillis() >= 0) {
+            builder.requestTimeoutMillis(serviceOption.requestTimeoutMillis());
         }
-        if (httpServiceOption.maxRequestLength() >= 0) {
-            builder.maxRequestLength(httpServiceOption.maxRequestLength());
+        if (serviceOption.maxRequestLength() >= 0) {
+            builder.maxRequestLength(serviceOption.maxRequestLength());
         }
-        if (httpServiceOption.requestAutoAbortDelayMillis() >= 0) {
-            builder.requestAutoAbortDelayMillis(httpServiceOption.requestAutoAbortDelayMillis());
+        if (serviceOption.requestAutoAbortDelayMillis() >= 0) {
+            builder.requestAutoAbortDelayMillis(serviceOption.requestAutoAbortDelayMillis());
         }
         return builder.build();
     }
@@ -516,7 +516,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
     }
 
     @Override
-    public HttpServiceOptions options() {
+    public ServiceOptions options() {
         return options;
     }
 

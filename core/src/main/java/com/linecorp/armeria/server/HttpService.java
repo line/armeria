@@ -73,10 +73,10 @@ public interface HttpService extends Service<HttpRequest, HttpResponse> {
     }
 
     /**
-     * Returns the {@link HttpServiceOptions} of this {@link HttpService}.
+     * Returns the {@link ServiceOptions} of this {@link HttpService}.
      */
     @UnstableApi
-    default HttpServiceOptions options() {
-        return HttpServiceOptions.of();
+    default ServiceOptions options() {
+        return ServiceOptions.of();
     }
 }

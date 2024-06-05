@@ -25,11 +25,11 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * An annotation used to configure {@link HttpServiceOptions} of an {@link HttpService}.
+ * An annotation used to configure {@link ServiceOptions} of an {@link HttpService}.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.METHOD, ElementType.TYPE })
-public @interface HttpServiceOption {
+public @interface ServiceOption {
 
     /**
      * Server-side timeout of a request in milliseconds.

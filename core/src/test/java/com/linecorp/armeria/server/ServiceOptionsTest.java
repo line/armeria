@@ -26,17 +26,17 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * The priority of configurations from highest to lowest:
  * 1. ServiceBinderBuilder
- * 2. HttpServiceOptions (if exists)
+ * 2. ServiceOptions (if exists)
  * 3. VirtualHostBuilder
  * 4. ServerBuilder
  */
-class HttpServiceOptionsTest {
-    private final HttpServiceOptions httpServiceOptions =
-            HttpServiceOptions.builder().requestTimeoutMillis(100001).maxRequestLength(10002)
-                              .requestAutoAbortDelayMillis(10003).build();
+class ServiceOptionsTest {
+    private final ServiceOptions serviceOptions =
+            ServiceOptions.builder().requestTimeoutMillis(100001).maxRequestLength(10002)
+                          .requestAutoAbortDelayMillis(10003).build();
 
     @Test
-    void httpServiceOptionsShouldNotOverrideServiceBindingBuilder() {
+    void serviceOptionsShouldNotOverrideServiceBindingBuilder() {
         final HttpService httpService = new HttpService() {
             @Override
             public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
@@ -44,8 +44,8 @@ class HttpServiceOptionsTest {
             }
 
             @Override
-            public HttpServiceOptions options() {
-                return httpServiceOptions;
+            public ServiceOptions options() {
+                return serviceOptions;
             }
         };
 
@@ -64,7 +64,7 @@ class HttpServiceOptionsTest {
     }
 
     @Test
-    void httpServiceOptionsShouldOverrideVirtualHostTemplate() {
+    void serviceOptionsShouldOverrideVirtualHostTemplate() {
         final HttpService httpService = new HttpService() {
             @Override
             public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
@@ -72,8 +72,8 @@ class HttpServiceOptionsTest {
             }
 
             @Override
-            public HttpServiceOptions options() {
-                return httpServiceOptions;
+            public ServiceOptions options() {
+                return serviceOptions;
             }
         };
         try (Server server = Server.builder()
@@ -89,15 +89,15 @@ class HttpServiceOptionsTest {
                                            .filter(s -> s.route().paths().contains("/test"))
                                            .findFirst().get();
 
-            assertThat(sc.requestTimeoutMillis()).isEqualTo(httpServiceOptions.requestTimeoutMillis());
-            assertThat(sc.maxRequestLength()).isEqualTo(httpServiceOptions.maxRequestLength());
+            assertThat(sc.requestTimeoutMillis()).isEqualTo(serviceOptions.requestTimeoutMillis());
+            assertThat(sc.maxRequestLength()).isEqualTo(serviceOptions.maxRequestLength());
             assertThat(sc.requestAutoAbortDelayMillis()).isEqualTo(
-                    httpServiceOptions.requestAutoAbortDelayMillis());
+                    serviceOptions.requestAutoAbortDelayMillis());
         }
     }
 
     @Test
-    void httpServiceOptionsShouldOverrideServerBuilder() {
+    void serviceOptionsShouldOverrideServerBuilder() {
         final HttpService httpService1 = new HttpService() {
             @Override
             public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
@@ -105,8 +105,8 @@ class HttpServiceOptionsTest {
             }
 
             @Override
-            public HttpServiceOptions options() {
-                return httpServiceOptions;
+            public ServiceOptions options() {
+                return serviceOptions;
             }
         };
 
@@ -124,10 +124,10 @@ class HttpServiceOptionsTest {
                                             .stream()
                                             .filter(s -> s.route().paths().contains("/test"))
                                             .findFirst().get();
-            assertThat(sc1.requestTimeoutMillis()).isEqualTo(httpServiceOptions.requestTimeoutMillis());
-            assertThat(sc1.maxRequestLength()).isEqualTo(httpServiceOptions.maxRequestLength());
+            assertThat(sc1.requestTimeoutMillis()).isEqualTo(serviceOptions.requestTimeoutMillis());
+            assertThat(sc1.maxRequestLength()).isEqualTo(serviceOptions.maxRequestLength());
             assertThat(sc1.requestAutoAbortDelayMillis()).isEqualTo(
-                    httpServiceOptions.requestAutoAbortDelayMillis());
+                    serviceOptions.requestAutoAbortDelayMillis());
         }
     }
 }

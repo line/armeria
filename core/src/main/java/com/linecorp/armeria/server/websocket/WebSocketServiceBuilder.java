@@ -38,8 +38,8 @@ import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.HttpServiceOptions;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceOptions;
 
 /**
  * Builds a {@link WebSocketService}.
@@ -62,7 +62,7 @@ public final class WebSocketServiceBuilder {
 
     static final int DEFAULT_MAX_FRAME_PAYLOAD_LENGTH = 65535; // 64 * 1024 -1
 
-    static final HttpServiceOptions DEFAULT_OPTIONS = HttpServiceOptions
+    static final ServiceOptions DEFAULT_OPTIONS = ServiceOptions
             .builder()
             .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
             .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
@@ -82,7 +82,7 @@ public final class WebSocketServiceBuilder {
     @Nullable
     private HttpService fallbackService;
     @Nullable
-    private HttpServiceOptions serviceOptions;
+    private ServiceOptions serviceOptions;
 
     WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -213,10 +213,10 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
-     * Sets the {@link HttpServiceOptions} for the {@link WebSocketService}.
+     * Sets the {@link ServiceOptions} for the {@link WebSocketService}.
      * If not set, {@link WebSocketService#options()} is used.
      */
-    public WebSocketServiceBuilder serviceOptions(HttpServiceOptions serviceOptions) {
+    public WebSocketServiceBuilder serviceOptions(ServiceOptions serviceOptions) {
         requireNonNull(serviceOptions, "serviceOptions");
         this.serviceOptions = serviceOptions;
         return this;

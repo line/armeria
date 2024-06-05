@@ -29,23 +29,23 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.HttpServiceOptions;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class WebSocketHttpServiceOptionsTest {
-    private static final HttpServiceOptions webSocketServiceOptions =
-            HttpServiceOptions.builder()
-                              .requestTimeoutMillis(100001)
-                              .maxRequestLength(10002)
-                              .requestAutoAbortDelayMillis(10003)
-                              .build();
+class WebSocketServiceOptionsTest {
+    private static final ServiceOptions webSocketServiceOptions =
+            ServiceOptions.builder()
+                          .requestTimeoutMillis(100001)
+                          .maxRequestLength(10002)
+                          .requestAutoAbortDelayMillis(10003)
+                          .build();
 
-    private static final HttpServiceOptions httpServiceOptions =
-            HttpServiceOptions.builder()
-                              .requestTimeoutMillis(50001)
-                              .build();
+    private static final ServiceOptions serviceOptions =
+            ServiceOptions.builder()
+                          .requestTimeoutMillis(50001)
+                          .build();
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -63,8 +63,8 @@ class WebSocketHttpServiceOptionsTest {
                                 }
 
                                 @Override
-                                public HttpServiceOptions options() {
-                                    return httpServiceOptions;
+                                public ServiceOptions options() {
+                                    return serviceOptions;
                                 }
                             })
                             .build();
@@ -73,7 +73,7 @@ class WebSocketHttpServiceOptionsTest {
     };
 
     @Test
-    void overrideHttpServiceOptions() throws InterruptedException {
+    void overrideServiceOptions() throws InterruptedException {
         final WebSocketClient webSocketClient = WebSocketClient.of(server.httpUri());
         final WebSocketSession session = webSocketClient.connect("/ws-or-rest").join();
         final WebSocketWriter out = session.outbound();
@@ -92,8 +92,8 @@ class WebSocketHttpServiceOptionsTest {
         final BlockingWebClient restClient = server.blockingWebClient();
         assertThat(restClient.get("/ws-or-rest").contentUtf8()).isEqualTo("fallback");
         final ServiceRequestContext restCtx = server.requestContextCaptor().take();
-        assertThat(restCtx.requestTimeoutMillis()).isEqualTo(httpServiceOptions.requestTimeoutMillis());
-        // Respect the virtual host's configurations if no value is set in the HttpServiceOptions of the
+        assertThat(restCtx.requestTimeoutMillis()).isEqualTo(serviceOptions.requestTimeoutMillis());
+        // Respect the virtual host's configurations if no value is set in the ServiceOptions of the
         // fallback service.
         assertThat(restCtx.maxRequestLength()).isEqualTo(restCtx.config().virtualHost().maxRequestLength());
         assertThat(restCtx.requestAutoAbortDelayMillis())

@@ -21,15 +21,15 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.server.HttpServiceOption;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceOption;
 
-public class HttpServiceOptionTest {
+public class ServiceOptionTest {
     @Test
-    void httpServiceOptionAnnotationShouldBeAppliedWhenConfiguredAtMethodLevel() {
+    void serviceOptionAnnotationShouldBeAppliedWhenConfiguredAtMethodLevel() {
         final class TestAnnotatedService {
-            @HttpServiceOption(
+            @ServiceOption(
                     requestTimeoutMillis = 11111,
                     maxRequestLength = 1111
             )
@@ -75,8 +75,8 @@ public class HttpServiceOptionTest {
     }
 
     @Test
-    void httpServiceOptionAnnotationShouldBeAppliedWhenConfiguredAtClassLevel() {
-        @HttpServiceOption(
+    void serviceOptionAnnotationShouldBeAppliedWhenConfiguredAtClassLevel() {
+        @ServiceOption(
                 requestTimeoutMillis = 11111,
                 maxRequestLength = 1111
         )
@@ -109,14 +109,14 @@ public class HttpServiceOptionTest {
     }
 
     @Test
-    void httpServiceOptionAnnotationAtMethodLevelShouldOverrideHttpServiceOptionAtClassLevel() {
-        @HttpServiceOption(
+    void serviceOptionAnnotationAtMethodLevelShouldOverrideServiceOptionAtClassLevel() {
+        @ServiceOption(
                 requestTimeoutMillis = 11111,
                 maxRequestLength = 1111,
                 requestAutoAbortDelayMillis = 111
         )
         final class TestAnnotatedService {
-            @HttpServiceOption(
+            @ServiceOption(
                     requestTimeoutMillis = 22222,
                     maxRequestLength = 2222,
                     requestAutoAbortDelayMillis = 222

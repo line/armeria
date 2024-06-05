@@ -142,7 +142,7 @@ class RoutingContextTest {
 
     static VirtualHost virtualHost() {
         final HttpService service = mock(HttpService.class);
-        when(service.options()).thenReturn(HttpServiceOptions.of());
+        when(service.options()).thenReturn(ServiceOptions.of());
         final Server server = Server.builder()
                                     .virtualHost("example.com")
                                     .serviceUnder("/", service)

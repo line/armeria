@@ -89,7 +89,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         this.route = requireNonNull(route, "route").withPrefix(contextPath);
         this.service = requireNonNull(service, "service");
 
-        final HttpServiceOptions options = service.options();
+        final ServiceOptions options = service.options();
         if (options.requestTimeoutMillis() != -1) {
             requestTimeoutMillis = options.requestTimeoutMillis();
         }
