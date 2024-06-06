@@ -16,16 +16,6 @@
 
 package com.linecorp.armeria.server.saml;
 
-import com.linecorp.armeria.common.AggregatedHttpRequest;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.opensaml.messaging.context.MessageContext;
-import org.opensaml.saml.saml2.core.Response;
-
-import java.util.Map;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -34,23 +24,34 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Map;
+
+import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
+import org.opensaml.messaging.context.MessageContext;
+import org.opensaml.saml.saml2.core.Response;
+
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.server.ServiceRequestContext;
+
 class SamlAssertionConsumerFunctionTest {
 
     @Test
     void testServeWithNullMessageContext() {
         // given
-        ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        AggregatedHttpRequest req = mock(AggregatedHttpRequest.class);
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final AggregatedHttpRequest req = mock(AggregatedHttpRequest.class);
         when(req.path()).thenReturn("/");
 
-        SamlAssertionConsumerConfig consumerConfig = new SamlAssertionConsumerConfigBuilder(
+        final SamlAssertionConsumerConfig consumerConfig = new SamlAssertionConsumerConfigBuilder(
                 new SamlServiceProviderBuilder(), SamlEndpoint.ofHttpPost("https://example.com")).build();
-        SamlSingleSignOnHandler ssoHandler = mock(SamlSingleSignOnHandler.class);
-        SamlAssertionConsumerFunction underTest = new SamlAssertionConsumerFunction(
+        final SamlSingleSignOnHandler ssoHandler = mock(SamlSingleSignOnHandler.class);
+        final SamlAssertionConsumerFunction underTest = new SamlAssertionConsumerFunction(
                 consumerConfig, "entityId", mock(Map.class), null,
                 mock(SamlRequestIdManager.class), ssoHandler, false);
 
-        SamlPortConfig portConfig = new SamlPortConfigBuilder().toAutoFiller().config();
+        final SamlPortConfig portConfig = new SamlPortConfigBuilder().toAutoFiller().config();
 
         // when
         underTest.serve(ctx, req, "example.com", portConfig);
@@ -62,26 +63,29 @@ class SamlAssertionConsumerFunctionTest {
     @Test
     void testServeWithNonNullMessageContext() {
         // given
-        ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        AggregatedHttpRequest req = mock(AggregatedHttpRequest.class);
+        final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
+        final AggregatedHttpRequest req = mock(AggregatedHttpRequest.class);
 
-        SamlAssertionConsumerConfig consumerConfig = new SamlAssertionConsumerConfigBuilder(
+        final SamlAssertionConsumerConfig consumerConfig = new SamlAssertionConsumerConfigBuilder(
                 new SamlServiceProviderBuilder(), SamlEndpoint.ofHttpPost("https://example.com")).build();
-        SamlSingleSignOnHandler ssoHandler = mock(SamlSingleSignOnHandler.class);
-        SamlRequestIdManager requestIdManager = mock(SamlRequestIdManager.class);
-        Map<String, SamlIdentityProviderConfig> idpConfigs = mock(Map.class);
+        final SamlSingleSignOnHandler ssoHandler = mock(SamlSingleSignOnHandler.class);
+        final SamlRequestIdManager requestIdManager = mock(SamlRequestIdManager.class);
+        final Map<String, SamlIdentityProviderConfig> idpConfigs = mock(Map.class);
 
-        SamlAssertionConsumerFunction underTest = new SamlAssertionConsumerFunction(
+        final SamlAssertionConsumerFunction underTest = new SamlAssertionConsumerFunction(
                 consumerConfig, "entityId", idpConfigs, null, requestIdManager, ssoHandler, false);
-        SamlPortConfig portConfig = new SamlPortConfig(SessionProtocol.HTTPS, 9999);
+        final SamlPortConfig portConfig = new SamlPortConfig(SessionProtocol.HTTPS, 9999);
 
-        MessageContext<Response> messageContext = mock(MessageContext.class);
-        Response response = mock(Response.class);
+        final MessageContext<Response> messageContext = mock(MessageContext.class);
+        final Response response = mock(Response.class);
         when(messageContext.getMessage()).thenReturn(response);
         when(response.getStatus()).thenThrow(new SamlException("test exception"));
 
-        try (MockedStatic<HttpPostBindingUtil> mockedHttpPostBindingUtil = mockStatic(HttpPostBindingUtil.class)) {
-            mockedHttpPostBindingUtil.when(() -> HttpPostBindingUtil.toSamlObject(any(AggregatedHttpRequest.class), eq("SAMLResponse"))).thenReturn(messageContext);
+        try (MockedStatic<HttpPostBindingUtil> mockedHttpPostBindingUtil
+                     = mockStatic(HttpPostBindingUtil.class)) {
+            mockedHttpPostBindingUtil.when(
+                    () -> HttpPostBindingUtil.toSamlObject(
+                            any(AggregatedHttpRequest.class), eq("SAMLResponse"))).thenReturn(messageContext);
 
             // when
             underTest.serve(ctx, req, "example.com", portConfig);
