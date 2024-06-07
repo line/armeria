@@ -17,7 +17,6 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.SortedSet;
 
@@ -119,8 +118,8 @@ final class DefaultLbStateFactory {
             return PerPriorityLoad.INVALID;
         }
 
-        final Map<Integer, Integer> healthyPriorityLoad = new HashMap<>();
-        final Map<Integer, Integer> degradedPriorityLoad = new HashMap<>();
+        final Map<Integer, Integer> healthyPriorityLoad = new Int2IntOpenHashMap();
+        final Map<Integer, Integer> degradedPriorityLoad = new Int2IntOpenHashMap();
         final DistributeLoadState firstHealthyAndRemaining =
                 distributeLoad(prioritySet.priorities(), healthyPriorityLoad, perPriorityHealth,
                                100, normalizedTotalAvailability);
@@ -206,8 +205,10 @@ final class DefaultLbStateFactory {
         }
         int totalLoad = 100;
         int firstNoEmpty = -1;
-        final Map<Integer, Integer> healthyPriorityLoad = new HashMap<>();
-        final Map<Integer, Integer> degradedPriorityLoad = new HashMap<>();
+        final Map<Integer, Integer> healthyPriorityLoad =
+                new Int2IntOpenHashMap(prioritySet.priorities().size());
+        final Map<Integer, Integer> degradedPriorityLoad =
+                new Int2IntOpenHashMap(prioritySet.priorities().size());
         for (Integer priority: prioritySet.priorities()) {
             final HostSet hostSet = prioritySet.hostSets().get(priority);
             final int hostsSize = hostSet.hosts().size();
