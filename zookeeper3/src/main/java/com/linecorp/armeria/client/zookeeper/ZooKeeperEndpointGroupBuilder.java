@@ -18,10 +18,8 @@ package com.linecorp.armeria.client.zookeeper;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.function.Consumer;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
@@ -33,8 +31,9 @@ import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
 /**
  * Builds a {@link ZooKeeperEndpointGroup}.
  */
-public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFrameworkBuilder
-        implements DynamicEndpointGroupSetters {
+public final class ZooKeeperEndpointGroupBuilder
+        extends AbstractCuratorFrameworkBuilder<ZooKeeperEndpointGroupBuilder>
+        implements DynamicEndpointGroupSetters<ZooKeeperEndpointGroupBuilder> {
 
     private final DynamicEndpointGroupBuilder dynamicEndpointGroupBuilder = new DynamicEndpointGroupBuilder();
     private final ZooKeeperDiscoverySpec spec;
@@ -71,33 +70,6 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
                                           client, znodePath(), spec, internalClient);
     }
 
-    // Override the return type of the chaining methods in the superclass.
-
-    @Override
-    public ZooKeeperEndpointGroupBuilder connectTimeout(Duration connectTimeout) {
-        return (ZooKeeperEndpointGroupBuilder) super.connectTimeout(connectTimeout);
-    }
-
-    @Override
-    public ZooKeeperEndpointGroupBuilder connectTimeoutMillis(long connectTimeoutMillis) {
-        return (ZooKeeperEndpointGroupBuilder) super.connectTimeoutMillis(connectTimeoutMillis);
-    }
-
-    @Override
-    public ZooKeeperEndpointGroupBuilder sessionTimeout(Duration sessionTimeout) {
-        return (ZooKeeperEndpointGroupBuilder) super.sessionTimeout(sessionTimeout);
-    }
-
-    @Override
-    public ZooKeeperEndpointGroupBuilder sessionTimeoutMillis(long sessionTimeoutMillis) {
-        return (ZooKeeperEndpointGroupBuilder) super.sessionTimeoutMillis(sessionTimeoutMillis);
-    }
-
-    @Override
-    public ZooKeeperEndpointGroupBuilder customizer(Consumer<? super Builder> customizer) {
-        return (ZooKeeperEndpointGroupBuilder) super.customizer(customizer);
-    }
-
     @Override
     public ZooKeeperEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         dynamicEndpointGroupBuilder.allowEmptyEndpoints(allowEmptyEndpoints);
@@ -131,7 +103,8 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
      * ZooKeeperEndpointGroupBuilder can't extend AbstractDynamicEndpointGroupBuilder because it already extends
      * AbstractCuratorFrameworkBuilder.
      */
-    private static class DynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+    private static class DynamicEndpointGroupBuilder
+            extends AbstractDynamicEndpointGroupBuilder<DynamicEndpointGroupBuilder> {
         protected DynamicEndpointGroupBuilder() {
             super(Flags.defaultResponseTimeoutMillis());
         }

@@ -34,7 +34,7 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
  */
 @UnstableApi
 public final class JsonLogFormatterBuilder
-        extends AbstractLogFormatterBuilder<JsonNode, JsonLogFormatterBuilder> {
+        extends AbstractLogFormatterBuilder<JsonLogFormatterBuilder, JsonNode> {
 
     @Nullable
     private ObjectMapper objectMapper;

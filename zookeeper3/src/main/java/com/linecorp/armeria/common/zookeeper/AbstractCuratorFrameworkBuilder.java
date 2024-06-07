@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A skeletal builder implementation for {@link CuratorFramework}.
  */
 @UnstableApi
-public class AbstractCuratorFrameworkBuilder {
+public class AbstractCuratorFrameworkBuilder<SELF extends AbstractCuratorFrameworkBuilder<SELF>> {
 
     private static final int DEFAULT_CONNECT_TIMEOUT_MILLIS = 1000;
     private static final int DEFAULT_SESSION_TIMEOUT_MILLIS = 10000;
@@ -97,6 +97,11 @@ public class AbstractCuratorFrameworkBuilder {
         return znodePath;
     }
 
+    @SuppressWarnings("unchecked")
+    final SELF self() {
+        return (SELF) this;
+    }
+
     /**
      * Sets the specified connect timeout. {@value DEFAULT_CONNECT_TIMEOUT_MILLIS} ms is used by default.
      *
@@ -105,7 +110,7 @@ public class AbstractCuratorFrameworkBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkBuilder connectTimeout(Duration connectTimeout) {
+    public SELF connectTimeout(Duration connectTimeout) {
         requireNonNull(connectTimeout, "connectTimeout");
         checkArgument(!connectTimeout.isZero() && !connectTimeout.isNegative(),
                       "connectTimeout: %s (expected: > 0)", connectTimeout);
@@ -121,12 +126,12 @@ public class AbstractCuratorFrameworkBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkBuilder connectTimeoutMillis(long connectTimeoutMillis) {
+    public SELF connectTimeoutMillis(long connectTimeoutMillis) {
         checkArgument(connectTimeoutMillis > 0,
                       "connectTimeoutMillis: %s (expected: > 0)", connectTimeoutMillis);
         ensureInternalClient();
         customizer(builder -> builder.connectionTimeoutMs(Ints.saturatedCast(connectTimeoutMillis)));
-        return this;
+        return self();
     }
 
     /**
@@ -137,7 +142,7 @@ public class AbstractCuratorFrameworkBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkBuilder sessionTimeout(Duration sessionTimeout) {
+    public SELF sessionTimeout(Duration sessionTimeout) {
         requireNonNull(sessionTimeout, "sessionTimeout");
         checkArgument(!sessionTimeout.isZero() && !sessionTimeout.isNegative(),
                       "sessionTimeout: %s (expected: > 0)", sessionTimeout);
@@ -152,12 +157,12 @@ public class AbstractCuratorFrameworkBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkBuilder sessionTimeoutMillis(long sessionTimeoutMillis) {
+    public SELF sessionTimeoutMillis(long sessionTimeoutMillis) {
         checkArgument(sessionTimeoutMillis > 0,
                       "sessionTimeoutMillis: %s (expected: > 0)", sessionTimeoutMillis);
         ensureInternalClient();
         customizer(builder -> builder.sessionTimeoutMs(Ints.saturatedCast(sessionTimeoutMillis)));
-        return this;
+        return self();
     }
 
     /**
@@ -166,11 +171,11 @@ public class AbstractCuratorFrameworkBuilder {
      * @throws IllegalStateException if this builder was created with an existing {@link CuratorFramework}
      *                               instance.
      */
-    public AbstractCuratorFrameworkBuilder customizer(
+    public SELF customizer(
             Consumer<? super CuratorFrameworkFactory.Builder> customizer) {
         ensureInternalClient();
         customizers.add(requireNonNull(customizer, "customizer"));
-        return this;
+        return self();
     }
 
     /**
