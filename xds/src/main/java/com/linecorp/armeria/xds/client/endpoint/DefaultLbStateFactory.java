@@ -36,24 +36,16 @@ import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.DistributeLo
 import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.HostAvailability;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.PriorityAndAvailability;
 
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntMaps;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+
 final class DefaultLbStateFactory {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultLbStateFactory.class);
 
     static DefaultLbState newInstance(PrioritySet prioritySet) {
-        final ImmutableMap.Builder<Integer, Integer> perPriorityHealthBuilder =
-                ImmutableMap.builder();
-        final ImmutableMap.Builder<Integer, Integer> perPriorityDegradedBuilder =
-                ImmutableMap.builder();
-        for (Integer priority: prioritySet.priorities()) {
-            final HealthAndDegraded healthAndDegraded =
-                    recalculatePerPriorityState(priority, prioritySet);
-            perPriorityHealthBuilder.put(priority, healthAndDegraded.healthWeight);
-            perPriorityDegradedBuilder.put(priority, healthAndDegraded.degradedWeight);
-        }
-        PerPriorityLoad perPriorityLoad = buildLoads(prioritySet,
-                                                     perPriorityHealthBuilder.build(),
-                                                     perPriorityDegradedBuilder.build());
+        PerPriorityLoad perPriorityLoad = calculatePerPriorityLoad(prioritySet);
         final PerPriorityPanic perPriorityPanic =
                 recalculatePerPriorityPanic(prioritySet,
                                             perPriorityLoad.normalizedTotalAvailability());
@@ -70,37 +62,52 @@ final class DefaultLbStateFactory {
         return new DefaultLbState(prioritySet, perPriorityLoad, perPriorityPanic);
     }
 
+    private static PerPriorityLoad calculatePerPriorityLoad(PrioritySet prioritySet) {
+        final Int2IntMap perPriorityHealth = new Int2IntOpenHashMap(prioritySet.priorities().size());
+        final Int2IntMap perPriorityDegraded = new Int2IntOpenHashMap(prioritySet.priorities().size());
+        for (int priority: prioritySet.priorities()) {
+            final HealthAndDegraded healthAndDegraded =
+                    recalculatePerPriorityState(priority, prioritySet);
+            perPriorityHealth.put(priority, healthAndDegraded.healthWeight);
+            perPriorityDegraded.put(priority, healthAndDegraded.degradedWeight);
+        }
+        return buildLoads(prioritySet,
+                          Int2IntMaps.unmodifiable(perPriorityHealth),
+                          Int2IntMaps.unmodifiable(perPriorityDegraded));
+    }
+
     private static HealthAndDegraded recalculatePerPriorityState(
             int priority, PrioritySet prioritySet) {
         final HostSet hostSet = prioritySet.hostSets().get(priority);
         final int hostCount = hostSet.hosts().size();
 
-        if (hostCount > 0) {
-            long healthyWeight = 0;
-            long degradedWeight = 0;
-            long totalWeight = 0;
-            if (hostSet.weightedPriorityHealth()) {
-                for (Endpoint host : hostSet.healthyHosts()) {
-                    healthyWeight += host.weight();
-                }
-                for (Endpoint host : hostSet.degradedHosts()) {
-                    degradedWeight += host.weight();
-                }
-                for (Endpoint host : hostSet.hosts()) {
-                    totalWeight += host.weight();
-                }
-            } else {
-                healthyWeight = hostSet.healthyHosts().size();
-                degradedWeight = hostSet.degradedHosts().size();
-                totalWeight = hostCount;
-            }
-            final int health = (int) Math.min(100L, LongMath.saturatedMultiply(
-                    hostSet.overProvisioningFactor(), healthyWeight) / totalWeight);
-            final int degraded = (int) Math.min(100L, LongMath.saturatedMultiply(
-                    hostSet.overProvisioningFactor(), degradedWeight) / totalWeight);
-            return new HealthAndDegraded(health, degraded);
+        if (hostCount <= 0) {
+            return HealthAndDegraded.ZERO;
         }
-        return new HealthAndDegraded(0, 0);
+
+        long healthyWeight = 0;
+        long degradedWeight = 0;
+        long totalWeight = 0;
+        if (hostSet.weightedPriorityHealth()) {
+            for (Endpoint host : hostSet.healthyHosts()) {
+                healthyWeight += host.weight();
+            }
+            for (Endpoint host : hostSet.degradedHosts()) {
+                degradedWeight += host.weight();
+            }
+            for (Endpoint host : hostSet.hosts()) {
+                totalWeight += host.weight();
+            }
+        } else {
+            healthyWeight = hostSet.healthyHosts().size();
+            degradedWeight = hostSet.degradedHosts().size();
+            totalWeight = hostCount;
+        }
+        final int health = (int) Math.min(100L, LongMath.saturatedMultiply(
+                hostSet.overProvisioningFactor(), healthyWeight) / totalWeight);
+        final int degraded = (int) Math.min(100L, LongMath.saturatedMultiply(
+                hostSet.overProvisioningFactor(), degradedWeight) / totalWeight);
+        return new HealthAndDegraded(health, degraded);
     }
 
     private static PerPriorityLoad buildLoads(PrioritySet prioritySet,
@@ -372,6 +379,9 @@ final class DefaultLbStateFactory {
     }
 
     private static class HealthAndDegraded {
+
+        static final HealthAndDegraded ZERO = new HealthAndDegraded(0, 0);
+
         private final int healthWeight;
         private final int degradedWeight;
 

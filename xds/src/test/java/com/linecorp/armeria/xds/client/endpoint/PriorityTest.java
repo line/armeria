@@ -144,15 +144,15 @@ class PriorityTest {
 
             // default overprovisioning factor (140) * 0.5 = 70 will be routed
             // to healthy endpoints for priority 0
-            ctx.setAttr(XdsAttributesKeys.SELECTION_HASH, 0);
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 0);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
-            ctx.setAttr(XdsAttributesKeys.SELECTION_HASH, 68);
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 68);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
 
             // 100 - 70 (priority 0) = 30 will be routed to healthy endpoints for priority 1
-            ctx.setAttr(XdsAttributesKeys.SELECTION_HASH, 70);
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 70);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
-            ctx.setAttr(XdsAttributesKeys.SELECTION_HASH, 99);
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 99);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
     }
@@ -193,15 +193,15 @@ class PriorityTest {
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
             // 0 ~ 9 for priority 0 HEALTHY
-            ctx.setAttr(XdsAttributesKeys.SELECTION_HASH, 0);
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 0);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
 
             // 10 ~ 19 for priority 1 HEALTHY
-            ctx.setAttr(XdsAttributesKeys.SELECTION_HASH, 10);
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 10);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
 
             // 20 ~ 99 for priority 1 DEGRADED
-            ctx.setAttr(XdsAttributesKeys.SELECTION_HASH, 20);
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 20);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8083));
         }
     }
@@ -266,9 +266,9 @@ class PriorityTest {
 
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-            ctx.setAttr(XdsAttributesKeys.SELECTION_HASH, 0);
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 0);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8083));
-            ctx.setAttr(XdsAttributesKeys.SELECTION_HASH, 99);
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 99);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8083));
         }
     }

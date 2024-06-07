@@ -123,8 +123,8 @@ final class EndpointUtil {
     }
 
     static int hash(ClientRequestContext ctx) {
-        if (ctx.hasAttr(XdsAttributesKeys.SELECTION_HASH)) {
-            final Integer selectionHash = ctx.attr(XdsAttributesKeys.SELECTION_HASH);
+        if (ctx.hasAttr(XdsAttributeKeys.SELECTION_HASH)) {
+            final Integer selectionHash = ctx.attr(XdsAttributeKeys.SELECTION_HASH);
             assert selectionHash != null;
             return Math.max(0, selectionHash);
         }
@@ -144,14 +144,14 @@ final class EndpointUtil {
     }
 
     private static LbEndpoint lbEndpoint(Endpoint endpoint) {
-        final LbEndpoint lbEndpoint = endpoint.attr(XdsAttributesKeys.LB_ENDPOINT_KEY);
+        final LbEndpoint lbEndpoint = endpoint.attr(XdsAttributeKeys.LB_ENDPOINT_KEY);
         assert lbEndpoint != null;
         return lbEndpoint;
     }
 
     private static LocalityLbEndpoints localityLbEndpoints(Endpoint endpoint) {
         final LocalityLbEndpoints localityLbEndpoints = endpoint.attr(
-                XdsAttributesKeys.LOCALITY_LB_ENDPOINTS_KEY);
+                XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY);
         assert localityLbEndpoints != null;
         return localityLbEndpoints;
     }

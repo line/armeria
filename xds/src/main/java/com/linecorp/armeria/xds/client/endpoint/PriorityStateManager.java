@@ -21,14 +21,16 @@ import static com.linecorp.armeria.xds.client.endpoint.EndpointUtil.priority;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.SortedMap;
-import java.util.TreeMap;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
+import it.unimi.dsi.fastutil.ints.Int2ReferenceAVLTreeMap;
+
 final class PriorityStateManager {
 
-    private final SortedMap<Integer, PriorityState.PriorityStateBuilder> priorityStateMap = new TreeMap<>();
+    private final SortedMap<Integer, PriorityState.PriorityStateBuilder> priorityStateMap =
+            new Int2ReferenceAVLTreeMap<>();
     private final ClusterSnapshot clusterSnapshot;
     private final List<Endpoint> origEndpoints;
 
@@ -41,11 +43,14 @@ final class PriorityStateManager {
     }
 
     private void registerEndpoint(Endpoint endpoint) {
-        final PriorityState.PriorityStateBuilder priorityStateBuilder =
-                priorityStateMap.computeIfAbsent(
-                        priority(endpoint),
-                        ignored -> new PriorityState.PriorityStateBuilder(clusterSnapshot));
-        priorityStateBuilder.addEndpoint(endpoint);
+        final int priority = priority(endpoint);
+        PriorityState.PriorityStateBuilder builder = priorityStateMap.get(priority);
+        if (builder == null) {
+            builder = priorityStateMap.computeIfAbsent(
+                    priority(endpoint),
+                    ignored -> new PriorityState.PriorityStateBuilder(clusterSnapshot));
+        }
+        builder.addEndpoint(endpoint);
     }
 
     PrioritySet build() {

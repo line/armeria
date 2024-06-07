@@ -147,7 +147,7 @@ final class HostSet {
         // We compute the availability of a locality via:
         // (overProvisioningFactor) * (# healthy/degraded of hosts) / (# total hosts)
         // https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/locality_weight.html
-        final double localityAvailabilityRatio = 1.0 * localityEligibleHosts.endpoints().size() / hostCount;
+        final double localityAvailabilityRatio = (double) localityEligibleHosts.endpoints().size() / hostCount;
         final int weight = localityWeightsMap.getOrDefault(locality, 0);
         final double effectiveLocalityAvailabilityRatio =
                 Math.min(1.0, (overProvisioningFactor / 100.0) * localityAvailabilityRatio);

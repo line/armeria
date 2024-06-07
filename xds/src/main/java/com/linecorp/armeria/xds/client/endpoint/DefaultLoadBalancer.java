@@ -50,13 +50,13 @@ final class DefaultLoadBalancer implements LoadBalancer {
         if (hostsSource == null) {
             return null;
         }
-        if (!prioritySet.hostSets().containsKey(hostsSource.priority)) {
+        final HostSet hostSet = prioritySet.hostSets().get(hostsSource.priority);
+        if (hostSet == null) {
             // shouldn't reach here
             throw new IllegalStateException("Unable to select a priority for cluster(" +
                                             prioritySet.cluster().getName() + "), hostsSource(" +
                                             hostsSource + ')');
         }
-        final HostSet hostSet = prioritySet.hostSets().get(hostsSource.priority);
         switch (hostsSource.sourceType) {
             case ALL_HOSTS:
                 return hostSet.hostsEndpointGroup().selectNow(ctx);
@@ -67,15 +67,17 @@ final class DefaultLoadBalancer implements LoadBalancer {
             case LOCALITY_HEALTHY_HOSTS:
                 final Map<Locality, EndpointGroup> healthyLocalities =
                         hostSet.healthyEndpointGroupPerLocality();
-                if (healthyLocalities.containsKey(hostsSource.locality)) {
-                    return healthyLocalities.get(hostsSource.locality).selectNow(ctx);
+                final EndpointGroup healthyEndpointGroup = healthyLocalities.get(hostsSource.locality);
+                if (healthyEndpointGroup != null) {
+                    return healthyEndpointGroup.selectNow(ctx);
                 }
                 break;
             case LOCALITY_DEGRADED_HOSTS:
                 final Map<Locality, EndpointGroup> degradedLocalities =
                         hostSet.degradedEndpointGroupPerLocality();
-                if (degradedLocalities.containsKey(hostsSource.locality)) {
-                    return degradedLocalities.get(hostsSource.locality).selectNow(ctx);
+                final EndpointGroup degradedEndpointGroup = degradedLocalities.get(hostsSource.locality);
+                if (degradedEndpointGroup != null) {
+                    return degradedEndpointGroup.selectNow(ctx);
                 }
                 break;
             default:
