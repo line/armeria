@@ -327,6 +327,15 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the {@link TlsEngineType} of this virtual host.
+     */
+    @Nullable
+    @UnstableApi
+    public TlsEngineType tlsEngineType() {
+        return tlsEngineType;
+    }
+
+    /**
      * Returns the information about the {@link HttpService}s bound to this virtual host.
      */
     public List<ServiceConfig> serviceConfigs() {

@@ -64,8 +64,6 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import io.netty.channel.ChannelOption;
-import io.netty.handler.ssl.JdkSslServerContext;
-import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import reactor.core.scheduler.Schedulers;
 
@@ -504,7 +502,8 @@ class ServerBuilderTest {
         // Did not call `tls()` for both default host and virtual host.
         assertThatThrownBy(() -> Server.builder()
                                        .virtualHost("example.com")
-                                       .tlsCustomizer(unused -> {})
+                                       .tlsCustomizer(unused -> {
+                                       })
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
@@ -514,7 +513,8 @@ class ServerBuilderTest {
                                        .tls(selfSignedCertificate.certificateFile(),
                                             selfSignedCertificate.privateKeyFile())
                                        .virtualHost("example.com")
-                                       .tlsCustomizer(unused -> {})
+                                       .tlsCustomizer(unused -> {
+                                       })
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
@@ -526,7 +526,8 @@ class ServerBuilderTest {
         assertThatThrownBy(() -> Server.builder()
                                        .tlsSelfSigned()
                                        .virtualHost("example.com")
-                                       .tlsCustomizer(unused -> {})
+                                       .tlsCustomizer(unused -> {
+                                       })
                                        .and().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("tlsCustomizer");
@@ -561,10 +562,9 @@ class ServerBuilderTest {
     @Test
     void tlsEngineType() {
         final Server sb1 = Server.builder()
-                                 .tlsSelfSigned()
                                  .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                  .build();
-        assertThat(sb1.config().defaultVirtualHost().sslContext()).isNotNull();
+        assertThat(sb1.config().defaultVirtualHost().tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
 
         final Server sb2 = Server.builder()
                                  .tlsSelfSigned()
@@ -583,17 +583,11 @@ class ServerBuilderTest {
                                  .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                  .and()
                                  .build();
-        assertThat(sb2.config().defaultVirtualHost().sslContext().getClass())
-                .isEqualTo(OpenSslServerContext.class);
-        assertThat(sb2.config().findVirtualHost("*.example1.com", 8080).sslContext().getClass())
-                .isEqualTo(JdkSslServerContext.class);
-        assertThat(sb2.config().findVirtualHost("*.example2.com", 8080).sslContext().getClass())
-                .isEqualTo(OpenSslServerContext.class);
-
-        final Server sb3 = Server.builder()
-                                 .service("/example", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                 .build();
-        assertThat(sb3.config().defaultVirtualHost().sslContext()).isNull();
+        assertThat(sb2.config().defaultVirtualHost().tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
+        assertThat(sb2.config().findVirtualHost("*.example1.com", 8080).tlsEngineType())
+                .isEqualTo(TlsEngineType.JDK);
+        assertThat(sb2.config().findVirtualHost("*.example2.com", 8080).tlsEngineType())
+                .isEqualTo(TlsEngineType.OPENSSL);
     }
 
     @Test
