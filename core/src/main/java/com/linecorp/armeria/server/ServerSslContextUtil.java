@@ -32,8 +32,6 @@ import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.ssl.JdkSslServerContext;
-import io.netty.handler.ssl.OpenSslServerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -49,7 +47,7 @@ final class ServerSslContextUtil {
      * key store password is not given to key store when {@link SslContext} was created using
      * {@link KeyManagerFactory}, the validation will fail and an {@link IllegalStateException} will be raised.
      */
-    static SSLSession validateSslContext(SslContext sslContext) {
+    static SSLSession validateSslContext(SslContext sslContext, TlsEngineType tlsEngineType) {
         if (!sslContext.isServer()) {
             throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
         }
@@ -64,7 +62,6 @@ final class ServerSslContextUtil {
             serverEngine.setNeedClientAuth(false);
 
             // Create a client-side engine with very permissive settings.
-            final TlsEngineType tlsEngineType = determineTlsEngineType(sslContext);
             final SslContext sslContextClient =
                     buildSslContext(() -> SslContextBuilder.forClient()
                                                            .trustManager(InsecureTrustManagerFactory.INSTANCE),
@@ -96,18 +93,6 @@ final class ServerSslContextUtil {
         }
 
         return sslSession;
-    }
-
-    private static TlsEngineType determineTlsEngineType(SslContext sslContext) {
-        if (sslContext instanceof OpenSslServerContext) {
-            return TlsEngineType.OPENSSL;
-        }
-
-        if (sslContext instanceof JdkSslServerContext) {
-            return TlsEngineType.JDK;
-        }
-
-        throw new IllegalStateException("Unknown SslContext type: " + sslContext.getClass().getName());
     }
 
     static SslContext buildSslContext(

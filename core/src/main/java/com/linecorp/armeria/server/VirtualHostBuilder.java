@@ -1431,9 +1431,12 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         builder.addAll(shutdownSupports);
         builder.addAll(template.shutdownSupports);
 
+        final TlsEngineType tlsEngineType = this.tlsEngineType != null ?
+                                            this.tlsEngineType : template.tlsEngineType;
+        assert tlsEngineType != null;
         final VirtualHost virtualHost =
-                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
-                                serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
+                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template, tlsEngineType),
+                                tlsEngineType, serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
                                 requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
@@ -1464,7 +1467,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     @Nullable
-    private SslContext sslContext(VirtualHostBuilder template) {
+    private SslContext sslContext(VirtualHostBuilder template, TlsEngineType tlsEngineType) {
         if (portBased) {
             return null;
         }
@@ -1477,10 +1480,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
             // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
             boolean sslContextFromThis = false;
-
-            final TlsEngineType tlsEngineType =
-                    this.tlsEngineType != null ? this.tlsEngineType : template.tlsEngineType;
-            assert tlsEngineType != null;
 
             // Build a new SslContext or use a user-specified one for backward compatibility.
             if (sslContextBuilderSupplier != null) {
@@ -1530,7 +1529,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
             // Validate the built `SslContext`.
             if (sslContext != null) {
-                validateSslContext(sslContext);
+                validateSslContext(sslContext, tlsEngineType);
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
             releaseSslContextOnFailure = false;

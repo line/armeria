@@ -37,7 +37,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TlsEngineType;
 
@@ -91,19 +90,6 @@ public final class SslContextUtil {
     private static boolean warnedUnsupportedProtocols;
     private static boolean warnedMissingEssentialCipherSuite;
     private static boolean warnedBadCipherSuite;
-
-    /**
-     * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
-     * TLSv1.3 (if supported), and TLSv1.2.
-     */
-    public static SslContext createSslContext(
-            Supplier<SslContextBuilder> builderSupplier, boolean forceHttp1,
-            boolean tlsAllowUnsafeCiphers,
-            Iterable<? extends Consumer<? super SslContextBuilder>> userCustomizers,
-            @Nullable List<X509Certificate> keyCertChainCaptor) {
-        return createSslContext(builderSupplier, forceHttp1, Flags.tlsEngineType(), tlsAllowUnsafeCiphers,
-                                userCustomizers, keyCertChainCaptor);
-    }
 
     /**
      * Creates a {@link SslContext} with Armeria's defaults, enabling support for HTTP/2,
