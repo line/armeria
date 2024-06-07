@@ -33,7 +33,7 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
  * @param <T> the response type
  */
 public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
-        extends AbstractRuleWithContentBuilder<T, CircuitBreakerRuleWithContentBuilder<T>> {
+        extends AbstractRuleWithContentBuilder<CircuitBreakerRuleWithContentBuilder<T>, T> {
 
     CircuitBreakerRuleWithContentBuilder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {

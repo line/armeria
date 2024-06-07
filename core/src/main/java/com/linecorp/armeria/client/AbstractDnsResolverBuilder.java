@@ -93,7 +93,7 @@ public abstract class AbstractDnsResolverBuilder<SELF extends AbstractDnsResolve
     protected AbstractDnsResolverBuilder() {}
 
     /**
-     * Return this.
+     * Return {@code this}.
      */
     @SuppressWarnings("unchecked")
     protected final SELF self() {

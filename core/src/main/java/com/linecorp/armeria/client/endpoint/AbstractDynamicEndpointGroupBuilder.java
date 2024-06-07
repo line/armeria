@@ -40,7 +40,7 @@ public abstract class AbstractDynamicEndpointGroupBuilder
     }
 
     /**
-     * Return this.
+     * Return {@code this}.
      */
     @SuppressWarnings("unchecked")
     protected final SELF self() {

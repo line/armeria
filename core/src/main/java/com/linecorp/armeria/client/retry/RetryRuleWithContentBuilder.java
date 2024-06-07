@@ -33,7 +33,7 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
  * A builder for creating a new {@link RetryRuleWithContent}.
  */
 public final class RetryRuleWithContentBuilder<T extends Response>
-        extends AbstractRuleWithContentBuilder<T, RetryRuleWithContentBuilder<T>> {
+        extends AbstractRuleWithContentBuilder<RetryRuleWithContentBuilder<T>, T> {
 
     RetryRuleWithContentBuilder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {

@@ -20,7 +20,7 @@ package com.linecorp.armeria.common.logging;
  * A builder implementation for Text {@link HeadersSanitizer}.
  */
 public final class TextHeadersSanitizerBuilder
-        extends AbstractHeadersSanitizerBuilder<String, TextHeadersSanitizerBuilder> {
+        extends AbstractHeadersSanitizerBuilder<TextHeadersSanitizerBuilder, String> {
 
     /**
      * Returns a newly created text {@link HeadersSanitizer} based on the properties of this builder.

@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public abstract class AbstractRuleWithContentBuilder
-        <T extends Response, SELF extends AbstractRuleWithContentBuilder<T, SELF>>
+        <SELF extends AbstractRuleWithContentBuilder<SELF, T>, T extends Response>
         extends AbstractRuleBuilder<SELF> {
 
     @Nullable

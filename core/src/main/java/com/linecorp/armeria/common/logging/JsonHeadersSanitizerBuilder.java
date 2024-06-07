@@ -28,7 +28,7 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
  * A builder implementation for JSON {@link HeadersSanitizer}.
  */
 public final class JsonHeadersSanitizerBuilder
-        extends AbstractHeadersSanitizerBuilder<JsonNode, JsonHeadersSanitizerBuilder> {
+        extends AbstractHeadersSanitizerBuilder<JsonHeadersSanitizerBuilder, JsonNode> {
 
     @Nullable
     private ObjectMapper objectMapper;

@@ -36,7 +36,7 @@ public abstract class AbstractCircuitBreakerMappingBuilder
     protected AbstractCircuitBreakerMappingBuilder() {}
 
     /**
-     * Return this.
+     * Return {@code this}.
      */
     @SuppressWarnings("unchecked")
     protected final SELF self() {

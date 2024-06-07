@@ -32,7 +32,7 @@ import io.netty.util.AsciiString;
 /**
  * A skeletal builder implementation for {@link HeadersSanitizer}.
  */
-abstract class AbstractHeadersSanitizerBuilder<T, SELF extends AbstractHeadersSanitizerBuilder<T, SELF>> {
+abstract class AbstractHeadersSanitizerBuilder<SELF extends AbstractHeadersSanitizerBuilder<SELF, T>, T> {
 
     // Referenced from:
     // - https://docs.rs/tower-http/latest/tower_http/sensitive_headers/index.html
