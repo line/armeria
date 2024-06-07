@@ -110,7 +110,7 @@ configure(relocatedProjects) {
             injars tasks.shadedTestJar.archiveFile.get().asFile
             relocatedProjects.each {
                 if (it != project && !it.hasFlags('no_aggregation')) {
-                    injars it.tasks.shadedJar.aarchiveFile.get().asFile
+                    injars it.tasks.shadedJar.archiveFile.get().asFile
                     injars it.tasks.shadedTestJar.archiveFile.get().asFile
                 }
             }
