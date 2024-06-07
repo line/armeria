@@ -31,19 +31,22 @@ mrJarVersions.each { version->
         options.release.set(targetJavaVersion)
     }
 
-    task "testJava${version}"(type: Test, group: 'Verification', description: "Runs unit tests for Java ${version} source set") {
+    tasks.register("testJava${version}", Test) {
+        group = 'Verification'
+        description = "Runs unit tests for Java ${version} source set"
         testClassesDirs = sourceSets."java${version}Test".output.classesDirs
         classpath = sourceSets."java${version}Test".runtimeClasspath
 
+        project.ext.configureFlakyTests(it)
         project.ext.configureCommonTestSettings(it)
         enabled = project.ext.testJavaVersion >= targetJavaVersion
+
+        check.dependsOn it
     }
 
     configurations."java${version}Implementation".extendsFrom configurations.implementation
     configurations."java${version}TestImplementation".extendsFrom configurations.testImplementation
     configurations."java${version}TestRuntimeClasspath".extendsFrom configurations.testRuntimeClasspath
-
-    check.dependsOn "testJava${version}"
 }
 
 tasks.withType(Jar) {
