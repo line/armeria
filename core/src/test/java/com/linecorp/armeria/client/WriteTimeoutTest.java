@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.client.HttpSession.get;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -34,6 +33,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -81,7 +81,7 @@ class WriteTimeoutTest {
 
             final RequestLog log = ctx.log().whenComplete().join();
             // Make sure that the session is deactivated after the write timeout.
-            assertThat(get(log.channel()).isAcquirable()).isFalse();
+            assertThat(HttpSession.get(log.channel()).isAcquirable()).isFalse();
         }
     }
 }
