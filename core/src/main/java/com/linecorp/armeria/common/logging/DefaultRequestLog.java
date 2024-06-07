@@ -82,7 +82,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private static final ResponseHeaders DUMMY_RESPONSE_HEADERS = ResponseHeaders.of(HttpStatus.UNKNOWN);
 
     private final RequestContext ctx;
-    private int currentAttempt = -1;
+    private int currentAttempt;
 
     private final CompleteRequestLog notCheckingAccessor = new CompleteRequestLog();
 
