@@ -16,11 +16,9 @@
 
 package com.linecorp.armeria.common.logging;
 
-import static com.linecorp.armeria.common.util.TextFormatter.elapsed;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
@@ -195,25 +193,48 @@ final class JsonLogFormatter implements LogFormatter {
         }
 
         final ObjectNode objectNode = objectMapper.createObjectNode();
-        objectNode.put("total",
-                       elapsed(timings.connectionAcquisitionDurationNanos(), TimeUnit.NANOSECONDS).toString());
+        final ObjectNode connectionObjectNode =
+                startTimeAndDuration(objectMapper,
+                                     timings.connectionAcquisitionDurationNanos(),
+                                     timings.connectionAcquisitionStartTimeMicros());
+        objectNode.set("total", connectionObjectNode);
 
         if (timings.dnsResolutionDurationNanos() >= 0) {
-            objectNode.put("dns",
-                           elapsed(timings.dnsResolutionDurationNanos(), TimeUnit.NANOSECONDS).toString());
+            final ObjectNode dnsObjectNode =
+                    startTimeAndDuration(objectMapper,
+                                         timings.dnsResolutionDurationNanos(),
+                                         timings.dnsResolutionStartTimeMicros());
+            objectNode.set("dns", dnsObjectNode);
         }
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
-            objectNode.put("pending", elapsed(timings.pendingAcquisitionDurationNanos(),
-                                              TimeUnit.NANOSECONDS).toString());
+            final ObjectNode pendingObjectNode =
+                    startTimeAndDuration(objectMapper,
+                                         timings.pendingAcquisitionDurationNanos(),
+                                         timings.pendingAcquisitionStartTimeMicros());
+            objectNode.set("pending", pendingObjectNode);
         }
         if (timings.socketConnectDurationNanos() >= 0) {
-            objectNode.put("socket",
-                           elapsed(timings.socketConnectDurationNanos(), TimeUnit.NANOSECONDS).toString());
+            final ObjectNode socketObjectNode =
+                    startTimeAndDuration(objectMapper,
+                                         timings.socketConnectDurationNanos(),
+                                         timings.socketConnectStartTimeMicros());
+            objectNode.set("socket", socketObjectNode);
         }
         if (timings.tlsHandshakeDurationNanos() >= 0) {
-            objectNode.put("tls",
-                           elapsed(timings.tlsHandshakeDurationNanos(), TimeUnit.NANOSECONDS).toString());
+            final ObjectNode tlsObjectNode =
+                    startTimeAndDuration(objectMapper,
+                                         timings.tlsHandshakeDurationNanos(),
+                                         timings.tlsHandshakeStartTimeMicros());
+            objectNode.set("tls", tlsObjectNode);
         }
+        return objectNode;
+    }
+
+    static ObjectNode startTimeAndDuration(ObjectMapper objectMapper, long durationNanos,
+                                             long startTimeMicros) {
+        final ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("durationNanos", durationNanos);
+        objectNode.put("startTimeMicros", startTimeMicros);
         return objectNode;
     }
 

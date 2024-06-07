@@ -26,6 +26,8 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 
 /**
  * A utility class to format things as a {@link String} with ease.
@@ -128,6 +130,18 @@ public final class TextFormatter {
         appendElapsed(buf, startTimeNanos, endTimeNanos);
         buf.append(", ");
         appendSize(buf, size);
+    }
+
+    /**
+     * Formats the given epoch time in microseconds and duration in nanos to the format
+     * "epochMicros[elapsedNanos]" and appends it to the specified {@link StringBuilder}.
+     * This may be useful to record high-resolution timings such as {@link ClientConnectionTimings}.
+     */
+    @UnstableApi
+    public static void appendEpochAndElapsed(StringBuilder buf, long epochMicros, long elapsedNanos) {
+        buf.append(epochMicros).append('[');
+        appendElapsed(buf, elapsedNanos);
+        buf.append(']');
     }
 
     private static final DateTimeFormatter dateTimeFormatter =

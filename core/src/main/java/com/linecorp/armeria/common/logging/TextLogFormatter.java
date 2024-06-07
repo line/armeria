@@ -198,22 +198,27 @@ final class TextLogFormatter implements LogFormatter {
             return;
         }
         buf.append(", Connection: {total=");
-        TextFormatter.appendElapsed(buf, timings.connectionAcquisitionDurationNanos());
+        TextFormatter.appendEpochAndElapsed(buf, timings.connectionAcquisitionStartTimeMicros(),
+                                            timings.connectionAcquisitionDurationNanos());
         if (timings.dnsResolutionDurationNanos() >= 0) {
             buf.append(", dns=");
-            TextFormatter.appendElapsed(buf, timings.dnsResolutionDurationNanos());
+            TextFormatter.appendEpochAndElapsed(buf, timings.dnsResolutionStartTimeMicros(),
+                                                timings.dnsResolutionDurationNanos());
         }
         if (timings.pendingAcquisitionDurationNanos() >= 0) {
             buf.append(", pending=");
-            TextFormatter.appendElapsed(buf, timings.pendingAcquisitionDurationNanos());
+            TextFormatter.appendEpochAndElapsed(buf, timings.pendingAcquisitionStartTimeMicros(),
+                                                timings.pendingAcquisitionDurationNanos());
         }
         if (timings.socketConnectDurationNanos() >= 0) {
             buf.append(", socket=");
-            TextFormatter.appendElapsed(buf, timings.socketConnectDurationNanos());
+            TextFormatter.appendEpochAndElapsed(buf, timings.socketConnectStartTimeMicros(),
+                                                timings.socketConnectDurationNanos());
         }
         if (timings.tlsHandshakeDurationNanos() >= 0) {
             buf.append(", tls=");
-            TextFormatter.appendElapsed(buf, timings.tlsHandshakeDurationNanos());
+            TextFormatter.appendEpochAndElapsed(buf, timings.tlsHandshakeStartTimeMicros(),
+                                                timings.tlsHandshakeDurationNanos());
         }
         buf.append('}');
     }
