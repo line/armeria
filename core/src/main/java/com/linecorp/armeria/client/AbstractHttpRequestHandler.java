@@ -329,6 +329,10 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     }
 
     final void failAndReset(Throwable cause) {
+        // Mark the session as unhealthy so that subsequent requests do not use it.
+        final HttpSession session = HttpSession.get(ch);
+        session.deactivate();
+
         if (cause instanceof ProxyConnectException || cause instanceof ResponseCompleteException) {
             // - ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
             // - ResponseCompleteException means the response is successfully received.
