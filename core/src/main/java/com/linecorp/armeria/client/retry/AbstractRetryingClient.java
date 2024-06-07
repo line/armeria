@@ -35,7 +35,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.client.ClientUtil;
 
@@ -126,6 +125,18 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      */
     final RetryConfig<O> mappedRetryConfig(ClientRequestContext ctx) {
         return (RetryConfig<O>) ctx.attr(STATE).config;
+    }
+
+    /**
+     * Returns the {@link RetryRuleWithContent}.
+     *
+     * @throws IllegalStateException if the {@link RetryRuleWithContent} is not set
+     */
+    protected final RetryRuleWithContent<O> retryRuleWithContent() {
+        checkState(retryConfig != null, "No retryRuleWithContent set. Are you using RetryConfigMapping?");
+        final RetryRuleWithContent<O> retryRuleWithContent = retryConfig.retryRuleWithContent();
+        checkState(retryRuleWithContent != null, "retryRuleWithContent is not set.");
+        return retryRuleWithContent;
     }
 
     /**
@@ -243,7 +254,6 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * Creates a new derived {@link ClientRequestContext}, replacing the requests.
      * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
      */
-    @UnstableApi
     protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
                                                             @Nullable HttpRequest req,
                                                             @Nullable RpcRequest rpcReq,
