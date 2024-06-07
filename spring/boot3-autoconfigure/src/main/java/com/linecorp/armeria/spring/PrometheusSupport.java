@@ -19,12 +19,12 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.metric.PrometheusExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.prometheus.client.CollectorRegistry;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
+import io.prometheus.metrics.model.registry.PrometheusRegistry;
 
 final class PrometheusSupport {
 
@@ -32,7 +32,7 @@ final class PrometheusSupport {
     static PrometheusExpositionService newExpositionService(MeterRegistry meterRegistry) {
         for (;;) {
             if (meterRegistry instanceof PrometheusMeterRegistry) {
-                final CollectorRegistry prometheusRegistry =
+                final PrometheusRegistry prometheusRegistry =
                         ((PrometheusMeterRegistry) meterRegistry).getPrometheusRegistry();
                 return PrometheusExpositionService.of(prometheusRegistry);
             }
@@ -40,22 +40,26 @@ final class PrometheusSupport {
             if (meterRegistry instanceof CompositeMeterRegistry) {
                 final Set<MeterRegistry> childRegistries =
                         ((CompositeMeterRegistry) meterRegistry).getRegistries();
-                final Optional<PrometheusMeterRegistry> opt =
-                        childRegistries.stream()
-                                       .filter(PrometheusMeterRegistry.class::isInstance)
-                                       .map(PrometheusMeterRegistry.class::cast)
-                                       .findAny();
 
-                if (!opt.isPresent()) {
-                    return null;
+                final Optional<PrometheusMeterRegistry> opt =
+                        find(PrometheusMeterRegistry.class, childRegistries);
+                if (opt.isPresent()) {
+                    meterRegistry = opt.get();
+                    continue;
                 }
 
-                meterRegistry = opt.get();
-                continue;
+                return null;
             }
 
             return null;
         }
+    }
+
+    static <T> Optional<T> find(Class<T> type, Set<MeterRegistry> childRegistries) {
+        return childRegistries.stream()
+                              .filter(type::isInstance)
+                              .map(type::cast)
+                              .findAny();
     }
 
     private PrometheusSupport() {}

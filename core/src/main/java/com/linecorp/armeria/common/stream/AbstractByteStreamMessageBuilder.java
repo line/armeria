@@ -25,12 +25,17 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil;
 
-abstract class AbstractByteStreamMessageBuilder {
+abstract class AbstractByteStreamMessageBuilder<SELF extends AbstractByteStreamMessageBuilder<SELF>> {
 
     private int bufferSize = InternalStreamMessageUtil.DEFAULT_FILE_BUFFER_SIZE;
 
     @Nullable
     private ExecutorService executor;
+
+    @SuppressWarnings("unchecked")
+    final SELF self() {
+        return (SELF) this;
+    }
 
     @Nullable
     final ExecutorService executor() {
@@ -40,10 +45,10 @@ abstract class AbstractByteStreamMessageBuilder {
     /**
      * Sets the specified {@link ExecutorService} that performs blocking IO read operations.
      */
-    AbstractByteStreamMessageBuilder executor(ExecutorService executor) {
+    public SELF executor(ExecutorService executor) {
         requireNonNull(executor, "executor");
         this.executor = executor;
-        return this;
+        return self();
     }
 
     final int bufferSize() {
@@ -58,10 +63,10 @@ abstract class AbstractByteStreamMessageBuilder {
      *
      * @throws IllegalArgumentException if the {@code bufferSize} is non-positive.
      */
-    AbstractByteStreamMessageBuilder bufferSize(int bufferSize) {
+    public SELF bufferSize(int bufferSize) {
         checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
         this.bufferSize = bufferSize;
-        return this;
+        return self();
     }
 
     /**

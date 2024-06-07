@@ -40,15 +40,8 @@ class ServiceNamingTest {
     @Test
     void fullTypeName_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(HealthCheckService.builder().build(),
+                                                      ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(HealthCheckService.class.getName());
@@ -57,15 +50,7 @@ class ServiceNamingTest {
     @Test
     void fullTypeName_nestedClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new NestedClass(), ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName)
@@ -75,15 +60,7 @@ class ServiceNamingTest {
     @Test
     void fullTypeName_trimTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new TrailingDollarSign$(), ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName() + "$TrailingDollarSign");
@@ -92,15 +69,8 @@ class ServiceNamingTest {
     @Test
     void fullTypeName_trimTrailingDollarSignMany() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new TrailingDollarSign$$$(),
+                                                      ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName() + "$TrailingDollarSign");
@@ -109,15 +79,7 @@ class ServiceNamingTest {
     @Test
     void fullTypeName_trimTrailingDollarSignOnly() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new $$$(), ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName());
@@ -126,15 +88,8 @@ class ServiceNamingTest {
     @Test
     void simpleTypeName_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(HealthCheckService.builder().build(),
+                                                      ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(HealthCheckService.class.getSimpleName());
@@ -143,15 +98,7 @@ class ServiceNamingTest {
     @Test
     void simpleTypeName_nestedClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new NestedClass(), ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName)
@@ -161,15 +108,7 @@ class ServiceNamingTest {
     @Test
     void simpleTypeName_trimTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new TrailingDollarSign$(), ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
@@ -178,15 +117,8 @@ class ServiceNamingTest {
     @Test
     void simpleTypeName_trimTrailingDollarSignMany() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new TrailingDollarSign$$$(),
+                                                      ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
@@ -195,15 +127,7 @@ class ServiceNamingTest {
     @Test
     void simpleTypeName_trimTrailingDollarSignOnly() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new $$$(), ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName());
@@ -212,15 +136,8 @@ class ServiceNamingTest {
     @Test
     void shorten_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(HealthCheckService.builder().build(),
+                                                      ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName).isEqualTo("c.l.a.s.h." + HealthCheckService.class.getSimpleName());
@@ -229,15 +146,7 @@ class ServiceNamingTest {
     @Test
     void shorten_nestedClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new NestedClass(), ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName).isEqualTo("c.l.a.s." + ServiceNamingTest.class.getSimpleName() + '$' +
@@ -247,15 +156,7 @@ class ServiceNamingTest {
     @Test
     void shorten_trimTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new TrailingDollarSign$(), ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)
@@ -265,15 +166,8 @@ class ServiceNamingTest {
     @Test
     void shorten_trimTrailingDollarSignMany() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new TrailingDollarSign$$$(),
+                                                      ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)
@@ -283,19 +177,23 @@ class ServiceNamingTest {
     @Test
     void shorten_trimTrailingDollarSignOnly() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
-        final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
-                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
-                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
-                                  ImmutableList.of(), HttpHeaders.of(),
-                                  routingCtx -> RequestId.of(1L),
-                                  ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
+        final ServiceConfig config = newServiceConfig(new $$$(), ServiceNaming.fullTypeName());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)
                 .isEqualTo("c.l.a.s." + ServiceNamingTest.class.getSimpleName());
+    }
+
+    private static ServiceConfig newServiceConfig(HttpService httpService, ServiceNaming serviceNaming) {
+        return new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), httpService,
+                                 null, null, serviceNaming, 0, 0, false,
+                                 AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
+                                 SuccessFunction.always(),
+                                 0, Files.newTemporaryFolder().toPath(),
+                                 MultipartRemovalStrategy.ON_RESPONSE_COMPLETION, CommonPools.workerGroup(),
+                                 ImmutableList.of(), HttpHeaders.of(),
+                                 routingCtx -> RequestId.of(1L),
+                                 ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);
     }
 
     private static final class NestedClass implements HttpService {
