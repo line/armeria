@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.cors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.function.Function;
+
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -44,25 +46,40 @@ class CorsServerErrorHandlerTest {
             final HttpService myService = (ctx, req) -> HttpResponse.of(HttpStatus.OK);
 
             addCorsServiceWithException(sb, myService, "/cors_status_exception",
-                                        HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR));
+                                        HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR), false);
             addCorsServiceWithException(sb, myService, "/cors_response_exception",
                                         HttpResponseException.of(
-                                                HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR)));
+                                                HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR)), false);
+
+            addCorsServiceWithException(sb, myService, "/cors_status_exception-route",
+                                        HttpStatusException.of(HttpStatus.INTERNAL_SERVER_ERROR), true);
+            addCorsServiceWithException(sb, myService, "/cors_response_exception-route",
+                                        HttpResponseException.of(
+                                                HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR)), true);
         }
     };
 
     private static void addCorsServiceWithException(ServerBuilder sb, HttpService myService, String pathPattern,
-                                                    Exception exception) {
-        sb.service(pathPattern,
-                   myService.decorate(CorsService.builder("http://example.com")
-                                                 .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
-                                                 .allowRequestHeaders("allow_request_header")
-                                                 .exposeHeaders("expose_header_1", "expose_header_2")
-                                                 .preflightResponseHeader("x-preflight-cors", "Hello CORS")
-                                                 .newDecorator())
-                            .decorate((delegate, ctx, req) -> {
-                                throw exception;
-                            }));
+                                                    Exception exception, boolean useRouteDecorator) {
+        final Function<? super HttpService, CorsService> corsService =
+                CorsService.builder("http://example.com")
+                           .allowRequestMethods(HttpMethod.POST, HttpMethod.GET)
+                           .allowRequestHeaders("allow_request_header")
+                           .exposeHeaders("expose_header_1", "expose_header_2")
+                           .preflightResponseHeader("x-preflight-cors", "Hello CORS")
+                           .newDecorator();
+        if (useRouteDecorator) {
+            sb.decorator(corsService);
+            sb.decorator((delegate, ctx, req) -> {
+                throw exception;
+            });
+        } else {
+            myService = myService.decorate(corsService)
+                                 .decorate((delegate, ctx, req) -> {
+                                     throw exception;
+                                 });
+        }
+        sb.service(pathPattern, myService);
     }
 
     private static AggregatedHttpResponse request(WebClient client, HttpMethod method, String path,
@@ -78,7 +95,12 @@ class CorsServerErrorHandlerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({ "/cors_status_exception", "/cors_response_exception" })
+    @CsvSource({
+            "/cors_status_exception",
+            "/cors_status_exception-route",
+            "/cors_response_exception",
+            "/cors_response_exception-route"
+    })
     void testCorsHeaderWithException(String path) {
         final WebClient client = server.webClient();
         final AggregatedHttpResponse response = preflightRequest(client, path,
