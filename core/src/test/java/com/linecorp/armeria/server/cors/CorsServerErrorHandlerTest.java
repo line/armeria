@@ -69,8 +69,8 @@ class CorsServerErrorHandlerTest {
                            .preflightResponseHeader("x-preflight-cors", "Hello CORS")
                            .newDecorator();
         if (useRouteDecorator) {
-            sb.decorator(corsService);
-            sb.decorator((delegate, ctx, req) -> {
+            sb.decorator(pathPattern, corsService);
+            sb.decorator(pathPattern, (delegate, ctx, req) -> {
                 throw exception;
             });
         } else {
