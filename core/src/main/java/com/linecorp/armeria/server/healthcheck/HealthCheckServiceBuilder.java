@@ -50,6 +50,12 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     private AggregatedHttpResponse healthyResponse = AggregatedHttpResponse.of(HttpStatus.OK,
                                                                                MediaType.JSON_UTF_8,
                                                                                "{\"healthy\":true}");
+
+    private AggregatedHttpResponse degradedResponse = AggregatedHttpResponse.of(HttpStatus.OK,
+                                                                                MediaType.JSON_UTF_8,
+                                                                                "{\"healthy\":true, " +
+                                                                                "\"degraded\":true}");
+
     private AggregatedHttpResponse unhealthyResponse = AggregatedHttpResponse.of(HttpStatus.SERVICE_UNAVAILABLE,
                                                                                  MediaType.JSON_UTF_8,
                                                                                  "{\"healthy\":false}");
@@ -102,6 +108,25 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
     public HealthCheckServiceBuilder healthyResponse(AggregatedHttpResponse healthyResponse) {
         requireNonNull(healthyResponse, "healthyResponse");
         this.healthyResponse = copyResponse(healthyResponse);
+        return this;
+    }
+
+    /**
+     * Sets the {@link AggregatedHttpResponse} to send when the {@link Service} is degraded. The following
+     * response is sent by default:
+     *
+     * <pre>{@code
+     * HTTP/1.1 200 OK
+     * Content-Type: application/json; charset=utf-8
+     *
+     * { "healthy": true, "degraded": true }
+     * }</pre>
+     *
+     * @return {@code this}
+     */
+    public HealthCheckServiceBuilder degradedResponse(AggregatedHttpResponse degradedResponse) {
+        requireNonNull(degradedResponse, "degradedResponse");
+        this.degradedResponse = copyResponse(degradedResponse);
         return this;
     }
 
@@ -306,7 +331,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
         checkState(startHealthy || updateHandler != null,
                    "Healthiness must be updatable by server listener or update handler.");
         return new HealthCheckService(healthCheckers.build(),
-                                      healthyResponse, unhealthyResponse,
+                                      healthyResponse, degradedResponse, unhealthyResponse,
                                       maxLongPollingTimeoutMillis, longPollingTimeoutJitterRate,
                                       pingIntervalMillis, updateHandler, updateListenersBuilder.build(),
                                       startHealthy, transientServiceOptionsBuilder.build());

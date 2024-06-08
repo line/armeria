@@ -92,6 +92,12 @@ final class CpuHealthChecker implements HealthChecker {
     @VisibleForTesting
     final double targetSystemCpuUsage;
 
+    @VisibleForTesting
+    final double degradedTargetProcessCpuLoad;
+
+    @VisibleForTesting
+    final double degradedTargetSystemCpuUsage;
+
     /**
      * Instantiates a new Default cpu health checker.
      *
@@ -100,23 +106,48 @@ final class CpuHealthChecker implements HealthChecker {
      */
     CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuUsage) {
         this(targetSystemCpuUsage, targetProcessCpuUsage,
+             targetSystemCpuUsage, targetProcessCpuUsage,
+             currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
+    }
+
+    /**
+     * Instantiates a new Default cpu health checker.
+     *
+     * @param targetSystemCpuUsage the target cpu usage
+     * @param targetProcessCpuLoad the target process cpu load
+     * @param degradedTargetSystemCpuUsage the degraded target cpu usage
+     * @param degradedTargetProcessCpuLoad the degraded target process cpu load
+     */
+    CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuLoad,
+                     double degradedTargetSystemCpuUsage, double degradedTargetProcessCpuLoad) {
+        this(targetSystemCpuUsage, targetProcessCpuLoad,
+             degradedTargetSystemCpuUsage, degradedTargetProcessCpuLoad,
              currentSystemCpuUsageSupplier, currentProcessCpuUsageSupplier);
     }
 
     private CpuHealthChecker(double targetSystemCpuUsage, double targetProcessCpuLoad,
+                             double degradedTargetSystemCpuUsage, double degradedTargetProcessCpuLoad,
                              DoubleSupplier systemCpuUsageSupplier, DoubleSupplier processCpuUsageSupplier) {
         checkArgument(targetSystemCpuUsage >= 0 && targetSystemCpuUsage <= 1.0,
                       "cpuUsage: %s (expected: 0 <= cpuUsage <= 1)", targetSystemCpuUsage);
         checkArgument(targetProcessCpuLoad >= 0 && targetProcessCpuLoad <= 1.0,
                       "processCpuLoad: %s (expected: 0 <= processCpuLoad <= 1)", targetProcessCpuLoad);
+        checkArgument(degradedTargetSystemCpuUsage >= 0 && degradedTargetSystemCpuUsage <= targetSystemCpuUsage,
+                      "degradedCpuUsage: %s (expected: 0 <= degradedCpuUsage <= %s)",
+                      degradedTargetSystemCpuUsage, targetSystemCpuUsage);
+        checkArgument(degradedTargetProcessCpuLoad >= 0 && degradedTargetProcessCpuLoad <= targetProcessCpuLoad,
+                      "degradedProcessCpuLoad: %s (expected: 0 <= degradedProcessCpuLoad <= %s)",
+                      degradedTargetProcessCpuLoad, targetProcessCpuLoad);
         this.targetSystemCpuUsage = targetSystemCpuUsage;
         this.targetProcessCpuLoad = targetProcessCpuLoad;
+        this.degradedTargetSystemCpuUsage = degradedTargetSystemCpuUsage;
+        this.degradedTargetProcessCpuLoad = degradedTargetProcessCpuLoad;
         this.systemCpuUsageSupplier = systemCpuUsageSupplier;
         this.processCpuUsageSupplier = processCpuUsageSupplier;
         checkState(operatingSystemBeanClass != null, "Unable to find an 'OperatingSystemMXBean' class");
         checkState(operatingSystemBean != null, "Unable to find an 'OperatingSystemMXBean'");
         checkState(systemCpuLoad != null, "Unable to find the method 'OperatingSystemMXBean.getCpuLoad'" +
-                                           " or 'OperatingSystemMXBean.getSystemCpuLoad'");
+                                          " or 'OperatingSystemMXBean.getSystemCpuLoad'");
         checkState(processCpuLoad != null,
                    "Unable to find the method 'OperatingSystemMXBean.getProcessCpuLoad'");
     }
@@ -167,13 +198,26 @@ final class CpuHealthChecker implements HealthChecker {
      */
     @Override
     public boolean isHealthy() {
-        return isHealthy(systemCpuUsageSupplier, processCpuUsageSupplier);
+        return healthStatus().isHealthy();
     }
 
-    private boolean isHealthy(
-            DoubleSupplier currentSystemCpuUsageSupplier, DoubleSupplier currentProcessCpuUsageSupplier) {
+    /**
+     * Returns the {@link HealthStatus} representing the System CPU Usage and Processes cpu usage.
+     */
+    @Override
+    public HealthStatus healthStatus() {
         final double currentSystemCpuUsage = currentSystemCpuUsageSupplier.getAsDouble();
         final double currentProcessCpuUsage = currentProcessCpuUsageSupplier.getAsDouble();
-        return currentSystemCpuUsage <= targetSystemCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad;
+
+        if (currentSystemCpuUsage <= targetSystemCpuUsage && currentProcessCpuUsage <= targetProcessCpuLoad) {
+            return HealthStatus.HEALTHY;
+        }
+
+        if (currentSystemCpuUsage <= degradedTargetSystemCpuUsage &&
+            currentProcessCpuUsage <= degradedTargetProcessCpuLoad) {
+            return HealthStatus.DEGRADED;
+        }
+
+        return HealthStatus.UNHEALTHY;
     }
 }

@@ -26,6 +26,10 @@ public enum HealthCheckUpdateResult {
      */
     HEALTHY,
     /**
+     * Tells {@link HealthCheckService} to mark the {@link Server} as 'degraded'.
+     */
+    DEGRADED,
+    /**
      * Tells {@link HealthCheckService} to mark the {@link Server} as 'unhealthy'.
      */
     UNHEALTHY,

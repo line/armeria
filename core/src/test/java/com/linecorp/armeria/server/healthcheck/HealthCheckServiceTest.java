@@ -68,6 +68,7 @@ import io.netty.util.NetUtil;
 class HealthCheckServiceTest {
 
     private static final SettableHealthChecker checker = new SettableHealthChecker();
+    private static final SettableHealthStatusChecker statusChecker = new SettableHealthStatusChecker();
     private static final AtomicReference<Boolean> capturedHealthy = new AtomicReference<>();
     private static final HealthChecker unfinishedHealthChecker = HealthChecker.of(CompletableFuture::new,
                                                                                   Duration.ofDays(1));
@@ -76,8 +77,9 @@ class HealthCheckServiceTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
+        protected void configure(ServerBuilder sb) {
             sb.service("/hc", HealthCheckService.of(checker));
+            sb.service("/hc_status", HealthCheckService.of(statusChecker));
             sb.service("/hc_unfinished_1", HealthCheckService.of(unfinishedHealthChecker));
             sb.service("/hc_unfinished_2", HealthCheckService.of(unfinishedHealthChecker));
             sb.service("/hc_long_polling_disabled", HealthCheckService.builder()
@@ -152,11 +154,8 @@ class HealthCheckServiceTest {
             final HealthCheckService service = cfg.service().as(HealthCheckService.class);
             if (service != null) {
                 await().untilAsserted(() -> {
-                    if (service.pendingHealthyResponses != null) {
-                        assertThat(service.pendingHealthyResponses).isEmpty();
-                    }
-                    if (service.pendingUnhealthyResponses != null) {
-                        assertThat(service.pendingUnhealthyResponses).isEmpty();
+                    if (service.pendingResponses != null) {
+                        assertThat(service.pendingResponses).isEmpty();
                     }
                 });
             }
@@ -233,7 +232,7 @@ class HealthCheckServiceTest {
 
     @Test
     void waitUntilUnhealthy() {
-        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("healthy");
+        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("healthy", "/hc");
 
         // Should not wake up until the server becomes unhealthy.
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS))
@@ -257,7 +256,7 @@ class HealthCheckServiceTest {
         // Make the server unhealthy.
         checker.setHealthy(false);
 
-        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("healthy");
+        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("healthy", "/hc");
 
         // The server is unhealthy already, so the response has to come in immediately.
         assertThat(f.get()).isEqualTo(AggregatedHttpResponse.of(
@@ -272,7 +271,7 @@ class HealthCheckServiceTest {
         // Make the server unhealthy.
         checker.setHealthy(false);
 
-        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("unhealthy");
+        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("unhealthy", "/hc");
 
         // Should not wake up until the server becomes unhealthy.
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS))
@@ -293,7 +292,7 @@ class HealthCheckServiceTest {
 
     @Test
     void waitUntilHealthyWithImmediateWakeUp() throws Exception {
-        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("unhealthy");
+        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("unhealthy", "/hc");
 
         // The server is healthy already, so the response has to come in immediately.
         assertThat(f.get()).isEqualTo(AggregatedHttpResponse.of(
@@ -305,7 +304,7 @@ class HealthCheckServiceTest {
 
     @Test
     void waitTimeout() throws Exception {
-        final AggregatedHttpResponse res = sendLongPollingGet("healthy", 1).get();
+        final AggregatedHttpResponse res = sendLongPollingGet("healthy", 1, "/hc").get();
         assertThat(res).isEqualTo(AggregatedHttpResponse.of(
                 ImmutableList.of(ResponseHeaders.builder(HttpStatus.PROCESSING)
                                                 .set("armeria-lphc", "60, 5")
@@ -334,7 +333,7 @@ class HealthCheckServiceTest {
 
     @Test
     void waitWithWrongTimeout() throws Exception {
-        final AggregatedHttpResponse res = sendLongPollingGet("healthy", -1).get();
+        final AggregatedHttpResponse res = sendLongPollingGet("healthy", -1, "/hc").get();
         assertThat(res.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
@@ -343,7 +342,7 @@ class HealthCheckServiceTest {
     @Test
     void waitWithOtherETag() throws Exception {
         // A never-matching etag must disable polling.
-        final AggregatedHttpResponse res = sendLongPollingGet("whatever", 1).get();
+        final AggregatedHttpResponse res = sendLongPollingGet("whatever", 1, "/hc").get();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
@@ -366,7 +365,7 @@ class HealthCheckServiceTest {
     }
 
     @Test
-    void notUpdatableByDefault() throws Exception {
+    void notUpdatableByDefault() {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hc"),
                                                           "{\"healthy\":false}");
@@ -497,19 +496,57 @@ class HealthCheckServiceTest {
         assertThat(res2.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    @Test
+    void checkDegradedStatus() {
+        statusChecker.setHealthStatus(HealthStatus.DEGRADED);
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.GET, "/hc_status"));
+        assertThat(res).isEqualTo(AggregatedHttpResponse.of(
+                ResponseHeaders.of(HttpStatus.OK,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                   "armeria-lphc", "60, 5"),
+                HttpData.ofUtf8("{\"healthy\":true, \"degraded\":true}")));
+    }
+
+    @Test
+    void notifyDegradedStatus() throws Exception {
+        statusChecker.setHealthStatus(HealthStatus.HEALTHY);
+
+        final CompletableFuture<AggregatedHttpResponse> f =
+                sendLongPollingGet("healthy", "/hc_status");
+
+        // Should not wake up until the server becomes degraded.
+        assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS))
+                .isInstanceOf(TimeoutException.class);
+
+        // Make the server degraded
+        statusChecker.setHealthStatus(HealthStatus.DEGRADED);
+        assertThat(f.get()).isEqualTo(AggregatedHttpResponse.of(
+                ImmutableList.of(ResponseHeaders.builder(HttpStatus.PROCESSING)
+                                                .set("armeria-lphc", "60, 5")
+                                                .build()),
+                ResponseHeaders.of(HttpStatus.OK,
+                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                                   "armeria-lphc", "60, 5"),
+                HttpData.ofUtf8("{\"healthy\":true, \"degraded\":true}"),
+                HttpHeaders.of()));
+    }
+
     private static void verifyDebugEnabled(Logger logger) {
         // Do not log for health check requests unless TransientServiceOption is enabled.
         verify(logger, never()).isDebugEnabled();
     }
 
-    private static CompletableFuture<AggregatedHttpResponse> sendLongPollingGet(String healthiness) {
-        return sendLongPollingGet(healthiness, 120);
+    private static CompletableFuture<AggregatedHttpResponse> sendLongPollingGet(String healthiness,
+                                                                                String path) {
+        return sendLongPollingGet(healthiness, 120, path);
     }
 
     private static CompletableFuture<AggregatedHttpResponse> sendLongPollingGet(String healthiness,
-                                                                                int timeoutSeconds) {
+                                                                                int timeoutSeconds,
+                                                                                String path) {
         final WebClient client = WebClient.of(server.httpUri());
-        return client.execute(RequestHeaders.of(HttpMethod.GET, "/hc",
+        return client.execute(RequestHeaders.of(HttpMethod.GET, path,
                                                 HttpHeaderNames.PREFER, "wait=" + timeoutSeconds,
                                                 HttpHeaderNames.IF_NONE_MATCH,
                                                 '"' + healthiness + '"')).aggregate();
