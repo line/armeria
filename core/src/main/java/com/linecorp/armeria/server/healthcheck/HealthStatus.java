@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+import com.linecorp.armeria.server.Server;
+
 /**
- * The health status of a component.
+ * The health status of a {@link Server}.
  */
 public enum HealthStatus {
     HEALTHY(2, true),

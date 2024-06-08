@@ -132,11 +132,13 @@ final class CpuHealthChecker implements HealthChecker {
                       "cpuUsage: %s (expected: 0 <= cpuUsage <= 1)", targetSystemCpuUsage);
         checkArgument(targetProcessCpuLoad >= 0 && targetProcessCpuLoad <= 1.0,
                       "processCpuLoad: %s (expected: 0 <= processCpuLoad <= 1)", targetProcessCpuLoad);
-        checkArgument(degradedTargetSystemCpuUsage >= 0 && degradedTargetSystemCpuUsage <= targetSystemCpuUsage,
-                      "degradedCpuUsage: %s (expected: 0 <= degradedCpuUsage <= %s)",
+        checkArgument(degradedTargetSystemCpuUsage >= targetSystemCpuUsage &&
+                      degradedTargetSystemCpuUsage <= 1.0,
+                      "degradedCpuUsage: %s (expected: %s <= degradedCpuUsage <= 1)",
                       degradedTargetSystemCpuUsage, targetSystemCpuUsage);
-        checkArgument(degradedTargetProcessCpuLoad >= 0 && degradedTargetProcessCpuLoad <= targetProcessCpuLoad,
-                      "degradedProcessCpuLoad: %s (expected: 0 <= degradedProcessCpuLoad <= %s)",
+        checkArgument(degradedTargetProcessCpuLoad >= targetProcessCpuLoad &&
+                      degradedTargetProcessCpuLoad <= 1.0,
+                      "degradedProcessCpuLoad: %s (expected: %s <= degradedProcessCpuLoad <= 1)",
                       degradedTargetProcessCpuLoad, targetProcessCpuLoad);
         this.targetSystemCpuUsage = targetSystemCpuUsage;
         this.targetProcessCpuLoad = targetProcessCpuLoad;

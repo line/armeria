@@ -116,9 +116,9 @@ public interface HealthChecker {
      * @param targetSystemCpuUsage Target system CPU usage as a percentage (0 - 1).
      * @param targetProcessCpuUsage Target process CPU usage as a percentage (0 - 1).
      * @param degradedTargetSystemCpuUsage Degraded target system CPU usage as a percentage
-     *     (0 - targetSystemCpuUsage).
+     *     (targetSystemCpuUsage - 1).
      * @param degradedTargetProcessCpuLoad Degraded target process CPU usage as a percentage
-     *     (0 - targetProcessCpuUsage).
+     *     (targetProcessCpuUsage - 1).
      * @return an instance of {@link HealthChecker} configured with the provided CPU usage targets.
      */
     static HealthChecker ofCpu(double targetSystemCpuUsage, double targetProcessCpuUsage,
