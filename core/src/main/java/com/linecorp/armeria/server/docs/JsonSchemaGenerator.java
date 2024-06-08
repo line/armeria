@@ -33,7 +33,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -52,8 +51,6 @@ final class JsonSchemaGenerator {
     private static final List<FieldLocation> VALID_FIELD_LOCATIONS = ImmutableList.of(
             FieldLocation.BODY,
             FieldLocation.UNSPECIFIED);
-
-    private static final List<String> MEMORIZED_JSON_TYPES = ImmutableList.of("array", "object");
 
     private static final String DEFS_PATH = "#/$defs";
 
@@ -199,6 +196,18 @@ final class JsonSchemaGenerator {
     }
 
     /**
+     *  Whether a field can be referenced as a definition. For example, map<*, *> and array types should not
+     *  be referenced as definitions in "$defs" block. It results in weird JSON schema definitions such as
+     *  {@code {"map<int32, string>": {"additionalProperties": {"type": "string"}}}}. Only non-primitive and
+     *  non-trivial types should be referenced as definitions.
+     */
+    private boolean canReferenceAsDef(TypeSignature typeSignature, String schemaType) {
+        return "object".equals(schemaType) &&
+               typeSignature.type() != TypeSignatureType.MAP &&
+               typeSignature.type() != TypeSignatureType.ITERABLE;
+    }
+
+    /**
      * Generate the JSON Schema for the given {@link FieldInfo} and add it to the given {@link ObjectNode}
      * and add required fields to the {@link ArrayNode}.
      *
@@ -230,7 +239,7 @@ final class JsonSchemaGenerator {
         }
 
         final boolean shouldFlatten = useFlatSchema &&
-                                      MEMORIZED_JSON_TYPES.contains(schemaType) &&
+                                      canReferenceAsDef(fieldTypeSignature, schemaType) &&
                                       currentPath.chars().filter(c -> c == '/').count() > 1;
         if (shouldFlatten) {
             // If field is already visited, add a reference to the field instead of iterating its children.
@@ -257,9 +266,9 @@ final class JsonSchemaGenerator {
                 fieldNode.set("enum", getEnumType(field.typeSignature()));
             }
 
-            // Only Struct types map to custom objects to we need reference to those structs.
-            // Having references to primitives do not make sense.
-            if (MEMORIZED_JSON_TYPES.contains(schemaType)) {
+            // Putting a field type signature to "visited" means it can be referenced from "$ref" of another
+            // field by referencing the property or the "$defs" block.
+            if (canReferenceAsDef(fieldTypeSignature, schemaType)) {
                 visited.put(fieldTypeSignature, currentPath);
             }
 
