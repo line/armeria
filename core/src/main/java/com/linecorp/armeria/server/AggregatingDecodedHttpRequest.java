@@ -41,7 +41,6 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private final int streamId;
     private final boolean keepAlive;
     private final long maxRequestLength;
-    private final ServerMetrics serverMetrics;
     private final RequestHeaders headers;
     private final RoutingContext routingCtx;
     private final ExchangeType exchangeType;
@@ -64,8 +63,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
                                   RoutingContext routingCtx, ExchangeType exchangeType,
-                                  long requestStartTimeNanos, long requestStartTimeMicros,
-                                  ServerMetrics serverMetrics) {
+                                  long requestStartTimeNanos, long requestStartTimeMicros) {
         super(4);
         this.headers = headers;
         this.eventLoop = eventLoop;
@@ -78,12 +76,6 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         this.exchangeType = exchangeType;
         this.requestStartTimeNanos = requestStartTimeNanos;
         this.requestStartTimeMicros = requestStartTimeMicros;
-        this.serverMetrics = serverMetrics;
-        if (routingCtx.sessionProtocol().isMultiplex()) {
-            serverMetrics.increasePendingHttp2Requests();
-        } else {
-            serverMetrics.increasePendingHttp1Requests();
-        }
     }
 
     @Override
@@ -196,36 +188,23 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
         // Complete aggregationFuture first to execute the aborted request with the service and decorators and
         // then abort the response.
-        completeAggregationFuture();
+        aggregationFuture.complete(null);
         if (response != null && !response.isComplete()) {
             response.abort(cause);
         }
-    }
-
-    private void completeAggregationFuture() {
-        if (!aggregationFuture.isDone()) {
-            if (routingCtx.sessionProtocol().isMultiplex()) {
-                serverMetrics.decreasePendingHttp2Requests();
-                serverMetrics.increaseActiveHttp2Requests();
-            } else {
-                serverMetrics.decreasePendingHttp1Requests();
-                serverMetrics.increaseActiveHttp1Requests();
-            }
-        }
-        aggregationFuture.complete(null);
     }
 
     @Override
     public void close() {
         isNormallyClosed = true;
         super.close();
-        completeAggregationFuture();
+        aggregationFuture.complete(null);
     }
 
     @Override
     public void close(Throwable cause) {
         super.close(cause);
-        completeAggregationFuture();
+        aggregationFuture.complete(null);
     }
 
     @Override
@@ -236,13 +215,13 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public void abort() {
         super.abort();
-        completeAggregationFuture();
+        aggregationFuture.complete(null);
     }
 
     @Override
     public void abort(Throwable cause) {
         super.abort(cause);
-        completeAggregationFuture();
+        aggregationFuture.complete(null);
     }
 
     @Override

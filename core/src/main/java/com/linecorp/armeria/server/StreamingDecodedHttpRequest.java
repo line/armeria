@@ -60,8 +60,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
                                 long requestStartTimeNanos, long requestStartTimeMicros,
-                                boolean http1WebSocket, boolean shouldResetOnlyIfRemoteIsOpen,
-                                ServerMetrics serverMetrics) {
+                                boolean http1WebSocket, boolean shouldResetOnlyIfRemoteIsOpen) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -77,13 +76,6 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.requestStartTimeMicros = requestStartTimeMicros;
         this.http1WebSocket = http1WebSocket;
         this.shouldResetOnlyIfRemoteIsOpen = shouldResetOnlyIfRemoteIsOpen;
-        if (http1WebSocket) {
-            serverMetrics.increaseActiveHttp1WebSocketRequests();
-        } else if (routingCtx.sessionProtocol().isMultiplex()) {
-            serverMetrics.increaseActiveHttp2Requests();
-        } else {
-            serverMetrics.increaseActiveHttp1Requests();
-        }
     }
 
     @Override

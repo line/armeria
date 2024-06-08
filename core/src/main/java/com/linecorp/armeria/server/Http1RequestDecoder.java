@@ -261,8 +261,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                             eventLoop, id, 1, headers, false, inboundTrafficController,
                                             serviceConfig.maxRequestLength(), routingCtx,
                                             ExchangeType.BIDI_STREAMING,
-                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true, false,
-                                            cfg.serverMetrics());
+                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true, false
+                                    );
                             assert encoder instanceof ServerHttp1ObjectEncoder;
                             ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
                             final ChannelPipeline pipeline = ctx.pipeline();
@@ -271,6 +271,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
                                 pipeline.remove(HttpServerUpgradeHandler.class);
                             }
+                            cfg.serverMetrics().increasePendingHttp1Requests();
                             ctx.fireChannelRead(webSocketRequest);
                             return;
                         }
@@ -278,9 +279,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     final boolean endOfStream = contentEmpty && !transferEncodingChunked;
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
-                                                           keepAlive, inboundTrafficController, routingCtx,
-                                                           cfg.serverMetrics());
-
+                                                           keepAlive, inboundTrafficController, routingCtx
+                    );
+                    cfg.serverMetrics().increasePendingHttp1Requests();
                     ctx.fireChannelRead(req);
                 } else {
                     fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);

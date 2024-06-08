@@ -18,7 +18,6 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -26,7 +25,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import reactor.test.StepVerifier;
@@ -39,11 +37,10 @@ class EmptyContentDecodedHttpRequestTest {
     @Test
     void emptyContent() {
         final RoutingContext routingContext = mock(RoutingContext.class);
-        when(routingContext.sessionProtocol()).thenReturn(SessionProtocol.H2C);
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final EmptyContentDecodedHttpRequest req =
                 new EmptyContentDecodedHttpRequest(eventLoop.get(), 1, 3, headers, true, routingContext,
-                                                   ExchangeType.BIDI_STREAMING, 0, 0, new ServerMetrics());
+                                                   ExchangeType.BIDI_STREAMING, 0, 0);
 
         StepVerifier.create(req)
                     .expectComplete()

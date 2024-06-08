@@ -34,13 +34,13 @@ interface DecodedHttpRequest extends HttpRequest {
     static DecodedHttpRequest of(boolean endOfStream, EventLoop eventLoop, int id, int streamId,
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
-                                 RoutingContext routingCtx, ServerMetrics serverMetrics) {
+                                 RoutingContext routingCtx) {
         final long requestStartTimeNanos = System.nanoTime();
         final long requestStartTimeMicros = SystemInfo.currentTimeMicros();
         if (!routingCtx.hasResult()) {
             return new EmptyContentDecodedHttpRequest(
                     eventLoop, id, streamId, headers, keepAlive, routingCtx, ExchangeType.RESPONSE_STREAMING,
-                    requestStartTimeNanos, requestStartTimeMicros, serverMetrics);
+                    requestStartTimeNanos, requestStartTimeMicros);
         } else {
             final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
@@ -48,17 +48,17 @@ interface DecodedHttpRequest extends HttpRequest {
             if (endOfStream) {
                 return new EmptyContentDecodedHttpRequest(
                         eventLoop, id, streamId, headers, keepAlive, routingCtx, exchangeType,
-                        requestStartTimeNanos, requestStartTimeMicros, serverMetrics);
+                        requestStartTimeNanos, requestStartTimeMicros);
             } else {
                 if (exchangeType.isRequestStreaming()) {
                     return new StreamingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
                             config.maxRequestLength(), routingCtx, exchangeType,
-                            requestStartTimeNanos, requestStartTimeMicros, false, false, serverMetrics);
+                            requestStartTimeNanos, requestStartTimeMicros, false, false);
                 } else {
                     return new AggregatingDecodedHttpRequest(
                             eventLoop, id, streamId, headers, keepAlive, config.maxRequestLength(), routingCtx,
-                            exchangeType, requestStartTimeNanos, requestStartTimeMicros, serverMetrics);
+                            exchangeType, requestStartTimeNanos, requestStartTimeMicros);
                 }
             }
         }
