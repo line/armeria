@@ -1449,8 +1449,11 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         builder.addAll(shutdownSupports);
         builder.addAll(template.shutdownSupports);
 
+        final TlsEngineType tlsEngineType = this.tlsEngineType != null ?
+                                            this.tlsEngineType : template.tlsEngineType;
+        assert tlsEngineType != null;
         final VirtualHost virtualHost =
-                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
+                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template, tlsEngineType),
                                 tlsEngineType, serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
@@ -1483,7 +1486,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     @Nullable
-    private SslContext sslContext(VirtualHostBuilder template) {
+    private SslContext sslContext(VirtualHostBuilder template, TlsEngineType tlsEngineType) {
         if (portBased) {
             return null;
         }
@@ -1493,9 +1496,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
             final boolean tlsAllowUnsafeCiphers =
                     this.tlsAllowUnsafeCiphers != null ?
                     this.tlsAllowUnsafeCiphers : template.tlsAllowUnsafeCiphers;
-            final TlsEngineType tlsEngineType =
-                    this.tlsEngineType != null ?
-                    this.tlsEngineType : template.tlsEngineType;
 
             // Whether the `SslContext` came (or was created) from this `VirtualHost`'s properties.
             boolean sslContextFromThis = false;
