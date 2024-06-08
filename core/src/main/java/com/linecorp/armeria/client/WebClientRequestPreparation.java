@@ -240,7 +240,7 @@ public final class WebClientRequestPreparation
                                                                               ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
-        return asEntity(ResponseAs.json(clazz));
+        return asEntity(ResponseAs.json(clazz, mapper));
     }
 
     /**

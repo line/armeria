@@ -19,22 +19,8 @@ package com.linecorp.armeria.client.circuitbreaker;
 /**
  * Builder class for building a {@link CircuitBreakerMapping} based on a combination of host, method and path.
  */
-public final class CircuitBreakerMappingBuilder extends AbstractCircuitBreakerMappingBuilder {
-
-    @Override
-    public CircuitBreakerMappingBuilder perHost() {
-        return (CircuitBreakerMappingBuilder) super.perHost();
-    }
-
-    @Override
-    public CircuitBreakerMappingBuilder perMethod() {
-        return (CircuitBreakerMappingBuilder) super.perMethod();
-    }
-
-    @Override
-    public CircuitBreakerMappingBuilder perPath() {
-        return (CircuitBreakerMappingBuilder) super.perPath();
-    }
+public final class CircuitBreakerMappingBuilder
+        extends AbstractCircuitBreakerMappingBuilder<CircuitBreakerMappingBuilder> {
 
     /**
      * Returns a newly-created {@link CircuitBreakerMapping} with the specified {@link CircuitBreakerFactory}

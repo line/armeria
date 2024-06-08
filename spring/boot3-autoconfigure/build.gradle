@@ -3,8 +3,8 @@ dependencies {
     compileOnly project(':thrift0.18')
     implementation project(':logback')
 
-    // TODO(anuraaga): Consider removing these since this module does not have related functionality.
-    optionalApi libs.micrometer.prometheus
+    optionalApi project(':prometheus1')
+    optionalApi libs.micrometer.prometheus.legacy
     optionalApi libs.dropwizard.metrics.json
 
     api libs.jakarta.inject

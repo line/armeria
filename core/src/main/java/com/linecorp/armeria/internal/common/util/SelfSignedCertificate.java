@@ -68,6 +68,8 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.util.Exceptions;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
@@ -87,9 +89,6 @@ import io.netty.util.internal.SystemPropertyUtil;
  * An X.509 certificate file and a EC/RSA private key file are generated in a system's temporary directory using
  * {@link File#createTempFile(String, String)}, and they are deleted when the JVM exits using
  * {@link File#deleteOnExit()}.
- * </p><p>
- * At first, this method tries to use OpenJDK's X.509 implementation (the {@code sun.security.x509} package).
- * If it fails, it tries to use <a href="https://www.bouncycastle.org/">Bouncy Castle</a> as a fallback.
  * </p>
  */
 public final class SelfSignedCertificate {
@@ -99,7 +98,7 @@ public final class SelfSignedCertificate {
     // https://github.com/netty/netty/blob/11e6a77fba9ec7184a558d869373d0ce506d7236/handler/src/main/java/io/netty/handler/ssl/util/BouncyCastleSelfSignedCertGenerator.java
     //
     // Changes:
-    // - Always use shaded BouncyCastle instead of JDK so it works on Java 16+.
+    // - Always use shaded Bouncy Castle instead of JDK, so it works on Java 16+.
     //   See https://github.com/line/armeria/issues/3673 for more information.
     // - Accept `Random` instead of `SecureRandom`.
     // - Inline `BouncyCastleSelfSignedCertGenerator`.
@@ -280,15 +279,16 @@ public final class SelfSignedCertificate {
             throw new Error(e);
         }
 
-        final String[] paths;
-        try {
-            // Try Bouncy Castle if the current JVM didn't have sun.security.x509.
-            paths = generate(
-                    fqdn, keypair, random, notBefore, notAfter, algorithm);
-        } catch (Throwable cause) {
-            throw new CertificateException(
-                    "Failed to generate a self-signed X.509 certificate using Bouncy Castle: " + cause, cause);
-        }
+        final String[] paths = MinifiedBouncyCastleProvider.call(() -> {
+            try {
+                return generate(
+                        fqdn, keypair, random, notBefore, notAfter, algorithm);
+            } catch (Throwable cause) {
+                return Exceptions.throwUnsafely(new CertificateException(
+                        "Failed to generate a self-signed X.509 certificate: " + cause,
+                        cause));
+            }
+        });
 
         certificate = new File(paths[0]);
         privateKey = new File(paths[1]);
@@ -306,7 +306,7 @@ public final class SelfSignedCertificate {
                     certificateInput.close();
                 } catch (IOException e) {
                     if (logger.isWarnEnabled()) {
-                        logger.warn("Failed to close a file: " + certificate, e);
+                        logger.warn("Failed to close a file: {}", certificate, e);
                     }
                 }
             }

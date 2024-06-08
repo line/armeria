@@ -42,7 +42,10 @@ import io.prometheus.client.exporter.common.TextFormat;
 /**
  * Exposes Prometheus metrics in <a href="https://prometheus.io/docs/instrumenting/exposition_formats/">text
  * format 0.0.4 or OpenMetrics format</a>.
+ *
+ * @deprecated Use {@code PrometheusExpositionService} in {@code armeria-prometheus1} module instead.
  */
+@Deprecated
 public final class PrometheusExpositionService extends AbstractHttpService implements TransientHttpService {
 
     /**
@@ -106,7 +109,7 @@ public final class PrometheusExpositionService extends AbstractHttpService imple
         final ByteBuf buffer = ctx.alloc().buffer();
         boolean success = false;
         try (ByteBufOutputStream byteBufOutputStream = new ByteBufOutputStream(buffer);
-            OutputStreamWriter writer = new OutputStreamWriter(byteBufOutputStream)) {
+             OutputStreamWriter writer = new OutputStreamWriter(byteBufOutputStream)) {
             TextFormat.writeFormat(format, writer, collectorRegistry.metricFamilySamples());
             success = true;
         } finally {

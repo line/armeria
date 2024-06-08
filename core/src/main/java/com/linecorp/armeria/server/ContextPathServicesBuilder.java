@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -39,7 +38,8 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  * }</pre>
  */
 @UnstableApi
-public final class ContextPathServicesBuilder extends AbstractContextPathServicesBuilder<ServerBuilder> {
+public final class ContextPathServicesBuilder
+        extends AbstractContextPathServicesBuilder<ContextPathServicesBuilder, ServerBuilder> {
 
     ContextPathServicesBuilder(ServerBuilder parent, VirtualHostBuilder virtualHostBuilder,
                                Set<String> contextPaths) {
@@ -76,95 +76,6 @@ public final class ContextPathServicesBuilder extends AbstractContextPathService
     }
 
     @Override
-    public ContextPathServicesBuilder serviceUnder(String pathPrefix,
-                                                   HttpService service) {
-        return (ContextPathServicesBuilder) super.serviceUnder(pathPrefix, service);
-    }
-
-    @Override
-    public ContextPathServicesBuilder service(String pathPattern, HttpService service) {
-        return (ContextPathServicesBuilder) super.service(pathPattern, service);
-    }
-
-    @Override
-    public ContextPathServicesBuilder service(Route route, HttpService service) {
-        return (ContextPathServicesBuilder) super.service(route, service);
-    }
-
-    @Override
-    public ContextPathServicesBuilder service(
-            HttpServiceWithRoutes serviceWithRoutes,
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
-        return (ContextPathServicesBuilder) super.service(serviceWithRoutes, decorators);
-    }
-
-    @SafeVarargs
-    @Override
-    public final ContextPathServicesBuilder service(
-            HttpServiceWithRoutes serviceWithRoutes,
-            Function<? super HttpService, ? extends HttpService>... decorators) {
-        return (ContextPathServicesBuilder) super.service(serviceWithRoutes, decorators);
-    }
-
-    @Override
-    public ContextPathServicesBuilder annotatedService(Object service) {
-        return (ContextPathServicesBuilder) super.annotatedService(service);
-    }
-
-    @Override
-    public ContextPathServicesBuilder annotatedService(Object service,
-                                                       Object... exceptionHandlersAndConverters) {
-        return (ContextPathServicesBuilder) super.annotatedService(service, exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public ContextPathServicesBuilder annotatedService(
-            Object service,
-            Function<? super HttpService, ? extends HttpService> decorator,
-            Object... exceptionHandlersAndConverters) {
-        return (ContextPathServicesBuilder) super.annotatedService(service, decorator,
-                                                                   exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public ContextPathServicesBuilder annotatedService(String pathPrefix,
-                                                       Object service) {
-        return (ContextPathServicesBuilder) super.annotatedService(pathPrefix, service);
-    }
-
-    @Override
-    public ContextPathServicesBuilder annotatedService(String pathPrefix, Object service,
-                                                       Object... exceptionHandlersAndConverters) {
-        return (ContextPathServicesBuilder) super.annotatedService(pathPrefix, service,
-                                                                   exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public ContextPathServicesBuilder annotatedService(
-            String pathPrefix, Object service,
-            Function<? super HttpService, ? extends HttpService> decorator,
-            Object... exceptionHandlersAndConverters) {
-        return (ContextPathServicesBuilder) super.annotatedService(
-                pathPrefix, service, decorator, exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public ContextPathServicesBuilder annotatedService(String pathPrefix, Object service,
-                                                       Iterable<?> exceptionHandlersAndConverters) {
-        return (ContextPathServicesBuilder) super.annotatedService(
-                pathPrefix, service, exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public ContextPathServicesBuilder annotatedService(
-            String pathPrefix, Object service,
-            Function<? super HttpService, ? extends HttpService> decorator,
-            Iterable<?> exceptionHandlersAndConverters) {
-        return (ContextPathServicesBuilder) super.annotatedService(pathPrefix, service,
-                                                                   decorator, exceptionHandlersAndConverters);
-    }
-
-    @Override
     public ContextPathServicesBuilder annotatedService(
             String pathPrefix, Object service,
             Function<? super HttpService, ? extends HttpService> decorator,
@@ -188,69 +99,5 @@ public final class ContextPathServicesBuilder extends AbstractContextPathService
     @Override
     public ContextPathAnnotatedServiceConfigSetters annotatedService() {
         return new ContextPathAnnotatedServiceConfigSetters(this);
-    }
-
-    @Override
-    public ContextPathServicesBuilder decorator(
-            Function<? super HttpService, ? extends HttpService> decorator) {
-        return (ContextPathServicesBuilder) super.decorator(decorator);
-    }
-
-    @Override
-    public ContextPathServicesBuilder decorator(
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (ContextPathServicesBuilder) super.decorator(decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public ContextPathServicesBuilder decorator(
-            String pathPattern,
-            Function<? super HttpService, ? extends HttpService> decorator) {
-        return (ContextPathServicesBuilder) super.decorator(pathPattern, decorator);
-    }
-
-    @Override
-    public ContextPathServicesBuilder decorator(String pathPattern,
-                                                DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (ContextPathServicesBuilder) super.decorator(pathPattern, decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public ContextPathServicesBuilder decorator(
-            Route route,
-            Function<? super HttpService, ? extends HttpService> decorator) {
-        return (ContextPathServicesBuilder) super.decorator(route, decorator);
-    }
-
-    @Override
-    public ContextPathServicesBuilder decorator(Route route,
-                                                DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (ContextPathServicesBuilder) super.decorator(route, decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public ContextPathServicesBuilder decoratorUnder(
-            String prefix,
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (ContextPathServicesBuilder) super.decoratorUnder(prefix, decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public ContextPathServicesBuilder decoratorUnder(
-            String prefix,
-            Function<? super HttpService, ? extends HttpService> decorator) {
-        return (ContextPathServicesBuilder) super.decoratorUnder(prefix, decorator);
-    }
-
-    @Override
-    ContextPathServicesBuilder addServiceConfigSetters(
-            ServiceConfigSetters serviceConfigSetters) {
-        return (ContextPathServicesBuilder) super.addServiceConfigSetters(serviceConfigSetters);
-    }
-
-    @Override
-    ContextPathServicesBuilder addRouteDecoratingService(
-            RouteDecoratingService routeDecoratingService) {
-        return (ContextPathServicesBuilder) super.addRouteDecoratingService(routeDecoratingService);
     }
 }

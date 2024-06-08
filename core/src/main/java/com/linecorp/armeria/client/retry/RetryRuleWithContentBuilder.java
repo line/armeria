@@ -19,41 +19,25 @@ package com.linecorp.armeria.client.retry;
 import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
  * A builder for creating a new {@link RetryRuleWithContent}.
  */
-public final class RetryRuleWithContentBuilder<T extends Response> extends AbstractRuleWithContentBuilder<T> {
+public final class RetryRuleWithContentBuilder<T extends Response>
+        extends AbstractRuleWithContentBuilder<RetryRuleWithContentBuilder<T>, T> {
 
     RetryRuleWithContentBuilder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
-    }
-
-    /**
-     * Adds the specified {@code responseFilter} for a {@link RetryRuleWithContent} which will retry
-     * if the specified {@code responseFilter} completes with {@code true}.
-     */
-    @Override
-    public RetryRuleWithContentBuilder<T> onResponse(
-            BiFunction<? super ClientRequestContext, ? super T,
-                    ? extends CompletionStage<Boolean>> responseFilter) {
-        return (RetryRuleWithContentBuilder<T>) super.onResponse(responseFilter);
     }
 
     /**
@@ -114,161 +98,5 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
                                  });
         };
         return RetryRuleUtil.orElse(first, second);
-    }
-
-    // Override the return type of the chaining methods in the superclass.
-
-    /**
-     * Adds the specified {@code responseHeadersFilter} for a {@link RetryRuleWithContent} which will retry
-     * if the {@code responseHeadersFilter} returns {@code true}.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onResponseHeaders(
-            BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
-        return (RetryRuleWithContentBuilder<T>) super.onResponseHeaders(responseHeadersFilter);
-    }
-
-    /**
-     * Adds the specified {@code responseTrailersFilter} for a {@link RetryRuleWithContent} which will retry
-     * if the {@code responseTrailersFilter} returns {@code true}. Note that using this method makes the entire
-     * response buffered, which may lead to excessive memory usage.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onResponseTrailers(
-            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
-        return (RetryRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
-    }
-
-    /**
-     * Adds the specified {@code grpcTrailersFilter} for a {@link RetryRuleWithContent} which will retry
-     * if the {@code grpcTrailersFilter} returns {@code true}. Note that using this method makes the entire
-     * response buffered, which may lead to excessive memory usage.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onGrpcTrailers(
-            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
-        return (RetryRuleWithContentBuilder<T>) super.onGrpcTrailers(grpcTrailersFilter);
-    }
-
-    /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRuleWithContent} which will retry
-     * if a class of the response status is one of the specified {@link HttpStatusClass}es.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onStatusClass(HttpStatusClass... statusClasses) {
-        return (RetryRuleWithContentBuilder<T>) super.onStatusClass(statusClasses);
-    }
-
-    /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRuleWithContent} which will retry
-     * if a class of the response status is one of the specified {@link HttpStatusClass}es.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onStatusClass(Iterable<HttpStatusClass> statusClasses) {
-        return (RetryRuleWithContentBuilder<T>) super.onStatusClass(statusClasses);
-    }
-
-    /**
-     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryRuleWithContent} which will retry
-     * if a class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onServerErrorStatus() {
-        return (RetryRuleWithContentBuilder<T>) super.onServerErrorStatus();
-    }
-
-    /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRuleWithContent} which will retry
-     * if a response status is one of the specified {@link HttpStatus}es.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onStatus(HttpStatus... statuses) {
-        return (RetryRuleWithContentBuilder<T>) super.onStatus(statuses);
-    }
-
-    /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRuleWithContent} which will retry
-     * if a response status is one of the specified {@link HttpStatus}es.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onStatus(Iterable<HttpStatus> statuses) {
-        return (RetryRuleWithContentBuilder<T>) super.onStatus(statuses);
-    }
-
-    /**
-     * Adds the specified {@code statusFilter} for a {@link RetryRuleWithContent} which will retry
-     * if a response status matches the specified {@code statusFilter}.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onStatus(
-            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
-        return (RetryRuleWithContentBuilder<T>) super.onStatus(statusFilter);
-    }
-
-    /**
-     * Adds the specified exception type for a {@link RetryRuleWithContent} which will retry
-     * if an {@link Exception} is raised and it is an instance of the specified {@code exception}.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onException(Class<? extends Throwable> exception) {
-        return (RetryRuleWithContentBuilder<T>) super.onException(exception);
-    }
-
-    /**
-     * Adds the specified {@code exceptionFilter} for a {@link RetryRuleWithContent} which will retry
-     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onException(
-            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
-        return (RetryRuleWithContentBuilder<T>) super.onException(exceptionFilter);
-    }
-
-    /**
-     * Makes a {@link RetryRuleWithContent} retry on any {@link Exception}.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onException() {
-        return (RetryRuleWithContentBuilder<T>) super.onException();
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onTimeoutException() {
-        return (RetryRuleWithContentBuilder<T>) super.onTimeoutException();
-    }
-
-    /**
-     * Makes a {@link RetryRuleWithContent} retry on an {@link UnprocessedRequestException} which means that
-     * the request has not been processed by the server.
-     * Therefore, you can safely retry the request without worrying about the idempotency of the request.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onUnprocessed() {
-        return (RetryRuleWithContentBuilder<T>) super.onUnprocessed();
-    }
-
-    /**
-     * Adds the specified {@code responseDurationFilter} for a {@link RetryRuleWithContent} which will retry
-     * if the {@code responseDurationFilter} returns {@code true}.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public RetryRuleWithContentBuilder<T> onTotalDuration(
-            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
-        return (RetryRuleWithContentBuilder<T>) super.onTotalDuration(totalDurationFilter);
     }
 }

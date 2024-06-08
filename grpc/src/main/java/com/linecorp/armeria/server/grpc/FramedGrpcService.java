@@ -60,13 +60,11 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
-import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -133,6 +131,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final boolean useBlockingTaskExecutor;
     private final boolean unsafeWrapRequestBuffers;
     private final boolean useClientTimeoutHeader;
+    private final boolean useMethodMarshaller;
     private final String advertisedEncodingsHeader;
     private final Map<SerializationFormat, ResponseHeaders> defaultHeaders;
     @Nullable
@@ -154,7 +153,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean useClientTimeoutHeader,
                       boolean lookupMethodFromAttribute,
                       @Nullable GrpcHealthCheckService grpcHealthCheckService,
-                      boolean autoCompression) {
+                      boolean autoCompression, boolean useMethodMarshaller) {
         this.registry = requireNonNull(registry, "registry");
         routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
         exchangeTypes = registry.methods().entrySet().stream()
@@ -173,6 +172,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.lookupMethodFromAttribute = lookupMethodFromAttribute;
         this.autoCompression = autoCompression;
+        this.useMethodMarshaller = useMethodMarshaller;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -239,8 +239,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    GrpcStatus.fromThrowable(exceptionHandler, ctx, e, metadata),
-                                    metadata));
+                                    exceptionHandler.apply(ctx, e, metadata), metadata));
                 }
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(AbstractUnframedGrpcService.IS_UNFRAMED_GRPC))) {
@@ -302,9 +301,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                   HttpRequest req, MethodDescriptor<I, O> methodDescriptor,
                                   AbstractServerCall<I, O> call) {
         final Listener<I> listener;
+        final Metadata headers = MetadataUtil.copyFromHeaders(req.headers());
         try {
             listener = methodDef.getServerCallHandler()
-                                .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
+                                .startCall(call, headers);
         } catch (Throwable t) {
             call.setListener((Listener<I>) EMPTY_LISTENER);
             call.close(t);
@@ -320,10 +320,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            Status status = Status.CANCELLED.withCause(cancellationCause);
-            if (cancellationCause instanceof RequestTimeoutException) {
-                status = status.withDescription("Request timed out");
-            }
+            final Status status = call.exceptionHandler().apply(ctx, cancellationCause, headers);
+            assert status != null;
             call.close(new ServerStatusAndMetadata(status, new Metadata(), true, true));
             return null;
         });
@@ -356,7 +354,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     defaultHeaders.get(serializationFormat),
                     exceptionHandler,
                     blockingExecutor,
-                    autoCompression);
+                    autoCompression,
+                    useMethodMarshaller);
         } else {
             return new StreamingServerCall<>(
                     req,
@@ -374,7 +373,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     defaultHeaders.get(serializationFormat),
                     exceptionHandler,
                     blockingExecutor,
-                    autoCompression);
+                    autoCompression,
+                    useMethodMarshaller);
         }
     }
 

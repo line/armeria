@@ -41,6 +41,8 @@ public final class ClientConnectionTimings {
     private final long dnsResolutionDurationNanos;
     private final long socketConnectStartTimeMicros;
     private final long socketConnectDurationNanos;
+    private final long tlsHandshakeStartTimeMicros;
+    private final long tlsHandshakeDurationNanos;
     private final long pendingAcquisitionStartTimeMicros;
     private final long pendingAcquisitionDurationNanos;
 
@@ -54,6 +56,7 @@ public final class ClientConnectionTimings {
     ClientConnectionTimings(long connectionAcquisitionStartTimeMicros, long connectionAcquisitionDurationNanos,
                             long dnsResolutionStartTimeMicros, long dnsResolutionDurationNanos,
                             long socketConnectStartTimeMicros, long socketConnectDurationNanos,
+                            long tlsHandshakeStartTimeMicros, long tlsHandshakeDurationNanos,
                             long pendingAcquisitionStartTimeMicros, long pendingAcquisitionDurationNanos) {
         this.connectionAcquisitionStartTimeMicros = connectionAcquisitionStartTimeMicros;
         this.connectionAcquisitionDurationNanos = connectionAcquisitionDurationNanos;
@@ -61,6 +64,8 @@ public final class ClientConnectionTimings {
         this.dnsResolutionDurationNanos = dnsResolutionDurationNanos;
         this.socketConnectStartTimeMicros = socketConnectStartTimeMicros;
         this.socketConnectDurationNanos = socketConnectDurationNanos;
+        this.tlsHandshakeStartTimeMicros = tlsHandshakeStartTimeMicros;
+        this.tlsHandshakeDurationNanos = tlsHandshakeDurationNanos;
         this.pendingAcquisitionStartTimeMicros = pendingAcquisitionStartTimeMicros;
         this.pendingAcquisitionDurationNanos = pendingAcquisitionDurationNanos;
     }
@@ -103,10 +108,7 @@ public final class ClientConnectionTimings {
      * @return the start time, or {@code -1} if there was no action to resolve a domain name.
      */
     public long dnsResolutionStartTimeMillis() {
-        if (dnsResolutionStartTimeMicros >= 0) {
-            return TimeUnit.MICROSECONDS.toMillis(dnsResolutionStartTimeMicros);
-        }
-        return -1;
+        return toMillis(dnsResolutionStartTimeMicros);
     }
 
     /**
@@ -133,10 +135,7 @@ public final class ClientConnectionTimings {
      * @return the start time, or {@code -1} if there was no action to connect to a remote peer.
      */
     public long socketConnectStartTimeMillis() {
-        if (socketConnectStartTimeMicros >= 0) {
-            return TimeUnit.MICROSECONDS.toMillis(socketConnectStartTimeMicros);
-        }
-        return -1;
+        return toMillis(socketConnectStartTimeMicros);
     }
 
     /**
@@ -146,6 +145,33 @@ public final class ClientConnectionTimings {
      */
     public long socketConnectDurationNanos() {
         return socketConnectDurationNanos;
+    }
+
+    /**
+     * Returns the time when the client started to TLS handshake, in microseconds since the epoch.
+     *
+     * @return the start time, or {@code -1} if there was no action to TLS handshake.
+     */
+    public long tlsHandshakeStartTimeMicros() {
+        return tlsHandshakeStartTimeMicros;
+    }
+
+    /**
+     * Returns the time when the client started to TLS handshake, in milliseconds since the epoch.
+     *
+     * @return the start time, or {@code -1} if there was no action to TLS handshake.
+     */
+    public long tlsHandshakeStartTimeMillis() {
+        return toMillis(tlsHandshakeStartTimeMicros);
+    }
+
+    /**
+     * Returns the duration which was taken to TLS handshake, in nanoseconds.
+     *
+     * @return the duration, or {@code -1} if there was no action to TLS handshake.
+     */
+    public long tlsHandshakeDurationNanos() {
+        return tlsHandshakeDurationNanos;
     }
 
     /**
@@ -165,10 +191,7 @@ public final class ClientConnectionTimings {
      * @return the start time, or {@code -1} if there was no action to get a pending connection.
      */
     public long pendingAcquisitionStartTimeMillis() {
-        if (pendingAcquisitionStartTimeMicros >= 0) {
-            return TimeUnit.MICROSECONDS.toMillis(pendingAcquisitionStartTimeMicros);
-        }
-        return -1;
+        return toMillis(pendingAcquisitionStartTimeMicros);
     }
 
     /**
@@ -203,6 +226,14 @@ public final class ClientConnectionTimings {
             buf.append(", socketConnectDuration=");
             TextFormatter.appendElapsed(buf, socketConnectDurationNanos);
         }
+
+        if (tlsHandshakeDurationNanos >= 0) {
+            buf.append(", tlsHandshakeStartTime=");
+            TextFormatter.appendEpochMicros(buf, tlsHandshakeStartTimeMicros);
+            buf.append(", tlsHandshakeDuration=");
+            TextFormatter.appendElapsed(buf, tlsHandshakeDurationNanos);
+        }
+
         if (pendingAcquisitionDurationNanos >= 0) {
             buf.append(", pendingAcquisitionStartTime=");
             TextFormatter.appendEpochMicros(buf, pendingAcquisitionStartTimeMicros);
@@ -211,5 +242,12 @@ public final class ClientConnectionTimings {
         }
         buf.append('}');
         return buf.toString();
+    }
+
+    private static long toMillis(long micro) {
+        if (micro >= 0) {
+            return TimeUnit.MICROSECONDS.toMillis(micro);
+        }
+        return -1;
     }
 }

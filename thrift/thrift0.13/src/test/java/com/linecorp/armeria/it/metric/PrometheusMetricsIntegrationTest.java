@@ -49,23 +49,21 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.prometheus.client.CollectorRegistry;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import testing.thrift.main.HelloService.Iface;
 
 public class PrometheusMetricsIntegrationTest {
 
     private static final Logger logger = LoggerFactory.getLogger(PrometheusMetricsIntegrationTest.class);
     private static final PrometheusMeterRegistry registry = PrometheusMeterRegistries.newRegistry();
-    private static final CollectorRegistry prometheusRegistry = registry.getPrometheusRegistry();
 
     @ClassRule
     public static final ServerRule server = new ServerRule() {
@@ -86,7 +84,8 @@ public class PrometheusMetricsIntegrationTest {
             sb.service("/bar", helloService.decorate(
                     MetricCollectingService.newDecorator(new MeterIdPrefixFunctionImpl("server", "Bar"))));
 
-            sb.service("/internal/prometheus/metrics", PrometheusExpositionService.of(prometheusRegistry));
+            sb.service("/internal/prometheus/metrics",
+                       PrometheusExpositionService.of(registry.getPrometheusRegistry()));
         }
     };
 
@@ -151,60 +150,60 @@ public class PrometheusMetricsIntegrationTest {
         assertThat(content).containsPattern(
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Foo\",hostname_pattern=\"*\",http_status=\"200\",",
-                                 "method=\"hello\",service=\"" + Iface.class.getName() + "\",} 7.0"));
+                                 "method=\"hello\",service=\"" + Iface.class.getName() + "\"} 7"));
         assertThat(content).containsPattern(
                 multilinePattern("server_request_length_count",
                                  "{handler=\"Foo\",hostname_pattern=\"*\",http_status=\"200\",",
-                                 "method=\"hello\",service=\"" + Iface.class.getName() + "\",} 7.0"));
+                                 "method=\"hello\",service=\"" + Iface.class.getName() + "\"} 7"));
         assertThat(content).containsPattern(
                 multilinePattern("server_response_length_count",
                                  "{handler=\"Foo\",hostname_pattern=\"*\",http_status=\"200\",",
-                                 "method=\"hello\",service=\"" + Iface.class.getName() + "\",} 7.0"));
+                                 "method=\"hello\",service=\"" + Iface.class.getName() + "\"} 7"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
                                  "{handler=\"Foo\",http_status=\"200\",method=\"hello\",service=\"" +
-                                 Iface.class.getName() + "\",} 7.0"));
+                                 Iface.class.getName() + "\"} 7"));
         assertThat(content).containsPattern(
                 multilinePattern("client_request_length_count",
                                  "{handler=\"Foo\",http_status=\"200\",method=\"hello\",service=\"" +
-                                 Iface.class.getName() + "\",} 7.0"));
+                                 Iface.class.getName() + "\"} 7"));
         assertThat(content).containsPattern(
                 multilinePattern("client_response_length_count",
                                  "{handler=\"Foo\",http_status=\"200\",method=\"hello\",service=\"" +
-                                 Iface.class.getName() + "\",} 7.0"));
+                                 Iface.class.getName() + "\"} 7"));
 
         // Failure count
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Foo\",hostname_pattern=\"*\",http_status=\"200\",",
                                  "method=\"hello\",result=\"failure\",",
-                                 "service=\"" + Iface.class.getName() + "\",} 3.0"));
+                                 "service=\"" + Iface.class.getName() + "\"} 3.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
                                  "{handler=\"Foo\",http_status=\"200\",method=\"hello\"," +
-                                 "result=\"failure\",service=\"" + Iface.class.getName() + "\",} 3.0"));
+                                 "result=\"failure\",service=\"" + Iface.class.getName() + "\"} 3.0"));
 
         // Success count
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Foo\",hostname_pattern=\"*\",http_status=\"200\",",
                                  "method=\"hello\",result=\"success\",",
-                                 "service=\"" + Iface.class.getName() + "\",} 4.0"));
+                                 "service=\"" + Iface.class.getName() + "\"} 4.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
                                  "{handler=\"Foo\",http_status=\"200\",method=\"hello\"," +
-                                 "result=\"success\",service=\"" + Iface.class.getName() + "\",} 4.0"));
+                                 "result=\"success\",service=\"" + Iface.class.getName() + "\"} 4.0"));
 
         // Active Requests 0
         assertThat(content).containsPattern(
                 multilinePattern("server_active_requests",
                                  "{handler=\"Foo\",hostname_pattern=\"*\",",
-                                 "method=\"hello\",service=\"" + Iface.class.getName() + "\",} 0.0"));
+                                 "method=\"hello\",service=\"" + Iface.class.getName() + "\"} 0.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_active_requests",
                                  "{handler=\"Foo\",method=\"hello\",service=\"" + Iface.class.getName() +
-                                 "\",} 0.0"));
+                                 "\"} 0.0"));
     }
 
     private static void hello_second_endpoint() throws Exception {
@@ -245,52 +244,52 @@ public class PrometheusMetricsIntegrationTest {
                 multilinePattern("server_request_duration_seconds_count",
                                  "{handler=\"Bar\",hostname_pattern=\"*\",http_status=\"200\",",
                                  "method=\"hello\",service=\"" + Iface.class.getName() +
-                                 "\",} 1.0"));
+                                 "\"} 1"));
         assertThat(content).containsPattern(
                 multilinePattern("server_request_length_count",
                                  "{handler=\"Bar\",hostname_pattern=\"*\",http_status=\"200\",",
                                  "method=\"hello\",service=\"" + Iface.class.getName() +
-                                 "\",} 1.0"));
+                                 "\"} 1"));
         assertThat(content).containsPattern(
                 multilinePattern("server_response_length_count",
                                  "{handler=\"Bar\",hostname_pattern=\"*\",http_status=\"200\",",
                                  "method=\"hello\",service=\"" + Iface.class.getName() +
-                                 "\",} 1.0"));
+                                 "\"} 1"));
         // Client entry count check
         assertThat(content).containsPattern(
                 multilinePattern("client_request_duration_seconds_count",
                                  "{handler=\"Bar\",http_status=\"200\",method=\"hello\",service=\"" +
-                                 Iface.class.getName() + "\",} 1.0"));
+                                 Iface.class.getName() + "\"} 1"));
         assertThat(content).containsPattern(
                 multilinePattern("client_request_length_count",
                                  "{handler=\"Bar\",http_status=\"200\",method=\"hello\",service=\"" +
-                                 Iface.class.getName() + "\",} 1.0"));
+                                 Iface.class.getName() + "\"} 1"));
         assertThat(content).containsPattern(
                 multilinePattern("client_response_length_count",
                                  "{handler=\"Bar\",http_status=\"200\",method=\"hello\",service=\"" +
-                                 Iface.class.getName() + "\",} 1.0"));
+                                 Iface.class.getName() + "\"} 1"));
 
         // Success count
         assertThat(content).containsPattern(
                 multilinePattern("server_requests_total",
                                  "{handler=\"Bar\",hostname_pattern=\"*\",http_status=\"200\",",
                                  "method=\"hello\",result=\"success\",",
-                                 "service=\"" + Iface.class.getName() + "\",} 1.0"));
+                                 "service=\"" + Iface.class.getName() + "\"} 1.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_requests_total",
                                  "{handler=\"Bar\",http_status=\"200\",method=\"hello\"," +
-                                 "result=\"success\",service=\"" + Iface.class.getName() + "\",} 1.0"));
+                                 "result=\"success\",service=\"" + Iface.class.getName() + "\"} 1.0"));
 
         // Active Requests 0
         assertThat(content).containsPattern(
                 multilinePattern("server_active_requests",
                                  "{handler=\"Bar\",hostname_pattern=\"*\",",
                                  "method=\"hello\",service=\"" + Iface.class.getName() +
-                                 "\",} 0.0"));
+                                 "\"} 0.0"));
         assertThat(content).containsPattern(
                 multilinePattern("client_active_requests",
                                  "{handler=\"Bar\",method=\"hello\",service=\"" + Iface.class.getName() +
-                                 "\",} 0.0"));
+                                 "\"} 0.0"));
     }
 
     private static void makeRequest1(String name) throws TException {

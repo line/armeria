@@ -23,7 +23,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * based on a combination of host, method and path.
  */
 @UnstableApi
-public abstract class AbstractCircuitBreakerMappingBuilder {
+public abstract class AbstractCircuitBreakerMappingBuilder
+        <SELF extends AbstractCircuitBreakerMappingBuilder<SELF>> {
 
     private boolean perHost;
     private boolean perMethod;
@@ -35,27 +36,35 @@ public abstract class AbstractCircuitBreakerMappingBuilder {
     protected AbstractCircuitBreakerMappingBuilder() {}
 
     /**
+     * Return {@code this}.
+     */
+    @SuppressWarnings("unchecked")
+    protected final SELF self() {
+        return (SELF) this;
+    }
+
+    /**
      * Adds host dimension to the mapping Key.
      */
-    public AbstractCircuitBreakerMappingBuilder perHost() {
+    public SELF perHost() {
         perHost = true;
-        return this;
+        return self();
     }
 
     /**
      * Adds method dimension to the mapping Key.
      */
-    public AbstractCircuitBreakerMappingBuilder perMethod() {
+    public SELF perMethod() {
         perMethod = true;
-        return this;
+        return self();
     }
 
     /**
      * Adds path dimension to the mapping Key.
      */
-    public AbstractCircuitBreakerMappingBuilder perPath() {
+    public SELF perPath() {
         perPath = true;
-        return this;
+        return self();
     }
 
     /**

@@ -24,45 +24,46 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 @UnstableApi
-interface AnnotatedServiceConfigSetters extends ServiceConfigSetters {
+interface AnnotatedServiceConfigSetters<SELF extends AnnotatedServiceConfigSetters<SELF>>
+        extends ServiceConfigSetters<SELF> {
 
     /**
      * Sets the path prefix to be used for this {@link AnnotatedServiceConfigSetters}.
      * @param pathPrefix string representing the path prefix.
      */
-    AnnotatedServiceConfigSetters pathPrefix(String pathPrefix);
+    SELF pathPrefix(String pathPrefix);
 
     /**
      * Adds the given {@link ExceptionHandlerFunction}s to this {@link AnnotatedServiceConfigSetters}.
      */
-    AnnotatedServiceConfigSetters exceptionHandlers(ExceptionHandlerFunction... exceptionHandlerFunctions);
+    SELF exceptionHandlers(ExceptionHandlerFunction... exceptionHandlerFunctions);
 
     /**
      * Adds the given {@link ExceptionHandlerFunction}s to this {@link AnnotatedServiceConfigSetters}.
      */
-    AnnotatedServiceConfigSetters exceptionHandlers(
+    SELF exceptionHandlers(
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions);
 
     /**
      * Adds the given {@link ResponseConverterFunction}s to this {@link AnnotatedServiceConfigSetters}.
      */
-    AnnotatedServiceConfigSetters responseConverters(ResponseConverterFunction... responseConverterFunctions);
+    SELF responseConverters(ResponseConverterFunction... responseConverterFunctions);
 
     /**
      * Adds the given {@link ResponseConverterFunction}s to this {@link AnnotatedServiceConfigSetters}.
      */
-    AnnotatedServiceConfigSetters responseConverters(
+    SELF responseConverters(
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions);
 
     /**
      * Adds the given {@link RequestConverterFunction}s to this {@link AnnotatedServiceConfigSetters}.
      */
-    AnnotatedServiceConfigSetters requestConverters(RequestConverterFunction... requestConverterFunctions);
+    SELF requestConverters(RequestConverterFunction... requestConverterFunctions);
 
     /**
      * Adds the given {@link RequestConverterFunction}s to this {@link AnnotatedServiceConfigSetters}.
      */
-    AnnotatedServiceConfigSetters requestConverters(
+    SELF requestConverters(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions);
 
     /**
@@ -71,5 +72,5 @@ interface AnnotatedServiceConfigSetters extends ServiceConfigSetters {
      * service uses blocking logic, you should either execute such logic in a separate thread using something
      * like {@link Executors#newCachedThreadPool()} or enable this setting.
      */
-    AnnotatedServiceConfigSetters useBlockingTaskExecutor(boolean useBlockingTaskExecutor);
+    SELF useBlockingTaskExecutor(boolean useBlockingTaskExecutor);
 }

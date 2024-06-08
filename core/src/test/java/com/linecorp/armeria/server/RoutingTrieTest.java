@@ -50,7 +50,7 @@ class RoutingTrieTest {
         builder.add("/abc/134", value3);
         builder.add("/abc/134", value1);
         builder.add("/abc/134/*", value4);
-        builder.add("/abc/124/:", value2);
+        builder.add("/abc/124/\0", value2);
 
         final RoutingTrie<Object> trie = builder.build();
 
@@ -109,15 +109,15 @@ class RoutingTrieTest {
         final Object value8 = new Object();
         final Object value9 = new Object();
 
-        builder.add("/users/:", value0);
-        builder.add("/users/:", value1);
-        builder.add("/users/:/movies", value2);
-        builder.add("/users/:/books", value3);
-        builder.add("/users/:/books/harry_potter", value4);
-        builder.add("/users/:/books/harry_potter*", value5);
-        builder.add("/users/:/books/:", value6);
-        builder.add("/users/:/movies/*", value7);
-        builder.add("/:", value8);
+        builder.add("/users/\0", value0);
+        builder.add("/users/\0", value1);
+        builder.add("/users/\0/movies", value2);
+        builder.add("/users/\0/books", value3);
+        builder.add("/users/\0/books/harry_potter", value4);
+        builder.add("/users/\0/books/harry_potter*", value5);
+        builder.add("/users/\0/books/\0", value6);
+        builder.add("/users/\0/movies/*", value7);
+        builder.add("/\0", value8);
         builder.add("/*", value9);
 
         final RoutingTrie<Object> trie = builder.build();
@@ -129,19 +129,21 @@ class RoutingTrieTest {
         //           |                        |                             |
         // `:`(param, values=[8])   `*`(catch, values=[9])   `users/`(exact, values=[])
         //           |                        |                             |
-        //          Nil                      Nil               `:`(param, values=[0,1])
+        //          Nil                      Nil               `\0`(param, values=[0,1])
         //                                                                  |
-        //                                                        `/`(exact, values=[])
+        //                      +-------------------------------------------+
+        //                      |                                           |
+        //         `:update`(exact, values=[10])                  `/`(exact, values=[])
         //                                                                  |
         //                           +----------------------------------------------+
         //                           |                                              |
-        //           `movies`(exact, values=[2])                     `books`(exact, values=[3])
+        //             `movies`(exact, values=[2])                      `books`(exact, values=[3])
         //                           |                                              |
         //                 `/`(exact, values=[])                          `/`(exact, values=[])
         //                           |                                              |
         //                `*`(catch, values=[7])               +----------------------------------+
         //                           |                         |                                  |
-        //                          Nil              `:`(param, values=[6])   `harry_potter`(exact, values=[4])
+        //                          Nil              `\0`(param, values=[6])   `harry_potter`(exact, values=[4])
         //                                                     |                                  |
         //                                                    Nil                        `*`(catch, values=[5])
         //                                                                                        |
@@ -159,12 +161,14 @@ class RoutingTrieTest {
         testNodeWithCheckingParentPath(trie, "/faq", "/", value8);
         testNodeWithCheckingParentPath(trie, "/events/2017", "/", value9);
         testNodeWithCheckingParentPath(trie, "/", "/", value9);
+        testNodeWithCheckingParentPath(trie, "/users/tom:update", "users/", value0, value1);
+        testNodeWithCheckingParentPath(trie, "/users/11:00:update", "users/", value0, value1);
     }
 
     @ParameterizedTest
     @MethodSource("generateFindStrategyData")
     void testFindAll(String path, int findFirst, List<Integer> findAll) {
-        final ImmutableList<Object> values = IntStream.range(0, 10).mapToObj(i -> new Object() {
+        final ImmutableList<Object> values = IntStream.range(0, 13).mapToObj(i -> new Object() {
             @Override
             public String toString() {
                 return "value" + i;
@@ -172,16 +176,18 @@ class RoutingTrieTest {
         }).collect(toImmutableList());
 
         final RoutingTrieBuilder<Object> builder = new RoutingTrieBuilder<>();
-        builder.add("/users/:", values.get(0));
+        builder.add("/users/\0", values.get(0));
         builder.add("/users/*", values.get(1));
-        builder.add("/users/:/movies", values.get(2));
-        builder.add("/users/:/books", values.get(3));
-        builder.add("/users/:/books/harry_potter", values.get(4));
-        builder.add("/users/:/books/harry_potter*", values.get(5));
-        builder.add("/users/:/books/:", values.get(6));
-        builder.add("/users/:/movies/*", values.get(7));
-        builder.add("/:", values.get(8));
+        builder.add("/users/\0/movies", values.get(2));
+        builder.add("/users/\0/books", values.get(3));
+        builder.add("/users/\0/books/harry_potter", values.get(4));
+        builder.add("/users/\0/books/harry_potter*", values.get(5));
+        builder.add("/users/\0/books/\0", values.get(6));
+        builder.add("/users/\0/movies/*", values.get(7));
+        builder.add("/\0", values.get(8));
         builder.add("/*", values.get(9));
+        builder.add("/users/\0/books/harry_potter:update", values.get(10));
+        builder.add("/users/bob:no-verb", values.get(11));
 
         final RoutingTrie<Object> trie = builder.build();
         List<Object> found;
@@ -197,7 +203,15 @@ class RoutingTrieTest {
     static Stream<Arguments> generateFindStrategyData() {
         return Stream.of(
                 Arguments.of("/users/1", 0, ImmutableList.of(0, 1, 9)),
-                Arguments.of("/users/1/movies/1", 7, ImmutableList.of(7, 1, 9))
+                Arguments.of("/users/1/movies/1", 7, ImmutableList.of(7, 1, 9)),
+                Arguments.of("/users/1/books/1:update", 6, ImmutableList.of(6,1,9)),
+                Arguments.of("/users/1:2/books/1", 6, ImmutableList.of(6,1,9)),
+                Arguments.of("/users/1:2/books/1:update", 6, ImmutableList.of(6,1,9)),
+                Arguments.of("/users/1:2/books/1:no-verb", 6, ImmutableList.of(6,1,9)),
+                Arguments.of("/users/1/books/harry_potter:update", 10, ImmutableList.of(10,1,9)),
+                Arguments.of("/users/1:2/books/harry_potter:update", 10, ImmutableList.of(10,1,9)),
+                Arguments.of("/users/:2/books/harry_potter:update", 10, ImmutableList.of(10,1,9)),
+                Arguments.of("/users/bob:no-verb", 11, ImmutableList.of(11,0,1,9))
         );
     }
 
@@ -278,12 +292,12 @@ class RoutingTrieTest {
         builder.add("/foo", high);
         builder.add("/bar/*", low, false);
         builder.add("/bar/*", high);
-        builder.add("/baz/:", low, false);
-        builder.add("/baz/:", high);
+        builder.add("/baz/\0", low, false);
+        builder.add("/baz/\0", high);
 
         builder.add("/foo_low_only", low, false);
         builder.add("/bar_low_only/*", low, false);
-        builder.add("/baz_low_only/:", low, false);
+        builder.add("/baz_low_only/\0", low, false);
 
         final RoutingTrie<String> trie = builder.build();
         Node<String> node;

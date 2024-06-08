@@ -116,6 +116,11 @@ public final class XdsTestResources {
                                     .build();
     }
 
+    public static ClusterLoadAssignment loadAssignment(String clusterName) {
+        return ClusterLoadAssignment.newBuilder().setClusterName(clusterName)
+                                    .build();
+    }
+
     public static Cluster bootstrapCluster(URI uri, String bootstrapClusterName) {
         final ClusterLoadAssignment loadAssignment =
                 loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
@@ -335,7 +340,11 @@ public final class XdsTestResources {
     }
 
     public static Listener staticResourceListener(Metadata metadata) {
-        final RouteAction.Builder routeActionBuilder = RouteAction.newBuilder().setCluster("cluster");
+        return staticResourceListener(metadata, "cluster");
+    }
+
+    public static Listener staticResourceListener(Metadata metadata, String clusterName) {
+        final RouteAction.Builder routeActionBuilder = RouteAction.newBuilder().setCluster(clusterName);
         if (metadata != Metadata.getDefaultInstance()) {
             routeActionBuilder.setMetadataMatch(metadata);
         }
