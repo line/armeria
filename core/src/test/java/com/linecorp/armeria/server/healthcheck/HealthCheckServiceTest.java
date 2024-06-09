@@ -41,6 +41,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 
 import com.google.common.collect.ImmutableList;
@@ -503,29 +505,34 @@ class HealthCheckServiceTest {
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":true, \"degraded\":true}")));
+                HttpData.ofUtf8("{\"healthy\":true,\"status\":\"DEGRADED\"}")));
     }
 
-    @Test
-    void notifyDegradedStatus() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = { "DEGRADED", "UNHEALTHY", "UNDER_MAINTENANCE" })
+    void notifyHealthStatus(String healthStatus) throws Exception {
         final CompletableFuture<AggregatedHttpResponse> f =
                 sendLongPollingGet("healthy", "/hc");
-
-        // Should not wake up until the server becomes degraded.
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS))
                 .isInstanceOf(TimeoutException.class);
 
-        // Make the server degraded
-        checker.setHealthStatus(HealthStatus.DEGRADED);
-        assertThat(f.get()).isEqualTo(AggregatedHttpResponse.of(
-                ImmutableList.of(ResponseHeaders.builder(HttpStatus.PROCESSING)
-                                                .set("armeria-lphc", "60, 5")
-                                                .build()),
-                ResponseHeaders.of(HttpStatus.OK,
-                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":true, \"degraded\":true}"),
-                HttpHeaders.of()));
+        switch (healthStatus) {
+            case "DEGRADED":
+                checker.setHealthStatus(HealthStatus.DEGRADED);
+                assertThat(f.get().contentUtf8())
+                        .isEqualTo("{\"healthy\":true,\"status\":\"DEGRADED\"}");
+                break;
+            case "UNHEALTHY":
+                checker.setHealthStatus(HealthStatus.UNHEALTHY);
+                assertThat(f.get().contentUtf8())
+                        .isEqualTo( "{\"healthy\":false}");
+                break;
+            case "UNDER_MAINTENANCE":
+                checker.setHealthStatus(HealthStatus.UNDER_MAINTENANCE);
+                assertThat(f.get().contentUtf8())
+                        .isEqualTo("{\"healthy\":false,\"status\":\"UNDER_MAINTENANCE\"}");
+                break;
+        }
     }
 
     private static void verifyDebugEnabled(Logger logger) {

@@ -134,6 +134,7 @@ public final class HealthCheckService implements TransientHttpService {
     private final AggregatedHttpResponse healthyResponse;
     private final AggregatedHttpResponse degradedResponse;
     private final AggregatedHttpResponse unhealthyResponse;
+    private final AggregatedHttpResponse underMaintenanceResponse;
     private final AggregatedHttpResponse stoppingResponse;
     private final ResponseHeaders ping;
     private final ResponseHeaders notModifiedHeaders;
@@ -155,11 +156,11 @@ public final class HealthCheckService implements TransientHttpService {
     private Server server;
     private boolean serverStopping;
 
-    HealthCheckService(Set<HealthChecker> healthCheckers,
-                       AggregatedHttpResponse healthyResponse, AggregatedHttpResponse degradedResponse,
-                       AggregatedHttpResponse unhealthyResponse,
-                       long maxLongPollingTimeoutMillis, double longPollingTimeoutJitterRate,
-                       long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
+    HealthCheckService(Set<HealthChecker> healthCheckers, AggregatedHttpResponse healthyResponse,
+                       AggregatedHttpResponse degradedResponse, AggregatedHttpResponse unhealthyResponse,
+                       AggregatedHttpResponse underMaintenanceResponse, long maxLongPollingTimeoutMillis,
+                       double longPollingTimeoutJitterRate, long pingIntervalMillis,
+                       @Nullable HealthCheckUpdateHandler updateHandler,
                        List<HealthCheckUpdateListener> updateListeners, boolean startHealthy,
                        Set<TransientServiceOption> transientServiceOptions) {
         serverHealth = new SettableHealthChecker(HealthStatus.UNHEALTHY);
@@ -200,6 +201,7 @@ public final class HealthCheckService implements TransientHttpService {
         this.healthyResponse = setCommonHeaders(healthyResponse);
         this.degradedResponse = setCommonHeaders(degradedResponse);
         this.unhealthyResponse = setCommonHeaders(unhealthyResponse);
+        this.underMaintenanceResponse = setCommonHeaders(underMaintenanceResponse);
         stoppingResponse = clearCommonHeaders(unhealthyResponse);
         notModifiedHeaders = ResponseHeaders.builder()
                                             .add(this.unhealthyResponse.headers())
@@ -301,7 +303,7 @@ public final class HealthCheckService implements TransientHttpService {
             @Override
             public void serverStopping(Server server) {
                 serverStopping = true;
-                serverHealth.setHealthStatus(HealthStatus.UNHEALTHY);
+                serverHealth.setHealthStatus(HealthStatus.UNDER_MAINTENANCE);
             }
 
             @Override
@@ -333,6 +335,9 @@ public final class HealthCheckService implements TransientHttpService {
                 useLongPolling = healthStatus == HealthStatus.DEGRADED;
             } else if ("\"unhealthy\"".equals(expectedState) || "w/\"unhealthy\"".equals(expectedState)) {
                 useLongPolling = healthStatus == HealthStatus.UNHEALTHY;
+            } else if ("\"under_maintenance\"".equals(expectedState) ||
+                       "w/\"under_maintenance\"".equals(expectedState)) {
+                useLongPolling = healthStatus == HealthStatus.UNDER_MAINTENANCE;
             } else {
                 useLongPolling = false;
             }
@@ -528,11 +533,14 @@ public final class HealthCheckService implements TransientHttpService {
             return stoppingResponse;
         }
 
-        if (healthStatus == HealthStatus.DEGRADED) {
-            return degradedResponse;
+        switch (healthStatus) {
+            case DEGRADED:
+                return degradedResponse;
+            case UNDER_MAINTENANCE:
+                return underMaintenanceResponse;
+            default:
+                return unhealthyResponse;
         }
-
-        return unhealthyResponse;
     }
 
     private void onHealthCheckerUpdate(HealthChecker unused) {
