@@ -340,7 +340,6 @@ public class HttpJsonTranscodingTest {
         @Override
         public void arbitraryHttp(HttpBody request, StreamObserver<HttpBody> responseObserver) {
             final HttpBody.Builder builder = HttpBody.newBuilder();
-            System.out.println("Request: " + request);
             builder.setContentType(request.getContentType())
                    .setData(request.getData());
             responseObserver.onNext(builder.build());
