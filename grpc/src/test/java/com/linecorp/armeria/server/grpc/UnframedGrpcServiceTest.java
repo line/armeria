@@ -127,7 +127,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
         UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
-                                              null, MediaType.PROTOBUF);
+                                              null, x -> MediaType.PROTOBUF);
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -141,7 +141,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse
                 .of(responseHeaders, HttpData.wrap(byteBuf));
         AbstractUnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
-                                                      null, MediaType.PROTOBUF);
+                                                      null, x -> MediaType.PROTOBUF);
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -155,7 +155,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
         AbstractUnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
-                                                      null, MediaType.PROTOBUF);
+                                                      null, x -> MediaType.PROTOBUF);
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -170,7 +170,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse
                 .of(responseHeaders, HttpData.wrap(byteBuf));
         AbstractUnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
-                                                      null, MediaType.PROTOBUF);
+                                                      null, x -> MediaType.PROTOBUF);
         assertThat(HttpResponse.of(res).aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }
 

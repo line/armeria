@@ -154,7 +154,7 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                        responseFuture.completeExceptionally(t);
                    } else {
                        frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(),
-                                     responseFuture, null, contentType);
+                                     responseFuture, null, mediaType -> contentType);
                    }
                }
                return null;

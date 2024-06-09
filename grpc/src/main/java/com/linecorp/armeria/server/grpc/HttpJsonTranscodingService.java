@@ -24,7 +24,9 @@ import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatc
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -196,11 +198,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             = toRouteAndPathVariables(additionalHttpRule);
                     if (additionalRouteAndVariables != null) {
                         specs.put(additionalRouteAndVariables.getKey(),
-                                    new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
-                                                        serviceDesc, methodDesc, originalFields,
-                                                        camelCaseFields,
-                                                        additionalRouteAndVariables.getValue(),
-                                                        responseBody));
+                                  new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
+                                                      serviceDesc, methodDesc, originalFields,
+                                                      camelCaseFields,
+                                                      additionalRouteAndVariables.getValue(),
+                                                      responseBody));
                     }
                 }
             }
@@ -436,7 +438,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         if (StringUtil.isNullOrEmpty(responseBody)) {
             return null;
         }
-        for (FieldDescriptor fieldDescriptor: topLevelFields) {
+        for (FieldDescriptor fieldDescriptor : topLevelFields) {
             if (fieldDescriptor.getName().equals(responseBody)) {
                 return responseBody;
             }
@@ -444,9 +446,70 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return null;
     }
 
+    private static MediaType getMediaTypeFromHttpBody(JsonNode jsonNode) {
+        final String contentType = jsonNode.get("contentType").asText();
+        try {
+            return MediaType.parse(contentType);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid media type in http body content_type {}.", contentType);
+            return MediaType.JSON_UTF_8;
+        }
+    }
+
+    private static Function<HttpData, MediaType> generateMediaTypeDecider(TranscodingSpec spec) {
+        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getOutputType())) {
+            return httpData -> {
+                try (HttpData data = httpData) {
+                    final byte[] array = data.array();
+                    try {
+                        final JsonNode jsonNode = mapper.readValue(array, JsonNode.class);
+                        return getMediaTypeFromHttpBody(jsonNode);
+                    } catch (IOException e) {
+                        logger.warn("Unexpected exception while reading HttpBody {}.", data, e);
+                    }
+
+                    // Default behavior is to return JSON_UTF_8, the default content type for JSON transcoding.
+                    return MediaType.JSON_UTF_8;
+                }
+            };
+        }
+
+        return httpData -> MediaType.JSON_UTF_8;
+    }
+
     @Nullable
     private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
-        @Nullable final String responseBody = spec.responseBody;
+        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getOutputType())) {
+            return httpData -> {
+                try (HttpData data = httpData) {
+                    final byte[] array = data.array();
+
+                    final JsonNode jsonNode;
+                    try {
+                        jsonNode = mapper.readValue(array, JsonNode.class);
+                    } catch (IOException e) {
+                        logger.warn("Unexpected exception while parsing HttpBody from {}", data, e);
+                        return HttpData.wrap(array);
+                    }
+
+                    final String httpBody = jsonNode.get("data").asText();
+                    final MediaType mediaType = getMediaTypeFromHttpBody(jsonNode);
+                    final Charset charset = mediaType.charset();
+
+                    final byte[] httpBodyBytes;
+                    if (charset != null) {
+                        httpBodyBytes = Base64.getDecoder().decode(httpBody);
+                    } else {
+                        httpBodyBytes = Base64.getDecoder().decode(httpBody);
+                    }
+
+                    return HttpData.wrap(httpBodyBytes);
+                }
+            };
+        }
+
+        @Nullable
+        final String responseBody = spec.responseBody;
         if (responseBody == null) {
             return null;
         } else {
@@ -455,11 +518,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     final byte[] array = data.array();
                     try {
                         final JsonNode jsonNode = mapper.readValue(array, JsonNode.class);
-
-                        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getOutputType())) {
-                            final String httpBody = jsonNode.get("data").asText();
-                            return HttpData.wrap(httpBody.getBytes());
-                        }
 
                         // we try to convert lower snake case response body to camel case
                         final String lowerCamelCaseResponseBody =
@@ -589,28 +647,21 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 } else {
                     try {
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
-                        final MediaType mediaType;
-                        final HttpData content;
+                        final HttpData requestContent;
 
                         // https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content
                         if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getInputType())) {
-                            // TODO: Determine media type dynamically from content.
-                            mediaType = ctx.request().contentType();
-                            content = convertToArbitraryHttpData(ctx, clientRequest);
+                            // Convert the HTTP request to a JSON representation of HttpBody.
+                            requestContent = convertToArbitraryHttpData(clientRequest);
                         } else {
-                            mediaType = MediaType.JSON_UTF_8;
-                            content = convertToJson(ctx, clientRequest, spec);
-                        }
-
-                        // Media type can only be nullif the request doesn't have a content type.
-                        if (mediaType == null) {
-                            throw new IllegalArgumentException("Unsupported content-type: " +
-                                                               clientRequest.contentType());
+                            // Convert the HTTP request to gRPC JSON.
+                            requestContent = convertToJson(ctx, clientRequest, spec);
                         }
 
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
-                                      content, responseFuture,
-                                      generateResponseBodyConverter(spec), mediaType);
+                                      requestContent, responseFuture,
+                                      generateResponseBodyConverter(spec),
+                                      generateMediaTypeDecider(spec));
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
@@ -624,17 +675,22 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return HttpResponse.of(responseFuture);
     }
 
-    private HttpData convertToArbitraryHttpData(ServiceRequestContext ctx,
-                                                AggregatedHttpRequest request) throws IOException {
+    private HttpData convertToArbitraryHttpData(AggregatedHttpRequest request) throws IOException {
         final ObjectNode body = mapper.createObjectNode();
 
-        try {
-            body.put("content_type",  request.contentUtf8());
-            body.put("data", request.content().array());
+        try (HttpData content = request.content()) {
+            final MediaType contentType;
+
+            if (request.contentType() == null) {
+                contentType = MediaType.OCTET_STREAM;
+            } else {
+                contentType = request.contentType();
+            }
+
+            body.put("content_type", contentType.toString());
+            body.put("data", content.array()); // Base64 encoded binary data
 
             return HttpData.wrap(mapper.writeValueAsBytes(body));
-        } finally {
-            request.content().close();
         }
     }
 
@@ -664,7 +720,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             root = mapper.createObjectNode();
                         } else {
                             throw new IllegalArgumentException("Unexpected JSON: " +
-                                    body + ", (expected: ObjectNode or null).");
+                                                               body + ", (expected: ObjectNode or null).");
                         }
                         return setParametersAndWriteJson(root, ctx, spec);
                     }
