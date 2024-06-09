@@ -479,6 +479,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * The {@link TlsEngineType} that will be used for processing TLS connections.
+     *
      * @param tlsEngineType the {@link TlsEngineType} to use
      */
     @UnstableApi

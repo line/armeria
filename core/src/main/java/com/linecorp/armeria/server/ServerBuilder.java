@@ -1195,7 +1195,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     }
 
     /**
-     * The {@link TlsEngineType} that will be used for processing TLS connections.
+     * Sets {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * @param tlsEngineType the {@link TlsEngineType} to use
      */
     @UnstableApi
     public ServerBuilder tlsEngineType(TlsEngineType tlsEngineType) {
