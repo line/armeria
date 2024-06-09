@@ -32,7 +32,7 @@ class CpuHealthCheckerTest {
     }
 
     @Test
-    void degradedCpuUsageShouldBeAboveTargetCpuUsage() {
+    void degradedCpuUsageShouldNotBeLowerThanTargetCpuUsage() {
         assertDoesNotThrow(() -> HealthChecker.ofCpu(0.5, 0.5, 0.6, 0.6));
         assertThrows(IllegalArgumentException.class,
                      () -> HealthChecker.ofCpu(0.5, 0.5, 0.4, 0.4));
