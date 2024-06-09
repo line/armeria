@@ -200,7 +200,7 @@ final class CpuHealthChecker implements HealthChecker {
      */
     @Override
     public boolean isHealthy() {
-        return healthStatus().isHealthy();
+        return healthStatus().isAvailable();
     }
 
     /**

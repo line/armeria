@@ -68,7 +68,6 @@ import io.netty.util.NetUtil;
 class HealthCheckServiceTest {
 
     private static final SettableHealthChecker checker = new SettableHealthChecker();
-    private static final SettableHealthStatusChecker statusChecker = new SettableHealthStatusChecker();
     private static final AtomicReference<Boolean> capturedHealthy = new AtomicReference<>();
     private static final HealthChecker unfinishedHealthChecker = HealthChecker.of(CompletableFuture::new,
                                                                                   Duration.ofDays(1));
@@ -79,7 +78,6 @@ class HealthCheckServiceTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/hc", HealthCheckService.of(checker));
-            sb.service("/hc_status", HealthCheckService.of(statusChecker));
             sb.service("/hc_unfinished_1", HealthCheckService.of(unfinishedHealthChecker));
             sb.service("/hc_unfinished_2", HealthCheckService.of(unfinishedHealthChecker));
             sb.service("/hc_long_polling_disabled", HealthCheckService.builder()
@@ -498,9 +496,9 @@ class HealthCheckServiceTest {
 
     @Test
     void checkDegradedStatus() {
-        statusChecker.setHealthStatus(HealthStatus.DEGRADED);
+        checker.setHealthStatus(HealthStatus.DEGRADED);
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
-        final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.GET, "/hc_status"));
+        final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.GET, "/hc"));
         assertThat(res).isEqualTo(AggregatedHttpResponse.of(
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
@@ -510,17 +508,15 @@ class HealthCheckServiceTest {
 
     @Test
     void notifyDegradedStatus() throws Exception {
-        statusChecker.setHealthStatus(HealthStatus.HEALTHY);
-
         final CompletableFuture<AggregatedHttpResponse> f =
-                sendLongPollingGet("healthy", "/hc_status");
+                sendLongPollingGet("healthy", "/hc");
 
         // Should not wake up until the server becomes degraded.
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS))
                 .isInstanceOf(TimeoutException.class);
 
         // Make the server degraded
-        statusChecker.setHealthStatus(HealthStatus.DEGRADED);
+        checker.setHealthStatus(HealthStatus.DEGRADED);
         assertThat(f.get()).isEqualTo(AggregatedHttpResponse.of(
                 ImmutableList.of(ResponseHeaders.builder(HttpStatus.PROCESSING)
                                                 .set("armeria-lphc", "60, 5")

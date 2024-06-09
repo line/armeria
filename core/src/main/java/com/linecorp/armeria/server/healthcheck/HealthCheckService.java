@@ -129,7 +129,7 @@ public final class HealthCheckService implements TransientHttpService {
         return new HealthCheckServiceBuilder();
     }
 
-    private final SettableHealthStatusChecker serverHealth;
+    private final SettableHealthChecker serverHealth;
     private final Set<HealthChecker> healthCheckers;
     private final AggregatedHttpResponse healthyResponse;
     private final AggregatedHttpResponse degradedResponse;
@@ -162,7 +162,7 @@ public final class HealthCheckService implements TransientHttpService {
                        long pingIntervalMillis, @Nullable HealthCheckUpdateHandler updateHandler,
                        List<HealthCheckUpdateListener> updateListeners, boolean startHealthy,
                        Set<TransientServiceOption> transientServiceOptions) {
-        serverHealth = new SettableHealthStatusChecker(HealthStatus.UNHEALTHY);
+        serverHealth = new SettableHealthChecker(HealthStatus.UNHEALTHY);
         if (!updateListeners.isEmpty()) {
             addServerHealthUpdateListener(ImmutableList.copyOf(updateListeners));
         }

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.server.healthcheck;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -46,5 +47,13 @@ public class SettableHealthCheckerTest {
         final SettableHealthChecker checker = new SettableHealthChecker();
         checker.setHealthy(false);
         assertFalse(checker.isHealthy());
+    }
+
+    @Test
+    public void setHealthStatus() {
+        final SettableHealthChecker checker = new SettableHealthChecker();
+        checker.setHealthStatus(HealthStatus.DEGRADED);
+        assertTrue(checker.isHealthy());
+        assertEquals(HealthStatus.DEGRADED, checker.healthStatus());
     }
 }

@@ -27,11 +27,11 @@ public enum HealthStatus {
     UNHEALTHY(0, false);
 
     private final int priority;
-    private final boolean isHealthy;
+    private final boolean isAvailable;
 
-    HealthStatus(int priority, boolean isHealthy) {
+    HealthStatus(int priority, boolean isAvailable) {
         this.priority = priority;
-        this.isHealthy = isHealthy;
+        this.isAvailable = isAvailable;
     }
 
     /**
@@ -42,9 +42,9 @@ public enum HealthStatus {
     }
 
     /**
-     * Returns whether this {@link HealthStatus} is considered healthy.
+     * Returns whether this {@link HealthStatus} is considered available.
      */
-    public boolean isHealthy() {
-        return isHealthy;
+    public boolean isAvailable() {
+        return isAvailable;
     }
 }
