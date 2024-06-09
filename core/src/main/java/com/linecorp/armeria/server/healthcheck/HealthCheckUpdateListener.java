@@ -28,7 +28,8 @@ public interface HealthCheckUpdateListener {
     void healthUpdated(boolean isHealthy) throws Exception;
 
     /**
-     * Invoked when the health status is updated. Use this method for more fine-grained health status updates.
+     * Invoked when the health status is updated. Override this method for more fine-grained health status
+     * updates.
      */
     default void healthStatusUpdated(HealthStatus healthStatus) throws Exception {
         healthUpdated(healthStatus.isAvailable());
