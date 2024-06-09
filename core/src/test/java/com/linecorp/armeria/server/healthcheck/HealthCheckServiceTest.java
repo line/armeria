@@ -524,8 +524,7 @@ class HealthCheckServiceTest {
                 break;
             case "UNHEALTHY":
                 checker.setHealthStatus(HealthStatus.UNHEALTHY);
-                assertThat(f.get().contentUtf8())
-                        .isEqualTo( "{\"healthy\":false}");
+                assertThat(f.get().contentUtf8()).isEqualTo("{\"healthy\":false}");
                 break;
             case "UNDER_MAINTENANCE":
                 checker.setHealthStatus(HealthStatus.UNDER_MAINTENANCE);
