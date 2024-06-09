@@ -527,20 +527,18 @@ public final class HealthCheckService implements TransientHttpService {
     private AggregatedHttpResponse getResponse(HealthStatus healthStatus) {
         if (healthStatus == HealthStatus.HEALTHY) {
             return healthyResponse;
+        } else if (healthStatus == HealthStatus.DEGRADED) {
+            return degradedResponse;
         }
 
         if (serverStopping) {
             return stoppingResponse;
         }
 
-        switch (healthStatus) {
-            case DEGRADED:
-                return degradedResponse;
-            case UNDER_MAINTENANCE:
-                return underMaintenanceResponse;
-            default:
-                return unhealthyResponse;
+        if (healthStatus == HealthStatus.UNDER_MAINTENANCE) {
+            return underMaintenanceResponse;
         }
+        return unhealthyResponse;
     }
 
     private void onHealthCheckerUpdate(HealthChecker unused) {
