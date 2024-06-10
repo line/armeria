@@ -38,7 +38,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * AsyncLoader<String> asyncLoader =
  *     AsyncLoader
  *         .builder(loader)
- *         .expireAfterLoad(Duration.ofSeconds(60))  // The loaded value is expired after 60 seconds.
+ *         // Expire the loaded value after 60 seconds.
+ *         .expireAfterLoad(Duration.ofSeconds(60))
  *         .build();
  *
  * // Fetch the value. This will call the loader function because the cache is empty.
@@ -63,6 +64,7 @@ public interface AsyncLoader<T> {
 
     /**
      * Returns a newly created {@link AsyncLoaderBuilder} with the specified loader.
+     *
      * @param loader function to load value. {@code T} is previously cached value
      *               or {@code null} when nothing is cached.
      */

@@ -170,7 +170,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         }
 
         if (expireAfterLoadNanos > 0) {
-            final long elapsed = System.nanoTime() - cacheEntry.cachedAt;
+            final long elapsed = System.nanoTime() - cacheEntry.cachedAtNanos;
             if (elapsed >= expireAfterLoadNanos) {
                 if (logger.isDebugEnabled()) {
                     logger.debug("The cached value expired after {} ms. cache: {}",
@@ -196,7 +196,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private static class CacheEntry<T> {
 
         private final T value;
-        private final long cachedAt = System.nanoTime();
+        private final long cachedAtNanos = System.nanoTime();
 
         CacheEntry(T value) {
             requireNonNull(value, "value");

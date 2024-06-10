@@ -54,13 +54,24 @@ public final class AsyncLoaderBuilder<T> {
     }
 
     /**
-     * Expires The loaded value after the duration since it was loaded.
+     * Expires the loaded value after the given duration since it was loaded.
      * New value will be loaded by the loader function on next {@link AsyncLoader#get()}.
      */
     public AsyncLoaderBuilder<T> expireAfterLoad(Duration expireAfterLoad) {
         requireNonNull(expireAfterLoad, "expireAfterLoad");
         checkState(!expireAfterLoad.isNegative(), "expireAfterLoad: %s (expected: >= 0)", expireAfterLoad);
         this.expireAfterLoad = expireAfterLoad;
+        return this;
+    }
+
+    /**
+     * Expires the loaded value after the given milliseconds since it was loaded.
+     * New value will be loaded by the loader function on next {@link AsyncLoader#get()}.
+     */
+    public AsyncLoaderBuilder<T> expireAfterLoadMillis(long expireAfterLoadMillis) {
+        checkState(expireAfterLoadMillis >= 0,
+                   "expireAfterLoadMillis: %s (expected: >= 0)", expireAfterLoadMillis);
+        this.expireAfterLoad = Duration.ofMillis(expireAfterLoadMillis);
         return this;
     }
 
