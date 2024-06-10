@@ -63,7 +63,7 @@ public final class InternalServices {
     }
 
     static {
-        // InternalServices is the only class that both boot-starter and boot-webflux-starter depend on.
+        // InternalServices is the only class that both boot-starter and boot-webflux-starter always depend on.
 
         // Disable the default shutdown hook to gracefully close the client factory after the server is
         // shut down.
@@ -73,7 +73,6 @@ public final class InternalServices {
         // https://github.com/spring-projects/spring-boot/blame/781d7b0394c71e20f098f64a3261a18346ccd915/spring-boot-project/spring-boot/src/main/java/org/springframework/boot/SpringApplicationShutdownHook.java#L114-L116
         SpringApplication.getShutdownHandlers().add(ClientFactory::closeDefault);
     }
-
 
     /**
      * Returns a newly created {@link InternalServices} from the specified properties.
