@@ -279,8 +279,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     final boolean endOfStream = contentEmpty && !transferEncodingChunked;
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
-                                                           keepAlive, inboundTrafficController, routingCtx
-                    );
+                                                           keepAlive, inboundTrafficController, routingCtx);
                     cfg.serverMetrics().increasePendingHttp1Requests();
                     ctx.fireChannelRead(req);
                 } else {
