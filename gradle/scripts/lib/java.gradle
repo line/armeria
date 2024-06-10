@@ -201,6 +201,9 @@ configure(projectsWithFlags('java')) {
                                      "targetJavaVersion(${project.ext.targetJavaVersion})")
             testTask.enabled = false
         }
+        if (testTask.enabled) {
+            project.ext.configureFlakyTests(testTask)
+        }
     }
 
     testing.suites {
@@ -210,7 +213,6 @@ configure(projectsWithFlags('java')) {
 
             targets.configureEach {
                 testTask.configure {
-                    project.ext.configureFlakyTests(it)
                     project.ext.configureCommonTestSettings(it)
                 }
             }
