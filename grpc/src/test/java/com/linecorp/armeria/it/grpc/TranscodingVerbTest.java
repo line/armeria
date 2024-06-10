@@ -24,12 +24,14 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 import testing.grpc.TranscodingVerbServiceGrpc;
 import testing.grpc.Verb.Simple;
+import testing.grpc.Verb.UnderScore;
 
 class TranscodingVerbTest {
 
@@ -55,6 +57,12 @@ class TranscodingVerbTest {
 
         @Override
         public void noParamsVerb(Simple request, StreamObserver<Simple> responseObserver) {
+            responseObserver.onNext(request);
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void underScoreVerb(UnderScore request, StreamObserver<UnderScore> responseObserver) {
             responseObserver.onNext(request);
             responseObserver.onCompleted();
         }
@@ -98,5 +106,17 @@ class TranscodingVerbTest {
     void testNoParamsVerb() throws Exception {
         final AggregatedHttpResponse response = server.blockingWebClient().get("/v1/simple/1/noparam:verb");
         assertThat(response.contentUtf8()).isEqualTo("{}");
+    }
+
+    @Test
+    void testUnderScoreVariableWithVerb() throws InterruptedException {
+        server.requestContextCaptor().clear();
+        final AggregatedHttpResponse response = server.blockingWebClient().get("/v1/underscore/a/b:verb");
+        final ServiceRequestContext ctx = server.requestContextCaptor().take();
+        assertThatJson(response.contentUtf8()).node("firstMessage").isEqualTo("a");
+        assertThatJson(response.contentUtf8()).node("secondMessage").isEqualTo("b");
+        // Verb pattern uses p\d for path variables
+        assertThat(ctx.pathParam("p0")).isEqualTo("a");
+        assertThat(ctx.pathParam("p1")).isEqualTo("b");
     }
 }

@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * A skeletal builder implementation for {@link LogFormatter}.
  */
-abstract class AbstractLogFormatterBuilder<T> {
+abstract class AbstractLogFormatterBuilder<SELF extends AbstractLogFormatterBuilder<SELF, T>, T> {
 
     @Nullable
     private HeadersSanitizer<T> requestHeadersSanitizer;
@@ -47,6 +47,11 @@ abstract class AbstractLogFormatterBuilder<T> {
 
     @Nullable
     private BiFunction<? super RequestContext, Object, ? extends T> responseContentSanitizer;
+
+    @SuppressWarnings("unchecked")
+    final SELF self() {
+        return (SELF) this;
+    }
 
     /**
      * Sets the {@link BiFunction} to use to sanitize request headers before logging. It is common to have the
@@ -69,12 +74,13 @@ abstract class AbstractLogFormatterBuilder<T> {
      *
      * @see HeadersSanitizer
      */
-    public AbstractLogFormatterBuilder<T> requestHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestHeadersSanitizer) {
+    public SELF requestHeadersSanitizer(
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable T> requestHeadersSanitizer) {
         requireNonNull(requestHeadersSanitizer, "requestHeadersSanitizer");
         // TODO(ikhoon): Replace BiFunction with HeadersSanitizer in Armeria 2.0.
         this.requestHeadersSanitizer = requestHeadersSanitizer::apply;
-        return this;
+        return self();
     }
 
     /**
@@ -106,12 +112,13 @@ abstract class AbstractLogFormatterBuilder<T> {
      *
      * @see HeadersSanitizer
      */
-    public AbstractLogFormatterBuilder<T> responseHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseHeadersSanitizer) {
+    public SELF responseHeadersSanitizer(
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable T> responseHeadersSanitizer) {
         // TODO(ikhoon): Replace BiFunction with HeadersSanitizer in Armeria 2.0.
         requireNonNull(responseHeadersSanitizer, "responseHeadersSanitizer");
         this.responseHeadersSanitizer = responseHeadersSanitizer::apply;
-        return this;
+        return self();
     }
 
     /**
@@ -142,12 +149,13 @@ abstract class AbstractLogFormatterBuilder<T> {
      *
      * @see HeadersSanitizer
      */
-    public AbstractLogFormatterBuilder<T> requestTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestTrailersSanitizer) {
+    public SELF requestTrailersSanitizer(
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable T> requestTrailersSanitizer) {
         // TODO(ikhoon): Replace BiFunction with HeadersSanitizer in Armeria 2.0.
         requireNonNull(requestTrailersSanitizer, "requestTrailersSanitizer");
         this.requestTrailersSanitizer = requestTrailersSanitizer::apply;
-        return this;
+        return self();
     }
 
     /**
@@ -178,12 +186,13 @@ abstract class AbstractLogFormatterBuilder<T> {
      *
      * @see HeadersSanitizer
      */
-    public AbstractLogFormatterBuilder<T> responseTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseTrailersSanitizer) {
+    public SELF responseTrailersSanitizer(
+            BiFunction<? super RequestContext, ? super HttpHeaders,
+                    ? extends @Nullable T> responseTrailersSanitizer) {
         // TODO(ikhoon): Replace BiFunction with HeadersSanitizer in Armeria 2.0.
         requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseTrailersSanitizer = responseTrailersSanitizer::apply;
-        return this;
+        return self();
     }
 
     /**
@@ -218,14 +227,14 @@ abstract class AbstractLogFormatterBuilder<T> {
      * @see #responseHeadersSanitizer(BiFunction)
      * @see #responseTrailersSanitizer(BiFunction)
      */
-    public AbstractLogFormatterBuilder<T> headersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> headersSanitizer) {
+    public SELF headersSanitizer(
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable T> headersSanitizer) {
         requireNonNull(headersSanitizer, "headersSanitizer");
         requestHeadersSanitizer(headersSanitizer);
         requestTrailersSanitizer(headersSanitizer);
         responseHeadersSanitizer(headersSanitizer);
         responseTrailersSanitizer(headersSanitizer);
-        return this;
+        return self();
     }
 
     /**
@@ -233,17 +242,17 @@ abstract class AbstractLogFormatterBuilder<T> {
      * {@link BiFunction} that removes sensitive content, such as an GPS location query, before logging.
      * If unset, will not sanitize request content.
      */
-    public AbstractLogFormatterBuilder<T> requestContentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends T> requestContentSanitizer) {
+    public SELF requestContentSanitizer(
+            BiFunction<? super RequestContext, Object, ? extends @Nullable T> requestContentSanitizer) {
         this.requestContentSanitizer = requireNonNull(requestContentSanitizer, "requestContentSanitizer");
-        return this;
+        return self();
     }
 
     /**
      * Returns the {@link BiFunction} to use to sanitize request content before logging.
      */
     @Nullable
-    final BiFunction<? super RequestContext, Object, ? extends T> requestContentSanitizer() {
+    final BiFunction<? super RequestContext, Object, ? extends @Nullable T> requestContentSanitizer() {
         return requestContentSanitizer;
     }
 
@@ -252,17 +261,17 @@ abstract class AbstractLogFormatterBuilder<T> {
      * {@link BiFunction} that removes sensitive content, such as an address, before logging. If unset,
      * will not sanitize response content.
      */
-    public AbstractLogFormatterBuilder<T> responseContentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends T> responseContentSanitizer) {
+    public SELF responseContentSanitizer(
+            BiFunction<? super RequestContext, Object, ? extends @Nullable T> responseContentSanitizer) {
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
-        return this;
+        return self();
     }
 
     /**
      * Returns the {@link BiFunction} to use to sanitize response content before logging.
      */
     @Nullable
-    final BiFunction<? super RequestContext, Object, ? extends T> responseContentSanitizer() {
+    final BiFunction<? super RequestContext, Object, ? extends @Nullable T> responseContentSanitizer() {
         return responseContentSanitizer;
     }
 
@@ -279,11 +288,11 @@ abstract class AbstractLogFormatterBuilder<T> {
      * @see #requestContentSanitizer(BiFunction)
      * @see #responseContentSanitizer(BiFunction)
      */
-    public AbstractLogFormatterBuilder<T> contentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends T> contentSanitizer) {
+    public SELF contentSanitizer(
+            BiFunction<? super RequestContext, Object, ? extends @Nullable T> contentSanitizer) {
         requireNonNull(contentSanitizer, "contentSanitizer");
         requestContentSanitizer(contentSanitizer);
         responseContentSanitizer(contentSanitizer);
-        return this;
+        return self();
     }
 }
