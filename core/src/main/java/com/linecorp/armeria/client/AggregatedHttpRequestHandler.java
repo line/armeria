@@ -32,8 +32,6 @@ import io.netty.channel.EventLoop;
 final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         implements BiFunction<AggregatedHttpRequest, Throwable, Void> {
 
-    private static final HttpData EMPTY_EOS = HttpData.empty().withEndOfStream();
-
     @Nullable
     private AggregatedHttpRequest request;
     private boolean cancelled;

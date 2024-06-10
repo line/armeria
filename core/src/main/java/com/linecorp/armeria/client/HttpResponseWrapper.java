@@ -50,7 +50,6 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseWrapper.class);
 
-    // This handler is used only when the response requires changing the state of the next request.
     @Nullable
     private final AbstractHttpRequestHandler requestHandler;
     private final DecodedHttpResponse delegate;
@@ -329,15 +328,5 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
                                    .add("contentLengthHeaderValue", contentLengthHeaderValue)
                                    .add("delegate", delegate)
                                    .toString();
-    }
-
-    void resume() {
-        assert requestHandler != null;
-        requestHandler.resume();
-    }
-
-    void discardRequestBody() {
-        assert requestHandler != null;
-        requestHandler.discardRequestBody();
     }
 }

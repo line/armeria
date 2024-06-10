@@ -59,7 +59,6 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
     private static final Logger logger = LoggerFactory.getLogger(Http1ResponseDecoder.class);
 
     private enum State {
-        DISCARD_DATA_OR_TRAILERS,
         NEED_HEADERS,
         NEED_INFORMATIONAL_DATA,
         NEED_DATA_OR_TRAILERS,
@@ -172,14 +171,8 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
         }
         keepAliveHandler.onReadOrWrite();
 
-        if (state == State.DISCARD_DATA_OR_TRAILERS && msg instanceof HttpResponse) {
-            state = State.NEED_HEADERS;
-        }
-
         try {
             switch (state) {
-                case DISCARD_DATA_OR_TRAILERS:
-                    return;
                 case NEED_HEADERS:
                     if (msg instanceof HttpResponse) {
                         final HttpResponse nettyRes = (HttpResponse) msg;
