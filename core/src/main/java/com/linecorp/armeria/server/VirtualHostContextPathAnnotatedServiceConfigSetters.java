@@ -25,8 +25,8 @@ import com.linecorp.armeria.server.annotation.AnnotatedService;
  */
 @UnstableApi
 public final class VirtualHostContextPathAnnotatedServiceConfigSetters
-        extends AbstractContextPathAnnotatedServiceConfigSetters<VirtualHostContextPathServicesBuilder,
-        VirtualHostContextPathAnnotatedServiceConfigSetters> {
+        extends AbstractContextPathAnnotatedServiceConfigSetters<
+        VirtualHostContextPathAnnotatedServiceConfigSetters, VirtualHostContextPathServicesBuilder> {
 
     VirtualHostContextPathAnnotatedServiceConfigSetters(VirtualHostContextPathServicesBuilder builder) {
         super(builder);

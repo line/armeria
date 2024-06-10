@@ -19,22 +19,8 @@ package com.linecorp.armeria.common.logging;
 /**
  * A builder implementation for Text {@link HeadersSanitizer}.
  */
-public final class TextHeadersSanitizerBuilder extends AbstractHeadersSanitizerBuilder<String> {
-
-    @Override
-    public TextHeadersSanitizerBuilder sensitiveHeaders(CharSequence... headers) {
-        return (TextHeadersSanitizerBuilder) super.sensitiveHeaders(headers);
-    }
-
-    @Override
-    public TextHeadersSanitizerBuilder sensitiveHeaders(Iterable<? extends CharSequence> headers) {
-        return (TextHeadersSanitizerBuilder) super.sensitiveHeaders(headers);
-    }
-
-    @Override
-    public TextHeadersSanitizerBuilder maskingFunction(HeaderMaskingFunction maskingFunction) {
-        return (TextHeadersSanitizerBuilder) super.maskingFunction(maskingFunction);
-    }
+public final class TextHeadersSanitizerBuilder
+        extends AbstractHeadersSanitizerBuilder<TextHeadersSanitizerBuilder, String> {
 
     /**
      * Returns a newly created text {@link HeadersSanitizer} based on the properties of this builder.

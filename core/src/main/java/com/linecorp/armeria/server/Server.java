@@ -131,7 +131,8 @@ public final class Server implements ListenableAsyncCloseable {
         serverConfig.setServer(this);
         config = new UpdatableServerConfig(requireNonNull(serverConfig, "serverConfig"));
         startStop = new ServerStartStopSupport(config.startStopExecutor());
-        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
+        connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections(),
+                                                                  config.serverMetrics());
 
         // Server-wide metrics.
         RequestTargetCache.registerServerMetrics(config.meterRegistry());
@@ -577,14 +578,13 @@ public final class Server implements ListenableAsyncCloseable {
         }
 
         private void setupServerMetrics() {
-            final MeterRegistry meterRegistry = config().meterRegistry();
+            final MeterRegistry meterRegistry = config.meterRegistry();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             assert gracefulShutdownSupport != null;
 
             meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
                                 GracefulShutdownSupport::pendingResponses);
-            meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
-                                ConnectionLimitingHandler::numConnections);
+            config.serverMetrics().bindTo(meterRegistry);
         }
 
         @Override

@@ -15,6 +15,6 @@ dependencies {
 
 task runDropwizardExample(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
-    main = application.mainClass.get()
+    mainClass = application.mainClass.get()
     args = ['server', 'server.yaml']
 }
