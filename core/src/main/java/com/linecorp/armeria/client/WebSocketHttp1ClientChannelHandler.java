@@ -180,7 +180,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                     }
 
                     if (!HttpUtil.isKeepAlive(nettyRes)) {
-                        session().deactivate();
+                        session().markUnacquirable();
                     }
 
                     if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {
