@@ -8,10 +8,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.BindMode;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -26,6 +29,8 @@ import example.armeria.reverseproxy.Hello.HelloReply;
 import example.armeria.reverseproxy.Hello.HelloRequest;
 
 class GrpcReverseProxyServerTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcReverseProxyServerTest.class);
 
     private static Server server;
 
@@ -50,7 +55,7 @@ class GrpcReverseProxyServerTest {
                     .withFileSystemBind(source.toString(), "/etc/envoy/envoy.yaml", BindMode.READ_WRITE)
                     .withStartupTimeout(Duration.ofSeconds(60));
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Failed to configure Envoy container", e);
         }
     }
 
@@ -63,7 +68,7 @@ class GrpcReverseProxyServerTest {
                         .build())
                 .build();
         server.start().join();
-        envoy.start();
+        CompletableFuture.runAsync(() -> envoy.start()).join();
     }
 
     @AfterAll
@@ -73,10 +78,12 @@ class GrpcReverseProxyServerTest {
             final Path destination = Paths.get("./envoy/envoy.yaml");
             Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Failed to restore Envoy configuration", e);
         }
-        server.stop().join();
-        envoy.stop();
+        CompletableFuture.runAsync(() -> {
+            server.stop().join();
+            envoy.stop();
+        }).join();
     }
 
     @Test
