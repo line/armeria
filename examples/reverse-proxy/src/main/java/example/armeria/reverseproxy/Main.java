@@ -2,6 +2,8 @@ package example.armeria.reverseproxy;
 
 import java.util.concurrent.CompletableFuture;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
@@ -14,8 +16,6 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.grpc.GrpcService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public final class Main {
 
