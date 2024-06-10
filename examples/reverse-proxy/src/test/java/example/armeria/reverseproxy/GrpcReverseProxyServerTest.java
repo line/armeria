@@ -68,7 +68,6 @@ class GrpcReverseProxyServerTest {
                         .build())
                 .build();
         server.start().join();
-        CompletableFuture.runAsync(() -> envoy.start()).join();
     }
 
     @AfterAll
@@ -80,26 +79,29 @@ class GrpcReverseProxyServerTest {
         } catch (IOException e) {
             logger.error("Failed to restore Envoy configuration", e);
         }
-        CompletableFuture.runAsync(() -> {
-            server.stop().join();
-            envoy.stop();
-        }).join();
+        server.stop().join();
     }
 
     @Test
     void reverseProxy() {
 
         // given
-        final String envoyAddress = "http://" + envoy.getHost() + ":" + envoy.getMappedPort(envoyPort);
+        final CompletableFuture<Void> envoyStartFuture = CompletableFuture.runAsync(() -> envoy.start());
 
-        final WebClient client = WebClient.of(envoyAddress);
-        final HelloServiceGrpc.HelloServiceBlockingStub helloService = GrpcClients.builder(client.uri())
-                .build(HelloServiceGrpc.HelloServiceBlockingStub.class);
+        envoyStartFuture.thenRun(() -> {
+            final String envoyAddress = "http://" + envoy.getHost() + ":" + envoy.getMappedPort(envoyPort);
 
-        // when
-        final HelloReply reply = helloService.hello(HelloRequest.newBuilder().setName("Armeria").build());
+            final WebClient client = WebClient.of(envoyAddress);
+            final HelloServiceGrpc.HelloServiceBlockingStub helloService = GrpcClients.builder(client.uri())
+                    .build(HelloServiceGrpc.HelloServiceBlockingStub.class);
 
-        // then
-        assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
+            // when
+            final HelloReply reply = helloService.hello(HelloRequest.newBuilder().setName("Armeria").build());
+
+            // then
+            assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
+            envoy.stop();
+        });
+        envoyStartFuture.join();
     }
 }
