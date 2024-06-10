@@ -36,8 +36,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class VirtualHostContextPathServiceBindingBuilder
-        extends AbstractContextPathServiceBindingBuilder<VirtualHostContextPathServicesBuilder,
-        VirtualHostContextPathServiceBindingBuilder> {
+        extends AbstractContextPathServiceBindingBuilder<VirtualHostContextPathServiceBindingBuilder,
+        VirtualHostContextPathServicesBuilder> {
 
     VirtualHostContextPathServiceBindingBuilder(VirtualHostContextPathServicesBuilder builder) {
         super(builder);

@@ -17,8 +17,6 @@ package com.linecorp.armeria.client.endpoint;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
-
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -28,7 +26,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class DynamicEndpointGroupBuilder
-        extends AbstractDynamicEndpointGroupBuilder {
+        extends AbstractDynamicEndpointGroupBuilder<DynamicEndpointGroupBuilder> {
 
     @Nullable
     private EndpointSelectionStrategy selectionStrategy;
@@ -44,21 +42,6 @@ public final class DynamicEndpointGroupBuilder
     public DynamicEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         return this;
-    }
-
-    @Override
-    public DynamicEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return (DynamicEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
-    }
-
-    @Override
-    public DynamicEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
-        return (DynamicEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
-    }
-
-    @Override
-    public DynamicEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
-        return (DynamicEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
     }
 
     /**

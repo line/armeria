@@ -33,9 +33,8 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
-abstract class AbstractContextPathServicesBuilder<T extends ServiceConfigsBuilder<T>,
-        SELF extends AbstractContextPathServicesBuilder<T, SELF>>
-        implements ServiceConfigsBuilder<SELF> {
+abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPathServicesBuilder<SELF, T>,
+        T extends ServiceConfigsBuilder<T>> implements ServiceConfigsBuilder<SELF> {
 
     private final Set<String> contextPaths;
     private final T parent;
