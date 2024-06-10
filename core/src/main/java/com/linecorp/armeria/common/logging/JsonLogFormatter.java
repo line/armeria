@@ -171,7 +171,11 @@ final class JsonLogFormatter implements LogFormatter {
                 objectNode.set("trailers", sanitizedTrailers);
             }
 
-            objectNode.put("currentAttempt", log.currentAttempt());
+            final int currentAttempt = log.currentAttempt();
+            if (currentAttempt > 0) {
+                objectNode.put("currentAttempt", currentAttempt);
+            }
+
             return objectMapper.writeValueAsString(objectNode);
         } catch (Exception e) {
             logger.warn("Unexpected exception while formatting a request log: {}", log, e);

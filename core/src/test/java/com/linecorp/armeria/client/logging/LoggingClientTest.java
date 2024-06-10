@@ -94,8 +94,7 @@ class LoggingClientTest {
 
         // verify request log
         verify(logger).info(argThat((String actLog) -> actLog.contains("Request:") &&
-                                                       actLog.endsWith("headers=[:method=GET, :path=/]" +
-                                                                       ", currentAttempt=0}")));
+                                                       actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
         verify(logger).info(argThat((String actLog) -> actLog.contains("Response:") &&
@@ -316,8 +315,7 @@ class LoggingClientTest {
 
         // verify request log
         verify(logger).debug(argThat((String actLog) -> actLog.contains("Request:") &&
-                                                        actLog.endsWith("headers=[:method=GET, :path=/]" +
-                                                                        ", currentAttempt=0}")));
+                                                        actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
         verify(logger).debug(argThat((String actLog) -> actLog.contains("Response:") &&
@@ -348,8 +346,7 @@ class LoggingClientTest {
 
         // verify request log
         verify(logger).debug(argThat((String actLog) -> actLog.contains("Request:") &&
-                                                        actLog.endsWith("headers=[:method=GET, :path=/]" +
-                                                                        ", currentAttempt=0}")));
+                                                        actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
         verify(logger).warn(argThat((String actLog) -> actLog.contains("Response:") &&
@@ -381,8 +378,7 @@ class LoggingClientTest {
 
         // verify request log
         verify(logger).warn(argThat((String actLog) -> actLog.contains("Request:") &&
-                                                       actLog.endsWith("headers=[:method=GET, :path=/]" +
-                                                                       ", currentAttempt=0}")));
+                                                       actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
         verify(logger).warn(argThat((String actLog) -> actLog.contains("Response:") &&

@@ -47,8 +47,7 @@ class TextLogFormatterTest {
         log.endRequest();
         final String requestLog = logFormatter.formatRequest(log);
         final String regex =
-                "Request: .*\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+," +
-                " currentAttempt=0}$";
+                "Request: .*\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+}$";
         if (containContext) {
             assertThat(requestLog).matches("\\[sreqId=.* " + regex);
         } else {

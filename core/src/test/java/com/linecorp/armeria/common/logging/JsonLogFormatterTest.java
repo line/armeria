@@ -50,8 +50,7 @@ class JsonLogFormatterTest {
         final String requestLog = logFormatter.formatRequest(log);
         assertThat(requestLog)
                 .matches("^\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
-                         "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}," +
-                         "\"currentAttempt\":0}$");
+                         "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}}$");
     }
 
     @Test
