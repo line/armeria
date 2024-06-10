@@ -85,6 +85,12 @@ public class ServiceRequestContextWrapper
         return unwrap().config();
     }
 
+    @Nullable
+    @Override
+    public <T extends HttpService> T findService(Class<? extends T> serviceClass) {
+        return unwrap().findService(serviceClass);
+    }
+
     @Override
     public RoutingContext routingContext() {
         return unwrap().routingContext();

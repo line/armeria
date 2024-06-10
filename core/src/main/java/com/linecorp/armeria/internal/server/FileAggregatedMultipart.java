@@ -26,6 +26,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
@@ -39,6 +42,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.netty.channel.EventLoop;
 
 public final class FileAggregatedMultipart {
+    private static final Logger logger = LoggerFactory.getLogger(FileAggregatedMultipart.class);
+
     private final ListMultimap<String, String> params;
     private final ListMultimap<String, MultipartFile> files;
 
@@ -72,7 +77,7 @@ public final class FileAggregatedMultipart {
                 return resolveTmpFile(incompleteDir, filename, executor).thenCompose(path -> {
                     return bodyPart.writeTo(path, eventLoop, executor).thenCompose(ignore -> {
                         final Path completeDir = destination.resolve("complete");
-                        return moveFile(path, completeDir, executor);
+                        return moveFile(path, completeDir, executor, ctx);
                     }).thenApply(completePath -> MultipartFile.of(name, filename, completePath.toFile(),
                                                                   bodyPart.headers()));
                 });
@@ -102,17 +107,38 @@ public final class FileAggregatedMultipart {
     }
 
     private static CompletableFuture<Path> moveFile(Path file, Path targetDirectory,
-                                                    ExecutorService blockingExecutorService) {
+                                                    ExecutorService blockingExecutorService,
+                                                    ServiceRequestContext ctx) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Files.createDirectories(targetDirectory);
                 // Avoid name duplication, create new file at target place and replace it.
-                return Files.move(file, Files.createTempFile(targetDirectory, null, ".multipart"),
-                                  StandardCopyOption.REPLACE_EXISTING);
+                final Path tempFile = createRemovableTempFile(targetDirectory, blockingExecutorService, ctx);
+                return Files.move(file, tempFile, StandardCopyOption.REPLACE_EXISTING);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
         }, blockingExecutorService);
+    }
+
+    private static Path createRemovableTempFile(Path targetDirectory,
+                                                ExecutorService blockingExecutorService,
+                                                ServiceRequestContext ctx) throws IOException {
+        final Path tempFile = Files.createTempFile(targetDirectory, null, ".multipart");
+        switch (ctx.config().multipartRemovalStrategy()) {
+            case NEVER:
+                break;
+            case ON_RESPONSE_COMPLETION:
+                ctx.log().whenComplete().thenAcceptAsync(unused -> {
+                    try {
+                        Files.deleteIfExists(tempFile);
+                    } catch (IOException e) {
+                        logger.warn("Failed to delete a temporary file: {}", tempFile, e);
+                    }
+                }, blockingExecutorService);
+                break;
+        }
+        return tempFile;
     }
 
     private static CompletableFuture<Path> resolveTmpFile(Path directory,

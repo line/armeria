@@ -45,8 +45,8 @@ import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 
-abstract class DnsEndpointGroupBuilder
-        extends AbstractDnsResolverBuilder implements DynamicEndpointGroupSetters {
+abstract class DnsEndpointGroupBuilder<SELF extends DnsEndpointGroupBuilder<SELF>>
+        extends AbstractDnsResolverBuilder<SELF> implements DynamicEndpointGroupSetters<SELF> {
 
     private final String hostname;
     @Nullable
@@ -82,12 +82,12 @@ abstract class DnsEndpointGroupBuilder
     /**
      * Sets the {@link EventLoop} to use for sending DNS queries.
      */
-    public DnsEndpointGroupBuilder eventLoop(EventLoop eventLoop) {
+    public SELF eventLoop(EventLoop eventLoop) {
         requireNonNull(eventLoop, "eventLoop");
         checkArgument(TransportType.isSupported(eventLoop), "unsupported event loop type: %s", eventLoop);
 
         this.eventLoop = eventLoop;
-        return this;
+        return self();
     }
 
     final Backoff backoff() {
@@ -99,17 +99,17 @@ abstract class DnsEndpointGroupBuilder
      * server sent an error response. {@code Backoff.exponential(1000, 32000).withJitter(0.2)} is used by
      * default.
      */
-    public DnsEndpointGroupBuilder backoff(Backoff backoff) {
+    public SELF backoff(Backoff backoff) {
         this.backoff = requireNonNull(backoff, "backoff");
-        return this;
+        return self();
     }
 
     /**
      * Sets the {@link EndpointSelectionStrategy} that determines the enumeration order of {@link Endpoint}s.
      */
-    public DnsEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
+    public SELF selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
-        return this;
+        return self();
     }
 
     final EndpointSelectionStrategy selectionStrategy() {
@@ -121,15 +121,15 @@ abstract class DnsEndpointGroupBuilder
     }
 
     @Override
-    public DnsEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+    public SELF allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         dnsDynamicEndpointGroupBuilder.allowEmptyEndpoints(allowEmptyEndpoints);
-        return this;
+        return self();
     }
 
     @Override
-    public DnsEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+    public SELF selectionTimeout(Duration selectionTimeout) {
         dnsDynamicEndpointGroupBuilder.selectionTimeout(selectionTimeout);
-        return this;
+        return self();
     }
 
     /**
@@ -139,9 +139,9 @@ abstract class DnsEndpointGroupBuilder
      * used by default.
      */
     @Override
-    public DnsEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+    public SELF selectionTimeoutMillis(long selectionTimeoutMillis) {
         dnsDynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);
-        return this;
+        return self();
     }
 
     final long selectionTimeoutMillis() {
@@ -167,13 +167,13 @@ abstract class DnsEndpointGroupBuilder
      * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default.
      */
     @UnstableApi
-    public DnsEndpointGroupBuilder addDnsQueryListeners(
+    public SELF addDnsQueryListeners(
             Iterable<? extends DnsQueryListener> dnsQueryListeners) {
         requireNonNull(dnsQueryListeners, "dnsQueryListeners");
         for (DnsQueryListener listener: dnsQueryListeners) {
             this.dnsQueryListeners.add(listener);
         }
-        return this;
+        return self();
     }
 
     /**
@@ -181,7 +181,7 @@ abstract class DnsEndpointGroupBuilder
      * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default.
      */
     @UnstableApi
-    public DnsEndpointGroupBuilder addDnsQueryListeners(DnsQueryListener... dnsQueryListeners) {
+    public SELF addDnsQueryListeners(DnsQueryListener... dnsQueryListeners) {
         requireNonNull(dnsQueryListeners, "dnsQueryListeners");
         return addDnsQueryListeners(ImmutableList.copyOf(dnsQueryListeners));
     }
@@ -195,7 +195,8 @@ abstract class DnsEndpointGroupBuilder
      * DnsEndpointGroupBuilder can't extend AbstractDynamicEndpointGroupBuilder because it already extends
      * AbstractDnsResolverBuilder.
      */
-    private static class DnsDynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+    private static class DnsDynamicEndpointGroupBuilder
+            extends AbstractDynamicEndpointGroupBuilder<DnsDynamicEndpointGroupBuilder> {
         protected DnsDynamicEndpointGroupBuilder(long selectionTimeoutMillis) {
             super(selectionTimeoutMillis);
         }

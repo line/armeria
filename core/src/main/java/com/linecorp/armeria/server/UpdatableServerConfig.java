@@ -321,6 +321,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public ServerMetrics serverMetrics() {
+        return delegate.serverMetrics();
+    }
+
+    @Override
     public String toString() {
         return delegate.toString();
     }

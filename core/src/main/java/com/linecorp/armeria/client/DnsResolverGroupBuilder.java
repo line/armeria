@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.function.ToLongFunction;
 
@@ -33,12 +32,9 @@ import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
-import io.netty.resolver.dns.DnsQueryLifecycleObserverFactory;
-import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 
 /**
  * Builds an {@link AddressResolverGroup} which builds {@link AddressResolver}s that update DNS caches
@@ -48,7 +44,7 @@ import io.netty.resolver.dns.DnsServerAddressStreamProvider;
  * meaning DNS queries after TTL will retrieve a refreshed result right away. If refreshing fails,
  * the {@link AddressResolver} will retry with {@link #autoRefreshBackoff(Backoff)}.
  */
-public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
+public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder<DnsResolverGroupBuilder> {
 
     static final ToLongFunction<String> DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION = hostname -> Long.MAX_VALUE;
 
@@ -203,144 +199,5 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
                                                   searchDomains(), ndots(), queryTimeoutMillis(),
                                                   hostsFileEntriesResolver(),
                                                   buildConfigurator(eventLoopGroup));
-    }
-
-    // Override the return type of the chaining methods in the super class.
-
-    @Override
-    public DnsResolverGroupBuilder traceEnabled(boolean traceEnabled) {
-        return (DnsResolverGroupBuilder) super.traceEnabled(traceEnabled);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder queryTimeout(Duration queryTimeout) {
-        return (DnsResolverGroupBuilder) super.queryTimeout(queryTimeout);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder queryTimeoutMillis(long queryTimeoutMillis) {
-        return (DnsResolverGroupBuilder) super.queryTimeoutMillis(queryTimeoutMillis);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder queryTimeoutForEachAttempt(Duration queryTimeoutForEachAttempt) {
-        return (DnsResolverGroupBuilder) super.queryTimeoutForEachAttempt(queryTimeoutForEachAttempt);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder queryTimeoutMillisForEachAttempt(long queryTimeoutMillisForEachAttempt) {
-        return (DnsResolverGroupBuilder) super.queryTimeoutMillisForEachAttempt(
-                queryTimeoutMillisForEachAttempt);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder recursionDesired(boolean recursionDesired) {
-        return (DnsResolverGroupBuilder) super.recursionDesired(recursionDesired);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder maxQueriesPerResolve(int maxQueriesPerResolve) {
-        return (DnsResolverGroupBuilder) super.maxQueriesPerResolve(maxQueriesPerResolve);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder serverAddresses(InetSocketAddress... serverAddresses) {
-        return (DnsResolverGroupBuilder) super.serverAddresses(serverAddresses);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
-        return (DnsResolverGroupBuilder) super.serverAddresses(serverAddresses);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder serverAddressStreamProvider(
-            DnsServerAddressStreamProvider serverAddressStreamProvider) {
-        return (DnsResolverGroupBuilder) super.serverAddressStreamProvider(serverAddressStreamProvider);
-    }
-
-    @Deprecated
-    @Override
-    public DnsResolverGroupBuilder dnsServerAddressStreamProvider(
-            DnsServerAddressStreamProvider dnsServerAddressStreamProvider) {
-        return (DnsResolverGroupBuilder) super.dnsServerAddressStreamProvider(dnsServerAddressStreamProvider);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder maxPayloadSize(int maxPayloadSize) {
-        return (DnsResolverGroupBuilder) super.maxPayloadSize(maxPayloadSize);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder optResourceEnabled(boolean optResourceEnabled) {
-        return (DnsResolverGroupBuilder) super.optResourceEnabled(optResourceEnabled);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder hostsFileEntriesResolver(
-            HostsFileEntriesResolver hostsFileEntriesResolver) {
-        return (DnsResolverGroupBuilder) super.hostsFileEntriesResolver(hostsFileEntriesResolver);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder dnsQueryLifecycleObserverFactory(
-            DnsQueryLifecycleObserverFactory observerFactory) {
-        return (DnsResolverGroupBuilder) super.dnsQueryLifecycleObserverFactory(observerFactory);
-    }
-
-    @Deprecated
-    @Override
-    public DnsResolverGroupBuilder disableDnsQueryMetrics() {
-        return (DnsResolverGroupBuilder) super.disableDnsQueryMetrics();
-    }
-
-    @Override
-    public DnsResolverGroupBuilder searchDomains(String... searchDomains) {
-        return (DnsResolverGroupBuilder) super.searchDomains(searchDomains);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder searchDomains(Iterable<String> searchDomains) {
-        return (DnsResolverGroupBuilder) super.searchDomains(searchDomains);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder ndots(int ndots) {
-        return (DnsResolverGroupBuilder) super.ndots(ndots);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder decodeIdn(boolean decodeIdn) {
-        return (DnsResolverGroupBuilder) super.decodeIdn(decodeIdn);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder meterRegistry(MeterRegistry meterRegistry) {
-        return (DnsResolverGroupBuilder) super.meterRegistry(meterRegistry);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder cacheSpec(String cacheSpec) {
-        return (DnsResolverGroupBuilder) super.cacheSpec(cacheSpec);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder ttl(int minTtl, int maxTtl) {
-        return (DnsResolverGroupBuilder) super.ttl(minTtl, maxTtl);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder negativeTtl(int negativeTtl) {
-        return (DnsResolverGroupBuilder) super.negativeTtl(negativeTtl);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder dnsCache(DnsCache dnsCache) {
-        return (DnsResolverGroupBuilder) super.dnsCache(dnsCache);
-    }
-
-    @Override
-    public DnsResolverGroupBuilder enableDnsQueryMetrics(boolean enable) {
-        return (DnsResolverGroupBuilder) super.enableDnsQueryMetrics(enable);
     }
 }

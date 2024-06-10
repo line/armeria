@@ -1,0 +1,4 @@
+// Defined in a separate module to set Flags.allowSemicolonInPathComponent to true.
+dependencies {
+    testImplementation libs.junit.pioneer
+}

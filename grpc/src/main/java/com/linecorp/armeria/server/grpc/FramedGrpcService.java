@@ -65,7 +65,6 @@ import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -302,9 +301,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                   HttpRequest req, MethodDescriptor<I, O> methodDescriptor,
                                   AbstractServerCall<I, O> call) {
         final Listener<I> listener;
+        final Metadata headers = MetadataUtil.copyFromHeaders(req.headers());
         try {
             listener = methodDef.getServerCallHandler()
-                                .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
+                                .startCall(call, headers);
         } catch (Throwable t) {
             call.setListener((Listener<I>) EMPTY_LISTENER);
             call.close(t);
@@ -320,10 +320,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            Status status = Status.CANCELLED.withCause(cancellationCause);
-            if (cancellationCause instanceof RequestTimeoutException) {
-                status = status.withDescription("Request timed out");
-            }
+            final Status status = call.exceptionHandler().apply(ctx, cancellationCause, headers);
+            assert status != null;
             call.close(new ServerStatusAndMetadata(status, new Metadata(), true, true));
             return null;
         });

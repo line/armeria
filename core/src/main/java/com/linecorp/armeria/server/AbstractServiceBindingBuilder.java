@@ -43,7 +43,9 @@ import io.netty.channel.EventLoopGroup;
  * @see ServiceBindingBuilder
  * @see VirtualHostServiceBindingBuilder
  */
-abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder implements ServiceConfigSetters {
+abstract class AbstractServiceBindingBuilder<SELF extends AbstractServiceBindingBuilder<SELF>>
+        extends AbstractBindingBuilder<SELF>
+        implements ServiceConfigSetters<AbstractServiceBindingBuilder<SELF>> {
 
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
 
@@ -51,188 +53,193 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         super(contextPaths);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public AbstractServiceBindingBuilder requestTimeout(Duration requestTimeout) {
+    final SELF self() {
+        return (SELF) this;
+    }
+
+    @Override
+    public SELF requestTimeout(Duration requestTimeout) {
         return requestTimeoutMillis(requireNonNull(requestTimeout, "requestTimeout").toMillis());
     }
 
     @Override
-    public AbstractServiceBindingBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+    public SELF requestTimeoutMillis(long requestTimeoutMillis) {
         defaultServiceConfigSetters.requestTimeoutMillis(requestTimeoutMillis);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder maxRequestLength(long maxRequestLength) {
+    public SELF maxRequestLength(long maxRequestLength) {
         defaultServiceConfigSetters.maxRequestLength(maxRequestLength);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder verboseResponses(boolean verboseResponses) {
+    public SELF verboseResponses(boolean verboseResponses) {
         defaultServiceConfigSetters.verboseResponses(verboseResponses);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder accessLogFormat(String accessLogFormat) {
+    public SELF accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
                                true);
     }
 
     @Override
-    public AbstractServiceBindingBuilder accessLogWriter(AccessLogWriter accessLogWriter,
-                                                         boolean shutdownOnStop) {
+    public SELF accessLogWriter(AccessLogWriter accessLogWriter,
+                                boolean shutdownOnStop) {
         defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder decorator(
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (AbstractServiceBindingBuilder) ServiceConfigSetters.super.decorator(
-                decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public AbstractServiceBindingBuilder decorator(
+    public SELF decorator(
             Function<? super HttpService, ? extends HttpService> decorator) {
         defaultServiceConfigSetters.decorator(decorator);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder decorators(
+    public SELF decorators(
             Function<? super HttpService, ? extends HttpService>... decorators) {
         defaultServiceConfigSetters.decorators(decorators);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder decorators(
+    public SELF decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         defaultServiceConfigSetters.decorators(decorators);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder defaultServiceName(String defaultServiceName) {
+    public SELF defaultServiceName(String defaultServiceName) {
         defaultServiceConfigSetters.defaultServiceName(defaultServiceName);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder defaultServiceNaming(ServiceNaming defaultServiceNaming) {
+    public SELF defaultServiceNaming(ServiceNaming defaultServiceNaming) {
         defaultServiceConfigSetters.defaultServiceNaming(defaultServiceNaming);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder defaultLogName(String defaultLogName) {
+    public SELF defaultLogName(String defaultLogName) {
         defaultServiceConfigSetters.defaultLogName(defaultLogName);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
-                                                              boolean shutdownOnStop) {
+    public SELF blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                     boolean shutdownOnStop) {
         defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
-                                                              boolean shutdownOnStop) {
+    public SELF blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
+                                     boolean shutdownOnStop) {
         defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+    public SELF blockingTaskExecutor(int numThreads) {
         defaultServiceConfigSetters.blockingTaskExecutor(numThreads);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+    public SELF successFunction(SuccessFunction successFunction) {
         defaultServiceConfigSetters.successFunction(successFunction);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder requestAutoAbortDelay(Duration delay) {
+    public SELF requestAutoAbortDelay(Duration delay) {
         defaultServiceConfigSetters.requestAutoAbortDelay(delay);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder requestAutoAbortDelayMillis(long delayMillis) {
+    public SELF requestAutoAbortDelayMillis(long delayMillis) {
         defaultServiceConfigSetters.requestAutoAbortDelayMillis(delayMillis);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+    public SELF multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
-                                                            boolean shutdownOnStop) {
+    public SELF multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        defaultServiceConfigSetters.multipartRemovalStrategy(removalStrategy);
+        return self();
+    }
+
+    @Override
+    public SELF serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                   boolean shutdownOnStop) {
         defaultServiceConfigSetters.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+    public SELF serviceWorkerGroup(int numThreads) {
         defaultServiceConfigSetters.serviceWorkerGroup(numThreads);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder requestIdGenerator(
+    public SELF requestIdGenerator(
             Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         defaultServiceConfigSetters.requestIdGenerator(requestIdGenerator);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder addHeader(CharSequence name, Object value) {
+    public SELF addHeader(CharSequence name, Object value) {
         defaultServiceConfigSetters.addHeader(name, value);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder addHeaders(
+    public SELF addHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
         defaultServiceConfigSetters.addHeaders(defaultHeaders);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder setHeader(CharSequence name, Object value) {
+    public SELF setHeader(CharSequence name, Object value) {
         defaultServiceConfigSetters.setHeader(name, value);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder setHeaders(
+    public SELF setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
         defaultServiceConfigSetters.setHeaders(defaultHeaders);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+    public SELF errorHandler(ServiceErrorHandler serviceErrorHandler) {
         defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
-        return this;
+        return self();
     }
 
     @Override
-    public AbstractServiceBindingBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
+    public SELF contextHook(Supplier<? extends AutoCloseable> contextHook) {
         defaultServiceConfigSetters.contextHook(contextHook);
-        return this;
+        return self();
     }
 
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
@@ -245,7 +252,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
 
         final List<Route> routes = buildRouteList(fallbackRoutes);
         final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
-        for (String contextPath: contextPaths()) {
+        for (String contextPath : contextPaths()) {
             for (Route route : routes) {
                 final ServiceConfigBuilder serviceConfigBuilder =
                         defaultServiceConfigSetters.toServiceConfigBuilder(

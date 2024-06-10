@@ -20,73 +20,19 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.util.function.BiFunction;
 
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A builder implementation for {@link TextLogFormatter}.
  */
 @UnstableApi
-public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<String> {
+public final class TextLogFormatterBuilder
+        extends AbstractLogFormatterBuilder<TextLogFormatterBuilder, String> {
 
     private boolean includeContext = true;
 
     TextLogFormatterBuilder() {}
-
-    @Override
-    public TextLogFormatterBuilder requestHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable String> requestHeadersSanitizer) {
-        return (TextLogFormatterBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
-    }
-
-    @Override
-    public TextLogFormatterBuilder responseHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable String> responseHeadersSanitizer) {
-        return (TextLogFormatterBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
-    }
-
-    @Override
-    public TextLogFormatterBuilder requestTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable String> requestTrailersSanitizer) {
-        return (TextLogFormatterBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
-    }
-
-    @Override
-    public TextLogFormatterBuilder responseTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable String> responseTrailersSanitizer) {
-        return (TextLogFormatterBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
-    }
-
-    @Override
-    public TextLogFormatterBuilder headersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable String> headersSanitizer) {
-        return (TextLogFormatterBuilder) super.headersSanitizer(headersSanitizer);
-    }
-
-    @Override
-    public TextLogFormatterBuilder requestContentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends @Nullable String> requestContentSanitizer) {
-        return (TextLogFormatterBuilder) super.requestContentSanitizer(requestContentSanitizer);
-    }
-
-    @Override
-    public TextLogFormatterBuilder responseContentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends @Nullable String> responseContentSanitizer) {
-        return (TextLogFormatterBuilder) super.responseContentSanitizer(responseContentSanitizer);
-    }
-
-    @Override
-    public TextLogFormatterBuilder contentSanitizer(
-            BiFunction<? super RequestContext, Object, ? extends @Nullable String> contentSanitizer) {
-        return (TextLogFormatterBuilder) super.contentSanitizer(contentSanitizer);
-    }
 
     /**
      * Sets whether to include stringified {@link RequestContext} in the result of

@@ -65,7 +65,8 @@ public class ServiceTest {
                                   AccessLogWriter.disabled(),
                                   CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
+                                  0, Files.newTemporaryFolder().toPath(),
+                                  MultipartRemovalStrategy.ON_RESPONSE_COMPLETION, CommonPools.workerGroup(),
                                   ImmutableList.of(), HttpHeaders.of(),
                                   ctx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);

@@ -1338,6 +1338,10 @@ cci.fr
 cd
 cd.eu.org
 cdn-edges.net
+cdn.cloudflare.net
+cdn.cloudflareanycast.net
+cdn.cloudflarecn.net
+cdn.cloudflareglobal.net
 cdn.prod.atlassian-dev.net
 cdn77-ssl.net
 cdn77-storage.com
@@ -1476,6 +1480,7 @@ cloudapps.digital
 cloudcontrolapp.com
 cloudcontrolled.com
 cloudflare-ipfs.com
+cloudflare.net
 cloudfront.net
 cloudfunctions.net
 cloudjiffy.net
@@ -3652,6 +3657,7 @@ hvaler.no
 hyatt
 hyllestad.no
 hyogo.jp
+hypernode.io
 hyuga.miyazaki.jp
 hyundai
 hzc.io
@@ -9063,6 +9069,7 @@ withyoutube.com
 wiw.gov.pl
 wix.run
 wixsite.com
+wixstudio.com
 wixstudio.io
 wjg.jp
 wkz.gov.pl
