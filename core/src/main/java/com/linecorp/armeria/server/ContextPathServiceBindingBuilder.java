@@ -35,8 +35,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class ContextPathServiceBindingBuilder
-        extends AbstractContextPathServiceBindingBuilder<ContextPathServicesBuilder,
-        ContextPathServiceBindingBuilder> {
+        extends AbstractContextPathServiceBindingBuilder<ContextPathServiceBindingBuilder,
+        ContextPathServicesBuilder> {
 
     ContextPathServiceBindingBuilder(ContextPathServicesBuilder builder) {
         super(builder);

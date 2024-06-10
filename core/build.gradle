@@ -65,7 +65,7 @@ tasks.trimShadedJar.doLast {
     def trimmed = tasks.trimShadedJar.outJarFiles[0].toPath()
 
     ant.jar(destfile: trimmed.toString(), update: true, duplicate: 'fail') {
-        zipfileset(src: tasks.shadedJar.archivePath) {
+        zipfileset(src: tasks.shadedJar.archiveFile.get().asFile) {
             include(name: 'META-INF/versions/**')
         }
 

@@ -21,10 +21,10 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 
 abstract class AbstractContextPathAnnotatedServiceConfigSetters
-        <T extends AbstractContextPathServicesBuilder<?, ?>,
-                SELF extends AbstractContextPathAnnotatedServiceConfigSetters<T, SELF>>
+        <SELF extends AbstractContextPathAnnotatedServiceConfigSetters<SELF, T>,
+                T extends AbstractContextPathServicesBuilder<?, ?>>
         extends AbstractAnnotatedServiceConfigSetters<
-        AbstractContextPathAnnotatedServiceConfigSetters<T, SELF>> {
+        AbstractContextPathAnnotatedServiceConfigSetters<SELF, T>> {
 
     private final T builder;
     private final Set<String> contextPaths;
