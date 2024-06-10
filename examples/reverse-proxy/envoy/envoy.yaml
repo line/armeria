@@ -22,15 +22,15 @@ static_resources:
                             prefix: "/"
                           route:
                             cluster: grpc_service
-                            timeout: 0s
-                            idle_timeout: 0s
+                            timeout: 60s
+                            idle_timeout: 60s
                 http_filters:
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
     - name: grpc_service
-      connect_timeout: 1s
+      connect_timeout: 60s
       type: STRICT_DNS
       lb_policy: round_robin
       http2_protocol_options: {}
