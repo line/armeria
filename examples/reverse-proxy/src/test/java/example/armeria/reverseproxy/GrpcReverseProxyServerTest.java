@@ -98,7 +98,8 @@ class GrpcReverseProxyServerTest {
                         .build(HelloServiceGrpc.HelloServiceBlockingStub.class);
 
                 // when
-                final HelloReply reply = helloService.hello(HelloRequest.newBuilder().setName("Armeria").build());
+                final var helloRequest = HelloRequest.newBuilder().setName("Armeria").build();
+                final HelloReply reply = helloService.hello(helloRequest);
 
                 // then
                 assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
