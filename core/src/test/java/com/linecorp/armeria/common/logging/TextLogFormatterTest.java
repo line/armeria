@@ -334,6 +334,12 @@ class TextLogFormatterTest {
         }
     }
 
+    @Test
+    void epochAndElapsedTest() {
+        assertThat(epochAndElapsed(1717987526233123L, 456L))
+                .isEqualTo("2024-06-10T02:45:26.233123Z[456ns]");
+    }
+
     private static String epochAndElapsed(long epochMicros, long durationNanos) {
         final StringBuilder sb = new StringBuilder();
         TextFormatter.appendEpochAndElapsed(sb, epochMicros, durationNanos);

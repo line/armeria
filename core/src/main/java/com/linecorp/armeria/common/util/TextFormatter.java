@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -139,13 +140,22 @@ public final class TextFormatter {
      */
     @UnstableApi
     public static void appendEpochAndElapsed(StringBuilder buf, long epochMicros, long elapsedNanos) {
-        buf.append(epochMicros).append('[');
+        buf.append(dateTimeMicrosecondFormatter.format(getInstantFromMicros(epochMicros))).append('[');
         appendElapsed(buf, elapsedNanos);
         buf.append(']');
     }
 
+    private static Instant getInstantFromMicros(long microsSinceEpoch) {
+        return Instant.EPOCH.plus(microsSinceEpoch, ChronoUnit.MICROS);
+    }
+
     private static final DateTimeFormatter dateTimeFormatter =
             new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+                                          .toFormatter(Locale.ENGLISH)
+                                          .withZone(ZoneId.of("GMT"));
+
+    private static final DateTimeFormatter dateTimeMicrosecondFormatter =
+            new DateTimeFormatterBuilder().appendPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSX")
                                           .toFormatter(Locale.ENGLISH)
                                           .withZone(ZoneId.of("GMT"));
 
