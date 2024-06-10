@@ -347,4 +347,9 @@ public interface ServerConfig {
      * Returns the interval between reporting unlogged exceptions in milliseconds.
      */
     long unloggedExceptionsReportIntervalMillis();
+
+    /**
+     * Returns the {@link ServerMetrics} that collects metrics related server.
+     */
+    ServerMetrics serverMetrics();
 }

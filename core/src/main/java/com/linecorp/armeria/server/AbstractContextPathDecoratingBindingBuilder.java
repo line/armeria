@@ -22,8 +22,9 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 
-abstract class AbstractContextPathDecoratingBindingBuilder<T extends AbstractContextPathServicesBuilder<?, ?>,
-        SELF extends AbstractContextPathDecoratingBindingBuilder<T, SELF>>
+abstract class AbstractContextPathDecoratingBindingBuilder
+        <SELF extends AbstractContextPathDecoratingBindingBuilder<SELF, T>,
+                T extends AbstractContextPathServicesBuilder<?, ?>>
         extends AbstractBindingBuilder<SELF> {
 
     private final T builder;

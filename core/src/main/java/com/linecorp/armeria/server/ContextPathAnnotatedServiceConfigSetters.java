@@ -25,8 +25,8 @@ import com.linecorp.armeria.server.annotation.AnnotatedService;
  */
 @UnstableApi
 public final class ContextPathAnnotatedServiceConfigSetters
-        extends AbstractContextPathAnnotatedServiceConfigSetters<ContextPathServicesBuilder,
-        ContextPathAnnotatedServiceConfigSetters> {
+        extends AbstractContextPathAnnotatedServiceConfigSetters<ContextPathAnnotatedServiceConfigSetters,
+        ContextPathServicesBuilder> {
 
     ContextPathAnnotatedServiceConfigSetters(ContextPathServicesBuilder builder) {
         super(builder);

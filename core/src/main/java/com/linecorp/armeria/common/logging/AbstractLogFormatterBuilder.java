@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * A skeletal builder implementation for {@link LogFormatter}.
  */
-abstract class AbstractLogFormatterBuilder<T, SELF extends AbstractLogFormatterBuilder<T, SELF>> {
+abstract class AbstractLogFormatterBuilder<SELF extends AbstractLogFormatterBuilder<SELF, T>, T> {
 
     @Nullable
     private HeadersSanitizer<T> requestHeadersSanitizer;

@@ -38,8 +38,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class ContextPathDecoratingBindingBuilder
-        extends AbstractContextPathDecoratingBindingBuilder<ContextPathServicesBuilder,
-        ContextPathDecoratingBindingBuilder> {
+        extends AbstractContextPathDecoratingBindingBuilder<ContextPathDecoratingBindingBuilder,
+        ContextPathServicesBuilder> {
 
     ContextPathDecoratingBindingBuilder(ContextPathServicesBuilder builder) {
         super(builder);
