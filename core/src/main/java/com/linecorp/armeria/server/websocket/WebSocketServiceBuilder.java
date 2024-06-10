@@ -81,8 +81,7 @@ public final class WebSocketServiceBuilder {
     private boolean aggregateContinuation;
     @Nullable
     private HttpService fallbackService;
-    @Nullable
-    private ServiceOptions serviceOptions;
+    private ServiceOptions serviceOptions = DEFAULT_OPTIONS;
 
     WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");

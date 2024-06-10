@@ -99,14 +99,13 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     @Nullable
     private final Predicate<? super String> originPredicate;
     private final boolean aggregateContinuation;
-    @Nullable
     private final ServiceOptions serviceOptions;
 
     public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
                                    int maxFramePayloadLength, boolean allowMaskMismatch,
                                    Set<String> subprotocols, boolean allowAnyOrigin,
                                    @Nullable Predicate<? super String> originPredicate,
-                                   boolean aggregateContinuation, @Nullable ServiceOptions serviceOptions) {
+                                   boolean aggregateContinuation, ServiceOptions serviceOptions) {
         this.handler = handler;
         this.fallbackService = fallbackService;
         this.maxFramePayloadLength = maxFramePayloadLength;
@@ -426,9 +425,6 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
 
     @Override
     public ServiceOptions options() {
-        if (serviceOptions != null) {
-            return serviceOptions;
-        }
-        return WebSocketService.super.options();
+        return serviceOptions;
     }
 }
