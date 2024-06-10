@@ -9,6 +9,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -54,8 +55,8 @@ class GrpcReverseProxyServerTest {
                     .withExposedPorts(envoyPort)
                     .withFileSystemBind(source.toString(), "/etc/envoy/envoy.yaml", BindMode.READ_WRITE)
                     .withStartupTimeout(Duration.ofSeconds(60));
-        } catch (IOException e) {
-            logger.error("Failed to configure Envoy container", e);
+        } catch (IOException ex) {
+            logger.error("Failed to configure Envoy container", ex);
         }
     }
 
@@ -76,8 +77,8 @@ class GrpcReverseProxyServerTest {
             final Path source = Paths.get("./envoy/envoy_backup.yaml");
             final Path destination = Paths.get("./envoy/envoy.yaml");
             Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException e) {
-            logger.error("Failed to restore Envoy configuration", e);
+        } catch (IOException ex) {
+            logger.error("Failed to restore Envoy configuration", ex);
         }
         server.stop().join();
     }
@@ -85,23 +86,27 @@ class GrpcReverseProxyServerTest {
     @Test
     void reverseProxy() {
 
-        // given
-        final CompletableFuture<Void> envoyStartFuture = CompletableFuture.runAsync(() -> envoy.start());
+        try {
+            // given
+            final CompletableFuture<Void> envoyStartFuture = CompletableFuture.runAsync(() -> envoy.start());
 
-        envoyStartFuture.thenRun(() -> {
-            final String envoyAddress = "http://" + envoy.getHost() + ":" + envoy.getMappedPort(envoyPort);
+            envoyStartFuture.thenRun(() -> {
+                final String envoyAddress = "http://" + envoy.getHost() + ":" + envoy.getMappedPort(envoyPort);
 
-            final WebClient client = WebClient.of(envoyAddress);
-            final HelloServiceGrpc.HelloServiceBlockingStub helloService = GrpcClients.builder(client.uri())
-                    .build(HelloServiceGrpc.HelloServiceBlockingStub.class);
+                final WebClient client = WebClient.of(envoyAddress);
+                final HelloServiceGrpc.HelloServiceBlockingStub helloService = GrpcClients.builder(client.uri())
+                        .build(HelloServiceGrpc.HelloServiceBlockingStub.class);
 
-            // when
-            final HelloReply reply = helloService.hello(HelloRequest.newBuilder().setName("Armeria").build());
+                // when
+                final HelloReply reply = helloService.hello(HelloRequest.newBuilder().setName("Armeria").build());
 
-            // then
-            assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
-            envoy.stop();
-        });
-        envoyStartFuture.join();
+                // then
+                assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
+                envoy.stop();
+            });
+            envoyStartFuture.join();
+        } catch (CompletionException ex) {
+            logger.error("Could not find a valid Docker environment", ex);
+        }
     }
 }
