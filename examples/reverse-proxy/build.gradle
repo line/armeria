@@ -6,6 +6,7 @@ dependencies {
     implementation project(':core')
     implementation project(':grpc')
     implementation libs.reactor.core
+    implementation libs.testcontainers.junit.jupiter
     compileOnly libs.javax.annotation
     runtimeOnly libs.slf4j.simple
 
@@ -16,8 +17,9 @@ dependencies {
     testImplementation libs.awaitility
     testImplementation libs.junit5.jupiter.api
     testImplementation libs.protobuf.java.util
+    testImplementation libs.testcontainers.junit.jupiter
 }
 
 application {
-    mainClass.set('example.armeria.grpc.Main')
+    mainClass.set('example.armeria.reverseproxy.Main')
 }
