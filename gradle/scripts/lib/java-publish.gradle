@@ -16,7 +16,7 @@ configure(projectsWithFlags('publish', 'java')) {
                     jarOverrideFile = tasks.trimShadedJar.outJarFiles.find() as File
                     jarOverrideTask = tasks.trimShadedJar
                 } else if (tasks.findByName('shadedJar')) {
-                    jarOverrideFile = tasks.shadedJar.archivePath
+                    jarOverrideFile = tasks.shadedJar.archiveFile.get().asFile
                     jarOverrideTask = tasks.shadedJar
                 }
                 if (jarOverrideFile != null) {
