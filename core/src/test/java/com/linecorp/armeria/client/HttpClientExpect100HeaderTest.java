@@ -198,7 +198,7 @@ final class HttpClientExpect100HeaderTest {
     // Response Status: 417 Expectation Failed //
     /////////////////////////////////////////////
     @Test
-    void repeatToSendRequestWithoutHeaderOnHttp1() throws Exception {
+    void expectationFailedHttp1() throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
             ss.setSoTimeout(10000);
 
@@ -234,28 +234,14 @@ final class HttpClientExpect100HeaderTest {
                            "Content-Length: 0\r\n" +
                            "\r\n").getBytes(StandardCharsets.US_ASCII));
 
-                // Repeat sending the same request without 'Expect: 100-continue' header.
-                assertThat(in.readLine()).isEqualTo("POST / HTTP/1.1");
-                assertThat(in.readLine()).startsWith("host: 127.0.0.1:");
-                assertThat(in.readLine()).isEqualTo("content-type: text/plain; charset=utf-8");
-                assertThat(in.readLine()).isEqualTo("content-length: 4");
-                assertThat(in.readLine()).startsWith("user-agent: armeria/");
-                assertThat(in.readLine()).isEmpty();
-                assertThat(in.readLine()).isEqualTo("foo");
-
-                out.write(("HTTP/1.1 201 Created\r\n" +
-                           "Connection: close\r\n" +
-                           "Content-Length: 0\r\n" +
-                           "\r\n").getBytes(StandardCharsets.US_ASCII));
-
                 final AggregatedHttpResponse res = future.join();
-                assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
+                assertThat(res.status()).isEqualTo(HttpStatus.EXPECTATION_FAILED);
             }
         }
     }
 
     @Test
-    void repeatToSendRequestWithoutHeaderOnHttp2() throws Exception {
+    void expectationFailedHttp2() throws Exception {
         try (ServerSocket ss = new ServerSocket(0);
              ClientFactory clientFactory =
                      ClientFactory.builder()
@@ -299,19 +285,8 @@ final class HttpClientExpect100HeaderTest {
                 // Send a 417 Expectation Failed response.
                 sendFrameHeaders(bos, HttpStatus.EXPECTATION_FAILED, true, 3);
 
-                final byte[] frameHeader = readBytes(in, 9);
-                final int payloadLength = payloadLength(frameHeader);
-                assertThat(payloadLength).isZero();
-
-                // Read a HEADERS frame and validate it.
-                readHeadersFrame(headersDecoder, in, false);
-                // Read a DATA frame.
-                readDataFrame(in);
-                // Send a CREATED response.
-                sendFrameHeaders(bos, HttpStatus.CREATED, true, 5);
-
                 final AggregatedHttpResponse res = future.join();
-                assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
+                assertThat(res.status()).isEqualTo(HttpStatus.EXPECTATION_FAILED);
             }
         }
     }

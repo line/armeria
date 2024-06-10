@@ -20,12 +20,10 @@ import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 
 import io.netty.channel.Channel;
@@ -37,7 +35,7 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     private static final HttpData EMPTY_EOS = HttpData.empty().withEndOfStream();
 
     @Nullable
-    private AggregatedHttpRequest aReq;
+    private AggregatedHttpRequest request;
     private boolean cancelled;
 
     AggregatedHttpRequestHandler(Channel ch, ClientHttpObjectEncoder encoder,
@@ -65,38 +63,40 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         }
 
         assert request != null;
-        if (!tryInitialize(false)) {
-            request.content().close();
-            return;
-        }
-
         final RequestHeaders merged = mergedRequestHeaders(request.headers());
-        final boolean shouldExpect100ContinueHeader = shouldExpect100ContinueHeader(merged);
-        if (shouldExpect100ContinueHeader && request.content().isEmpty()) {
-            request.content().close();
-            failAndReset(new IllegalArgumentException(
+        final boolean needs100Continue = needs100Continue(merged);
+        final HttpData content = request.content();
+        if (needs100Continue && content.isEmpty()) {
+            content.close();
+            failRequest(new IllegalArgumentException(
                     "an empty content is not allowed with Expect: 100-continue header"));
             return;
         }
-        writeHeaders(merged, shouldExpect100ContinueHeader);
+
+        if (!tryInitialize()) {
+            content.close();
+            return;
+        }
+
+        writeHeaders(merged, needs100Continue);
         if (cancelled) {
-            request.content().close();
+            content.close();
             // If the headers size exceeds the limit, the headers write fails immediately.
             return;
         }
 
-        aReq = request;
-        if (state() != State.NEEDS_100_CONTINUE) {
-            writeDataOrTrailers();
+        if (!needs100Continue) {
+            writeDataAndTrailers(request);
+        } else {
+            this.request = request;
         }
         channel().flush();
     }
 
-    private void writeDataOrTrailers() {
-        assert aReq != null;
-        final HttpData content = aReq.content();
+    private void writeDataAndTrailers(AggregatedHttpRequest request) {
+        final HttpData content = request.content();
         final boolean contentEmpty = content.isEmpty();
-        final HttpHeaders trailers = aReq.trailers();
+        final HttpHeaders trailers = request.trailers();
         final boolean trailersEmpty = trailers.isEmpty();
         if (!contentEmpty) {
             if (trailersEmpty) {
@@ -121,33 +121,15 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     }
 
     @Override
-    void doResume() {
-        writeDataOrTrailers();
+    void resume() {
+        assert request != null;
+        writeDataAndTrailers(request);
         channel().flush();
     }
 
     @Override
-    boolean doRepeat() {
-        writeData(EMPTY_EOS);
-        channel().flush();
-
-        assert aReq != null;
-        if (!tryInitialize(true)) {
-            return false;
-        }
-
-        final RequestHeaders newHeaders = ctx().log().ensureAvailable(RequestLogProperty.REQUEST_HEADERS)
-                                               .requestHeaders().toBuilder()
-                                               .removeAndThen(HttpHeaderNames.EXPECT).build();
-        writeHeaders(newHeaders, false);
-        writeDataOrTrailers();
-        channel().flush();
-        return true;
-    }
-
-    @Override
-    void doDiscardRequestBody() {
-        assert aReq != null;
-        aReq.content().close();
+    void discardRequestBody() {
+        assert request != null;
+        request.content().close();
     }
 }

@@ -33,8 +33,10 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseCompleteException;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -113,10 +115,6 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         return ch;
     }
 
-    ClientRequestContext ctx() {
-        return ctx;
-    }
-
     final int id() {
         return id;
     }
@@ -166,26 +164,23 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
     }
 
-    final boolean tryInitialize(boolean incrementNumUnfinishedResponses) {
+    final boolean tryInitialize() {
         final HttpSession session = HttpSession.get(ch);
-        if (incrementNumUnfinishedResponses && !session.incrementNumUnfinishedResponses()) {
-            deactivateSessionAndFail(session, new ClosedSessionException(
-                    "Can't send requests. ID: " + id + ", session active: " +
-                    session.isAcquirable(responseDecoder.keepAliveHandler())));
-            return false;
-        }
-
         id = session.incrementAndGetNumRequestsSent();
-        if (id >= MAX_NUM_REQUESTS_SENT) {
-            deactivateSessionAndFail(session, new ClosedSessionException(
-                    "Can't send requests more than " + MAX_NUM_REQUESTS_SENT +
-                    " in one connection. ID: " + id));
-            return false;
-        }
-        if (!session.canSendRequest()) {
-            deactivateSessionAndFail(session, new ClosedSessionException(
-                    "Can't send requests. ID: " + id + ", session active: " +
-                    session.isAcquirable(responseDecoder.keepAliveHandler())));
+        if (id >= MAX_NUM_REQUESTS_SENT || !session.canSendRequest()) {
+            final ClosedSessionException exception;
+            if (id >= MAX_NUM_REQUESTS_SENT) {
+                exception = new ClosedSessionException(
+                        "Can't send requests more than " + MAX_NUM_REQUESTS_SENT +
+                        " in one connection. ID: " + id);
+            } else {
+                exception = new ClosedSessionException(
+                        "Can't send requests. ID: " + id + ", session active: " +
+                        session.isAcquirable(responseDecoder.keepAliveHandler()));
+            }
+            session.deactivate();
+            // No need to send RST because we didn't send any packet and this will be disconnected anyway.
+            fail(UnprocessedRequestException.of(exception));
             return false;
         }
 
@@ -199,12 +194,6 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                     timeoutMillis, TimeUnit.MILLISECONDS);
         }
         return true;
-    }
-
-    private void deactivateSessionAndFail(HttpSession session, ClosedSessionException exception) {
-        session.deactivate();
-        // No need to send RST because we didn't send any packet and this will be disconnected anyway.
-        fail(UnprocessedRequestException.of(exception));
     }
 
     RequestHeaders mergedRequestHeaders(RequestHeaders headers) {
@@ -226,10 +215,10 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
      * Note that the written data is not flushed by this method. The caller should explicitly call
      * {@link Channel#flush()} when each write unit is done.
      */
-    final void writeHeaders(RequestHeaders headers, boolean shouldExpect100ContinueHeader) {
+    final void writeHeaders(RequestHeaders headers, boolean needs100Continue) {
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
-        if (shouldExpect100ContinueHeader) {
+        if (needs100Continue) {
             state = State.NEEDS_100_CONTINUE;
         } else if (headersOnly) {
             state = State.DONE;
@@ -258,36 +247,33 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         encoder.writeHeaders(id, streamId(), headers, headersOnly, promise);
     }
 
-    static boolean shouldExpect100ContinueHeader(RequestHeaders headers) {
-        // Skip checking protocol version since Armeria is not fully compatible with HTTP/1.0.
-        // We can assume that the version is always HTTP/1.1 or later.
+    static boolean needs100Continue(RequestHeaders headers) {
         return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
     }
 
-    final boolean needs100Continue() {
-        return state == State.NEEDS_100_CONTINUE;
+    void handle100Continue(ResponseHeaders responseHeaders) {
+        if (state != State.NEEDS_100_CONTINUE) {
+            return;
+        }
+
+        if (responseHeaders.status() == HttpStatus.CONTINUE) {
+            state = State.NEEDS_DATA_OR_TRAILERS;
+            resume();
+            // TODO(minwoox): reset the timeout
+        } else {
+            // We do not retry the request when HttpStatus.EXPECTATION_FAILED is received
+            // because:
+            // - Most servers support 100-continue.
+            // - It's much simpler to just fail the request and let the user retry.
+            state = State.DONE;
+            logBuilder.endRequest();
+            discardRequestBody();
+        }
     }
 
-    void resume() {
-        state = State.NEEDS_DATA_OR_TRAILERS;
-        doResume();
-    }
+    abstract void resume();
 
-    abstract void doResume();
-
-    boolean repeat() {
-        state = State.NEEDS_TO_WRITE_FIRST_HEADER;
-        return doRepeat();
-    }
-
-    abstract boolean doRepeat();
-
-    void discardRequestBody() {
-        state = State.DONE;
-        doDiscardRequestBody();
-    }
-
-    abstract void doDiscardRequestBody();
+    abstract void discardRequestBody();
 
     /**
      * Writes the {@link HttpData} to the {@link Channel}.

@@ -77,7 +77,7 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
             return;
         }
 
-        if (!tryInitialize(false)) {
+        if (!tryInitialize()) {
             return;
         }
 
@@ -129,18 +129,12 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     }
 
     @Override
-    final void doResume() {
+    final void resume() {
         // TODO(minwoox): handle in the follow-up PR.
     }
 
     @Override
-    final boolean doRepeat() {
-        // TODO(minwoox): handle in the follow-up PR.
-        return false;
-    }
-
-    @Override
-    void doDiscardRequestBody() {
+    void discardRequestBody() {
         // TODO(minwoox): handle in the follow-up PR.
     }
 }

@@ -76,11 +76,10 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         this.responseTimeoutMillis = responseTimeoutMillis;
     }
 
-    final boolean needs100Continue() {
-        if (requestHandler == null) {
-            return false;
+    void handle100Continue(ResponseHeaders responseHeaders) {
+        if (requestHandler != null) {
+            requestHandler.handle100Continue(responseHeaders);
         }
-        return requestHandler.needs100Continue();
     }
 
     DecodedHttpResponse delegate() {
@@ -340,10 +339,5 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     void discardRequestBody() {
         assert requestHandler != null;
         requestHandler.discardRequestBody();
-    }
-
-    boolean repeat() {
-        assert requestHandler != null;
-        return requestHandler.repeat();
     }
 }

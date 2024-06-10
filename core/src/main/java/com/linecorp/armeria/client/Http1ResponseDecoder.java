@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -202,32 +201,13 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                         assert res != null;
                         this.res = res;
 
-                        final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
-                        final HttpStatus status = responseHeaders.status();
-
-                        if (res.needs100Continue()) {
-                            if (status == HttpStatus.CONTINUE) {
-                                res.resume();
-                            } else if (status == HttpStatus.EXPECTATION_FAILED) {
-                                // Remove the response and do not close the HttpResponseWrapper in order not to
-                                // close the original response.
-                                removeResponse(resId++);
-                                if (res.repeat()) {
-                                    state = State.DISCARD_DATA_OR_TRAILERS;
-                                    // TODO(minwoox): reset timeout
-                                } else {
-                                    // session is not acquirable.
-                                    state = State.DISCARD;
-                                }
-                                return;
-                            } else {
-                                res.discardRequestBody();
-                            }
-                        }
                         res.startResponse();
+                        final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
+
+                        res.handle100Continue(responseHeaders);
 
                         final boolean written;
-                        if (status.codeClass() == HttpStatusClass.INFORMATIONAL) {
+                        if (responseHeaders.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
                             written = res.tryWrite(responseHeaders);
                         } else {
