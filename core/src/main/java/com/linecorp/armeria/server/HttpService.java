@@ -71,4 +71,12 @@ public interface HttpService extends Service<HttpRequest, HttpResponse> {
     default ExchangeType exchangeType(RoutingContext routingContext) {
         return ExchangeType.BIDI_STREAMING;
     }
+
+    /**
+     * Returns the {@link ServiceOptions} of this {@link HttpService}.
+     */
+    @UnstableApi
+    default ServiceOptions options() {
+        return ServiceOptions.of();
+    }
 }
