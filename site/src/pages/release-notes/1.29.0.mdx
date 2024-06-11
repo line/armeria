@@ -4,21 +4,6 @@ date: 2024-06-05
 
 ## 🌟 New features
 
-- You can now use an <type://AsyncLoader> to load a value atomically and asynchronously. #5506 #5590
-  ```java
-  Function<String, CompletableFuture<String>> loader = cache -> {
-    ResponseEntity<String> response =
-      client.prepare().get("/api/v1/items").asString().execute();
-      return response.thenApply(res -> res.content());
-  };
-
-  AsyncLoader<String> asyncLoader =
-    AsyncLoader
-      .builder(loader)
-      .expireAfterLoad(Duration.ofSeconds(60))
-      .build();
-  asyncLoader.get().join();
-  ```
 - Armeria [HTTP/JSON to GRPC transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) service now
   supports [Custom methods](https://cloud.google.com/apis/design/custom_methods). #5613
   ```protobuf
@@ -33,19 +18,20 @@ date: 2024-06-05
   ```java
   Server
     .builder()
-    .multipartRemovalStrategy(MultipartRemovalStrategy.ON_RESPONSE_COMPLETION)
+    .multipartRemovalStrategy(
+      MultipartRemovalStrategy.ON_RESPONSE_COMPLETION)
     ...
   ```
 - A <type://ClientConnectionTimings> now includes the time spent on the TLS handshake. #3647 #5647
   ```java
   ClientConnectionTimings timings = ...
-  timings.tlsHandshakeDurationNanos();
+  assert timings.tlsHandshakeDurationNanos() > 0;
   ```
 - You can now configure <type://TlsEngineType> using <type://ClientFactoryBuilder> or <type://ServerBuilder>. #4962
   ```java
   ClientFactory
     .builder()
-    .tlsEngineType(TlsEngineType.OPENSSL)
+    .tlsEngineType(TlsEngineType.OPENSSL) // 👈👈👈
     .build();
   ```
 - You can now easily find both dynamic and static decorators that handle a request
@@ -58,10 +44,15 @@ date: 2024-06-05
   CorsService corsService = ctx.findService(CorsService.class);
   assert corsService.config().isAnyOriginSupported();
   ```
-- You can now use the marshaller specified by gRPC `MethodDescriptor`. #5103 #5630
+- You can now use the marshaller specified by gRPC `MethodDescriptor` by setting
+  <type://GrpcClientBuilder#useMethodMarshaller(boolean)> and
+  <type://GrpcServiceBuilder#useMethodMarshaller(boolean)>. #5103 #5630
   ```java
   GrpcClientBuilder builder = ...
-  builder.useMethodMarshaller(true);
+  builder.useMethodMarshaller(true); // 👈👈👈
+
+  GrpcServiceBuilder builder = ...
+  builder.useMethodMarshaller(true); // 👈👈👈
   ```
 - You can now programmatically retrieve the server side metrics via <type://ServerMetrics>. #4992 #5627
   ```java
@@ -83,7 +74,8 @@ date: 2024-06-05
   ```java
   static final ServiceOptions SERVICE_OPTIONS =
     ServiceOptions
-      .builder().requestTimeoutMillis(5000)
+      .builder()
+      .requestTimeoutMillis(5000)
       .maxRequestLength(1024)
       .requestAutoAbortDelayMillis(1000)
       .build();
@@ -146,10 +138,9 @@ date: 2024-06-05
 
 ## 📈 Improvements
 
-- An <type://XdsEndpointGroup> now supports
-  [Slow start mode](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/slow_start). #5688 #5693
+- An <type://XdsEndpointGroup> now supports [Slow start mode](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/slow_start). #5688 #5693
 - Priority and locality based load balancing is now available for an <type://XdsEndpointGroup>. #5610
-- An Armeria client now correctly handles `Expect: 100-continue` header. #5394 #5646
+- You can now view connection related information in the request logs. #5730
 - CORS headers are added to responses even if an exception is raised while handling a request. #5632
 - <type://AnnotatedService> is now available through a public API. #5382 #5628
 - The metrics for failed requests while retrying now include the cause of the failure. #5405 #5583
@@ -182,6 +173,8 @@ date: 2024-06-05
 - The specfied `ObjectMapper` to <type://WebClientRequestPreparation#asJson(Class,ObjectMapper)> isn't
   ignored anymore. #5454 #5512
 - <type://GrpcExceptionHandlerFunction> is now applied to convert a gRPC cancellations. #5329 #5398
+- In Spring integration, the default <type://ClientFactory> is now gracefully closed after the server shuts down. #5742
+- A connection is not reused anymore after a <type://WriteTimeoutException> is raised. #5738
 
 ## 🏚️ Deprecations
 
@@ -198,6 +191,14 @@ date: 2024-06-05
     use the `io.micrometer:micrometer-registry-prometheus-simpleclient:1.13.0` module.
   - If you want to use Prometheus Java client 1.x, add `com.linecorp.armeria:armeria-prometheus1` module.
   - More details can be found in the [migration guide](https://github.com/micrometer-metrics/micrometer/wiki/1.13-Migration-Guide).
+- The following builder classes are now have the `SELF` type parameter. #5733
+  - <type://AbstractDnsResolverBuilder>
+  - <type://AbstractRuleBuilder>
+  - <type://AbstractRuleWithContentBuilder>
+  - <type://AbstractCircuitBreakerMappingBuilder>
+  - <type://AbstractDynamicEndpointGroupBuilder>
+  - <type://DynamicEndpointGroupSetters>
+  - <type://AbstractCuratorFrameworkBuilder>
 
 ## ⛓ Dependencies
 
