@@ -823,7 +823,9 @@ barsy.ca
 barsy.club
 barsy.co.uk
 barsy.de
+barsy.dev
 barsy.eu
+barsy.gr
 barsy.in
 barsy.info
 barsy.io
@@ -836,13 +838,17 @@ barsy.org
 barsy.pro
 barsy.pub
 barsy.ro
+barsy.rs
 barsy.shop
 barsy.site
+barsy.store
 barsy.support
 barsy.uk
 barsycenter.com
 barsyonline.co.uk
 barsyonline.com
+barsyonline.menu
+barsyonline.shop
 barueri.br
 barum.no
 bas.it
@@ -3447,6 +3453,7 @@ health.vn
 healthcare
 heavy.jp
 heguri.nara.jp
+heiyu.space
 hekinan.aichi.jp
 helioho.st
 heliohost.us
@@ -3798,6 +3805,7 @@ ind.br
 ind.gt
 ind.in
 ind.kw
+ind.mom
 ind.tn
 independent-commission.uk
 independent-inquest.uk
@@ -5078,6 +5086,7 @@ media
 media.aero
 media.hu
 media.pl
+media.strapiapp.com
 mediatech.by
 mediatech.dev
 medicina.bo
@@ -6935,6 +6944,8 @@ reit
 reklam.hu
 rel.ht
 rel.pl
+relay.evervault.app
+relay.evervault.dev
 reliance
 remotewd.com
 ren
@@ -7987,6 +7998,7 @@ storipress.app
 storj.farm
 strand.no
 stranda.no
+strapiapp.com
 streak-link.com
 streaklinks.com
 streakusercontent.com
