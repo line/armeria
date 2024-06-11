@@ -11,7 +11,6 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import com.linecorp.armeria.common.SessionProtocol;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -23,6 +22,7 @@ import org.testcontainers.junit.jupiter.Container;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.grpc.GrpcService;
