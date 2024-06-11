@@ -39,4 +39,9 @@ public abstract class SimpleDecoratingHttpService extends SimpleDecoratingServic
     public ExchangeType exchangeType(RoutingContext routingContext) {
         return ((HttpService) unwrap()).exchangeType(routingContext);
     }
+
+    @Override
+    public ServiceOptions options() {
+        return ((HttpService) unwrap()).options();
+    }
 }

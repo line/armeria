@@ -32,7 +32,7 @@ import io.netty.util.AsciiString;
 /**
  * A skeletal builder implementation for {@link HeadersSanitizer}.
  */
-abstract class AbstractHeadersSanitizerBuilder<T> {
+abstract class AbstractHeadersSanitizerBuilder<SELF extends AbstractHeadersSanitizerBuilder<SELF, T>, T> {
 
     // Referenced from:
     // - https://docs.rs/tower-http/latest/tower_http/sensitive_headers/index.html
@@ -47,10 +47,15 @@ abstract class AbstractHeadersSanitizerBuilder<T> {
 
     private HeaderMaskingFunction maskingFunction = HeaderMaskingFunction.of();
 
+    @SuppressWarnings("unchecked")
+    final SELF self() {
+        return (SELF) this;
+    }
+
     /**
      * Adds the headers to mask before logging.
      */
-    public AbstractHeadersSanitizerBuilder<T> sensitiveHeaders(CharSequence... headers) {
+    public SELF sensitiveHeaders(CharSequence... headers) {
         requireNonNull(headers, "headers");
         return sensitiveHeaders(ImmutableSet.copyOf(headers));
     }
@@ -58,13 +63,13 @@ abstract class AbstractHeadersSanitizerBuilder<T> {
     /**
      * Adds the headers to mask before logging.
      */
-    public AbstractHeadersSanitizerBuilder<T> sensitiveHeaders(Iterable<? extends CharSequence> headers) {
+    public SELF sensitiveHeaders(Iterable<? extends CharSequence> headers) {
         requireNonNull(headers, "headers");
         if (sensitiveHeaders == null) {
             sensitiveHeaders = new HashSet<>();
         }
         headers.forEach(header -> sensitiveHeaders.add(AsciiString.of(header).toLowerCase()));
-        return this;
+        return self();
     }
 
     final Set<AsciiString> sensitiveHeaders() {
@@ -90,9 +95,9 @@ abstract class AbstractHeadersSanitizerBuilder<T> {
      * }
      * }</pre>
      */
-    public AbstractHeadersSanitizerBuilder<T> maskingFunction(HeaderMaskingFunction maskingFunction) {
+    public SELF maskingFunction(HeaderMaskingFunction maskingFunction) {
         this.maskingFunction = requireNonNull(maskingFunction, "maskingFunction");
-        return this;
+        return self();
     }
 
     /**

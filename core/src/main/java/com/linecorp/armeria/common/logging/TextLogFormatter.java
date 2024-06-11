@@ -186,8 +186,12 @@ final class TextLogFormatter implements LogFormatter {
             if (sanitizedTrailers != null) {
                 buf.append(", trailers=").append(sanitizedTrailers);
             }
-            buf.append('}');
 
+            final int currentAttempt = log.currentAttempt();
+            if (currentAttempt > 0) {
+                buf.append(", currentAttempt=").append(currentAttempt);
+            }
+            buf.append('}');
             return buf.toString();
         }
     }

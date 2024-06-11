@@ -31,11 +31,13 @@ import org.junit.jupiter.params.provider.NullSource;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextBuilder;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TextFormatter;
@@ -75,6 +77,23 @@ class TextLogFormatterTest {
         } else {
             assertThat(responseLog).matches(regex);
         }
+    }
+
+    @Test
+    void derivedLog() {
+        final LogFormatter logFormatter = LogFormatter.builderForText().build();
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/format");
+        final ClientRequestContext ctx = ClientRequestContext.of(request);
+        final ClientRequestContext derivedCtx =
+                ctx.newDerivedContext(RequestId.of(1), request, null, Endpoint.of("127.0.0.1"));
+        final DefaultRequestLog log = (DefaultRequestLog) derivedCtx.log();
+        ctx.logBuilder().addChild(log);
+        log.endRequest();
+        final String requestLog = logFormatter.formatRequest(log);
+        final String regex =
+                ".*Request: .*\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+" +
+                "currentAttempt=1}$";
+        assertThat(requestLog).matches(regex);
     }
 
     @Test
@@ -139,7 +158,6 @@ class TextLogFormatterTest {
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
         final String requestLog = logFormatter.formatRequest(log);
-        System.out.println(requestLog);
         final Matcher matcher1 = Pattern.compile("cookie=(.*?)[,\\]]").matcher(requestLog);
         assertThat(matcher1.find()).isTrue();
         assertThat(matcher1.group(1)).isEqualTo(

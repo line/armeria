@@ -22,9 +22,6 @@ import java.net.InetSocketAddress;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
-import com.linecorp.armeria.client.retry.Backoff;
-
 import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoop;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -92,10 +89,10 @@ class DnsEndpointGroupBuilderTest {
 
     @Test
     void allowEmptyEndpoints() {
-        final DnsEndpointGroupBuilder builder0 = new Builder("foo.com").allowEmptyEndpoints(false);
+        final DnsEndpointGroupBuilder<Builder> builder0 = new Builder("foo.com").allowEmptyEndpoints(false);
         assertThat(builder0.shouldAllowEmptyEndpoints()).isFalse();
 
-        final DnsEndpointGroupBuilder builder1 = new Builder("foo.com").allowEmptyEndpoints(true);
+        final DnsEndpointGroupBuilder<Builder> builder1 = new Builder("foo.com").allowEmptyEndpoints(true);
         assertThat(builder1.shouldAllowEmptyEndpoints()).isTrue();
     }
 
@@ -103,14 +100,9 @@ class DnsEndpointGroupBuilderTest {
         return new Builder("foo.com");
     }
 
-    private static final class Builder extends DnsEndpointGroupBuilder {
+    private static final class Builder extends DnsEndpointGroupBuilder<Builder> {
         Builder(String hostname) {
             super(hostname);
-        }
-
-        @Override
-        public Builder eventLoop(EventLoop eventLoop) {
-            return (Builder) super.eventLoop(eventLoop);
         }
 
         int minTtl0() {
@@ -121,33 +113,8 @@ class DnsEndpointGroupBuilderTest {
             return maxTtl();
         }
 
-        @Override
-        public Builder ttl(int minTtl, int maxTtl) {
-            return (Builder) super.ttl(minTtl, maxTtl);
-        }
-
         DnsServerAddressStreamProvider serverAddressStreamProvider0() {
             return serverAddressStreamProvider();
-        }
-
-        @Override
-        public Builder serverAddresses(InetSocketAddress... serverAddresses) {
-            return (Builder) super.serverAddresses(serverAddresses);
-        }
-
-        @Override
-        public Builder serverAddresses(Iterable<InetSocketAddress> serverAddresses) {
-            return (Builder) super.serverAddresses(serverAddresses);
-        }
-
-        @Override
-        public Builder backoff(Backoff backoff) {
-            return (Builder) super.backoff(backoff);
-        }
-
-        @Override
-        public Builder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
-            return (Builder) super.selectionStrategy(selectionStrategy);
         }
     }
 }
