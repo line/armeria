@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import com.linecorp.armeria.common.SessionProtocol;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -35,14 +36,23 @@ class GrpcReverseProxyServerTest {
 
     private static Server server;
 
-    private static final int serverPort = PortUtil.unusedTcpPort();
-
     private static final int envoyPort = PortUtil.unusedTcpPort();
 
     @Container
     private static GenericContainer<?> envoy;
 
-    static {
+    @BeforeAll
+    static void startServer() {
+        server = Server.builder()
+                .http(0)
+                .service(GrpcService.builder()
+                        .addService(new HelloService())
+                        .build())
+                .build();
+
+        server.start().join();
+        final int serverPort = server.activeLocalPort(SessionProtocol.HTTP);
+
         try {
             final Path source = Paths.get("./envoy/envoy.yaml");
             final Path destination = Paths.get("./envoy/envoy_backup.yaml");
@@ -58,17 +68,6 @@ class GrpcReverseProxyServerTest {
         } catch (IOException ex) {
             logger.error("Failed to configure Envoy container", ex);
         }
-    }
-
-    @BeforeAll
-    static void startServer() {
-        server = Server.builder()
-                .http(serverPort)
-                .service(GrpcService.builder()
-                        .addService(new HelloService())
-                        .build())
-                .build();
-        server.start().join();
     }
 
     @AfterAll
