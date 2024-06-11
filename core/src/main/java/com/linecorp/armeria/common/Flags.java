@@ -400,10 +400,10 @@ public final class Flags {
     private static final boolean TLS_ALLOW_UNSAFE_CIPHERS =
             getValue(FlagsProvider::tlsAllowUnsafeCiphers, "tlsAllowUnsafeCiphers");
 
-    // Maximum 16KiB https://datatracker.ietf.org/doc/html/rfc5246#section-6.2.1
+    // Maximum 16MiB https://datatracker.ietf.org/doc/html/rfc5246#section-7.4
     private static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH =
             getValue(FlagsProvider::defaultMaxClientHelloLength, "defaultMaxClientHelloLength",
-                     value -> value >= 0 && value <= 16384);
+                     value -> value >= 0 && value <= 16777216); // 16MiB
 
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
             getValue(FlagsProvider::transientServiceOptions, "transientServiceOptions");
@@ -1433,8 +1433,8 @@ public final class Flags {
 
     /**
      * Returns the default maximum client hello length that a server allows.
-     * The length shouldn't exceed 16KiB as described in
-     * <a href="https://datatracker.ietf.org/doc/html/rfc5246#section-6.2.1">Fragmentation</a>.
+     * The length shouldn't exceed 16MiB as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc5246#section-7.4">Handshake Protocol</a>.
      *
      * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_HELLO_LENGTH}.
      * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>} JVM option to
