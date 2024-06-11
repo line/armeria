@@ -1013,6 +1013,20 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default maximum client hello length that a server allows.
+     * The length shouldn't exceed 16KiB as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc5246#section-6.2.1">Fragmentation</a>.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_HELLO_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    default Integer defaultMaxClientHelloLength() {
+        return null;
+    }
+
+    /**
      * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for a
      * {@link TransientService}.
      *
