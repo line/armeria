@@ -21,7 +21,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
 import org.slf4j.Logger;
@@ -47,29 +46,30 @@ final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
     private final Set<Channel> childChannels = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Set<Channel> unmodifiableChildChannels = Collections.unmodifiableSet(childChannels);
     private final int maxNumConnections;
-    private final AtomicInteger numConnections = new AtomicInteger();
+    private final ServerMetrics serverMetrics;
 
     private final AtomicBoolean loggingScheduled = new AtomicBoolean();
     private final LongAdder numDroppedConnections = new LongAdder();
 
-    ConnectionLimitingHandler(int maxNumConnections) {
+    ConnectionLimitingHandler(int maxNumConnections, ServerMetrics serverMetrics) {
         this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
+        this.serverMetrics = serverMetrics;
     }
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         final Channel child = (Channel) msg;
 
-        final int conn = numConnections.incrementAndGet();
+        final int conn = serverMetrics.increaseActiveConnectionsAndGet();
         if (conn > 0 && conn <= maxNumConnections) {
             childChannels.add(child);
             child.closeFuture().addListener(future -> {
                 childChannels.remove(child);
-                numConnections.decrementAndGet();
+                serverMetrics.decreaseActiveConnections();
             });
             super.channelRead(ctx, msg);
         } else {
-            numConnections.decrementAndGet();
+            serverMetrics.decreaseActiveConnections();
 
             // Set linger option to 0 so that the server doesn't get too many TIME_WAIT states.
             child.config().setOption(ChannelOption.SO_LINGER, 0);
@@ -104,7 +104,7 @@ final class ConnectionLimitingHandler extends ChannelInboundHandlerAdapter {
      * Returns the number of open connections.
      */
     public int numConnections() {
-        return numConnections.get();
+        return serverMetrics.activeConnections();
     }
 
     /**
