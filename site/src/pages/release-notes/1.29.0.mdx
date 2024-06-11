@@ -137,6 +137,8 @@ date: 2024-06-11
   builder.graphql(graphQL);
 - You can now specify a delay to close an HTTP/1.1 connection from the server side, allowing the client an
   opportunity for active closing. #4849 #5616
+- You can now configure the maximum length of a TLS client hello message that a server allows by using the
+  `-Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>` JVM option. #5747
 
 ## 📈 Improvements
 
@@ -168,7 +170,6 @@ date: 2024-06-11
   It happened when the following conditions are all met:
   - DEBUG-level logging of JDK security event is enabled.
   - A user has no Bouncy Castle dependency.
-- A `DecompressionException` isn't ignored anymore in a <type://StreamDecoder>. #5177 #5620
 - <type://@Description> annotations at the super class or interface are now used for the parameter description. #5195 #5562
 - The specfied `ObjectMapper` to <type://WebClientRequestPreparation#asJson(Class,ObjectMapper)> isn't
   ignored anymore. #5454 #5512
