@@ -407,7 +407,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         res = res.recover(cause -> {
             reqCtx.logBuilder().responseCause(cause);
             // Recover the failed response with the error handler.
-            return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+            try (SafeCloseable ignored = reqCtx.push()) {
+                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+            }
         });
 
         // Keep track of the number of unfinished requests and
