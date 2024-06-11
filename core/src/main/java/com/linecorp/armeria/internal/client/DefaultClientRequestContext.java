@@ -1013,7 +1013,7 @@ public final class DefaultClientRequestContext
                 });
                 // To deactivate the channel when initiateShutdown is called after the RequestHeaders is sent.
                 // The next request will trigger shutdown.
-                HttpSession.get(ch).deactivate();
+                HttpSession.get(ch).markUnacquirable();
             }
         });
         return completableFuture;

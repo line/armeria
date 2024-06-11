@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.List;
 
@@ -141,6 +142,7 @@ class RoutingContextTest {
 
     static VirtualHost virtualHost() {
         final HttpService service = mock(HttpService.class);
+        when(service.options()).thenReturn(ServiceOptions.of());
         final Server server = Server.builder()
                                     .virtualHost("example.com")
                                     .serviceUnder("/", service)

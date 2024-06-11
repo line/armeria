@@ -20,12 +20,14 @@ import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
 import io.netty.util.AttributeKey;
 
-final class XdsAttributesKeys {
+final class XdsAttributeKeys {
 
     static final AttributeKey<LbEndpoint> LB_ENDPOINT_KEY =
-            AttributeKey.valueOf(XdsAttributesKeys.class, "LB_ENDPOINT_KEY");
+            AttributeKey.valueOf(XdsAttributeKeys.class, "LB_ENDPOINT_KEY");
     static final AttributeKey<LocalityLbEndpoints> LOCALITY_LB_ENDPOINTS_KEY =
-            AttributeKey.valueOf(XdsAttributesKeys.class, "LOCALITY_LB_ENDPOINTS_KEY");
+            AttributeKey.valueOf(XdsAttributeKeys.class, "LOCALITY_LB_ENDPOINTS_KEY");
+    static final AttributeKey<Integer> SELECTION_HASH =
+            AttributeKey.valueOf(XdsAttributeKeys.class, "SELECTION_HASH");
 
-    private XdsAttributesKeys() {}
+    private XdsAttributeKeys() {}
 }
