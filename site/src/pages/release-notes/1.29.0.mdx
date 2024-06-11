@@ -176,6 +176,8 @@ date: 2024-06-11
 - <type://GrpcExceptionHandlerFunction> is now applied to convert a gRPC cancellations. #5329 #5398
 - In Spring integration, the default <type://ClientFactory> is now gracefully closed after the server shuts down. #5742
 - A connection is not reused anymore after a <type://WriteTimeoutException> is raised. #5738
+- <type://ServiceRequestContext> is now correctly propagated when
+  <type://ServerErrorHandler#onServiceException(ServiceRequestContext,Throwable)> is invoked. #5746
 
 ## 🏚️ Deprecations
 
