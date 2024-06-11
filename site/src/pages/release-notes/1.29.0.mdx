@@ -52,10 +52,11 @@ date: 2024-06-05
   via <type://ServiceRequestContext.findService(Class)>. #5670
   ```java
   ServerBuilder sb = ...
-  sb.service("/foo", fooService);
+  sb.decorator(CorsService.builderForAnyOrigin().newDecorator());
   ...
   ServiceRequestContext ctx = ...
-  assert ctx.findService(FooService.class) == fooService;
+  CorsService corsService = ctx.findService(CorsService.class);
+  assert corsService.config().isAnyOriginSupported();
   ```
 - You can now use the marshaller specified by gRPC `MethodDescriptor`. #5103 #5630
   ```java
@@ -80,17 +81,24 @@ date: 2024-06-05
   ```
 - You can now specify options for an <type://HttpService> via <type://ServiceOptions>. #5071 #5574
   ```java
+  static final ServiceOptions SERVICE_OPTIONS =
+    ServiceOptions
+      .builder().requestTimeoutMillis(5000)
+      .maxRequestLength(1024)
+      .requestAutoAbortDelayMillis(1000)
+      .build();
+
   HttpService httpService = new HttpService() {
     ...
     @Override
     public ServiceOptions options() {
-      return customizedOptions;
+      return SERVICE_OPTIONS;
     }
   };
 
   // Or use annotation for an annotated service.
   class MyService {
-      @ServiceOption(requestTimeoutMillis = 10000, maxRequestLength = 1024)
+      @ServiceOption(requestTimeoutMillis = 5000, maxRequestLength = 1024)
       @Get("/hello")
       public HttpResponse hello() {
           return HttpResponse.of("Hello!");
@@ -110,7 +118,7 @@ date: 2024-06-05
     @Get("/hello")
     public HttpResponse hello(
       @Attribute(prefix = MyAttributes.class, value = "USERNAME") // 👈👈👈
-        String username) { ... }
+      String username) { ... }
   }
   ```
 - You can now specify a graceful shutdown timeout for a <type://ClientFactory>. #5470 #5489
@@ -120,7 +128,7 @@ date: 2024-06-05
     .http2GracefulShutdownTimeoutMillis(1000)
     .build();
   ```
-- You can now specify an <type://EndpointGroup> to build a <type://ClientRequestContext>. #5292 #5298
+- You can now specify an <type://EndpointGroup> when building a <type://ClientRequestContext>. #5292 #5298
   ```java
   ClientRequestContext ctx =
     ClientRequestContext
@@ -185,7 +193,7 @@ date: 2024-06-05
 
 ## ☢️ Breaking changes
 
-- Micrometer 1.13.0 uses Prometheus Java client 1.x. #5698
+- We updated Micrometer to 1.13.0 that has breaking changes in its Prometheus support. #5698
   - If you want to keep the old behavior that uses Prometheus Java client 0.x,
     use the `io.micrometer:micrometer-registry-prometheus-simpleclient:1.13.0` module.
   - If you want to use Prometheus Java client 1.x, add `com.linecorp.armeria:armeria-prometheus1` module.
