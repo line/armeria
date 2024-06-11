@@ -22,6 +22,8 @@ date: 2024-06-05
       MultipartRemovalStrategy.ON_RESPONSE_COMPLETION)
     ...
   ```
+  - The default value is now <type://ON_RESPONSE_COMPLETION`> which removes the temporary files
+    when the response is completed.
 - A <type://ClientConnectionTimings> now includes the time spent on the TLS handshake. #3647 #5647
   ```java
   ClientConnectionTimings timings = ...
@@ -113,7 +115,7 @@ date: 2024-06-05
       String username) { ... }
   }
   ```
-- You can now specify a graceful shutdown timeout for a <type://ClientFactory>. #5470 #5489
+- You can now specify a graceful shutdown timeout for an HTTP/2 connection in <type://ClientFactory>. #5470 #5489
   ```java
   ClientFactory
     .builder()
@@ -138,7 +140,7 @@ date: 2024-06-05
 
 ## 📈 Improvements
 
-- An <type://XdsEndpointGroup> now supports [Slow start mode](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/slow_start). #5688 #5693
+- <type://XdsEndpointGroup> now supports [Slow start mode](https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/upstream/load_balancing/slow_start). #5688 #5693
 - Priority and locality based load balancing is now available for an <type://XdsEndpointGroup>. #5610
 - You can now view connection related information in the request logs. #5730
 - CORS headers are added to responses even if an exception is raised while handling a request. #5632
@@ -155,8 +157,6 @@ date: 2024-06-05
 
 ## 🛠️ Bug fixes
 
-- <type://HealthCheckedEndpointGroup> no longer raises an <type://EndpointSelectionTimeoutException> when
-  a server is stopped by the JVM shutdown hook. #5718
 - Fixed a bug where <type://RetryingClient> gets to deadlock when <type://OAuth2Client> fails to obtain
   an access token. #5715
 - Armeria client always uses HTTP/2 connection preface for `h2c`, regardless of
@@ -190,8 +190,8 @@ date: 2024-06-05
   - If you want to keep the old behavior that uses Prometheus Java client 0.x,
     use the `io.micrometer:micrometer-registry-prometheus-simpleclient:1.13.0` module.
   - If you want to use Prometheus Java client 1.x, add `com.linecorp.armeria:armeria-prometheus1` module.
-  - More details can be found in the [migration guide](https://github.com/micrometer-metrics/micrometer/wiki/1.13-Migration-Guide).
-- The following builder classes are now have the `SELF` type parameter. #5733
+  - More details can be found in the [Micrometer migration guide](https://github.com/micrometer-metrics/micrometer/wiki/1.13-Migration-Guide).
+- The following builder classes now have the `SELF` type parameter. #5733
   - <type://AbstractDnsResolverBuilder>
   - <type://AbstractRuleBuilder>
   - <type://AbstractRuleWithContentBuilder>
@@ -206,7 +206,6 @@ date: 2024-06-05
 - Control Plane 1.0.44 → 1.0.45
 - GraphQL Kotlin 7.0.2 → 7.1.1
 - gRPC Java 1.63.0 → 1.64.0
-- Guava 33.1.0-jre → 33.2.0-jre
 - Jackson 2.17.0 → 2.17.1
 - Kotlin Coroutine 1.8.0 → 1.8.1
 - Kubernetes client 6.11.0 → 6.12.1
