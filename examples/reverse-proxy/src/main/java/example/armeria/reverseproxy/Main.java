@@ -9,7 +9,6 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.common.util.PortUtil;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Param;
@@ -21,9 +20,6 @@ public final class Main {
 
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
-    private static final int serverPort = PortUtil.unusedTcpPort();
-    private static final int backendServerPort = PortUtil.unusedTcpPort();
-
     public static void main(String[] args) {
         final Server backendServer = startBackendServer();
 
@@ -32,7 +28,7 @@ public final class Main {
         backendServer.start().join();
         reverseProxyServer.start().join();
 
-        final WebClient client = WebClient.of("http://localhost:" + serverPort);
+        final WebClient client = WebClient.of("http://localhost:9090");
 
         final CompletableFuture<AggregatedHttpResponse> responseFuture = client.get("/hello/John")
                 .aggregate();
@@ -51,7 +47,7 @@ public final class Main {
 
     private static Server startBackendServer() {
         return Server.builder()
-                .http(backendServerPort)
+                .http(8080)
                 .service(GrpcService.builder()
                         .addService(new HelloService())
                         .build())
@@ -60,7 +56,7 @@ public final class Main {
 
     private static Server startReverseProxyServer() {
         return Server.builder()
-                .http(serverPort)
+                .http(9090)
                 .annotatedService(new ReverseProxyService())
                 .build();
     }
@@ -69,7 +65,7 @@ public final class Main {
         private final WebClient backendClient;
 
         public ReverseProxyService() {
-            backendClient = WebClient.builder("http://localhost:" + backendServerPort).build();
+            backendClient = WebClient.builder("http://localhost:8080").build();
         }
 
         @Get("/hello/{name}")
