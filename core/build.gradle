@@ -162,9 +162,6 @@ dependencies {
     }
     testImplementation libs.brave6.context.slf4j
     testImplementation libs.brave6.instrumentation.http.tests
-
-    // akka
-    implementation libs.akka.actor.typed.v213
 }
 
 if (!rootProject.hasProperty('noWeb')) {

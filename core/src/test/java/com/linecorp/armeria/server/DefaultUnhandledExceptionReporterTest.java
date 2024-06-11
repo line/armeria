@@ -28,7 +28,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Spy;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -36,8 +35,6 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import javassist.tools.rmi.ObjectNotFoundException;
 
 class DefaultUnhandledExceptionReporterTest {
 
@@ -48,9 +45,6 @@ class DefaultUnhandledExceptionReporterTest {
     private static final long reportIntervalMillis = 1000;
     private static final long awaitIntervalMillis = 2000;
     private static volatile boolean throwNonIgnorableException;
-
-    private DefaultUnhandledExceptionsReporter defaultUnhandledExceptionsReporter
-            = new DefaultUnhandledExceptionsReporter(new SimpleMeterRegistry(), 1);
 
     @BeforeEach
     public void attachAppender() {
@@ -129,56 +123,5 @@ class DefaultUnhandledExceptionReporterTest {
                 .isEqualTo(400);
         Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
         assertThat(logAppender.list).isEmpty();
-    }
-
-    @Test
-    void thrownExceptionsShouldBeIncrementedByTheNumberOfTimesTheSameExceptionOccurs() throws Exception {
-        Throwable cause = new IllegalArgumentException();
-        defaultUnhandledExceptionsReporter.report(ServiceRequestContext.of(createMockRequest()), cause);
-        defaultUnhandledExceptionsReporter.report(ServiceRequestContext.of(createMockRequest()), cause);
-        defaultUnhandledExceptionsReporter.report(ServiceRequestContext.of(createMockRequest()), cause);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().size()).isEqualTo(1);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().get(cause).first().longValue())
-                .isEqualTo(3);
-    }
-
-    @Test
-    void thrownExceptionsShouldBeAggregatedSeparatelyEachTimeNewExceptionOccurs() throws Exception {
-        Throwable cause1 = new IllegalArgumentException();
-        Throwable cause2 = new ArithmeticException();
-        Throwable cause3 = new NoSuchFieldException();
-        defaultUnhandledExceptionsReporter.report(ServiceRequestContext.of(createMockRequest()), cause1);
-        defaultUnhandledExceptionsReporter.report(ServiceRequestContext.of(createMockRequest()), cause2);
-        defaultUnhandledExceptionsReporter.report(ServiceRequestContext.of(createMockRequest()), cause3);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().size()).isEqualTo(3);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().get(cause1).first().longValue())
-                .isEqualTo(1);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().get(cause2).first().longValue())
-                .isEqualTo(1);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().get(cause3).first().longValue())
-                .isEqualTo(1);
-    }
-
-    @Test
-    void temp() throws Exception {
-        Throwable cause1 = new IllegalArgumentException();
-        Throwable cause2 = new IllegalArgumentException();
-        Throwable cause3 = new IllegalArgumentException();
-        defaultUnhandledExceptionsReporter.report(ServiceRequestContext.of(createMockRequest()), cause1);
-        defaultUnhandledExceptionsReporter.report(ServiceRequestContext.of(createMockRequest()), cause2);
-        defaultUnhandledExceptionsReporter.report(ServiceRequestContext.of(createMockRequest()), cause3);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().size()).isEqualTo(3);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().get(cause1).first().longValue())
-                .isEqualTo(1);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().get(cause2).first().longValue())
-                .isEqualTo(1);
-        assertThat(defaultUnhandledExceptionsReporter.getThrownExceptions().get(cause3).first().longValue())
-                .isEqualTo(1);
-    }
-
-    private HttpRequest createMockRequest() {
-        return HttpRequest.builder()
-                          .post("/mocking")
-                          .build();
     }
 }
