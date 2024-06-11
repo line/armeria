@@ -629,6 +629,7 @@ public final class Flags {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder::forClient,
                     /* forceHttp1 */ false,
+                    tlsEngineType,
                     /* tlsAllowUnsafeCiphers */ false,
                     ImmutableList.of(), null).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
