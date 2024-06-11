@@ -19,10 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
-import java.util.function.Predicate;
 
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 
 /**
@@ -48,145 +45,14 @@ import com.linecorp.armeria.internal.server.RouteDecoratingService;
  *
  * @see VirtualHostServiceBindingBuilder
  */
-public final class VirtualHostDecoratingServiceBindingBuilder extends AbstractBindingBuilder {
+public final class VirtualHostDecoratingServiceBindingBuilder
+        extends AbstractBindingBuilder<VirtualHostDecoratingServiceBindingBuilder> {
 
     private final VirtualHostBuilder virtualHostBuilder;
 
     VirtualHostDecoratingServiceBindingBuilder(VirtualHostBuilder virtualHostBuilder) {
         super(EMPTY_CONTEXT_PATHS);
         this.virtualHostBuilder = requireNonNull(virtualHostBuilder, "virtualHostBuilder");
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder path(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.path(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder pathPrefix(String prefix) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.pathPrefix(prefix);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder methods(HttpMethod... methods) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.methods(methods);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder methods(Iterable<HttpMethod> methods) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.methods(methods);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder get(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.get(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder post(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.post(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder put(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.put(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder patch(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.patch(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder delete(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.delete(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder options(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.delete(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder head(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.head(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder trace(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.trace(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder connect(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.connect(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder consumes(MediaType... consumeTypes) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.consumes(consumeTypes);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder consumes(Iterable<MediaType> consumeTypes) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.consumes(consumeTypes);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder produces(MediaType... produceTypes) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.produces(produceTypes);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder produces(Iterable<MediaType> produceTypes) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.produces(produceTypes);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder matchesParams(String... paramPredicates) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesParams(paramPredicates);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder matchesParams(Iterable<String> paramPredicates) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesParams(paramPredicates);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder matchesParams(String paramName,
-                                                                    Predicate<? super String> valuePredicate) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesParams(paramName, valuePredicate);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder matchesHeaders(String... headerPredicates) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesHeaders(headerPredicates);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder matchesHeaders(Iterable<String> headerPredicates) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesHeaders(headerPredicates);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder matchesHeaders(CharSequence headerName,
-                                                                     Predicate<? super String> valuePredicate) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.matchesHeaders(headerName, valuePredicate);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder addRoute(Route route) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.addRoute(route);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder exclude(String pathPattern) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.exclude(pathPattern);
-    }
-
-    @Override
-    public VirtualHostDecoratingServiceBindingBuilder exclude(Route excludedRoute) {
-        return (VirtualHostDecoratingServiceBindingBuilder) super.exclude(excludedRoute);
     }
 
     /**

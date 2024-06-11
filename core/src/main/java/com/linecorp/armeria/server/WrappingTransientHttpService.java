@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * Decorates a {@link HttpService} to be treated as {@link TransientService} without inheritance.
+ * Decorates an {@link HttpService} to be treated as {@link TransientService} without inheritance.
  */
 final class WrappingTransientHttpService extends SimpleDecoratingHttpService implements TransientHttpService {
 

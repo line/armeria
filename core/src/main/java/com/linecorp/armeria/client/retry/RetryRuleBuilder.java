@@ -20,7 +20,6 @@ import static com.linecorp.armeria.client.retry.RetryRuleUtil.DEFAULT_DECISION;
 import static com.linecorp.armeria.client.retry.RetryRuleUtil.NEXT_DECISION;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
@@ -28,13 +27,7 @@ import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.AbstractRuleBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
@@ -42,7 +35,7 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 /**
  * A builder for creating a new {@link RetryRule}.
  */
-public final class RetryRuleBuilder extends AbstractRuleBuilder {
+public final class RetryRuleBuilder extends AbstractRuleBuilder<RetryRuleBuilder> {
 
     RetryRuleBuilder(BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
         super(requestHeadersFilter);
@@ -105,149 +98,5 @@ public final class RetryRuleBuilder extends AbstractRuleBuilder {
                 return requiresResponseTrailers;
             }
         };
-    }
-
-    // Override the return type of the chaining methods in the superclass.
-
-    /**
-     * Adds the specified {@code responseHeadersFilter} for a {@link RetryRule} which will retry
-     * if the {@code responseHeadersFilter} returns {@code true}.
-     */
-    @Override
-    public RetryRuleBuilder onResponseHeaders(
-            BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
-        return (RetryRuleBuilder) super.onResponseHeaders(responseHeadersFilter);
-    }
-
-    /**
-     * Adds the specified {@code responseTrailersFilter} for a {@link RetryRuleWithContent} which will retry
-     * if the {@code responseTrailersFilter} returns {@code true}. Note that using this method makes the entire
-     * response buffered, which may lead to excessive memory usage.
-     */
-    @Override
-    public RetryRuleBuilder onResponseTrailers(
-            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
-        return (RetryRuleBuilder) super.onResponseTrailers(responseTrailersFilter);
-    }
-
-    /**
-     * Adds the specified {@code grpcTrailersFilter} for a {@link RetryRuleWithContent} which will retry
-     * if the {@code grpcTrailersFilter} returns {@code true}. Note that using this method makes the entire
-     * response buffered, which may lead to excessive memory usage.
-     */
-    @Override
-    public RetryRuleBuilder onGrpcTrailers(
-            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
-        return (RetryRuleBuilder) super.onGrpcTrailers(grpcTrailersFilter);
-    }
-
-    /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
-     * if a class of the response status is one of the specified {@link HttpStatusClass}es.
-     */
-    @Override
-    public RetryRuleBuilder onStatusClass(HttpStatusClass... statusClasses) {
-        return (RetryRuleBuilder) super.onStatusClass(statusClasses);
-    }
-
-    /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link RetryRule} which will retry
-     * if a class of the response status is one of the specified {@link HttpStatusClass}es.
-     */
-    @Override
-    public RetryRuleBuilder onStatusClass(Iterable<HttpStatusClass> statusClasses) {
-        return (RetryRuleBuilder) super.onStatusClass(statusClasses);
-    }
-
-    /**
-     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link RetryRule} which will retry
-     * if a class of the response status is {@link HttpStatusClass#SERVER_ERROR}.
-     */
-    @Override
-    public RetryRuleBuilder onServerErrorStatus() {
-        return (RetryRuleBuilder) super.onServerErrorStatus();
-    }
-
-    /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
-     * if a response status is one of the specified {@link HttpStatus}es.
-     */
-    @Override
-    public RetryRuleBuilder onStatus(HttpStatus... statuses) {
-        return (RetryRuleBuilder) super.onStatus(statuses);
-    }
-
-    /**
-     * Adds the specified {@link HttpStatus}es for a {@link RetryRule} which will retry
-     * if a response status is one of the specified {@link HttpStatus}es.
-     */
-    @Override
-    public RetryRuleBuilder onStatus(Iterable<HttpStatus> statuses) {
-        return (RetryRuleBuilder) super.onStatus(statuses);
-    }
-
-    /**
-     * Adds the specified {@code statusFilter} for a {@link RetryRule} which will retry
-     * if a response status matches the specified {@code statusFilter}.
-     */
-    @Override
-    public RetryRuleBuilder onStatus(
-            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
-        return (RetryRuleBuilder) super.onStatus(statusFilter);
-    }
-
-    /**
-     * Adds the specified exception type for a {@link RetryRule} which will retry
-     * if an {@link Exception} is raised and it is an instance of the specified {@code exception}.
-     */
-    @Override
-    public RetryRuleBuilder onException(Class<? extends Throwable> exception) {
-        return (RetryRuleBuilder) super.onException(exception);
-    }
-
-    /**
-     * Adds the specified {@code exceptionFilter} for a {@link RetryRule} which will retry
-     * if an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true}.
-     */
-    @Override
-    public RetryRuleBuilder onException(
-            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
-        return (RetryRuleBuilder) super.onException(exceptionFilter);
-    }
-
-    /**
-     * Makes a {@link RetryRule} retry on any {@link Exception}.
-     */
-    @Override
-    public RetryRuleBuilder onException() {
-        return (RetryRuleBuilder) super.onException();
-    }
-
-    /**
-     * Makes a {@link RetryRule} retry on a {@link TimeoutException}.
-     */
-    @Override
-    public RetryRuleBuilder onTimeoutException() {
-        return (RetryRuleBuilder) super.onTimeoutException();
-    }
-
-    /**
-     * Makes a {@link RetryRule} retry on an {@link UnprocessedRequestException} which means that the request
-     * has not been processed by the server. Therefore, you can safely retry the request without worrying about
-     * the idempotency of the request.
-     */
-    @Override
-    public RetryRuleBuilder onUnprocessed() {
-        return (RetryRuleBuilder) super.onUnprocessed();
-    }
-
-    /**
-     * Adds the specified {@code totalDurationFilter} for a {@link RetryRule} which will retry
-     * if the {@code totalDurationFilter} returns {@code true}.
-     */
-    @Override
-    public RetryRuleBuilder onTotalDuration(
-            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
-        return (RetryRuleBuilder) super.onTotalDuration(totalDurationFilter);
     }
 }

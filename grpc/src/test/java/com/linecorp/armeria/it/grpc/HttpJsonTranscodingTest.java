@@ -76,7 +76,6 @@ import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import testing.grpc.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
-import testing.grpc.Transcoding.ConflictMessage;
 import testing.grpc.Transcoding.EchoAnyRequest;
 import testing.grpc.Transcoding.EchoAnyResponse;
 import testing.grpc.Transcoding.EchoFieldMaskRequest;
@@ -334,13 +333,6 @@ public class HttpJsonTranscodingTest {
                     .onNext(EchoNestedMessageResponse.newBuilder().setNested(request.getNested()).build());
             responseObserver.onCompleted();
         }
-
-        @Override
-        public void paramNameConflict(ConflictMessage request,
-                                      StreamObserver<ConflictMessage> responseObserver) {
-            responseObserver.onNext(request);
-            responseObserver.onCompleted();
-        }
     }
 
     @RegisterExtension
@@ -554,7 +546,7 @@ public class HttpJsonTranscodingTest {
         final String duration = "1.000340012s";
 
         final AggregatedHttpResponse response =
-                webClient.get("/v1/echo/" + timestamp + '/' + duration).aggregate().join();
+                webClient.get("/v1/echo/timestamp/" + timestamp + '/' + duration).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
@@ -566,7 +558,7 @@ public class HttpJsonTranscodingTest {
         final String timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_INSTANT);
 
         final AggregatedHttpResponse response =
-                webClient.post("/v1/echo/" + timestamp + ":get", "").aggregate().join();
+                webClient.post("/v1/echo/timestamp/" + timestamp + ":get", "").aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
@@ -955,8 +947,8 @@ public class HttpJsonTranscodingTest {
 
         final JsonNode getMessageV1 = findMethod(methods, "GetMessageV1");
         assertThat(getMessageV1.get("httpMethod").asText()).isEqualTo("GET");
-        assertThat(pathMapping(getMessageV1)).containsExactlyInAnyOrder("/v1/messages/:@p0",
-                                                                        "/foo/v1/messages/:@p0");
+        assertThat(pathMapping(getMessageV1)).containsExactlyInAnyOrder("/v1/messages/:p0",
+                                                                        "/foo/v1/messages/:p0");
 
         final JsonNode getMessageV2 = findMethod(methods, "GetMessageV2");
         assertThat(getMessageV2.get("httpMethod").asText()).isEqualTo("GET");
@@ -1085,14 +1077,6 @@ public class HttpJsonTranscodingTest {
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(nested).isNotNull().matches(v -> ((TreeNode) v).isObject());
         assertThat(nested.get("name").asText()).isEqualTo("Armeria");
-    }
-
-    @Test
-    void conflictingParamNamesReturnsCorrectly() {
-        final AggregatedHttpResponse res = server.blockingWebClient().get("/v1/conflict/hello/1/a/test");
-        assertThat(res.status().code()).isEqualTo(200);
-        assertThatJson(res.contentUtf8()).node("id").isEqualTo("hello/1");
-        assertThatJson(res.contentUtf8()).node("p0").isEqualTo("a");
     }
 
     public static JsonNode findMethod(JsonNode methods, String name) {

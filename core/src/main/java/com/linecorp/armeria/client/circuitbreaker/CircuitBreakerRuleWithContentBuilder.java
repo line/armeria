@@ -18,20 +18,14 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.NEXT_DECISION;
 
-import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
 import com.linecorp.armeria.client.AbstractRuleWithContentBuilder;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.UnprocessedRequestException;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
 
 /**
@@ -39,7 +33,7 @@ import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
  * @param <T> the response type
  */
 public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
-        extends AbstractRuleWithContentBuilder<T> {
+        extends AbstractRuleWithContentBuilder<CircuitBreakerRuleWithContentBuilder<T>, T> {
 
     CircuitBreakerRuleWithContentBuilder(
             BiPredicate<? super ClientRequestContext, ? super RequestHeaders> requestHeadersFilter) {
@@ -98,199 +92,5 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
                                  });
         };
         return CircuitBreakerRuleUtil.orElse(first, second);
-    }
-
-    // Override the return type and Javadoc of chaining methods in superclass.
-
-    /**
-     * Adds the specified {@code responseFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code responseFilter} completes with {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onResponse(
-            BiFunction<? super ClientRequestContext, ? super T,
-                    ? extends CompletionStage<Boolean>> responseFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponse(responseFilter);
-    }
-
-    /**
-     * Adds the specified {@code responseHeadersFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code responseHeadersFilter} returns {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onResponseHeaders(
-            BiPredicate<? super ClientRequestContext, ? super ResponseHeaders> responseHeadersFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseHeaders(responseHeadersFilter);
-    }
-
-    /**
-     * Adds the specified {@code responseTrailersFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code responseTrailersFilter} returns {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onResponseTrailers(
-            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
-    }
-
-    /**
-     * Adds the specified {@code grpcTrailersFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code grpcTrailersFilter} returns {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @Override
-    @SuppressWarnings("unchecked")
-    public CircuitBreakerRuleWithContentBuilder<T> onGrpcTrailers(
-            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onGrpcTrailers(grpcTrailersFilter);
-    }
-
-    /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link CircuitBreakerRuleWithContent}.
-     * If the class of the response status is one of the specified {@link HttpStatusClass}es,
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onStatusClass(HttpStatusClass... statusClasses) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onStatusClass(statusClasses);
-    }
-
-    /**
-     * Adds the specified {@link HttpStatusClass}es for a {@link CircuitBreakerRuleWithContent}.
-     * If the class of the response status is one of the specified {@link HttpStatusClass}es,
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onStatusClass(Iterable<HttpStatusClass> statusClasses) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onStatusClass(statusClasses);
-    }
-
-    /**
-     * Adds the {@link HttpStatusClass#SERVER_ERROR} for a {@link CircuitBreakerRuleWithContent}.
-     * If the class of the response status is {@link HttpStatusClass#SERVER_ERROR},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onServerErrorStatus() {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onServerErrorStatus();
-    }
-
-    /**
-     * Adds the specified {@link HttpStatus}es for a {@link CircuitBreakerRuleWithContent}.
-     * If the response status is one of the specified {@link HttpStatus}es,
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onStatus(HttpStatus... statuses) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onStatus(statuses);
-    }
-
-    /**
-     * Adds the specified {@link HttpStatus}es for a {@link CircuitBreakerRuleWithContent}.
-     * If the response status is one of the specified {@link HttpStatus}es,
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onStatus(Iterable<HttpStatus> statuses) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onStatus(statuses);
-    }
-
-    /**
-     * Adds the specified {@code statusFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the response status matches the specified {@code statusFilter},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onStatus(
-            BiPredicate<? super ClientRequestContext, ? super HttpStatus> statusFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onStatus(statusFilter);
-    }
-
-    /**
-     * Adds the specified exception type for a {@link CircuitBreakerRuleWithContent}.
-     * If an {@link Exception} is raised and it is an instance of the specified {@code exception},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onException(Class<? extends Throwable> exception) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onException(exception);
-    }
-
-    /**
-     * Adds the specified {@code exceptionFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If an {@link Exception} is raised and the specified {@code exceptionFilter} returns {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onException(
-            BiPredicate<? super ClientRequestContext, ? super Throwable> exceptionFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onException(exceptionFilter);
-    }
-
-    /**
-     * Reports a {@link Response} as a success or failure to a {@link CircuitBreaker},
-     * or ignores it according to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and
-     * {@link #thenIgnore()}), if an {@link Exception} is raised.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onException() {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onException();
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onTimeoutException() {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onTimeoutException();
-    }
-
-    /**
-     * Reports a {@link Response} as a success or failure to a {@link CircuitBreaker},
-     * or ignores it according to the build methods({@link #thenSuccess()}, {@link #thenFailure()} and
-     * {@link #thenIgnore()}), if an {@link UnprocessedRequestException}, which means that the request has not
-     * been processed by the server, is raised.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onUnprocessed() {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onUnprocessed();
-    }
-
-    /**
-     * Adds the specified {@code totalDurationFilter} for a {@link CircuitBreakerRuleWithContent}.
-     * If the specified {@code totalDurationFilter} returns {@code true},
-     * depending on the build methods({@link #thenSuccess()}, {@link #thenFailure()} and {@link #thenIgnore()}),
-     * a {@link Response} is reported as a success or failure to a {@link CircuitBreaker} or ignored.
-     */
-    @SuppressWarnings("unchecked")
-    @Override
-    public CircuitBreakerRuleWithContentBuilder<T> onTotalDuration(
-            BiPredicate<? super ClientRequestContext, ? super Duration> totalDurationFilter) {
-        return (CircuitBreakerRuleWithContentBuilder<T>) super.onTotalDuration(totalDurationFilter);
     }
 }
