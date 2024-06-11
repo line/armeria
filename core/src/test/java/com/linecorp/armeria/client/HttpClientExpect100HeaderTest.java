@@ -81,6 +81,8 @@ final class HttpClientExpect100HeaderTest {
                           .aggregate();
 
             assertThatThrownBy(future::join)
+                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                    .cause()
                     .hasCauseInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Expect: 100-continue header");
         }
