@@ -28,12 +28,6 @@ import com.linecorp.armeria.common.CoreBlockHoundIntegration;
 public class ReentrantShortLock extends ReentrantLock {
     private static final long serialVersionUID = 8999619612996643502L;
 
-    public ReentrantShortLock() {}
-
-    public ReentrantShortLock(boolean fair) {
-        super(fair);
-    }
-
     @Override
     public void lock() {
         super.lock();

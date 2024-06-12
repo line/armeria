@@ -33,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -49,7 +50,6 @@ import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsRam
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.Ticker;
-import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.util.concurrent.EventExecutor;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -134,7 +134,6 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         @VisibleForTesting
         final Map<Long, EndpointsRampingUpEntry> rampingUpWindowsMap = new HashMap<>();
         private Object2LongOpenHashMap<Endpoint> endpointCreatedTimestamps = new Object2LongOpenHashMap<>();
-        private final ReentrantShortLock lock = new ReentrantShortLock(true);
 
         RampingUpEndpointWeightSelector(EndpointGroup endpointGroup, EventExecutor executor) {
             super(endpointGroup);
@@ -146,14 +145,14 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         @Override
-        protected void updateNewEndpoints(List<Endpoint> endpoints) {
-            // Use locks so the order of endpoints change is guaranteed.
-            lock.lock();
-            try {
+        protected CompletableFuture<Void> updateNewEndpoints(List<Endpoint> endpoints) {
+            // Use the executor so the order of endpoints change is guaranteed.
+            final CompletableFuture<Void> cf = new CompletableFuture<>();
+            executor.execute(() -> {
                 updateEndpoints(endpoints);
-            } finally {
-                lock.unlock();
-            }
+                cf.complete(null);
+            });
+            return cf;
         }
 
         private long computeCreateTimestamp(Endpoint endpoint) {
@@ -176,7 +175,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             return endpointSelector;
         }
 
-        // Only executed inside a lock
+        // Only executed by the executor.
         private void updateEndpoints(List<Endpoint> newEndpoints) {
 
             // clean up existing entries
