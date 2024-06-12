@@ -40,6 +40,8 @@ import org.apache.hc.core5.http2.hpack.HPackEncoder;
 import org.apache.hc.core5.util.ByteArrayBuffer;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -50,6 +52,7 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -429,8 +432,9 @@ final class HttpClientExpect100HeaderTest {
         }
     }
 
-    @Test
-    void ignoreHeaderWhenStreamingRequest() throws Exception {
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void streamingRequest(boolean send100Continue) throws Exception {
         try (ServerSocket ss = new ServerSocket(0)) {
             final int port = ss.getLocalPort();
             final WebClient client = WebClient.of("h1c://127.0.0.1:" + port);
@@ -459,17 +463,24 @@ final class HttpClientExpect100HeaderTest {
                 assertThat(in.readLine()).startsWith("user-agent: armeria/");
                 assertThat(in.readLine()).isEqualTo("transfer-encoding: chunked");
                 assertThat(in.readLine()).isEmpty();
-                // Read the content directly even if Expect: 100-continue header is set.
-                assertThat(in.readLine()).isEqualTo("3");
-                assertThat(in.readLine()).isEqualTo("foo");
 
+                if (send100Continue) {
+                    out.write("HTTP/1.1 100 Continue\r\n\r\n".getBytes(StandardCharsets.US_ASCII));
+
+                    assertThat(in.readLine()).isEqualTo("3");
+                    assertThat(in.readLine()).isEqualTo("foo");
+                }
                 out.write(("HTTP/1.1 201 Created\r\n" +
                            "Connection: close\r\n" +
                            "Content-Length: 0\r\n" +
                            "\r\n").getBytes(StandardCharsets.US_ASCII));
-
                 final AggregatedHttpResponse res = future.join();
                 assertThat(res.status()).isEqualTo(HttpStatus.CREATED);
+                if (!send100Continue) {
+                    // request body wasn't sent so cancelled.
+                    assertThatThrownBy(() -> req.whenComplete().join()).hasCauseInstanceOf(
+                            CancelledSubscriptionException.class);
+                }
             }
         }
     }

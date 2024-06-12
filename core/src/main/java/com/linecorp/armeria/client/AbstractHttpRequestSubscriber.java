@@ -57,6 +57,7 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     @Nullable
     private Subscription subscription;
     private boolean isSubscriptionCompleted;
+    private boolean needs100Continue;
 
     AbstractHttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder,
                                   HttpResponseDecoder responseDecoder,
@@ -85,8 +86,8 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         //     class can be called before the member fields (subscription, id, responseWrapper and
         //     timeoutFuture) are initialized.
         final RequestHeaders headers = mergedRequestHeaders(mapHeaders(request.headers()));
-        // TODO(minwoox): handle in the follow-up PR for 100 continue.
-        writeHeaders(headers, false);
+        needs100Continue = needs100Continue(headers);
+        writeHeaders(headers, needs100Continue);
         channel().flush();
     }
 
@@ -112,6 +113,13 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
 
     @Override
     void onWriteSuccess() {
+        if (needs100Continue) {
+            return;
+        }
+        request();
+    }
+
+    private void request() {
         // Request more messages regardless whether the state is DONE. It makes the producer have
         // a chance to produce the last call such as 'onComplete' and 'onError' when there are
         // no more messages it can produce.
@@ -130,11 +138,12 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
 
     @Override
     final void resume() {
-        // TODO(minwoox): handle in the follow-up PR.
+        needs100Continue = false;
+        request();
     }
 
     @Override
     void discardRequestBody() {
-        // TODO(minwoox): handle in the follow-up PR.
+        cancel();
     }
 }
