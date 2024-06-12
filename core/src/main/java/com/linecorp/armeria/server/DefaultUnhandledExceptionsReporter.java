@@ -51,7 +51,7 @@ final class DefaultUnhandledExceptionsReporter implements UnhandledExceptionsRep
 
     @Nullable
     private ScheduledFuture<?> reportingTaskFuture;
-    private ExceptionStats exceptionStats = new ExceptionStats(new ConcurrentHashMap<>(),
+    private final ExceptionStats exceptionStats = new ExceptionStats(new ConcurrentHashMap<>(),
                                                                new ReentrantShortLock());
 
     DefaultUnhandledExceptionsReporter(MeterRegistry meterRegistry, long intervalMillis) {

@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.RequestContext;
-
 import io.micrometer.core.instrument.MeterRegistry;
 
 interface UnhandledExceptionsReporter extends ServerListener {
