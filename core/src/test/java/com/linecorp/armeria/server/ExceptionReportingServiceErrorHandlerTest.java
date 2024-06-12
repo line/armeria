@@ -50,28 +50,28 @@ class ExceptionReportingServiceErrorHandlerTest {
     void onServiceExceptionShouldNotReportWhenShouldReportUnhandledExceptionsIsFalse() {
         when(ctx.shouldReportUnhandledExceptions()).thenReturn(false);
         serviceErrorHandler.onServiceException(ctx, new IllegalArgumentException("Test"));
-        verify(reporter, times(0)).report(any());
+        verify(reporter, times(0)).report(any(), any());
     }
 
     @Test
     void onServiceExceptionShouldNotReportWhenCauseIsExpected() {
         when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
         serviceErrorHandler.onServiceException(ctx, new ClosedChannelException());
-        verify(reporter, times(0)).report(any());
+        verify(reporter, times(0)).report(any(), any());
     }
 
     @Test
     void onServiceExceptionShouldReportWhenCauseIsNotExpected() {
         when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
         serviceErrorHandler.onServiceException(ctx, new IllegalArgumentException("Test"));
-        verify(reporter, times(1)).report(any());
+        verify(reporter, times(1)).report(any(), any());
     }
 
     @Test
     void onServiceExceptionShouldNotReportWhenCauseIsHttpStatusExceptionAndCauseNull() {
         when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
         serviceErrorHandler.onServiceException(ctx, HttpStatusException.of(500));
-        verify(reporter, times(0)).report(any());
+        verify(reporter, times(0)).report(any(), any());
     }
 
     @Test
@@ -79,6 +79,6 @@ class ExceptionReportingServiceErrorHandlerTest {
         when(ctx.shouldReportUnhandledExceptions()).thenReturn(true);
         serviceErrorHandler.onServiceException(
                 ctx, HttpStatusException.of(500, new IllegalArgumentException("test")));
-        verify(reporter, times(1)).report(any());
+        verify(reporter, times(1)).report(any(), any());
     }
 }

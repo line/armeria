@@ -8,8 +8,13 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 final class ExceptionStats {
-    private Map<String, ExceptionContext> exceptions = new HashMap<>();
-    private final ReentrantShortLock lock = new ReentrantShortLock();
+    private Map<String, ExceptionContext> exceptions;
+    private final ReentrantShortLock lock;
+
+    public ExceptionStats(Map<String, ExceptionContext> exceptions, ReentrantShortLock lock) {
+        this.exceptions = exceptions;
+        this.lock = lock;
+    }
 
     void record(ServiceRequestContext ctx, Throwable cause) {
         lock.lock();
@@ -39,7 +44,7 @@ final class ExceptionStats {
         }
     }
 
-    private static class ExceptionContext {
+    static class ExceptionContext {
         private final Throwable exception;
         private final ServiceRequestContext ctx;
         private long counter = 1;
@@ -51,6 +56,14 @@ final class ExceptionStats {
 
         public void incrementCounter() {
             counter++;
+        }
+
+        public Throwable getException() {
+            return exception;
+        }
+
+        public long getCounter() {
+            return counter;
         }
     }
 }
