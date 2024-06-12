@@ -33,6 +33,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -144,9 +145,9 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         }
 
         @Override
-        protected void updateNewEndpoints(List<Endpoint> endpoints) {
+        protected CompletableFuture<Void> updateNewEndpoints(List<Endpoint> endpoints) {
             // Use the executor so the order of endpoints change is guaranteed.
-            executor.execute(() -> updateEndpoints(endpoints));
+            return CompletableFuture.runAsync(() -> updateEndpoints(endpoints), executor);
         }
 
         private long computeCreateTimestamp(Endpoint endpoint) {
