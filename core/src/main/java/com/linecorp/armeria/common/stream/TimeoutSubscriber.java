@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -32,25 +33,25 @@ public class TimeoutSubscriber<T> implements Subscriber<T> {
     private final Subscriber<? super T> delegate;
     private final EventExecutor executor;
 
-    private final StreamTimeoutMode streamTimeoutMode;
+    private final StreamTimeoutMode timeoutMode;
     private ScheduledFuture<?> timeoutFuture;
 
     private Subscription subscription;
-    private final long timeoutMillis;
+    private final Duration timeoutDuration;
 
-    public TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, long timeoutMillis, StreamTimeoutMode streamTimeoutMode) {
+    public TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.executor = requireNonNull(executor, "executor");
-        this.timeoutMillis = timeoutMillis;
-        this.streamTimeoutMode = requireNonNull(streamTimeoutMode, "streamTimeoutMode");
+        this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
+        this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
     }
 
     private ScheduledFuture<?> scheduleTimeout() {
         return executor.schedule(() -> {
             subscription.cancel();
             delegate.onError(new TimeoutException(
-                    String.format("Stream timed out after %d ms (timeout mode: %s)", timeoutMillis, streamTimeoutMode)));
-        }, timeoutMillis, TimeUnit.MILLISECONDS);
+                    String.format("Stream timed out after %d ms (timeout mode: %s)", timeoutDuration.toMillis(), timeoutMode)));
+        }, timeoutDuration.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -66,7 +67,7 @@ public class TimeoutSubscriber<T> implements Subscriber<T> {
         if (timeoutFuture == null) {
             return;
         }
-        switch (streamTimeoutMode) {
+        switch (timeoutMode) {
             case UNTIL_NEXT:
                 timeoutFuture.cancel(false);
                 timeoutFuture = scheduleTimeout();

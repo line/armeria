@@ -1205,11 +1205,14 @@ public interface StreamMessage<T> extends Publisher<T> {
         return new SubscribeOnStreamMessage<>(this, eventExecutor);
     }
 
-    default StreamMessage<T> timeout(Duration timeout) {
-        return timeout(timeout, StreamTimeoutMode.UNTIL_NEXT);
+    default StreamMessage<T> timeout(Duration timeoutDuration) {
+        requireNonNull(timeoutDuration, "timeoutDuration");
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
     }
 
-    default StreamMessage<T> timeout(Duration timeout, StreamTimeoutMode streamTimeoutMode) {
-        return new TimeoutStreamMessage<>(this, timeout, streamTimeoutMode);
+    default StreamMessage<T> timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        requireNonNull(timeoutDuration, "timeoutDuration");
+        requireNonNull(timeoutMode, "timeoutMode");
+        return new TimeoutStreamMessage<>(this, timeoutDuration, timeoutMode);
     }
 }

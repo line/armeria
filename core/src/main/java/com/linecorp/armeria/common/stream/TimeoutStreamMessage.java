@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
@@ -26,13 +28,13 @@ import io.netty.util.concurrent.EventExecutor;
 public class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
     private final StreamMessage<? extends T> delegate;
-    private final long timeoutMillis;
-    private final StreamTimeoutMode streamTimeoutMode;
+    private final Duration timeoutDuration;
+    private final StreamTimeoutMode timeoutMode;
 
-    public TimeoutStreamMessage(StreamMessage<? extends T> delegate, Duration timeout, StreamTimeoutMode streamTimeoutMode) {
-        this.delegate = delegate;
-        this.timeoutMillis = timeout.toMillis();
-        this.streamTimeoutMode = streamTimeoutMode;
+    public TimeoutStreamMessage(StreamMessage<? extends T> delegate, Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        this.delegate = requireNonNull(delegate, "delegate");
+        this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
+        this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
     }
 
     @Override
@@ -58,7 +60,7 @@ public class TimeoutStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        delegate.subscribe(new TimeoutSubscriber<T>(subscriber, executor, timeoutMillis, streamTimeoutMode), executor, options);
+        delegate.subscribe(new TimeoutSubscriber<T>(subscriber, executor, timeoutDuration, timeoutMode), executor, options);
     }
 
     @Override
