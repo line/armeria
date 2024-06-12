@@ -443,6 +443,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Integer defaultMaxClientHelloLength() {
+        return getInt("defaultMaxClientHelloLength");
+    }
+
+    @Override
     public Set<TransientServiceOption> transientServiceOptions() {
         final String val = getNormalized("transientServiceOptions");
         if (val == null) {
