@@ -123,7 +123,7 @@ class AbstractEndpointSelectorTest {
         endpointGroup.setEndpoints(ImmutableList.of(endpoint));
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final Endpoint selected = endpointGroup.select(ctx, ctx.eventLoop()).join();
-        assertThat(selected).isSameAs(endpoint);
+        assertThat(selected).isEqualTo(endpoint);
     }
 
     private static AbstractEndpointSelector newSelector(EndpointGroup endpointGroup) {
