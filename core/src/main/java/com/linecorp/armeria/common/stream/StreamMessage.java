@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -1202,5 +1203,13 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> subscribeOn(EventExecutor eventExecutor) {
         requireNonNull(eventExecutor, "eventExecutor");
         return new SubscribeOnStreamMessage<>(this, eventExecutor);
+    }
+
+    default StreamMessage<T> timeout(Duration timeout) {
+        return timeout(timeout, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    default StreamMessage<T> timeout(Duration timeout, StreamTimeoutMode streamTimeoutMode) {
+        return new TimeoutStreamMessage<>(this, timeout, streamTimeoutMode);
     }
 }
