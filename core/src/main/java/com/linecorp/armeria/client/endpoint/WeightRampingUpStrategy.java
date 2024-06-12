@@ -147,12 +147,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
         @Override
         protected CompletableFuture<Void> updateNewEndpoints(List<Endpoint> endpoints) {
             // Use the executor so the order of endpoints change is guaranteed.
-            final CompletableFuture<Void> cf = new CompletableFuture<>();
-            executor.execute(() -> {
-                updateEndpoints(endpoints);
-                cf.complete(null);
-            });
-            return cf;
+            return CompletableFuture.runAsync(() -> updateEndpoints(endpoints), executor);
         }
 
         private long computeCreateTimestamp(Endpoint endpoint) {
