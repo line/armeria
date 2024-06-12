@@ -54,16 +54,16 @@ final class ExceptionStats {
             this.ctx = ctx;
         }
 
-        public void incrementCounter() {
-            counter++;
-        }
-
         public Throwable getException() {
             return exception;
         }
 
         public long getCounter() {
             return counter;
+        }
+
+        public void incrementCounter() {
+            counter++;
         }
     }
 }
