@@ -19,9 +19,6 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 
 import javax.annotation.Nonnull;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
@@ -49,8 +46,6 @@ import com.linecorp.armeria.server.annotation.AnnotatedService;
 enum DefaultServerErrorHandler implements ServerErrorHandler {
 
     INSTANCE;
-
-    private static final Logger logger = LoggerFactory.getLogger(DefaultServerErrorHandler.class);
 
     /**
      * Converts the specified {@link Throwable} to an {@link HttpResponse}.

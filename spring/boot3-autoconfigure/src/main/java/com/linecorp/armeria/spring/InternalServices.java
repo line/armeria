@@ -23,10 +23,12 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.PortUtil;
@@ -58,6 +60,18 @@ public final class InternalServices {
             }
         }
         return true;
+    }
+
+    static {
+        // InternalServices is the only class that both boot-starter and boot-webflux-starter always depend on.
+
+        // Disable the default shutdown hook to gracefully close the client factory after the server is
+        // shut down.
+        ClientFactory.disableShutdownHook();
+        // The shutdown hooks are invoked after all other contexts are closed.
+        // The server is closed by ConfigurableApplicationContext.closeAndWait().
+        // https://github.com/spring-projects/spring-boot/blame/781d7b0394c71e20f098f64a3261a18346ccd915/spring-boot-project/spring-boot/src/main/java/org/springframework/boot/SpringApplicationShutdownHook.java#L114-L116
+        SpringApplication.getShutdownHandlers().add(ClientFactory::closeDefault);
     }
 
     /**
