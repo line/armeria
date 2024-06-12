@@ -819,16 +819,16 @@ public interface HttpRequest extends Request, HttpMessage {
         return of(headers(), HttpMessage.super.subscribeOn(eventExecutor));
     }
 
-//    @Override
-//    default HttpRequest timeout(Duration timeoutDuration) {
-//        requireNonNull(timeoutDuration, "timeoutDuration");
-//        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
-//    }
-//
-//    @Override
-//    default HttpRequest timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
-//        requireNonNull(timeoutDuration, "timeoutDuration");
-//        requireNonNull(timeoutMode, "timeoutMode");
-//        return of(headers(), HttpMessage.super.timeout(timeoutDuration, timeoutMode));
-//    }
+    @Override
+    default HttpRequest timeout(Duration timeoutDuration) {
+        requireNonNull(timeoutDuration, "timeoutDuration");
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    @Override
+    default HttpRequest timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        requireNonNull(timeoutDuration, "timeoutDuration");
+        requireNonNull(timeoutMode, "timeoutMode");
+        return of(headers(), HttpMessage.super.timeout(timeoutDuration, timeoutMode));
+    }
 }
