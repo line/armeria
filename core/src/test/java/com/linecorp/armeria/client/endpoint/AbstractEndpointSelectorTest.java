@@ -118,7 +118,8 @@ class AbstractEndpointSelectorTest {
 
     @Test
     void testRampingUpInitialSelection() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup(EndpointSelectionStrategy.rampingUp());
+        final DynamicEndpointGroup endpointGroup =
+                new DynamicEndpointGroup(EndpointSelectionStrategy.rampingUp());
         final Endpoint endpoint = Endpoint.of("foo.com");
         endpointGroup.setEndpoints(ImmutableList.of(endpoint));
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
