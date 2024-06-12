@@ -194,6 +194,7 @@ date: 2024-06-12
     use the `io.micrometer:micrometer-registry-prometheus-simpleclient:1.13.0` module.
   - If you want to use Prometheus Java client 1.x, add `com.linecorp.armeria:armeria-prometheus1` module.
   - More details can be found in the [Micrometer migration guide](https://github.com/micrometer-metrics/micrometer/wiki/1.13-Migration-Guide).
+- <type://AbstractEndpointSelector#updateNewEndpoints(List)> now returns a `CompletableFuture`. #5752
 - The following builder classes now have the `SELF` type parameter. #5733
   - <type://AbstractDnsResolverBuilder>
   - <type://AbstractRuleBuilder>
