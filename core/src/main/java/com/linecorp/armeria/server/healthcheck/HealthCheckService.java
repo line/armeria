@@ -154,10 +154,10 @@ public final class HealthCheckService implements TransientHttpService {
 
     @Nullable
     private Server server;
-    private boolean serverStopping;
 
-    HealthCheckService(Set<HealthChecker> healthCheckers, AggregatedHttpResponse healthyResponse,
-                       AggregatedHttpResponse degradedResponse, AggregatedHttpResponse unhealthyResponse,
+    HealthCheckService(Set<HealthChecker> healthCheckers,
+                       AggregatedHttpResponse healthyResponse, AggregatedHttpResponse degradedResponse,
+                       AggregatedHttpResponse stoppingResponse, AggregatedHttpResponse unhealthyResponse,
                        AggregatedHttpResponse underMaintenanceResponse, long maxLongPollingTimeoutMillis,
                        double longPollingTimeoutJitterRate, long pingIntervalMillis,
                        @Nullable HealthCheckUpdateHandler updateHandler,
@@ -202,7 +202,7 @@ public final class HealthCheckService implements TransientHttpService {
         this.degradedResponse = setCommonHeaders(degradedResponse);
         this.unhealthyResponse = setCommonHeaders(unhealthyResponse);
         this.underMaintenanceResponse = setCommonHeaders(underMaintenanceResponse);
-        stoppingResponse = clearCommonHeaders(unhealthyResponse);
+        this.stoppingResponse = clearCommonHeaders(stoppingResponse);
         notModifiedHeaders = ResponseHeaders.builder()
                                             .add(this.unhealthyResponse.headers())
                                             .endOfStream(true)
@@ -281,7 +281,6 @@ public final class HealthCheckService implements TransientHttpService {
         server.addListener(new ServerListenerAdapter() {
             @Override
             public void serverStarting(Server server) throws Exception {
-                serverStopping = false;
                 if (healthCheckerListener != null) {
                     healthCheckers.stream().map(ListenableHealthChecker.class::cast).forEach(c -> {
                         c.addListener(healthCheckerListener);
@@ -302,8 +301,7 @@ public final class HealthCheckService implements TransientHttpService {
 
             @Override
             public void serverStopping(Server server) {
-                serverStopping = true;
-                serverHealth.setHealthStatus(HealthStatus.UNDER_MAINTENANCE);
+                serverHealth.setHealthStatus(HealthStatus.STOPPING);
             }
 
             @Override
@@ -442,8 +440,14 @@ public final class HealthCheckService implements TransientHttpService {
                     case DEGRADED:
                         serverHealth.setHealthStatus(HealthStatus.DEGRADED);
                         break;
+                    case STOPPING:
+                        serverHealth.setHealthStatus(HealthStatus.STOPPING);
+                        break;
                     case UNHEALTHY:
                         serverHealth.setHealthStatus(HealthStatus.UNHEALTHY);
+                        break;
+                    case UNDER_MAINTENANCE:
+                        serverHealth.setHealthStatus(HealthStatus.UNDER_MAINTENANCE);
                         break;
                 }
             }
@@ -525,20 +529,18 @@ public final class HealthCheckService implements TransientHttpService {
     }
 
     private AggregatedHttpResponse getResponse(HealthStatus healthStatus) {
-        if (healthStatus == HealthStatus.HEALTHY) {
-            return healthyResponse;
-        } else if (healthStatus == HealthStatus.DEGRADED) {
-            return degradedResponse;
+        switch (healthStatus) {
+            case HEALTHY:
+                return healthyResponse;
+            case DEGRADED:
+                return degradedResponse;
+            case STOPPING:
+                return stoppingResponse;
+            case UNDER_MAINTENANCE:
+                return underMaintenanceResponse;
+            default:
+                return unhealthyResponse;
         }
-
-        if (serverStopping) {
-            return stoppingResponse;
-        }
-
-        if (healthStatus == HealthStatus.UNDER_MAINTENANCE) {
-            return underMaintenanceResponse;
-        }
-        return unhealthyResponse;
     }
 
     private void onHealthCheckerUpdate(HealthChecker unused) {

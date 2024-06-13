@@ -22,10 +22,11 @@ import com.linecorp.armeria.server.Server;
  * The health status of a {@link Server}.
  */
 public enum HealthStatus {
-    HEALTHY(3, true),
-    DEGRADED(2, true),
-    UNHEALTHY(1, false),
-    UNDER_MAINTENANCE(0, false);
+    HEALTHY(500, true),
+    DEGRADED(400, true),
+    STOPPING(300, false),
+    UNHEALTHY(200, false),
+    UNDER_MAINTENANCE(100, false);
 
     private final int priority;
     private final boolean isAvailable;

@@ -30,9 +30,17 @@ public enum HealthCheckUpdateResult {
      */
     DEGRADED,
     /**
+     * Tells {@link HealthCheckService} to mark the {@link Server} as 'stopping'.
+     */
+    STOPPING,
+    /**
      * Tells {@link HealthCheckService} to mark the {@link Server} as 'unhealthy'.
      */
     UNHEALTHY,
+    /**
+     * Tells {@link HealthCheckService} to mark the {@link Server} as 'under maintenance'.
+     */
+    UNDER_MAINTENANCE,
     /**
      * Tells {@link HealthCheckService} to leave the {@link Server} healthiness unchanged.
      */
