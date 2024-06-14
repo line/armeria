@@ -20,7 +20,9 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -28,6 +30,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -153,8 +156,15 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                    if (t != null) {
                        responseFuture.completeExceptionally(t);
                    } else {
+                       // Add the content type to the response headers.
+                       final Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter =
+                               response -> {
+                                   final ResponseHeaders headers = response.headers().withMutations(
+                                           builder -> builder.contentType(contentType));
+                                   return AggregatedHttpResponse.of(headers, response.content());
+                               };
                        frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(),
-                                     responseFuture, null, mediaType -> contentType);
+                                     responseFuture, responseConverter);
                    }
                }
                return null;

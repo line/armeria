@@ -142,8 +142,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             RequestHeaders grpcHeaders,
             HttpData content,
             CompletableFuture<HttpResponse> res,
-            @Nullable Function<HttpData, HttpData> responseBodyConverter,
-            Function<HttpData, MediaType> responseContentTypeDecider) {
+            @Nullable Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
         final HttpRequest grpcRequest;
         ctx.setAttr(IS_UNFRAMED_GRPC, true);
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
@@ -177,7 +176,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                                         res.completeExceptionally(t);
                                     } else {
                                         deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
-                                                          responseBodyConverter, responseContentTypeDecider);
+                                                          responseConverter);
                                     }
                                 }
                                 return null;
@@ -189,8 +188,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                                   AggregatedHttpResponse grpcResponse,
                                   CompletableFuture<HttpResponse> res,
                                   UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                                  @Nullable Function<HttpData, HttpData> responseBodyConverter,
-                                  Function<HttpData, MediaType> responseMediaTypeDecider) {
+                                  @Nullable
+                                  Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -231,15 +230,14 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE);
         final Subscriber<DeframedMessage> subscriber = singleSubscriber(
-                unframedHeaders, res, responseBodyConverter, responseMediaTypeDecider);
+                unframedHeaders, res, responseConverter);
         grpcResponse.toHttpResponse().decode(deframer, ctx.alloc())
                     .subscribe(subscriber, ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
     static Subscriber<DeframedMessage> singleSubscriber(
             ResponseHeadersBuilder unframedHeaders, CompletableFuture<HttpResponse> res,
-            @Nullable Function<HttpData, HttpData> responseBodyConverter,
-            Function<HttpData, MediaType> responseMediaTypeDecider) {
+            @Nullable Function<AggregatedHttpResponse, AggregatedHttpResponse> responseConverter) {
         return new Subscriber<DeframedMessage>() {
 
             @Override
@@ -250,13 +248,20 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             @Override
             public void onNext(DeframedMessage message) {
                 // We know that we don't support compression, so this is always a ByteBuf.
-                HttpData unframedContent = HttpData.wrap(message.buf());
-                unframedHeaders.contentType(responseMediaTypeDecider.apply(unframedContent));
-                if (responseBodyConverter != null) {
-                    unframedContent = responseBodyConverter.apply(unframedContent);
-                }
+                final HttpData unframedContent = HttpData.wrap(message.buf());
+                unframedHeaders.contentType(MediaType.JSON_UTF_8);
                 unframedHeaders.contentLength(unframedContent.length());
-                res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
+
+                final AggregatedHttpResponse existingResponse = AggregatedHttpResponse.of(
+                        unframedHeaders.build(),
+                        unframedContent);
+
+                if (responseConverter != null) {
+                    final AggregatedHttpResponse convertedResponse = responseConverter.apply(existingResponse);
+                    res.complete(convertedResponse.toHttpResponse());
+                } else {
+                    res.complete(existingResponse.toHttpResponse());
+                }
             }
 
             @Override
