@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import com.google.common.util.concurrent.AtomicDouble;
 
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.EventCount;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;

@@ -66,6 +66,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -137,7 +138,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
      *
      * @param shutdownOnClose whether to shut down the worker {@link EventLoopGroup}
-     *                        when the {@link ClientFactory} is closed
+     * when the {@link ClientFactory} is closed
      */
     public ClientFactoryBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnClose) {
         option(ClientFactoryOptions.WORKER_GROUP, requireNonNull(workerGroup, "workerGroup"));
@@ -449,7 +450,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * more information. This option is disabled by default.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
-     *             communicate with an insecure peer than this.
+     * communicate with an insecure peer than this.
      */
     @Deprecated
     public ClientFactoryBuilder tlsAllowUnsafeCiphers() {
@@ -469,7 +470,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
-     *             communicate with an insecure peer than this.
+     * communicate with an insecure peer than this.
      */
     @Deprecated
     public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
@@ -679,7 +680,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@code 0} means the client will not send a PING.
      *
      * @throws IllegalArgumentException if the specified {@code pingIntervalMillis} is smaller than
-     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder pingIntervalMillis(long pingIntervalMillis) {
         checkArgument(pingIntervalMillis == 0 || pingIntervalMillis >= MIN_PING_INTERVAL_MILLIS,
@@ -703,7 +704,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@code 0} means the client will not send a PING.
      *
      * @throws IllegalArgumentException if the specified {@code pingInterval} is smaller than
-     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder pingInterval(Duration pingInterval) {
         pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
@@ -716,8 +717,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
+     *
      * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
-     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     * {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder maxConnectionAgeMillis(long maxConnectionAgeMillis) {
         checkArgument(maxConnectionAgeMillis >= MIN_MAX_CONNECTION_AGE_MILLIS || maxConnectionAgeMillis == 0,
@@ -733,8 +735,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
+     *
      * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
-     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     * {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
@@ -745,7 +748,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * This option is disabled by default, which means unlimited.
      *
      * @param maxNumRequestsPerConnection the maximum number of requests per connection.
-     *                                    {@code 0} disables the limit.
+     * {@code 0} disables the limit.
      */
     public ClientFactoryBuilder maxNumRequestsPerConnection(int maxNumRequestsPerConnection) {
         checkArgument(maxNumRequestsPerConnection >= 0, "maxNumRequestsPerConnection: %s (expected: >= 0)",
@@ -801,6 +804,18 @@ public final class ClientFactoryBuilder implements TlsSetters {
             ConnectionPoolListener connectionPoolListener) {
         option(ClientFactoryOptions.CONNECTION_POOL_LISTENER,
                requireNonNull(connectionPoolListener, "connectionPoolListener"));
+        return this;
+    }
+
+    /**
+     * Sets the {@link OutlierDetection} which is used to detect unhealthy connections.
+     * If an unhealthy connection is detected, it is disabled and a new connection will be created.
+     * This option is disabled by default.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder connectionOutlierDetection(OutlierDetection outlierDetection) {
+        option(ClientFactoryOptions.CONNECTION_OUTLIER_DETECTION,
+               requireNonNull(outlierDetection, "outlierDetection"));
         return this;
     }
 
