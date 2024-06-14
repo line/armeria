@@ -17,9 +17,8 @@ dependencies {
     testImplementation libs.awaitility
     testImplementation libs.junit5.jupiter.api
     testImplementation libs.protobuf.java.util
-    testImplementation libs.testcontainers.junit.jupiter
 }
 
 application {
-    mainClass.set('example.armeria.reverseproxy.Main')
+    mainClass.set('example.armeria.grpc.envoy.Main')
 }

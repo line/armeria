@@ -1,8 +1,8 @@
-package example.armeria.reverseproxy;
+package example.armeria.grpc.envoy;
 
-import example.armeria.reverseproxy.Hello.HelloReply;
-import example.armeria.reverseproxy.Hello.HelloRequest;
-import example.armeria.reverseproxy.HelloServiceGrpc.HelloServiceImplBase;
+import example.armeria.grpc.envoy.Hello.HelloReply;
+import example.armeria.grpc.envoy.Hello.HelloRequest;
+import example.armeria.grpc.envoy.HelloServiceGrpc.HelloServiceImplBase;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 

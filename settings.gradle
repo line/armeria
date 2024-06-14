@@ -252,6 +252,7 @@ includeWithFlags ':examples:graphql-kotlin-example',               'java17', 'ko
 project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
 includeWithFlags ':examples:graphql-sangria-example',              'java11', 'scala_2.13'
 project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')
+includeWithFlags ':examples:grpc-envoy',                           'java11'
 includeWithFlags ':examples:grpc-example',                         'java11'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                          'java11', 'kotlin-grpc', 'kotlin'
@@ -259,8 +260,6 @@ includeWithFlags ':examples:grpc-krotodc',                         'java11', 'kr
 includeWithFlags ':examples:grpc-scala',                           'java11', 'scala-grpc_2.13', 'scala_2.13'
 includeWithFlags ':examples:grpc-reactor',                         'java11', 'reactor-grpc'
 includeWithFlags ':examples:proxy-server',                         'java11'
-includeWithFlags ':examples:reverse-proxy-example',                'java11'
-project(':examples:reverse-proxy-example').projectDir = file('examples/reverse-proxy')
 includeWithFlags ':examples:resilience4j-spring',                  'java17'
 includeWithFlags ':examples:saml-service-provider',                'java11'
 includeWithFlags ':examples:server-sent-events',                   'java11'

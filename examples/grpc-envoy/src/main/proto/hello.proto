@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package example.grpc.hello;
-option java_package = "example.armeria.reverseproxy";
+option java_package = "example.armeria.grpc.envoy";
 option java_multiple_files = false;
 
 import "google/api/annotations.proto";
