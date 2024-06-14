@@ -22,77 +22,69 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
-interface ServiceConfigsBuilder {
+interface ServiceConfigsBuilder<SELF extends ServiceConfigsBuilder<SELF>> {
 
-    AbstractServiceBindingBuilder route();
+    AbstractServiceBindingBuilder<?> route();
 
-    AbstractBindingBuilder routeDecorator();
+    AbstractBindingBuilder<?> routeDecorator();
 
-    ServiceConfigsBuilder serviceUnder(String pathPrefix, HttpService service);
+    SELF serviceUnder(String pathPrefix, HttpService service);
 
-    ServiceConfigsBuilder service(String pathPattern, HttpService service);
+    SELF service(String pathPattern, HttpService service);
 
-    ServiceConfigsBuilder service(Route route, HttpService service);
+    SELF service(Route route, HttpService service);
 
-    ServiceConfigsBuilder service(
-            HttpServiceWithRoutes serviceWithRoutes,
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators);
+    SELF service(HttpServiceWithRoutes serviceWithRoutes,
+                 Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators);
 
-    ServiceConfigsBuilder service(HttpServiceWithRoutes serviceWithRoutes,
-                                  Function<? super HttpService, ? extends HttpService>... decorators);
+    SELF service(HttpServiceWithRoutes serviceWithRoutes,
+                 Function<? super HttpService, ? extends HttpService>... decorators);
 
-    ServiceConfigsBuilder annotatedService(Object service);
+    SELF annotatedService(Object service);
 
-    ServiceConfigsBuilder annotatedService(Object service,
-                                           Object... exceptionHandlersAndConverters);
+    SELF annotatedService(Object service, Object... exceptionHandlersAndConverters);
 
-    ServiceConfigsBuilder annotatedService(Object service,
-                                           Function<? super HttpService, ? extends HttpService> decorator,
-                                           Object... exceptionHandlersAndConverters);
+    SELF annotatedService(Object service,
+                          Function<? super HttpService, ? extends HttpService> decorator,
+                          Object... exceptionHandlersAndConverters);
 
-    ServiceConfigsBuilder annotatedService(String pathPrefix, Object service);
+    SELF annotatedService(String pathPrefix, Object service);
 
-    ServiceConfigsBuilder annotatedService(String pathPrefix, Object service,
-                                           Object... exceptionHandlersAndConverters);
+    SELF annotatedService(String pathPrefix, Object service,
+                          Object... exceptionHandlersAndConverters);
 
-    ServiceConfigsBuilder annotatedService(String pathPrefix, Object service,
-                                           Function<? super HttpService, ? extends HttpService> decorator,
-                                           Object... exceptionHandlersAndConverters);
+    SELF annotatedService(String pathPrefix, Object service,
+                          Function<? super HttpService, ? extends HttpService> decorator,
+                          Object... exceptionHandlersAndConverters);
 
-    ServiceConfigsBuilder annotatedService(String pathPrefix, Object service,
-                                           Iterable<?> exceptionHandlersAndConverters);
+    SELF annotatedService(String pathPrefix, Object service,
+                          Iterable<?> exceptionHandlersAndConverters);
 
-    ServiceConfigsBuilder annotatedService(String pathPrefix, Object service,
-                                           Function<? super HttpService, ? extends HttpService> decorator,
-                                           Iterable<?> exceptionHandlersAndConverters);
+    SELF annotatedService(String pathPrefix, Object service,
+                          Function<? super HttpService, ? extends HttpService> decorator,
+                          Iterable<?> exceptionHandlersAndConverters);
 
-    ServiceConfigsBuilder annotatedService(
+    SELF annotatedService(
             String pathPrefix, Object service, Function<? super HttpService, ? extends HttpService> decorator,
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions,
             Iterable<? extends RequestConverterFunction> requestConverterFunctions,
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions);
 
-    AnnotatedServiceConfigSetters annotatedService();
+    AnnotatedServiceConfigSetters<?> annotatedService();
 
-    ServiceConfigsBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator);
+    SELF decorator(Function<? super HttpService, ? extends HttpService> decorator);
 
-    ServiceConfigsBuilder decorator(DecoratingHttpServiceFunction decoratingHttpServiceFunction);
+    SELF decorator(DecoratingHttpServiceFunction decoratingHttpServiceFunction);
 
-    ServiceConfigsBuilder decorator(String pathPattern,
-                                    Function<? super HttpService, ? extends HttpService> decorator);
+    SELF decorator(String pathPattern, Function<? super HttpService, ? extends HttpService> decorator);
 
-    ServiceConfigsBuilder decorator(String pathPattern,
-                                    DecoratingHttpServiceFunction decoratingHttpServiceFunction);
+    SELF decorator(String pathPattern, DecoratingHttpServiceFunction decoratingHttpServiceFunction);
 
-    ServiceConfigsBuilder decorator(Route route,
-                                    Function<? super HttpService, ? extends HttpService> decorator);
+    SELF decorator(Route route, Function<? super HttpService, ? extends HttpService> decorator);
 
-    ServiceConfigsBuilder decorator(Route route,
-                                    DecoratingHttpServiceFunction decoratingHttpServiceFunction);
+    SELF decorator(Route route, DecoratingHttpServiceFunction decoratingHttpServiceFunction);
 
-    ServiceConfigsBuilder decoratorUnder(String prefix,
-                                         DecoratingHttpServiceFunction decoratingHttpServiceFunction);
+    SELF decoratorUnder(String prefix, DecoratingHttpServiceFunction decoratingHttpServiceFunction);
 
-    ServiceConfigsBuilder decoratorUnder(String prefix,
-                                         Function<? super HttpService, ? extends HttpService> decorator);
+    SELF decoratorUnder(String prefix, Function<? super HttpService, ? extends HttpService> decorator);
 }

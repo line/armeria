@@ -327,7 +327,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public void deactivate() {
+    public void markUnacquirable() {
         isAcquirable = false;
     }
 

@@ -329,6 +329,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // Ignore the request received after the last request,
         // because we are going to close the connection after sending the last response.
         if (handledLastRequest) {
+            req.abort();
+            decreasePendingRequests();
             return;
         }
 
@@ -357,6 +359,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             // Handle 'OPTIONS * HTTP/1.1'.
             if (routingStatus == RoutingStatus.OPTIONS) {
                 handleOptions(ctx, reqCtx);
+                decreasePendingRequests();
                 return;
             }
 
@@ -388,23 +391,25 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         req.init(reqCtx);
         final CompletableFuture<Void> whenAggregated = req.whenAggregated();
         if (whenAggregated != null) {
-            res = HttpResponse.of(req.whenAggregated().thenApply(ignored -> {
+            res = HttpResponse.of(whenAggregated.thenApply(ignored -> {
                 if (serviceEventLoop.inEventLoop()) {
-                    return serve0(req, service, reqCtx);
+                    return serve0(req, service, reqCtx, req.isHttp1WebSocket());
                 }
-                return serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop);
+                return serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop, req.isHttp1WebSocket());
             }));
         } else {
             if (serviceEventLoop.inEventLoop()) {
-                res = serve0(req, service, reqCtx);
+                res = serve0(req, service, reqCtx, req.isHttp1WebSocket());
             } else {
-                res = serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop);
+                res = serveInServiceEventLoop(req, service, reqCtx, serviceEventLoop, req.isHttp1WebSocket());
             }
         }
         res = res.recover(cause -> {
             reqCtx.logBuilder().responseCause(cause);
             // Recover the failed response with the error handler.
-            return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+            try (SafeCloseable ignored = reqCtx.push()) {
+                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+            }
         });
 
         // Keep track of the number of unfinished requests and
@@ -456,12 +461,33 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private static HttpResponse serve0(HttpRequest req, HttpService service,
-                                       DefaultServiceRequestContext reqCtx) {
+    private void decreasePendingRequests() {
+        if (protocol.isExplicitHttp1()) {
+            config.serverMetrics().decreasePendingHttp1Requests();
+        } else {
+            assert protocol.isExplicitHttp2();
+            config.serverMetrics().decreasePendingHttp2Requests();
+        }
+    }
+
+    private void increaseActiveRequests(boolean isHttp1WebSocket) {
+        if (isHttp1WebSocket) {
+            config.serverMetrics().increaseActiveHttp1WebSocketRequests();
+        } else if (protocol.isExplicitHttp1()) {
+            config.serverMetrics().increaseActiveHttp1Requests();
+        } else {
+            assert protocol.isExplicitHttp2();
+            config.serverMetrics().increaseActiveHttp2Requests();
+        }
+    }
+
+    private HttpResponse serve0(HttpRequest req, HttpService service, DefaultServiceRequestContext reqCtx,
+                                boolean isHttp1WebSocket) {
         try (SafeCloseable ignored = reqCtx.push()) {
-            HttpResponse serviceResponse;
             try {
-                serviceResponse = service.serve(reqCtx, req);
+                decreasePendingRequests();
+                increaseActiveRequests(isHttp1WebSocket);
+                return service.serve(reqCtx, req);
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.
                 if (cause instanceof HttpResponseException || cause instanceof HttpStatusException) {
@@ -469,18 +495,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 } else {
                     req.abort(cause);
                 }
-                serviceResponse = HttpResponse.ofFailure(cause);
+                return HttpResponse.ofFailure(cause);
             }
-
-            return serviceResponse;
         }
     }
 
-    private static HttpResponse serveInServiceEventLoop(DecodedHttpRequest req,
-                                                        HttpService service,
-                                                        DefaultServiceRequestContext reqCtx,
-                                                        EventLoop serviceEventLoop) {
-        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), service, reqCtx),
+    private HttpResponse serveInServiceEventLoop(DecodedHttpRequest req,
+                                                 HttpService service,
+                                                 DefaultServiceRequestContext reqCtx,
+                                                 EventLoop serviceEventLoop,
+                                                 boolean isHttp1WebSocket) {
+        return HttpResponse.of(() -> serve0(req.subscribeOn(serviceEventLoop), service,
+                                            reqCtx, isHttp1WebSocket),
                                serviceEventLoop)
                            .subscribeOn(serviceEventLoop);
     }
@@ -767,6 +793,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     requestOrResponseComplete = true;
                     return;
                 }
+                if (req.isHttp1WebSocket()) {
+                    config.serverMetrics().decreaseActiveHttp1WebSocketRequests();
+                } else if (protocol.isExplicitHttp1()) {
+                    config.serverMetrics().decreaseActiveHttp1Requests();
+                } else if (protocol.isExplicitHttp2()) {
+                    config.serverMetrics().decreaseActiveHttp2Requests();
+                }
+
                 // NB: logBuilder.endResponse() is called by HttpResponseSubscriber.
                 if (!isTransientService) {
                     gracefulShutdownSupport.dec();

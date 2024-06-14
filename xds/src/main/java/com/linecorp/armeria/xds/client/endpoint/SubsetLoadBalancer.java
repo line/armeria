@@ -31,6 +31,7 @@ import com.google.protobuf.Struct;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
@@ -42,34 +43,24 @@ final class SubsetLoadBalancer implements LoadBalancer {
 
     private static final Logger logger = LoggerFactory.getLogger(SubsetLoadBalancer.class);
 
-    private final ClusterSnapshot clusterSnapshot;
-    @Nullable
-    private volatile EndpointGroup endpointGroup;
+    private final EndpointGroup endpointGroup;
 
-    SubsetLoadBalancer(ClusterSnapshot clusterSnapshot) {
-        this.clusterSnapshot = clusterSnapshot;
+    SubsetLoadBalancer(PrioritySet prioritySet) {
+        endpointGroup = createEndpointGroup(prioritySet);
     }
 
     @Override
     @Nullable
     public Endpoint selectNow(ClientRequestContext ctx) {
-        final EndpointGroup endpointGroup = this.endpointGroup;
-        if (endpointGroup == null) {
-            return null;
-        }
         return endpointGroup.selectNow(ctx);
     }
 
-    @Override
-    public void prioritySetUpdated(PrioritySet prioritySet) {
-        endpointGroup = createEndpointGroup(prioritySet);
-    }
-
-    private EndpointGroup createEndpointGroup(PrioritySet prioritySet) {
+    private static EndpointGroup createEndpointGroup(PrioritySet prioritySet) {
+        final ClusterSnapshot clusterSnapshot = prioritySet.clusterSnapshot();
         final Struct filterMetadata = filterMetadata(clusterSnapshot);
         if (filterMetadata.getFieldsCount() == 0) {
             // No metadata. Use the whole endpoints.
-            return createEndpointGroup(prioritySet.endpoints());
+            return createEndpointGroup(prioritySet.endpoints(), clusterSnapshot);
         }
 
         final Cluster cluster = clusterSnapshot.xdsResource().resource();
@@ -90,7 +81,7 @@ final class SubsetLoadBalancer implements LoadBalancer {
             if (fallbackPolicy == LbSubsetFallbackPolicy.NO_FALLBACK) {
                 return EndpointGroup.of();
             }
-            return createEndpointGroup(prioritySet.endpoints());
+            return createEndpointGroup(prioritySet.endpoints(), clusterSnapshot);
         }
         final List<Endpoint> endpoints = convertEndpoints(prioritySet.endpoints(),
                                                           filterMetadata);
@@ -98,19 +89,21 @@ final class SubsetLoadBalancer implements LoadBalancer {
             if (fallbackPolicy == LbSubsetFallbackPolicy.NO_FALLBACK) {
                 return EndpointGroup.of();
             }
-            return createEndpointGroup(prioritySet.endpoints());
+            return createEndpointGroup(prioritySet.endpoints(), clusterSnapshot);
         }
-        return createEndpointGroup(endpoints);
+        return createEndpointGroup(endpoints, clusterSnapshot);
     }
 
-    private static EndpointGroup createEndpointGroup(List<Endpoint> endpoints) {
-        return EndpointGroup.of(endpoints);
+    private static EndpointGroup createEndpointGroup(List<Endpoint> endpoints,
+                                                     ClusterSnapshot clusterSnapshot) {
+        final EndpointSelectionStrategy strategy = EndpointUtil.selectionStrategy(
+                clusterSnapshot.xdsResource().resource());
+        return EndpointGroup.of(strategy, endpoints);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("clusterSnapshot", clusterSnapshot)
                           .add("endpointGroup", endpointGroup)
                           .toString();
     }
