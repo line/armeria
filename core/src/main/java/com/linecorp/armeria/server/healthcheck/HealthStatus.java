@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.healthcheck;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Server;
 
 /**

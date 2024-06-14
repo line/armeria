@@ -19,7 +19,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -59,6 +58,7 @@ import com.linecorp.armeria.server.TransientServiceOption;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ScheduledFuture;
+import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 
 /**
  * An {@link HttpService} that responds with HTTP status {@code "200 OK"} if the server is healthy and can
@@ -179,7 +179,7 @@ public final class HealthCheckService implements TransientHttpService {
             this.longPollingTimeoutJitterRate = longPollingTimeoutJitterRate;
             this.pingIntervalMillis = pingIntervalMillis;
             healthCheckerListener = this::onHealthCheckerUpdate;
-            pendingResponses = ConcurrentHashMap.newKeySet();
+            pendingResponses = new ObjectLinkedOpenHashSet<>();
         } else {
             this.maxLongPollingTimeoutMillis = 0;
             this.longPollingTimeoutJitterRate = 0;
@@ -328,15 +328,10 @@ public final class HealthCheckService implements TransientHttpService {
             final String expectedState =
                     Ascii.toLowerCase(req.headers().get(HttpHeaderNames.IF_NONE_MATCH, ""));
             if ("\"healthy\"".equals(expectedState) || "w/\"healthy\"".equals(expectedState)) {
-                useLongPolling = healthStatus == HealthStatus.HEALTHY;
-            } else if ("\"degraded\"".equals(expectedState) || "w/\"degraded\"".equals(expectedState)) {
-                useLongPolling = healthStatus == HealthStatus.DEGRADED;
-            } else if ("\"unhealthy\"".equals(expectedState) || "w/\"unhealthy\"".equals(expectedState)) {
-                useLongPolling = healthStatus == HealthStatus.UNHEALTHY;
-            } else if ("\"under_maintenance\"".equals(expectedState) ||
-                       "w/\"under_maintenance\"".equals(expectedState)) {
-                useLongPolling = healthStatus == HealthStatus.UNDER_MAINTENANCE;
-            } else {
+                useLongPolling = healthStatus.isAvailable();
+            }  else if ("\"unhealthy\"".equals(expectedState) || "w/\"unhealthy\"".equals(expectedState)) {
+                useLongPolling = !healthStatus.isAvailable();
+            }  else {
                 useLongPolling = false;
             }
         } else {
