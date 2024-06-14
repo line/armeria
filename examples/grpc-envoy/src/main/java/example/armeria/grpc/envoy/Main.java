@@ -13,6 +13,7 @@ public final class Main {
     private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     private static final int serverPort = 8080;
+    // the port envoy binds to within the container
     private static final int envoyPort = 10000;
 
     public static void main(String[] args) {

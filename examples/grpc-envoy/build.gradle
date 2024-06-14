@@ -5,18 +5,11 @@ plugins {
 dependencies {
     implementation project(':core')
     implementation project(':grpc')
-    implementation libs.reactor.core
     implementation libs.testcontainers.junit.jupiter
     compileOnly libs.javax.annotation
     runtimeOnly libs.slf4j.simple
 
     testImplementation project(':junit5')
-    testImplementation libs.javax.annotation
-    testImplementation libs.json.unit.fluent
-    testImplementation libs.assertj
-    testImplementation libs.awaitility
-    testImplementation libs.junit5.jupiter.api
-    testImplementation libs.protobuf.java.util
 }
 
 application {
