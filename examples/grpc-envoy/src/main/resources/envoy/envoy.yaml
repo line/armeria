@@ -14,6 +14,8 @@ static_resources:
               typed_config:
                 "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
                 stat_prefix: ingress_http
+                http_protocol_options:
+                  enable_trailers: true
                 codec_type: AUTO
                 route_config:
                   name: local_route
@@ -25,18 +27,20 @@ static_resources:
                             prefix: "/"
                           route:
                             cluster: grpc_service
-                            timeout: 60s
-                            idle_timeout: 60s
                 http_filters:
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
   clusters:
     - name: grpc_service
-      connect_timeout: 60s
       type: STRICT_DNS
-      lb_policy: round_robin
-      http2_protocol_options: {}
+      lb_policy: ROUND_ROBIN
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http_protocol_options:
+              enable_trailers: true
       load_assignment:
         cluster_name: grpc_service
         endpoints:

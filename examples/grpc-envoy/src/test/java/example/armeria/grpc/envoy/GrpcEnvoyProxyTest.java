@@ -3,11 +3,13 @@ package example.armeria.grpc.envoy;
 import static example.armeria.grpc.envoy.Main.configureEnvoy;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -31,12 +33,13 @@ class GrpcEnvoyProxyTest {
         }
     };
 
-    @Test
-    void reverseProxy() {
-        org.testcontainers.Testcontainers.exposeHostPorts(server.httpPort());
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
+    void reverseProxy(SessionProtocol sessionProtocol) {
         try (EnvoyContainer envoy = configureEnvoy(server.httpPort(), envoyPort)) {
             envoy.start();
-            final String uri = "http://" + envoy.getHost() + ':' + envoy.getMappedPort(envoyPort);
+            final String uri = sessionProtocol.uriText() + "://" + envoy.getHost() +
+                               ':' + envoy.getMappedPort(envoyPort);
             final HelloServiceGrpc.HelloServiceBlockingStub helloService =
                     GrpcClients.builder(uri)
                                .build(HelloServiceGrpc.HelloServiceBlockingStub.class);
