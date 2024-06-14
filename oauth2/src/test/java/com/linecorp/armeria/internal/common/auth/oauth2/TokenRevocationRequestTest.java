@@ -69,7 +69,6 @@ public class TokenRevocationRequestTest {
                 requestHeaders1, "token=" + token.grantedToken().accessToken() +
                                  "&token_type_hint=access_token").aggregate().join();
         assertThat(response1.status()).isEqualTo(HttpStatus.OK);
-        System.out.println(response1.contentUtf8());
         assertThat(response1.contentUtf8()).isEqualTo(HttpStatus.OK.toString());
 
         final RequestHeaders requestHeaders2 = RequestHeaders.of(

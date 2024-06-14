@@ -61,6 +61,11 @@ if (publishToStaging) {
                 password = project.findProperty(publishPasswordProperty)
             }
         }
+
+        transitionCheckOptions {
+            maxRetries.set(100)
+            delayBetween.set(Duration.ofSeconds(20))
+        }
     }
 }
 

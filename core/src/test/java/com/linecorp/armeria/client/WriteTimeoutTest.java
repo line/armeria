@@ -16,7 +16,10 @@
 
 package com.linecorp.armeria.client;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
@@ -29,6 +32,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -63,12 +68,20 @@ class WriteTimeoutTest {
         headersBuilder.add("header1", Strings.repeat("a", 2048)); // set a header over 1KB
 
         // using h1c since http2 compresses headers
-        assertThatThrownBy(() -> WebClient.builder(SessionProtocol.H1C, server.httpEndpoint())
-                                          .factory(clientFactory)
-                                          .writeTimeoutMillis(1000)
-                                          .build()
-                                          .blocking()
-                                          .execute(headersBuilder.build(), "content"))
-                .isInstanceOf(WriteTimeoutException.class);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final HttpResponse res = WebClient.builder(SessionProtocol.H1C, server.httpEndpoint())
+                                              .factory(clientFactory)
+                                              .writeTimeoutMillis(1000)
+                                              .build()
+                                              .execute(headersBuilder.build(), "content");
+            final ClientRequestContext ctx = captor.get();
+            assertThatThrownBy(() -> res.aggregate().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(WriteTimeoutException.class);
+
+            final RequestLog log = ctx.log().whenComplete().join();
+            // Make sure that the session is deactivated after the write timeout.
+            assertThat(HttpSession.get(log.channel()).isAcquirable()).isFalse();
+        }
     }
 }
