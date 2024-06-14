@@ -65,7 +65,6 @@ import com.linecorp.armeria.internal.common.encoding.DefaultHttpDecodedResponse;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.compression.SnappyFrameDecoder;
 import reactor.test.StepVerifier;
@@ -315,15 +314,10 @@ class DefaultHttpDecodedResponseTest {
 
     @Test
     void shouldExposeReasonWhenEncounterUnexpectedDecodeException() {
-        final ByteBuf mockByteBuf = mock(ByteBuf.class);
-        final HttpData mockData = mock(HttpData.class);
-        when(mockData.byteBuf()).thenReturn(mockByteBuf);
-
-        final EmbeddedChannel channel = new AlwaysFailureEmbeddedChannel(false);
-        final StreamDecoder decoder = new TestStreamDecoder(channel, new SnappyFrameDecoder(),
-                                                            mock(ByteBufAllocator.class), 100);
-
-        assertThatThrownBy(() -> decoder.decode(mockData))
+        final HttpData httpData = HttpData.of(StandardCharsets.UTF_8, "Hello");
+        final StreamDecoder decoder = new AbstractStreamDecoder(new SnappyFrameDecoder(),
+                                                                ByteBufAllocator.DEFAULT, 100);
+        assertThatThrownBy(() -> decoder.decode(httpData))
                 .isInstanceOf(DecompressionException.class);
     }
 
