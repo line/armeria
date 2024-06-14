@@ -167,12 +167,11 @@ class HealthCheckServiceTest {
         assertResponseEquals("GET /hc HTTP/1.0",
                              "HTTP/1.1 200 OK\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
-                             "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 16\r\n" +
+                             "armeria-lphc: 60, 5\r\n" + "content-length: 35\r\n" +
                              // As Armeria is not fully compatible with HTTP/1.0,
                              // an HTTP/1.1 response including "connection: close" header is returned.
                              "connection: close\r\n\r\n" +
-                             "{\"healthy\":true}");
+                             "{\"healthy\":true,\"status\":\"HEALTHY\"}");
         verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
@@ -183,10 +182,9 @@ class HealthCheckServiceTest {
         assertResponseEquals("GET /hc HTTP/1.0",
                              "HTTP/1.1 503 Service Unavailable\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
-                             "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 17\r\n" +
+                             "armeria-lphc: 60, 5\r\n" + "content-length: 38\r\n" +
                              "connection: close\r\n\r\n" +
-                             "{\"healthy\":false}");
+                             "{\"healthy\":false,\"status\":\"UNHEALTHY\"}");
         await().untilAsserted(() -> {
             verify(logger).debug(anyString());
         });
@@ -197,8 +195,7 @@ class HealthCheckServiceTest {
         assertResponseEquals("HEAD /hc HTTP/1.0",
                              "HTTP/1.1 200 OK\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
-                             "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 16\r\n" +
+                             "armeria-lphc: 60, 5\r\n" + "content-length: 35\r\n" +
                              "connection: close\r\n\r\n");
         verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
@@ -211,7 +208,7 @@ class HealthCheckServiceTest {
                              "HTTP/1.1 503 Service Unavailable\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 17\r\n" +
+                             "content-length: 38\r\n" +
                              "connection: close\r\n\r\n");
         verify(logger).debug(anyString());
     }
@@ -247,7 +244,7 @@ class HealthCheckServiceTest {
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":false}"),
+                HttpData.ofUtf8("{\"healthy\":false,\"status\":\"UNHEALTHY\"}"),
                 HttpHeaders.of()));
     }
 
@@ -263,7 +260,7 @@ class HealthCheckServiceTest {
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":false}")));
+                HttpData.ofUtf8("{\"healthy\":false,\"status\":\"UNHEALTHY\"}")));
     }
 
     @Test
@@ -284,9 +281,11 @@ class HealthCheckServiceTest {
                                                 .set("armeria-lphc", "60, 5")
                                                 .build()),
                 ResponseHeaders.of(HttpStatus.OK,
-                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":true}"),
+                                   HttpHeaderNames.CONTENT_TYPE,
+                                   MediaType.JSON_UTF_8,
+                                   "armeria-lphc",
+                                   "60, 5"),
+                HttpData.ofUtf8("{\"healthy\":true,\"status\":\"HEALTHY\"}"),
                 HttpHeaders.of()));
     }
 
@@ -299,7 +298,7 @@ class HealthCheckServiceTest {
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":true}")));
+                HttpData.ofUtf8("{\"healthy\":true,\"status\":\"HEALTHY\"}")));
     }
 
     @Test
@@ -314,8 +313,7 @@ class HealthCheckServiceTest {
                                .status(HttpStatus.NOT_MODIFIED)
                                .contentType(MediaType.JSON_UTF_8)
                                .set("armeria-lphc", "60, 5")
-                               .build(),
-                HttpData.empty(),
+                               .build(), HttpData.empty(),
                 HttpHeaders.of()));
     }
 
@@ -356,10 +354,9 @@ class HealthCheckServiceTest {
                                   HttpHeaderNames.PREFER, "wait=60",
                                   HttpHeaderNames.IF_NONE_MATCH, "\"healthy\"")).aggregate();
         assertThat(f.get(10, TimeUnit.SECONDS)).isEqualTo(AggregatedHttpResponse.of(
-                ResponseHeaders.of(HttpStatus.OK,
-                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
+                ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "0, 0"),
-                HttpData.ofUtf8("{\"healthy\":true}")));
+                HttpData.ofUtf8("{\"healthy\":true,\"status\":\"HEALTHY\"}")));
         verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
     }
@@ -368,7 +365,7 @@ class HealthCheckServiceTest {
     void notUpdatableByDefault() {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.POST, "/hc"),
-                                                          "{\"healthy\":false}");
+                                                          "{\"healthy\":false,\"status\":\"UNHEALTHY\"}");
         assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
         verifyDebugEnabled(logger);
         verifyNoMoreInteractions(logger);
@@ -385,7 +382,7 @@ class HealthCheckServiceTest {
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":false}")));
+                HttpData.ofUtf8("{\"healthy\":false,\"status\":\"UNHEALTHY\"}")));
 
         // Make healthy.
         final AggregatedHttpResponse res2 = client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_updatable"),
@@ -394,7 +391,7 @@ class HealthCheckServiceTest {
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":true}")));
+                HttpData.ofUtf8("{\"healthy\":true,\"status\":\"HEALTHY\"}")));
     }
 
     @Test
@@ -409,7 +406,7 @@ class HealthCheckServiceTest {
                 ResponseHeaders.of(HttpStatus.SERVICE_UNAVAILABLE,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":false}")));
+                HttpData.ofUtf8("{\"healthy\":false,\"status\":\"UNHEALTHY\"}")));
 
         // Make healthy.
         final AggregatedHttpResponse res2 = client.execute(
@@ -419,7 +416,7 @@ class HealthCheckServiceTest {
                 ResponseHeaders.of(HttpStatus.OK,
                                    HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
                                    "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":true}")));
+                HttpData.ofUtf8("{\"healthy\":true,\"status\":\"HEALTHY\"}")));
     }
 
     @Test
@@ -429,13 +426,15 @@ class HealthCheckServiceTest {
         capturedHealthy.set(null);
 
         // Make unhealthy.
-        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":false}");
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"),
+                       "{\"healthy\":false,\"status\":\"UNHEALTHY\"}");
         assertThat(capturedHealthy.get()).isFalse();
 
         capturedHealthy.set(null);
 
         // Make healthy.
-        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"), "{\"healthy\":true}");
+        client.execute(RequestHeaders.of(HttpMethod.POST, "/hc_update_listener"),
+                       "{\"healthy\":true,\"status\":\"HEALTHY\"}");
         assertThat(capturedHealthy.get()).isTrue();
     }
 
@@ -445,9 +444,9 @@ class HealthCheckServiceTest {
                              "HTTP/1.1 503 Service Unavailable\r\n" +
                              "content-type: application/json; charset=utf-8\r\n" +
                              "armeria-lphc: 60, 5\r\n" +
-                             "content-length: 17\r\n" +
+                             "content-length: 38\r\n" +
                              "connection: close\r\n\r\n" +
-                             "{\"healthy\":false}");
+                             "{\"healthy\":false,\"status\":\"UNHEALTHY\"}");
     }
 
     @Test
@@ -509,27 +508,28 @@ class HealthCheckServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "DEGRADED", "UNHEALTHY", "UNDER_MAINTENANCE" })
+    @ValueSource(strings = { "DEGRADED", "STOPPING", "UNHEALTHY", "UNDER_MAINTENANCE" })
     void notifyHealthStatus(String healthStatus) throws Exception {
-        final CompletableFuture<AggregatedHttpResponse> f =
-                sendLongPollingGet("healthy", "/hc");
-        assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS))
-                .isInstanceOf(TimeoutException.class);
+        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("healthy", "/hc");
+        assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
 
         switch (healthStatus) {
             case "DEGRADED":
                 checker.setHealthStatus(HealthStatus.DEGRADED);
-                assertThat(f.get().contentUtf8())
-                        .isEqualTo("{\"healthy\":true,\"status\":\"DEGRADED\"}");
+                assertThat(f.get().contentUtf8()).isEqualTo("{\"healthy\":true,\"status\":\"DEGRADED\"}");
+                break;
+            case "STOPPING":
+                checker.setHealthStatus(HealthStatus.STOPPING);
+                assertThat(f.get().contentUtf8()).isEqualTo("{\"healthy\":false,\"status\":\"STOPPING\"}");
                 break;
             case "UNHEALTHY":
                 checker.setHealthStatus(HealthStatus.UNHEALTHY);
-                assertThat(f.get().contentUtf8()).isEqualTo("{\"healthy\":false}");
+                assertThat(f.get().contentUtf8()).isEqualTo("{\"healthy\":false,\"status\":\"UNHEALTHY\"}");
                 break;
             case "UNDER_MAINTENANCE":
                 checker.setHealthStatus(HealthStatus.UNDER_MAINTENANCE);
-                assertThat(f.get().contentUtf8())
-                        .isEqualTo("{\"healthy\":false,\"status\":\"UNDER_MAINTENANCE\"}");
+                assertThat(f.get().contentUtf8()).isEqualTo(
+                        "{\"healthy\":false,\"status\":\"UNDER_MAINTENANCE\"}");
                 break;
         }
     }
