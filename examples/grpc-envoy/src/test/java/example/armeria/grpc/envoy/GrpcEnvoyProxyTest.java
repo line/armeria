@@ -43,10 +43,7 @@ class GrpcEnvoyProxyTest {
             final String uri = sessionProtocol.uriText() + "://" + envoy.getHost() +
                                ':' + envoy.getMappedPort(envoyPort);
             // if envoy isn't ready for requests, a `UNAVAILABLE: no healthy upstream` is returned
-            final RetryRule retryRule =
-                    RetryRule.builder()
-                             .onGrpcTrailers((ctx, trailers) -> trailers.containsInt("grpc-status", 14))
-                             .thenBackoff();
+            final RetryRule retryRule = RetryRule.builder().onServerErrorStatus().thenBackoff();
             final HelloServiceGrpc.HelloServiceBlockingStub helloService =
                     GrpcClients.builder(uri)
                                .decorator(RetryingClient.newDecorator(retryRule))
