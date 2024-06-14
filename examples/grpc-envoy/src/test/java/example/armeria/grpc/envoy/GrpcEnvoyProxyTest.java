@@ -9,8 +9,6 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.client.retry.RetryRule;
-import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
@@ -38,15 +36,13 @@ class GrpcEnvoyProxyTest {
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
     void reverseProxy(SessionProtocol sessionProtocol) {
+        org.testcontainers.Testcontainers.exposeHostPorts(server.httpPort());
         try (EnvoyContainer envoy = configureEnvoy(server.httpPort(), envoyPort)) {
             envoy.start();
             final String uri = sessionProtocol.uriText() + "://" + envoy.getHost() +
                                ':' + envoy.getMappedPort(envoyPort);
-            // if envoy isn't ready for requests, a `UNAVAILABLE: no healthy upstream` is returned
-            final RetryRule retryRule = RetryRule.builder().onServerErrorStatus().thenBackoff();
             final HelloServiceGrpc.HelloServiceBlockingStub helloService =
                     GrpcClients.builder(uri)
-                               .decorator(RetryingClient.newDecorator(retryRule))
                                .build(HelloServiceGrpc.HelloServiceBlockingStub.class);
             final HelloReply reply =
                     helloService.hello(HelloRequest.newBuilder()
