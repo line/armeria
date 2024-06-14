@@ -21,6 +21,7 @@ import com.linecorp.armeria.server.Server;
 /**
  * The health status of a {@link Server}.
  */
+@UnstableApi
 public enum HealthStatus {
     HEALTHY(500, true),
     DEGRADED(400, true),
