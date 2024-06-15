@@ -16,7 +16,9 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.function.Function;
 
@@ -26,6 +28,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 class KeyedCircuitBreakerMappingTest {
 
@@ -65,6 +68,33 @@ class KeyedCircuitBreakerMappingTest {
         assertThat(breakerMapping.get(context(Endpoint.of("::1", 80)), req)).isSameAs(e);
 
         assertThat(breakerMapping.get(context(Endpoint.of("bar")), req)).isNull();
+
+        System.out.println("hello world");
+        System.out.println(breakerMapping.get(context(Endpoint.of("1.2.3.4", 80)), req));
+    }
+
+    @Test
+    void connectionSelector() throws Exception {
+        final CircuitBreaker a = mock(CircuitBreaker.class);
+        final CircuitBreaker b = mock(CircuitBreaker.class);
+        final String VALID_CONNECTION_ID = "bcd074fffe75dee6-00001aa0-00000001-4ac56cba154d73e8-15112c70";
+        final String INVALID_CONNECTION_ID = "acd074fffe75dee6-00001aa0-00000001-4ac56cba154d73e8-15112c71";
+        final Function<String, ? extends CircuitBreaker> factory = connectionId -> {
+            if (VALID_CONNECTION_ID.equals(connectionId)) {
+                return a;
+            }
+
+            return null;
+        };
+
+        final CircuitBreakerMapping breakerMapping = CircuitBreakerMapping.perConnection(factory);
+        final ClientRequestContext mockContext = mock(ClientRequestContext.class, RETURNS_DEEP_STUBS);
+        when(mockContext.log().isAvailable(RequestLogProperty.SESSION)).thenReturn(true);
+
+        when(mockContext.log().partial().channel().id().asLongText()).thenReturn(VALID_CONNECTION_ID);
+        assertThat(breakerMapping.get(mockContext, req)).isSameAs(a);
+        when(mockContext.log().partial().channel().id().asLongText()).thenReturn(INVALID_CONNECTION_ID);
+        assertThat(breakerMapping.get(mockContext, req)).isNull();
     }
 
     private static ClientRequestContext context(Endpoint endpoint) {

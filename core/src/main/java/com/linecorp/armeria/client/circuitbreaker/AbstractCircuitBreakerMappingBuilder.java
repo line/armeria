@@ -29,6 +29,7 @@ public abstract class AbstractCircuitBreakerMappingBuilder
     private boolean perHost;
     private boolean perMethod;
     private boolean perPath;
+    private boolean perConnection;
 
     /**
      * Creates an empty builder where all mapping keys are disabled by default.
@@ -68,6 +69,14 @@ public abstract class AbstractCircuitBreakerMappingBuilder
     }
 
     /**
+     * Adds connection dimension to the mapping Key.
+     */
+    public SELF perConnection() {
+        perConnection = true;
+        return self();
+    }
+
+    /**
      * Returns whether the host dimension is enabled for the mapping.
      */
     protected final boolean isPerHost() {
@@ -89,10 +98,17 @@ public abstract class AbstractCircuitBreakerMappingBuilder
     }
 
     /**
+     * Returns whether the connection dimension is enabled for the mapping.
+     */
+    protected final boolean isPerConnection() {
+        return perConnection;
+    }
+
+    /**
      * Returns whether the set dimensions are valid.
      * At least one mapping key must be set.
      */
     protected final boolean validateMappingKeys() {
-        return perHost || perMethod || perPath;
+        return perHost || perMethod || perPath || perConnection;
     }
 }

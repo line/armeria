@@ -30,6 +30,7 @@ public final class CircuitBreakerMappingBuilder
         if (!validateMappingKeys()) {
             throw new IllegalStateException("A CircuitBreakerMapping must be per host, method and/or path");
         }
-        return new KeyedCircuitBreakerMapping(isPerHost(), isPerMethod(), isPerPath(), factory);
+        return new KeyedCircuitBreakerMapping(isPerHost(), isPerMethod(), isPerPath(), isPerConnection(),
+                                              factory);
     }
 }

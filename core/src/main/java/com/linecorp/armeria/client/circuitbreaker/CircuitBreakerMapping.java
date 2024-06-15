@@ -51,7 +51,7 @@ public interface CircuitBreakerMapping extends ClientCircuitBreakerGenerator<Cir
      */
     static CircuitBreakerMapping perMethod(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return builder().perMethod().build((host, method, path) -> factory.apply(method));
+        return builder().perMethod().build((host, method, path, connectionId) -> factory.apply(method));
     }
 
     /**
@@ -61,7 +61,7 @@ public interface CircuitBreakerMapping extends ClientCircuitBreakerGenerator<Cir
      */
     static CircuitBreakerMapping perHost(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return builder().perHost().build((host, method, path) -> factory.apply(host));
+        return builder().perHost().build((host, method, path, connectionId) -> factory.apply(host));
     }
 
     /**
@@ -71,7 +71,19 @@ public interface CircuitBreakerMapping extends ClientCircuitBreakerGenerator<Cir
      */
     static CircuitBreakerMapping perPath(Function<String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return builder().perPath().build((host, method, path) -> factory.apply(path));
+        return builder().perPath()
+                        .build((host, method, path, connectionId) -> factory.apply(path));
+    }
+
+    /**
+     * Creates a new {@link CircuitBreakerMapping} which maps {@link CircuitBreaker}s with the connection id.
+     *
+     * @param factory the function that takes a connection id and creates a new {@link CircuitBreaker}
+     */
+    static CircuitBreakerMapping perConnection(Function<String, ? extends CircuitBreaker> factory) {
+        requireNonNull(factory, "factory");
+        return builder().perConnection()
+                        .build((host, method, path, connectionId) -> factory.apply(connectionId));
     }
 
     /**
@@ -84,7 +96,8 @@ public interface CircuitBreakerMapping extends ClientCircuitBreakerGenerator<Cir
     static CircuitBreakerMapping perHostAndMethod(
             BiFunction<String, String, ? extends CircuitBreaker> factory) {
         requireNonNull(factory, "factory");
-        return builder().perHost().perMethod().build((host, method, path) -> factory.apply(host, method));
+        return builder().perHost().perMethod().build((host, method, path, connectionId) ->
+                                                             factory.apply(host, method));
     }
 
     /**

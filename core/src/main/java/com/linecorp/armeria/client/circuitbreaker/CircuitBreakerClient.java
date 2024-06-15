@@ -247,6 +247,37 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     }
 
     /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per connection with the specified
+     * {@link CircuitBreakerRule}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a connection id and creates a new {@link CircuitBreaker}.
+     */
+    @UnstableApi
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerConnectionDecorator(Function<String, ? extends CircuitBreaker> factory, CircuitBreakerRule rule) {
+        return newDecorator(CircuitBreakerMapping.perConnection(factory), rule);
+    }
+
+    /**
+     * Creates a new decorator that binds one {@link CircuitBreaker} per connection with the specified
+     * {@link CircuitBreakerRuleWithContent}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     *
+     * @param factory a function that takes a connection id and creates a new {@link CircuitBreaker}.
+     */
+    @UnstableApi
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newPerConnectionDecorator(Function<String, ? extends CircuitBreaker> factory,
+                              CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        return newDecorator(CircuitBreakerMapping.perConnection(factory), ruleWithContent);
+    }
+
+    /**
      * Returns a new {@link CircuitBreakerClientBuilder} with the specified {@link CircuitBreakerRule}.
      */
     public static CircuitBreakerClientBuilder builder(CircuitBreakerRule rule) {

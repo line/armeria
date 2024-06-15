@@ -16,10 +16,14 @@
 
 package com.linecorp.armeria.internal.common.circuitbreaker;
 
+import java.util.Objects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 public final class CircuitBreakerMappingUtil {
 
@@ -45,6 +49,15 @@ public final class CircuitBreakerMappingUtil {
     public static String path(ClientRequestContext ctx) {
         final HttpRequest request = ctx.request();
         return request == null ? "" : request.path();
+    }
+
+    @Nullable
+    public static String connectionId(ClientRequestContext ctx) {
+        if (ctx.log().isAvailable(RequestLogProperty.SESSION)) {
+            return Objects.requireNonNull(ctx.log().partial().channel()).id().asLongText();
+        }
+
+        return null;
     }
 
     private CircuitBreakerMappingUtil() {}

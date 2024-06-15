@@ -29,7 +29,9 @@ public interface CircuitBreakerFactory {
      * @param host the host of the context endpoint.
      * @param method the method of the context request.
      * @param path the path of the context request.
+     * @param connectionId the connectionId of the channel of the context request.
      * @return the {@link CircuitBreaker} instance corresponding to this combination.
      */
-    CircuitBreaker apply(@Nullable String host, @Nullable String method, @Nullable String path);
+    CircuitBreaker apply(@Nullable String host, @Nullable String method,
+                         @Nullable String path, @Nullable String connectionId);
 }

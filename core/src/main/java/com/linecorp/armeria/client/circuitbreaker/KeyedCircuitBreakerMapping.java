@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.connectionId;
 import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.host;
 import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.method;
 import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.path;
@@ -39,25 +40,28 @@ import com.linecorp.armeria.common.Request;
  */
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
-    static final CircuitBreakerMapping hostMapping = new KeyedCircuitBreakerMapping(
-            true, false, false, (host, method, path) -> CircuitBreaker.of(host));
+    static final CircuitBreakerMapping hostMapping =
+            new KeyedCircuitBreakerMapping(true, false, false, false,
+                                           (host, method, path, connectionId) -> CircuitBreaker.of(host));
 
     private final ConcurrentMap<String, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 
     private final boolean isPerHost;
     private final boolean isPerMethod;
     private final boolean isPerPath;
+    private final boolean isPerConnection;
     private final CircuitBreakerFactory factory;
 
     /**
      * Creates a new {@link KeyedCircuitBreakerMapping} with the given {@link CircuitBreakerMappingBuilder} and
      * {@link CircuitBreaker} factory.
      */
-    KeyedCircuitBreakerMapping(
-            boolean perHost, boolean perMethod, boolean perPath, CircuitBreakerFactory factory) {
+    KeyedCircuitBreakerMapping(boolean perHost, boolean perMethod, boolean perPath, boolean perConnection,
+                               CircuitBreakerFactory factory) {
         isPerHost = perHost;
         isPerMethod = perMethod;
         isPerPath = perPath;
+        isPerConnection = perConnection;
         this.factory = requireNonNull(factory, "factory");
     }
 
@@ -66,14 +70,16 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
         final String host = isPerHost ? host(ctx) : null;
         final String method = isPerMethod ? method(ctx) : null;
         final String path = isPerPath ? path(ctx) : null;
-        final String key = Stream.of(host, method, path)
+        final String connectionId = isPerConnection ? connectionId(ctx) : null;
+
+        final String key = Stream.of(host, method, path, connectionId)
                                  .filter(Objects::nonNull)
                                  .collect(joining("#"));
         final CircuitBreaker circuitBreaker = mapping.get(key);
         if (circuitBreaker != null) {
             return circuitBreaker;
         }
-        return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method, path));
+        return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method, path, connectionId));
     }
 
     @Override
@@ -83,6 +89,7 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
                           .add("isPerHost", isPerHost)
                           .add("isPerMethod", isPerMethod)
                           .add("isPerPath", isPerPath)
+                          .add("isPerConnection", isPerConnection)
                           .add("factory", factory)
                           .toString();
     }
