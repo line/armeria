@@ -19,25 +19,23 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.function.Supplier;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.HttpEntity;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.*;
+import org.checkerframework.checker.nullness.qual.NonNull;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.github.benmanes.caffeine.cache.AsyncLoadingCache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 /**
  * A Nacos client that is responsible for
@@ -49,13 +47,41 @@ final class LoginClient extends SimpleDecoratingHttpClient {
         return delegate -> new LoginClient(delegate, webClient, username, password);
     }
 
+    private static final String NACOS_ACCESS_TOKEN_CACHE_KEY = "NACOS_ACCESS_TOKEN_CACHE_KEY";
+    private final AsyncLoadingCache<String, LoginResult> tokenCache = Caffeine.newBuilder()
+            .maximumSize(1)
+            .expireAfter(new Expiry<String, LoginResult>() {
+                @Override
+                public long expireAfterCreate(@NonNull String key, @NonNull LoginResult loginResult,
+                                              long currentTime) {
+                    return loginResult.tokenTtl.longValue();
+                }
+
+                @Override
+                public long expireAfterUpdate(@NonNull String key, @NonNull LoginResult loginResult,
+                                              long currentTime, long currentDuration) {
+                    return loginResult.tokenTtl.longValue();
+                }
+
+                @Override
+                public long expireAfterRead(@NonNull String key, @NonNull LoginResult loginResult,
+                                            long currentTime, long currentDuration) {
+                    return currentDuration;
+                }
+            })
+            .buildAsync((key, executor) -> {
+                try {
+                    return loginInternal();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
     private final HttpClient delegate;
 
     private final WebClient webClient;
 
     private final String queryParamsForLogin;
-
-    private final CachedLoginResult cachedLoginResult = new CachedLoginResult();
 
     LoginClient(HttpClient delegate, WebClient webClient, String username, String password) {
         super(delegate);
@@ -68,7 +94,12 @@ final class LoginClient extends SimpleDecoratingHttpClient {
                 .toQueryString();
     }
 
-    private CompletableFuture<LoginResult> login() {
+    private CompletableFuture<String> login() {
+        return tokenCache.get(NACOS_ACCESS_TOKEN_CACHE_KEY)
+                .thenApply(loginResult -> loginResult.accessToken);
+    }
+
+    private CompletableFuture<LoginResult> loginInternal() {
         return webClient.prepare().post("/v1/auth/login")
                 .content(MediaType.FORM_DATA, queryParamsForLogin)
                 .asJson(LoginResult.class)
@@ -78,7 +109,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-        final CompletableFuture<HttpResponse> future = cachedLoginResult.get().thenApply(accessToken -> {
+        CompletableFuture<HttpResponse> future = login().thenApply(accessToken -> {
             try {
                 return delegate.execute(ctx, req.mapHeaders(headers -> headers.toBuilder()
                         .set(HttpHeaderNames.AUTHORIZATION, "Bearer " + accessToken)
@@ -89,39 +120,6 @@ final class LoginClient extends SimpleDecoratingHttpClient {
         });
 
         return HttpResponse.of(future);
-    }
-
-    private final class CachedLoginResult {
-        @Nullable
-        private volatile CacheEntry cacheEntry;
-
-        CachedLoginResult() { }
-
-        CompletableFuture<String> get() {
-            final CacheEntry cacheEntry = this.cacheEntry;
-            if (cacheEntry != null && !cacheEntry.isExpired()) {
-                return UnmodifiableFuture.completedFuture(cacheEntry.loginResult.accessToken);
-            }
-
-            return login().thenApply(loginResult -> {
-                this.cacheEntry = new CacheEntry(loginResult);
-                return loginResult.accessToken;
-            });
-        }
-
-        private class CacheEntry {
-            private final LoginResult loginResult;
-            private final long expirationTimeMillis;
-
-            CacheEntry(LoginResult loginResult) {
-                this.loginResult = loginResult;
-                this.expirationTimeMillis = System.currentTimeMillis() + loginResult.tokenTtl * 1000;
-            }
-
-            boolean isExpired() {
-                return System.currentTimeMillis() >= expirationTimeMillis;
-            }
-        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
