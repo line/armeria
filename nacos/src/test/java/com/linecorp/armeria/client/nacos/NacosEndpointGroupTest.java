@@ -83,16 +83,13 @@ class NacosEndpointGroupTest extends NacosTestBase {
                                        .registryFetchInterval(Duration.ofSeconds(1))
                                        .build()) {
             await().atMost(5, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
-                   });
+                   .untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
 
             // stop a server
             servers.get(0).stop().join();
             await().atMost(5, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1);
-                   });
+                   .untilAsserted(() -> assertThat(endpointGroup.endpoints())
+                           .hasSize(sampleEndpoints.size() - 1));
 
             // restart the server
             await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
@@ -100,9 +97,7 @@ class NacosEndpointGroupTest extends NacosTestBase {
                 assertThatCode(servers.get(0).start()::join).doesNotThrowAnyException();
             });
             await().atMost(5, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
-                   });
+                   .untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
         }
     }
 
@@ -114,16 +109,13 @@ class NacosEndpointGroupTest extends NacosTestBase {
                                        .registryFetchInterval(Duration.ofSeconds(1))
                                        .build()) {
             await().atMost(5, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
-                   });
+                   .untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
 
             // stop a server
             servers.get(0).stop().join();
             await().atMost(5, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSize(sampleEndpoints.size() - 1);
-                   });
+                   .untilAsserted(() -> assertThat(endpointGroup.endpoints())
+                           .hasSize(sampleEndpoints.size() - 1));
 
             // restart the server
             await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
@@ -131,9 +123,7 @@ class NacosEndpointGroupTest extends NacosTestBase {
                 assertThatCode(servers.get(0).start()::join).doesNotThrowAnyException();
             });
             await().atMost(5, TimeUnit.SECONDS)
-                   .untilAsserted(() -> {
-                       assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints);
-                   });
+                   .untilAsserted(() -> assertThat(endpointGroup.endpoints()).hasSameSizeAs(sampleEndpoints));
         }
     }
 

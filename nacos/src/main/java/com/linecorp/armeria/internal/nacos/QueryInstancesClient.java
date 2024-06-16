@@ -65,7 +65,7 @@ final class QueryInstancesClient {
                         clusterName, healthyOnly, app, null, null, null);
         pathBuilder.append(params.toQueryString());
 
-        this.pathForQuery = pathBuilder.toString();
+        pathForQuery = pathBuilder.toString();
     }
 
     CompletableFuture<List<Endpoint>> endpoints() {

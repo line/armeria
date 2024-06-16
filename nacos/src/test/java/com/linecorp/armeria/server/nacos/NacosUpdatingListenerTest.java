@@ -43,29 +43,28 @@ class NacosUpdatingListenerTest extends NacosTestBase {
 
     @BeforeAll
     static void startServers() throws JsonProcessingException {
-
-        await().pollInSameThread().pollInterval(Duration.ofSeconds(1)).untilAsserted(() -> {
-            assertThatCode(() -> {
-                final List<Endpoint> endpoints = newSampleEndpoints();
-                servers.clear();
-                for (Endpoint endpoint : endpoints) {
-                    final Server server = Server.builder()
-                                                .http(endpoint.port())
-                                                .service("/echo", new EchoService())
-                                                .build();
-                    final ServerListener listener =
-                            NacosUpdatingListener
-                                    .builder(nacosUri(), serviceName)
-                                    .authorization(NACOS_AUTH_SECRET, NACOS_AUTH_SECRET)
-                                    .endpoint(endpoint)
-                                    .build();
-                    server.addListener(listener);
-                    server.start().join();
-                    servers.add(server);
-                }
-                sampleEndpoints = endpoints;
-            }).doesNotThrowAnyException();
-        });
+        await().pollInSameThread()
+               .pollInterval(Duration.ofSeconds(1))
+               .untilAsserted(() -> assertThatCode(() -> {
+                   final List<Endpoint> endpoints = newSampleEndpoints();
+                   servers.clear();
+                   for (Endpoint endpoint : endpoints) {
+                       final Server server = Server.builder()
+                                                   .http(endpoint.port())
+                                                   .service("/echo", new EchoService())
+                                                   .build();
+                       final ServerListener listener =
+                               NacosUpdatingListener
+                                       .builder(nacosUri(), serviceName)
+                                       .authorization(NACOS_AUTH_SECRET, NACOS_AUTH_SECRET)
+                                       .endpoint(endpoint)
+                                       .build();
+                       server.addListener(listener);
+                       server.start().join();
+                       servers.add(server);
+                   }
+                   sampleEndpoints = endpoints;
+               }).doesNotThrowAnyException());
     }
 
     @AfterAll
@@ -85,10 +84,8 @@ class NacosUpdatingListenerTest extends NacosTestBase {
     @Test
     void testEndpointsCountOfListeningServiceWithAServerStopAndStart() {
         // Checks sample endpoints created when initialized.
-        await().untilAsserted(() -> {
-            assertThat(client(null, null).endpoints()
-                               .join()).hasSameSizeAs(sampleEndpoints);
-        });
+        await().untilAsserted(() -> assertThat(client(null, null).endpoints()
+                                                             .join()).hasSameSizeAs(sampleEndpoints));
 
         // When we close one server then the listener deregister it automatically from nacos.
         servers.get(0).stop().join();
@@ -102,10 +99,8 @@ class NacosUpdatingListenerTest extends NacosTestBase {
         // Endpoints increased after service restart.
         servers.get(0).start().join();
 
-        await().untilAsserted(() -> {
-            assertThat(client(null, null).endpoints()
-                               .join()).hasSameSizeAs(sampleEndpoints);
-        });
+        await().untilAsserted(() -> assertThat(client(null, null).endpoints()
+                                                             .join()).hasSameSizeAs(sampleEndpoints));
     }
 
     @Test
@@ -126,10 +121,8 @@ class NacosUpdatingListenerTest extends NacosTestBase {
                                      .build();
         server.addListener(listener);
         server.start().join();
-        await().untilAsserted(() -> {
-            assertThat(client("testThatGroupNameIsSpecified", "groupName").endpoints().join())
-                    .hasSize(1);
-        });
+        await().untilAsserted(() -> assertThat(client("testThatGroupNameIsSpecified", "groupName")
+                                                       .endpoints().join()).hasSize(1));
         server.stop();
     }
 }

@@ -88,7 +88,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
 
         this.delegate = requireNonNull(delegate, "delegate");
         this.webClient = requireNonNull(webClient, "webClient");
-        this.queryParamsForLogin = QueryParams.builder()
+        queryParamsForLogin = QueryParams.builder()
                 .add("username", requireNonNull(username, "username"))
                 .add("password", requireNonNull(password, "password"))
                 .toQueryString();
@@ -109,7 +109,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-        CompletableFuture<HttpResponse> future = login().thenApply(accessToken -> {
+        final CompletableFuture<HttpResponse> future = login().thenApply(accessToken -> {
             try {
                 return delegate.execute(ctx, req.mapHeaders(headers -> headers.toBuilder()
                         .set(HttpHeaderNames.AUTHORIZATION, "Bearer " + accessToken)
