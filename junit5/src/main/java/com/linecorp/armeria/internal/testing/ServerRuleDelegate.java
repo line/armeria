@@ -455,8 +455,8 @@ public abstract class ServerRuleDelegate {
 
     private WebSocketClientBuilder webSocketClientBuilder() {
         final boolean hasHttps = hasHttps();
-        final String hostAndPort = hasHttps ? "wss://" + httpsUri().getHost() + ":" + httpsUri().getPort()
-                                            : "ws://" + httpUri().getHost() + ":" + httpUri().getPort();
+        final String hostAndPort = hasHttps ? "wss://" + httpsUri().getAuthority()
+                                            : "ws://" + httpUri().getAuthority();
         final WebSocketClientBuilder webSocketClientBuilder = WebSocketClient.builder(hostAndPort);
         if (hasHttps) {
             webSocketClientBuilder.factory(ClientFactory.insecure());
