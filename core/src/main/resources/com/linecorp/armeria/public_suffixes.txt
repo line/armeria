@@ -70,6 +70,7 @@
 *.frusky.de
 *.futurecms.at
 *.gateway.dev
+*.hosted.app
 *.hosting.myjino.ru
 *.hosting.ovh.net
 *.id.pub
@@ -123,6 +124,7 @@
 *.sch.uk
 *.sendai.jp
 *.sensiosite.cloud
+*.services.clever-cloud.com
 *.snowflake.app
 *.spectrum.myjino.ru
 *.statics.cloud
@@ -821,7 +823,9 @@ barsy.ca
 barsy.club
 barsy.co.uk
 barsy.de
+barsy.dev
 barsy.eu
+barsy.gr
 barsy.in
 barsy.info
 barsy.io
@@ -834,13 +838,17 @@ barsy.org
 barsy.pro
 barsy.pub
 barsy.ro
+barsy.rs
 barsy.shop
 barsy.site
+barsy.store
 barsy.support
 barsy.uk
 barsycenter.com
 barsyonline.co.uk
 barsyonline.com
+barsyonline.menu
+barsyonline.shop
 barueri.br
 barum.no
 bas.it
@@ -1116,6 +1124,7 @@ bounty-full.com
 boutique
 boutir.com
 box
+box.ca
 boxfuse.io
 boy.jp
 boyfriend.jp
@@ -1335,6 +1344,10 @@ cci.fr
 cd
 cd.eu.org
 cdn-edges.net
+cdn.cloudflare.net
+cdn.cloudflareanycast.net
+cdn.cloudflarecn.net
+cdn.cloudflareglobal.net
 cdn.prod.atlassian-dev.net
 cdn77-ssl.net
 cdn77-storage.com
@@ -1448,7 +1461,9 @@ clan.rip
 cleaning
 clerk.app
 clerkstage.app
+cleverapps.cc
 cleverapps.io
+cleverapps.tech
 click
 clickrising.net
 client.scrypted.io
@@ -1471,6 +1486,7 @@ cloudapps.digital
 cloudcontrolapp.com
 cloudcontrolled.com
 cloudflare-ipfs.com
+cloudflare.net
 cloudfront.net
 cloudfunctions.net
 cloudjiffy.net
@@ -2558,9 +2574,11 @@ execute-api.us-west-2.amazonaws.com
 exnet.su
 expert
 experts-comptables.fr
+expo.app
 exposed
 express
 express.aero
+express.val.run
 extraspace
 ezproxy.kuleuven.be
 f.bg
@@ -3435,6 +3453,7 @@ health.vn
 healthcare
 heavy.jp
 heguri.nara.jp
+heiyu.space
 hekinan.aichi.jp
 helioho.st
 heliohost.us
@@ -3645,6 +3664,7 @@ hvaler.no
 hyatt
 hyllestad.no
 hyogo.jp
+hypernode.io
 hyuga.miyazaki.jp
 hyundai
 hzc.io
@@ -3785,6 +3805,7 @@ ind.br
 ind.gt
 ind.in
 ind.kw
+ind.mom
 ind.tn
 independent-commission.uk
 independent-inquest.uk
@@ -4940,6 +4961,7 @@ macapa.br
 maceio.br
 macerata.it
 machida.tokyo.jp
+madethis.site
 madrid
 maebashi.gunma.jp
 magazine.aero
@@ -5065,6 +5087,7 @@ media
 media.aero
 media.hu
 media.pl
+media.strapiapp.com
 mediatech.by
 mediatech.dev
 medicina.bo
@@ -5635,7 +5658,6 @@ nasushiobara.tochigi.jp
 nat.tn
 natal.br
 natori.miyagi.jp
-natura
 natural.bo
 naturbruksgymn.se
 naustdal.no
@@ -6026,6 +6048,7 @@ notebook.us-west-1.sagemaker.aws
 notebook.us-west-2.sagemaker.aws
 noticeable.news
 noticias.bo
+notion.site
 noto.ishikawa.jp
 notodden.no
 notogawa.shiga.jp
@@ -6093,6 +6116,7 @@ obira.hokkaido.jp
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
 obninsk.su
+observablehq.cloud
 observer
 obu.aichi.jp
 obuse.nagano.jp
@@ -6920,6 +6944,8 @@ reit
 reklam.hu
 rel.ht
 rel.pl
+relay.evervault.app
+relay.evervault.dev
 reliance
 remotewd.com
 ren
@@ -7926,6 +7952,7 @@ stackit.run
 stackit.zone
 stada
 stage.nodeart.io
+staging.expo.app
 staging.onred.one
 staging.replit.dev
 stalowa-wola.pl
@@ -7971,6 +7998,7 @@ storipress.app
 storj.farm
 strand.no
 stranda.no
+strapiapp.com
 streak-link.com
 streaklinks.com
 streakusercontent.com
@@ -8947,6 +8975,7 @@ web.ni
 web.pk
 web.tj
 web.tr
+web.val.run
 web.ve
 web.za
 webadorsite.com
@@ -9052,6 +9081,7 @@ withyoutube.com
 wiw.gov.pl
 wix.run
 wixsite.com
+wixstudio.com
 wixstudio.io
 wjg.jp
 wkz.gov.pl
@@ -9719,6 +9749,7 @@ zapto.org
 zapto.xyz
 zara
 zarow.pl
+zeabur.app
 zentsuji.kagawa.jp
 zero
 zgora.pl

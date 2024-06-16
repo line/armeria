@@ -179,12 +179,12 @@ public final class DefaultClientRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            @Nullable EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
+        this(eventLoop, meterRegistry, sessionProtocol,
              id, method, reqTarget, options, req, rpcReq, requestOptions, serviceRequestContext(),
              requireNonNull(responseCancellationScheduler, "responseCancellationScheduler"),
              requestStartTimeNanos, requestStartTimeMicros);
@@ -226,9 +226,6 @@ public final class DefaultClientRequestContext
               guessExchangeType(requestOptions, req),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root), options.contextHook());
-        assert (eventLoop == null && responseCancellationScheduler == null) ||
-               (eventLoop != null && responseCancellationScheduler != null)
-                : "'eventLoop' and 'responseCancellationScheduler' should be both null or non-null";
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -1016,7 +1013,7 @@ public final class DefaultClientRequestContext
                 });
                 // To deactivate the channel when initiateShutdown is called after the RequestHeaders is sent.
                 // The next request will trigger shutdown.
-                HttpSession.get(ch).deactivate();
+                HttpSession.get(ch).markUnacquirable();
             }
         });
         return completableFuture;

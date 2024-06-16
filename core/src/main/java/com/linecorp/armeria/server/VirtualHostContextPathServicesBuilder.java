@@ -23,7 +23,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
@@ -41,7 +40,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
  */
 @UnstableApi
 public final class VirtualHostContextPathServicesBuilder
-        extends AbstractContextPathServicesBuilder<VirtualHostBuilder> {
+        extends AbstractContextPathServicesBuilder<VirtualHostContextPathServicesBuilder, VirtualHostBuilder> {
 
     VirtualHostContextPathServicesBuilder(VirtualHostBuilder parent, VirtualHostBuilder virtualHostBuilder,
                                           Set<String> contextPaths) {
@@ -77,101 +76,6 @@ public final class VirtualHostContextPathServicesBuilder
     }
 
     @Override
-    public VirtualHostContextPathServicesBuilder serviceUnder(String pathPrefix,
-                                                              HttpService service) {
-        return (VirtualHostContextPathServicesBuilder) super.serviceUnder(pathPrefix, service);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder service(String pathPattern,
-                                                         HttpService service) {
-        return (VirtualHostContextPathServicesBuilder) super.service(pathPattern, service);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder service(Route route, HttpService service) {
-        return (VirtualHostContextPathServicesBuilder) super.service(route, service);
-    }
-
-    @SafeVarargs
-    @Override
-    public final VirtualHostContextPathServicesBuilder service(
-            HttpServiceWithRoutes serviceWithRoutes,
-            Function<? super HttpService, ? extends HttpService>... decorators) {
-        return (VirtualHostContextPathServicesBuilder) super.service(serviceWithRoutes, decorators);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder service(
-            HttpServiceWithRoutes serviceWithRoutes,
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
-        return (VirtualHostContextPathServicesBuilder) super.service(serviceWithRoutes, decorators);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder annotatedService(Object service) {
-        return (VirtualHostContextPathServicesBuilder) super.annotatedService(service);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder annotatedService(Object service,
-                                                                  Object... exceptionHandlersAndConverters) {
-        return (VirtualHostContextPathServicesBuilder) super.annotatedService(service,
-                                                                              exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder annotatedService(
-            Object service,
-            Function<? super HttpService, ? extends HttpService> decorator,
-            Object... exceptionHandlersAndConverters) {
-        return (VirtualHostContextPathServicesBuilder) super.annotatedService(service, decorator,
-                                                                              exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder annotatedService(String pathPrefix,
-                                                                  Object service) {
-        return (VirtualHostContextPathServicesBuilder) super.annotatedService(pathPrefix, service);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder annotatedService(String pathPrefix,
-                                                                  Object service,
-                                                                  Object... exceptionHandlersAndConverters) {
-        return (VirtualHostContextPathServicesBuilder) super.annotatedService(pathPrefix, service,
-                                                                              exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder annotatedService(
-            String pathPrefix,
-            Object service,
-            Function<? super HttpService, ? extends HttpService> decorator,
-            Object... exceptionHandlersAndConverters) {
-        return (VirtualHostContextPathServicesBuilder) super.annotatedService(pathPrefix, service, decorator,
-                                                                              exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder annotatedService(String pathPrefix,
-                                                                  Object service,
-                                                                  Iterable<?> exceptionHandlersAndConverters) {
-        return (VirtualHostContextPathServicesBuilder) super.annotatedService(pathPrefix, service,
-                                                                              exceptionHandlersAndConverters);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder annotatedService(
-            String pathPrefix,
-            Object service,
-            Function<? super HttpService, ? extends HttpService> decorator,
-            Iterable<?> exceptionHandlersAndConverters) {
-        return (VirtualHostContextPathServicesBuilder) super.annotatedService(pathPrefix, service, decorator,
-                                                                              exceptionHandlersAndConverters);
-    }
-
-    @Override
     public VirtualHostContextPathServicesBuilder annotatedService(
             String pathPrefix,
             Object service,
@@ -196,72 +100,5 @@ public final class VirtualHostContextPathServicesBuilder
     @Override
     public VirtualHostContextPathAnnotatedServiceConfigSetters annotatedService() {
         return new VirtualHostContextPathAnnotatedServiceConfigSetters(this);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder decorator(
-            Function<? super HttpService, ? extends HttpService> decorator) {
-        return (VirtualHostContextPathServicesBuilder) super.decorator(decorator);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder decorator(
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (VirtualHostContextPathServicesBuilder) super.decorator(decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder decorator(
-            String pathPattern,
-            Function<? super HttpService, ? extends HttpService> decorator) {
-        return (VirtualHostContextPathServicesBuilder) super.decorator(pathPattern, decorator);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder decorator(
-            String pathPattern,
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (VirtualHostContextPathServicesBuilder)
-                super.decorator(pathPattern, decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder decorator(
-            Route route,
-            Function<? super HttpService, ? extends HttpService> decorator) {
-        return (VirtualHostContextPathServicesBuilder) super.decorator(route, decorator);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder decorator(
-            Route route,
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (VirtualHostContextPathServicesBuilder) super.decorator(route, decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder decoratorUnder(
-            String prefix,
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
-        return (VirtualHostContextPathServicesBuilder)
-                super.decoratorUnder(prefix, decoratingHttpServiceFunction);
-    }
-
-    @Override
-    public VirtualHostContextPathServicesBuilder decoratorUnder(
-            String prefix, Function<? super HttpService, ? extends HttpService> decorator) {
-        return (VirtualHostContextPathServicesBuilder) super.decoratorUnder(prefix, decorator);
-    }
-
-    @Override
-    VirtualHostContextPathServicesBuilder addServiceConfigSetters(
-            ServiceConfigSetters serviceConfigSetters) {
-        return (VirtualHostContextPathServicesBuilder) super.addServiceConfigSetters(serviceConfigSetters);
-    }
-
-    @Override
-    VirtualHostContextPathServicesBuilder addRouteDecoratingService(
-            RouteDecoratingService routeDecoratingService) {
-        return (VirtualHostContextPathServicesBuilder) super.addRouteDecoratingService(routeDecoratingService);
     }
 }

@@ -34,6 +34,7 @@ import com.google.protobuf.StringValue;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -365,7 +366,9 @@ public class TestServiceImpl extends TestServiceGrpc.TestServiceImplBase {
                 }
             } catch (Throwable e) {
                 failure = e;
-                if (GrpcStatus.fromThrowable(e).getCode() == Status.CANCELLED.getCode()) {
+                if (GrpcExceptionHandlerFunction.of()
+                                                .apply(ServiceRequestContext.current(), e, new Metadata())
+                                                .getCode() == Status.CANCELLED.getCode()) {
                     // Stream was cancelled by client, responseStream.onError() might be called already or
                     // will be called soon by inbounding StreamObserver.
                     chunks.clear();

@@ -15,7 +15,9 @@
  */
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.Stringifier.segmentsToPath;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.Mockito.mock;
@@ -23,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -46,18 +49,15 @@ class HttpJsonTranscodingPathParserTest {
                                            PathMappingType typeAnswer,
                                            Map<String, String> pathParams,
                                            Map<String, String> pathVariablesAnswer) {
+        if (typeAnswer == PathMappingType.REGEX) {
+            // Make sure the generated path is a valid regex pattern.
+            assertThatCode(() -> Pattern.compile(generatedPathAnswer))
+                    .doesNotThrowAnyException();
+        }
         final List<HttpJsonTranscodingPathParser.PathSegment> segments =
                 HttpJsonTranscodingPathParser.parse(originalPath);
 
-        final String generatedPath;
-        if (typeAnswer == PathMappingType.PARAMETERIZED) {
-            generatedPath = HttpJsonTranscodingPathParser.Stringifier.asParameterizedPath(segments, true);
-        } else {
-            assertThatThrownBy(() -> HttpJsonTranscodingPathParser.Stringifier.asParameterizedPath(segments,
-                                                                                                   true))
-                    .isInstanceOf(UnsupportedOperationException.class);
-            generatedPath = HttpJsonTranscodingPathParser.Stringifier.asGlobPath(segments, true);
-        }
+        final String generatedPath = segmentsToPath(typeAnswer, segments, true);
         assertThat(generatedPath).isEqualTo(generatedPathAnswer);
 
         // Check path variables and their values.
@@ -71,7 +71,7 @@ class HttpJsonTranscodingPathParserTest {
                 HttpJsonTranscodingService.populatePathVariables(ctx, pathVariables);
 
         assertThat(populated.size()).isEqualTo(pathVariablesAnswer.size());
-        pathVariablesAnswer.forEach((key, value) -> assertThat(populated.get(key)).isEqualTo(value));
+        assertThat(pathVariablesAnswer).containsExactlyInAnyOrderEntriesOf(populated);
     }
 
     private static class PathArgumentsProvider implements ArgumentsProvider {
@@ -103,6 +103,21 @@ class HttpJsonTranscodingPathParserTest {
                               PathMappingType.PARAMETERIZED,
                               ImmutableMap.of("p0", "1", "name3", "2"),
                               ImmutableMap.of("name", "messages/1/foo/2", "name2", "1/foo/2", "name3", "2")),
+                    arguments("/v1/messages/{message_id}:verb",
+                              "/v1/messages/(?<p0>[^/]+):verb",
+                              PathMappingType.REGEX,
+                              ImmutableMap.of("p0", "1"),
+                              ImmutableMap.of("message_id", "1")),
+                    arguments("/v1/messages/{message_id=hello/*}:verb",
+                              "/v1/messages/hello/(?<p0>[^/]+):verb",
+                              PathMappingType.REGEX,
+                              ImmutableMap.of("p0", "1"),
+                              ImmutableMap.of("message_id", "hello/1")),
+                    arguments("/v1/messages/{first=a/{second=b/*/{third}}}:verb",
+                              "/v1/messages/a/b/(?<p0>[^/]+)/(?<p1>[^/]+):verb",
+                              PathMappingType.REGEX,
+                              ImmutableMap.of("p0", "1", "p1", "2"),
+                              ImmutableMap.of("first", "a/b/1/2", "second", "b/1/2", "third", "2")),
                     arguments("/v1/messages/{name=**}",
                               "/v1/messages/**",
                               PathMappingType.GLOB,
@@ -141,6 +156,12 @@ class HttpJsonTranscodingPathParserTest {
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{}"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse(""))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{var}:verb:verb"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/var:verb:verb"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse("/v1/{deep=**}/var:verb"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> HttpJsonTranscodingPathParser.parse(null))
                 .isInstanceOf(NullPointerException.class);

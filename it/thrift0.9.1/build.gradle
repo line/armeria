@@ -15,7 +15,6 @@ dependencies {
     // Dropwizard and Prometheus, for testing metrics integration
     testImplementation libs.dropwizard.metrics.core
     testImplementation libs.micrometer.prometheus
-    testImplementation libs.prometheus
 }
 
 def suffix = rootProject.osdetector.classifier

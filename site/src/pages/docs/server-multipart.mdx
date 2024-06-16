@@ -63,7 +63,7 @@ content-type:application/octet-stream
 ## Sending a multipart request
 
 The <type://Multipart> created in this way can be converted to an <type://HttpRequest> through 
-<type://MultiPart#toHttpRequest(String)> and transmitted to a server using a <type://WebClient>.
+<type://Multipart#toHttpRequest(String)> and transmitted to a server using a <type://WebClient>.
 
 ```java
 WebClient client = WebClient.of("https://armeria.dev");
@@ -139,8 +139,13 @@ public HttpResponse upload(
 
 <Tip>
 
-The multipart files uploaded to an annotated service are stored into
-<type://ServerBuilder#multipartUploadsLocation(Path)> and the files are not removed automatically. 
-You should explicitly **delete** the files after use.
+<type://ServerBuilder#multipartUploadsLocation(Path)> and the files are removed as soon as the request is 
+handled completely by default, i.e. when the <type://RequestLog> is complete. If you want to persist the 
+uploaded file, you can move the uploaded file to another folder or persistence layer before the deletion.
+
+Alternatively, you can disable the automatic deletion of the uploaded files by setting 
+<type://MultipartRemovalStrategy#NEVER> to 
+<type://ServerBuilder#multipartRemovalStrategy(MultipartRemovalStrategy)>, but please note that you must make
+sure the uploaded files are deleted once they are not in use to avoid the excessive consumption of disk space.
 
 </Tip>

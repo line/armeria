@@ -36,7 +36,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * @param <T> the response type
  */
 @UnstableApi
-public abstract class AbstractRuleWithContentBuilder<T extends Response> extends AbstractRuleBuilder {
+public abstract class AbstractRuleWithContentBuilder
+        <SELF extends AbstractRuleWithContentBuilder<SELF, T>, T extends Response>
+        extends AbstractRuleBuilder<SELF> {
 
     @Nullable
     private BiFunction<? super ClientRequestContext, ? super T, ? extends CompletionStage<Boolean>>
@@ -54,7 +56,7 @@ public abstract class AbstractRuleWithContentBuilder<T extends Response> extends
      * Adds the specified {@code responseFilter}.
      */
     @SuppressWarnings("unchecked")
-    public AbstractRuleWithContentBuilder<T> onResponse(
+    public SELF onResponse(
             BiFunction<? super ClientRequestContext, ? super T,
                     ? extends CompletionStage<Boolean>> responseFilter) {
         requireNonNull(responseFilter, "responseFilter");
@@ -88,7 +90,7 @@ public abstract class AbstractRuleWithContentBuilder<T extends Response> extends
                 }
             };
         }
-        return this;
+        return self();
     }
 
     /**

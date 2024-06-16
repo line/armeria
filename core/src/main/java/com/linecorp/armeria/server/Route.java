@@ -149,7 +149,7 @@ public interface Route {
      * <ul>
      *   <li>EXACT: {@code [ "/foo", "/foo" ]} (The trie path is the same.)</li>
      *   <li>PREFIX: {@code [ "/foo/", "/foo/*" ]}</li>
-     *   <li>PARAMETERIZED: {@code [ "/foo/:", "/foo/:" ]} (The trie path is the same.)</li>
+     *   <li>PARAMETERIZED: {@code [ "/foo/\0", "/foo/\0" ]} (The trie path is the same.)</li>
      * </ul>
      *
      * <p>{@link RoutePathType#REGEX} may have one or two paths. If the {@link Route} was created from a glob

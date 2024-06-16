@@ -187,5 +187,9 @@ static void afterProjectsWithFlags(Project project, Iterable<?> flags, Closure<S
 
 // We add a "virtual project", with no source code, to control dependency management using Gradle's platform
 // functionality.
+def virtualProjectsPath = "${rootDir}/build/virtual-projects"
 includeWithFlags ':dependencyManagement', 'dependencyManagement'
-project(':dependencyManagement').projectDir = file("${rootProject.projectDir}/build/dependencyManagement")
+project(":dependencyManagement").with {
+    projectDir = file("${virtualProjectsPath}/dependencyManagement")
+    projectDir.mkdirs()
+}

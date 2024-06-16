@@ -29,13 +29,13 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Sets properties for building {@link DynamicEndpointGroup}.
  */
 @UnstableApi
-public interface DynamicEndpointGroupSetters {
+public interface DynamicEndpointGroupSetters<SELF extends DynamicEndpointGroupSetters<SELF>> {
 
     /**
      * Sets whether to allow an empty {@link Endpoint} list.
      * If unspecified, an empty {@link Endpoint} list is allowed.
      */
-    DynamicEndpointGroupSetters allowEmptyEndpoints(boolean allowEmptyEndpoints);
+    SELF allowEmptyEndpoints(boolean allowEmptyEndpoints);
 
     /**
      * Sets the timeout to wait until a successful {@link Endpoint} selection.
@@ -43,7 +43,7 @@ public interface DynamicEndpointGroupSetters {
      * If unspecified, {@link Flags#defaultConnectTimeoutMillis()} is used by default.
      */
     @UnstableApi
-    default DynamicEndpointGroupSetters selectionTimeout(Duration selectionTimeout) {
+    default SELF selectionTimeout(Duration selectionTimeout) {
         requireNonNull(selectionTimeout, "selectionTimeout");
         checkArgument(!selectionTimeout.isNegative(), "selectionTimeout: %s (expected: >= 0)",
                       selectionTimeout);
@@ -56,5 +56,5 @@ public interface DynamicEndpointGroupSetters {
      * If unspecified, {@link Flags#defaultConnectTimeoutMillis()} is used by default.
      */
     @UnstableApi
-    DynamicEndpointGroupSetters selectionTimeoutMillis(long selectionTimeoutMillis);
+    SELF selectionTimeoutMillis(long selectionTimeoutMillis);
 }

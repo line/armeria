@@ -6,6 +6,8 @@ dependencies {
 
     api libs.javax.annotation
 
+    testImplementation project(':prometheus1')
+
     // thrift api depends on httpclient4
     testImplementation libs.apache.httpclient4
 
@@ -15,8 +17,7 @@ dependencies {
 
     // Dropwizard and Prometheus, for testing metrics integration
     testImplementation libs.dropwizard.metrics.core
-    testImplementation libs.micrometer.prometheus
-    testImplementation libs.prometheus
+    testImplementation libs.prometheus.metrics.exposition.formats
 
     // micrometer tracing
     testImplementation (libs.micrometer.tracing.integration.test) {
@@ -72,7 +73,7 @@ tasks.sourcesJar.from "${thrift013ProjectDir}/src/main/resources"
 // NB: Keep this same with ':thrift0.13'.
 tasks.shadedJar.exclude 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*'
 tasks.shadedJar.doLast {
-    ant.jar(update: true, destfile: tasks.shadedJar.archivePath) {
+    ant.jar(update: true, destfile: tasks.shadedJar.archiveFile.get().asFile) {
         sourceSets.main.output.classesDirs.each { classesDir ->
             fileset(dir: "$classesDir",
                     includes: 'com/linecorp/armeria/common/thrift/ThriftListenableFuture*')

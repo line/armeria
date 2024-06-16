@@ -35,7 +35,6 @@ import java.util.function.Supplier;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
@@ -43,13 +42,11 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
-import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.EventLoopGroup;
 
-final class ServiceConfigBuilder implements ServiceConfigSetters {
+final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBuilder> {
 
     private final Route route;
     private final HttpService service;
@@ -79,6 +76,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     @Nullable
     private Path multipartUploadsLocation;
     @Nullable
+    private MultipartRemovalStrategy multipartRemovalStrategy;
+    @Nullable
     private EventLoopGroup serviceWorkerGroup;
     @Nullable
     private ServiceErrorHandler serviceErrorHandler;
@@ -91,6 +90,17 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     ServiceConfigBuilder(Route route, String contextPath, HttpService service) {
         this.route = requireNonNull(route, "route").withPrefix(contextPath);
         this.service = requireNonNull(service, "service");
+
+        final ServiceOptions options = service.options();
+        if (options.requestTimeoutMillis() != -1) {
+            requestTimeoutMillis = options.requestTimeoutMillis();
+        }
+        if (options.maxRequestLength() != -1) {
+            maxRequestLength = options.maxRequestLength();
+        }
+        if (options.requestAutoAbortDelayMillis() != -1) {
+            requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
+        }
     }
 
     void addMappedRoute(Route mappedRoute) {
@@ -214,7 +224,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
-        this.multipartUploadsLocation = multipartUploadsLocation;
+        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        multipartRemovalStrategy = requireNonNull(removalStrategy, "removalStrategy");
         return this;
     }
 
@@ -329,48 +345,28 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         SuccessFunction defaultSuccessFunction,
                         long defaultRequestAutoAbortDelayMillis,
                         Path defaultMultipartUploadsLocation,
+                        MultipartRemovalStrategy defaultMultipartRemovalStrategy,
                         EventLoopGroup defaultServiceWorkerGroup,
                         HttpHeaders virtualHostDefaultHeaders,
                         Function<? super RoutingContext, ? extends RequestId> defaultRequestIdGenerator,
                         ServiceErrorHandler defaultServiceErrorHandler,
-                        @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
+                        @Nullable UnloggedExceptionsReporter unloggedExceptionsReporter,
                         String baseContextPath, Supplier<AutoCloseable> contextHook) {
         ServiceErrorHandler errorHandler =
                 serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
                                             : defaultServiceErrorHandler;
-        if (unhandledExceptionsReporter != null) {
+        if (unloggedExceptionsReporter != null) {
             errorHandler = new ExceptionReportingServiceErrorHandler(errorHandler,
-                                                                     unhandledExceptionsReporter);
+                                                                     unloggedExceptionsReporter);
         }
 
-        final boolean webSocket = service.as(DefaultWebSocketService.class) != null;
-        final long requestTimeoutMillis;
-        if (this.requestTimeoutMillis != null) {
-            requestTimeoutMillis = this.requestTimeoutMillis;
-        } else if (!webSocket || defaultRequestTimeoutMillis != Flags.defaultRequestTimeoutMillis()) {
-            requestTimeoutMillis = defaultRequestTimeoutMillis;
-        } else {
-            requestTimeoutMillis = WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS;
-        }
-
-        final long maxRequestLength;
-        if (this.maxRequestLength != null) {
-            maxRequestLength = this.maxRequestLength;
-        } else if (!webSocket || defaultMaxRequestLength != Flags.defaultMaxRequestLength()) {
-            maxRequestLength = defaultMaxRequestLength;
-        } else {
-            maxRequestLength = WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH;
-        }
-
-        final long requestAutoAbortDelayMillis;
-        if (this.requestAutoAbortDelayMillis != null) {
-            requestAutoAbortDelayMillis = this.requestAutoAbortDelayMillis;
-        } else if (!webSocket ||
-                   defaultRequestAutoAbortDelayMillis != Flags.defaultRequestAutoAbortDelayMillis()) {
-            requestAutoAbortDelayMillis = defaultRequestAutoAbortDelayMillis;
-        } else {
-            requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
-        }
+        final long requestTimeoutMillis = this.requestTimeoutMillis != null ? this.requestTimeoutMillis
+                                                                            : defaultRequestTimeoutMillis;
+        final long maxRequestLength = this.maxRequestLength != null ? this.maxRequestLength
+                                                                    : defaultMaxRequestLength;
+        final long requestAutoAbortDelayMillis =
+                this.requestAutoAbortDelayMillis != null ? this.requestAutoAbortDelayMillis
+                                                         : defaultRequestAutoAbortDelayMillis;
 
         final Supplier<AutoCloseable> mergedContextHook = mergeHooks(contextHook, this.contextHook);
 
@@ -388,6 +384,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 successFunction != null ? successFunction : defaultSuccessFunction,
                 requestAutoAbortDelayMillis,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
+                multipartRemovalStrategy != null ? multipartRemovalStrategy : defaultMultipartRemovalStrategy,
                 serviceWorkerGroup != null ? serviceWorkerGroup : defaultServiceWorkerGroup,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),

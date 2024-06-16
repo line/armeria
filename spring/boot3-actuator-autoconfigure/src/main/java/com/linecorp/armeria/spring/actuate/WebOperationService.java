@@ -251,6 +251,10 @@ final class WebOperationService implements HttpService {
             return HttpResponse.of(status, contentType, (CharSequence) body);
         }
 
+        if (body instanceof byte[]) {
+            return HttpResponse.of(status, contentType, (byte[]) body);
+        }
+
         if (body instanceof Resource) {
             final Resource resource = (Resource) body;
             final String filename = resource.getFilename();
