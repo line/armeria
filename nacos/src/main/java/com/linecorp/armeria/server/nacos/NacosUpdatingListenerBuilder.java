@@ -40,9 +40,6 @@ import com.linecorp.armeria.server.Server;
  */
 @UnstableApi
 public final class NacosUpdatingListenerBuilder implements NacosConfigSetters {
-
-    private final String serviceName;
-
     @Nullable
     private Endpoint endpoint;
 
@@ -55,8 +52,8 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters {
      * @param serviceName the service name to register
      */
     NacosUpdatingListenerBuilder(URI nacosUri, String serviceName) {
-        this.serviceName = requireNonNull(serviceName, "serviceName");
-        checkArgument(!this.serviceName.isEmpty(), "serviceName can't be empty");
+        requireNonNull(serviceName, "serviceName");
+        checkArgument(!serviceName.isEmpty(), "serviceName can't be empty");
         nacosClientBuilder = NacosClient.builder(nacosUri, serviceName);
     }
 
