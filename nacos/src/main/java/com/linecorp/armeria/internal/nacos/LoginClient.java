@@ -53,6 +53,8 @@ final class LoginClient extends SimpleDecoratingHttpClient {
     }
 
     private static final String NACOS_ACCESS_TOKEN_CACHE_KEY = "NACOS_ACCESS_TOKEN_CACHE_KEY";
+
+    // TODO: Replace the caffeine AsyncLoadingCache with internally implemented AsyncLoader, if #5590 merged.
     private final AsyncLoadingCache<String, LoginResult> tokenCache = Caffeine.newBuilder()
             .maximumSize(1)
             .expireAfter(new Expiry<String, LoginResult>() {
