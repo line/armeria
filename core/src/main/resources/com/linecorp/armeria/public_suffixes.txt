@@ -607,6 +607,7 @@ arts.ro
 arts.ve
 arvo.network
 as
+as.sh.cn
 as.us
 asago.hyogo.jp
 asahi.chiba.jp
