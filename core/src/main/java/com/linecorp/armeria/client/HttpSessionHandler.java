@@ -148,7 +148,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.serializationFormat = serializationFormat;
         this.poolKey = poolKey;
         this.clientFactory = clientFactory;
-        final OutlierDetection outlierDetection = clientFactory.options().outlierDetection();
+        final OutlierDetection outlierDetection = clientFactory.options().connectionOutlierDetection();
         if (outlierDetection != OutlierDetection.disabled()) {
             outlierDetector = outlierDetection.newDetector();
             outlierDetectingRule = outlierDetection.rule();
@@ -613,6 +613,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                     break;
                 case FATAL:
                     markUnacquirable();
+                    break;
                 case IGNORE:
                     break;
             }

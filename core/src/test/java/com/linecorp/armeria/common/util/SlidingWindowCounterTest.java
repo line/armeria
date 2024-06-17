@@ -29,7 +29,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
 
-
 class SlidingWindowCounterTest {
 
     private static final AtomicLong ticker = new AtomicLong();

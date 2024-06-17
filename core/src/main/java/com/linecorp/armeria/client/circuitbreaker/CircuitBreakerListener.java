@@ -135,7 +135,7 @@ public interface CircuitBreakerListener {
      * Invoked when the circuit breaker's internal {@link EventCount} is updated.
      *
      * @deprecated Use {@link #onEventCountUpdated(String, com.linecorp.armeria.common.util.EventCount)}
-     * instead.
+     *             instead.
      */
     @Deprecated
     void onEventCountUpdated(String circuitBreakerName, EventCount eventCount) throws Exception;

@@ -35,7 +35,9 @@ public final class OutlierDetectionBuilder {
     private static final double DEFAULT_FAILURE_RATE_THRESHOLD = 0.5;
     private static final long DEFAULT_MINIMUM_REQUEST_THRESHOLD = 10;
 
-    static final OutlierDetection DEFAULT_DETECTION = OutlierDetection.builder(OutlierDetectingRule.of()).build();
+    static final OutlierDetection DEFAULT_DETECTION =
+            OutlierDetection.builder(OutlierDetectingRule.of())
+                            .build();
 
     private final OutlierDetectingRule rule;
 
@@ -127,6 +129,9 @@ public final class OutlierDetectionBuilder {
         return this;
     }
 
+    /**
+     * Returns a new {@link OutlierDetection} with the specified configuration.
+     */
     public OutlierDetection build() {
         return new DefaultOutlierDetection(rule, ticker, counterSlidingWindow, counterUpdateInterval,
                                            failureRateThreshold, minimumRequestThreshold);

@@ -594,7 +594,10 @@ public final class ClientFactoryOptions
         return get(CONNECTION_POOL_LISTENER);
     }
 
-    public OutlierDetection outlierDetection() {
+    /**
+     * Returns the {@link OutlierDetection} which is used to detect unhealthy connections.
+     */
+    public OutlierDetection connectionOutlierDetection() {
         return get(CONNECTION_OUTLIER_DETECTION);
     }
 
