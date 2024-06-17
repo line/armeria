@@ -140,6 +140,10 @@ final class TextLogFormatter implements LogFormatter {
             buf.append("Request: {startTime=");
             TextFormatter.appendEpochMicros(buf, log.requestStartTimeMicros());
 
+            if (RequestLogProperty.SESSION.isAvailable(flags)) {
+                maybeAppendConnectionTimings(log.connectionTimings(), buf);
+            }
+
             if (RequestLogProperty.REQUEST_LENGTH.isAvailable(flags)) {
                 buf.append(", length=");
                 TextFormatter.appendSize(buf, log.requestLength());
@@ -182,10 +186,45 @@ final class TextLogFormatter implements LogFormatter {
             if (sanitizedTrailers != null) {
                 buf.append(", trailers=").append(sanitizedTrailers);
             }
-            buf.append('}');
 
+            final int currentAttempt = log.currentAttempt();
+            if (currentAttempt > 0) {
+                buf.append(", currentAttempt=").append(currentAttempt);
+            }
+            buf.append('}');
             return buf.toString();
         }
+    }
+
+    private static void maybeAppendConnectionTimings(@Nullable ClientConnectionTimings timings,
+                                                     StringBuilder buf) {
+        if (timings == null) {
+            return;
+        }
+        buf.append(", Connection: {total=");
+        TextFormatter.appendEpochAndElapsed(buf, timings.connectionAcquisitionStartTimeMicros(),
+                                            timings.connectionAcquisitionDurationNanos());
+        if (timings.dnsResolutionDurationNanos() >= 0) {
+            buf.append(", dns=");
+            TextFormatter.appendEpochAndElapsed(buf, timings.dnsResolutionStartTimeMicros(),
+                                                timings.dnsResolutionDurationNanos());
+        }
+        if (timings.pendingAcquisitionDurationNanos() >= 0) {
+            buf.append(", pending=");
+            TextFormatter.appendEpochAndElapsed(buf, timings.pendingAcquisitionStartTimeMicros(),
+                                                timings.pendingAcquisitionDurationNanos());
+        }
+        if (timings.socketConnectDurationNanos() >= 0) {
+            buf.append(", socket=");
+            TextFormatter.appendEpochAndElapsed(buf, timings.socketConnectStartTimeMicros(),
+                                                timings.socketConnectDurationNanos());
+        }
+        if (timings.tlsHandshakeDurationNanos() >= 0) {
+            buf.append(", tls=");
+            TextFormatter.appendEpochAndElapsed(buf, timings.tlsHandshakeStartTimeMicros(),
+                                                timings.tlsHandshakeDurationNanos());
+        }
+        buf.append('}');
     }
 
     @Override

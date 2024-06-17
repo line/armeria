@@ -30,25 +30,11 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
  * based on a combination of host, method and path.
  */
 @UnstableApi
-public final class Resilience4jCircuitBreakerMappingBuilder extends AbstractCircuitBreakerMappingBuilder {
+public final class Resilience4jCircuitBreakerMappingBuilder
+        extends AbstractCircuitBreakerMappingBuilder<Resilience4jCircuitBreakerMappingBuilder> {
 
     private CircuitBreakerRegistry registry = CircuitBreakerRegistry.ofDefaults();
     private Resilience4jCircuitBreakerFactory factory = Resilience4jCircuitBreakerFactory.of();
-
-    @Override
-    public Resilience4jCircuitBreakerMappingBuilder perHost() {
-        return (Resilience4jCircuitBreakerMappingBuilder) super.perHost();
-    }
-
-    @Override
-    public Resilience4jCircuitBreakerMappingBuilder perMethod() {
-        return (Resilience4jCircuitBreakerMappingBuilder) super.perMethod();
-    }
-
-    @Override
-    public Resilience4jCircuitBreakerMappingBuilder perPath() {
-        return (Resilience4jCircuitBreakerMappingBuilder) super.perPath();
-    }
 
     /**
      * The {@link CircuitBreakerRegistry} from which {@link CircuitBreaker} instances will be

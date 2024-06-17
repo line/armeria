@@ -1,6 +1,5 @@
 import java.util.regex.Pattern
 
-// Determine which version of JDK should be used for builds.
 def buildJdkVersion = Integer.parseInt(JavaVersion.current().getMajorVersion())
 if (rootProject.hasProperty('buildJdkVersion')) {
     def jdkVersion = Integer.parseInt(String.valueOf(rootProject.findProperty('buildJdkVersion')))
@@ -50,7 +49,9 @@ configure(projectsWithFlags('java')) {
     apply plugin: 'idea'
     apply plugin: 'jvm-test-suite'
 
-    archivesBaseName = project.ext.artifactId
+    base {
+        archivesName = project.ext.artifactId
+    }
 
     // Delete the generated source directory on clean.
     ext {
@@ -140,12 +141,6 @@ configure(projectsWithFlags('java')) {
         registerFeature('optional') {
             usingSourceSet(sourceSets.main)
         }
-
-        // Do not let Gradle infer the module path if automatic module name is enabled,
-        // because it means the JAR will rely on JDK's automatic module metadata generation.
-        if (project.ext.automaticModuleName != null) {
-            modularity.inferModulePath = false
-        }
     }
 
     // Set the sensible compiler options.
@@ -159,15 +154,6 @@ configure(projectsWithFlags('java')) {
         options.encoding = 'UTF-8'
         options.warnings = false
         options.compilerArgs += '-parameters'
-    }
-
-    // Set the 'Automatic-Module-Name' property in 'MANIFEST.MF' if `automaticModuleName` is not null.
-    if (project.ext.automaticModuleName != null) {
-        tasks.named('jar') {
-            manifest {
-                attributes('Automatic-Module-Name': project.ext.automaticModuleName)
-            }
-        }
     }
 
     project.ext.configureFlakyTests = { Test testTask ->
@@ -201,6 +187,9 @@ configure(projectsWithFlags('java')) {
                                      "targetJavaVersion(${project.ext.targetJavaVersion})")
             testTask.enabled = false
         }
+        if (testTask.enabled) {
+            project.ext.configureFlakyTests(testTask)
+        }
     }
 
     testing.suites {
@@ -210,7 +199,6 @@ configure(projectsWithFlags('java')) {
 
             targets.configureEach {
                 testTask.configure {
-                    project.ext.configureFlakyTests(it)
                     project.ext.configureCommonTestSettings(it)
                 }
             }

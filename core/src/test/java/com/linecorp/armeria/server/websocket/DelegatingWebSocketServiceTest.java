@@ -30,7 +30,6 @@ import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.websocket.WebSocketClient;
 import com.linecorp.armeria.client.websocket.WebSocketSession;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -39,7 +38,6 @@ import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -81,14 +79,6 @@ class DelegatingWebSocketServiceTest {
         response = client.post("/ws-or-http", "");
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("fallback");
-    }
-
-    @Test
-    void shouldNotSetDefaultSettings() {
-        final ServiceConfig serviceConfig = server.server().serviceConfigs().get(0);
-        assertThat(serviceConfig.service().as(DelegatingWebSocketService.class)).isNotNull();
-        // The default settings for `WebSocketService` should be applied only to `DefaultWebSocketService`.
-        assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(Flags.defaultRequestTimeoutMillis());
     }
 
     private static class EchoWebSocketHandler implements WebSocketServiceHandler {

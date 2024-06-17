@@ -86,6 +86,10 @@ class RetryingClientWithEmptyEndpointGroupTest {
         assertEmptyEndpointGroupException(log);
 
         assertThat(log.children()).hasSize(numAttempts);
+        for (int i = 0; i < log.children().size(); i++) {
+            assertThat(log.children().get(i).partial().currentAttempt()).isEqualTo(i + 1);
+        }
+
         log.children().stream()
            .map(RequestLogAccess::ensureComplete)
            .forEach(RetryingClientWithEmptyEndpointGroupTest::assertEmptyEndpointGroupException);

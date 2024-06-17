@@ -21,6 +21,9 @@ import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
@@ -35,8 +38,11 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class ClusterEntry implements AsyncCloseable {
 
+    private static final Logger logger = LoggerFactory.getLogger(ClusterEntry.class);
+
     private final EndpointsPool endpointsPool;
-    private final LoadBalancer loadBalancer = new SubsetLoadBalancer();
+    @Nullable
+    private volatile LoadBalancer loadBalancer;
     private final ClusterManager clusterManager;
     private final EventExecutor eventExecutor;
     private List<Endpoint> endpoints = ImmutableList.of();
@@ -51,6 +57,10 @@ final class ClusterEntry implements AsyncCloseable {
 
     @Nullable
     Endpoint selectNow(ClientRequestContext ctx) {
+        final LoadBalancer loadBalancer = this.loadBalancer;
+        if (loadBalancer == null) {
+            return null;
+        }
         return loadBalancer.selectNow(ctx);
     }
 
@@ -64,9 +74,16 @@ final class ClusterEntry implements AsyncCloseable {
 
     void accept(ClusterSnapshot clusterSnapshot, List<Endpoint> endpoints) {
         assert eventExecutor.inEventLoop();
-        this.endpoints = endpoints;
-        final PrioritySet prioritySet = new PrioritySet(endpoints, clusterSnapshot);
-        loadBalancer.prioritySetUpdated(prioritySet);
+        this.endpoints = ImmutableList.copyOf(endpoints);
+        final PrioritySet prioritySet = new PriorityStateManager(clusterSnapshot, endpoints).build();
+        if (logger.isTraceEnabled()) {
+            logger.trace("XdsEndpointGroup is using a new PrioritySet({})", prioritySet);
+        }
+        if (clusterSnapshot.xdsResource().resource().hasLbSubsetConfig()) {
+            loadBalancer = new SubsetLoadBalancer(prioritySet);
+        } else {
+            loadBalancer = new DefaultLoadBalancer(prioritySet);
+        }
         clusterManager.notifyListeners();
     }
 

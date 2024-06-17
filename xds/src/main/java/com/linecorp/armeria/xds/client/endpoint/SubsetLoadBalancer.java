@@ -43,22 +43,16 @@ final class SubsetLoadBalancer implements LoadBalancer {
 
     private static final Logger logger = LoggerFactory.getLogger(SubsetLoadBalancer.class);
 
-    @Nullable
-    private volatile EndpointGroup endpointGroup;
+    private final EndpointGroup endpointGroup;
+
+    SubsetLoadBalancer(PrioritySet prioritySet) {
+        endpointGroup = createEndpointGroup(prioritySet);
+    }
 
     @Override
     @Nullable
     public Endpoint selectNow(ClientRequestContext ctx) {
-        final EndpointGroup endpointGroup = this.endpointGroup;
-        if (endpointGroup == null) {
-            return null;
-        }
         return endpointGroup.selectNow(ctx);
-    }
-
-    @Override
-    public void prioritySetUpdated(PrioritySet prioritySet) {
-        endpointGroup = createEndpointGroup(prioritySet);
     }
 
     private static EndpointGroup createEndpointGroup(PrioritySet prioritySet) {

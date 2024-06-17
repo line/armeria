@@ -42,6 +42,7 @@ class VirtualHostAndServiceConfigConsistencyTest {
         final Set<String> ignorableVirtualHostMethods = ImmutableSet.of(
                 "defaultHostname",
                 "sslContext",
+                "tlsEngineType",
                 "accessLogger",
                 "port",
                 "hostnamePattern",
