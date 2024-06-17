@@ -82,6 +82,7 @@ import com.google.protobuf.Value;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -448,17 +449,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     }
 
     @Nullable
-    private static MediaType getMediaTypeFromHttpBody(JsonNode jsonNode) {
-        final String contentType = jsonNode.get("contentType").asText();
-        try {
-            return MediaType.parse(contentType);
-        } catch (IllegalArgumentException e) {
-            logger.warn("Invalid media type in http body content_type {}.", contentType);
-            return null;
-        }
-    }
-
-    @Nullable
     private static Function<AggregatedHttpResponse, AggregatedHttpResponse> generateResponseConverter(
             TranscodingSpec spec) {
         // Ignore the spec if the method is HttpBody. The response body is already in the correct format.
@@ -477,9 +467,12 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 final byte[] httpBodyBytes = Base64.getDecoder().decode(httpBody);
 
                 final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
-                    final MediaType mediaType = getMediaTypeFromHttpBody(jsonNode);
-                    if (mediaType != null) {
-                        builder.contentType(mediaType);
+                    final JsonNode contentType = jsonNode.get("contentType");
+
+                    if (contentType != null && contentType.isTextual()) {
+                        builder.set(HttpHeaderNames.CONTENT_TYPE, contentType.textValue());
+                    } else {
+                        builder.remove(HttpHeaderNames.CONTENT_TYPE);
                     }
                     builder.contentLength(httpBodyBytes.length);
                 });
@@ -507,7 +500,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     private static JsonNode extractHttpBody(HttpData data) {
         final byte[] array = data.array();
 
-        final JsonNode jsonNode;
         try {
             return mapper.readValue(array, JsonNode.class);
         } catch (IOException e) {
