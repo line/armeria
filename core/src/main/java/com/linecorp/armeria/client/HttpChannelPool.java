@@ -585,7 +585,10 @@ final class HttpChannelPool implements AsyncCloseable {
     private void notifyConnectionFailed(Channel channel, Throwable cause) {
         final ConnectionEventKey connectionEventKey = ChannelUtil.connectionEventKey(channel);
 
-        assert connectionEventKey != null;
+        // In case the remote host does not support the desired protocol, it immediately fails before pending.
+        if (connectionEventKey == null) {
+            return;
+        }
 
         final SessionProtocol desiredProtocol = connectionEventKey.desiredProtocol();
         final InetSocketAddress remoteAddr = connectionEventKey.remoteAddress();
