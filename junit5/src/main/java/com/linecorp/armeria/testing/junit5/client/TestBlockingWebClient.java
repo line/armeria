@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.testing.junit5.client;
 
 import static java.util.Objects.requireNonNull;
 
@@ -23,6 +23,13 @@ import java.nio.charset.Charset;
 
 import com.google.errorprone.annotations.CheckReturnValue;
 
+import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.ClientBuilderParams;
+import com.linecorp.armeria.client.ClientFactory;
+import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -33,54 +40,93 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.WebClientUtil;
 
-import io.netty.channel.EventLoop;
-
 /**
- * An asynchronous web client.
+ * This is a web client created for testing purposes. It uses an internal {@link BlockingWebClient},
+ * so the {@link HttpResponse} that comes in response is fully aggregated.
+ * The return type, {@link TestHttpResponse}, supports method chaining for assertions,
+ * allowing for a fluent syntax.
+ *
+ * <pre>{@code
+ * @RegisterExtension
+ * static ServerExtension server = ...;
+ *
+ * @Test
+ * void usingTestBlockingWebClient() {
+ *     final TestBlockingWebClient client = server.testBlockingWebClient();
+ *
+ *     client.get("/rest/1")
+ *           .assertStatus().isOk()
+ *           .assertHeaders().contains(...)
+ *           .assertContent().stringUtf8IsEqualTo(...)
+ *           .assertTrailers().isEmpty();
+ * }
+ * }</pre>
  */
-public interface WebClient extends ClientBuilderParams, Unwrappable {
+public interface TestBlockingWebClient extends ClientBuilderParams, Unwrappable {
 
     /**
-     * Returns a {@link WebClient} without a base URI using the default {@link ClientFactory} and
+     * Returns a {@link TestBlockingWebClient} without a base URI using the default {@link ClientFactory} and
      * the default {@link ClientOptions}.
      */
-    static WebClient of() {
-        return DefaultWebClient.DEFAULT;
+    static TestBlockingWebClient of() {
+        return DefaultTestBlockingWebClient.DEFAULT;
     }
 
     /**
-     * Returns a new {@link WebClient} that connects to the specified {@code uri} using the default options.
+     * Returns a new {@link TestBlockingWebClient} with the specified {@link WebClient}.
+     */
+    static TestBlockingWebClient of(WebClient webClient) {
+        requireNonNull(webClient, "webClient");
+
+        if (webClient == WebClient.of()) {
+            return of();
+        }
+        return of(webClient.blocking());
+    }
+
+    /**
+     * Returns a new {@link TestBlockingWebClient} with the specified {@link BlockingWebClient}.
+     */
+    static TestBlockingWebClient of(BlockingWebClient blockingWebClient) {
+        requireNonNull(blockingWebClient, "blockingWebClient");
+
+        if (blockingWebClient == BlockingWebClient.of()) {
+            return of();
+        }
+        return new DefaultTestBlockingWebClient(blockingWebClient);
+    }
+
+    /**
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@code uri} using the default
+     * options.
      *
      * @param uri the URI of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClient of(String uri) {
+    static TestBlockingWebClient of(String uri) {
         return builder(uri).build();
     }
 
     /**
-     * Returns a new {@link WebClient} that connects to the specified {@link URI} using the default options.
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link URI} using the default
+     * options.
      *
      * @param uri the {@link URI} of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClient of(URI uri) {
+    static TestBlockingWebClient of(URI uri) {
         return builder(uri).build();
     }
 
     /**
-     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@code protocol} using the default {@link ClientFactory} and the default
      * {@link ClientOptions}.
      *
@@ -88,15 +134,14 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param endpointGroup the server {@link EndpointGroup}
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClient of(String protocol, EndpointGroup endpointGroup) {
+    static TestBlockingWebClient of(String protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
     }
 
     /**
-     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@link SessionProtocol} using the default {@link ClientFactory} and the default
      * {@link ClientOptions}.
      *
@@ -104,15 +149,14 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param endpointGroup the server {@link EndpointGroup}
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClient of(SessionProtocol protocol, EndpointGroup endpointGroup) {
+    static TestBlockingWebClient of(SessionProtocol protocol, EndpointGroup endpointGroup) {
         return builder(protocol, endpointGroup).build();
     }
 
     /**
-     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@code protocol} and {@code path} using the default {@link ClientFactory} and
      * the default {@link ClientOptions}.
      *
@@ -121,15 +165,14 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param path the path to the endpoint
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClient of(String protocol, EndpointGroup endpointGroup, String path) {
+    static TestBlockingWebClient of(String protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
     }
 
     /**
-     * Returns a new {@link WebClient} that connects to the specified {@link EndpointGroup} with
+     * Returns a new {@link TestBlockingWebClient} that connects to the specified {@link EndpointGroup} with
      * the specified {@link SessionProtocol} and {@code path} using the default {@link ClientFactory} and
      * the default {@link ClientOptions}.
      *
@@ -138,77 +181,85 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * @param path the path to the endpoint
      *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClient of(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
+    static TestBlockingWebClient of(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
         return builder(protocol, endpointGroup, path).build();
     }
 
     /**
-     * Returns a new {@link WebClientBuilder} created without a base {@link URI}.
+     * Returns a new {@link TestBlockingWebClientBuilder} created without a base {@link URI}.
      */
-    static WebClientBuilder builder() {
-        return new WebClientBuilder();
+    static TestBlockingWebClientBuilder builder() {
+        return new TestBlockingWebClientBuilder();
     }
 
     /**
-     * Returns a new {@link WebClientBuilder} created with the specified base {@code uri}.
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified base {@code uri}.
+     *
+     * @param uri the URI of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClientBuilder builder(String uri) {
+    static TestBlockingWebClientBuilder builder(String uri) {
         return builder(URI.create(requireNonNull(uri, "uri")));
     }
 
     /**
-     * Returns a new {@link WebClientBuilder} created with the specified base {@link URI}.
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified base {@link URI}.
+     *
+     * @param uri the {@link URI} of the server endpoint
      *
      * @throws IllegalArgumentException if the {@code uri} is not valid or its scheme is not one of the values
-     *                                  in {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     in {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClientBuilder builder(URI uri) {
-        return new WebClientBuilder(uri);
+    static TestBlockingWebClientBuilder builder(URI uri) {
+        return new TestBlockingWebClientBuilder(uri);
     }
 
     /**
-     * Returns a new {@link WebClientBuilder} created with the specified {@code protocol}
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified {@code protocol}
      * and base {@link EndpointGroup}.
      *
+     * @param protocol the session protocol of the {@link EndpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
+     *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClientBuilder builder(String protocol, EndpointGroup endpointGroup) {
+    static TestBlockingWebClientBuilder builder(String protocol, EndpointGroup endpointGroup) {
         return builder(SessionProtocol.of(requireNonNull(protocol, "protocol")), endpointGroup);
     }
 
     /**
-     * Returns a new {@link WebClientBuilder} created with the specified {@link SessionProtocol}
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified {@link SessionProtocol}
      * and base {@link EndpointGroup}.
      *
+     * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
+     *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
+    static TestBlockingWebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
-        return new WebClientBuilder(protocol, endpointGroup, null);
+        return new TestBlockingWebClientBuilder(protocol, endpointGroup, null);
     }
 
     /**
-     * Returns a new {@link WebClientBuilder} created with the specified {@code protocol}.
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified {@code protocol}.
      * base {@link EndpointGroup} and path.
      *
+     * @param protocol the session protocol of the {@link EndpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param path the path to the endpoint
+     *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClientBuilder builder(String protocol, EndpointGroup endpointGroup, String path) {
+    static TestBlockingWebClientBuilder builder(String protocol, EndpointGroup endpointGroup, String path) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(path, "path");
@@ -216,25 +267,29 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     }
 
     /**
-     * Returns a new {@link WebClientBuilder} created with the specified {@link SessionProtocol},
+     * Returns a new {@link TestBlockingWebClientBuilder} created with the specified {@link SessionProtocol},
      * base {@link EndpointGroup} and path.
      *
+     * @param protocol the {@link SessionProtocol} of the {@link EndpointGroup}
+     * @param endpointGroup the server {@link EndpointGroup}
+     * @param path the path to the endpoint
+     *
      * @throws IllegalArgumentException if the {@code protocol} is not one of the values in
-     *                                  {@link SessionProtocol#httpValues()} or
-     *                                  {@link SessionProtocol#httpsValues()}.
+     *     {@link SessionProtocol#httpValues()} or {@link SessionProtocol#httpsValues()}.
      */
-    static WebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup, String path) {
+    static TestBlockingWebClientBuilder builder(SessionProtocol protocol, EndpointGroup endpointGroup,
+                                                String path) {
         requireNonNull(protocol, "protocol");
         requireNonNull(endpointGroup, "endpointGroup");
         requireNonNull(path, "path");
-        return new WebClientBuilder(protocol, endpointGroup, path);
+        return new TestBlockingWebClientBuilder(protocol, endpointGroup, path);
     }
 
     /**
      * Sends the specified HTTP request.
      */
     @CheckReturnValue
-    default HttpResponse execute(HttpRequest req) {
+    default TestHttpResponse execute(HttpRequest req) {
         return execute(req, RequestOptions.of());
     }
 
@@ -242,13 +297,13 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends the specified HTTP request with the specified {@link RequestOptions}.
      */
     @CheckReturnValue
-    HttpResponse execute(HttpRequest req, RequestOptions options);
+    TestHttpResponse execute(HttpRequest req, RequestOptions options);
 
     /**
      * Sends the specified HTTP request.
      */
     @CheckReturnValue
-    default HttpResponse execute(AggregatedHttpRequest aggregatedReq) {
+    default TestHttpResponse execute(AggregatedHttpRequest aggregatedReq) {
         requireNonNull(aggregatedReq, "aggregatedReq");
         return execute(aggregatedReq.toHttpRequest());
     }
@@ -257,7 +312,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an empty HTTP request with the specified headers.
      */
     @CheckReturnValue
-    default HttpResponse execute(RequestHeaders headers) {
+    default TestHttpResponse execute(RequestHeaders headers) {
         return execute(HttpRequest.of(headers));
     }
 
@@ -265,7 +320,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP request with the specified headers and content.
      */
     @CheckReturnValue
-    default HttpResponse execute(RequestHeaders headers, HttpData content) {
+    default TestHttpResponse execute(RequestHeaders headers, HttpData content) {
         return execute(HttpRequest.of(headers, content));
     }
 
@@ -273,7 +328,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP request with the specified headers and content.
      */
     @CheckReturnValue
-    default HttpResponse execute(RequestHeaders headers, byte[] content) {
+    default TestHttpResponse execute(RequestHeaders headers, byte[] content) {
         return execute(HttpRequest.of(headers, HttpData.wrap(content)));
     }
 
@@ -281,7 +336,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP request with the specified headers and content.
      */
     @CheckReturnValue
-    default HttpResponse execute(RequestHeaders headers, String content) {
+    default TestHttpResponse execute(RequestHeaders headers, String content) {
         return execute(HttpRequest.of(headers, HttpData.ofUtf8(content)));
     }
 
@@ -289,30 +344,28 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP request with the specified headers and content.
      */
     @CheckReturnValue
-    default HttpResponse execute(RequestHeaders headers, String content, Charset charset) {
+    default TestHttpResponse execute(RequestHeaders headers, String content, Charset charset) {
         return execute(HttpRequest.of(headers, HttpData.of(charset, content)));
     }
 
     /**
      * Prepares to send an {@link HttpRequest} using fluent builder.
      * <pre>{@code
-     * WebClient client = WebClient.of(...);
-     * HttpResponse response = client.prepare()
+     * TestBlockingWebClient client = TestBlockingWebClient.of(...);
+     * TestHttpResponse response = client.prepare()
      *                               .post("/foo")
      *                               .header(HttpHeaderNames.AUTHORIZATION, ...)
      *                               .content(MediaType.JSON, ...)
      *                               .execute();
      * }</pre>
      */
-    default WebClientRequestPreparation prepare() {
-        return new WebClientRequestPreparation(this);
-    }
+    TestBlockingWebClientRequestPreparation prepare();
 
     /**
      * Sends an HTTP OPTIONS request.
      */
     @CheckReturnValue
-    default HttpResponse options(String path) {
+    default TestHttpResponse options(String path) {
         return options(path, null);
     }
 
@@ -320,7 +373,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP OPTIONS request, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse options(String path, @Nullable QueryParams params) {
+    default TestHttpResponse options(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.OPTIONS, WebClientUtil.addQueryParams(path, params)));
     }
 
@@ -328,7 +381,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP GET request.
      */
     @CheckReturnValue
-    default HttpResponse get(String path) {
+    default TestHttpResponse get(String path) {
         return get(path, null);
     }
 
@@ -336,7 +389,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP GET request, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse get(String path, @Nullable QueryParams params) {
+    default TestHttpResponse get(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.GET, WebClientUtil.addQueryParams(path, params)));
     }
 
@@ -344,7 +397,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP HEAD request.
      */
     @CheckReturnValue
-    default HttpResponse head(String path) {
+    default TestHttpResponse head(String path) {
         return head(path, null);
     }
 
@@ -352,7 +405,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP HEAD request, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse head(String path, @Nullable QueryParams params) {
+    default TestHttpResponse head(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.HEAD, WebClientUtil.addQueryParams(path, params)));
     }
 
@@ -360,7 +413,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP POST request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse post(String path, HttpData content) {
+    default TestHttpResponse post(String path, HttpData content) {
         return post(path, null, content);
     }
 
@@ -368,15 +421,16 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse post(String path, @Nullable QueryParams params, HttpData content) {
-        return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)), content);
+    default TestHttpResponse post(String path, @Nullable QueryParams params, HttpData content) {
+        return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)),
+                       content);
     }
 
     /**
      * Sends an HTTP POST request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse post(String path, byte[] content) {
+    default TestHttpResponse post(String path, byte[] content) {
         return post(path, null, content);
     }
 
@@ -384,15 +438,16 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse post(String path, @Nullable QueryParams params, byte[] content) {
-        return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)), content);
+    default TestHttpResponse post(String path, @Nullable QueryParams params, byte[] content) {
+        return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)),
+                       content);
     }
 
     /**
      * Sends an HTTP POST request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse post(String path, String content) {
+    default TestHttpResponse post(String path, String content) {
         return post(path, null, content);
     }
 
@@ -400,15 +455,16 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse post(String path, @Nullable QueryParams params, String content) {
-        return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)), content);
+    default TestHttpResponse post(String path, @Nullable QueryParams params, String content) {
+        return execute(RequestHeaders.of(HttpMethod.POST, WebClientUtil.addQueryParams(path, params)),
+                       content);
     }
 
     /**
      * Sends an HTTP POST request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse post(String path, String content, Charset charset) {
+    default TestHttpResponse post(String path, String content, Charset charset) {
         return post(path, null, content, charset);
     }
 
@@ -416,7 +472,8 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP POST request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse post(String path, @Nullable QueryParams params, String content, Charset charset) {
+    default TestHttpResponse post(String path, @Nullable QueryParams params, String content,
+                                  Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.POST,
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
@@ -425,7 +482,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse put(String path, HttpData content) {
+    default TestHttpResponse put(String path, HttpData content) {
         return put(path, null, content);
     }
 
@@ -433,7 +490,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse put(String path, @Nullable QueryParams params, HttpData content) {
+    default TestHttpResponse put(String path, @Nullable QueryParams params, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -442,7 +499,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse put(String path, byte[] content) {
+    default TestHttpResponse put(String path, byte[] content) {
         return put(path, null, content);
     }
 
@@ -450,7 +507,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse put(String path, @Nullable QueryParams params, byte[] content) {
+    default TestHttpResponse put(String path, @Nullable QueryParams params, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -459,7 +516,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse put(String path, String content) {
+    default TestHttpResponse put(String path, String content) {
         return put(path, null, content);
     }
 
@@ -467,7 +524,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse put(String path, @Nullable QueryParams params, String content) {
+    default TestHttpResponse put(String path, @Nullable QueryParams params, String content) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -476,7 +533,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse put(String path, String content, Charset charset) {
+    default TestHttpResponse put(String path, String content, Charset charset) {
         return put(path, null, content, charset);
     }
 
@@ -484,7 +541,8 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PUT request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse put(String path, @Nullable QueryParams params, String content, Charset charset) {
+    default TestHttpResponse put(String path, @Nullable QueryParams params, String content,
+                                 Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PUT,
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
@@ -493,7 +551,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse patch(String path, HttpData content) {
+    default TestHttpResponse patch(String path, HttpData content) {
         return patch(path, null, content);
     }
 
@@ -502,7 +560,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * query params to the path.
      */
     @CheckReturnValue
-    default HttpResponse patch(String path, @Nullable QueryParams params, HttpData content) {
+    default TestHttpResponse patch(String path, @Nullable QueryParams params, HttpData content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -511,7 +569,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse patch(String path, byte[] content) {
+    default TestHttpResponse patch(String path, byte[] content) {
         return patch(path, null, content);
     }
 
@@ -519,7 +577,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse patch(String path, @Nullable QueryParams params, byte[] content) {
+    default TestHttpResponse patch(String path, @Nullable QueryParams params, byte[] content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -528,7 +586,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse patch(String path, String content) {
+    default TestHttpResponse patch(String path, String content) {
         return patch(path, null, content);
     }
 
@@ -536,7 +594,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse patch(String path, @Nullable QueryParams params, String content) {
+    default TestHttpResponse patch(String path, @Nullable QueryParams params, String content) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
                                          WebClientUtil.addQueryParams(path, params)), content);
     }
@@ -545,7 +603,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content.
      */
     @CheckReturnValue
-    default HttpResponse patch(String path, String content, Charset charset) {
+    default TestHttpResponse patch(String path, String content, Charset charset) {
         return patch(path, null, content, charset);
     }
 
@@ -553,7 +611,8 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP PATCH request with the specified content, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse patch(String path, @Nullable QueryParams params, String content, Charset charset) {
+    default TestHttpResponse patch(String path, @Nullable QueryParams params, String content,
+                                   Charset charset) {
         return execute(RequestHeaders.of(HttpMethod.PATCH,
                                          WebClientUtil.addQueryParams(path, params)), content, charset);
     }
@@ -562,7 +621,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP DELETE request.
      */
     @CheckReturnValue
-    default HttpResponse delete(String path) {
+    default TestHttpResponse delete(String path) {
         return delete(path, null);
     }
 
@@ -570,7 +629,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP DELETE request, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse delete(String path, @Nullable QueryParams params) {
+    default TestHttpResponse delete(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.DELETE, WebClientUtil.addQueryParams(path, params)));
     }
 
@@ -578,7 +637,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP TRACE request.
      */
     @CheckReturnValue
-    default HttpResponse trace(String path) {
+    default TestHttpResponse trace(String path) {
         return trace(path, null);
     }
 
@@ -586,24 +645,9 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      * Sends an HTTP TRACE request, appending the given query parameters to the path.
      */
     @CheckReturnValue
-    default HttpResponse trace(String path, @Nullable QueryParams params) {
+    default TestHttpResponse trace(String path, @Nullable QueryParams params) {
         return execute(RequestHeaders.of(HttpMethod.TRACE, WebClientUtil.addQueryParams(path, params)));
     }
-
-    /**
-     * Returns a {@link BlockingWebClient} that connects to the same {@link URI} with this {@link WebClient}.
-     *
-     * <p>Note that you should never use the {@link BlockingWebClient} in an {@link EventLoop} thread.
-     * Use it from a non-{@link EventLoop} thread such as {@link BlockingTaskExecutor}.
-     */
-    @UnstableApi
-    BlockingWebClient blocking();
-
-    /**
-     * Returns a {@link RestClient} that connects to the same {@link URI} with this {@link WebClient}.
-     */
-    @UnstableApi
-    RestClient asRestClient();
 
     @Override
     HttpClient unwrap();

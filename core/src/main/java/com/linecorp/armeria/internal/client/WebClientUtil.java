@@ -13,19 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class WebClientUtil {
+public final class WebClientUtil {
 
     /**
      * Appends query params to the current path and returns the modified path.
      */
-    static String addQueryParams(String path, @Nullable QueryParams params) {
+    public static String addQueryParams(String path, @Nullable QueryParams params) {
         requireNonNull(path, "path");
         if (params == null || params.isEmpty()) {
             return path;
