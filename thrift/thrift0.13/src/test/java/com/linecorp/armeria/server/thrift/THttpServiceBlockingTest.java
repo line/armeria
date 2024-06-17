@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.thrift.TException;
 import org.apache.thrift.async.AsyncMethodCallback;
@@ -37,7 +37,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import testing.thrift.main.HelloService;
 
 class THttpServiceBlockingTest {
-    private static final AtomicBoolean blocking = new AtomicBoolean();
+    private static final AtomicReference<String> currentThreadName = new AtomicReference<>("");
 
     private static final String BLOCKING_EXECUTOR_PREFIX = "blocking-test";
     private static final ScheduledExecutorService executor =
@@ -46,7 +46,7 @@ class THttpServiceBlockingTest {
 
     @BeforeEach
     void clearDetector() {
-        blocking.set(false);
+        currentThreadName.set("");
     }
 
     @AfterAll
@@ -80,7 +80,7 @@ class THttpServiceBlockingTest {
         final String response = client.hello(message);
 
         assertThat(response).isEqualTo(message);
-        assertThat(blocking).isFalse();
+        assertThat(currentThreadName.get().startsWith(BLOCKING_EXECUTOR_PREFIX)).isFalse();
     }
 
     @Test
@@ -93,7 +93,7 @@ class THttpServiceBlockingTest {
         final String response = client.hello(message);
 
         assertThat(response).isEqualTo(message);
-        assertThat(blocking).isTrue();
+        assertThat(currentThreadName.get().startsWith(BLOCKING_EXECUTOR_PREFIX)).isTrue();
     }
 
     @Test
@@ -106,21 +106,21 @@ class THttpServiceBlockingTest {
         final String response = client.hello(message);
 
         assertThat(response).isEqualTo(message);
-        assertThat(blocking).isTrue();
+        assertThat(currentThreadName.get().startsWith(BLOCKING_EXECUTOR_PREFIX)).isTrue();
     }
 
     static class HelloServiceAsyncImpl implements HelloService.AsyncIface {
         @Override
         public void hello(String name, AsyncMethodCallback resultHandler) throws TException {
+            currentThreadName.set(Thread.currentThread().getName());
             resultHandler.onComplete(name);
-            blocking.set(Thread.currentThread().getName().startsWith(BLOCKING_EXECUTOR_PREFIX));
         }
     }
 
     static class HelloServiceImpl implements HelloService.Iface {
         @Override
         public String hello(String name) throws TException {
-            blocking.set(Thread.currentThread().getName().startsWith(BLOCKING_EXECUTOR_PREFIX));
+            currentThreadName.set(Thread.currentThread().getName());
             return name;
         }
     }
