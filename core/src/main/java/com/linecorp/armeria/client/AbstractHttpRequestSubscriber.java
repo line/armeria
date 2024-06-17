@@ -53,20 +53,21 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     }
 
     private final HttpRequest request;
+    private final boolean http1WebSocket;
 
     @Nullable
     private Subscription subscription;
     private boolean isSubscriptionCompleted;
-    private boolean needs100Continue;
 
     AbstractHttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder,
                                   HttpResponseDecoder responseDecoder,
                                   HttpRequest request, DecodedHttpResponse originalRes,
                                   ClientRequestContext ctx, long timeoutMillis, boolean allowTrailers,
-                                  boolean keepAlive) {
+                                  boolean keepAlive, boolean http1WebSocket) {
         super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty(), allowTrailers,
               keepAlive);
         this.request = request;
+        this.http1WebSocket = http1WebSocket;
     }
 
     @Override
@@ -78,6 +79,14 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
             return;
         }
 
+        final RequestHeaders headers = mergedRequestHeaders(mapHeaders(request.headers()));
+        final boolean needs100Continue = needs100Continue(headers);
+        if (needs100Continue && http1WebSocket) {
+            failRequest(new IllegalArgumentException(
+                    "a WebSocket request is not allowed to have Expect: 100-continue header"));
+            return;
+        }
+
         if (!tryInitialize()) {
             return;
         }
@@ -85,9 +94,7 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         // NB: This must be invoked at the end of this method because otherwise the callback methods in this
         //     class can be called before the member fields (subscription, id, responseWrapper and
         //     timeoutFuture) are initialized.
-        final RequestHeaders headers = mergedRequestHeaders(mapHeaders(request.headers()));
-        needs100Continue = needs100Continue(headers);
-        writeHeaders(headers, needs100Continue);
+        writeHeaders(headers, needs100Continue(headers));
         channel().flush();
     }
 
@@ -113,7 +120,7 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
 
     @Override
     void onWriteSuccess() {
-        if (needs100Continue) {
+        if (state() == State.NEEDS_100_CONTINUE) {
             return;
         }
         request();
@@ -138,7 +145,6 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
 
     @Override
     final void resume() {
-        needs100Continue = false;
         request();
     }
 

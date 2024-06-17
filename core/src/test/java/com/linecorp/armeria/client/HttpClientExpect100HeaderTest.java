@@ -43,16 +43,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.websocket.WebSocketClient;
+import com.linecorp.armeria.client.websocket.WebSocketSession;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
+import com.linecorp.armeria.server.Server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -483,6 +488,22 @@ final class HttpClientExpect100HeaderTest {
                 }
             }
         }
+    }
+
+    @Test
+    void webSocketFails() {
+        final Server server = Server.builder().service("/", (ctx, req) -> HttpResponse.of(200)).build();
+        server.start().join();
+        final WebSocketClient webSocketClient = WebSocketClient.of(
+                "h1c://127.0.0.1:" + server.activePort().localAddress().getPort());
+        final CompletableFuture<WebSocketSession> future = webSocketClient.connect(
+                "/", HttpHeaders.of(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString()));
+        assertThatThrownBy(future::join)
+                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                .cause()
+                .hasCauseInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("a WebSocket request is not allowed to have Expect: 100-continue header");
+        server.stop().join();
     }
 
     private static void readSettingsFrame(InputStream in) throws Exception {
