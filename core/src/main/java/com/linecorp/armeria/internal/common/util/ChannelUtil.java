@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.common.util;
 
-import static com.linecorp.armeria.common.ConnectionEventState.CONNECTION_EVENT_STATE;
+import static com.linecorp.armeria.internal.common.ConnectionEventState.CONNECTION_EVENT_STATE;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -37,13 +37,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 
-import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.ConnectionEventState;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;

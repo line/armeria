@@ -76,4 +76,14 @@ public interface KeepAliveHandler {
      * Increases the number of requests received or sent.
      */
     void increaseNumRequests();
+
+    /**
+     * Try to notify connection active event.
+     */
+    void tryNotifyConnectionActive();
+
+    /**
+     * Try to notify connection idle event.
+     */
+    void tryNotifyConnectionIdle();
 }

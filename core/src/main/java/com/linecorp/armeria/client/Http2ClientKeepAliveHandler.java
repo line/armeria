@@ -26,11 +26,11 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 
 final class Http2ClientKeepAliveHandler extends Http2KeepAliveHandler {
     Http2ClientKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Timer keepAliveTimer,
-                                long idleTimeoutMillis, long pingIntervalMillis,
-                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
-                                boolean keepAliveOnPing) {
+                                ClientConnectionEventListener connectionEventListener, long idleTimeoutMillis,
+                                long pingIntervalMillis, long maxConnectionAgeMillis,
+                                int maxNumRequestsPerConnection, boolean keepAliveOnPing) {
 
-        super(channel, frameWriter, "client", keepAliveTimer,
+        super(channel, frameWriter, "client", keepAliveTimer, connectionEventListener,
               idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
               keepAliveOnPing);
     }

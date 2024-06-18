@@ -32,6 +32,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 
+import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
@@ -64,7 +65,7 @@ class Http2KeepAliveHandlerTest {
 
         keepAliveHandler = new Http2KeepAliveHandler(
                 channel, frameWriter, "test", NoopMeterRegistry.get().timer(""),
-                idleTimeoutMillis, pingIntervalMillis,
+                ConnectionEventListener.noop(), idleTimeoutMillis, pingIntervalMillis,
                 /* maxConnectionAgeMillis */ 0, /* maxNumRequestsPerConnection */ 0,
                 keepAliveOnPing) {
             @Override

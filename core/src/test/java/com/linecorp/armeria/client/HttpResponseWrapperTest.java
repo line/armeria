@@ -18,13 +18,9 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.net.InetSocketAddress;
-
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.ConnectionEventListener;
-import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -32,7 +28,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -162,8 +157,7 @@ class HttpResponseWrapperTest {
         final InboundTrafficController controller = InboundTrafficController.disabled();
         final Channel channel = cctx.log().ensureAvailable(RequestLogProperty.SESSION).channel();
         assertThat(channel).isNotNull();
-        final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller,
-                                                                            ConnectionEventListener.noop());
+        final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 
         res.init(controller);
         return decoder.addResponse(1, res, cctx, cctx.eventLoop());
@@ -172,21 +166,12 @@ class HttpResponseWrapperTest {
     private static class TestHttpResponseDecoder extends AbstractHttpResponseDecoder {
         private final KeepAliveHandler keepAliveHandler = new NoopKeepAliveHandler();
 
-        TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController,
-                                ConnectionEventListener connectionEventListener) {
-            super(channel, inboundTrafficController, connectionEventListener, false);
+        TestHttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
+            super(channel, inboundTrafficController);
         }
 
         @Override
         void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {}
-
-        @Override
-        protected ConnectionEventState connectionEventState() {
-            return new ConnectionEventState(
-                    InetSocketAddress.createUnresolved("foo.com", 36462),
-                    InetSocketAddress.createUnresolved("bar.com", 36462),
-                    SessionProtocol.H1C);
-        }
 
         @Override
         public KeepAliveHandler keepAliveHandler() {

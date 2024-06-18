@@ -70,7 +70,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
                 MoreMeters.newTimer(clientFactory.meterRegistry(), "armeria.client.connections.lifespan",
                                     ImmutableList.of(Tag.of("protocol", protocol.uriText())));
         return new Http2ClientKeepAliveHandler(
-                channel, encoder.frameWriter(), keepAliveTimer,
+                channel, encoder.frameWriter(), keepAliveTimer, clientFactory.connectionEventListener(),
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 keepAliveOnPing);
     }

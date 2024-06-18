@@ -64,4 +64,10 @@ public class NoopKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public void increaseNumRequests() {}
+
+    @Override
+    public void tryNotifyConnectionActive() {}
+
+    @Override
+    public void tryNotifyConnectionIdle() {}
 }

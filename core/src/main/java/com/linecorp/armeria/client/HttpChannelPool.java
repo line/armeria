@@ -47,7 +47,6 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -56,6 +55,7 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
+import com.linecorp.armeria.internal.common.ConnectionEventState;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -572,8 +572,9 @@ final class HttpChannelPool implements AsyncCloseable {
                 if (throwable instanceof ProxyConnectException) {
                     maybeHandleProxyFailure(desiredProtocol, key, throwable);
                 }
-                promise.completeExceptionally(UnprocessedRequestException.of(throwable));
-                notifyConnectionFailed(channel, throwable);
+                final UnprocessedRequestException cause = UnprocessedRequestException.of(throwable);
+                promise.completeExceptionally(cause);
+                notifyConnectionFailed(channel, cause);
             }
         } catch (Exception e) {
             final UnprocessedRequestException cause = UnprocessedRequestException.of(e);

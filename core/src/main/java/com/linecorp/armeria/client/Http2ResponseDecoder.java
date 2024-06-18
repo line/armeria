@@ -66,9 +66,7 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
     Http2ResponseDecoder(Channel channel, Http2ConnectionEncoder encoder, HttpClientFactory clientFactory,
                          KeepAliveHandler keepAliveHandler) {
         super(channel,
-              InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()),
-              clientFactory.connectionEventListener(),
-              keepAliveHandler instanceof Http2ClientKeepAliveHandler);
+              InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
         assert keepAliveHandler instanceof Http2ClientKeepAliveHandler ||

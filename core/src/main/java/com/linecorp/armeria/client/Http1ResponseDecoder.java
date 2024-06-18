@@ -74,17 +74,15 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
     private State state = State.NEED_HEADERS;
 
     Http1ResponseDecoder(Channel channel, HttpClientFactory clientFactory, SessionProtocol protocol) {
-        super(channel, InboundTrafficController.ofHttp1(channel), clientFactory.connectionEventListener(),
-              needsKeepAliveHandler(clientFactory.idleTimeoutMillis(),
-                                    clientFactory.pingIntervalMillis(),
-                                    clientFactory.maxConnectionAgeMillis(),
-                                    clientFactory.maxNumRequestsPerConnection()));
-
+        super(channel, InboundTrafficController.ofHttp1(channel));
         final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
         final long pingIntervalMillis = clientFactory.pingIntervalMillis();
         final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
         final boolean keepAliveOnPing = clientFactory.keepAliveOnPing();
+        final boolean needsKeepAliveHandler =
+                needsKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
+                                      maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
         if (needsKeepAliveHandler) {
             final Timer keepAliveTimer =
@@ -92,7 +90,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                                         "armeria.client.connections.lifespan",
                                         ImmutableList.of(Tag.of("protocol", protocol.uriText())));
             keepAliveHandler = new Http1ClientKeepAliveHandler(
-                    channel, this, keepAliveTimer, idleTimeoutMillis,
+                    channel, this, keepAliveTimer, clientFactory.connectionEventListener(), idleTimeoutMillis,
                     pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                     keepAliveOnPing);
         } else {

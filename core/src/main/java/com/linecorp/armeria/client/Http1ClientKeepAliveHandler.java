@@ -44,10 +44,11 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
     private ClientHttp1ObjectEncoder encoder;
 
     Http1ClientKeepAliveHandler(Channel channel, Http1ResponseDecoder decoder,
-                                Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
+                                Timer keepAliveTimer, ClientConnectionEventListener connectionEventListener,
+                                long idleTimeoutMillis, long pingIntervalMillis,
                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
                                 boolean keepAliveOnPing) {
-        super(channel, "client", keepAliveTimer, idleTimeoutMillis,
+        super(channel, "client", keepAliveTimer, connectionEventListener, idleTimeoutMillis,
               pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
         httpSession = HttpSession.get(requireNonNull(channel, "channel"));
         this.decoder = requireNonNull(decoder, "decoder");
