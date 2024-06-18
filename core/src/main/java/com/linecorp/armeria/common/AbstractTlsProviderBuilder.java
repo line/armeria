@@ -37,7 +37,7 @@ import io.netty.handler.ssl.SslContextBuilder;
 /**
  * A skeletal builder implementation for {@link TlsProvider}.
  */
-public abstract class AbstractTlsProviderBuilder {
+public abstract class AbstractTlsProviderBuilder<SELF extends AbstractTlsProviderBuilder> {
 
     private static final Consumer<SslContextBuilder> NOOP = b -> {};
 
@@ -59,17 +59,17 @@ public abstract class AbstractTlsProviderBuilder {
      * <p>Note that {@code "*"} is a special hostname which matches any hostname which may be used to find the
      * {@link TlsKeyPair} for the {@linkplain ServerBuilder#defaultVirtualHost() default virtual host}.
      */
-    public AbstractTlsProviderBuilder set(String hostname, TlsKeyPair tlsKeyPair) {
+    public SELF set(String hostname, TlsKeyPair tlsKeyPair) {
         requireNonNull(hostname, "hostname");
         requireNonNull(tlsKeyPair, "tlsKeyPair");
         tlsKeyPairsBuilder.put(normalizeHostname(hostname), tlsKeyPair);
-        return this;
+        return self();
     }
 
     /**
      * Set the default {@link TlsKeyPair} which is used when no {@link TlsKeyPair} is specified for a hostname.
      */
-    public AbstractTlsProviderBuilder setDefault(TlsKeyPair tlsKeyPair) {
+    public SELF setDefault(TlsKeyPair tlsKeyPair) {
         return set("*", tlsKeyPair);
     }
 
@@ -89,9 +89,9 @@ public abstract class AbstractTlsProviderBuilder {
      * communicate with an insecure peer than this.
      */
     @Deprecated
-    public AbstractTlsProviderBuilder allowsUnsafeCiphers(boolean allowsUnsafeCiphers) {
+    public SELF allowsUnsafeCiphers(boolean allowsUnsafeCiphers) {
         this.allowsUnsafeCiphers = allowsUnsafeCiphers;
-        return this;
+        return self();
     }
 
     /**
@@ -100,7 +100,7 @@ public abstract class AbstractTlsProviderBuilder {
      * to configure a custom server CA or {@link SslContextBuilder#keyManager(KeyManagerFactory)} to configure
      * a client certificate for SSL authorization.
      */
-    public AbstractTlsProviderBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
+    public SELF tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
         if (this.tlsCustomizer == NOOP) {
             //noinspection unchecked
@@ -108,17 +108,22 @@ public abstract class AbstractTlsProviderBuilder {
         } else {
             this.tlsCustomizer = this.tlsCustomizer.andThen(tlsCustomizer);
         }
-        return this;
+        return self();
     }
 
     /**
      * Sets the {@link MeterIdPrefix} for the {@link TlsProvider}.
      */
-    public AbstractTlsProviderBuilder meterIdPrefix(MeterIdPrefix meterIdPrefix) {
+    public SELF meterIdPrefix(MeterIdPrefix meterIdPrefix) {
         this.meterIdPrefix = requireNonNull(meterIdPrefix, "meterIdPrefix");
-        return this;
+        return self();
     }
 
+    @SuppressWarnings("unchecked")
+    private SELF self() {
+        return (SELF) this;
+    }
+    
     /**
      * Returns a newly-created {@link TlsProvider} instance.
      */

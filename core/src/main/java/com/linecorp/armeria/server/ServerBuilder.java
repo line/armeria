@@ -1150,7 +1150,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
      *   Server
      *     .builder()
      *     .tlsProvider(
-     *       TlsProvider.builder()
+     *       TlsProvider.builderForServer()
      *                  // Set the default key pair.
      *                  .setDefault(TlsKeyPair.of(...))
      *                  // Set the key pair for "example.com".

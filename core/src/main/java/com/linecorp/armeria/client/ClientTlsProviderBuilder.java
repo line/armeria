@@ -21,19 +21,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AbstractTlsProviderBuilder;
-import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
-import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
-public final class ClientTlsProviderBuilder extends AbstractTlsProviderBuilder {
+public final class ClientTlsProviderBuilder extends AbstractTlsProviderBuilder<ClientTlsProviderBuilder> {
 
     private boolean tlsNoVerifySet;
     private final Set<String> insecureHosts = new HashSet<>();
@@ -64,33 +60,5 @@ public final class ClientTlsProviderBuilder extends AbstractTlsProviderBuilder {
             tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
         }
         return super.build();
-    }
-
-    // Override the return type of the chaining methods in the superclass.
-
-    @Override
-    public ClientTlsProviderBuilder set(String hostname, TlsKeyPair tlsKeyPair) {
-        return (ClientTlsProviderBuilder) super.set(hostname, tlsKeyPair);
-    }
-
-    @Override
-    public ClientTlsProviderBuilder setDefault(TlsKeyPair tlsKeyPair) {
-        return (ClientTlsProviderBuilder) super.setDefault(tlsKeyPair);
-    }
-
-    @Deprecated
-    @Override
-    public ClientTlsProviderBuilder allowsUnsafeCiphers(boolean allowsUnsafeCiphers) {
-        return (ClientTlsProviderBuilder) super.allowsUnsafeCiphers(allowsUnsafeCiphers);
-    }
-
-    @Override
-    public ClientTlsProviderBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
-        return (ClientTlsProviderBuilder) super.tlsCustomizer(tlsCustomizer);
-    }
-
-    @Override
-    public ClientTlsProviderBuilder meterIdPrefix(MeterIdPrefix meterIdPrefix) {
-        return (ClientTlsProviderBuilder) super.meterIdPrefix(meterIdPrefix);
     }
 }

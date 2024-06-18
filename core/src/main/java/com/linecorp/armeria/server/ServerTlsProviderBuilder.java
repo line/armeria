@@ -16,48 +16,15 @@
 
 package com.linecorp.armeria.server;
 
-import java.util.function.Consumer;
-
 import com.linecorp.armeria.common.AbstractTlsProviderBuilder;
-import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
-import io.netty.handler.ssl.SslContextBuilder;
-
-public final class ServerTlsProviderBuilder extends AbstractTlsProviderBuilder {
+public final class ServerTlsProviderBuilder extends AbstractTlsProviderBuilder<ServerTlsProviderBuilder> {
 
     // We may add more methods to this class to provide server-specific features in the future.
 
     @Override
     public TlsProvider build() {
         return super.build();
-    }
-
-    // Override the return type of the chaining methods in the superclass.
-
-    @Override
-    public ServerTlsProviderBuilder set(String hostname, TlsKeyPair tlsKeyPair) {
-        return (ServerTlsProviderBuilder) super.set(hostname, tlsKeyPair);
-    }
-
-    @Override
-    public ServerTlsProviderBuilder setDefault(TlsKeyPair tlsKeyPair) {
-        return (ServerTlsProviderBuilder) super.setDefault(tlsKeyPair);
-    }
-
-    @Override
-    public ServerTlsProviderBuilder allowsUnsafeCiphers(boolean allowsUnsafeCiphers) {
-        return (ServerTlsProviderBuilder) super.allowsUnsafeCiphers(allowsUnsafeCiphers);
-    }
-
-    @Override
-    public ServerTlsProviderBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
-        return (ServerTlsProviderBuilder) super.tlsCustomizer(tlsCustomizer);
-    }
-
-    @Override
-    public ServerTlsProviderBuilder meterIdPrefix(MeterIdPrefix meterIdPrefix) {
-        return (ServerTlsProviderBuilder) super.meterIdPrefix(meterIdPrefix);
     }
 }

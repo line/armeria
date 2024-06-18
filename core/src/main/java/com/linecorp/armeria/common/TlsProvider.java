@@ -38,6 +38,14 @@ import io.netty.handler.ssl.SslContextBuilder;
 public interface TlsProvider {
 
     /**
+     * Returns a {@link TlsProvider} which always returns the specified {@link TlsKeyPair}.
+     */
+    static TlsProvider of(TlsKeyPair tlsKeyPair) {
+        requireNonNull(tlsKeyPair, "tlsKeyPair");
+        return new StaticTlsProvider(tlsKeyPair);
+    }
+
+    /**
      * Returns a newly created {@link ServerTlsProviderBuilder}.
      *
      * <p>Example usage:
@@ -57,14 +65,6 @@ public interface TlsProvider {
 
     static ClientTlsProviderBuilder builderForClient() {
         return new ClientTlsProviderBuilder();
-    }
-
-    /**
-     * Returns a {@link TlsProvider} which always returns the specified {@link TlsKeyPair}.
-     */
-    static TlsProvider of(TlsKeyPair tlsKeyPair) {
-        requireNonNull(tlsKeyPair, "tlsKeyPair");
-        return new StaticTlsProvider(tlsKeyPair);
     }
 
     /**
