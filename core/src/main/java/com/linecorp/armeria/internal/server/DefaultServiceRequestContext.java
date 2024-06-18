@@ -62,6 +62,8 @@ import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.server.RouteDecoratingService.InitialDispatcherService;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
@@ -253,6 +255,18 @@ public final class DefaultServiceRequestContext
     @Override
     public ServiceConfig config() {
         return cfg;
+    }
+
+    @Nullable
+    @Override
+    public <T extends HttpService> T findService(Class<? extends T> serviceClass) {
+        requireNonNull(serviceClass, "serviceClass");
+        final HttpService service = config().service();
+        if (service instanceof InitialDispatcherService) {
+            return ((InitialDispatcherService) service).findService(this, serviceClass);
+        } else {
+            return service.as(serviceClass);
+        }
     }
 
     @Override

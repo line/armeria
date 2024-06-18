@@ -667,4 +667,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final ServiceRequestContext ctx() {
         return ctx;
     }
+
+    public final GrpcExceptionHandlerFunction exceptionHandler() {
+        return exceptionHandler;
+    }
 }

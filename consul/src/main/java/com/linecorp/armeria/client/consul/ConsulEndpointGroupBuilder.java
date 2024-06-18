@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
@@ -44,7 +43,7 @@ import com.linecorp.armeria.server.consul.ConsulUpdatingListenerBuilder;
  */
 @UnstableApi
 public final class ConsulEndpointGroupBuilder
-        extends AbstractDynamicEndpointGroupBuilder implements ConsulConfigSetters {
+        extends AbstractDynamicEndpointGroupBuilder<ConsulEndpointGroupBuilder> implements ConsulConfigSetters {
 
     private static final long DEFAULT_HEALTH_CHECK_INTERVAL_MILLIS = 10_000;
 
@@ -145,30 +144,5 @@ public final class ConsulEndpointGroupBuilder
         return new ConsulEndpointGroup(selectionStrategy, shouldAllowEmptyEndpoints(), selectionTimeoutMillis(),
                                        consulClientBuilder.build(), serviceName, registryFetchIntervalMillis,
                                        useHealthyEndpoints, datacenter, filter);
-    }
-
-    @Override
-    public ConsulEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return (ConsulEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
-    }
-
-    /**
-     * Sets the timeout to wait until a successful {@link Endpoint} selection.
-     * {@link Duration#ZERO} disables the timeout.
-     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
-     */
-    @Override
-    public ConsulEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
-        return (ConsulEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
-    }
-
-    /**
-     * Sets the timeout to wait until a successful {@link Endpoint} selection.
-     * {@code 0} disables the timeout.
-     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
-     */
-    @Override
-    public ConsulEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
-        return (ConsulEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
     }
 }

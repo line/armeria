@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.xds.client.endpoint.XdsAttributesKeys.LB_ENDPOINT_KEY;
-import static com.linecorp.armeria.xds.client.endpoint.XdsAttributesKeys.LOCALITY_LB_ENDPOINTS_KEY;
+import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.LB_ENDPOINT_KEY;
+import static com.linecorp.armeria.xds.client.endpoint.XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY;
 
 import java.util.List;
 import java.util.function.Consumer;

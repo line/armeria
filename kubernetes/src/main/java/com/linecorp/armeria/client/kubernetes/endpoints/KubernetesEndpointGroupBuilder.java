@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.kubernetes.endpoints;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.function.Predicate;
 
 import com.google.common.base.Strings;
@@ -38,7 +37,8 @@ import io.fabric8.kubernetes.client.KubernetesClient;
  * A builder for creating a new {@link KubernetesEndpointGroup}.
  */
 @UnstableApi
-public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+public final class KubernetesEndpointGroupBuilder
+        extends AbstractDynamicEndpointGroupBuilder<KubernetesEndpointGroupBuilder> {
 
     private final KubernetesClient kubernetesClient;
     private final boolean autoClose;
@@ -107,25 +107,6 @@ public final class KubernetesEndpointGroupBuilder extends AbstractDynamicEndpoin
     public KubernetesEndpointGroupBuilder selectionStrategy(EndpointSelectionStrategy selectionStrategy) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         return this;
-    }
-
-    /**
-     * Sets whether to allow an empty {@link Endpoint} list.
-     * If unspecified, the default is {@code false} that disallows an empty {@link Endpoint} list.
-     */
-    @Override
-    public KubernetesEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return (KubernetesEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
-    }
-
-    @Override
-    public KubernetesEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
-        return (KubernetesEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
-    }
-
-    @Override
-    public KubernetesEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
-        return (KubernetesEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
     }
 
     /**

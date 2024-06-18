@@ -407,7 +407,7 @@ class InputStreamStreamMessageTest {
         StepVerifier.create(byteStreamMessage)
                     .verifyComplete();
         assertThat(byteStreamMessage.isEmpty()).isTrue();
-        assertThat(byteStreamMessage.isOpen()).isFalse();
+        await().untilAsserted(() -> assertThat(byteStreamMessage.isOpen()).isFalse());
     }
 
     @Test
@@ -420,7 +420,7 @@ class InputStreamStreamMessageTest {
         assertThatThrownBy(() -> byteStreamMessage.subscribe().join())
                 .hasCauseInstanceOf(IOException.class);
         assertThat(byteStreamMessage.isEmpty()).isTrue();
-        assertThat(byteStreamMessage.isOpen()).isFalse();
+        await().untilAsserted(() -> assertThat(byteStreamMessage.isOpen()).isFalse());
     }
 
     @Test
@@ -447,7 +447,7 @@ class InputStreamStreamMessageTest {
                     .expectNext(HttpData.wrap(new byte[] { 4 }))
                     .verifyError(IOException.class);
         assertThat(byteStreamMessage.isEmpty()).isFalse();
-        assertThat(byteStreamMessage.isOpen()).isFalse();
+        await().untilAsserted(() -> assertThat(byteStreamMessage.isOpen()).isFalse());
     }
 
     @Test
@@ -463,7 +463,7 @@ class InputStreamStreamMessageTest {
                     .expectNext(HttpData.wrap(new byte[] { 1, 2, 3 }))
                     .then(byteStreamMessage::abort)
                     .verifyError(AbortedStreamException.class);
-        assertThat(byteStreamMessage.isOpen()).isFalse();
+        await().untilAsserted(() -> assertThat(byteStreamMessage.isOpen()).isFalse());
     }
 
     @Test

@@ -67,6 +67,7 @@ import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -473,6 +474,17 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Deprecated
     public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         option(ClientFactoryOptions.TLS_ALLOW_UNSAFE_CIPHERS, tlsAllowUnsafeCiphers);
+        return this;
+    }
+
+    /**
+     * Sets the {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * @param tlsEngineType the {@link TlsEngineType} to use
+     */
+    @UnstableApi
+    public ClientFactoryBuilder tlsEngineType(TlsEngineType tlsEngineType) {
+        option(ClientFactoryOptions.TLS_ENGINE_TYPE, tlsEngineType);
         return this;
     }
 

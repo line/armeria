@@ -165,7 +165,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * @see VirtualHostBuilder
  */
-public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
+public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<ServerBuilder> {
     private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     // Defaults to no graceful shutdown.
@@ -249,12 +249,14 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
         virtualHostTemplate.tlsAllowUnsafeCiphers(false);
+        virtualHostTemplate.tlsEngineType(Flags.tlsEngineType());
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.requestAutoAbortDelayMillis(0);
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
+        virtualHostTemplate.multipartRemovalStrategy(Flags.defaultMultipartRemovalStrategy());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
 
@@ -954,6 +956,18 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Sets the {@link MultipartRemovalStrategy} that determines when to remove temporary files created
+     * for multipart requests.
+     * If not set, {@link MultipartRemovalStrategy#ON_RESPONSE_COMPLETION} is used by default.
+     */
+    @UnstableApi
+    public ServerBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        requireNonNull(removalStrategy, "removalStrategy");
+        virtualHostTemplate.multipartRemovalStrategy(removalStrategy);
+        return this;
+    }
+
+    /**
      * Sets the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
      * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
      *
@@ -1177,6 +1191,17 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Deprecated
     public ServerBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         virtualHostTemplate.tlsAllowUnsafeCiphers(tlsAllowUnsafeCiphers);
+        return this;
+    }
+
+    /**
+     * Sets {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * @param tlsEngineType the {@link TlsEngineType} to use
+     */
+    @UnstableApi
+    public ServerBuilder tlsEngineType(TlsEngineType tlsEngineType) {
+        virtualHostTemplate.tlsEngineType(tlsEngineType);
         return this;
     }
 

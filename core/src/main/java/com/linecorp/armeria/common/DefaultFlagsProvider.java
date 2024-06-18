@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -58,6 +59,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final boolean DEFAULT_CLIENT_KEEP_ALIVE_ON_PING = false;
     static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     static final long DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
+
+    // Use the fragmentation size as the default. https://datatracker.ietf.org/doc/html/rfc5246#section-6.2.1
+    static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH = 16384; // 16KiB
 
     // Use slightly greater value than the default request timeout so that clients have a higher chance of
     // getting proper 503 Service Unavailable response when server-side timeout occurs.
@@ -437,6 +441,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Integer defaultMaxClientHelloLength() {
+        return DEFAULT_MAX_CLIENT_HELLO_LENGTH;
+    }
+
+    @Override
     public Set<TransientServiceOption> transientServiceOptions() {
         return ImmutableSet.of();
     }
@@ -466,6 +475,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return Paths.get(System.getProperty("java.io.tmpdir") +
                          File.separatorChar + "armeria" +
                          File.separatorChar + "multipart-uploads");
+    }
+
+    @Override
+    public MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
+        return MultipartRemovalStrategy.ON_RESPONSE_COMPLETION;
     }
 
     @Override

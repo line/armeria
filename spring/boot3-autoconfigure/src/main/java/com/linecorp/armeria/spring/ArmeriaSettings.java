@@ -37,10 +37,9 @@ import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
 import io.netty.channel.EventLoopGroup;
 
 /**
@@ -691,7 +690,7 @@ public class ArmeriaSettings {
 
     /**
      * Returns the path of the metrics exposition service. {@link PrometheusExpositionService} will be used if
-     * {@link PrometheusMeterRegistry} is available. Otherwise, Dropwizard's {@link MetricsModule} will be used
+     * {@code armeria-prometheus1} module is added. Otherwise, Dropwizard's {@link MetricsModule} will be used
      * if {@link DropwizardMeterRegistry} is available.
      */
     @Nullable
@@ -701,7 +700,7 @@ public class ArmeriaSettings {
 
     /**
      * Sets the path of the metrics exposition service. {@link PrometheusExpositionService} will be used if
-     * {@link PrometheusMeterRegistry} is available. Otherwise, Dropwizard's {@link MetricsModule} will be used
+     * {@code armeria-prometheus1} module is added. Otherwise, Dropwizard's {@link MetricsModule} will be used
      * if {@link DropwizardMeterRegistry} is available.
      */
     public void setMetricsPath(@Nullable String metricsPath) {

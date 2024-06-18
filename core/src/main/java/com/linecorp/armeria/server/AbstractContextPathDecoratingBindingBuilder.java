@@ -22,18 +22,24 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 
-abstract class AbstractContextPathDecoratingBindingBuilder<T extends ServiceConfigsBuilder>
-        extends AbstractBindingBuilder {
+abstract class AbstractContextPathDecoratingBindingBuilder
+        <SELF extends AbstractContextPathDecoratingBindingBuilder<SELF, T>,
+                T extends AbstractContextPathServicesBuilder<?, ?>>
+        extends AbstractBindingBuilder<SELF> {
 
-    private final AbstractContextPathServicesBuilder<T> builder;
+    private final T builder;
 
-    AbstractContextPathDecoratingBindingBuilder(AbstractContextPathServicesBuilder<T> builder) {
+    AbstractContextPathDecoratingBindingBuilder(T builder) {
         super(builder.contextPaths());
         this.builder = builder;
     }
 
-    AbstractContextPathServicesBuilder<T> build(
-            Function<? super HttpService, ? extends HttpService> decorator) {
+    /**
+     * Sets the {@code decorator} and returns the context path service builder.
+     *
+     * @param decorator the {@link Function} that decorates {@link HttpService}
+     */
+    public T build(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
         buildRouteList().forEach(
                 route -> contextPaths().forEach(contextPath -> builder.addRouteDecoratingService(
@@ -41,8 +47,13 @@ abstract class AbstractContextPathDecoratingBindingBuilder<T extends ServiceConf
         return builder;
     }
 
-    AbstractContextPathServicesBuilder<T> build(
-            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+    /**
+     * Sets the {@link DecoratingHttpServiceFunction} and returns the context path service builder.
+     *
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}
+     */
+    public T build(DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
         return build(delegate -> new FunctionalDecoratingHttpService(delegate, decoratingHttpServiceFunction));
     }

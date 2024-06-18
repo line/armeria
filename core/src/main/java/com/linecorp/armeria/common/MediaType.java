@@ -496,6 +496,7 @@ public final class MediaType {
      * This constant is used for advertising the capabilities of a Git server,
      * as described in <a href="https://git-scm.com/docs/http-protocol/2.34.0#_smart_clients">Smart Clients</a>.
      */
+    @UnstableApi
     public static final MediaType GIT_UPLOAD_PACK_ADVERTISEMENT =
             createConstant(APPLICATION_TYPE, "x-git-upload-pack-advertisement");
 
@@ -504,6 +505,7 @@ public final class MediaType {
      * <a href="https://git-scm.com/docs/http-protocol/2.34.0#_smart_service_git_upload_pack">
      * Smart Service git-upload-pack</a>.
      */
+    @UnstableApi
     public static final MediaType GIT_UPLOAD_PACK_REQUEST =
             createConstant(APPLICATION_TYPE, "x-git-upload-pack-request");
 
@@ -512,6 +514,7 @@ public final class MediaType {
      * <a href="https://git-scm.com/docs/http-protocol/2.34.0#_smart_service_git_upload_pack">
      * Smart Service git-upload-pack</a>.
      */
+    @UnstableApi
     public static final MediaType GIT_UPLOAD_PACK_RESULT =
             createConstant(APPLICATION_TYPE, "x-git-upload-pack-result");
 

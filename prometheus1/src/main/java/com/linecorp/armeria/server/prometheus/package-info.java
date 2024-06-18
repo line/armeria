@@ -14,18 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+/**
+ * Prometheus version 1 metrics.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.server.prometheus;
 
-import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
-import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
-import io.netty.util.AttributeKey;
-
-final class XdsAttributesKeys {
-
-    static final AttributeKey<LbEndpoint> LB_ENDPOINT_KEY =
-            AttributeKey.valueOf(XdsAttributesKeys.class, "LB_ENDPOINT_KEY");
-    static final AttributeKey<LocalityLbEndpoints> LOCALITY_LB_ENDPOINTS_KEY =
-            AttributeKey.valueOf(XdsAttributesKeys.class, "LOCALITY_LB_ENDPOINTS_KEY");
-
-    private XdsAttributesKeys() {}
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

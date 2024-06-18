@@ -54,7 +54,7 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
             return serverErrorHandler.renderStatus(null, serviceConfig, headers, status, description, cause);
         }
 
-        final CorsService corsService = serviceConfig.service().as(CorsService.class);
+        final CorsService corsService = ctx.findService(CorsService.class);
         if (corsService == null) {
             return serverErrorHandler.renderStatus(ctx, serviceConfig, headers, status, description, cause);
         }
@@ -80,7 +80,7 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
             if (oldRes == null) {
                 return null;
             }
-            final CorsService corsService = ctx.config().service().as(CorsService.class);
+            final CorsService corsService = ctx.findService(CorsService.class);
             if (corsService == null) {
                 return oldRes;
             }

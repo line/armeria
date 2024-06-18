@@ -82,6 +82,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private static final ResponseHeaders DUMMY_RESPONSE_HEADERS = ResponseHeaders.of(HttpStatus.UNKNOWN);
 
     private final RequestContext ctx;
+    private int currentAttempt;
+
     private final CompleteRequestLog notCheckingAccessor = new CompleteRequestLog();
 
     @Nullable
@@ -545,7 +547,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             children = new ArrayList<>();
             propagateRequestSideLog(child);
         }
+
         children.add(child);
+        if (child instanceof DefaultRequestLog) {
+            ((DefaultRequestLog) child).currentAttempt = children.size();
+        }
     }
 
     private void propagateRequestSideLog(RequestLogAccess child) {
@@ -1023,6 +1029,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         requireNonNull(requestTrailers, "requestTrailers");
         this.requestTrailers = requestTrailers;
         updateFlags(RequestLogProperty.REQUEST_TRAILERS);
+    }
+
+    @Override
+    public int currentAttempt() {
+        return currentAttempt;
     }
 
     @Override
@@ -1777,6 +1788,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public HttpHeaders requestTrailers() {
             return requestTrailers;
+        }
+
+        @Override
+        public int currentAttempt() {
+            return currentAttempt;
         }
 
         @Override

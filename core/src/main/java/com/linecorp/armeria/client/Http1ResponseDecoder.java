@@ -185,7 +185,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                         }
 
                         if (!HttpUtil.isKeepAlive(nettyRes)) {
-                            session().deactivate();
+                            session().markUnacquirable();
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);

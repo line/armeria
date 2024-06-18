@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static graphql.com.google.common.base.Preconditions.checkArgument;
@@ -47,6 +48,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketServiceBuilder;
 
 import graphql.GraphQL;
+import graphql.execution.ExecutionIdProvider;
 import graphql.execution.instrumentation.ChainedInstrumentation;
 import graphql.execution.instrumentation.Instrumentation;
 import graphql.schema.GraphQLSchema;
@@ -67,29 +69,38 @@ public final class GraphqlServiceBuilder {
 
     private static final List<String> DEFAULT_SCHEMA_FILE_NAMES = ImmutableList.of("schema.graphqls",
                                                                                    "schema.graphql");
-    private final ImmutableList.Builder<URL> schemaUrls = ImmutableList.builder();
-
-    private final ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators =
-            ImmutableList.builder();
-    private final ImmutableList.Builder<GraphQLTypeVisitor> typeVisitors = ImmutableList.builder();
-    private final ImmutableList.Builder<Instrumentation> instrumentations = ImmutableList.builder();
-    private final ImmutableList.Builder<GraphqlConfigurator> graphqlBuilderConsumers =
-            ImmutableList.builder();
 
     @Nullable
-    private ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers;
-    private boolean useBlockingTaskExecutor;
+    private GraphQL graphql;
 
+    // Fields for building a graphql
+    @Nullable
+    private ExecutionIdGenerator executionIdGenerator;
+    @Nullable
+    private ImmutableList.Builder<Instrumentation> instrumentations;
+    @Nullable
+    private ImmutableList.Builder<GraphqlConfigurator> graphqlBuilderConsumers;
+
+    // Fields for building a schema in a graphql
+    @Nullable
+    private GraphQLSchema schema;
+    @Nullable
+    private ImmutableList.Builder<URL> schemaUrls;
+    @Nullable
+    private ImmutableList.Builder<RuntimeWiringConfigurator> runtimeWiringConfigurators;
+    @Nullable
+    private ImmutableList.Builder<GraphQLTypeVisitor> typeVisitors;
+
+    // Fields for building a DataLoaderRegistry
+    @Nullable
+    private ImmutableList.Builder<Consumer<? super DataLoaderRegistry>> dataLoaderRegistryConsumers;
     @Nullable
     private Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory;
 
-    @Nullable
-    private GraphQLSchema schema;
-
+    // Others
+    private boolean useBlockingTaskExecutor;
     @Nullable
     private GraphqlErrorHandler errorHandler;
-
-    private ExecutionIdGenerator executionIdGenerator = ExecutionIdGenerator.of();
 
     private boolean enableWebSocket;
 
@@ -99,9 +110,27 @@ public final class GraphqlServiceBuilder {
     GraphqlServiceBuilder() {}
 
     /**
+     * Sets the {@link GraphQL}.
+     */
+    public GraphqlServiceBuilder graphql(GraphQL graphql) {
+        checkState(executionIdGenerator == null && instrumentations == null &&
+                   graphqlBuilderConsumers == null && schema == null &&
+                   schemaUrls == null && runtimeWiringConfigurators == null &&
+                   typeVisitors == null,
+                   "graphql() and setting properties for a GraphQL are mutually exclusive.");
+        this.graphql = requireNonNull(graphql, "graphql");
+        return this;
+    }
+
+    /**
      * Adds the schema {@link File}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can create a {@link TypeDefinitionRegistry}
+     *             using {@link SchemaParser}, and then create {@link GraphQLSchema} using a
+     *             {@link SchemaGenerator}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schemaFile(File... schemaFiles) {
         return schemaFile(ImmutableList.copyOf(requireNonNull(schemaFiles, "schemaFiles")));
     }
@@ -109,7 +138,12 @@ public final class GraphqlServiceBuilder {
     /**
      * Adds the schema {@link File}s.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can create a {@link TypeDefinitionRegistry}
+     *             using {@link SchemaParser}, and then create {@link GraphQLSchema} using a
+     *             {@link SchemaGenerator}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schemaFile(Iterable<? extends File> schemaFiles) {
         requireNonNull(schemaFiles, "schemaFiles");
         return schemaUrls0(Streams.stream(schemaFiles)
@@ -125,7 +159,12 @@ public final class GraphqlServiceBuilder {
     /**
      * Adds the schema loaded from the given URLs.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can create a {@link TypeDefinitionRegistry}
+     *             using {@link SchemaParser}, and then create {@link GraphQLSchema} using a
+     *             {@link SchemaGenerator}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schemaUrls(String... schemaUrls) {
         return schemaUrls(ImmutableList.copyOf(requireNonNull(schemaUrls, "schemaUrls")));
     }
@@ -133,7 +172,12 @@ public final class GraphqlServiceBuilder {
     /**
      * Adds the schema loaded from the given URLs.
      * If not set, the {@code schema.graphql} or {@code schema.graphqls} will be imported from the resource.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can create a {@link TypeDefinitionRegistry}
+     *             using {@link SchemaParser}, and then create {@link GraphQLSchema} using a
+     *             {@link SchemaGenerator}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schemaUrls(Iterable<String> schemaUrls) {
         requireNonNull(schemaUrls, "schemaUrls");
         return schemaUrls0(Streams.stream(schemaUrls)
@@ -147,14 +191,23 @@ public final class GraphqlServiceBuilder {
     }
 
     private GraphqlServiceBuilder schemaUrls0(Iterable<URL> schemaUrls) {
+        checkState(graphql == null, "graphql() and schemaUrls() are mutually exclusive.");
+        if (this.schemaUrls == null) {
+            this.schemaUrls = ImmutableList.builder();
+        }
         this.schemaUrls.addAll(requireNonNull(schemaUrls, "schemaUrls"));
         return this;
     }
 
     /**
      * Sets the {@link GraphQLSchema}.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. Set the {@link GraphQLSchema} to a
+     *             {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder schema(GraphQLSchema schema) {
+        checkState(graphql == null, "graphql() and schema() are mutually exclusive.");
         this.schema = requireNonNull(schema, "schema");
         return this;
     }
@@ -201,7 +254,12 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link RuntimeWiringConfigurator}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can specify a {@link RuntimeWiringConfigurator}
+     *             to {@link SchemaGenerator#makeExecutableSchema(TypeDefinitionRegistry, RuntimeWiring)}
+     *             when creating a {@link GraphQLSchema}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder runtimeWiring(RuntimeWiringConfigurator... runtimeWiringConfigurators) {
         requireNonNull(runtimeWiringConfigurators, "runtimeWiringConfigurators");
         return runtimeWiring(ImmutableList.copyOf(runtimeWiringConfigurators));
@@ -209,30 +267,57 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link RuntimeWiringConfigurator}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can specify a {@link RuntimeWiringConfigurator}
+     *             to {@link SchemaGenerator#makeExecutableSchema(TypeDefinitionRegistry, RuntimeWiring)}
+     *             when creating a {@link GraphQLSchema}. Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder runtimeWiring(Iterable<? extends RuntimeWiringConfigurator> configurators) {
+        checkState(graphql == null, "graphql() and runtimeWiring() are mutually exclusive.");
+        if (runtimeWiringConfigurators == null) {
+            runtimeWiringConfigurators = ImmutableList.builder();
+        }
         runtimeWiringConfigurators.addAll(requireNonNull(configurators, "configurators"));
         return this;
     }
 
     /**
      * Adds the {@link GraphQLTypeVisitor}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can transform a {@link GraphQLSchema}
+     *             using {@link SchemaTransformer#transformSchema(GraphQLSchema, GraphQLTypeVisitor)}.
+     *             Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder typeVisitors(GraphQLTypeVisitor... typeVisitors) {
         return typeVisitors(ImmutableList.copyOf(requireNonNull(typeVisitors, "typeVisitors")));
     }
 
     /**
      * Adds the {@link GraphQLTypeVisitor}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can transform a {@link GraphQLSchema}
+     *             using {@link SchemaTransformer#transformSchema(GraphQLSchema, GraphQLTypeVisitor)}.
+     *             Then, set it to a {@link GraphQL.Builder}.
      */
+    @Deprecated
     public GraphqlServiceBuilder typeVisitors(Iterable<? extends GraphQLTypeVisitor> typeVisitors) {
+        checkState(graphql == null, "graphql() and typeVisitors() are mutually exclusive.");
+        if (this.typeVisitors == null) {
+            this.typeVisitors = ImmutableList.builder();
+        }
         this.typeVisitors.addAll(requireNonNull(typeVisitors, "typeVisitors"));
         return this;
     }
 
     /**
      * Adds the {@link Instrumentation}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can specify a {@link Instrumentation} to
+     *             {@link GraphQL.Builder#instrumentation(Instrumentation)}.
      */
+    @Deprecated
     public GraphqlServiceBuilder instrumentation(Instrumentation... instrumentations) {
         requireNonNull(instrumentations, "instrumentations");
         return instrumentation(ImmutableList.copyOf(instrumentations));
@@ -240,25 +325,45 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Adds the {@link Instrumentation}s.
+     *
+     * @deprecated Use {@link #graphql(GraphQL)} instead. You can specify a {@link Instrumentation} to
+     *             {@link GraphQL.Builder#instrumentation(Instrumentation)}.
      */
+    @Deprecated
     public GraphqlServiceBuilder instrumentation(Iterable<? extends Instrumentation> instrumentations) {
-        this.instrumentations.addAll(requireNonNull(instrumentations, "instrumentations"));
+        checkState(graphql == null, "graphql() and instrumentation() are mutually exclusive.");
+        requireNonNull(instrumentations, "instrumentations");
+        if (this.instrumentations == null) {
+            this.instrumentations = ImmutableList.builder();
+        }
+        this.instrumentations.addAll(instrumentations);
         return this;
     }
 
     /**
      * Adds the {@link GraphqlConfigurator} consumers.
+     *
+     * @deprecated Use {@link GraphQL.Builder} directly.
      */
+    @Deprecated
     public GraphqlServiceBuilder configureGraphql(GraphqlConfigurator... configurers) {
         return configureGraphql(ImmutableList.copyOf(requireNonNull(configurers, "configurers")));
     }
 
     /**
      * Adds the {@link GraphqlConfigurator} consumers.
+     *
+     * @deprecated Use {@link GraphQL.Builder} directly.
      */
+    @Deprecated
     public GraphqlServiceBuilder configureGraphql(
             Iterable<? extends GraphqlConfigurator> configurers) {
-        graphqlBuilderConsumers.addAll(requireNonNull(configurers, "configurers"));
+        checkState(graphql == null, "graphql() and configureGraphql() are mutually exclusive.");
+        requireNonNull(configurers, "configurers");
+        if (graphqlBuilderConsumers == null) {
+            graphqlBuilderConsumers = ImmutableList.builder();
+        }
+        graphqlBuilderConsumers.addAll(configurers);
         return this;
     }
 
@@ -309,6 +414,7 @@ public final class GraphqlServiceBuilder {
      * If not specified, {@link ExecutionIdGenerator#of()} is used by default.
      */
     public GraphqlServiceBuilder executionIdGenerator(ExecutionIdGenerator executionIdGenerator) {
+        checkState(graphql == null, "graphql() and executionIdGenerator() are mutually exclusive.");
         this.executionIdGenerator = requireNonNull(executionIdGenerator, "executionIdGenerator");
         return this;
     }
@@ -319,33 +425,9 @@ public final class GraphqlServiceBuilder {
     public GraphqlService build() {
         checkArgument(enableWebSocket || webSocketServiceCustomizer == null,
                       "enableWebSocket must be true to customize WebSocketServiceBuilder");
-
-        final GraphQLSchema schema = buildSchema();
-        GraphQL.Builder builder = GraphQL.newGraphQL(schema)
-                                         .executionIdProvider(executionIdGenerator.asExecutionProvider());
-        final List<Instrumentation> instrumentations = this.instrumentations.build();
-        if (!instrumentations.isEmpty()) {
-            builder = builder.instrumentation(new ChainedInstrumentation(instrumentations));
-        }
-
-        final List<GraphqlConfigurator> graphqlBuilders = graphqlBuilderConsumers.build();
-        for (GraphqlConfigurator configurer : graphqlBuilders) {
-            configurer.configure(builder);
-        }
-
-        Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory = null;
-        if (this.dataLoaderRegistryFactory != null) {
-            dataLoaderRegistryFactory = this.dataLoaderRegistryFactory;
-        } else if (dataLoaderRegistryConsumers != null) {
-            final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
-            for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistryConsumers.build()) {
-                configurer.accept(dataLoaderRegistry);
-            }
-            dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
-        } else {
-            assert dataLoaderRegistryFactory == null && dataLoaderRegistryConsumers == null;
-            dataLoaderRegistryFactory = ctx -> new DataLoaderRegistry();
-        }
+        final GraphQL graphql = buildGraphql();
+        final Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory =
+                buildDataLoaderRegistry();
 
         final GraphqlErrorHandler errorHandler;
         if (this.errorHandler == null) {
@@ -353,8 +435,7 @@ public final class GraphqlServiceBuilder {
         } else {
             errorHandler = this.errorHandler.orElse(GraphqlErrorHandler.of());
         }
-
-        final DefaultGraphqlService graphqlService = new DefaultGraphqlService(builder.build(),
+        final DefaultGraphqlService graphqlService = new DefaultGraphqlService(graphql,
                                                                                dataLoaderRegistryFactory,
                                                                                useBlockingTaskExecutor,
                                                                                errorHandler);
@@ -366,41 +447,54 @@ public final class GraphqlServiceBuilder {
         }
     }
 
-    private GraphQLSchema buildSchema() {
-        final List<URL> schemaUrls = this.schemaUrls.build();
-        final List<RuntimeWiringConfigurator> runtimeWiringConfigurators =
-                this.runtimeWiringConfigurators.build();
-        final List<GraphQLTypeVisitor> typeVisitors = this.typeVisitors.build();
+    private GraphQL buildGraphql() {
+        if (graphql != null) {
+            return graphql;
+        }
+        final GraphQLSchema schema = buildSchema();
+        final ExecutionIdProvider executionProvider =
+                firstNonNull(executionIdGenerator, ExecutionIdGenerator.of()).asExecutionProvider();
 
+        final GraphQL.Builder builder = GraphQL.newGraphQL(schema)
+                                               .executionIdProvider(executionProvider);
+        if (instrumentations != null) {
+            final List<Instrumentation> instrumentations = this.instrumentations.build();
+            builder.instrumentation(new ChainedInstrumentation(instrumentations));
+        }
+        if (graphqlBuilderConsumers != null) {
+            final List<GraphqlConfigurator> graphqlBuilders = graphqlBuilderConsumers.build();
+            for (GraphqlConfigurator configurer : graphqlBuilders) {
+                configurer.configure(builder);
+            }
+        }
+        return builder.build();
+    }
+
+    private GraphQLSchema buildSchema() {
         if (schema != null) {
-            checkState(schemaUrls.isEmpty() && runtimeWiringConfigurators.isEmpty() &&
-                       typeVisitors.isEmpty(),
+            checkState(schemaUrls == null && runtimeWiringConfigurators == null &&
+                       typeVisitors == null,
                        "Cannot add schemaUrl(or File), runtimeWiringConfigurator and " +
                        "typeVisitor when GraphqlSchema is specified.");
             return schema;
         }
 
-        final TypeDefinitionRegistry registry = typeDefinitionRegistry(schemaUrls);
-        final RuntimeWiring runtimeWiring = buildRuntimeWiring(runtimeWiringConfigurators);
+        final TypeDefinitionRegistry registry = typeDefinitionRegistry();
+        final RuntimeWiring runtimeWiring = buildRuntimeWiring();
         GraphQLSchema schema = new SchemaGenerator().makeExecutableSchema(registry, runtimeWiring);
-        for (GraphQLTypeVisitor typeVisitor : typeVisitors) {
-            schema = SchemaTransformer.transformSchema(schema, typeVisitor);
+        if (typeVisitors != null) {
+            for (GraphQLTypeVisitor typeVisitor : typeVisitors.build()) {
+                schema = SchemaTransformer.transformSchema(schema, typeVisitor);
+            }
         }
         return schema;
     }
 
-    private static TypeDefinitionRegistry typeDefinitionRegistry(List<URL> schemaUrls) {
+    private TypeDefinitionRegistry typeDefinitionRegistry() {
         final TypeDefinitionRegistry registry = new TypeDefinitionRegistry();
         final SchemaParser parser = new SchemaParser();
-        if (schemaUrls.isEmpty()) {
-            schemaUrls = defaultSchemaUrls();
-        }
-        if (schemaUrls.isEmpty()) {
-            throw new IllegalStateException("Not found schema file(s)");
-        }
-
-        logger.info("Found schema files: {}", schemaUrls);
-        schemaUrls.forEach(url -> {
+        final List<URL> schemaUrlList = schemaUrls != null ? schemaUrls.build() : defaultSchemaUrls();
+        schemaUrlList.forEach(url -> {
             try (InputStream inputStream = url.openStream()) {
                 registry.merge(parser.parse(inputStream));
             } catch (IOException e) {
@@ -410,19 +504,42 @@ public final class GraphqlServiceBuilder {
         return registry;
     }
 
-    private static RuntimeWiring buildRuntimeWiring(
-            List<RuntimeWiringConfigurator> runtimeWiringConfigurators) {
+    private RuntimeWiring buildRuntimeWiring() {
         final RuntimeWiring.Builder runtimeWiringBuilder = RuntimeWiring.newRuntimeWiring();
-        runtimeWiringConfigurators.forEach(it -> it.configure(runtimeWiringBuilder));
+        if (runtimeWiringConfigurators != null) {
+            runtimeWiringConfigurators.build().forEach(it -> it.configure(runtimeWiringBuilder));
+        }
         return runtimeWiringBuilder.build();
     }
 
     private static List<URL> defaultSchemaUrls() {
         final ClassLoader classLoader = GraphqlServiceBuilder.class.getClassLoader();
-        return DEFAULT_SCHEMA_FILE_NAMES
+        final List<URL> schemaFiles = DEFAULT_SCHEMA_FILE_NAMES
                 .stream()
                 .map(classLoader::getResource)
                 .filter(Objects::nonNull)
                 .collect(toImmutableList());
+
+        if (schemaFiles.isEmpty()) {
+            throw new IllegalStateException("Not found schema file(s)");
+        }
+        logger.info("Found schema files: {}", schemaFiles);
+        return schemaFiles;
+    }
+
+    private Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> buildDataLoaderRegistry() {
+        final Function<? super ServiceRequestContext, ? extends DataLoaderRegistry> dataLoaderRegistryFactory;
+        if (this.dataLoaderRegistryFactory != null) {
+            dataLoaderRegistryFactory = this.dataLoaderRegistryFactory;
+        } else if (dataLoaderRegistryConsumers != null) {
+            final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
+            for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistryConsumers.build()) {
+                configurer.accept(dataLoaderRegistry);
+            }
+            dataLoaderRegistryFactory = ctx -> dataLoaderRegistry;
+        } else {
+            dataLoaderRegistryFactory = ctx -> new DataLoaderRegistry();
+        }
+        return dataLoaderRegistryFactory;
     }
 }

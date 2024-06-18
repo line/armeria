@@ -26,8 +26,8 @@ configure(projectsWithFlags('bom')) {
                                     "Please check bomGroups property", project.name)
                     }
                     subs = bomGroups.get(project.path)
-                    if (!(subs.value instanceof List)) {
-                        throw new IllegalStateException("bomGroups' value must be a List: ${subs.value}")
+                    if (!(subs instanceof List)) {
+                        throw new IllegalStateException("bomGroups' value must be a List: ${subs}")
                     }
                 }
 

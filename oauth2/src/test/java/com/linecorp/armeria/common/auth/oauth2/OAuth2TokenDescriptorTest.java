@@ -197,8 +197,6 @@ public class OAuth2TokenDescriptorTest {
                                                                       .extras(extras)
                                                                       .scope(scope)
                                                                       .build();
-
-        System.out.println(descriptor);
         assertThat(descriptor.toString()).isEqualTo(rawResponse);
     }
 

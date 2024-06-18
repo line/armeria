@@ -359,7 +359,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     private void configureUpgradeCodec(Channel ch, Consumer<ChannelHandler> pipelineCustomizer) {
         final Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch, http2);
-        if (clientFactory.useHttp2Preface()) {
+        // - h2c: HTTP/2 preface is always used.
+        // - http: Either HTTP/1.1 upgrade or HTTP/2 preface is used depending on 'useHttp2Preface()'.
+        final boolean shouldUsePreface = httpPreference == HttpPreference.HTTP2_REQUIRED ||
+                                         clientFactory.useHttp2Preface();
+        if (shouldUsePreface) {
             pipelineCustomizer.accept(new DowngradeHandler());
             pipelineCustomizer.accept(http2Handler);
         } else {
@@ -801,7 +805,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            HttpSession.get(ctx.channel()).deactivate();
+            HttpSession.get(ctx.channel()).markUnacquirable();
             super.close(ctx, promise);
         }
     }
