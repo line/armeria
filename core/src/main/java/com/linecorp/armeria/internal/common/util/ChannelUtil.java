@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.common.util;
 
-import static com.linecorp.armeria.common.ConnectionEventKey.CONNECTION_EVENT_KEY;
+import static com.linecorp.armeria.common.ConnectionEventState.CONNECTION_EVENT_STATE;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -37,7 +37,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 
-import com.linecorp.armeria.common.ConnectionEventKey;
+import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -336,12 +336,12 @@ public final class ChannelUtil {
     }
 
     @Nullable
-    public static ConnectionEventKey connectionEventKey(@Nullable Channel ch) {
+    public static ConnectionEventState connectionEventState(@Nullable Channel ch) {
         if (ch == null) {
             return null;
         }
 
-        final Attribute<ConnectionEventKey> attr = ch.attr(CONNECTION_EVENT_KEY);
+        final Attribute<ConnectionEventState> attr = ch.attr(CONNECTION_EVENT_STATE);
 
         if (attr != null) {
             return attr.get();
@@ -350,8 +350,8 @@ public final class ChannelUtil {
         return null;
     }
 
-    public static void setConnectionEventKey(Channel ch, ConnectionEventKey key) {
-        ch.attr(CONNECTION_EVENT_KEY).set(key);
+    public static void setConnectionEventState(Channel ch, ConnectionEventState state) {
+        ch.attr(CONNECTION_EVENT_STATE).set(state);
     }
 
     @Nullable

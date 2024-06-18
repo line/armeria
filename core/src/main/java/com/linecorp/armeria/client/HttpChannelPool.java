@@ -47,7 +47,7 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.client.proxy.Socks4ProxyConfig;
 import com.linecorp.armeria.client.proxy.Socks5ProxyConfig;
 import com.linecorp.armeria.common.ClosedSessionException;
-import com.linecorp.armeria.common.ConnectionEventKey;
+import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -422,11 +422,11 @@ final class HttpChannelPool implements AsyncCloseable {
 
                 assert localAddress != null;
 
-                final ConnectionEventKey connectionEventKey = new ConnectionEventKey(remoteInetAddress,
-                                                                                     localAddress,
-                                                                                     desiredProtocol);
+                final ConnectionEventState connectionEventState = new ConnectionEventState(remoteInetAddress,
+                                                                                           localAddress,
+                                                                                           desiredProtocol);
 
-                ChannelUtil.setConnectionEventKey(channel, connectionEventKey);
+                ChannelUtil.setConnectionEventState(channel, connectionEventState);
 
                 try {
                     listener.connectionPending(desiredProtocol, remoteInetAddress, localAddress, channel);
@@ -504,13 +504,13 @@ final class HttpChannelPool implements AsyncCloseable {
 
                 final HttpSession session = HttpSession.get(channel);
 
-                final ConnectionEventKey connectionEventKey = ChannelUtil.connectionEventKey(channel);
+                final ConnectionEventState connectionEventState = ChannelUtil.connectionEventState(channel);
 
-                assert connectionEventKey != null;
+                assert connectionEventState != null;
 
-                final InetSocketAddress remoteAddr = connectionEventKey.remoteAddress();
-                final InetSocketAddress localAddr = connectionEventKey.localAddress();
-                connectionEventKey.setProtocol(protocol);
+                final InetSocketAddress remoteAddr = connectionEventState.remoteAddress();
+                final InetSocketAddress localAddr = connectionEventState.localAddress();
+                connectionEventState.setActualProtocol(protocol);
 
                 try {
                     listener.connectionOpened(
@@ -559,7 +559,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
                     try {
                         listener.connectionClosed(protocol, remoteAddr, localAddr,
-                                                  connectionEventKey.isActive(), channel);
+                                                  connectionEventState.isActive(), channel);
                     } catch (Throwable e) {
                         if (logger.isWarnEnabled()) {
                             logger.warn("{} Exception handling {}.connectionClosed()",
@@ -583,16 +583,16 @@ final class HttpChannelPool implements AsyncCloseable {
     }
 
     private void notifyConnectionFailed(Channel channel, Throwable cause) {
-        final ConnectionEventKey connectionEventKey = ChannelUtil.connectionEventKey(channel);
+        final ConnectionEventState connectionEventState = ChannelUtil.connectionEventState(channel);
 
         // In case the remote host does not support the desired protocol, it immediately fails before pending.
-        if (connectionEventKey == null) {
+        if (connectionEventState == null) {
             return;
         }
 
-        final SessionProtocol desiredProtocol = connectionEventKey.desiredProtocol();
-        final InetSocketAddress remoteAddr = connectionEventKey.remoteAddress();
-        final InetSocketAddress localAddr = connectionEventKey.localAddress();
+        final SessionProtocol desiredProtocol = connectionEventState.desiredProtocol();
+        final InetSocketAddress remoteAddr = connectionEventState.remoteAddress();
+        final InetSocketAddress localAddr = connectionEventState.localAddress();
 
         assert desiredProtocol != null;
 

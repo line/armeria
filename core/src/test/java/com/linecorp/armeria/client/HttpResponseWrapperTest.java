@@ -23,7 +23,7 @@ import java.net.InetSocketAddress;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.ConnectionEventKey;
+import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -181,8 +181,8 @@ class HttpResponseWrapperTest {
         void onResponseAdded(int id, EventLoop eventLoop, HttpResponseWrapper responseWrapper) {}
 
         @Override
-        protected ConnectionEventKey connectionEventKey() {
-            return new ConnectionEventKey(
+        protected ConnectionEventState connectionEventState() {
+            return new ConnectionEventState(
                     InetSocketAddress.createUnresolved("foo.com", 36462),
                     InetSocketAddress.createUnresolved("bar.com", 36462),
                     SessionProtocol.H1C);

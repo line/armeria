@@ -796,6 +796,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the listener which is notified on a connection pool event.
+     * This option won't work in case the connectionEventListener is already set.
+     *
      * @deprecated Use {@link #connectionEventListener} instead.
      */
     @Deprecated

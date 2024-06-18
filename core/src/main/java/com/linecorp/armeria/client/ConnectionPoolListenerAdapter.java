@@ -16,7 +16,10 @@
 package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
+import java.util.function.Consumer;
 
+import com.linecorp.armeria.common.ConnectionEventListener;
+import com.linecorp.armeria.common.ConnectionEventListenerAdapter;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.util.AttributeMap;
@@ -24,7 +27,10 @@ import io.netty.util.AttributeMap;
 /**
  * A skeletal {@link ConnectionPoolListener} implementation in order for a user to implement only the methods
  * what he or she really needs.
+ *
+ * @deprecated Use {@link ConnectionEventListenerAdapter} with {@link ConnectionEventListener} instead.
  */
+@Deprecated
 public class ConnectionPoolListenerAdapter implements ConnectionPoolListener {
 
     static final ConnectionPoolListenerAdapter NOOP = new ConnectionPoolListenerAdapter();

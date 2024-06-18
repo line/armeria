@@ -251,7 +251,10 @@ public final class ClientFactoryOptions
 
     /**
      * The listener which is notified on a connection pool event.
+     *
+     * @deprecated Use {@link #CONNECTION_EVENT_LISTENER} instead.
      */
+    @Deprecated
     public static final ClientFactoryOption<ConnectionPoolListener> CONNECTION_POOL_LISTENER =
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
 
@@ -586,7 +589,10 @@ public final class ClientFactoryOptions
 
     /**
      * Returns the listener which is notified on a connection pool event.
+     *
+     * @deprecated Use {@link #connectionEventListener()} instead.
      */
+    @Deprecated
     public ConnectionPoolListener connectionPoolListener() {
         return get(CONNECTION_POOL_LISTENER);
     }

@@ -25,12 +25,12 @@ import io.netty.util.AttributeKey;
 /**
  * A key to identify a connection event.
  */
-public final class ConnectionEventKey {
+public final class ConnectionEventState {
     /**
-     * The attribute key of the {@link ConnectionEventKey}.
+     * The attribute key of the {@link ConnectionEventState}.
      */
-    public static final AttributeKey<ConnectionEventKey> CONNECTION_EVENT_KEY =
-            AttributeKey.valueOf(ConnectionEventKey.class, "CONNECTION_EVENT_KEY");
+    public static final AttributeKey<ConnectionEventState> CONNECTION_EVENT_STATE =
+            AttributeKey.valueOf(ConnectionEventState.class, "CONNECTION_EVENT_STATE");
     /**
      * The remote address of the connection.
      */
@@ -40,10 +40,10 @@ public final class ConnectionEventKey {
      */
     private final InetSocketAddress localAddress;
     /**
-     * The protocol of the connection.
+     * The actual protocol of the connection.
      */
     @Nullable
-    private SessionProtocol protocol;
+    private SessionProtocol actualProtocol;
 
     /**
      * The desired protocol of the connection. This field is only used for client-side connection.
@@ -59,35 +59,26 @@ public final class ConnectionEventKey {
     /**
      * Creates a new instance.
      */
-    public ConnectionEventKey(InetSocketAddress remoteAddress,
-                              InetSocketAddress localAddress) {
-        this.remoteAddress = remoteAddress;
-        this.localAddress = localAddress;
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public ConnectionEventKey(InetSocketAddress remoteAddress,
-                              InetSocketAddress localAddress,
-                              SessionProtocol desiredProtocol) {
+    public ConnectionEventState(InetSocketAddress remoteAddress,
+                                InetSocketAddress localAddress,
+                                SessionProtocol desiredProtocol) {
         this.remoteAddress = remoteAddress;
         this.localAddress = localAddress;
         this.desiredProtocol = desiredProtocol;
     }
 
     /**
-     * Sets the protocol of the connection.
+     * Sets the actual protocol of the connection.
      */
-    public ConnectionEventKey setProtocol(SessionProtocol protocol) {
-        this.protocol = protocol;
+    public ConnectionEventState setActualProtocol(SessionProtocol actualProtocol) {
+        this.actualProtocol = actualProtocol;
         return this;
     }
 
     /**
      * Sets whether the connection is active.
      */
-    public ConnectionEventKey setActive(boolean isActive) {
+    public ConnectionEventState setActive(boolean isActive) {
         this.isActive = isActive;
         return this;
     }
@@ -110,8 +101,8 @@ public final class ConnectionEventKey {
      * Returns the protocol of the connection. This field can be null if the protocol is not determined yet.
      */
     @Nullable
-    public SessionProtocol protocol() {
-        return protocol;
+    public SessionProtocol actualProtocol() {
+        return actualProtocol;
     }
 
     /**

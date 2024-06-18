@@ -23,7 +23,7 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.ConnectionEventKey;
+import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ContentTooLargeExceptionBuilder;
@@ -48,7 +48,7 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
     private final InboundTrafficController inboundTrafficController;
     private final ConnectionEventListener connectionEventListener;
     @Nullable
-    private ConnectionEventKey connectionEventKey;
+    private ConnectionEventState connectionEventState;
 
     @Nullable
     private HttpSession httpSession;
@@ -111,14 +111,14 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
             unfinishedResponses--;
             assert unfinishedResponses >= 0 : unfinishedResponses;
 
-            final ConnectionEventKey key = connectionEventKey();
+            final ConnectionEventState connectionEventState = connectionEventState();
 
-            if (needsKeepAliveHandler && unfinishedResponses == 0 && key.isActive()) {
-                key.setActive(false);
+            if (needsKeepAliveHandler && unfinishedResponses == 0 && connectionEventState.isActive()) {
+                connectionEventState.setActive(false);
 
-                final InetSocketAddress remoteAddress = key.remoteAddress();
-                final InetSocketAddress localAddress = key.localAddress();
-                final SessionProtocol protocol = Objects.requireNonNull(key.protocol());
+                final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
+                final InetSocketAddress localAddress = connectionEventState.localAddress();
+                final SessionProtocol protocol = Objects.requireNonNull(connectionEventState.actualProtocol());
 
                 try {
                     connectionEventListener.connectionIdle(protocol, localAddress, remoteAddress, channel);
@@ -146,22 +146,22 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
 
         unfinishedResponses++;
 
-        final ConnectionEventKey key = connectionEventKey();
+        final ConnectionEventState connectionEventState = connectionEventState();
 
         /*
             If the protocol is null, it means that the protocol is undetermined.
             e.g. HTTP protocol upgrade
          */
-        if (key.protocol() == null) {
+        if (connectionEventState.actualProtocol() == null) {
             return true;
         }
 
-        if (!key.isActive() || unfinishedResponses == 1) {
-            key.setActive(true);
+        if (!connectionEventState.isActive() || unfinishedResponses == 1) {
+            connectionEventState.setActive(true);
 
-            final InetSocketAddress remoteAddress = key.remoteAddress();
-            final InetSocketAddress localAddress = key.localAddress();
-            final SessionProtocol protocol = key.protocol();
+            final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
+            final InetSocketAddress localAddress = connectionEventState.localAddress();
+            final SessionProtocol protocol = connectionEventState.actualProtocol();
 
             try {
                 connectionEventListener.connectionActive(protocol, localAddress, remoteAddress, channel);
@@ -206,16 +206,16 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
         return httpSession = HttpSession.get(channel);
     }
 
-    protected ConnectionEventKey connectionEventKey() {
-        if (connectionEventKey != null) {
-            return connectionEventKey;
+    protected ConnectionEventState connectionEventState() {
+        if (connectionEventState != null) {
+            return connectionEventState;
         }
 
-        connectionEventKey = ChannelUtil.connectionEventKey(channel);
+        connectionEventState = ChannelUtil.connectionEventState(channel);
 
-        assert connectionEventKey != null;
+        assert connectionEventState != null;
 
-        return connectionEventKey;
+        return connectionEventState;
     }
 
     static ContentTooLargeException contentTooLargeException(HttpResponseWrapper res, long transferred) {
