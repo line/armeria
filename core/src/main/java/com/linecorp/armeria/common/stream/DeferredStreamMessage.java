@@ -34,6 +34,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
@@ -112,6 +113,9 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
     @Nullable
     private volatile Throwable abortCause;
+
+    // Only accessed from downstreamSubscription's executor.
+    private boolean downstreamOnSubscribeCalled;
 
     /**
      * Creates a new instance.
@@ -327,6 +331,11 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     }
 
     private void subscribe(SubscriptionImpl subscription, Subscriber<Object> subscriber) {
+        if (downstreamOnSubscribeCalled) {
+            // abort is called.
+            return;
+        }
+        downstreamOnSubscribeCalled = true;
         try {
             subscriber.onSubscribe(subscription);
         } catch (Throwable t) {
@@ -366,15 +375,38 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             return;
         }
 
-        final SubscriptionImpl newSubscription = new SubscriptionImpl(
-                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
-        downstreamSubscriptionUpdater.compareAndSet(this, null, newSubscription);
-
-        final StreamMessage<T> upstream = this.upstream;
-        if (upstream != null) {
+        if (!subscribedToUpstreamUpdater.compareAndSet(this, 0, 1)) {
+            // Already subscribed to upstream so just abort upstream.
+            final StreamMessage<T> upstream = this.upstream;
+            assert upstream != null;
             upstream.abort(cause);
             return;
         }
+
+        // The upstream wouldn't be subscribed to by the downstream.
+        // So we need to abort upstream and complete the downstream with the cause.
+        // Upstream.abort() is called here and in delegate(StreamMessage<T> upstream) method.
+        // It's safe to call upstream.abort() multiple times.
+
+        // The downstream.onError() is called in downstreamOnError method if it's already set.
+        // If it wasn't set yet, downstream.onError() will be called in
+        // CancellableStreamMessage.failLateSubscriber().
+
+        // Abort upstream if it's set.
+        final StreamMessage<T> upstream = this.upstream;
+        if (upstream != null) {
+            upstream.abort(cause);
+        }
+
+        final SubscriptionImpl newSubscription = new SubscriptionImpl(
+                this, AbortingSubscriber.get(cause), ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
+        if (downstreamSubscriptionUpdater.compareAndSet(this, null, newSubscription)) {
+            // Downstream wasn't set yet.
+            whenComplete().completeExceptionally(cause);
+            return;
+        }
+
+        // Downstream was already set but upstream wasn't set yet or wouldn't be subscribed by the downstream.
 
         //noinspection unchecked
         final CompletableFuture<List<?>> collectingFuture =
@@ -383,15 +415,35 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             collectingFuture.completeExceptionally(cause);
         }
 
-        final CloseEvent closeEvent = newCloseEvent(cause);
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
         assert downstreamSubscription != null;
         if (downstreamSubscription.needsDirectInvocation()) {
-            closeEvent.notifySubscriber(downstreamSubscription, whenComplete());
+            downstreamOnError(cause, downstreamSubscription);
         } else {
             downstreamSubscription.executor().execute(
-                    () -> closeEvent.notifySubscriber(downstreamSubscription, whenComplete()));
+                    () -> downstreamOnError(cause, downstreamSubscription));
         }
+    }
+
+    private void downstreamOnError(Throwable cause, SubscriptionImpl downstreamSubscription) {
+        final Subscriber<Object> subscriber = downstreamSubscription.subscriber();
+        try {
+            if (!downstreamOnSubscribeCalled) {
+                downstreamOnSubscribeCalled = true;
+                subscriber.onSubscribe(downstreamSubscription);
+            }
+
+            if (downstreamSubscription.shouldNotifyCancellation() ||
+                !(cause instanceof CancelledSubscriptionException)) {
+                subscriber.onError(cause);
+            }
+        } catch (Throwable t) {
+            final Exception composite = new CompositeException(t, cause);
+            throwIfFatal(t);
+            logger.warn("Subscriber.onSubscribe() or onError() should not raise an exception. subscriber: {}",
+                        subscriber, composite);
+        }
+        whenComplete().completeExceptionally(cause);
     }
 
     @Override
@@ -430,10 +482,8 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     }
 
     private static SubscriptionImpl noopSubscription() {
-        final DefaultStreamMessage<?> streamMessage = new DefaultStreamMessage<>();
-        streamMessage.close();
-        return new SubscriptionImpl(streamMessage, NoopSubscriber.get(), ImmediateEventExecutor.INSTANCE,
-                                    EMPTY_OPTIONS);
+        return new SubscriptionImpl(NoopCancellableStreamMessage.INSTANCE, NoopSubscriber.get(),
+                                    ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
     }
 
     private final class ForwardingSubscriber implements Subscriber<T> {

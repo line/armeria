@@ -496,7 +496,11 @@ class DownloadJavadocPackageListTask extends DefaultTask {
             conn.disconnect()
         } catch (e) {
             tmpListFile.delete()
-            logger.log(LogLevel.WARN, "Download failed: ${e}", e)
+            if (project.gradle.startParameter.showStacktrace == ShowStacktrace.ALWAYS_FULL) {
+                logger.log(LogLevel.WARN, "Download failed: ${e}", e)
+            } else {
+                logger.log(LogLevel.WARN, "Download failed: ${e}")
+            }
         }
 
         return success

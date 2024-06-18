@@ -121,15 +121,17 @@ allprojects {
             })
         }
 
-        retry {
-            if (rootProject.findProperty('retry') == 'true') {
-                maxRetries = 3
-                failOnPassedAfterRetry = rootProject.findProperty('failOnPassedAfterRetry') != 'false'
+        develocity {
+            testRetry {
+                if (rootProject.findProperty('retry') == 'true') {
+                    maxRetries = 3
+                    failOnPassedAfterRetry = rootProject.findProperty('failOnPassedAfterRetry') != 'false'
+                }
             }
-        }
 
-        predictiveSelection {
-            enabled.set(!isCi)
+            predictiveTestSelection {
+                enabled.set(!isCi)
+            }
         }
     }
 }
@@ -282,9 +284,9 @@ allprojects {
 }
 
 // Require to use JDK 19 when releasing.
-tasks.closeAndReleaseStagingRepository.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_19) {
-        throw new IllegalStateException("You must release using JDK 19.");
+tasks.closeAndReleaseStagingRepositories.doFirst {
+    if (JavaVersion.current() != JavaVersion.VERSION_21) {
+        throw new IllegalStateException("You must release using JDK 21.");
     }
 }
 
@@ -439,7 +441,7 @@ configure(relocatedProjects) {
 }
 
 // additional configuration that can't be done at settings.gradle
-gradleEnterprise {
+develocity {
     buildScan {
         // maintain a allowList so that sensitive information (credentials) aren't accidentally published.
         Set<String> allowList = ['coverage', 'leak', 'blockhound', 'noLint', 'flakyTests', 'buildJdkVersion',

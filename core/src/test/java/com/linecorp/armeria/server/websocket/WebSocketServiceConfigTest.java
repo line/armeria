@@ -16,11 +16,13 @@
 
 package com.linecorp.armeria.server.websocket;
 
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.websocket.WebSocketServiceTest.AbstractWebSocketHandler;
@@ -32,25 +34,34 @@ class WebSocketServiceConfigTest {
         final WebSocketService webSocketService = WebSocketService.of(new AbstractWebSocketHandler());
         final Server server = Server.builder().service("/", webSocketService).build();
         assertThat(server.config().serviceConfigs()).hasSize(1);
-        ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
+        final ServiceConfig serviceConfig = server.config().serviceConfigs().get(0);
         assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(
-                WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS);
+                DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS);
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(
-                WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH);
+                DEFAULT_MAX_REQUEST_RESPONSE_LENGTH);
         assertThat(serviceConfig.requestAutoAbortDelayMillis()).isEqualTo(
-                WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS);
+                DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS);
+    }
 
-        server.reconfigure(sb -> sb.requestAutoAbortDelayMillis(1000)
+    @Test
+    void webSocketServiceOptionsPriority() {
+        final WebSocketService webSocketService = WebSocketService.of(new AbstractWebSocketHandler());
+        try (Server server = Server.builder()
+                                   .requestAutoAbortDelayMillis(1500)
+                                   .service("/", webSocketService)
+                                   .build()) {
+            final ServiceConfig sc = server.config().serviceConfigs().get(0);
+            assertThat(sc.requestAutoAbortDelayMillis()).isEqualTo(DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS);
+        }
+
+        try (Server server = Server.builder()
                                    .route()
-                                   .get("/")
-                                   .requestTimeoutMillis(2000)
-                                   .build(webSocketService));
-
-        assertThat(server.config().serviceConfigs()).hasSize(1);
-        serviceConfig = server.config().serviceConfigs().get(0);
-        assertThat(serviceConfig.requestTimeoutMillis()).isEqualTo(2000);
-        assertThat(serviceConfig.maxRequestLength()).isEqualTo(
-                WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH);
-        assertThat(serviceConfig.requestAutoAbortDelayMillis()).isEqualTo(1000);
+                                   .path("/")
+                                   .requestAutoAbortDelayMillis(1500)
+                                   .build(webSocketService)
+                                   .build()) {
+            final ServiceConfig sc = server.config().serviceConfigs().get(0);
+            assertThat(sc.requestAutoAbortDelayMillis()).isEqualTo(1500);
+        }
     }
 }

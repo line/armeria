@@ -52,6 +52,8 @@ import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
+import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -119,6 +121,7 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp2WithoutAlpn;
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
+    private final long http2GracefulShutdownTimeoutMillis;
     private MeterRegistry meterRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
     private final Http1HeaderNaming http1HeaderNaming;
@@ -177,11 +180,12 @@ final class HttpClientFactory implements ClientFactory {
                 options.tlsCustomizer();
         final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
         final List<X509Certificate> keyCertChainCaptor = new ArrayList<>();
+        final TlsEngineType tlsEngineType = options.tlsEngineType();
         sslCtxHttp1Or2 = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, false, tlsAllowUnsafeCiphers, tlsCustomizer,
+                .createSslContext(SslContextBuilder::forClient, false, tlsEngineType, tlsAllowUnsafeCiphers, tlsCustomizer,
                                   keyCertChainCaptor);
         sslCtxHttp1Only = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, true, tlsAllowUnsafeCiphers, tlsCustomizer,
+                .createSslContext(SslContextBuilder::forClient, true, tlsEngineType, tlsAllowUnsafeCiphers, tlsCustomizer,
                                   keyCertChainCaptor);
         setupTlsMetrics(keyCertChainCaptor, options.meterRegistry());
 
@@ -199,6 +203,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
+        http2GracefulShutdownTimeoutMillis = options.http2GracefulShutdownTimeoutMillis();
         meterRegistry = options.meterRegistry();
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();
@@ -296,6 +301,10 @@ final class HttpClientFactory implements ClientFactory {
 
     ConnectionPoolListener connectionPoolListener() {
         return connectionPoolListener;
+    }
+
+    long http2GracefulShutdownTimeoutMillis() {
+        return http2GracefulShutdownTimeoutMillis;
     }
 
     ProxyConfigSelector proxyConfigSelector() {
@@ -474,6 +483,10 @@ final class HttpClientFactory implements ClientFactory {
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {
+        if (isClosing()) {
+            throw new IllegalStateException("ClientFactory is closing or closed.");
+        }
+
         final HttpChannelPool pool = pools.get(eventLoop);
         if (pool != null) {
             return pool;

@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -84,6 +85,8 @@ public final class VirtualHost {
     @Nullable
     private final SslContext sslContext;
     private final TlsProvider tlsProvider;
+    @Nullable
+    private final TlsEngineType tlsEngineType;
     private final Router<ServiceConfig> router;
     private final List<ServiceConfig> serviceConfigs;
     private final ServiceConfig fallbackServiceConfig;
@@ -100,6 +103,7 @@ public final class VirtualHost {
     private final long requestAutoAbortDelayMillis;
     private final SuccessFunction successFunction;
     private final Path multipartUploadsLocation;
+    private final MultipartRemovalStrategy multipartRemovalStrategy;
     private final EventLoopGroup serviceWorkerGroup;
     private final List<ShutdownSupport> shutdownSupports;
     private final Function<RoutingContext, RequestId> requestIdGenerator;
@@ -107,6 +111,7 @@ public final class VirtualHost {
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
                 @Nullable TlsProvider tlsProvider,
+                @Nullable TlsEngineType tlsEngineType,
                 Iterable<ServiceConfig> serviceConfigs,
                 ServiceConfig fallbackServiceConfig,
                 RejectedRouteHandler rejectionHandler,
@@ -120,6 +125,7 @@ public final class VirtualHost {
                 long requestAutoAbortDelayMillis,
                 SuccessFunction successFunction,
                 Path multipartUploadsLocation,
+                MultipartRemovalStrategy multipartRemovalStrategy,
                 EventLoopGroup serviceWorkerGroup,
                 List<ShutdownSupport> shutdownSupports,
                 Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
@@ -135,6 +141,7 @@ public final class VirtualHost {
         this.port = port;
         this.sslContext = sslContext;
         this.tlsProvider = tlsProvider;
+        this.tlsEngineType = tlsEngineType;
         this.defaultServiceNaming = defaultServiceNaming;
         this.defaultLogName = defaultLogName;
         this.requestTimeoutMillis = requestTimeoutMillis;
@@ -145,6 +152,7 @@ public final class VirtualHost {
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         this.successFunction = successFunction;
         this.multipartUploadsLocation = multipartUploadsLocation;
+        this.multipartRemovalStrategy = multipartRemovalStrategy;
         this.serviceWorkerGroup = serviceWorkerGroup;
         this.shutdownSupports = shutdownSupports;
         @SuppressWarnings("unchecked")
@@ -168,11 +176,12 @@ public final class VirtualHost {
 
     VirtualHost withNewSslContext(SslContext sslContext) {
         return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, tlsProvider,
-                               serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
-                               maxRequestLength, verboseResponses,
+                               tlsEngineType, serviceConfigs, fallbackServiceConfig,
+                               RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
+                               defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
-                               successFunction, multipartUploadsLocation, serviceWorkerGroup,
+                               successFunction, multipartUploadsLocation, multipartRemovalStrategy,
+                               serviceWorkerGroup,
                                shutdownSupports, requestIdGenerator);
     }
 
@@ -319,6 +328,15 @@ public final class VirtualHost {
     @Nullable
     public SslContext sslContext() {
         return sslContext;
+    }
+
+    /**
+     * Returns the {@link TlsEngineType} of this virtual host.
+     */
+    @Nullable
+    @UnstableApi
+    public TlsEngineType tlsEngineType() {
+        return tlsEngineType;
     }
 
     /**
@@ -498,6 +516,10 @@ public final class VirtualHost {
                     // CorsService will handle the preflight request
                     // even if the service does not handle an OPTIONS method.
                     return routed;
+                } else {
+                    // `handlesCorsPreflight()` is false if `CorsService` is set as a route decorator.
+                    // However, this is not a problem because the CorsService is chosen and applied by
+                    // `InitialDispatcherService` regardless of the target service.
                 }
                 break;
             default:
@@ -548,6 +570,15 @@ public final class VirtualHost {
         return multipartUploadsLocation;
     }
 
+    /**
+     * Returns the {@link MultipartRemovalStrategy} that specifies when to remove the temporary files created
+     * for multipart requests.
+     */
+    @UnstableApi
+    public MultipartRemovalStrategy multipartRemovalStrategy() {
+        return multipartRemovalStrategy;
+    }
+
     VirtualHost decorate(@Nullable Function<? super HttpService, ? extends HttpService> decorator) {
         if (decorator == null) {
             return this;
@@ -562,10 +593,11 @@ public final class VirtualHost {
                 this.fallbackServiceConfig.withDecoratedService(decorator);
 
         return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, tlsProvider,
-                               serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
-                               maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
-                               requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
+                               tlsEngineType, serviceConfigs, fallbackServiceConfig,
+                               RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
+                               defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,
+                               accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
+                               successFunction, multipartUploadsLocation, multipartRemovalStrategy,
                                serviceWorkerGroup, shutdownSupports, requestIdGenerator);
     }
 

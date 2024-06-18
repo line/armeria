@@ -173,7 +173,6 @@ public class GrantedOAuth2AccessTokenTest {
                                                                        .scope(scope)
                                                                        .build();
 
-        System.out.println(token);
         assertThat(token.toString()).isEqualTo(toString);
     }
 

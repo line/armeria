@@ -57,7 +57,7 @@ final class XdsEndpointUtil {
         checkArgument(filterMetadata.getFieldsCount() > 0,
                       "filterMetadata.getFieldsCount(): %s (expected: > 0)", filterMetadata.getFieldsCount());
         final Predicate<Endpoint> lbEndpointPredicate = endpoint -> {
-            final LbEndpoint lbEndpoint = endpoint.attr(XdsAttributesKeys.LB_ENDPOINT_KEY);
+            final LbEndpoint lbEndpoint = endpoint.attr(XdsAttributeKeys.LB_ENDPOINT_KEY);
             assert lbEndpoint != null;
             final Struct endpointMetadata = lbEndpoint.getMetadata().getFilterMetadataOrDefault(
                     SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.getDefaultInstance());
@@ -201,13 +201,13 @@ final class XdsEndpointUtil {
         if (!Strings.isNullOrEmpty(hostname)) {
             endpoint = Endpoint.of(hostname)
                                .withIpAddr(socketAddress.getAddress())
-                               .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint)
-                               .withAttr(XdsAttributesKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
+                               .withAttr(XdsAttributeKeys.LB_ENDPOINT_KEY, lbEndpoint)
+                               .withAttr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
                                .withWeight(weight);
         } else {
             endpoint = Endpoint.of(socketAddress.getAddress())
-                               .withAttr(XdsAttributesKeys.LB_ENDPOINT_KEY, lbEndpoint)
-                               .withAttr(XdsAttributesKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
+                               .withAttr(XdsAttributeKeys.LB_ENDPOINT_KEY, lbEndpoint)
+                               .withAttr(XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
                                .withWeight(weight);
         }
         if (socketAddress.hasPortValue()) {

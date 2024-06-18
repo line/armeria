@@ -72,7 +72,7 @@
     "gatsby-remark-autolink-headers": "^4.11.0",
     "gatsby-remark-copy-linked-files": "^4.11.0",
     "gatsby-remark-draw": "^1.0.16",
-    "gatsby-remark-images": "^5.11.0",
+    "gatsby-remark-images": "^5.12.0",
     "gatsby-remark-plantuml-lite": "^0.1.2",
     "gatsby-source-build-date": "^1.0.1",
     "gatsby-source-filesystem": "^3.14.0",

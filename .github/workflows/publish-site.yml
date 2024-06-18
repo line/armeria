@@ -20,22 +20,22 @@ jobs:
           sudo apt-get -y install cargo && cargo install svgbob_cli
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - id: setup-jdk-19
-        name: Set up JDK 19
+      - id: setup-jdk-21
+        name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '19'
+          java-version: '21'
 
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build the site
         run: |
           ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken=${{ secrets.GITHUB_TOKEN }} site
 
       - name: Deploy the site
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: site/public

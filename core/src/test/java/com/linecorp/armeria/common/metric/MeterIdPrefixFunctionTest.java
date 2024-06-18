@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;

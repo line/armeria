@@ -24,6 +24,7 @@ import org.dataloader.DataLoaderRegistry;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
+import com.linecorp.armeria.server.ServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolHandler;
 import com.linecorp.armeria.server.websocket.WebSocketService;
@@ -73,5 +74,10 @@ final class GraphqlWebSocketService implements GraphqlService, WebSocketService,
                 new GraphqlWSSubProtocol(ctx, graphqlExecutor, dataLoaderRegistryFunction);
         in.subscribe(new GraphqlWebSocketSubscriber(protocol, outgoing));
         return outgoing;
+    }
+
+    @Override
+    public ServiceOptions options() {
+        return delegate.options();
     }
 }

@@ -40,6 +40,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.math.IntMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AsciiString;
 
@@ -56,6 +57,7 @@ public final class HttpHeaderNames {
     // - Added pseudo headers
     // - Added Accept-Patch
     // - Added Content-Base
+    // - Added Git-Protocol
     // - Added Prefer
     // - Removed the ancient CSP headers
     //   - X-Content-Security-Policy
@@ -232,6 +234,12 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString FOLLOW_ONLY_WHEN_PRERENDER_SHOWN =
             create("Follow-Only-When-Prerender-Shown");
+    /**
+     * The HTTP {@code "Git-Protocol"} header field name, as described in
+     * <a href="https://git-scm.com/docs/protocol-v2#_http_transport">HTTP Transport</a>.
+     */
+    @UnstableApi
+    public static final AsciiString GIT_PROTOCOL = create("Git-Protocol");
     /**
      * The HTTP {@code "Host"} header field name.
      */

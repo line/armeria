@@ -376,6 +376,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 retryConfig.requiresResponseTrailers() ?
                 RequestLogProperty.RESPONSE_END_TIME : RequestLogProperty.RESPONSE_HEADERS;
 
+        // The RequestLog may be not complete when a decorator returns a response directly.
+        // The direct response typically occurs when an exception is raised from the decorator.
+        // The incomplete RequestLog may cause a deadlock when the response don't be completed
+        // until it times out.
+        // TODO(ikhoon): Find a way to apply RetryingRule without relying on the RequestLog.
         derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable responseCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;

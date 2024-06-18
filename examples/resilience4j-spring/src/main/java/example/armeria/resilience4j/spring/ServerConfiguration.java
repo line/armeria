@@ -4,13 +4,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 
 @Configuration
 public class ServerConfiguration {

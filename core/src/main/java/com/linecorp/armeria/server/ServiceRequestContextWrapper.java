@@ -85,6 +85,12 @@ public class ServiceRequestContextWrapper
         return unwrap().config();
     }
 
+    @Nullable
+    @Override
+    public <T extends HttpService> T findService(Class<? extends T> serviceClass) {
+        return unwrap().findService(serviceClass);
+    }
+
     @Override
     public RoutingContext routingContext() {
         return unwrap().routingContext();
@@ -241,6 +247,16 @@ public class ServiceRequestContextWrapper
     @Override
     public void setShouldReportUnhandledExceptions(boolean value) {
         unwrap().setShouldReportUnhandledExceptions(value);
+    }
+
+    @Override
+    public boolean shouldReportUnloggedExceptions() {
+        return unwrap().shouldReportUnloggedExceptions();
+    }
+
+    @Override
+    public void setShouldReportUnloggedExceptions(boolean value) {
+        unwrap().setShouldReportUnloggedExceptions(value);
     }
 
     @Override

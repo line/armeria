@@ -31,7 +31,7 @@
   <!-- Copyright headers -->
   <module name="RegexpSingleline">
     <property name="id" value="CopyrightHeader"/>
-    <property name="format" value="^(?:\s|\*)*Copyright\s+[0-9]+\s+LINE Corporation\s*$"/>
+    <property name="format" value="^(?:\s|\*)*Copyright\s+[0-9]+\s+(LINE|LY) Corporation\s*$"/>
     <property name="minimum" value="1"/>
     <property name="maximum" value="1"/>
     <property name="message" value="missing copyright header"/>

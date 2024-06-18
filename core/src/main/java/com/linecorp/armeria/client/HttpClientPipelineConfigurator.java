@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.client.HttpChannelPool.TIMINGS_BUILDER_KEY;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -49,6 +50,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RequestTarget;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
@@ -216,17 +218,18 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         assert isHttps();
 
         final ChannelPipeline p = ch.pipeline();
-        final SslHandler sslHandler;
+        final SSLEngine sslEngine;
         if (remoteAddr instanceof InetSocketAddress) {
             final InetSocketAddress raddr = (InetSocketAddress) remoteAddr;
-            sslHandler = sslCtx.newHandler(ch.alloc(),
-                                           raddr.getHostString(),
-                                           raddr.getPort());
+            sslEngine = sslCtx.newEngine(ch.alloc(),
+                                         raddr.getHostString(),
+                                         raddr.getPort());
         } else {
             assert remoteAddr instanceof DomainSocketAddress : remoteAddr;
-            sslHandler = sslCtx.newHandler(ch.alloc());
+            sslEngine = sslCtx.newEngine(ch.alloc());
         }
-
+        final ClientConnectionTimingsBuilder timingsBuilder = ch.attr(TIMINGS_BUILDER_KEY).get();
+        final SslHandler sslHandler = new ClientSslHandler(sslEngine, timingsBuilder);
         p.addLast(configureSslHandler(sslHandler));
         p.addLast(TrafficLoggingHandler.CLIENT);
         p.addLast(new ChannelInboundHandlerAdapter() {
@@ -356,7 +359,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     private void configureUpgradeCodec(Channel ch, Consumer<ChannelHandler> pipelineCustomizer) {
         final Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch, http2);
-        if (clientFactory.useHttp2Preface()) {
+        // - h2c: HTTP/2 preface is always used.
+        // - http: Either HTTP/1.1 upgrade or HTTP/2 preface is used depending on 'useHttp2Preface()'.
+        final boolean shouldUsePreface = httpPreference == HttpPreference.HTTP2_REQUIRED ||
+                                         clientFactory.useHttp2Preface();
+        if (shouldUsePreface) {
             pipelineCustomizer.accept(new DowngradeHandler());
             pipelineCustomizer.accept(http2Handler);
         } else {
@@ -455,6 +462,25 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     private static boolean isHttp2Protocol(SslHandler sslHandler) {
         return ApplicationProtocolNames.HTTP_2.equals(sslHandler.applicationProtocol());
+    }
+
+    /**
+     * A handler that collects the ssl related metric.
+     */
+    private static final class ClientSslHandler extends SslHandler {
+        private final ClientConnectionTimingsBuilder timingsBuilder;
+
+        ClientSslHandler(SSLEngine engine, ClientConnectionTimingsBuilder timingsBuilder) {
+            super(engine);
+            this.timingsBuilder = timingsBuilder;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            timingsBuilder.tlsHandshakeStart();
+            super.channelActive(ctx);
+            handshakeFuture().addListener(future -> timingsBuilder.tlsHandshakeEnd());
+        }
     }
 
     /**
@@ -729,18 +755,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         final Http2ClientConnectionHandlerBuilder builder =
                 new Http2ClientConnectionHandlerBuilder(ch, clientFactory, protocol);
-        builder.codec(decoder, encoder)
-               .initialSettings(http2Settings());
-
-        final long timeout = clientFactory.idleTimeoutMillis();
-        if (timeout > 0) {
-            builder.gracefulShutdownTimeoutMillis(timeout);
-        } else {
-            // Timeout disabled
-            builder.gracefulShutdownTimeoutMillis(-1);
-        }
-
-        return builder.build();
+        return builder.codec(decoder, encoder)
+                      .initialSettings(http2Settings())
+                      .build();
     }
 
     private static Http2ConnectionEncoder encoder(Http2Connection connection) {
@@ -788,7 +805,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            HttpSession.get(ctx.channel()).deactivate();
+            HttpSession.get(ctx.channel()).markUnacquirable();
             super.close(ctx, promise);
         }
     }
