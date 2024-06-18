@@ -23,8 +23,8 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.ConnectionEventListener;
+import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ContentTooLargeExceptionBuilder;
 import com.linecorp.armeria.common.SessionProtocol;

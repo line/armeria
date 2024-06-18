@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
-import java.util.function.Consumer;
 
 import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.ConnectionEventListenerAdapter;

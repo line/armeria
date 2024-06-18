@@ -23,8 +23,8 @@ import java.net.InetSocketAddress;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.ConnectionEventListener;
+import com.linecorp.armeria.common.ConnectionEventState;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
