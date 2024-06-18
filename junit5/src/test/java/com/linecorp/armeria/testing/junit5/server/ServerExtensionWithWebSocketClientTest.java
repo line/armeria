@@ -26,7 +26,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.client.websocket.WebSocketClient;
 import com.linecorp.armeria.client.websocket.WebSocketSession;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -37,31 +36,47 @@ import com.linecorp.armeria.server.websocket.WebSocketService;
 import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 
 public class ServerExtensionWithWebSocketClientTest {
-    private static final int MAX_FRAME_LENGTH = 4 * 1024;
 
     @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
+    static ServerExtension wsServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.service("/chat", WebSocketService.builder(new WebSocketEchoHandler())
-                                                .maxFramePayloadLength(MAX_FRAME_LENGTH)
+                                                .build());
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension wssServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.tlsSelfSigned();
+            sb.service("/chat", WebSocketService.builder(new WebSocketEchoHandler())
                                                 .build());
         }
     };
 
     @Test
     void webSocketClient() {
-        final WebSocketClient client = server.webSocketClient();
-        final WebSocketSession session = client.connect("/chat").join();
-
-        assertThat(session).isNotNull();
-        final WebSocketWriter outbound = session.outbound();
+        final WebSocketSession wsSession = wsServer.webSocketClient().connect("/chat").join();
+        assertThat(wsSession).isNotNull();
+        final WebSocketWriter outbound = wsSession.outbound();
         outbound.write("hello");
-        outbound.write("world");
+        outbound.write("ws");
         outbound.close();
-        final List<String> responses = session.inbound().collect().join().stream().map(WebSocketFrame::text)
-                                              .collect(toImmutableList());
-        assertThat(responses).contains("hello", "world");
+        final List<String> responses = wsSession.inbound().collect().join().stream().map(WebSocketFrame::text)
+                                                .collect(toImmutableList());
+        assertThat(responses).contains("hello", "ws");
+
+        final WebSocketSession wssSession = wssServer.webSocketClient().connect("/chat").join();
+        assertThat(wssSession).isNotNull();
+        final WebSocketWriter wssOutbound = wssSession.outbound();
+        wssOutbound.write("hello");
+        wssOutbound.write("wss");
+        wssOutbound.close();
+        final List<String> wssResponses = wssSession.inbound().collect().join().stream().map(
+                WebSocketFrame::text).collect(toImmutableList());
+        assertThat(wssResponses).contains("hello", "wss");
     }
 
     static final class WebSocketEchoHandler implements WebSocketServiceHandler {
