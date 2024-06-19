@@ -38,9 +38,11 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.outlier.OutlierDetectingRule;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.outlier.OutlierDetectionDecision;
@@ -589,34 +591,46 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
-        ctx.log().whenComplete().thenAccept(log -> {
-            final OutlierDetectionDecision decision =
-                    outlierDetectingRule.decide(ctx, log.responseHeaders(), log.responseCause());
-            if (decision == null) {
-                return;
-            }
-            switch (decision) {
-                // NEXT is assumed as SUCCESS.
-                case SUCCESS:
-                case NEXT:
-                    outlierDetector.onSuccess();
-                    // The connection was marked as an outlier, but it's back to normal.
-                    if (outlierDetector.isOutlier()) {
-                        markUnacquirable();
-                    }
-                    break;
-                case FAILURE:
-                    outlierDetector.onFailure();
-                    if (outlierDetector.isOutlier()) {
-                        markUnacquirable();
-                    }
-                    break;
-                case FATAL:
-                    markUnacquirable();
-                    break;
-                case IGNORE:
-                    break;
-            }
-        });
+        ctx.log().whenComplete().thenAccept(this::detectOutlier);
     }
+
+    private void detectOutlier(RequestLog log) {
+        final RequestContext context = log.context();
+        if (!context.eventLoop().inEventLoop()) {
+            // Execute in the event loop to prevent a connection from being marked as an outlier as a request is
+            // about to be sent.
+            detectOutlier(log);
+        }
+
+        final OutlierDetectionDecision decision =
+                outlierDetectingRule.decide(context, log.responseHeaders(), log.responseCause());
+        if (decision == null) {
+            return;
+        }
+        switch (decision) {
+            // NEXT is assumed as SUCCESS.
+            case SUCCESS:
+            case NEXT:
+                outlierDetector.onSuccess();
+                // The connection was marked as an outlier, but it's back to normal.
+                if (outlierDetector.isOutlier()) {
+                    markUnacquirable();
+                }
+                break;
+            case FAILURE:
+                outlierDetector.onFailure();
+                if (outlierDetector.isOutlier()) {
+                    markUnacquirable();
+                }
+                break;
+            case FATAL:
+                markUnacquirable();
+                break;
+            case IGNORE:
+                break;
+        }
+    }
+
+    ;
+}
 }

@@ -78,7 +78,7 @@ public final class OutlierDetectingRuleBuilder {
      * Reports the specified {@link OutlierDetectionDecision} if the response status matches the specified
      * {@link Predicate}.
      */
-    public OutlierDetectingRuleBuilder onStatus(Predicate<HttpStatus> predicate,
+    public OutlierDetectingRuleBuilder onStatus(Predicate<? super HttpStatus> predicate,
                                                 OutlierDetectionDecision decision) {
         requireNonNull(predicate, "predicate");
         requireNonNull(decision, "decision");
@@ -95,7 +95,8 @@ public final class OutlierDetectingRuleBuilder {
      * Adds the specified function to determine whether the request is an outlier.
      */
     public OutlierDetectingRuleBuilder onResponseHeaders(
-            BiFunction<RequestContext, ResponseHeaders, OutlierDetectionDecision> function) {
+            BiFunction<? super RequestContext, ? super ResponseHeaders, OutlierDetectionDecision> function) {
+        requireNonNull(function, "function");
         final OutlierDetectingRule rule = (ctx, headers, cause) -> {
             if (headers == null) {
                 return OutlierDetectionDecision.NEXT;
@@ -110,7 +111,8 @@ public final class OutlierDetectingRuleBuilder {
      * Adds the specified function to determine whether the request is an outlier.
      */
     public OutlierDetectingRuleBuilder onException(
-            BiFunction<RequestContext, Throwable, OutlierDetectionDecision> function) {
+            BiFunction<? super RequestContext, ? super Throwable, OutlierDetectionDecision> function) {
+        requireNonNull(function, "function");
         final OutlierDetectingRule rule = (ctx, headers, cause) -> {
             if (cause == null) {
                 return OutlierDetectionDecision.NEXT;
