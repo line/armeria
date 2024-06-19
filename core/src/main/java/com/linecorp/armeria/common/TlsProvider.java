@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
-import com.linecorp.armeria.internal.common.StaticTlsProvider;
 import com.linecorp.armeria.server.ServerTlsProviderBuilder;
 
 import io.netty.handler.ssl.SslContextBuilder;

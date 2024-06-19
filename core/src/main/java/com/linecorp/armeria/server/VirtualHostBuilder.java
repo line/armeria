@@ -1469,21 +1469,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
     }
 
-    private void ensureNoStaticTlsSettings() {
-        checkState(sslContextBuilderSupplier == null,
-                   "ServerBuilder.tlsProvider() and VirtualHostBuilder.tls() are mutually exclusive.");
-        checkState(tlsSelfSigned == null,
-                   "ServerBuilder.tlsProvider() and VirtualHostBuilder.tlsSelfSigned() are " +
-                   "mutually exclusive.");
-        checkState(tlsCustomizer == null,
-                   "ServerBuilder.tlsProvider() and VirtualHostBuilder.tlsCustomizer() are " +
-                   "mutually exclusive.");
-        if (!defaultVirtualHost) {
-            checkState(tlsEngineType == null,
-                       "TlsEngineType is only allowed for the default virtual host when TlsProvider is set.");
-        }
-    }
-
     static HttpHeaders mergeDefaultHeaders(HttpHeadersBuilder lowPriorityHeaders,
                                            HttpHeaders highPriorityHeaders) {
         if (lowPriorityHeaders.isEmpty()) {

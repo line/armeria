@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
@@ -23,14 +23,12 @@ import java.util.function.Consumer;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
-public final class StaticTlsProvider implements TlsProvider {
+final class StaticTlsProvider implements TlsProvider {
 
     private final TlsKeyPair tlsKeyPair;
     private final boolean allowsUnsafeCiphers;
@@ -38,13 +36,13 @@ public final class StaticTlsProvider implements TlsProvider {
     @Nullable
     private final MeterIdPrefix meterIdPrefix;
 
-    public StaticTlsProvider(TlsKeyPair tlsKeyPair) {
+    StaticTlsProvider(TlsKeyPair tlsKeyPair) {
         this(tlsKeyPair, b -> {}, false, null);
     }
 
-    public StaticTlsProvider(TlsKeyPair tlsKeyPair, Consumer<SslContextBuilder> tlsCustomizer,
-                             boolean allowsUnsafeCiphers,
-                             @Nullable MeterIdPrefix meterIdPrefix) {
+    StaticTlsProvider(TlsKeyPair tlsKeyPair, Consumer<SslContextBuilder> tlsCustomizer,
+                      boolean allowsUnsafeCiphers,
+                      @Nullable MeterIdPrefix meterIdPrefix) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
         requireNonNull(tlsCustomizer, "tlsCustomizer");
         this.tlsKeyPair = tlsKeyPair;
@@ -55,10 +53,6 @@ public final class StaticTlsProvider implements TlsProvider {
 
     @Override
     public TlsKeyPair find(String hostname) {
-        return tlsKeyPair;
-    }
-
-    public TlsKeyPair tlsKeyPair() {
         return tlsKeyPair;
     }
 
