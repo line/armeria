@@ -44,7 +44,7 @@ import io.netty.channel.EventLoop;
  * using <a href="https://nacos.io/en-us/docs/v2/guide/user/open-api.html">Nacos's HTTP Open API</a>
  * and updates the {@link Endpoint}s periodically.
  */
-public class NacosEndpointGroup extends DynamicEndpointGroup {
+class NacosEndpointGroup extends DynamicEndpointGroup {
     private static final Logger logger = LoggerFactory.getLogger(NacosEndpointGroup.class);
 
     /**
