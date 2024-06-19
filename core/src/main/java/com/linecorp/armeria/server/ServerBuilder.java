@@ -2365,7 +2365,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 }
                 sslContexts = mappingBuilder.build();
             } else {
-                sslContexts = toSslContextMapping(tlsProvider);
+                final TlsEngineType tlsEngineType = defaultVirtualHost.tlsEngineType();
+                assert tlsEngineType != null;
+                sslContexts = toSslContextMapping(tlsProvider, tlsEngineType);
             }
         }
         if (pingIntervalMillis > 0) {

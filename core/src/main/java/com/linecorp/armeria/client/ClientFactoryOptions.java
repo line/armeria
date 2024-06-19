@@ -96,7 +96,7 @@ public final class ClientFactoryOptions
      * more information.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
-     * communicate with an insecure peer than this.
+     *             communicate with an insecure peer than this.
      */
     @Deprecated
     public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS =
@@ -644,6 +644,15 @@ public final class ClientFactoryOptions
     @UnstableApi
     public TlsEngineType tlsEngineType() {
         return get(TLS_ENGINE_TYPE);
+    }
+
+    /**
+     * Returns the {@link TlsProvider} which provides the {@link TlsKeyPair} that is used to create the
+     * {@link SslContext} for TLS handshake.
+     */
+    @UnstableApi
+    public TlsProvider tlsProvider() {
+        return get(TLS_PROVIDER);
     }
 
     /**

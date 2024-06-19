@@ -138,7 +138,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * If not set, {@linkplain CommonPools#workerGroup() the common worker group} is used.
      *
      * @param shutdownOnClose whether to shut down the worker {@link EventLoopGroup}
-     *                        when the {@link ClientFactory} is closed
+     * when the {@link ClientFactory} is closed
      */
     public ClientFactoryBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnClose) {
         option(ClientFactoryOptions.WORKER_GROUP, requireNonNull(workerGroup, "workerGroup"));
@@ -286,6 +286,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     public ClientFactoryBuilder tlsNoVerify() {
         checkState(insecureHosts.isEmpty(), "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
+        ensureNoTlsProvider();
         tlsNoVerifySet = true;
         return this;
     }
@@ -299,6 +300,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     public ClientFactoryBuilder tlsNoVerifyHosts(String... insecureHosts) {
         checkState(!tlsNoVerifySet, "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
+        ensureNoTlsProvider();
         this.insecureHosts.addAll(Arrays.asList(insecureHosts));
         return this;
     }
@@ -371,8 +373,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified cleartext
      * {@link PrivateKey} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or
-     *             {@link AbstractClientOptionsBuilder#tls(TlsKeyPair)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} with {@link TlsKeyPair#of(PrivateKey, Iterable)} instead.
      */
     @Deprecated
     @Override
@@ -384,7 +385,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} with {@link TlsKeyPair#of(PrivateKey, X509Certificate...)}
+     * instead.
      */
     @Deprecated
     @Override
@@ -397,7 +399,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
      * {@code keyPassword} and {@link X509Certificate} chain.
      *
-     * @deprecated Use {@link #tls(TlsKeyPair)} or {@link #tlsProvider(TlsProvider)} instead.
+     * @deprecated Use {@link #tls(TlsKeyPair)} with {@link TlsKeyPair#of(PrivateKey, Iterable)} instead.
      */
     @Deprecated
     @Override
@@ -482,7 +484,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * more information. This option is disabled by default.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
-     *             communicate with an insecure peer than this.
+     * communicate with an insecure peer than this.
      */
     @Deprecated
     public ClientFactoryBuilder tlsAllowUnsafeCiphers() {
@@ -502,7 +504,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
-     *             communicate with an insecure peer than this.
+     * communicate with an insecure peer than this.
      */
     @Deprecated
     public ClientFactoryBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
@@ -718,7 +720,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@code 0} means the client will not send a PING.
      *
      * @throws IllegalArgumentException if the specified {@code pingIntervalMillis} is smaller than
-     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder pingIntervalMillis(long pingIntervalMillis) {
         checkArgument(pingIntervalMillis == 0 || pingIntervalMillis >= MIN_PING_INTERVAL_MILLIS,
@@ -742,7 +744,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * {@code 0} means the client will not send a PING.
      *
      * @throws IllegalArgumentException if the specified {@code pingInterval} is smaller than
-     *                                  {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
+     * {@value #MIN_PING_INTERVAL_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder pingInterval(Duration pingInterval) {
         pingIntervalMillis(requireNonNull(pingInterval, "pingInterval").toMillis());
@@ -755,8 +757,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAgeMillis the maximum connection age in millis. {@code 0} disables the limit.
+     *
      * @throws IllegalArgumentException if the specified {@code maxConnectionAgeMillis} is smaller than
-     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     * {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder maxConnectionAgeMillis(long maxConnectionAgeMillis) {
         checkArgument(maxConnectionAgeMillis >= MIN_MAX_CONNECTION_AGE_MILLIS || maxConnectionAgeMillis == 0,
@@ -772,8 +775,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * This option is disabled by default, which means unlimited.
      *
      * @param maxConnectionAge the maximum connection age. {@code 0} disables the limit.
+     *
      * @throws IllegalArgumentException if the specified {@code maxConnectionAge} is smaller than
-     *                                  {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
+     * {@value #MIN_MAX_CONNECTION_AGE_MILLIS} milliseconds.
      */
     public ClientFactoryBuilder maxConnectionAge(Duration maxConnectionAge) {
         return maxConnectionAgeMillis(requireNonNull(maxConnectionAge, "maxConnectionAge").toMillis());
@@ -784,7 +788,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      * This option is disabled by default, which means unlimited.
      *
      * @param maxNumRequestsPerConnection the maximum number of requests per connection.
-     *                                    {@code 0} disables the limit.
+     * {@code 0} disables the limit.
      */
     public ClientFactoryBuilder maxNumRequestsPerConnection(int maxNumRequestsPerConnection) {
         checkArgument(maxNumRequestsPerConnection >= 0, "maxNumRequestsPerConnection: %s (expected: >= 0)",
@@ -985,10 +989,14 @@ public final class ClientFactoryBuilder implements TlsSetters {
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
 
-        if (tlsNoVerifySet) {
-            tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
-        } else if (!insecureHosts.isEmpty()) {
-            tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
+        if (tlsProvider != null) {
+            option(ClientFactoryOptions.TLS_PROVIDER, tlsProvider);
+        } else {
+            if (tlsNoVerifySet) {
+                tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
+            } else if (!insecureHosts.isEmpty()) {
+                tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
+            }
         }
 
         final ClientFactoryOptions newOptions = ClientFactoryOptions.of(options.values());

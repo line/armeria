@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.IDN;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -28,6 +29,8 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.LoadingCache;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.Scheduler;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
@@ -36,6 +39,7 @@ import com.linecorp.armeria.common.metric.CloseableMeterBinder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.handler.ssl.SslContext;
@@ -45,7 +49,8 @@ import io.netty.util.ReferenceCountUtil;
 
 public final class TlsProviderUtil {
 
-    private static final LoadingCache<TlsCacheContext, SslContext> sslContextCache;
+    @VisibleForTesting
+    static final LoadingCache<TlsCacheContext, SslContext> sslContextCache;
 
     static {
         final ScheduledExecutorService cacheExecutor = Executors.newSingleThreadScheduledExecutor(
@@ -55,8 +60,8 @@ public final class TlsProviderUtil {
                 Caffeine.newBuilder()
                         .maximumSize(1024)
                         .scheduler(Scheduler.forScheduledExecutorService(cacheExecutor))
-                        // To clean up metrics for unused certs.
-                        .expireAfterAccess(Duration.ofDays(1))
+                        // Remove the cached SslContext after 1 hour of inactivity.
+                        .expireAfterAccess(Duration.ofHours(1))
                         .removalListener((TlsCacheContext key, SslContext value, RemovalCause cause) -> {
                             if (value != null) {
                                 ReferenceCountUtil.release(value);
@@ -69,7 +74,8 @@ public final class TlsProviderUtil {
                         .build(TlsProviderUtil::newSslContext);
     }
 
-    public static Mapping<@Nullable String, SslContext> toSslContextMapping(TlsProvider tlsProvider) {
+    public static Mapping<@Nullable String, SslContext> toSslContextMapping(TlsProvider tlsProvider,
+                                                                            TlsEngineType tlsEngineType) {
         return hostname -> {
             if (hostname == null) {
                 hostname = "*";
@@ -84,13 +90,13 @@ public final class TlsProviderUtil {
             if (tlsKeyPair == null) {
                 throw new IllegalStateException("No TLS key pair found for " + hostname);
             }
-            return maybeCreateSslContext(tlsProvider, tlsKeyPair, SslContextType.SERVER);
+            return getOrCreateSslContext(tlsProvider, tlsKeyPair, SslContextType.SERVER, tlsEngineType);
         };
     }
 
-    public static SslContext maybeCreateSslContext(TlsProvider tlsProvider, TlsKeyPair tlsKeyPair,
-                                                   SslContextType type) {
-        final TlsCacheContext key = new TlsCacheContext(tlsProvider, tlsKeyPair, type);
+    public static SslContext getOrCreateSslContext(TlsProvider tlsProvider, @Nullable TlsKeyPair tlsKeyPair,
+                                                   SslContextType type, TlsEngineType tlsEngineType) {
+        final TlsCacheContext key = new TlsCacheContext(tlsProvider, tlsKeyPair, type, tlsEngineType);
         final SslContext sslContext = sslContextCache.get(key);
         return requireNonNull(sslContext, "sslContextCache.get() returned null");
     }
@@ -98,18 +104,24 @@ public final class TlsProviderUtil {
     private static SslContext newSslContext(TlsCacheContext key) {
         final TlsKeyPair tlsKeyPair = key.tlsKeyPair;
         final TlsProvider tlsProvider = key.tlsProvider;
-        if (key.type == SslContextType.SERVER) {
+        if (key.sslContextType == SslContextType.SERVER) {
+            assert tlsKeyPair != null;
             return SslContextUtil.createSslContext(
                     () -> SslContextBuilder.forServer(tlsKeyPair.privateKey(), tlsKeyPair.certificateChain()),
-                    false, tlsProvider.allowsUnsafeCiphers(),
+                    false, key.tlsEngineType, tlsProvider.allowsUnsafeCiphers(),
                     tlsProvider.tlsCustomizer(), null);
         } else {
             final boolean forceHttp1 =
-                    key.type == SslContextType.CLIENT_HTTP1_ONLY;
+                    key.sslContextType == SslContextType.CLIENT_HTTP1_ONLY;
             return SslContextUtil.createSslContext(
-                    () -> SslContextBuilder.forClient()
-                                           .keyManager(tlsKeyPair.privateKey(), tlsKeyPair.certificateChain()),
-                    forceHttp1, tlsProvider.allowsUnsafeCiphers(),
+                    () -> {
+                        final SslContextBuilder contextBuilder = SslContextBuilder.forClient();
+                        if (tlsKeyPair != null) {
+                            contextBuilder.keyManager(tlsKeyPair.privateKey(), tlsKeyPair.certificateChain());
+                        }
+                        return contextBuilder;
+                    },
+                    forceHttp1, key.tlsEngineType, tlsProvider.allowsUnsafeCiphers(),
                     tlsProvider.tlsCustomizer(), null);
         }
     }
@@ -145,30 +157,42 @@ public final class TlsProviderUtil {
                 new MeterIdPrefix("armeria.client");
 
         final TlsProvider tlsProvider;
+        @Nullable
         final TlsKeyPair tlsKeyPair;
-        final SslContextType type;
+        final SslContextType sslContextType;
+        final TlsEngineType tlsEngineType;
+        @Nullable
         final CloseableMeterBinder meterBinder;
 
-        TlsCacheContext(TlsProvider tlsProvider, TlsKeyPair tlsKeyPair, SslContextType type) {
+        TlsCacheContext(TlsProvider tlsProvider, @Nullable TlsKeyPair tlsKeyPair,
+                        SslContextType sslContextType, TlsEngineType tlsEngineType) {
+            // A TlsKeyPair must exist for a server.
+            assert sslContextType != SslContextType.SERVER || tlsKeyPair != null;
+
             this.tlsProvider = tlsProvider;
             this.tlsKeyPair = tlsKeyPair;
-            this.type = type;
+            this.sslContextType = sslContextType;
+            this.tlsEngineType = tlsEngineType;
 
             MeterIdPrefix meterIdPrefix = tlsProvider.meterIdPrefix();
             if (meterIdPrefix == null) {
-                if (type == SslContextType.SERVER) {
+                if (sslContextType == SslContextType.SERVER) {
                     meterIdPrefix = SERVER_METER_ID_PREFIX;
                 } else {
                     meterIdPrefix = CLIENT_METER_ID_PREFIX;
                 }
             }
-            meterBinder = MoreMeterBinders.certificateMetrics(tlsKeyPair.certificateChain(), meterIdPrefix);
+            if (tlsKeyPair != null) {
+                meterBinder = MoreMeterBinders.certificateMetrics(tlsKeyPair.certificateChain(), meterIdPrefix);
+            } else {
+                meterBinder = null;
+            }
         }
 
         @Override
         public int hashCode() {
             // Don't include meterBinder in hashCode() and equals() because it's not used for caching.
-            return tlsProvider.hashCode() * 31 + tlsKeyPair.hashCode() * 31 + type.hashCode();
+            return Objects.hash(tlsProvider, tlsKeyPair, sslContextType, tlsEngineType);
         }
 
         @Override
@@ -179,8 +203,20 @@ public final class TlsProviderUtil {
 
             final TlsCacheContext that = (TlsCacheContext) obj;
             return tlsProvider.equals(that.tlsProvider) &&
-                   tlsKeyPair.equals(that.tlsKeyPair) &&
-                   type == that.type;
+                   Objects.equals(tlsKeyPair, that.tlsKeyPair) &&
+                   sslContextType == that.sslContextType &&
+                   tlsEngineType == that.tlsEngineType;
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .omitNullValues()
+                              .add("tlsProvider", tlsProvider)
+                              .add("tlsKeyPair", tlsKeyPair)
+                              .add("sslContextType", sslContextType)
+                              .add("tlsEngineType", tlsEngineType)
+                              .toString();
         }
     }
 

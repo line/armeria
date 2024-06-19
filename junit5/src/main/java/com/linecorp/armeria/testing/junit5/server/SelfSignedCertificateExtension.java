@@ -26,6 +26,7 @@ import java.time.temporal.TemporalAccessor;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.internal.testing.SelfSignedCertificateRuleDelegate;
 import com.linecorp.armeria.testing.junit5.common.AbstractAllOrEachExtension;
 
@@ -143,5 +144,12 @@ public class SelfSignedCertificateExtension extends AbstractAllOrEachExtension {
      */
     public File privateKeyFile() {
         return delegate.privateKeyFile();
+    }
+
+    /**
+     * Returns the {@link TlsKeyPair} of the self-signed certificate.
+     */
+    public TlsKeyPair tlsKeyPair() {
+        return delegate.tlsKeyPair();
     }
 }

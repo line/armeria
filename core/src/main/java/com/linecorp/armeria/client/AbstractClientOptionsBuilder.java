@@ -522,13 +522,8 @@ public class AbstractClientOptionsBuilder {
      */
     protected final ClientOptions buildOptions(@Nullable ClientOptions baseOptions) {
         final Collection<ClientOptionValue<?>> optVals = options.values();
-        final int numOpts = optVals.size();
-        int extra = 3;
-        if (contextCustomizer != null) {
-            extra++;
-        }
         final ImmutableList.Builder<ClientOptionValue<?>> additionalValues =
-                ImmutableList.builderWithExpectedSize(numOpts + extra);
+                ImmutableList.builder();
         additionalValues.addAll(optVals);
         additionalValues.add(ClientOptions.DECORATION.newValue(decoration.build()));
         additionalValues.add(ClientOptions.HEADERS.newValue(headers.build()));
