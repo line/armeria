@@ -630,7 +630,4 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 break;
         }
     }
-
-    ;
-}
 }
