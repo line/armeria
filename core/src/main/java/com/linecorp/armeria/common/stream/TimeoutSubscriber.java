@@ -64,7 +64,7 @@ public class TimeoutSubscriber<T> implements Subscriber<T> {
     @Override
     public void onNext(T t) {
         delegate.onNext(t);
-        if (timeoutFuture == null) {
+        if (timeoutFuture.isCancelled()) {
             return;
         }
         switch (timeoutMode) {
@@ -74,7 +74,6 @@ public class TimeoutSubscriber<T> implements Subscriber<T> {
                 break;
             case UNTIL_FIRST:
                 timeoutFuture.cancel(false);
-                timeoutFuture = null;
                 break;
             case UNTIL_EOS:
                 break;
@@ -83,7 +82,7 @@ public class TimeoutSubscriber<T> implements Subscriber<T> {
 
     @Override
     public void onError(Throwable throwable) {
-        if(timeoutFuture != null) {
+        if(!timeoutFuture.isCancelled()) {
             timeoutFuture.cancel(false);
         }
         delegate.onError(throwable);
@@ -91,7 +90,7 @@ public class TimeoutSubscriber<T> implements Subscriber<T> {
 
     @Override
     public void onComplete() {
-        if(timeoutFuture != null) {
+        if(!timeoutFuture.isCancelled()) {
             timeoutFuture.cancel(false);
         }
         delegate.onComplete();
