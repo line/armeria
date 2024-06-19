@@ -22,13 +22,13 @@ import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
  * Sets properties for building a Nacos client.
  */
 @UnstableApi
-public interface NacosConfigSetters {
+public interface NacosConfigSetters<SELF extends NacosConfigSetters<SELF>> {
     /**
      * Sets the specified Nacos's API version.
      * @param nacosApiVersion the version of Nacos API service, default: {@value
      *                         NacosClientBuilder#DEFAULT_NACOS_API_VERSION}
      */
-    NacosConfigSetters nacosApiVersion(String nacosApiVersion);
+    SELF nacosApiVersion(String nacosApiVersion);
 
     /**
      * Sets the username and password pair for Nacos's API.
@@ -39,5 +39,5 @@ public interface NacosConfigSetters {
      * @param username the username for access Nacos API, default: {@code null}
      * @param password the password for access Nacos API, default: {@code null}
      */
-    NacosConfigSetters authorization(String username, String password);
+    SELF authorization(String username, String password);
 }

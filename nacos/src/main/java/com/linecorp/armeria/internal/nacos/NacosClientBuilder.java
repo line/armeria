@@ -25,7 +25,7 @@ import java.util.regex.Pattern;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.nacos.NacosConfigSetters;
 
-public final class NacosClientBuilder implements NacosConfigSetters {
+public final class NacosClientBuilder implements NacosConfigSetters<NacosClientBuilder> {
     public static final String DEFAULT_NACOS_API_VERSION = "v2";
     private static final Pattern NACOS_API_VERSION_PATTERN = Pattern.compile("^v[0-9][-._a-zA-Z0-9]*$");
     private final URI nacosUri;
@@ -61,7 +61,7 @@ public final class NacosClientBuilder implements NacosConfigSetters {
     }
 
     @Override
-    public NacosConfigSetters nacosApiVersion(String nacosApiVersion) {
+    public NacosClientBuilder nacosApiVersion(String nacosApiVersion) {
         this.nacosApiVersion = requireNonNull(nacosApiVersion, "nacosApiVersion");
         checkArgument(NACOS_API_VERSION_PATTERN.matcher(nacosApiVersion).matches(),
                       "nacosApiVersion: %s (expected: a version string that starts with 'v', e.g. 'v1')",
