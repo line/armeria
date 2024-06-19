@@ -62,6 +62,9 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Re
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
+import com.linecorp.armeria.server.ServiceOption;
+import com.linecorp.armeria.server.ServiceOptions;
+import com.linecorp.armeria.server.ServiceOptionsBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.AnnotatedService;
@@ -112,6 +115,8 @@ final class DefaultAnnotatedService implements AnnotatedService {
     private final List<String> parameters;
     @Nullable
     private final String name;
+
+    private final ServiceOptions options;
 
     DefaultAnnotatedService(Object object, Method method,
                             int overloadId, List<AnnotatedValueResolver> resolvers,
@@ -181,6 +186,16 @@ final class DefaultAnnotatedService implements AnnotatedService {
         this.method.setAccessible(true);
         // following must be called only after method.setAccessible(true)
         methodHandle = asMethodHandle(method, object);
+
+        ServiceOption serviceOption = AnnotationUtil.findFirst(method, ServiceOption.class);
+        if (serviceOption == null) {
+            serviceOption = AnnotationUtil.findFirst(object.getClass(), ServiceOption.class);
+        }
+        if (serviceOption != null) {
+            options = buildServiceOptions(serviceOption);
+        } else {
+            options = ServiceOptions.of();
+        }
     }
 
     private static Type getActualReturnType(Method method) {
@@ -224,6 +239,20 @@ final class DefaultAnnotatedService implements AnnotatedService {
                 }
             }
         }
+    }
+
+    private static ServiceOptions buildServiceOptions(ServiceOption serviceOption) {
+        final ServiceOptionsBuilder builder = ServiceOptions.builder();
+        if (serviceOption.requestTimeoutMillis() >= 0) {
+            builder.requestTimeoutMillis(serviceOption.requestTimeoutMillis());
+        }
+        if (serviceOption.maxRequestLength() >= 0) {
+            builder.maxRequestLength(serviceOption.maxRequestLength());
+        }
+        if (serviceOption.requestAutoAbortDelayMillis() >= 0) {
+            builder.requestAutoAbortDelayMillis(serviceOption.requestAutoAbortDelayMillis());
+        }
+        return builder.build();
     }
 
     @Override
@@ -490,6 +519,11 @@ final class DefaultAnnotatedService implements AnnotatedService {
         } else {
             return isResponseStreaming ? ExchangeType.RESPONSE_STREAMING : ExchangeType.UNARY;
         }
+    }
+
+    @Override
+    public ServiceOptions options() {
+        return options;
     }
 
     /**

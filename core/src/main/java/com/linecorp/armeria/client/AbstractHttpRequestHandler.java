@@ -169,7 +169,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                         "Can't send requests. ID: " + id + ", session active: " +
                         session.isAcquirable(responseDecoder.keepAliveHandler()));
             }
-            session.deactivate();
+            session.markUnacquirable();
             // No need to send RST because we didn't send any packet and this will be disconnected anyway.
             fail(UnprocessedRequestException.of(exception));
             return false;
@@ -223,7 +223,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             // connection by sending a GOAWAY frame that will be sent after receiving the corresponding
             // response from the remote peer. The "Connection: close" header is stripped when it is converted to
             // a Netty HTTP/2 header.
-            session.deactivate();
+            session.markUnacquirable();
         }
 
         final ChannelPromise promise = ch.newPromise();
@@ -329,6 +329,12 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     }
 
     final void failAndReset(Throwable cause) {
+        if (cause instanceof WriteTimeoutException) {
+            final HttpSession session = HttpSession.get(ch);
+            // Mark the session as unhealthy so that subsequent requests do not use it.
+            session.markUnacquirable();
+        }
+
         if (cause instanceof ProxyConnectException || cause instanceof ResponseCompleteException) {
             // - ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
             // - ResponseCompleteException means the response is successfully received.

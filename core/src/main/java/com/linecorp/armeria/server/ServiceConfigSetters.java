@@ -39,7 +39,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.EventLoopGroup;
 
-interface ServiceConfigSetters {
+interface ServiceConfigSetters<SELF extends ServiceConfigSetters<SELF>> {
 
     /**
      * Sets the timeout of an HTTP request. If not set, the value set via
@@ -47,7 +47,7 @@ interface ServiceConfigSetters {
      *
      * @param requestTimeout the timeout. {@code 0} disables the timeout.
      */
-    ServiceConfigSetters requestTimeout(Duration requestTimeout);
+    SELF requestTimeout(Duration requestTimeout);
 
     /**
      * Sets the timeout of an HTTP request in milliseconds. If not set, the value set via
@@ -55,7 +55,7 @@ interface ServiceConfigSetters {
      *
      * @param requestTimeoutMillis the timeout in milliseconds. {@code 0} disables the timeout.
      */
-    ServiceConfigSetters requestTimeoutMillis(long requestTimeoutMillis);
+    SELF requestTimeoutMillis(long requestTimeoutMillis);
 
     /**
      * Sets the maximum allowed length of an HTTP request. If not set, the value set via
@@ -63,7 +63,7 @@ interface ServiceConfigSetters {
      *
      * @param maxRequestLength the maximum allowed length. {@code 0} disables the length limit.
      */
-    ServiceConfigSetters maxRequestLength(long maxRequestLength);
+    SELF maxRequestLength(long maxRequestLength);
 
     /**
      * Sets whether the verbose response mode is enabled. When enabled, the service response will contain
@@ -71,13 +71,13 @@ interface ServiceConfigSetters {
      * insecure. When disabled, the service response will not expose such server-side details to the client.
      * If not set, the value set via {@link VirtualHostBuilder#verboseResponses(boolean)} is used.
      */
-    ServiceConfigSetters verboseResponses(boolean verboseResponses);
+    SELF verboseResponses(boolean verboseResponses);
 
     /**
      * Sets the format of this {@link HttpService}'s access log. The specified {@code accessLogFormat} would be
      * parsed by {@link AccessLogWriter#custom(String)}.
      */
-    ServiceConfigSetters accessLogFormat(String accessLogFormat);
+    SELF accessLogFormat(String accessLogFormat);
 
     /**
      * Sets the access log writer of this {@link HttpService}. If not set, the {@link AccessLogWriter} set via
@@ -85,8 +85,7 @@ interface ServiceConfigSetters {
      *
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
-    ServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter,
-                                         boolean shutdownOnStop);
+    SELF accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop);
 
     /**
      * Decorates an {@link HttpService} with the specified {@code decorator}.
@@ -94,7 +93,7 @@ interface ServiceConfigSetters {
      * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
      *                                      {@link HttpService}s
      */
-    default ServiceConfigSetters decorator(DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+    default SELF decorator(DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
         requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
         return decorator(
                 delegate -> new FunctionalDecoratingHttpService(delegate, decoratingHttpServiceFunction));
@@ -105,22 +104,21 @@ interface ServiceConfigSetters {
      *
      * @param decorator the {@link Function} that decorates the {@link HttpService}
      */
-    ServiceConfigSetters decorator(Function<? super HttpService, ? extends HttpService> decorator);
+    SELF decorator(Function<? super HttpService, ? extends HttpService> decorator);
 
     /**
      * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
      *
      * @param decorators the {@link Function}s that decorate the {@link HttpService}
      */
-    ServiceConfigSetters decorators(Function<? super HttpService, ? extends HttpService>... decorators);
+    SELF decorators(Function<? super HttpService, ? extends HttpService>... decorators);
 
     /**
      * Decorates an {@link HttpService} with the given {@code decorators}, in the order of iteration.
      *
      * @param decorators the {@link Function}s that decorate the {@link HttpService}
      */
-    ServiceConfigSetters decorators(
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators);
+    SELF decorators(Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators);
 
     /**
      * Sets the default value of the {@link RequestLog#serviceName()} property which is used when
@@ -128,7 +126,7 @@ interface ServiceConfigSetters {
      *
      * @param defaultServiceName the default service name.
      */
-    ServiceConfigSetters defaultServiceName(String defaultServiceName);
+    SELF defaultServiceName(String defaultServiceName);
 
     /**
      * Sets the default naming rule for the {@link RequestLog#serviceName()}.
@@ -136,7 +134,7 @@ interface ServiceConfigSetters {
      *
      * @param defaultServiceNaming the default service naming.
      */
-    ServiceConfigSetters defaultServiceNaming(ServiceNaming defaultServiceNaming);
+    SELF defaultServiceNaming(ServiceNaming defaultServiceNaming);
 
     /**
      * Sets the default value of the {@link RequestLog#name()} property which is used when no name was set via
@@ -144,7 +142,7 @@ interface ServiceConfigSetters {
      *
      * @param defaultLogName the default log name.
      */
-    ServiceConfigSetters defaultLogName(String defaultLogName);
+    SELF defaultLogName(String defaultLogName);
 
     /**
      * Sets an {@link ScheduledExecutorService executor} to be used when executing blocking tasks.
@@ -153,8 +151,7 @@ interface ServiceConfigSetters {
      * @param shutdownOnStop whether to shut down the {@link ScheduledExecutorService} when the {@link Server}
      *                       stops.
      */
-    ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
-                                              boolean shutdownOnStop);
+    SELF blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor, boolean shutdownOnStop);
 
     /**
      * Sets an {@link BlockingTaskExecutor executor} to be used when executing blocking tasks.
@@ -163,8 +160,7 @@ interface ServiceConfigSetters {
      * @param shutdownOnStop whether to shut down the {@link BlockingTaskExecutor} when the {@link Server}
      *                       stops.
      */
-    ServiceConfigSetters blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor,
-                                              boolean shutdownOnStop);
+    SELF blockingTaskExecutor(BlockingTaskExecutor blockingTaskExecutor, boolean shutdownOnStop);
 
     /**
      * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
@@ -173,14 +169,14 @@ interface ServiceConfigSetters {
      *
      * @param numThreads the number of threads in the executor
      */
-    ServiceConfigSetters blockingTaskExecutor(int numThreads);
+    SELF blockingTaskExecutor(int numThreads);
 
     /**
      * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
      * If unspecified, {@link SuccessFunction#ofDefault()} is used.
      */
     @UnstableApi
-    ServiceConfigSetters successFunction(SuccessFunction successFunction);
+    SELF successFunction(SuccessFunction successFunction);
 
     /**
      * Sets the amount of time to wait before aborting an {@link HttpRequest} when
@@ -190,7 +186,7 @@ interface ServiceConfigSetters {
      * abort the request automatically. There is no delay by default.
      */
     @UnstableApi
-    ServiceConfigSetters requestAutoAbortDelay(Duration delay);
+    SELF requestAutoAbortDelay(Duration delay);
 
     /**
      * Sets the amount of time in millis to wait before aborting an {@link HttpRequest} when
@@ -200,7 +196,7 @@ interface ServiceConfigSetters {
      * abort the request automatically. There is no delay by default.
      */
     @UnstableApi
-    ServiceConfigSetters requestAutoAbortDelayMillis(long delayMillis);
+    SELF requestAutoAbortDelayMillis(long delayMillis);
 
     /**
      * Sets the {@link Path} for storing the files uploaded from
@@ -209,7 +205,14 @@ interface ServiceConfigSetters {
      * @param multipartUploadsLocation the path of the directory which stores the files.
      */
     @UnstableApi
-    ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
+    SELF multipartUploadsLocation(Path multipartUploadsLocation);
+
+    /**
+     * Sets the {@link MultipartRemovalStrategy} that determines when to remove temporary files created
+     * for multipart requests.
+     */
+    @UnstableApi
+    SELF multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy);
 
      /**
       * Sets a {@linkplain EventLoopGroup worker group} to be used when serving a {@link Service}.
@@ -219,8 +222,7 @@ interface ServiceConfigSetters {
       *                       stops.
       */
      @UnstableApi
-     ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
-                                             boolean shutdownOnStop);
+     SELF serviceWorkerGroup(EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop);
 
      /**
       * Uses a newly created {@link EventLoopGroup} with the specified number of threads dedicated to
@@ -230,15 +232,14 @@ interface ServiceConfigSetters {
       * @param numThreads the number of threads in the executor
       */
      @UnstableApi
-     ServiceConfigSetters serviceWorkerGroup(int numThreads);
+     SELF serviceWorkerGroup(int numThreads);
 
     /**
      * Sets the {@link Function} which generates a {@link RequestId}.
      *
      * @param requestIdGenerator the {@link Function} that generates a request ID.
      */
-    ServiceConfigSetters requestIdGenerator(
-            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator);
+    SELF requestIdGenerator(Function<? super RoutingContext, ? extends RequestId> requestIdGenerator);
 
     /**
      * Adds the default HTTP header for an {@link HttpResponse} served by this {@link Service}.
@@ -248,7 +249,7 @@ interface ServiceConfigSetters {
      * {@link ServiceRequestContext#additionalResponseHeaders()}.
      */
     @UnstableApi
-    ServiceConfigSetters addHeader(CharSequence name, Object value);
+    SELF addHeader(CharSequence name, Object value);
 
     /**
      * Adds the default HTTP headers for an {@link HttpResponse} served by this {@link Service}.
@@ -258,8 +259,7 @@ interface ServiceConfigSetters {
      * {@link ServiceRequestContext#additionalResponseHeaders()}.
      */
     @UnstableApi
-    ServiceConfigSetters addHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
+    SELF addHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
 
     /**
      * Sets the default HTTP header for an {@link HttpResponse} served by this {@link Service}.
@@ -269,7 +269,7 @@ interface ServiceConfigSetters {
      * {@link ServiceRequestContext#additionalResponseHeaders()}.
      */
     @UnstableApi
-    ServiceConfigSetters setHeader(CharSequence name, Object value);
+    SELF setHeader(CharSequence name, Object value);
 
     /**
      * Sets the default HTTP headers for an {@link HttpResponse} served by this {@link Service}.
@@ -279,8 +279,7 @@ interface ServiceConfigSetters {
      * {@link ServiceRequestContext#additionalResponseHeaders()}.
      */
     @UnstableApi
-    ServiceConfigSetters setHeaders(
-            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
+    SELF setHeaders(Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
 
     /**
      * Adds the default {@link ServiceErrorHandler} served by this {@link Service}.
@@ -289,8 +288,8 @@ interface ServiceConfigSetters {
      *
      * @param serviceErrorHandler the default {@link ServiceErrorHandler}
      */
-    ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler);
+    SELF errorHandler(ServiceErrorHandler serviceErrorHandler);
 
     @UnstableApi
-    ServiceConfigSetters contextHook(Supplier<? extends AutoCloseable> contextHook);
+    SELF contextHook(Supplier<? extends AutoCloseable> contextHook);
 }

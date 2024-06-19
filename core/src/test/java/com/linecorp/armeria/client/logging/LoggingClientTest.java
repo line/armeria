@@ -378,7 +378,7 @@ class LoggingClientTest {
 
         // verify request log
         verify(logger).warn(argThat((String actLog) -> actLog.contains("Request:") &&
-                                                        actLog.endsWith("headers=[:method=GET, :path=/]}")));
+                                                       actLog.endsWith("headers=[:method=GET, :path=/]}")));
 
         // verify response log
         verify(logger).warn(argThat((String actLog) -> actLog.contains("Response:") &&

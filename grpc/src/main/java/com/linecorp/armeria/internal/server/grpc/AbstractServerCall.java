@@ -113,7 +113,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     @Nullable
     private final Executor blockingExecutor;
-    @Nullable
     private final GrpcExceptionHandlerFunction exceptionHandler;
 
     // Only set once.
@@ -149,7 +148,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                  @Nullable GrpcJsonMarshaller jsonMarshaller,
                                  boolean unsafeWrapRequestBuffers,
                                  ResponseHeaders defaultHeaders,
-                                 @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                                 GrpcExceptionHandlerFunction exceptionHandler,
                                  @Nullable Executor blockingExecutor,
                                  boolean autoCompression,
                                  boolean useMethodMarshaller) {
@@ -214,16 +213,23 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Throwable exception, boolean cancelled) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        final Status status = GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata);
+        final Status status = exceptionHandler.apply(ctx, exception, metadata);
         close(new ServerStatusAndMetadata(status, metadata, false, cancelled), exception);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
+        if (status.getCause() == null) {
+            close(new ServerStatusAndMetadata(status, metadata, false));
+            return;
+        }
+        Status newStatus = exceptionHandler.apply(ctx, status.getCause(), metadata);
+        assert newStatus != null;
+        if (status.getDescription() != null) {
+            newStatus = newStatus.withDescription(status.getDescription());
+        }
         final ServerStatusAndMetadata statusAndMetadata =
-                new ServerStatusAndMetadata(GrpcStatus.fromExceptionHandler(exceptionHandler, ctx,
-                                                                            status, metadata),
-                                            metadata, false);
+                new ServerStatusAndMetadata(newStatus, metadata, false);
         close(statusAndMetadata);
     }
 
@@ -660,5 +666,9 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     public final ServiceRequestContext ctx() {
         return ctx;
+    }
+
+    public final GrpcExceptionHandlerFunction exceptionHandler() {
+        return exceptionHandler;
     }
 }

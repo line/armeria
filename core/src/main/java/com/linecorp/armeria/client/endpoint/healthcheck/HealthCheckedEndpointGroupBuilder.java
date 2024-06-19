@@ -18,23 +18,17 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.Duration;
 import java.util.function.Function;
 
-import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 /**
  * A builder for creating a new {@link HealthCheckedEndpointGroup} that sends HTTP health check requests.
  */
-public final class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheckedEndpointGroupBuilder {
+public final class HealthCheckedEndpointGroupBuilder
+        extends AbstractHealthCheckedEndpointGroupBuilder<HealthCheckedEndpointGroupBuilder> {
 
     private final String path;
     private boolean useGet;
@@ -62,93 +56,8 @@ public final class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheck
     }
 
     @Override
-    public HealthCheckedEndpointGroupBuilder clientFactory(ClientFactory clientFactory) {
-        return (HealthCheckedEndpointGroupBuilder) super.clientFactory(clientFactory);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder protocol(SessionProtocol protocol) {
-        return (HealthCheckedEndpointGroupBuilder) super.protocol(protocol);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder port(int port) {
-        return (HealthCheckedEndpointGroupBuilder) super.port(port);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder retryInterval(Duration retryInterval) {
-        return (HealthCheckedEndpointGroupBuilder) super.retryInterval(retryInterval);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder retryIntervalMillis(long retryIntervalMillis) {
-        return (HealthCheckedEndpointGroupBuilder) super.retryIntervalMillis(retryIntervalMillis);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder retryBackoff(Backoff retryBackoff) {
-        return (HealthCheckedEndpointGroupBuilder) super.retryBackoff(retryBackoff);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder clientOptions(ClientOptions options) {
-        return (HealthCheckedEndpointGroupBuilder) super.clientOptions(options);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder withClientOptions(
-            Function<? super ClientOptionsBuilder, ClientOptionsBuilder> configurator) {
-        return (HealthCheckedEndpointGroupBuilder) super.withClientOptions(configurator);
-    }
-
-    @Override
     protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
         return new HttpHealthCheckerFactory(path, useGet);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
-        return (HealthCheckedEndpointGroupBuilder) super.maxEndpointRatio(maxEndpointRatio);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
-        return (HealthCheckedEndpointGroupBuilder) super.maxEndpointCount(maxEndpointCount);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder auth(AuthToken token) {
-        return (HealthCheckedEndpointGroupBuilder) super.auth(token);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return (HealthCheckedEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
-        return (HealthCheckedEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder selectionTimeout(Duration initialSelectionTimeout,
-                                                                      Duration selectionTimeout) {
-        return (HealthCheckedEndpointGroupBuilder) super.selectionTimeout(initialSelectionTimeout,
-                                                                          selectionTimeout);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
-        return (HealthCheckedEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
-    }
-
-    @Override
-    public HealthCheckedEndpointGroupBuilder selectionTimeoutMillis(long initialSelectionTimeoutMillis,
-                                                                            long selectionTimeoutMillis) {
-        return (HealthCheckedEndpointGroupBuilder) super.selectionTimeoutMillis(initialSelectionTimeoutMillis,
-                                                                                selectionTimeoutMillis);
     }
 
     private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {

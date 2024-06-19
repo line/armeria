@@ -34,7 +34,9 @@ import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -47,6 +49,9 @@ import io.grpc.ClientCall;
 import io.grpc.ClientInterceptor;
 import io.grpc.MethodDescriptor;
 import io.grpc.MethodDescriptor.PrototypeMarshaller;
+import io.grpc.Status;
+import io.grpc.Status.Code;
+import io.grpc.StatusRuntimeException;
 import testing.grpc.Messages.Payload;
 import testing.grpc.Messages.SimpleRequest;
 import testing.grpc.Messages.SimpleResponse;
@@ -281,5 +286,25 @@ class GrpcClientBuilderTest {
                     }).build();
             return next.newCall(methodDescriptor, callOptions);
         }
+    }
+
+    @Test
+    void useDefaultGrpcExceptionHandlerFunctionAsFallback() {
+        final GrpcExceptionHandlerFunction noopExceptionHandler = (ctx, cause, metadata) -> null;
+        final GrpcExceptionHandlerFunction exceptionHandler =
+                GrpcExceptionHandlerFunction.builder()
+                                            .on(ContentTooLargeException.class, noopExceptionHandler)
+                                            .build();
+        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+                                                          .maxResponseLength(1)
+                                                          .exceptionHandler(exceptionHandler)
+                                                          .build(TestServiceBlockingStub.class);
+
+        // Fallback exception handler expected to return RESOURCE_EXHAUSTED for the ContentTooLargeException
+        assertThatThrownBy(() -> client.unaryCall(SimpleRequest.getDefaultInstance()))
+                .isInstanceOf(StatusRuntimeException.class)
+                .extracting(e -> ((StatusRuntimeException) e).getStatus())
+                .extracting(Status::getCode)
+                .isEqualTo(Code.RESOURCE_EXHAUSTED);
     }
 }

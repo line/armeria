@@ -607,6 +607,7 @@ arts.ro
 arts.ve
 arvo.network
 as
+as.sh.cn
 as.us
 asago.hyogo.jp
 asahi.chiba.jp
@@ -823,7 +824,9 @@ barsy.ca
 barsy.club
 barsy.co.uk
 barsy.de
+barsy.dev
 barsy.eu
+barsy.gr
 barsy.in
 barsy.info
 barsy.io
@@ -836,13 +839,17 @@ barsy.org
 barsy.pro
 barsy.pub
 barsy.ro
+barsy.rs
 barsy.shop
 barsy.site
+barsy.store
 barsy.support
 barsy.uk
 barsycenter.com
 barsyonline.co.uk
 barsyonline.com
+barsyonline.menu
+barsyonline.shop
 barueri.br
 barum.no
 bas.it
@@ -1338,6 +1345,10 @@ cci.fr
 cd
 cd.eu.org
 cdn-edges.net
+cdn.cloudflare.net
+cdn.cloudflareanycast.net
+cdn.cloudflarecn.net
+cdn.cloudflareglobal.net
 cdn.prod.atlassian-dev.net
 cdn77-ssl.net
 cdn77-storage.com
@@ -1476,6 +1487,7 @@ cloudapps.digital
 cloudcontrolapp.com
 cloudcontrolled.com
 cloudflare-ipfs.com
+cloudflare.net
 cloudfront.net
 cloudfunctions.net
 cloudjiffy.net
@@ -3442,6 +3454,7 @@ health.vn
 healthcare
 heavy.jp
 heguri.nara.jp
+heiyu.space
 hekinan.aichi.jp
 helioho.st
 heliohost.us
@@ -3652,6 +3665,7 @@ hvaler.no
 hyatt
 hyllestad.no
 hyogo.jp
+hypernode.io
 hyuga.miyazaki.jp
 hyundai
 hzc.io
@@ -3792,6 +3806,7 @@ ind.br
 ind.gt
 ind.in
 ind.kw
+ind.mom
 ind.tn
 independent-commission.uk
 independent-inquest.uk
@@ -4947,6 +4962,7 @@ macapa.br
 maceio.br
 macerata.it
 machida.tokyo.jp
+madethis.site
 madrid
 maebashi.gunma.jp
 magazine.aero
@@ -5072,6 +5088,7 @@ media
 media.aero
 media.hu
 media.pl
+media.strapiapp.com
 mediatech.by
 mediatech.dev
 medicina.bo
@@ -5642,7 +5659,6 @@ nasushiobara.tochigi.jp
 nat.tn
 natal.br
 natori.miyagi.jp
-natura
 natural.bo
 naturbruksgymn.se
 naustdal.no
@@ -6929,6 +6945,8 @@ reit
 reklam.hu
 rel.ht
 rel.pl
+relay.evervault.app
+relay.evervault.dev
 reliance
 remotewd.com
 ren
@@ -7981,6 +7999,7 @@ storipress.app
 storj.farm
 strand.no
 stranda.no
+strapiapp.com
 streak-link.com
 streaklinks.com
 streakusercontent.com
@@ -9063,6 +9082,7 @@ withyoutube.com
 wiw.gov.pl
 wix.run
 wixsite.com
+wixstudio.com
 wixstudio.io
 wjg.jp
 wkz.gov.pl

@@ -20,6 +20,7 @@ dependencies {
     testImplementation(libs.gax.grpc) {
         exclude group: 'com.google.protobuf', module: 'protobuf-java'
     }
+    testImplementation project(':prometheus1')
     testImplementation libs.grpc.okhttp
     testImplementation libs.grpc.testing
     testImplementation libs.micrometer.prometheus

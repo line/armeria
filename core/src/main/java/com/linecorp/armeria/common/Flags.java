@@ -45,6 +45,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientBuilder;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
@@ -58,6 +59,7 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
@@ -281,6 +283,10 @@ public final class Flags {
             getValue(FlagsProvider::defaultServerConnectionDrainDurationMicros,
                      "defaultServerConnectionDrainDurationMicros", value -> value >= 0);
 
+    private static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+            getValue(FlagsProvider::defaultClientHttp2GracefulShutdownTimeoutMillis,
+                     "defaultClientHttp2GracefulShutdownTimeoutMillis", value -> value >= 0);
+
     private static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
             getValue(FlagsProvider::defaultHttp2InitialConnectionWindowSize,
                      "defaultHttp2InitialConnectionWindowSize", value -> value > 0);
@@ -394,6 +400,11 @@ public final class Flags {
     private static final boolean TLS_ALLOW_UNSAFE_CIPHERS =
             getValue(FlagsProvider::tlsAllowUnsafeCiphers, "tlsAllowUnsafeCiphers");
 
+    // Maximum 16MiB https://datatracker.ietf.org/doc/html/rfc5246#section-7.4
+    private static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH =
+            getValue(FlagsProvider::defaultMaxClientHelloLength, "defaultMaxClientHelloLength",
+                     value -> value >= 0 && value <= 16777216); // 16MiB
+
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
             getValue(FlagsProvider::transientServiceOptions, "transientServiceOptions");
 
@@ -411,6 +422,9 @@ public final class Flags {
 
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
+
+    private static final MultipartRemovalStrategy DEFAULT_MULTIPART_REMOVAL_STRATEGY =
+            getValue(FlagsProvider::defaultMultipartRemovalStrategy, "defaultMultipartRemovalStrategy");
 
     private static final Sampler<? super RequestContext> REQUEST_CONTEXT_LEAK_DETECTION_SAMPLER =
             getValue(FlagsProvider::requestContextLeakDetectionSampler, "requestContextLeakDetectionSampler");
@@ -620,6 +634,7 @@ public final class Flags {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder::forClient,
                     /* forceHttp1 */ false,
+                    tlsEngineType,
                     /* tlsAllowUnsafeCiphers */ false,
                     ImmutableList.of(), null).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
@@ -866,8 +881,11 @@ public final class Flags {
      * If disabled, the {@code OPTIONS * HTTP/1.1} request with {@code "Upgrade: h2c"} header is sent for
      * a cleartext HTTP/2 connection. Consider disabling this flag if your HTTP servers have issues
      * handling or rejecting the HTTP/2 connection preface without a upgrade request.
-     * Note that this option does not affect ciphertext HTTP/2 connections, which use ALPN for protocol
-     * negotiation, and it has no effect if a user specified the value explicitly via
+     *
+     * <p>Note that this option is only effective when the {@link SessionProtocol} of the {@link Endpoint} is
+     * {@link SessionProtocol#HTTP}. This option does not affect ciphertext HTTP/2 connections, which use ALPN
+     * for protocol negotiation, or {@link SessionProtocol#H2C}, which will always use HTTP/2 connection
+     * preface. This option is ignored if a user specified the value explicitly via
      * {@link ClientFactoryBuilder#useHttp2Preface(boolean)}.
      *
      * <p>This flag is enabled by default. Specify the
@@ -1032,6 +1050,24 @@ public final class Flags {
      */
     public static long defaultServerConnectionDrainDurationMicros() {
         return DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS;
+    }
+
+    /**
+     * Returns the default client-side graceful connection shutdown timeout in milliseconds.
+     * {@code 0} disables the timeout and closes the connection immediately after sending a GOAWAY frame.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientHttp2GracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value.
+     * After the drain period end client will close all the connections.
+     * </p>
+     *
+     * @see ClientFactoryBuilder#http2GracefulShutdownTimeout(Duration)
+     * @see ClientFactoryBuilder#http2GracefulShutdownTimeoutMillis(long)
+     */
+    public static long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     }
 
     /**
@@ -1397,6 +1433,19 @@ public final class Flags {
     }
 
     /**
+     * Returns the default maximum client hello length that a server allows.
+     * The length shouldn't exceed 16MiB as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc5246#section-7.4">Handshake Protocol</a>.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_HELLO_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>} JVM option to
+     * override the default value.
+     */
+    public static int defaultMaxClientHelloLength() {
+        return DEFAULT_MAX_CLIENT_HELLO_LENGTH;
+    }
+
+    /**
      * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for a
      * {@link TransientService}.
      *
@@ -1453,6 +1502,15 @@ public final class Flags {
      */
     public static Path defaultMultipartUploadsLocation() {
         return DEFAULT_MULTIPART_UPLOADS_LOCATION;
+    }
+
+    /**
+     * Returns the {@link MultipartRemovalStrategy} that is used to determine how to remove the uploaded files
+     * from {@code multipart/form-data}.
+     */
+    @UnstableApi
+    public static MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
+        return DEFAULT_MULTIPART_REMOVAL_STRATEGY;
     }
 
     /**

@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -216,6 +217,7 @@ public interface FlagsProvider {
      * the default.</p>
      */
     @Nullable
+    @UnstableApi
     default TlsEngineType tlsEngineType() {
         return null;
     }
@@ -578,6 +580,22 @@ public interface FlagsProvider {
      */
     @Nullable
     default Integer defaultMaxClientNumRequestsPerConnection() {
+        return null;
+    }
+
+    /**
+     * Returns the default client-side graceful connection shutdown timeout in microseconds.
+     *
+     * <p>Note that this flag has no effect if a user specified the value explicitly via
+     * {@link ClientFactoryBuilder#http2GracefulShutdownTimeoutMillis(long)}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultClientHttp2GracefulShutdownTimeoutMillis=<long>}
+     * JVM option to override the default value. {@code 0} disables the graceful shutdown.
+     */
+    @Nullable
+    default Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
         return null;
     }
 
@@ -996,6 +1014,20 @@ public interface FlagsProvider {
     }
 
     /**
+     * Returns the default maximum client hello length that a server allows.
+     * The length shouldn't exceed 16MiB as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc5246#section-7.4">Handshake Protocol</a>.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_HELLO_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>} JVM option to
+     * override the default value.
+     */
+    @Nullable
+    default Integer defaultMaxClientHelloLength() {
+        return null;
+    }
+
+    /**
      * Returns the {@link Set} of {@link TransientServiceOption}s that are enabled for a
      * {@link TransientService}.
      *
@@ -1092,6 +1124,15 @@ public interface FlagsProvider {
      */
     @Nullable
     default Path defaultMultipartUploadsLocation() {
+        return null;
+    }
+
+    /**
+     * Returns the {@link MultipartRemovalStrategy} that is used to determine how to remove the uploaded files
+     * from {@code multipart/form-data}.
+     */
+    @Nullable
+    default MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
         return null;
     }
 
