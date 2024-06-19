@@ -100,13 +100,13 @@ class AnnotatedServiceMultipartTest {
                 BodyPart.of(ContentDisposition.of("form-data", "multipartFile2", "quz.txt"),
                             MediaType.PLAIN_TEXT, "quz"),
                 // Unexpected parameter: multipartFile3
-                BodyPart.of(ContentDisposition.of("form-data", "multipartFile3", "qux.txt"), "qux"),
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile3", "qux3.txt"), "qux3"),
                 BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
 
         );
         final AggregatedHttpResponse response =
                 server.blockingWebClient().execute(multipart.toHttpRequest(path));
-        assertEquals(HttpStatus.BAD_REQUEST, response.status());
+        assertEquals(HttpStatus.OK, response.status());
     }
 
     @Test

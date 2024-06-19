@@ -34,6 +34,7 @@ import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -58,6 +59,12 @@ public final class FileAggregatedMultipart {
         return files;
     }
 
+    private static boolean shouldSkip(BodyPart bodyPart, List<String> parameters) {
+        final String name = bodyPart.name();
+        assert name != null;
+        return !parameters.isEmpty() && !parameters.contains(name);
+    }
+
     public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
                                                                                 HttpRequest req) {
         return aggregateMultipart(ctx, req, Collections.emptyList());
@@ -66,12 +73,10 @@ public final class FileAggregatedMultipart {
     public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(
             ServiceRequestContext ctx, HttpRequest req, List<String> parameters) {
         final Path destination = ctx.config().multipartUploadsLocation();
-        return Multipart.from(req).collect(bodyPart -> {
+        return Multipart.from(req)
+                        .filterBodyParts(bodyPart -> !shouldSkip(bodyPart, parameters)).collect(bodyPart -> {
             final String name = bodyPart.name();
             assert name != null;
-            if (!parameters.isEmpty() && !parameters.contains(name)) {
-                throw new IllegalArgumentException("Unexpected parameter received: " + name);
-            }
             final String filename = bodyPart.filename();
             final EventLoop eventLoop = ctx.eventLoop();
             if (filename != null) {
