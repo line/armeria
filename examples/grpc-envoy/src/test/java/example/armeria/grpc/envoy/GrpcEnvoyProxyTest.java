@@ -36,6 +36,7 @@ class GrpcEnvoyProxyTest {
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
     void reverseProxy(SessionProtocol sessionProtocol) {
+        org.testcontainers.Testcontainers.exposeHostPorts(server.httpPort());
         try (EnvoyContainer envoy = configureEnvoy(server.httpPort(), ENVOY_PORT)) {
             envoy.start();
             final String uri = sessionProtocol.uriText() + "://" + envoy.getHost() +
