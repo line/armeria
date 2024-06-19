@@ -35,7 +35,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 import com.linecorp.armeria.server.websocket.WebSocketServiceHandler;
 
-public class ServerExtensionWithWebSocketClientTest {
+class ServerExtensionWithWebSocketClientTest {
 
     @RegisterExtension
     static ServerExtension wsServer = new ServerExtension() {
@@ -56,27 +56,21 @@ public class ServerExtensionWithWebSocketClientTest {
         }
     };
 
-    @Test
-    void webSocketClient() {
-        final WebSocketSession wsSession = wsServer.webSocketClient().connect("/chat").join();
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void webSocketClient(boolean useTls) {
+        final WebSocketClient webSocketClient = useTls ? wssServer.webSocketClient()
+                                                       : wsServer.webSocketClient();
+        final WebSocketSession wsSession = webSocketClient.connect("/chat").join();
         assertThat(wsSession).isNotNull();
         final WebSocketWriter outbound = wsSession.outbound();
         outbound.write("hello");
-        outbound.write("ws");
+        final String message = useTls ? "wss" : "ws";
+        outbound.write(message);
         outbound.close();
         final List<String> responses = wsSession.inbound().collect().join().stream().map(WebSocketFrame::text)
                                                 .collect(toImmutableList());
-        assertThat(responses).contains("hello", "ws");
-
-        final WebSocketSession wssSession = wssServer.webSocketClient().connect("/chat").join();
-        assertThat(wssSession).isNotNull();
-        final WebSocketWriter wssOutbound = wssSession.outbound();
-        wssOutbound.write("hello");
-        wssOutbound.write("wss");
-        wssOutbound.close();
-        final List<String> wssResponses = wssSession.inbound().collect().join().stream().map(
-                WebSocketFrame::text).collect(toImmutableList());
-        assertThat(wssResponses).contains("hello", "wss");
+        assertThat(responses).contains("hello", message);
     }
 
     static final class WebSocketEchoHandler implements WebSocketServiceHandler {
