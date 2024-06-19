@@ -38,7 +38,7 @@ import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
  * sb.serverListener(listener);
  * }</pre>
  */
-public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+public final class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder<NacosEndpointGroupBuilder> {
 
     private static final long DEFAULT_CHECK_INTERVAL_MILLIS = 30_000;
 
@@ -158,7 +158,7 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
 
     @Override
     public NacosEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return (NacosEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+        return super.allowEmptyEndpoints(allowEmptyEndpoints);
     }
 
     /**
@@ -168,7 +168,7 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
      */
     @Override
     public NacosEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
-        return (NacosEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
+        return super.selectionTimeout(selectionTimeout);
     }
 
     /**
@@ -178,6 +178,6 @@ public class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuild
      */
     @Override
     public NacosEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
-        return (NacosEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
+        return super.selectionTimeoutMillis(selectionTimeoutMillis);
     }
 }
