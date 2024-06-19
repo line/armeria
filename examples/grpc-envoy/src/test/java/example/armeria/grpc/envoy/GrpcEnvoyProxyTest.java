@@ -21,7 +21,7 @@ import example.armeria.grpc.envoy.Hello.HelloRequest;
 class GrpcEnvoyProxyTest {
 
     // the port envoy binds to within the container
-    private static final int envoyPort = 10000;
+    private static final int ENVOY_PORT = 10000;
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -36,10 +36,10 @@ class GrpcEnvoyProxyTest {
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = {"H1C", "H2C"})
     void reverseProxy(SessionProtocol sessionProtocol) {
-        try (EnvoyContainer envoy = configureEnvoy(server.httpPort(), envoyPort)) {
+        try (EnvoyContainer envoy = configureEnvoy(server.httpPort(), ENVOY_PORT)) {
             envoy.start();
             final String uri = sessionProtocol.uriText() + "://" + envoy.getHost() +
-                               ':' + envoy.getMappedPort(envoyPort);
+                               ':' + envoy.getMappedPort(ENVOY_PORT);
             final HelloServiceGrpc.HelloServiceBlockingStub helloService =
                     GrpcClients.builder(uri)
                                .build(HelloServiceGrpc.HelloServiceBlockingStub.class);

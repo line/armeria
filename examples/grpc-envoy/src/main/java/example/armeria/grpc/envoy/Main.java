@@ -35,11 +35,11 @@ public final class Main {
 
     private static Server startBackendServer(int serverPort) {
         return Server.builder()
-                .http(serverPort)
-                .service(GrpcService.builder()
-                        .addService(new HelloService())
-                        .build())
-                .build();
+                     .http(serverPort)
+                     .service(GrpcService.builder()
+                                         .addService(new HelloService())
+                                         .build())
+                     .build();
     }
 
     static EnvoyContainer configureEnvoy(int serverPort, int envoyPort) {
