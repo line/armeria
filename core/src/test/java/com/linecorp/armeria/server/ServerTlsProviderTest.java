@@ -89,15 +89,17 @@ class ServerTlsProviderTest {
                                             .build()
                                             .blocking();
         assertThat(client.get("/").contentUtf8()).isEqualTo("default:default");
-        client = WebClient.builder("https://example.com:" + server.httpsPort())
-                          .factory(ClientFactory.builder()
-                                                .tlsNoVerify()
-                                                .addressResolverGroupFactory(
-                                                        unused -> MockAddressResolverGroup.localhost())
-                                                .build())
-                          .build()
-                          .blocking();
-        assertThat(client.get("/").contentUtf8()).isEqualTo("virtual:example.com");
+        try (ClientFactory factory = ClientFactory.builder()
+                                                   .tlsNoVerify()
+                                                   .addressResolverGroupFactory(
+                                                           unused -> MockAddressResolverGroup.localhost())
+                                                   .build()) {
+            client = WebClient.builder("https://example.com:" + server.httpsPort())
+                              .factory(factory)
+                              .build()
+                              .blocking();
+            assertThat(client.get("/").contentUtf8()).isEqualTo("virtual:example.com");
+        }
     }
 
     @Test

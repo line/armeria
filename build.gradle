@@ -44,9 +44,9 @@ gradle.buildFinished({ result ->
 
     if (hasLeak.get()) {
         throw new TestExecutionException('Found a leak while testing. ' +
-                "Specify '-Pleak' option to record the detail and " +
-                'find it using the following command: \n\n' +
-                "    find . -type f -name 'TEST-*.xml' -exec grep -Fl 'LEAK: ' {} ';'\n")
+                                         "Specify '-Pleak' option to record the detail and " +
+                                         'find it using the following command: \n\n' +
+                                         "    find . -type f -name 'TEST-*.xml' -exec grep -Fl 'LEAK: ' {} ';'\n")
     }
 })
 
@@ -116,6 +116,10 @@ allprojects {
         doFirst {
             addTestOutputListener({ descriptor, event ->
                 if (event.message.contains('LEAK: ')) {
+                    if (isCi) {
+                        logger.warn("Leak is detected in ${descriptor.className}.${descriptor.displayName}\n" +
+                                    "${event.message}")
+                    }
                     hasLeak.set(true)
                 }
             })
@@ -417,8 +421,8 @@ configure(relocatedProjects) {
             jvmArgs = jvmArgs.stream().filter {
                 !(it.startsWith('-javaagent:') && it.endsWith('jetty-alpn-agent.jar'))
             }.collect() + [
-                    "-agentlib:native-image-agent=trace-output=$nativeImageTraceFile"
-            ]
+                              "-agentlib:native-image-agent=trace-output=$nativeImageTraceFile"
+                      ]
 
             testClassesDirs = files(copyShadedTestClassesTask.destinationDir)
             classpath = testClassesDirs
