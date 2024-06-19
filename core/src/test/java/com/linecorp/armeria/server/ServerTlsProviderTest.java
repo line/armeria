@@ -17,9 +17,13 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
@@ -28,6 +32,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -58,6 +63,25 @@ class ServerTlsProviderTest {
         }
     };
 
+    @RegisterExtension
+    static final ServerExtension certRenewableServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.tlsProvider(settableTlsProvider);
+            sb.service("/", (ctx, req) -> {
+                final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                return HttpResponse.of(commonName);
+            });
+        }
+    };
+
+    private static final SettableTlsProvider settableTlsProvider = new SettableTlsProvider();
+
+    @BeforeEach
+    void setUp() {
+        settableTlsProvider.set(null);
+    }
+
     @Test
     void shouldUseTlsProviderForTlsHandshake() {
         BlockingWebClient client = WebClient.builder(server.uri(SessionProtocol.HTTPS))
@@ -74,5 +98,67 @@ class ServerTlsProviderTest {
                           .build()
                           .blocking();
         assertThat(client.get("/").contentUtf8()).isEqualTo("virtual:example.com");
+    }
+
+    @Test
+    void shouldUseNewTlsKeyPair() {
+        for (String host : ImmutableList.of("foo.com", "bar.com")) {
+            settableTlsProvider.set(TlsKeyPair.ofSelfSigned(host));
+            try (ClientFactory factory = ClientFactory.builder()
+                                                      .tlsNoVerify()
+                                                      .addressResolverGroupFactory(
+                                                              unused -> MockAddressResolverGroup.localhost())
+                                                      .build()) {
+                final BlockingWebClient client = WebClient.builder(certRenewableServer.httpsUri())
+                                                          .factory(factory)
+                                                          .build()
+                                                          .blocking();
+                assertThat(client.get("/").contentUtf8()).isEqualTo(host);
+            }
+        }
+    }
+
+    @Test
+    void disallowTlsProviderWhenTlsSettingsIsSet() {
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .tls(TlsKeyPair.ofSelfSigned())
+                  .tlsProvider(TlsProvider.of(TlsKeyPair.ofSelfSigned()))
+                  .build();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot configure TLS settings with a TlsProvider");
+
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .tlsSelfSigned()
+                  .tlsProvider(TlsProvider.of(TlsKeyPair.ofSelfSigned()))
+                  .build();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot configure TLS settings with a TlsProvider");
+
+        assertThatThrownBy(() -> {
+            Server.builder()
+                  .tlsProvider(TlsProvider.of(TlsKeyPair.ofSelfSigned()))
+                  .virtualHost("example.com")
+                  .tls(TlsKeyPair.ofSelfSigned())
+                  .and()
+                  .build();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot configure TLS settings with a TlsProvider");
+    }
+
+    private static class SettableTlsProvider implements TlsProvider {
+
+        @Nullable
+        private volatile TlsKeyPair keyPair;
+
+        @Override
+        public TlsKeyPair find(String hostname) {
+            return keyPair;
+        }
+
+        public void set(@Nullable TlsKeyPair keyPair) {
+            this.keyPair = keyPair;
+        }
     }
 }

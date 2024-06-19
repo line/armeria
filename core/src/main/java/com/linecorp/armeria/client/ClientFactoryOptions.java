@@ -113,6 +113,7 @@ public final class ClientFactoryOptions
      * The {@link TlsProvider} which provides the {@link TlsKeyPair} that is used to create the
      * {@link SslContext} for TLS handshake.
      */
+    @UnstableApi
     public static final ClientFactoryOption<TlsProvider> TLS_PROVIDER =
             ClientFactoryOption.define("TLS_PROVIDER", NullTlsProvider.INSTANCE);
 

@@ -23,7 +23,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
-import static com.linecorp.armeria.internal.common.TlsProviderUtil.toSslContextMapping;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateGreaterThanOrEqual;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
 import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
@@ -242,7 +241,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private int http2MaxResetFramesWindowSeconds = 60;
     @Nullable
     private TlsProvider tlsProvider;
-    private boolean staticTlsSettingsSet;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -1138,22 +1136,14 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      */
     @Override
     public ServerBuilder tls(TlsKeyPair tlsKeyPair) {
-        ensureNoTlsProvider();
-        staticTlsSettingsSet = true;
         virtualHostTemplate.tls(tlsKeyPair);
         return this;
     }
 
     @Override
     public ServerBuilder tls(KeyManagerFactory keyManagerFactory) {
-        ensureNoTlsProvider();
-        staticTlsSettingsSet = true;
         virtualHostTemplate.tls(keyManagerFactory);
         return this;
-    }
-
-    private void ensureNoTlsProvider() {
-        checkState(tlsProvider == null, "Cannot configure TLS settings because a TlsProvider has been set.");
     }
 
     /**
@@ -1176,11 +1166,9 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      *
      * <p>Note that this method mutually exclusive with {@link #tls(TlsKeyPair)} and other static TLS settings.
      */
+    @UnstableApi
     public ServerBuilder tlsProvider(TlsProvider tlsProvider) {
         requireNonNull(tlsProvider, "tlsProvider");
-        checkState(!staticTlsSettingsSet,
-                   "Cannot configure the TlsProvider because static TLS settings have been set already.");
-
         this.tlsProvider = tlsProvider;
         return this;
     }
@@ -1209,8 +1197,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
 
     @Override
     public ServerBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
-        ensureNoTlsProvider();
-        staticTlsSettingsSet = true;
         virtualHostTemplate.tlsCustomizer(tlsCustomizer);
         return this;
     }
@@ -1230,8 +1216,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      */
     @Deprecated
     public ServerBuilder tlsAllowUnsafeCiphers() {
-        ensureNoTlsProvider();
-        staticTlsSettingsSet = true;
         virtualHostTemplate.tlsAllowUnsafeCiphers();
         return this;
     }
@@ -1253,8 +1237,6 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      */
     @Deprecated
     public ServerBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
-        ensureNoTlsProvider();
-        staticTlsSettingsSet = true;
         virtualHostTemplate.tlsAllowUnsafeCiphers(tlsAllowUnsafeCiphers);
         return this;
     }
@@ -2320,7 +2302,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         }
 
         checkState(defaultSslContext == null || tlsProvider == null,
-                   "Can't set %s with a static TLS setting", TlsProvider.class);
+                   "Can't set %s with a static TLS setting", TlsProvider.class.getSimpleName());
         if (defaultSslContext == null && tlsProvider == null) {
             sslContexts = null;
             if (!serverPorts.isEmpty()) {
@@ -2367,7 +2349,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
             } else {
                 final TlsEngineType tlsEngineType = defaultVirtualHost.tlsEngineType();
                 assert tlsEngineType != null;
-                sslContexts = toSslContextMapping(tlsProvider, tlsEngineType);
+                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType);
             }
         }
         if (pingIntervalMillis > 0) {

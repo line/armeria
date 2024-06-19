@@ -212,8 +212,8 @@ final class HttpChannelPool implements AsyncCloseable {
      * Attempts to acquire a {@link Channel} which is matched by the specified condition immediately.
      *
      * @return {@code null} is there's no match left in the pool and thus a new connection has to be
-     * requested via {@link #acquireLater(SessionProtocol, SerializationFormat,
-     * PoolKey, ClientConnectionTimingsBuilder)}.
+     *         requested via {@link #acquireLater(SessionProtocol, SerializationFormat,
+     *         PoolKey, ClientConnectionTimingsBuilder)}.
      */
     @Nullable
     @SuppressWarnings("checkstyle:FallThrough")
@@ -515,7 +515,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     // Clean up old unhealthy channels by iterating from the beginning of the queue.
                     final Deque<PooledChannel> queue = getPool(protocol, key);
                     if (queue != null) {
-                        for (; ; ) {
+                        for (;;) {
                             final PooledChannel pooledChannel = queue.peekFirst();
                             if (pooledChannel == null || isHealthy(pooledChannel)) {
                                 break;

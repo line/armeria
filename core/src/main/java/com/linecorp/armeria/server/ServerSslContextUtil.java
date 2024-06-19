@@ -26,10 +26,8 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 
-import com.google.common.collect.ImmutableList;
-
-import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.buffer.ByteBufAllocator;

@@ -1303,8 +1303,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                       @Nullable UnloggedExceptionsReporter unloggedExceptionsReporter,
                       ServerErrorHandler serverErrorHandler, @Nullable TlsProvider tlsProvider) {
         requireNonNull(template, "template");
-        checkState(tlsProvider == null || sslContextBuilderSupplier == null,
-                   "ServerBuilder.tlsProvider() and VirtualHostBuilder.tls() are mutually exclusive.");
 
         if (defaultHostname == null) {
             if (hostnamePattern != null) {
@@ -1449,9 +1447,16 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         final TlsEngineType tlsEngineType = this.tlsEngineType != null ?
                                             this.tlsEngineType : template.tlsEngineType;
         assert tlsEngineType != null;
+
+        final SslContext sslContext = sslContext(template, tlsEngineType);
+        if (sslContext != null && tlsProvider != null) {
+            ReferenceCountUtil.release(sslContext);
+            throw new IllegalStateException("Cannot configure TLS settings with a TlsProvider");
+        }
+
         final VirtualHost virtualHost =
                 new VirtualHost(defaultHostname, hostnamePattern, port,
-                                sslContext(template, tlsEngineType), tlsProvider, tlsEngineType,
+                                sslContext, tlsProvider, tlsEngineType,
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
@@ -1462,6 +1467,21 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template, baseContextPath);
         return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
+    }
+
+    private void ensureNoStaticTlsSettings() {
+        checkState(sslContextBuilderSupplier == null,
+                   "ServerBuilder.tlsProvider() and VirtualHostBuilder.tls() are mutually exclusive.");
+        checkState(tlsSelfSigned == null,
+                   "ServerBuilder.tlsProvider() and VirtualHostBuilder.tlsSelfSigned() are " +
+                   "mutually exclusive.");
+        checkState(tlsCustomizer == null,
+                   "ServerBuilder.tlsProvider() and VirtualHostBuilder.tlsCustomizer() are " +
+                   "mutually exclusive.");
+        if (!defaultVirtualHost) {
+            checkState(tlsEngineType == null,
+                       "TlsEngineType is only allowed for the default virtual host when TlsProvider is set.");
+        }
     }
 
     static HttpHeaders mergeDefaultHeaders(HttpHeadersBuilder lowPriorityHeaders,

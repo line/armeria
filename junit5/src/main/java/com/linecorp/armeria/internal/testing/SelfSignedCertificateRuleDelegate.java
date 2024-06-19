@@ -226,5 +226,4 @@ public final class SelfSignedCertificateRuleDelegate {
     private void ensureCertificate() {
         checkState(certificate != null, "certificate not created");
     }
-
 }

@@ -44,7 +44,6 @@ import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.util.Mapping;
 import io.netty.util.ReferenceCountUtil;
 
 public final class TlsProviderUtil {
@@ -72,26 +71,6 @@ public final class TlsProviderUtil {
                             }
                         })
                         .build(TlsProviderUtil::newSslContext);
-    }
-
-    public static Mapping<@Nullable String, SslContext> toSslContextMapping(TlsProvider tlsProvider,
-                                                                            TlsEngineType tlsEngineType) {
-        return hostname -> {
-            if (hostname == null) {
-                hostname = "*";
-            } else {
-                hostname = normalizeHostname(hostname);
-            }
-            TlsKeyPair tlsKeyPair = tlsProvider.find(hostname);
-            if (tlsKeyPair == null) {
-                // Try to find the default TLS key pair.
-                tlsKeyPair = tlsProvider.find("*");
-            }
-            if (tlsKeyPair == null) {
-                throw new IllegalStateException("No TLS key pair found for " + hostname);
-            }
-            return getOrCreateSslContext(tlsProvider, tlsKeyPair, SslContextType.SERVER, tlsEngineType);
-        };
     }
 
     public static SslContext getOrCreateSslContext(TlsProvider tlsProvider, @Nullable TlsKeyPair tlsKeyPair,

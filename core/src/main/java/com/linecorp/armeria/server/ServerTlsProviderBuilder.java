@@ -19,6 +19,9 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.AbstractTlsProviderBuilder;
 import com.linecorp.armeria.common.TlsProvider;
 
+/**
+ * A builder class for creating a {@link TlsProvider} that provides server-side TLS.
+ */
 public final class ServerTlsProviderBuilder extends AbstractTlsProviderBuilder<ServerTlsProviderBuilder> {
 
     // We may add more methods to this class to provide server-specific features in the future.

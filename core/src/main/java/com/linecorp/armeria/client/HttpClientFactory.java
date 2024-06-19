@@ -53,7 +53,6 @@ import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TlsEngineType;
-import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -182,11 +181,11 @@ final class HttpClientFactory implements ClientFactory {
         final List<X509Certificate> keyCertChainCaptor = new ArrayList<>();
         final TlsEngineType tlsEngineType = options.tlsEngineType();
         sslCtxHttp1Or2 = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, false, tlsEngineType, tlsAllowUnsafeCiphers, tlsCustomizer,
-                                  keyCertChainCaptor);
+                .createSslContext(SslContextBuilder::forClient, false, tlsEngineType,
+                                  tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
         sslCtxHttp1Only = SslContextUtil
-                .createSslContext(SslContextBuilder::forClient, true, tlsEngineType, tlsAllowUnsafeCiphers, tlsCustomizer,
-                                  keyCertChainCaptor);
+                .createSslContext(SslContextBuilder::forClient, true, tlsEngineType,
+                                  tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
         setupTlsMetrics(keyCertChainCaptor, options.meterRegistry());
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();

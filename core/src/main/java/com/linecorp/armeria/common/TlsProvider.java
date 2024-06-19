@@ -63,6 +63,18 @@ public interface TlsProvider {
         return new ServerTlsProviderBuilder();
     }
 
+    /**
+     * Returns a newly created {@link ClientTlsProviderBuilder}.
+     * <pre>{@code
+     * TlsProvider
+     *   .builderForClient()
+     *   // Set the key pair for "api.example.com".
+     *   .set("api.example.com", TlsKeyPair.of(...))
+     *   // Set the key pair for "web.example.com".
+     *   .set("web.example.com", TlsKeyPair.of(...))
+     *   .build();
+     * }</pre>
+     */
     static ClientTlsProviderBuilder builderForClient() {
         return new ClientTlsProviderBuilder();
     }

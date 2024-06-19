@@ -53,6 +53,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
+import io.netty.util.ReferenceCountUtil;
 
 /**
  * A <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Name-based">name-based virtual host</a>.
@@ -84,6 +85,7 @@ public final class VirtualHost {
     private final int port;
     @Nullable
     private final SslContext sslContext;
+    @Nullable
     private final TlsProvider tlsProvider;
     @Nullable
     private final TlsEngineType tlsEngineType;
@@ -175,7 +177,11 @@ public final class VirtualHost {
     }
 
     VirtualHost withNewSslContext(SslContext sslContext) {
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, tlsProvider,
+        if (tlsProvider != null) {
+            ReferenceCountUtil.release(sslContext);
+            throw new IllegalStateException("Cannot set a new SslContext when TlsProvider is set.");
+        }
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext, null,
                                tlsEngineType, serviceConfigs, fallbackServiceConfig,
                                RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
                                defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,

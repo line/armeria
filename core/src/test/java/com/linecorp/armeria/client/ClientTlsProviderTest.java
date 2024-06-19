@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -233,10 +234,52 @@ class ClientTlsProviderTest {
             assertThat(client.get("/").contentUtf8()).isEqualTo("virtual:bar.com");
 
             client = WebClient.builder("https://127.0.0.1:" + serverNoMtls.httpsPort())
-                                                .factory(factory)
-                                                .build()
-                                                .blocking();
+                              .factory(factory)
+                              .build()
+                              .blocking();
             assertThat(client.get("/").contentUtf8()).isEqualTo("default:localhost");
         }
+    }
+
+    @Test
+    void disallowTlsProviderWhenTlsSettingsIsSet() {
+        final TlsProvider tlsProvider =
+                TlsProvider.of(TlsKeyPair.ofSelfSigned());
+
+        assertThatThrownBy(() -> {
+            ClientFactory.builder()
+                         .tlsProvider(tlsProvider)
+                         .tls(TlsKeyPair.ofSelfSigned());
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot configure TLS settings because a TlsProvider has been set.");
+
+        assertThatThrownBy(() -> {
+            ClientFactory.builder()
+                         .tlsProvider(tlsProvider)
+                         .tlsCustomizer(b -> {});
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot configure TLS settings because a TlsProvider has been set.");
+
+        assertThatThrownBy(() -> {
+            ClientFactory.builder()
+                         .tlsProvider(tlsProvider)
+                         .tlsNoVerify();
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot configure TLS settings because a TlsProvider has been set.");
+
+        assertThatThrownBy(() -> {
+            ClientFactory.builder()
+                         .tlsProvider(tlsProvider)
+                         .tlsNoVerifyHosts("example.com");
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining("Cannot configure TLS settings because a TlsProvider has been set.");
+
+        assertThatThrownBy(() -> {
+            ClientFactory.builder()
+                         .tls(TlsKeyPair.ofSelfSigned())
+                         .tlsProvider(tlsProvider);
+        }).isInstanceOf(IllegalStateException.class)
+          .hasMessageContaining(
+                  "Cannot configure the TlsProvider because static TLS settings have been set already.");
     }
 }
