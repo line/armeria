@@ -250,7 +250,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             If the actual protocol is null, it means that the protocol is undetermined.
             e.g. HTTP protocol upgrade
          */
-        if (connectionEventState.actualProtocol() == null) {
+        if (connectionEventState == null || connectionEventState.actualProtocol() == null) {
             return;
         }
 
@@ -275,6 +275,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     @Override
     public void tryNotifyConnectionIdle() {
         final ConnectionEventState connectionEventState = connectionEventState();
+
+        if (connectionEventState == null) {
+            return;
+        }
 
         if (connectionEventState.isActive()) {
             connectionEventState.setActive(false);
@@ -309,14 +313,13 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         return pingState == PingState.PENDING_PING_ACK;
     }
 
+    @Nullable
     private ConnectionEventState connectionEventState() {
         if (connectionEventState != null) {
             return connectionEventState;
         }
 
         connectionEventState = ChannelUtil.connectionEventState(channel);
-
-        assert connectionEventState != null;
 
         return connectionEventState;
     }
