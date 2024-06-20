@@ -1523,7 +1523,6 @@ cn.eu.org
 cn.in
 cn.it
 cn.ua
-cn.vu
 cng.br
 cnpy.gdn
 cnt.br
@@ -7027,7 +7026,6 @@ rn.leg.br
 ro
 ro.eu.org
 ro.gov.br
-ro.im
 ro.it
 ro.leg.br
 roan.no
