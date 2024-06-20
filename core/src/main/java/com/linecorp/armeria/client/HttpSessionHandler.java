@@ -600,10 +600,17 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             // Execute in the event loop to prevent a connection from being marked as an outlier as a request is
             // about to be sent.
             detectOutlier(log);
+            return;
         }
 
-        final OutlierDetectionDecision decision =
-                outlierDetectingRule.decide(context, log.responseHeaders(), log.responseCause());
+        OutlierDetectionDecision decision;
+        try {
+            decision = outlierDetectingRule.decide(context, log.responseHeaders(), log.responseCause());
+        } catch (Exception e) {
+            logger.warn("Unexpected exception from an OutlierDetectingRule: {}", outlierDetectingRule, e);
+            return;
+        }
+
         if (decision == null) {
             return;
         }

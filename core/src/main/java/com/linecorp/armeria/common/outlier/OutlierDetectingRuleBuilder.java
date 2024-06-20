@@ -142,6 +142,8 @@ public final class OutlierDetectingRuleBuilder {
      */
     public OutlierDetectingRuleBuilder onException(Class<? extends Throwable> exceptionType,
                                                    OutlierDetectionDecision decision) {
+        requireNonNull(exceptionType, "exceptionType");
+        requireNonNull(decision, "decision");
         onException((ctx, cause) -> {
             if (exceptionType.isInstance(cause)) {
                 return decision;
