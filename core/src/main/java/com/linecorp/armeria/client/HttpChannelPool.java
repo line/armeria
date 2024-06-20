@@ -420,7 +420,11 @@ final class HttpChannelPool implements AsyncCloseable {
                 final InetSocketAddress remoteInetAddress = poolKey.endpoint.toSocketAddress(-1);
                 final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
 
-                assert localAddress != null;
+                if (localAddress == null) {
+                    // When the transport type(-Dcom.linecorp.armeria.transportType) is NIO,
+                    // sometimes local address is not available yet.
+                    return;
+                }
 
                 final ConnectionEventState connectionEventState = new ConnectionEventState(remoteInetAddress,
                                                                                            localAddress,
@@ -504,20 +508,28 @@ final class HttpChannelPool implements AsyncCloseable {
 
                 final HttpSession session = HttpSession.get(channel);
 
+                if (ChannelUtil.connectionEventState(channel) == null) {
+                    final InetSocketAddress remoteAddr = ChannelUtil.remoteAddress(channel);
+                    final InetSocketAddress localAddr = ChannelUtil.localAddress(channel);
+
+                    assert remoteAddr != null && localAddr != null;
+
+                    ChannelUtil.setConnectionEventState(channel, new ConnectionEventState(
+                            remoteAddr, localAddr, desiredProtocol));
+                }
+
                 final ConnectionEventState connectionEventState = ChannelUtil.connectionEventState(channel);
 
                 assert connectionEventState != null;
 
-                final InetSocketAddress remoteAddr = connectionEventState.remoteAddress();
-                final InetSocketAddress localAddr = connectionEventState.localAddress();
                 connectionEventState.setActualProtocol(protocol);
 
                 try {
                     listener.connectionOpened(
                             desiredProtocol,
                             protocol,
-                            remoteAddr,
-                            localAddr,
+                            connectionEventState.remoteAddress(),
+                            connectionEventState.localAddress(),
                             channel
                     );
                 } catch (Throwable e) {
@@ -558,7 +570,8 @@ final class HttpChannelPool implements AsyncCloseable {
                     }
 
                     try {
-                        listener.connectionClosed(protocol, remoteAddr, localAddr,
+                        listener.connectionClosed(protocol, connectionEventState.remoteAddress(),
+                                                  connectionEventState.localAddress(),
                                                   connectionEventState.isActive(), channel);
                     } catch (Throwable e) {
                         if (logger.isWarnEnabled()) {
@@ -587,6 +600,8 @@ final class HttpChannelPool implements AsyncCloseable {
         final ConnectionEventState connectionEventState = ChannelUtil.connectionEventState(channel);
 
         // In case the remote host does not support the desired protocol, it immediately fails before pending.
+        // Or sometimes when the transport type(-Dcom.linecorp.armeria.transportType) is NIO,
+        // local address is not available yet.
         if (connectionEventState == null) {
             return;
         }
