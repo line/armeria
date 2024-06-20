@@ -99,34 +99,4 @@ public final class RequestContextThreadLocalAccessor implements ThreadLocalAcces
         RequestContextUtil.pop();
     }
 
-    /**
-     * {@link ContextSnapshot} will call this method during the execution
-     * of lambda functions in {@link ContextSnapshot#wrap(Runnable)},
-     * as well as during Mono#subscribe(), Flux#subscribe(),
-     * {@link Subscription#request(long)}, and CoreSubscriber#onSubscribe(Subscription).
-     * Following these calls, {@link ContextSnapshot#setThreadLocals()} is
-     * invoked to restore the state of {@link RequestContextStorage}.
-     * Furthermore, at the end of these methods, {@link Scope#close()} is executed
-     * to revert the {@link RequestContextStorage} to its original state.
-     */
-    @Override
-    @SuppressWarnings("MustBeClosedChecker")
-    public void restore(RequestContext previousValue) {
-        RequestContextUtil.getAndSet(previousValue);
-    }
-
-    /**
-     * This method will be called at the start of {@link ContextSnapshot.Scope} and
-     * the end of {@link ContextSnapshot.Scope}. If reactor Context does not
-     * contains {@link RequestContextThreadLocalAccessor#KEY}, {@link ContextSnapshot} will use
-     * this method to remove the value from {@link ThreadLocal}.
-     * Please note that {@link RequestContextUtil#pop()} return {@link AutoCloseable} instance,
-     * but it is not used in `Try with Resources` syntax. this is because {@link ContextSnapshot.Scope}
-     * will handle the {@link AutoCloseable} instance returned by {@link RequestContextUtil#pop()}.
-     */
-    @Override
-    @SuppressWarnings("MustBeClosedChecker")
-    public void restore() {
-        RequestContextUtil.pop();
-    }
 }
