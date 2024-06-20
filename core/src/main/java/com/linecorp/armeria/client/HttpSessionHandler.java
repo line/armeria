@@ -603,7 +603,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
-        OutlierDetectionDecision decision;
+        final OutlierDetectionDecision decision;
         try {
             decision = outlierDetectingRule.decide(context, log.responseHeaders(), log.responseCause());
         } catch (Exception e) {
