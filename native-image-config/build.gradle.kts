@@ -30,15 +30,9 @@ plugins {
 // otherwise, the previously generated config will be merged into the newly generated config.
 val shouldGenerateFromScratch = project.findProperty("scratch").let {
     when (it) {
-        null -> {
-            false
-        }
-        "" -> {
-            true
-        }
-        else -> {
-            throw IllegalArgumentException("-Pscratch option must be specified without any value.")
-        }
+        null -> false
+        "" -> true
+        else -> throw IllegalArgumentException("-Pscratch option must be specified without any value.")
     }
 }
 
