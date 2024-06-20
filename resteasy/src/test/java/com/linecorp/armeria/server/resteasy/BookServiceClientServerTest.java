@@ -112,7 +112,6 @@ public class BookServiceClientServerTest {
         assertThatThrownBy(getBooks::hasEntity)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("RESTEASY003765: Response is closed.");
-        System.out.println(getBooksEntry);
         assertThat(getBooksEntry).contains("John Doe");
         assertThat(getBooksEntry).contains("Java");
         final Book[] getBooksEntryArray = JSON.readValue(getBooksEntry, Book[].class);
@@ -134,7 +133,6 @@ public class BookServiceClientServerTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("RESTEASY003765: Response is closed.");
         final String getBooksEntry2 = JSON.writeValueAsString(getBooksEntryArray2);
-        System.out.println(getBooksEntry2);
         assertThat(getBooksEntry2).isEqualTo(getBooksEntry);
 
         final Response getAllBooks = webTarget.path(booksPath)
@@ -150,7 +148,6 @@ public class BookServiceClientServerTest {
         assertThat(getAllBooksEntryArray[0]).isInstanceOf(Book.class);
         assertThat(getAllBooksEntryArray).contains(getBooksEntryArray2);
         final String getAllBooksEntry = JSON.writeValueAsString(getBooksEntryArray2);
-        System.out.println(getAllBooksEntry);
 
         final String getBookPath = "/resteasy/app/books/978-3-16-148410-0";
         final Response getBook = webTarget.path(getBookPath)

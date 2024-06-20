@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AttributeMap;

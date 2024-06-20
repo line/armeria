@@ -17,6 +17,7 @@ package com.linecorp.armeria.server.websocket;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceOptions;
 
 /**
  * Builds a {@link WebSocketService}.
@@ -59,6 +62,13 @@ public final class WebSocketServiceBuilder {
 
     static final int DEFAULT_MAX_FRAME_PAYLOAD_LENGTH = 65535; // 64 * 1024 -1
 
+    static final ServiceOptions DEFAULT_OPTIONS = ServiceOptions
+            .builder()
+            .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
+            .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
+            .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
+            .build();
+
     private final WebSocketServiceHandler handler;
 
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
@@ -71,6 +81,7 @@ public final class WebSocketServiceBuilder {
     private boolean aggregateContinuation;
     @Nullable
     private HttpService fallbackService;
+    private ServiceOptions serviceOptions = DEFAULT_OPTIONS;
 
     WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -184,7 +195,10 @@ public final class WebSocketServiceBuilder {
 
     private static Set<String> validateOrigins(Iterable<String> allowedOrigins) {
         //TODO(minwoox): Dedup the same logic in cors service.
-        final Set<String> copied = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"));
+        final Set<String> copied = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"))
+                                               .stream()
+                                               .map(Ascii::toLowerCase)
+                                               .collect(toImmutableSet());
         checkArgument(!copied.isEmpty(), "allowedOrigins is empty. (expected: non-empty)");
         if (copied.contains(ANY_ORIGIN)) {
             if (copied.size() > 1) {
@@ -198,11 +212,23 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
+     * Sets the {@link ServiceOptions} for the {@link WebSocketService}.
+     * If not set, {@link WebSocketService#options()} is used.
+     */
+    public WebSocketServiceBuilder serviceOptions(ServiceOptions serviceOptions) {
+        requireNonNull(serviceOptions, "serviceOptions");
+        this.serviceOptions = serviceOptions;
+        return this;
+    }
+
+    /**
      * Sets the fallback {@link HttpService} to use when the request is not a valid WebSocket upgrade request.
      * This is useful when you want to serve both WebSocket and HTTP requests at the same path.
      */
     public WebSocketServiceBuilder fallbackService(HttpService fallbackService) {
         this.fallbackService = requireNonNull(fallbackService, "fallbackService");
+        checkArgument(!(fallbackService instanceof WebSocketService),
+                      "fallbackService must not be a WebSocketService.");
         return this;
     }
 
@@ -220,7 +246,7 @@ public final class WebSocketServiceBuilder {
             originPredicate = this.originPredicate;
         }
         return new DefaultWebSocketService(handler, fallbackService, maxFramePayloadLength, allowMaskMismatch,
-                                           subprotocols, allowAnyOrigin,
-                                           originPredicate, aggregateContinuation);
+                                           subprotocols, allowAnyOrigin, originPredicate, aggregateContinuation,
+                                           serviceOptions);
     }
 }

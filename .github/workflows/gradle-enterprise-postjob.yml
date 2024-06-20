@@ -8,8 +8,8 @@ on:
 
 env:
   LC_ALL: "en_US.UTF-8"
-  BUILD_JDK_VERSION: "19"
-  GRADLE_ENTERPRISE_ACCESS_KEY: ${{ secrets.GRADLE_ENTERPRISE_ACCESS_KEY }}
+  BUILD_JDK_VERSION: "21"
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
   RUN_ID: ${{ github.event.workflow_run.id }}
   COMMIT_SHA: ${{ github.event.workflow_run.head_sha }}
   # Used by Octokit
@@ -24,16 +24,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: setup-jdk-19
-        name: Set up JDK 19
+      - id: setup-jdk-21
+        name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '19'
+          java-version: '21'
 
       - name: Download artifact
         id: download-artifact
-        uses: dawidd6/action-download-artifact@v3
+        uses: dawidd6/action-download-artifact@v6
         with:
           workflow_conclusion: ""
           run_id: ${{ env.RUN_ID }}
@@ -56,7 +56,7 @@ jobs:
         shell: bash
 
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v3
 
       - id: upload-build-scans
         name: Upload build scans
@@ -128,7 +128,7 @@ jobs:
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build with Gradle
         run: |

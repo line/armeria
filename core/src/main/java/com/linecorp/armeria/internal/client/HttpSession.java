@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.client;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.WriteTimeoutException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -90,7 +91,7 @@ public interface HttpSession {
         }
 
         @Override
-        public void deactivate() {}
+        public void markUnacquirable() {}
 
         @Override
         public int incrementAndGetNumRequestsSent() {
@@ -137,9 +138,10 @@ public interface HttpSession {
      *     <li>A connection is closed.</li>
      *     <li>"Connection: close" header is sent or received.</li>
      *     <li>A GOAWAY frame is sent or received.</li>
+     *     <li>A {@link WriteTimeoutException} is raised</li>
      * </ul>
      */
-    void deactivate();
+    void markUnacquirable();
 
     /**
      * Returns {@code true} if a new request can be sent with this {@link HttpSession}.

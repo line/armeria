@@ -85,11 +85,6 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
-    public boolean isInitialized() {
-        return ctx != null;
-    }
-
-    @Override
     public RoutingContext routingContext() {
         return routingContext;
     }
@@ -198,6 +193,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     public void close(Throwable cause) {}
 
     @Override
+    public boolean isClosedSuccessfully() {
+        return true;
+    }
+
+    @Override
     public void setResponse(HttpResponse response) {
         // TODO(ikhoon): Dedup
         if (abortResponseCause != null) {
@@ -231,11 +231,6 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public boolean isResponseAborted() {
         return abortResponseCause != null;
-    }
-
-    @Override
-    public boolean needsAggregation() {
-        return false;
     }
 
     @Override

@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MoreMeters;
@@ -73,7 +74,6 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
-import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http2.DefaultHttp2Connection;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
 import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
@@ -110,7 +110,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private static final Logger logger = LoggerFactory.getLogger(HttpServerPipelineConfigurator.class);
 
     private static final int SSL_RECORD_HEADER_LENGTH = 5;
-    private static final int MAX_CLIENT_HELLO_LENGTH = 4096; // 4KiB should be more than enough.
 
     static final AsciiString SCHEME_HTTP = AsciiString.cached("http");
     static final AsciiString SCHEME_HTTPS = AsciiString.cached("https");
@@ -233,7 +232,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private void configureHttps(ChannelPipeline p, @Nullable ProxiedAddresses proxiedAddresses) {
         final Mapping<String, SslContext> sslContexts =
                 requireNonNull(config.sslContextMapping(), "config.sslContextMapping() returned null");
-        p.addLast(new SniHandler(sslContexts, MAX_CLIENT_HELLO_LENGTH, config.idleTimeoutMillis()));
+        p.addLast(new SniHandler(sslContexts, Flags.defaultMaxClientHelloLength(), config.idleTimeoutMillis()));
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2OrHttpHandler(proxiedAddresses));
     }

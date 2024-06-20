@@ -165,7 +165,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * @see VirtualHostBuilder
  */
-public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
+public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<ServerBuilder> {
     private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     // Defaults to no graceful shutdown.
@@ -232,8 +232,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Nullable
     private DependencyInjector dependencyInjector;
     private Function<? super String, String> absoluteUriTransformer = Function.identity();
-    private long unhandledExceptionsReportIntervalMillis =
-            Flags.defaultUnhandledExceptionsReportIntervalMillis();
+    private long unloggedExceptionsReportIntervalMillis =
+            Flags.defaultUnloggedExceptionsReportIntervalMillis();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private int http2MaxResetFramesPerWindow = Flags.defaultServerHttp2MaxResetFramesPerMinute();
     private int http2MaxResetFramesWindowSeconds = 60;
@@ -249,12 +249,14 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 host -> LoggerFactory.getLogger(defaultAccessLoggerName(host.hostnamePattern())));
         virtualHostTemplate.tlsSelfSigned(false);
         virtualHostTemplate.tlsAllowUnsafeCiphers(false);
+        virtualHostTemplate.tlsEngineType(Flags.tlsEngineType());
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.requestAutoAbortDelayMillis(0);
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
+        virtualHostTemplate.multipartRemovalStrategy(Flags.defaultMultipartRemovalStrategy());
         virtualHostTemplate.requestIdGenerator(routingContext -> RequestId.random());
     }
 
@@ -954,6 +956,18 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
+     * Sets the {@link MultipartRemovalStrategy} that determines when to remove temporary files created
+     * for multipart requests.
+     * If not set, {@link MultipartRemovalStrategy#ON_RESPONSE_COMPLETION} is used by default.
+     */
+    @UnstableApi
+    public ServerBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        requireNonNull(removalStrategy, "removalStrategy");
+        virtualHostTemplate.multipartRemovalStrategy(removalStrategy);
+        return this;
+    }
+
+    /**
      * Sets the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
      * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
      *
@@ -1177,6 +1191,17 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     @Deprecated
     public ServerBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         virtualHostTemplate.tlsAllowUnsafeCiphers(tlsAllowUnsafeCiphers);
+        return this;
+    }
+
+    /**
+     * Sets {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * @param tlsEngineType the {@link TlsEngineType} to use
+     */
+    @UnstableApi
+    public ServerBuilder tlsEngineType(TlsEngineType tlsEngineType) {
+        virtualHostTemplate.tlsEngineType(tlsEngineType);
         return this;
     }
 
@@ -2106,32 +2131,60 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
     }
 
     /**
-     * Sets the interval between reporting exceptions which is not handled or logged
+     * Sets the interval between reporting exceptions which is not logged
      * by any decorators or services such as {@link LoggingService}.
      * @param unhandledExceptionsReportInterval the interval between reports,
      *        or {@link Duration#ZERO} to disable this feature
      * @throws IllegalArgumentException if specified {@code interval} is negative.
+     *
+     * @deprecated Use {@link #unloggedExceptionsReportInterval(Duration)} instead.
      */
-    @UnstableApi
+    @Deprecated
     public ServerBuilder unhandledExceptionsReportInterval(Duration unhandledExceptionsReportInterval) {
-        requireNonNull(unhandledExceptionsReportInterval, "unhandledExceptionsReportInterval");
-        checkArgument(!unhandledExceptionsReportInterval.isNegative());
-        return unhandledExceptionsReportIntervalMillis(unhandledExceptionsReportInterval.toMillis());
+        return unloggedExceptionsReportInterval(unhandledExceptionsReportInterval);
     }
 
     /**
-     * Sets the interval between reporting exceptions which is not handled or logged
+     * Sets the interval between reporting exceptions which is not logged
      * by any decorators or services such as {@link LoggingService}.
      * @param unhandledExceptionsReportIntervalMillis the interval between reports in milliseconds,
      *        or {@code 0} to disable this feature
      * @throws IllegalArgumentException if specified {@code interval} is negative.
+     *
+     * @deprecated Use {@link #unloggedExceptionsReportIntervalMillis(long)} instead.
+     */
+    @Deprecated
+    public ServerBuilder unhandledExceptionsReportIntervalMillis(long unhandledExceptionsReportIntervalMillis) {
+        return unloggedExceptionsReportIntervalMillis(unhandledExceptionsReportIntervalMillis);
+    }
+
+    /**
+     * Sets the interval between reporting exceptions which is not logged
+     * by any decorators or services such as {@link LoggingService}.
+     * @param unloggedExceptionsReportInterval the interval between reports,
+     *        or {@link Duration#ZERO} to disable this feature
+     * @throws IllegalArgumentException if specified {@code interval} is negative.
      */
     @UnstableApi
-    public ServerBuilder unhandledExceptionsReportIntervalMillis(long unhandledExceptionsReportIntervalMillis) {
-        checkArgument(unhandledExceptionsReportIntervalMillis >= 0,
-                      "unhandledExceptionsReportIntervalMillis: %s (expected: >= 0)",
-                      unhandledExceptionsReportIntervalMillis);
-        this.unhandledExceptionsReportIntervalMillis = unhandledExceptionsReportIntervalMillis;
+    public ServerBuilder unloggedExceptionsReportInterval(Duration unloggedExceptionsReportInterval) {
+        requireNonNull(unloggedExceptionsReportInterval, "unloggedExceptionsReportInterval");
+        checkArgument(!unloggedExceptionsReportInterval.isNegative());
+        return unloggedExceptionsReportIntervalMillis(unloggedExceptionsReportInterval.toMillis());
+    }
+
+    /**
+     * Sets the interval between reporting exceptions which is not logged
+     * by any decorators or services such as {@link LoggingService}.
+     * @param unloggedExceptionsReportIntervalMillis the interval between reports in milliseconds,
+     *        or {@code 0} to disable this feature
+     * @throws IllegalArgumentException if specified {@code interval} is negative.
+     */
+    @UnstableApi
+    public ServerBuilder unloggedExceptionsReportIntervalMillis(long unloggedExceptionsReportIntervalMillis) {
+        checkArgument(unloggedExceptionsReportIntervalMillis >= 0,
+                      "unloggedExceptionsReportIntervalMillis: %s (expected: >= 0)",
+                      unloggedExceptionsReportIntervalMillis);
+        this.unloggedExceptionsReportIntervalMillis = unloggedExceptionsReportIntervalMillis;
         return this;
     }
 
@@ -2154,29 +2207,26 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
         assert extensions != null;
         final DependencyInjector dependencyInjector = dependencyInjectorOrReflective();
 
-        final UnhandledExceptionsReporter unhandledExceptionsReporter;
-        if (unhandledExceptionsReportIntervalMillis > 0) {
-            unhandledExceptionsReporter = UnhandledExceptionsReporter.of(
-                    meterRegistry, unhandledExceptionsReportIntervalMillis);
-            serverListeners.add(unhandledExceptionsReporter);
+        final UnloggedExceptionsReporter unloggedExceptionsReporter;
+        if (unloggedExceptionsReportIntervalMillis > 0) {
+            unloggedExceptionsReporter = UnloggedExceptionsReporter.of(
+                    meterRegistry, unloggedExceptionsReportIntervalMillis);
+            serverListeners.add(unloggedExceptionsReporter);
         } else {
-            unhandledExceptionsReporter = null;
+            unloggedExceptionsReporter = null;
         }
 
-        final ServerErrorHandler errorHandler;
-        if (this.errorHandler == null) {
-            errorHandler = ServerErrorHandler.ofDefault();
-        } else {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = this.errorHandler.orElse(ServerErrorHandler.ofDefault());
-        }
+        final ServerErrorHandler errorHandler =
+                new CorsServerErrorHandler(
+                        this.errorHandler == null ? ServerErrorHandler.ofDefault()
+                                                  : this.errorHandler.orElse(ServerErrorHandler.ofDefault()));
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector,
-                                                unhandledExceptionsReporter, errorHandler);
+                                                unloggedExceptionsReporter, errorHandler);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
                                    .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector,
-                                                         unhandledExceptionsReporter, errorHandler))
+                                                         unloggedExceptionsReporter, errorHandler))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -2283,7 +2333,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder {
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
-                unhandledExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
+                unloggedExceptionsReportIntervalMillis, ImmutableList.copyOf(shutdownSupports));
     }
 
     /**

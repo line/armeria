@@ -27,25 +27,11 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 /**
  * A builder implementation for JSON {@link HeadersSanitizer}.
  */
-public final class JsonHeadersSanitizerBuilder extends AbstractHeadersSanitizerBuilder<JsonNode> {
+public final class JsonHeadersSanitizerBuilder
+        extends AbstractHeadersSanitizerBuilder<JsonHeadersSanitizerBuilder, JsonNode> {
 
     @Nullable
     private ObjectMapper objectMapper;
-
-    @Override
-    public JsonHeadersSanitizerBuilder sensitiveHeaders(CharSequence... headers) {
-        return (JsonHeadersSanitizerBuilder) super.sensitiveHeaders(headers);
-    }
-
-    @Override
-    public JsonHeadersSanitizerBuilder sensitiveHeaders(Iterable<? extends CharSequence> headers) {
-        return (JsonHeadersSanitizerBuilder) super.sensitiveHeaders(headers);
-    }
-
-    @Override
-    public JsonHeadersSanitizerBuilder maskingFunction(HeaderMaskingFunction maskingFunction) {
-        return (JsonHeadersSanitizerBuilder) super.maskingFunction(maskingFunction);
-    }
 
     /**
      * Sets the {@link ObjectMapper} that will be used to convert headers into a {@link JsonNode}.

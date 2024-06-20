@@ -18,14 +18,16 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-abstract class AbstractContextPathServiceBindingBuilder<T extends ServiceConfigsBuilder>
-        extends AbstractServiceBindingBuilder {
+abstract class AbstractContextPathServiceBindingBuilder
+        <SELF extends AbstractContextPathServiceBindingBuilder<SELF, T>,
+                T extends AbstractContextPathServicesBuilder<?, ?>>
+        extends AbstractServiceBindingBuilder<AbstractContextPathServiceBindingBuilder<SELF, T>> {
 
-    private final AbstractContextPathServicesBuilder<T> contextPathServicesBuilder;
+    private final T contextPathServicesBuilder;
 
-    AbstractContextPathServiceBindingBuilder(AbstractContextPathServicesBuilder<T> builder) {
+    AbstractContextPathServiceBindingBuilder(T builder) {
         super(builder.contextPaths());
-        this.contextPathServicesBuilder = builder;
+        contextPathServicesBuilder = builder;
     }
 
     @Override
@@ -33,7 +35,10 @@ abstract class AbstractContextPathServiceBindingBuilder<T extends ServiceConfigs
         contextPathServicesBuilder.addServiceConfigSetters(serviceConfigBuilder);
     }
 
-    AbstractContextPathServicesBuilder<T> build(HttpService service) {
+    /**
+     * Sets the {@link HttpService} and returns the object that this builder was created from.
+     */
+    public T build(HttpService service) {
         requireNonNull(service, "service");
         build0(service);
         return contextPathServicesBuilder;

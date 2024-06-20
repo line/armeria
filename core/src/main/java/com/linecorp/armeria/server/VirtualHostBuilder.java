@@ -84,6 +84,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.internal.server.RouteUtil;
@@ -112,12 +113,12 @@ import io.netty.util.ReferenceCountUtil;
  * @see ServerBuilder
  * @see Route
  */
-public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuilder {
+public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuilder<VirtualHostBuilder> {
 
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final boolean portBased;
-    private final List<ServiceConfigSetters> serviceConfigSetters = new ArrayList<>();
+    private final List<ServiceConfigSetters<?>> serviceConfigSetters = new ArrayList<>();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
 
@@ -136,6 +137,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private final List<Consumer<? super SslContextBuilder>> tlsCustomizers = new ArrayList<>();
     @Nullable
     private Boolean tlsAllowUnsafeCiphers;
+    @Nullable
+    private TlsEngineType tlsEngineType;
     private final LinkedList<RouteDecoratingService> routeDecoratingServices = new LinkedList<>();
     @Nullable
     private Function<? super VirtualHost, ? extends Logger> accessLoggerMapper;
@@ -164,6 +167,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     private Long requestAutoAbortDelayMillis;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private MultipartRemovalStrategy multipartRemovalStrategy;
     @Nullable
     private EventLoopGroup serviceWorkerGroup;
     @Nullable
@@ -422,6 +427,16 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     @Deprecated
     public VirtualHostBuilder tlsAllowUnsafeCiphers(boolean tlsAllowUnsafeCiphers) {
         this.tlsAllowUnsafeCiphers = tlsAllowUnsafeCiphers;
+        return this;
+    }
+
+    /**
+     * The {@link TlsEngineType} that will be used for processing TLS connections.
+     */
+    @UnstableApi
+    public VirtualHostBuilder tlsEngineType(TlsEngineType tlsEngineType) {
+        requireNonNull(tlsEngineType, "tlsEngineType");
+        this.tlsEngineType = tlsEngineType;
         return this;
     }
 
@@ -695,16 +710,16 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         return new VirtualHostAnnotatedServiceBindingBuilder(this);
     }
 
-    VirtualHostBuilder addServiceConfigSetters(ServiceConfigSetters serviceConfigSetters) {
+    VirtualHostBuilder addServiceConfigSetters(ServiceConfigSetters<?> serviceConfigSetters) {
         this.serviceConfigSetters.add(serviceConfigSetters);
         return this;
     }
 
-    private List<ServiceConfigSetters> getServiceConfigSetters(
+    private List<ServiceConfigSetters<?>> getServiceConfigSetters(
             @Nullable VirtualHostBuilder defaultVirtualHostBuilder) {
-        final List<ServiceConfigSetters> serviceConfigSetters;
+        final List<ServiceConfigSetters<?>> serviceConfigSetters;
         if (defaultVirtualHostBuilder != null) {
-            serviceConfigSetters = ImmutableList.<ServiceConfigSetters>builder()
+            serviceConfigSetters = ImmutableList.<ServiceConfigSetters<?>>builder()
                                                 .addAll(this.serviceConfigSetters)
                                                 .addAll(defaultVirtualHostBuilder.serviceConfigSetters)
                                                 .build();
@@ -1192,6 +1207,17 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     /**
+     * Sets the {@link MultipartRemovalStrategy} that determines when to remove temporary files created
+     * for multipart requests.
+     * If not set, {@link MultipartRemovalStrategy#ON_RESPONSE_COMPLETION} is used by default.
+     */
+    @UnstableApi
+    public VirtualHostBuilder multipartRemovalStrategy(MultipartRemovalStrategy removalStrategy) {
+        multipartRemovalStrategy = requireNonNull(removalStrategy, "removalStrategy");
+        return this;
+    }
+
+    /**
      * Sets the {@link Function} which generates a {@link RequestId}.
      * If not set, the value set via {@link ServerBuilder#requestIdGenerator(Function)} is used.
      *
@@ -1279,7 +1305,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * added to this builder.
      */
     VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector,
-                      @Nullable UnhandledExceptionsReporter unhandledExceptionsReporter,
+                      @Nullable UnloggedExceptionsReporter unloggedExceptionsReporter,
                       ServerErrorHandler serverErrorHandler) {
         requireNonNull(template, "template");
 
@@ -1353,6 +1379,9 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         final Path multipartUploadsLocation =
                 this.multipartUploadsLocation != null ?
                 this.multipartUploadsLocation : template.multipartUploadsLocation;
+        final MultipartRemovalStrategy multipartRemovalStrategy =
+                this.multipartRemovalStrategy != null ?
+                this.multipartRemovalStrategy : template.multipartRemovalStrategy;
 
         final HttpHeaders defaultHeaders =
                 mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
@@ -1382,13 +1411,14 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         assert blockingTaskExecutor != null;
         assert successFunction != null;
         assert multipartUploadsLocation != null;
+        assert multipartRemovalStrategy != null;
         assert requestIdGenerator != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
                 .flatMap(cfgSetters -> {
                     if (cfgSetters instanceof AbstractAnnotatedServiceConfigSetters) {
-                        return ((AbstractAnnotatedServiceConfigSetters) cfgSetters)
+                        return ((AbstractAnnotatedServiceConfigSetters<?>) cfgSetters)
                                 .buildServiceConfigBuilder(extensions, dependencyInjector).stream();
                     } else if (cfgSetters instanceof ServiceConfigBuilder) {
                         return Stream.of((ServiceConfigBuilder) cfgSetters);
@@ -1401,30 +1431,35 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
                                             successFunction, requestAutoAbortDelayMillis,
-                                            multipartUploadsLocation, serviceWorkerGroup, defaultHeaders,
+                                            multipartUploadsLocation, multipartRemovalStrategy,
+                                            serviceWorkerGroup, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
-                                            unhandledExceptionsReporter, baseContextPath, contextHook);
+                                            unloggedExceptionsReporter, baseContextPath, contextHook);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, "/", FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               requestAutoAbortDelayMillis, multipartUploadsLocation, serviceWorkerGroup,
-                               defaultHeaders, requestIdGenerator,
-                               defaultErrorHandler, unhandledExceptionsReporter, "/", contextHook);
+                               requestAutoAbortDelayMillis, multipartUploadsLocation, multipartRemovalStrategy,
+                               serviceWorkerGroup, defaultHeaders, requestIdGenerator,
+                               defaultErrorHandler, unloggedExceptionsReporter, "/", contextHook);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);
         builder.addAll(template.shutdownSupports);
 
+        final TlsEngineType tlsEngineType = this.tlsEngineType != null ?
+                                            this.tlsEngineType : template.tlsEngineType;
+        assert tlsEngineType != null;
         final VirtualHost virtualHost =
-                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
-                                serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
+                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template, tlsEngineType),
+                                tlsEngineType, serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
                                 requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
-                                serviceWorkerGroup, builder.build(), requestIdGenerator);
+                                multipartRemovalStrategy, serviceWorkerGroup, builder.build(),
+                                requestIdGenerator);
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template, baseContextPath);
@@ -1451,7 +1486,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
     }
 
     @Nullable
-    private SslContext sslContext(VirtualHostBuilder template) {
+    private SslContext sslContext(VirtualHostBuilder template, TlsEngineType tlsEngineType) {
         if (portBased) {
             return null;
         }
@@ -1467,13 +1502,13 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
             // Build a new SslContext or use a user-specified one for backward compatibility.
             if (sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(sslContextBuilderSupplier, tlsAllowUnsafeCiphers, tlsCustomizers);
+                sslContext = buildSslContext(sslContextBuilderSupplier, tlsEngineType, tlsAllowUnsafeCiphers,
+                                             tlsCustomizers);
                 sslContextFromThis = true;
                 releaseSslContextOnFailure = true;
             } else if (template.sslContextBuilderSupplier != null) {
-                sslContext = buildSslContext(template.sslContextBuilderSupplier,
-                                             tlsAllowUnsafeCiphers,
-                                             template.tlsCustomizers);
+                sslContext = buildSslContext(template.sslContextBuilderSupplier, tlsEngineType,
+                                             tlsAllowUnsafeCiphers, template.tlsCustomizers);
                 releaseSslContextOnFailure = true;
             }
 
@@ -1500,6 +1535,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
                     sslContext = buildSslContext(() -> SslContextBuilder.forServer(ssc.certificate(),
                                                                                    ssc.privateKey()),
+                                                 tlsEngineType,
                                                  tlsAllowUnsafeCiphers,
                                                  tlsCustomizers);
                     releaseSslContextOnFailure = true;
@@ -1512,7 +1548,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
             // Validate the built `SslContext`.
             if (sslContext != null) {
-                validateSslContext(sslContext);
+                validateSslContext(sslContext, tlsEngineType);
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
             releaseSslContextOnFailure = false;

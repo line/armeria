@@ -36,6 +36,7 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * Makes sure most builder overrides all overridden methods with the correct return type.
@@ -44,11 +45,63 @@ class OverriddenBuilderMethodsReturnTypeTest {
 
     @Test
     void methodChaining() {
+        final Set<String> excludedClasses = ImmutableSet.of("JsonLogFormatterBuilder",
+                                                            "TextLogFormatterBuilder",
+                                                            "PathStreamMessageBuilder",
+                                                            "InputStreamStreamMessageBuilder",
+                                                            "ContextPathAnnotatedServiceConfigSetters",
+                                                            "ContextPathDecoratingBindingBuilder",
+                                                            "ContextPathServiceBindingBuilder",
+                                                            "ContextPathServicesBuilder",
+                                                            "DecoratingServiceBindingBuilder",
+                                                            "ServerBuilder",
+                                                            "ServiceBindingBuilder",
+                                                            "AnnotatedServiceBindingBuilder",
+                                                            "VirtualHostAnnotatedServiceBindingBuilder",
+                                                            "VirtualHostBuilder",
+                                                            "VirtualHostContextPathDecoratingBindingBuilder",
+                                                            "VirtualHostContextPathServiceBindingBuilder",
+                                                            "VirtualHostContextPathServicesBuilder",
+                                                            "VirtualHostDecoratingServiceBindingBuilder",
+                                                            "VirtualHostServiceBindingBuilder",
+                                                            "ChainedCorsPolicyBuilder",
+                                                            "CorsPolicyBuilder",
+                                                            "ConsulEndpointGroupBuilde",
+                                                            "AbstractDnsResolverBuilder",
+                                                            "AbstractRuleBuilder",
+                                                            "AbstractRuleWithContentBuilder",
+                                                            "DnsResolverGroupBuilder",
+                                                            "AbstractCircuitBreakerMappingBuilder",
+                                                            "CircuitBreakerMappingBuilder",
+                                                            "CircuitBreakerRuleBuilder",
+                                                            "CircuitBreakerRuleWithContentBuilder",
+                                                            "AbstractDynamicEndpointGroupBuilder",
+                                                            "DynamicEndpointGroupBuilder",
+                                                            "DynamicEndpointGroupSetters",
+                                                            "DnsAddressEndpointGroupBuilder",
+                                                            "DnsEndpointGroupBuilder",
+                                                            "DnsServiceEndpointGroupBuilder",
+                                                            "DnsTextEndpointGroupBuilder",
+                                                            "AbstractHealthCheckedEndpointGroupBuilder",
+                                                            "HealthCheckedEndpointGroupBuilder",
+                                                            "RetryRuleBuilder",
+                                                            "RetryRuleWithContentBuilder",
+                                                            "AbstractHeadersSanitizerBuilder",
+                                                            "JsonHeadersSanitizerBuilder",
+                                                            "TextHeadersSanitizerBuilder",
+                                                            "EurekaEndpointGroupBuilder",
+                                                            "KubernetesEndpointGroupBuilder",
+                                                            "Resilience4jCircuitBreakerMappingBuilder",
+                                                            "ZooKeeperEndpointGroupBuilder",
+                                                            "AbstractCuratorFrameworkBuilder",
+                                                            "ZooKeeperUpdatingListenerBuilder");
         final String packageName = "com.linecorp.armeria";
         findAllClasses(packageName).stream()
                                    .map(ReflectionUtils::forName)
                                    .filter(clazz -> clazz.getSimpleName().endsWith("Builder") &&
-                                                    Modifier.isFinal(clazz.getModifiers()))
+                                                    Modifier.isFinal(clazz.getModifiers()) &&
+                                                    Modifier.isPublic(clazz.getModifiers()))
+                                   .filter(clazz -> !excludedClasses.contains(clazz.getSimpleName()))
                                    .forEach(clazz -> {
                                        final List<Method> methods = overriddenMethods(clazz);
                                        for (Method m : methods) {

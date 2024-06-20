@@ -15,6 +15,7 @@ dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation(libs.kotlin.coroutines.core)
     implementation(libs.grpc.kotlin)
+    implementation(libs.protobuf.java.util)
 
     testImplementation(project(":junit5"))
     testImplementation(libs.javax.annotation)

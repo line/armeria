@@ -21,23 +21,26 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import java.time.Duration;
-import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 
 import io.micrometer.core.instrument.Clock;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.dropwizard.DropwizardMeterRegistry;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
-import io.prometheus.client.Collector.MetricFamilySamples;
-import io.prometheus.client.Collector.MetricFamilySamples.Sample;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
+import io.prometheus.metrics.model.snapshots.DataPointSnapshot;
+import io.prometheus.metrics.model.snapshots.MetricMetadata;
+import io.prometheus.metrics.model.snapshots.MetricSnapshot;
+import io.prometheus.metrics.model.snapshots.SummarySnapshot.SummaryDataPointSnapshot;
 
 class DropwizardMeterRegistriesTest {
     @Test
@@ -131,20 +134,28 @@ class DropwizardMeterRegistriesTest {
         assertThat(dropwizard.getDropwizardRegistry().getMetrics()).containsOnlyKeys("summary");
 
         // Make sure Prometheus registry collects all samples.
-        final MetricFamilySamples prometheusSamples = findPrometheusSample(prometheus, "summary");
-        assertThat(prometheusSamples.samples).containsExactly(
-                new Sample("summary", ImmutableList.of("quantile"), ImmutableList.of("0.5"), 42),
-                new Sample("summary", ImmutableList.of("quantile"), ImmutableList.of("0.99"), 42),
-                new Sample("summary_count", ImmutableList.of(), ImmutableList.of(), 1),
-                new Sample("summary_sum", ImmutableList.of(), ImmutableList.of(), 42));
+        final List<? extends DataPointSnapshot> dataPointSnapshots =
+                findPrometheusDataPointSnapshot(prometheus, "summary");
+        assertThat(dataPointSnapshots.size()).isOne();
+        final DataPointSnapshot snapshot = dataPointSnapshots.get(0);
+        assertThat(snapshot).isInstanceOf(SummaryDataPointSnapshot.class);
+        // SummaryDataPointSnapshot and its values do not override equals().
+        final SummaryDataPointSnapshot summarySnapshot = (SummaryDataPointSnapshot) snapshot;
+        assertThat(summarySnapshot.getCount()).isOne();
+        assertThat(summarySnapshot.getSum()).isEqualTo(42.0);
+        assertThat(summarySnapshot.getQuantiles().size()).isEqualTo(2);
+        assertThat(summarySnapshot.getQuantiles().get(0).getQuantile()).isEqualTo(0.5);
+        assertThat(summarySnapshot.getQuantiles().get(0).getValue()).isEqualTo(42.0);
+        assertThat(summarySnapshot.getQuantiles().get(1).getQuantile()).isEqualTo(0.99);
+        assertThat(summarySnapshot.getQuantiles().get(1).getValue()).isEqualTo(42.0);
     }
 
-    private static MetricFamilySamples findPrometheusSample(PrometheusMeterRegistry registry, String name) {
-        for (final Enumeration<MetricFamilySamples> e = registry.getPrometheusRegistry().metricFamilySamples();
-             e.hasMoreElements();) {
-            final MetricFamilySamples samples = e.nextElement();
-            if (name.equals(samples.name)) {
-                return samples;
+    private static List<? extends DataPointSnapshot> findPrometheusDataPointSnapshot(
+            PrometheusMeterRegistry registry, String name) {
+        for (final MetricSnapshot snapshot : registry.getPrometheusRegistry().scrape()) {
+            final MetricMetadata metadata = snapshot.getMetadata();
+            if (name.equals(metadata.getName())) {
+                return snapshot.getDataPoints();
             }
         }
 
@@ -152,3 +163,4 @@ class DropwizardMeterRegistriesTest {
         throw new Error(); // Never reaches here.
     }
 }
+

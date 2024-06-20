@@ -36,8 +36,6 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
 
-import com.google.common.net.HostAndPort;
-
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -74,6 +72,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.SchemeAndAuthority;
 import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -180,12 +179,12 @@ public final class DefaultClientRequestContext
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
     public DefaultClientRequestContext(
-            EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
+            @Nullable EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, RequestTarget reqTarget,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions, CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros) {
-        this(requireNonNull(eventLoop, "eventLoop"), meterRegistry, sessionProtocol,
+        this(eventLoop, meterRegistry, sessionProtocol,
              id, method, reqTarget, options, req, rpcReq, requestOptions, serviceRequestContext(),
              requireNonNull(responseCancellationScheduler, "responseCancellationScheduler"),
              requestStartTimeNanos, requestStartTimeMicros);
@@ -227,9 +226,6 @@ public final class DefaultClientRequestContext
               guessExchangeType(requestOptions, req),
               requestAutoAbortDelayMillis(options, requestOptions), req, rpcReq,
               getAttributes(root), options.contextHook());
-        assert (eventLoop == null && responseCancellationScheduler == null) ||
-               (eventLoop != null && responseCancellationScheduler != null)
-                : "'eventLoop' and 'responseCancellationScheduler' should be both null or non-null";
 
         this.eventLoop = eventLoop;
         this.options = requireNonNull(options, "options");
@@ -475,7 +471,7 @@ public final class DefaultClientRequestContext
             // The connection will be established with the IP address but `host` set to the `Endpoint`
             // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
             // proxy based on an authority.
-            final String host = authorityToHost(authority);
+            final String host = SchemeAndAuthority.of(null, authority).host();
             if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
                 endpoint = endpoint.withHost(host);
             }
@@ -496,18 +492,6 @@ public final class DefaultClientRequestContext
             }
         }
         internalRequestHeaders = headersBuilder.build();
-    }
-
-    private static String authorityToHost(String authority) {
-        return HostAndPort.fromString(removeUserInfo(authority)).getHost();
-    }
-
-    private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf('@');
-        if (indexOfDelimiter == -1) {
-            return authority;
-        }
-        return authority.substring(indexOfDelimiter + 1);
     }
 
     /**
@@ -771,8 +755,7 @@ public final class DefaultClientRequestContext
         if (authority == null) {
             return null;
         }
-
-        return authorityToHost(authority);
+        return SchemeAndAuthority.of(null, authority).host();
     }
 
     @Override
@@ -1030,7 +1013,7 @@ public final class DefaultClientRequestContext
                 });
                 // To deactivate the channel when initiateShutdown is called after the RequestHeaders is sent.
                 // The next request will trigger shutdown.
-                HttpSession.get(ch).deactivate();
+                HttpSession.get(ch).markUnacquirable();
             }
         });
         return completableFuture;

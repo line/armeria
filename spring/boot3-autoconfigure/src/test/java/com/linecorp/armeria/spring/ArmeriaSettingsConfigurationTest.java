@@ -23,12 +23,16 @@ import javax.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.spring.ArmeriaSettingsConfigurationTest.TestConfiguration;
 
@@ -37,8 +41,48 @@ import com.linecorp.armeria.spring.ArmeriaSettingsConfigurationTest.TestConfigur
 @DirtiesContext
 class ArmeriaSettingsConfigurationTest {
 
+    private static final Object dummyObject = new Object();
+    private static final HttpResponse dummyResponse = HttpResponse.of(200);
+
     @SpringBootApplication
-    static class TestConfiguration {}
+    static class TestConfiguration {
+        @Bean
+        public ArmeriaServerConfigurator configurator() {
+            return builder -> builder.gracefulShutdownTimeoutMillis(1000, 10000)
+                                     .errorHandler((ctx, cause) -> {
+                                         // Should never reach here because the bean is applied first.
+                                         throw new Error();
+                                     })
+                                     .dependencyInjector(new DependencyInjector() {
+                                         @Override
+                                         public <T> T getInstance(Class<T> type) {
+                                             // Should never reach here because the bean is applied first.
+                                             throw new Error();
+                                         }
+
+                                         @Override
+                                         public void close() {}
+                                     }, true);
+        }
+
+        @Bean
+        public ServerErrorHandler errorHandler() {
+            return (ctx, cause) -> dummyResponse;
+        }
+
+        @Bean
+        public DependencyInjector dependencyInjector() {
+            return new DependencyInjector() {
+                @Override
+                public <T> T getInstance(Class<T> type) {
+                    return type.cast(dummyObject);
+                }
+
+                @Override
+                public void close() {}
+            };
+        }
+    }
 
     @Inject
     @Nullable
@@ -69,5 +113,12 @@ class ArmeriaSettingsConfigurationTest {
         assertThat(defaultVirtualHost.requestTimeoutMillis()).isEqualTo(8000);
         assertThat(defaultVirtualHost.maxRequestLength()).isEqualTo(0);
         assertThat(defaultVirtualHost.verboseResponses()).isTrue();
+
+        // ArmeriaServerConfigurator overrides the properties from ArmeriaSettings.
+        assertThat(config.gracefulShutdownTimeout().toMillis()).isEqualTo(10000);
+        assertThat(config.gracefulShutdownQuietPeriod().toMillis()).isEqualTo(1000);
+
+        assertThat(config.dependencyInjector().getInstance(Object.class)).isSameAs(dummyObject);
+        assertThat(config.errorHandler().onServiceException(null, null)).isSameAs(dummyResponse);
     }
 }
