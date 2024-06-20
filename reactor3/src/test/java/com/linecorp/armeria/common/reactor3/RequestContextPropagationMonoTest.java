@@ -376,7 +376,6 @@ class RequestContextPropagationMonoTest {
 
     private static <T> Mono<T> addCallbacks(Mono<T> mono0, ClientRequestContext ctx,
                                             boolean useContextCapture) {
-        // doOnCancel and doFinally do not have context because we cannot add a hook to the cancel.
         final Mono<T> mono = mono0.doFirst(() -> assertThat(ctxExists(ctx)).isTrue())
                                   .doOnSubscribe(s -> assertThat(ctxExists(ctx)).isTrue())
                                   .doOnRequest(l -> assertThat(ctxExists(ctx)).isTrue())
