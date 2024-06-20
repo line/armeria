@@ -624,6 +624,8 @@ class RequestContextPropagationFluxTest {
                                   .doOnComplete(() -> assertThat(ctxExists(ctx)).isTrue())
                                   .doOnEach(s -> assertThat(ctxExists(ctx)).isTrue())
                                   .doOnError(t -> assertThat(ctxExists(ctx)).isTrue())
+                                  .doOnCancel(() -> assertThat(ctxExists(ctx)).isTrue())
+                                  .doFinally(t -> assertThat(ctxExists(ctx)).isTrue())
                                   .doAfterTerminate(() -> assertThat(ctxExists(ctx)).isTrue());
 
         if (useContextCapture) {

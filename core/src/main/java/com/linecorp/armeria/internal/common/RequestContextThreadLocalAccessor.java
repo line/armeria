@@ -98,5 +98,4 @@ public final class RequestContextThreadLocalAccessor implements ThreadLocalAcces
     public void setValue() {
         RequestContextUtil.pop();
     }
-
 }
