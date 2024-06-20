@@ -617,7 +617,6 @@ class RequestContextPropagationFluxTest {
     private static <T> Flux<T> addCallbacks(Flux<T> flux0,
                                             ClientRequestContext ctx,
                                             boolean useContextCapture) {
-        // doOnCancel and doFinally do not have context because we cannot add a hook to the cancel.
         final Flux<T> flux = flux0.doFirst(() -> assertThat(ctxExists(ctx)).isTrue())
                                   .doOnSubscribe(s -> assertThat(ctxExists(ctx)).isTrue())
                                   .doOnRequest(l -> assertThat(ctxExists(ctx)).isTrue())
