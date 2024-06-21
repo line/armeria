@@ -26,7 +26,8 @@ import com.google.common.primitives.Ints;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.client.endpoint.WeightedRandomDistributionSelector;
+import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
+import com.linecorp.armeria.internal.common.loadbalancer.Weighted;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -36,8 +37,8 @@ final class HostSet {
     private final boolean weightedPriorityHealth;
     private final int overProvisioningFactor;
 
-    private final WeightedRandomDistributionSelector<LocalityEntry> healthyLocalitySelector;
-    private final WeightedRandomDistributionSelector<LocalityEntry> degradedLocalitySelector;
+    private final LoadBalancer<Weighted<Locality>> healthyLocalitySelector;
+    private final LoadBalancer<Weighted<Locality>> degradedLocalitySelector;
 
     private final EndpointGroup hostsEndpointGroup;
     private final EndpointGroup healthyHostsEndpointGroup;
@@ -116,21 +117,22 @@ final class HostSet {
                           .toString();
     }
 
-    private static WeightedRandomDistributionSelector<LocalityEntry> rebuildLocalityScheduler(
+    private static LoadBalancer<Weighted<Locality>> rebuildLocalityScheduler(
             Map<Locality, EndpointGroup> eligibleHostsPerLocality,
             Map<Locality, EndpointGroup> allHostsPerLocality,
             Map<Locality, Integer> localityWeightsMap,
             int overProvisioningFactor) {
-        final ImmutableList.Builder<LocalityEntry> localityWeightsBuilder = ImmutableList.builder();
+        final ImmutableList.Builder<Weighted<Locality>> localityWeightsBuilder = ImmutableList.builder();
         for (Locality locality : allHostsPerLocality.keySet()) {
             final double effectiveWeight =
                     effectiveLocalityWeight(locality, eligibleHostsPerLocality, allHostsPerLocality,
                                             localityWeightsMap, overProvisioningFactor);
             if (effectiveWeight > 0) {
-                localityWeightsBuilder.add(new LocalityEntry(locality, effectiveWeight));
+                final int weight = Ints.saturatedCast(Math.round(effectiveWeight));
+                localityWeightsBuilder.add(new Weighted<>(locality, weight));
             }
         }
-        return new WeightedRandomDistributionSelector<>(localityWeightsBuilder.build());
+        return LoadBalancer.ofWeightedRandom(localityWeightsBuilder.build(), Weighted::weight);
     }
 
     static double effectiveLocalityWeight(Locality locality,
@@ -156,35 +158,23 @@ final class HostSet {
 
     @Nullable
     Locality chooseDegradedLocality() {
-        final LocalityEntry localityEntry = degradedLocalitySelector.select();
+        // It is safe to call pick() with null RequestContext because it is not used in the implementation
+        // of WeightedRandomLoadBalancer.
+        final Weighted<Locality> localityEntry = degradedLocalitySelector.pick(null);
         if (localityEntry == null) {
             return null;
         }
-        return localityEntry.locality;
+        return localityEntry.get();
     }
 
     @Nullable
     Locality chooseHealthyLocality() {
-        final LocalityEntry localityEntry = healthyLocalitySelector.select();
+        // It is safe to call pick() with null RequestContext because it is not used in the implementation
+        // of WeightedRandomLoadBalancer.
+        final Weighted<Locality> localityEntry = healthyLocalitySelector.pick(null);
         if (localityEntry == null) {
             return null;
         }
-        return localityEntry.locality;
-    }
-
-    static class LocalityEntry extends WeightedRandomDistributionSelector.AbstractEntry {
-
-        private final Locality locality;
-        private final int weight;
-
-        LocalityEntry(Locality locality, double weight) {
-            this.locality = locality;
-            this.weight = Ints.saturatedCast(Math.round(weight));
-        }
-
-        @Override
-        public int weight() {
-            return weight;
-        }
+        return localityEntry.get();
     }
 }

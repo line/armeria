@@ -26,9 +26,10 @@ import com.google.protobuf.Duration;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
-import com.linecorp.armeria.client.endpoint.EndpointWeightTransition;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.loadbalancer.WeightTransition;
+import com.linecorp.armeria.internal.client.endpoint.RampingUpKeys;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
@@ -97,8 +98,14 @@ final class EndpointUtil {
             if (slowStartConfig.hasMinWeightPercent()) {
                 minWeightPercent = slowStartConfig.getMinWeightPercent().getValue();
             }
-            builder.transition(EndpointWeightTransition.aggression(aggression, minWeightPercent));
+            builder.weightTransition(WeightTransition.aggression(aggression, minWeightPercent));
         }
+        builder.timestampFunction(endpoint -> {
+            if (RampingUpKeys.hasCreatedAtNanos(endpoint)) {
+                return RampingUpKeys.createdAtNanos(endpoint);
+            }
+            return null;
+        });
         return builder.build();
     }
 

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.common.loadbalancer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,30 +21,25 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyTest.EndpointComparator;
-import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.loadbalancer.WeightRampingUpStrategyTest.EndpointComparator;
+import com.linecorp.armeria.common.loadbalancer.WeightedRandomLoadBalancer.CandidateContext;
 import com.linecorp.armeria.common.util.Exceptions;
 
 final class WeightedRandomDistributionEndpointSelectorTest {
-
-    private static final Logger logger =
-            LoggerFactory.getLogger(WeightedRandomDistributionEndpointSelectorTest.class);
 
     @Test
     void zeroWeightFiltered() {
         final Endpoint foo = Endpoint.of("foo.com").withWeight(0);
         final Endpoint bar = Endpoint.of("bar.com").withWeight(0);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar);
-        final WeightedRandomDistributionEndpointSelector
-                selector = new WeightedRandomDistributionEndpointSelector(endpoints);
-        assertThat(selector.selectEndpoint()).isNull();
+        final LoadBalancer<Endpoint, Void> loadBalancer =
+                LoadBalancer.ofWeightedRandom(endpoints, Endpoint::weight);
+        assertThat(loadBalancer.pick(null)).isNull();
     }
 
     @Test
@@ -53,13 +48,13 @@ final class WeightedRandomDistributionEndpointSelectorTest {
         final Endpoint bar = Endpoint.of("bar.com").withWeight(2);
         final Endpoint baz = Endpoint.of("baz.com").withWeight(1);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar, baz);
-        final WeightedRandomDistributionEndpointSelector
-                selector = new WeightedRandomDistributionEndpointSelector(endpoints);
+        final LoadBalancer<Endpoint, Void> loadBalancer = LoadBalancer.ofWeightedRandom(
+                endpoints, Endpoint::weight);
         for (int i = 0; i < 1000; i++) {
             final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
             // The sum of weight is 6. Every endpoint is selected as many as its weight.
             for (int j = 0; j < 6; j++) {
-                builder.add(selector.selectEndpoint());
+                builder.add(loadBalancer.pick(null));
             }
             final List<Endpoint> selected = builder.build();
             assertThat(selected).usingElementComparator(EndpointComparator.INSTANCE).containsExactlyInAnyOrder(
@@ -79,8 +74,10 @@ final class WeightedRandomDistributionEndpointSelectorTest {
         final Endpoint bar = Endpoint.of("bar.com").withWeight(200);
         final Endpoint qux = Endpoint.of("qux.com").withWeight(300);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar, qux);
-        final WeightedRandomDistributionEndpointSelector
-                selector = new WeightedRandomDistributionEndpointSelector(endpoints);
+        final WeightedRandomLoadBalancer<Endpoint, Void> loadBalancer =
+                (WeightedRandomLoadBalancer<Endpoint, Void>)
+                        LoadBalancer.<Endpoint, Void>ofWeightedRandom(endpoints, Endpoint::weight);
+
         final int totalWeight = foo.weight() + bar.weight() + qux.weight();
         for (int i = 0; i < concurrency; i++) {
             CommonPools.blockingTaskExecutor().execute(() -> {
@@ -89,19 +86,19 @@ final class WeightedRandomDistributionEndpointSelectorTest {
                     startLatch0.await();
 
                     for (int count = 0; count < totalWeight * concurrency; count++) {
-                        assertThat(selector.selectEndpoint()).isNotNull();
+                        assertThat(loadBalancer.pick(null)).isNotNull();
                     }
                     finalLatch0.countDown();
                     finalLatch0.await();
 
-                    final int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
+                    final int sum = loadBalancer.entries().stream().mapToInt(CandidateContext::counter).sum();
                     // Since all entries were full, `Entry.counter()` should be reset.
                     assertThat(sum).isZero();
 
                     startLatch1.countDown();
                     startLatch1.await();
                     for (int count = 0; count < totalWeight * concurrency; count++) {
-                        assertThat(selector.selectEndpoint()).isNotNull();
+                        assertThat(loadBalancer.pick(null)).isNotNull();
                     }
                     finalLatch1.countDown();
                 } catch (Exception e) {
@@ -111,7 +108,7 @@ final class WeightedRandomDistributionEndpointSelectorTest {
         }
 
         finalLatch1.await();
-        final int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
+        final int sum = loadBalancer.entries().stream().mapToInt(CandidateContext::counter).sum();
         assertThat(sum).isZero();
     }
 }

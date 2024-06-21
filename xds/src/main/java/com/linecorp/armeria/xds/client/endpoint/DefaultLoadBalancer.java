@@ -26,11 +26,12 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.DefaultLbState;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
-final class DefaultLoadBalancer implements LoadBalancer {
+final class DefaultLoadBalancer implements LoadBalancer<Endpoint, ClientRequestContext> {
 
     private final DefaultLbStateFactory.DefaultLbState lbState;
 
@@ -40,12 +41,13 @@ final class DefaultLoadBalancer implements LoadBalancer {
 
     @Override
     @Nullable
-    public Endpoint selectNow(ClientRequestContext ctx) {
+    public Endpoint pick(ClientRequestContext ctx) {
+        final ClientRequestContext cctx = ctx;
         final PrioritySet prioritySet = lbState.prioritySet();
         if (prioritySet.priorities().isEmpty()) {
             return null;
         }
-        final int hash = EndpointUtil.hash(ctx);
+        final int hash = EndpointUtil.hash(cctx);
         final HostsSource hostsSource = hostSourceToUse(lbState, hash);
         if (hostsSource == null) {
             return null;
@@ -59,17 +61,17 @@ final class DefaultLoadBalancer implements LoadBalancer {
         }
         switch (hostsSource.sourceType) {
             case ALL_HOSTS:
-                return hostSet.hostsEndpointGroup().selectNow(ctx);
+                return hostSet.hostsEndpointGroup().selectNow(cctx);
             case HEALTHY_HOSTS:
-                return hostSet.healthyHostsEndpointGroup().selectNow(ctx);
+                return hostSet.healthyHostsEndpointGroup().selectNow(cctx);
             case DEGRADED_HOSTS:
-                return hostSet.degradedHostsEndpointGroup().selectNow(ctx);
+                return hostSet.degradedHostsEndpointGroup().selectNow(cctx);
             case LOCALITY_HEALTHY_HOSTS:
                 final Map<Locality, EndpointGroup> healthyLocalities =
                         hostSet.healthyEndpointGroupPerLocality();
                 final EndpointGroup healthyEndpointGroup = healthyLocalities.get(hostsSource.locality);
                 if (healthyEndpointGroup != null) {
-                    return healthyEndpointGroup.selectNow(ctx);
+                    return healthyEndpointGroup.selectNow(cctx);
                 }
                 break;
             case LOCALITY_DEGRADED_HOSTS:
@@ -77,7 +79,7 @@ final class DefaultLoadBalancer implements LoadBalancer {
                         hostSet.degradedEndpointGroupPerLocality();
                 final EndpointGroup degradedEndpointGroup = degradedLocalities.get(hostsSource.locality);
                 if (degradedEndpointGroup != null) {
-                    return degradedEndpointGroup.selectNow(ctx);
+                    return degradedEndpointGroup.selectNow(cctx);
                 }
                 break;
             default:

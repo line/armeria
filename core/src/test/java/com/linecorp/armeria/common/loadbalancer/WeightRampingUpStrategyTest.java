@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.common.loadbalancer;
 
-import static com.linecorp.armeria.client.endpoint.EndpointWeightTransition.linear;
 import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.withCreatedAtNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -23,6 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
@@ -42,11 +42,15 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsRampingUpEntry.EndpointAndStep;
-import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.RampingUpEndpointWeightSelector;
-import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.loadbalancer.RampingUpLoadBalancer.CandidateAndStep;
+import com.linecorp.armeria.common.loadbalancer.WeightedRandomLoadBalancer.CandidateContext;
+import com.linecorp.armeria.internal.client.endpoint.RampingUpKeys;
+import com.linecorp.armeria.internal.common.loadbalancer.Weighted;
 
 import io.netty.channel.DefaultEventLoop;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -61,7 +65,11 @@ final class WeightRampingUpStrategyTest {
     private static final Queue<ScheduledFuture<?>> scheduledFutures = new ConcurrentLinkedQueue<>();
     private static final long rampingUpIntervalNanos = TimeUnit.MILLISECONDS.toNanos(20000);
     private static final long rampingUpTaskWindowNanos = TimeUnit.MILLISECONDS.toNanos(1000);
-    private static final EndpointWeightTransition weightTransition = linear();
+    private static final WeightTransition<Endpoint> weightTransition = WeightTransition.linear();
+    private static final List<Endpoint> initialEndpoints = ImmutableList.of(Endpoint.of("foo.com"),
+                                                                            Endpoint.of("foo1.com"));
+    private static final List<Endpoint> secondEndpoints = ImmutableList.of(Endpoint.of("bar.com"),
+                                                                           Endpoint.of("bar1.com"));
 
     @BeforeEach
     void setUp() {
@@ -74,11 +82,10 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void endpointIsRemovedIfNotInNewEndpoints() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, 2);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(2);
         ticker.addAndGet(rampingUpIntervalNanos);
         // Because we set only foo1.com, foo.com is removed.
-        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo1.com")));
+        selector.updateCandidates(ImmutableList.of(Endpoint.of("foo1.com")));
         final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactly(
@@ -88,15 +95,16 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void rampingUpIsDoneAfterNumberOfSteps() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final int steps = 2;
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
         ticker.addAndGet(rampingUpIntervalNanos);
         final long windowIndex = selector.windowIndex(ticker.get());
-        endpointGroup.addEndpoint(Endpoint.of("bar.com"));
-        assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(windowIndex);
-        final Set<EndpointAndStep> endpointAndSteps =
-                selector.rampingUpWindowsMap.get(windowIndex).endpointAndSteps();
+        selector.updateCandidates(ImmutableList.<Endpoint>builder()
+                                               .addAll(initialEndpoints)
+                                               .add(Endpoint.of("bar.com"))
+                                               .build());
+        final Set<CandidateAndStep<Endpoint>> endpointAndSteps =
+                selector.rampingUpWindowsMap.get(windowIndex).candidateAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE).containsExactly(
                 endpointAndStep(Endpoint.of("bar.com"), 1, steps));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
@@ -110,7 +118,6 @@ final class WeightRampingUpStrategyTest {
         scheduledJobs.poll().run();
         // Ramping up is done because the step reached the numberOfSteps.
 
-        assertThat(selector.endpointsRampingUp).isEmpty();
         endpointsFromEntry = endpointsFromSelectorEntry(selector);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
@@ -121,21 +128,23 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void endpointsAreAddedToPreviousEntry_IfTheyAreAddedWithinWindow() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final int steps = 10;
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
 
-        addSecondEndpoints(endpointGroup, selector, steps);
+        addSecondEndpoints(selector, steps);
 
         ticker.addAndGet(rampingUpTaskWindowNanos - 1);
 
         final long windowIndex = selector.windowIndex(ticker.get());
-        endpointGroup.addEndpoint(Endpoint.of("baz.com"));
-        endpointGroup.addEndpoint(Endpoint.of("baz1.com"));
+        selector.updateCandidates(ImmutableList.<Endpoint>builder()
+                                               .addAll(initialEndpoints)
+                                               .addAll(secondEndpoints)
+                                               .addAll(secondEndpoints)
+                                               .build());
 
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(windowIndex);
-        final Set<EndpointAndStep> endpointAndSteps1 =
-                selector.rampingUpWindowsMap.get(windowIndex).endpointAndSteps();
+        final Set<CandidateAndStep<Endpoint>> endpointAndSteps1 =
+                selector.rampingUpWindowsMap.get(windowIndex).candidateAndSteps();
         assertThat(endpointAndSteps1).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                      .containsExactlyInAnyOrder(
                                              endpointAndStep(Endpoint.of("bar.com"), 1, steps),
@@ -155,20 +164,19 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void endpointsAreAddedToNewEntry_IfAllTheEntryAreRemoved() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final int steps = 10;
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
 
-        addSecondEndpoints(endpointGroup, selector, steps);
+        addSecondEndpoints(selector, steps);
 
         ticker.addAndGet(steps * rampingUpIntervalNanos);
 
         final long window = selector.windowIndex(ticker.get());
-        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("baz.com"), Endpoint.of("baz1.com")));
+        selector.updateCandidates(ImmutableList.of(Endpoint.of("baz.com"), Endpoint.of("baz1.com")));
 
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
-        final Set<EndpointAndStep> endpointAndSteps1 =
-                selector.rampingUpWindowsMap.get(window).endpointAndSteps();
+        final Set<CandidateAndStep<Endpoint>> endpointAndSteps1 =
+                selector.rampingUpWindowsMap.get(window).candidateAndSteps();
         assertThat(endpointAndSteps1).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                      .containsExactlyInAnyOrder(
                                              endpointAndStep(Endpoint.of("baz.com"), 1, steps),
@@ -177,19 +185,18 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void endpointsAreAddedToNextEntry_IfTheyAreAddedWithinWindow() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final int steps = 10;
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
 
         long window = selector.windowIndex(ticker.get());
-        addSecondEndpoints(endpointGroup, selector, steps);
+        addSecondEndpoints(selector, steps);
 
         // Add 19 seconds so now it's within the window of second ramping up of bar.com and bar1.com.
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(19));
 
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
-        final Set<EndpointAndStep> endpointAndSteps1 =
-                selector.rampingUpWindowsMap.get(window).endpointAndSteps();
+        final Set<CandidateAndStep<Endpoint>> endpointAndSteps1 =
+                selector.rampingUpWindowsMap.get(window).candidateAndSteps();
         assertThat(endpointAndSteps1).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                      .containsExactlyInAnyOrder(
                                              endpointAndStep(Endpoint.of("bar.com"), 1, steps),
@@ -206,13 +213,13 @@ final class WeightRampingUpStrategyTest {
         window = selector.windowIndex(ticker.get());
 
         // The weights of qux.com and qux1.com will be ramped up with bar.com and bar1.com.
-        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
-                                                    Endpoint.of("bar.com"), Endpoint.of("bar1.com"),
-                                                    Endpoint.of("qux.com"), Endpoint.of("qux1.com")));
+        selector.updateCandidates(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                                   Endpoint.of("bar.com"), Endpoint.of("bar1.com"),
+                                                   Endpoint.of("qux.com"), Endpoint.of("qux1.com")));
 
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
-        final Set<EndpointAndStep> endpointAndSteps2 =
-                selector.rampingUpWindowsMap.get(window).endpointAndSteps();
+        final Set<CandidateAndStep<Endpoint>> endpointAndSteps2 =
+                selector.rampingUpWindowsMap.get(window).candidateAndSteps();
         assertThat(endpointAndSteps2).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                      .containsExactlyInAnyOrder(
                                              endpointAndStep(Endpoint.of("bar.com"), 2, steps),
@@ -234,13 +241,12 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void setEndpointWithDifferentWeight() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final int steps = 10;
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
 
         // Set an endpoint with the weight which is lower than current weight so ramping up is
         // not happening for the endpoint.
-        endpointGroup.setEndpoints(
+        selector.updateCandidates(
                 ImmutableList.of(Endpoint.of("foo.com").withWeight(100), Endpoint.of("foo1.com")));
         assertThat(selector.rampingUpWindowsMap).hasSize(0);
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
@@ -251,13 +257,13 @@ final class WeightRampingUpStrategyTest {
 
         long window = selector.windowIndex(ticker.get());
         // Set an endpoint with the weight which is greater than the current weight
-        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com").withWeight(3000),
-                                                    Endpoint.of("foo1.com"),
-                                                    Endpoint.of("bar.com")));
+        selector.updateCandidates(ImmutableList.of(Endpoint.of("foo.com").withWeight(3000),
+                                                   Endpoint.of("foo1.com"),
+                                                   Endpoint.of("bar.com")));
 
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
-        Set<EndpointAndStep> endpointAndSteps =
-                selector.rampingUpWindowsMap.get(window).endpointAndSteps();
+        Set<CandidateAndStep<Endpoint>> endpointAndSteps =
+                selector.rampingUpWindowsMap.get(window).candidateAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
                                             endpointAndStep(Endpoint.of("bar.com"), 1, steps));
@@ -274,7 +280,7 @@ final class WeightRampingUpStrategyTest {
         window = selector.windowIndex(ticker.get());
 
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
-        endpointAndSteps = selector.rampingUpWindowsMap.get(window).endpointAndSteps();
+        endpointAndSteps = selector.rampingUpWindowsMap.get(window).candidateAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
                                             endpointAndStep(Endpoint.of("bar.com"), 2, steps));
@@ -288,9 +294,9 @@ final class WeightRampingUpStrategyTest {
                 );
 
         // Set an endpoint with the weight which is lower than current weight so scheduling is canceled.
-        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com").withWeight(599),
-                                                    Endpoint.of("foo1.com"),
-                                                    Endpoint.of("bar.com")));
+        selector.updateCandidates(ImmutableList.of(Endpoint.of("foo.com").withWeight(599),
+                                                   Endpoint.of("foo1.com"),
+                                                   Endpoint.of("bar.com")));
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE).containsExactly(
                 endpointAndStep(Endpoint.of("bar.com"), 2, steps));
@@ -304,20 +310,19 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void rampingUpEndpointsAreRemoved() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final int steps = 10;
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
 
-        addSecondEndpoints(endpointGroup, selector, steps);
+        addSecondEndpoints(selector, steps);
 
         final long window = selector.windowIndex(ticker.get());
         // bar1.com is removed and the weight of bar.com is ramped up.
-        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
-                                                    Endpoint.of("bar.com").withWeight(3000)));
+        selector.updateCandidates(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                                   Endpoint.of("bar.com").withWeight(3000)));
 
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
-        final Set<EndpointAndStep> endpointAndSteps =
-                selector.rampingUpWindowsMap.get(window).endpointAndSteps();
+        final Set<CandidateAndStep<Endpoint>> endpointAndSteps =
+                selector.rampingUpWindowsMap.get(window).candidateAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE).containsExactly(
                 endpointAndStep(Endpoint.of("bar.com").withWeight(3000), 1, steps));
         List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
@@ -329,7 +334,7 @@ final class WeightRampingUpStrategyTest {
 
         ticker.addAndGet(steps * rampingUpIntervalNanos);
         // bar.com is removed.
-        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com")));
+        selector.updateCandidates(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com")));
         scheduledJobs.peek().run();
 
         assertThat(selector.rampingUpWindowsMap).isEmpty();
@@ -344,21 +349,20 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void sameEndpointsAreProcessed() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final int steps = 10;
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
 
-        addSecondEndpoints(endpointGroup, selector, steps);
+        addSecondEndpoints(selector, steps);
 
         final long window = selector.windowIndex(ticker.get());
         // The three bar.com are converted into onw bar.com with 3000 weight.
-        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
-                                                    Endpoint.of("bar.com"), Endpoint.of("bar.com"),
-                                                    Endpoint.of("bar.com"), Endpoint.of("bar1.com")));
+        selector.updateCandidates(ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"),
+                                                   Endpoint.of("bar.com"), Endpoint.of("bar.com"),
+                                                   Endpoint.of("bar.com"), Endpoint.of("bar1.com")));
 
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
-        final Set<EndpointAndStep> endpointAndSteps =
-                selector.rampingUpWindowsMap.get(window).endpointAndSteps();
+        final Set<CandidateAndStep<Endpoint>> endpointAndSteps =
+                selector.rampingUpWindowsMap.get(window).candidateAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
                                             endpointAndStep(Endpoint.of("bar.com"), 1, steps),
@@ -379,12 +383,11 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void endpointTimestampsArePrioritized() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final int steps = 10;
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
 
         // The three bar.com are converted into onw bar.com with 3000 weight.
-        endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo.com")));
+        selector.updateCandidates(ImmutableList.of(Endpoint.of("foo.com")));
 
         ticker.addAndGet(rampingUpIntervalNanos * steps);
 
@@ -395,12 +398,12 @@ final class WeightRampingUpStrategyTest {
 
         // as far as the selector is concerned, the endpoint is added at ticker#get now
         final Endpoint endpoint = withCreatedAtNanos(Endpoint.of("foo.com"), ticker.get());
-        endpointGroup.setEndpoints(ImmutableList.of(endpoint));
+        selector.updateCandidates(ImmutableList.of(endpoint));
 
         final long window = selector.windowIndex(ticker.get());
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(window);
-        final Set<EndpointAndStep> endpointAndSteps =
-                selector.rampingUpWindowsMap.get(window).endpointAndSteps();
+        final Set<CandidateAndStep<Endpoint>> endpointAndSteps =
+                selector.rampingUpWindowsMap.get(window).candidateAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
                                             endpointAndStep(Endpoint.of("foo.com"), 1, steps));
@@ -411,22 +414,27 @@ final class WeightRampingUpStrategyTest {
 
     @Test
     void scheduledIsCanceledWhenEndpointGroupIsClosed() {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
         final int steps = 10;
-        final RampingUpEndpointWeightSelector selector = setInitialEndpoints(endpointGroup, steps);
+        final RampingUpLoadBalancer<Endpoint, Void> selector = setInitialEndpoints(steps);
 
         ticker.addAndGet(steps * rampingUpIntervalNanos);
 
-        addSecondEndpoints(endpointGroup, selector, steps);
+        addSecondEndpoints(selector, steps);
         assertThat(scheduledFutures).hasSize(2);
 
         ticker.addAndGet(TimeUnit.SECONDS.toNanos(steps));
 
-        endpointGroup.addEndpoint(Endpoint.of("baz.com"));
-        endpointGroup.addEndpoint(Endpoint.of("baz1.com"));
+        final List<Endpoint> newEndpoints = ImmutableList.<Endpoint>builder()
+                                                         .addAll(initialEndpoints)
+                                                         .addAll(secondEndpoints)
+                                                         .add(Endpoint.of("baz.com"))
+                                                         .add(Endpoint.of("baz1.com"))
+                                                         .build();
+
+        selector.updateCandidates(newEndpoints);
         assertThat(scheduledFutures).hasSize(3);
 
-        endpointGroup.close();
+        selector.close();
 
         ScheduledFuture<?> scheduledFuture;
         while ((scheduledFuture = scheduledFutures.poll()) != null) {
@@ -464,34 +472,41 @@ final class WeightRampingUpStrategyTest {
     @MethodSource("correctSchedulingParams")
     void correctScheduling(long intervalNanos, long windowNanos, int totalSteps,
                            long timePassed, long expectedInitialDelay, long expectedWindow) {
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
-        final WeightRampingUpStrategy strategy =
-                new WeightRampingUpStrategy(
-                        weightTransition, ImmediateExecutor::new,
-                        TimeUnit.NANOSECONDS.toMillis(intervalNanos), totalSteps,
-                        TimeUnit.NANOSECONDS.toMillis(windowNanos), ticker::get);
-        final RampingUpEndpointWeightSelector selector =
-                (RampingUpEndpointWeightSelector) strategy.newSelector(endpointGroup);
+        final RampingUpLoadBalancer<Endpoint, Void> loadBalancer =
+                (RampingUpLoadBalancer<Endpoint, Void>)
+                        LoadBalancer.<Endpoint, Void>builderForRampingUp(
+                                            ImmutableList.of(Endpoint.of("baz.com")))
+                                    .weightTransition(weightTransition)
+                                    .rampingUpInterval(Duration.ofNanos(intervalNanos))
+                                    .rampingUpTaskWindow(Duration.ofNanos(windowNanos))
+                                    .totalSteps(totalSteps)
+                                    .ticker(ticker::get)
+                                    .executor(new ImmediateExecutor())
+                                    .build();
 
         ticker.addAndGet(timePassed);
-        endpointGroup.addEndpoint(Endpoint.of("baz.com"));
         assertThat(periodNanos.poll()).isEqualTo(intervalNanos);
         assertThat(initialDelayNanos.poll()).isEqualTo(expectedInitialDelay);
-        assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(expectedWindow);
+        assertThat(loadBalancer.rampingUpWindowsMap).containsOnlyKeys(expectedWindow);
     }
 
-    private static RampingUpEndpointWeightSelector setInitialEndpoints(DynamicEndpointGroup endpointGroup,
-                                                                       int numberOfSteps) {
-        final WeightRampingUpStrategy strategy =
-                new WeightRampingUpStrategy(
-                        weightTransition, ImmediateExecutor::new,
-                        TimeUnit.NANOSECONDS.toMillis(rampingUpIntervalNanos), numberOfSteps,
-                        TimeUnit.NANOSECONDS.toMillis(rampingUpTaskWindowNanos), ticker::get);
-
-        final List<Endpoint> endpoints = ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"));
-        endpointGroup.setEndpoints(endpoints);
-        final RampingUpEndpointWeightSelector selector =
-                (RampingUpEndpointWeightSelector) strategy.newSelector(endpointGroup);
+    private static RampingUpLoadBalancer<Endpoint, Void> setInitialEndpoints(int numberOfSteps) {
+        final RampingUpLoadBalancer<Endpoint, Void> loadBalancer = (RampingUpLoadBalancer<Endpoint, Void>)
+                LoadBalancer.<Endpoint, Void>builderForRampingUp(initialEndpoints)
+                            .weightTransition(weightTransition)
+                            .rampingUpInterval(Duration.ofNanos(rampingUpIntervalNanos))
+                            .rampingUpTaskWindow(Duration.ofNanos(rampingUpTaskWindowNanos))
+                            .ticker(ticker::get)
+                            .totalSteps(numberOfSteps)
+                            .timestampFunction(e -> {
+                                if (RampingUpKeys.hasCreatedAtNanos(e)) {
+                                    return RampingUpKeys.createdAtNanos(e);
+                                } else {
+                                    return null;
+                                }
+                            })
+                            .executor(new ImmediateExecutor())
+                            .build();
 
         final ScheduledFuture<?> future = scheduledFutures.peek();
         // We start out with step 1 so the scheduled jobs needs to run (n - 1) times
@@ -503,31 +518,35 @@ final class WeightRampingUpStrategyTest {
         periodNanos.clear();
         initialDelayNanos.clear();
 
-        final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(selector);
+        final List<Endpoint> endpointsFromEntry = endpointsFromSelectorEntry(loadBalancer);
         assertThat(endpointsFromEntry).usingElementComparator(EndpointComparator.INSTANCE)
                                       .containsExactlyInAnyOrder(
                                               Endpoint.of("foo.com"), Endpoint.of("foo1.com")
                                       );
-        return selector;
+        return loadBalancer;
     }
 
-    private static List<Endpoint> endpointsFromSelectorEntry(RampingUpEndpointWeightSelector selector) {
+    private static List<Endpoint> endpointsFromSelectorEntry(RampingUpLoadBalancer<Endpoint, Void> selector) {
         final ImmutableList.Builder<Endpoint> builder = new ImmutableList.Builder<>();
-        final List<Entry> entries = selector.endpointSelector().entries();
-        entries.forEach(entry -> builder.add(entry.endpoint()));
+        @SuppressWarnings("unchecked")
+        final WeightedRandomLoadBalancer<Weighted<Endpoint>, Void> randomLoadBalancer =
+                (WeightedRandomLoadBalancer<Weighted<Endpoint>, Void>)
+                        selector.weightedRandomLoadBalancer();
+        final List<CandidateContext<Weighted<Endpoint>>> entries = randomLoadBalancer.entries();
+        entries.forEach(entry -> builder.add(entry.get().get()));
         return builder.build();
     }
 
-    private void addSecondEndpoints(DynamicEndpointGroup endpointGroup,
-                                    RampingUpEndpointWeightSelector selector,
-                                    int steps) {
-        endpointGroup.addEndpoint(Endpoint.of("bar.com"));
-        endpointGroup.addEndpoint(Endpoint.of("bar1.com"));
-
+    private static void addSecondEndpoints(RampingUpLoadBalancer<Endpoint, Void> selector, int steps) {
+        final List<Endpoint> newEndpoints = ImmutableList.<Endpoint>builder()
+                                                         .addAll(initialEndpoints)
+                                                         .addAll(secondEndpoints)
+                                                         .build();
+        selector.updateCandidates(newEndpoints);
         final long windowIndex = selector.windowIndex(ticker.get());
         assertThat(selector.rampingUpWindowsMap).containsOnlyKeys(windowIndex);
-        final Set<EndpointAndStep> endpointAndSteps =
-                selector.rampingUpWindowsMap.get(windowIndex).endpointAndSteps();
+        final Set<CandidateAndStep<Endpoint>> endpointAndSteps =
+                selector.rampingUpWindowsMap.get(windowIndex).candidateAndSteps();
         assertThat(endpointAndSteps).usingElementComparator(EndpointAndStepComparator.INSTANCE)
                                     .containsExactlyInAnyOrder(
                                             endpointAndStep(Endpoint.of("bar.com"), 1, steps),
@@ -542,8 +561,8 @@ final class WeightRampingUpStrategyTest {
                                       );
     }
 
-    private static EndpointAndStep endpointAndStep(Endpoint endpoint, int step, int totalSteps) {
-        return new EndpointAndStep(endpoint, weightTransition, step, totalSteps);
+    private static CandidateAndStep<Endpoint> endpointAndStep(Endpoint endpoint, int step, int totalSteps) {
+        return new CandidateAndStep<>(endpoint, weightTransition, Endpoint::weight, step, totalSteps);
     }
 
     /**
@@ -565,14 +584,14 @@ final class WeightRampingUpStrategyTest {
     /**
      * A Comparator which includes the weight of an endpoint to compare.
      */
-    private enum EndpointAndStepComparator implements Comparator<EndpointAndStep> {
+    private enum EndpointAndStepComparator implements Comparator<CandidateAndStep<Endpoint>> {
 
         INSTANCE;
 
         @Override
-        public int compare(EndpointAndStep o1, EndpointAndStep o2) {
-            final Endpoint endpoint1 = o1.endpoint();
-            final Endpoint endpoint2 = o2.endpoint();
+        public int compare(CandidateAndStep<Endpoint> o1, CandidateAndStep<Endpoint> o2) {
+            final Endpoint endpoint1 = o1.candidate();
+            final Endpoint endpoint2 = o2.candidate();
             if (endpoint1.equals(endpoint2) &&
                 endpoint1.weight() == endpoint2.weight() &&
                 o1.step() == o2.step() &&

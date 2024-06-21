@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
@@ -42,7 +43,7 @@ final class ClusterEntry implements AsyncCloseable {
 
     private final EndpointsPool endpointsPool;
     @Nullable
-    private volatile LoadBalancer loadBalancer;
+    private volatile LoadBalancer<Endpoint> loadBalancer;
     private final ClusterManager clusterManager;
     private final EventExecutor eventExecutor;
     private List<Endpoint> endpoints = ImmutableList.of();
@@ -57,11 +58,11 @@ final class ClusterEntry implements AsyncCloseable {
 
     @Nullable
     Endpoint selectNow(ClientRequestContext ctx) {
-        final LoadBalancer loadBalancer = this.loadBalancer;
+        final LoadBalancer<Endpoint> loadBalancer = this.loadBalancer;
         if (loadBalancer == null) {
             return null;
         }
-        return loadBalancer.selectNow(ctx);
+        return loadBalancer.pick(ctx);
     }
 
     void updateClusterSnapshot(ClusterSnapshot clusterSnapshot) {

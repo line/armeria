@@ -33,13 +33,14 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetFallbackPolicy;
 
-final class SubsetLoadBalancer implements LoadBalancer {
+final class SubsetLoadBalancer implements LoadBalancer<Endpoint, ClientRequestContext> {
 
     private static final Logger logger = LoggerFactory.getLogger(SubsetLoadBalancer.class);
 
@@ -51,8 +52,8 @@ final class SubsetLoadBalancer implements LoadBalancer {
 
     @Override
     @Nullable
-    public Endpoint selectNow(ClientRequestContext ctx) {
-        return endpointGroup.selectNow(ctx);
+    public Endpoint pick(ClientRequestContext ctx) {
+        return endpointGroup.selectNow((ClientRequestContext) ctx);
     }
 
     private static EndpointGroup createEndpointGroup(PrioritySet prioritySet) {
