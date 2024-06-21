@@ -32,6 +32,6 @@ public interface HealthCheckUpdateListener {
      * updates.
      */
     default void healthStatusUpdated(HealthStatus healthStatus) throws Exception {
-        healthUpdated(healthStatus.isAvailable());
+        healthUpdated(healthStatus.isHealthy());
     }
 }

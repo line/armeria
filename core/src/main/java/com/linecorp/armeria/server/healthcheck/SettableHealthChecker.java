@@ -57,7 +57,7 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
 
     @Override
     public boolean isHealthy() {
-        return this.healthStatus.isAvailable();
+        return this.healthStatus.isHealthy();
     }
 
     /**

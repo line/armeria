@@ -31,24 +31,24 @@ public enum HealthStatus {
     UNDER_MAINTENANCE(100, false);
 
     private final int priority;
-    private final boolean isAvailable;
+    private final boolean isHealthy;
 
-    HealthStatus(int priority, boolean isAvailable) {
+    HealthStatus(int priority, boolean isHealthy) {
         this.priority = priority;
-        this.isAvailable = isAvailable;
+        this.isHealthy = isHealthy;
     }
 
     /**
      * Returns the priority of this {@link HealthStatus}.
      */
-    public int getPriority() {
+    public int priority() {
         return priority;
     }
 
     /**
      * Returns whether this {@link HealthStatus} is considered available.
      */
-    public boolean isAvailable() {
-        return isAvailable;
+    public boolean isHealthy() {
+        return isHealthy;
     }
 }

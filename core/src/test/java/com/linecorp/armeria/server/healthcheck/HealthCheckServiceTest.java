@@ -32,6 +32,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -42,6 +43,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 
@@ -495,43 +497,67 @@ class HealthCheckServiceTest {
         assertThat(res2.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
-    @Test
-    void checkDegradedStatus() {
-        checker.setHealthStatus(HealthStatus.DEGRADED);
+    @ParameterizedTest
+    @ValueSource(strings = { "DEGRADED", "STOPPING", "UNHEALTHY", "UNDER_MAINTENANCE" })
+    void checkStatus(String status) {
+        final HealthStatus healthStatus = HealthStatus.valueOf(status);
+        checker.setHealthStatus(healthStatus);
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.GET, "/hc"));
-        assertThat(res).isEqualTo(AggregatedHttpResponse.of(
-                ResponseHeaders.of(HttpStatus.OK,
-                                   HttpHeaderNames.CONTENT_TYPE, MediaType.JSON_UTF_8,
-                                   "armeria-lphc", "60, 5"),
-                HttpData.ofUtf8("{\"healthy\":true,\"status\":\"DEGRADED\"}")));
+        assertThat(res.content()).isEqualTo(HttpData.ofUtf8("{\"healthy\":" + healthStatus.isHealthy() + ","
+                                                            + "\"status\":\"" + healthStatus.name() + "\"}"));
+    }
+
+    @Test
+    void pollSameHealthState() throws ExecutionException, InterruptedException {
+        checker.setHealthStatus(HealthStatus.HEALTHY);
+        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("healthy", "/hc");
+        assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
+
+        // Because we did not poll for specific status, no response is sent.
+        checker.setHealthStatus(HealthStatus.DEGRADED);
+        assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
+        
+        checker.setHealthStatus(HealthStatus.UNHEALTHY);
+        assertThat(f.get().contentUtf8()).isEqualTo(
+                "{\"healthy\":" + "false" + ",\"status\":\"" + "UNHEALTHY" + "\"}");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "healthy,   STOPPING",
+            "healthy,   UNHEALTHY",
+            "healthy,   UNDER_MAINTENANCE",
+            "unhealthy, HEALTHY",
+            "unhealthy, DEGRADED",
+    })
+    void pollHealthState(String longPollingState, String targetStatus)
+            throws ExecutionException, InterruptedException {
+        checker.setHealthy(longPollingState.equals("healthy"));
+        final HealthStatus healthStatus = HealthStatus.valueOf(targetStatus);
+        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet(longPollingState, "/hc");
+        assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
+
+        checker.setHealthStatus(healthStatus);
+        final String changedState = healthStatus.isHealthy() ? "true" : "false";
+        assertThat(f.get().contentUtf8()).isEqualTo(
+                "{\"healthy\":" + changedState + ",\"status\":\"" + healthStatus.name() + "\"}");
     }
 
     @ParameterizedTest
     @ValueSource(strings = { "DEGRADED", "STOPPING", "UNHEALTHY", "UNDER_MAINTENANCE" })
-    void notifyHealthStatus(String healthStatus) throws Exception {
-        final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("healthy", "/hc");
+    void pollSpecificHealthStatus(String status) throws Exception {
+        final HealthStatus healthStatus = HealthStatus.valueOf(status);
+        checker.setHealthStatus(HealthStatus.HEALTHY);
+        final CompletableFuture<AggregatedHttpResponse> f =
+                sendLongPollingGet(HealthStatus.HEALTHY, "/hc");
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
 
-        switch (healthStatus) {
-            case "DEGRADED":
-                checker.setHealthStatus(HealthStatus.DEGRADED);
-                assertThat(f.get().contentUtf8()).isEqualTo("{\"healthy\":true,\"status\":\"DEGRADED\"}");
-                break;
-            case "STOPPING":
-                checker.setHealthStatus(HealthStatus.STOPPING);
-                assertThat(f.get().contentUtf8()).isEqualTo("{\"healthy\":false,\"status\":\"STOPPING\"}");
-                break;
-            case "UNHEALTHY":
-                checker.setHealthStatus(HealthStatus.UNHEALTHY);
-                assertThat(f.get().contentUtf8()).isEqualTo("{\"healthy\":false,\"status\":\"UNHEALTHY\"}");
-                break;
-            case "UNDER_MAINTENANCE":
-                checker.setHealthStatus(HealthStatus.UNDER_MAINTENANCE);
-                assertThat(f.get().contentUtf8()).isEqualTo(
-                        "{\"healthy\":false,\"status\":\"UNDER_MAINTENANCE\"}");
-                break;
-        }
+        // change to different health status and get notified
+        checker.setHealthStatus(healthStatus);
+        final String healthy = healthStatus.isHealthy() ? "true" : "false";
+        assertThat(f.get().contentUtf8()).isEqualTo(
+                "{\"healthy\":" + healthy + ",\"status\":\"" + healthStatus.name() + "\"}");
     }
 
     private static void verifyDebugEnabled(Logger logger) {
@@ -552,5 +578,20 @@ class HealthCheckServiceTest {
                                                 HttpHeaderNames.PREFER, "wait=" + timeoutSeconds,
                                                 HttpHeaderNames.IF_NONE_MATCH,
                                                 '"' + healthiness + '"')).aggregate();
+    }
+
+    private static CompletableFuture<AggregatedHttpResponse> sendLongPollingGet(HealthStatus healthStatus,
+                                                                                String path) {
+        return sendLongPollingGet(healthStatus, 120, path);
+    }
+
+    private static CompletableFuture<AggregatedHttpResponse> sendLongPollingGet(HealthStatus healthStatus,
+                                                                                int timeoutSeconds,
+                                                                                String path) {
+        final WebClient client = WebClient.of(server.httpUri());
+        return client.execute(RequestHeaders.of(HttpMethod.GET, path,
+                                                HttpHeaderNames.PREFER, "wait=" + timeoutSeconds,
+                                                HttpHeaderNames.IF_NONE_MATCH,
+                                                "\"status=" + healthStatus + '"')).aggregate();
     }
 }
