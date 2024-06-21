@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.encoding;
+package com.linecorp.armeria.common.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,6 +46,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
@@ -57,7 +58,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.encoding.StreamDecoder;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompositeException;
@@ -66,6 +66,7 @@ import com.linecorp.armeria.internal.common.encoding.DefaultHttpDecodedResponse;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.compression.DecompressionException;
+import io.netty.handler.codec.compression.SnappyFrameDecoder;
 import reactor.test.StepVerifier;
 
 class DefaultHttpDecodedResponseTest {
@@ -309,6 +310,15 @@ class DefaultHttpDecodedResponseTest {
         assertThatThrownBy(() -> decoded.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(CompositeException.class);
+    }
+
+    @Test
+    void shouldExposeReasonWhenEncounterUnexpectedDecodeException() {
+        final HttpData httpData = HttpData.of(StandardCharsets.UTF_8, "Hello");
+        final StreamDecoder decoder = new AbstractStreamDecoder(new SnappyFrameDecoder(),
+                                                                ByteBufAllocator.DEFAULT, 100);
+        assertThatThrownBy(() -> decoder.decode(httpData))
+                .isInstanceOf(DecompressionException.class);
     }
 
     private static HttpResponse newFailingDecodedResponse() {
