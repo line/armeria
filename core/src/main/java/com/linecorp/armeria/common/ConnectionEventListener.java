@@ -35,6 +35,12 @@ public interface ConnectionEventListener {
 
     /**
      * Invoked when a connection is opened.
+     *
+     * @param desiredProtocol the protocol that the client requested to use. null if it's server.
+     * @param protocol the protocol that the connection is actually using.
+     * @param remoteAddress the remote address of the connection.
+     * @param localAddress the local address of the connection.
+     * @param attrs the attributes of the connection.
      */
     void connectionOpened(@Nullable SessionProtocol desiredProtocol,
                           SessionProtocol protocol,
@@ -44,14 +50,26 @@ public interface ConnectionEventListener {
 
     /**
      * Invoked when a connection becomes active.
+     *
+     * @param protocol the protocol that the connection is using.
+     * @param remoteAddress the remote address of the connection.
+     * @param localAddress the local address of the connection.
+     * @param attrs the attributes of the connection.
+     * @param isNew whether the connection is newly created or reused.
      */
     void connectionActive(SessionProtocol protocol,
                           InetSocketAddress remoteAddress,
                           InetSocketAddress localAddress,
-                          AttributeMap attrs) throws Exception;
+                          AttributeMap attrs,
+                          boolean isNew) throws Exception;
 
     /**
      * Invoked when a connection becomes idle.
+     *
+     * @param protocol the protocol that the connection is using.
+     * @param remoteAddress the remote address of the connection.
+     * @param localAddress the local address of the connection.
+     * @param attrs the attributes of the connection.
      */
     void connectionIdle(SessionProtocol protocol,
                         InetSocketAddress remoteAddress,
@@ -60,10 +78,16 @@ public interface ConnectionEventListener {
 
     /**
      * Invoked when a connection is closed.
+     *
+     * @param protocol the protocol that the connection is using.
+     * @param remoteAddress the remote address of the connection.
+     * @param localAddress the local address of the connection.
+     * @param attrs the attributes of the connection.
+     * @param isActive whether the connection was active or not(idle).
      */
     void connectionClosed(SessionProtocol protocol,
                           InetSocketAddress remoteAddress,
                           InetSocketAddress localAddress,
-                          boolean isActive,
-                          AttributeMap attrs) throws Exception;
+                          AttributeMap attrs,
+                          boolean isActive) throws Exception;
 }

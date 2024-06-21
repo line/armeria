@@ -54,8 +54,8 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
             public void connectionClosed(SessionProtocol protocol,
                                          InetSocketAddress remoteAddress,
                                          InetSocketAddress localAddress,
-                                         boolean isActive,
-                                         AttributeMap attrs) throws Exception {
+                                         AttributeMap attrs,
+                                         boolean isActive) throws Exception {
                 connectionPoolListener.connectionClosed(protocol,
                                                         remoteAddress,
                                                         localAddress,
@@ -92,7 +92,8 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
     public void connectionActive(SessionProtocol protocol,
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
-                                 AttributeMap attrs) throws Exception {}
+                                 AttributeMap attrs,
+                                 boolean isNew) throws Exception {}
 
     @Override
     public void connectionIdle(SessionProtocol protocol,
@@ -104,6 +105,5 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
     public void connectionClosed(SessionProtocol protocol,
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
-                                 boolean isActive,
-                                 AttributeMap attrs) throws Exception {}
+                                 AttributeMap attrs, boolean isActive) throws Exception {}
 }

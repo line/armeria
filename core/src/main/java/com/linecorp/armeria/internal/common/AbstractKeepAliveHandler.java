@@ -254,20 +254,27 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             return;
         }
 
-        if (!connectionEventState.isActive()) {
-            connectionEventState.setActive(true);
+        if (connectionEventState.isActive()) {
+            return;
+        }
 
-            final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
-            final InetSocketAddress localAddress = connectionEventState.localAddress();
-            final SessionProtocol protocol = connectionEventState.actualProtocol();
+        connectionEventState.setActive(true);
 
-            try {
-                connectionEventListener.connectionActive(protocol, localAddress, remoteAddress, channel);
-            } catch (Throwable e) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("{} Exception handling {}.connectionActive()",
-                                channel, connectionEventListener.getClass().getName(), e);
-                }
+        final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
+        final InetSocketAddress localAddress = connectionEventState.localAddress();
+        final SessionProtocol protocol = connectionEventState.actualProtocol();
+        final boolean isNew = connectionEventState.isNew();
+
+        try {
+            connectionEventListener.connectionActive(protocol, localAddress, remoteAddress, channel, isNew);
+
+            if (isNew) {
+                connectionEventState.setNew(false);
+            }
+        } catch (Throwable e) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("{} Exception handling {}.connectionActive()",
+                            channel, connectionEventListener.getClass().getName(), e);
             }
         }
     }
@@ -280,20 +287,22 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             return;
         }
 
-        if (connectionEventState.isActive()) {
-            connectionEventState.setActive(false);
+        if (!connectionEventState.isActive()) {
+            return;
+        }
 
-            final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
-            final InetSocketAddress localAddress = connectionEventState.localAddress();
-            final SessionProtocol protocol = Objects.requireNonNull(connectionEventState.actualProtocol());
+        connectionEventState.setActive(false);
 
-            try {
-                connectionEventListener.connectionIdle(protocol, localAddress, remoteAddress, channel);
-            } catch (Throwable e) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn("{} Exception handling {}.connectionIdle()",
-                                channel, connectionEventListener.getClass().getName(), e);
-                }
+        final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
+        final InetSocketAddress localAddress = connectionEventState.localAddress();
+        final SessionProtocol protocol = Objects.requireNonNull(connectionEventState.actualProtocol());
+
+        try {
+            connectionEventListener.connectionIdle(protocol, localAddress, remoteAddress, channel);
+        } catch (Throwable e) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("{} Exception handling {}.connectionIdle()",
+                            channel, connectionEventListener.getClass().getName(), e);
             }
         }
     }

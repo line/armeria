@@ -40,7 +40,8 @@ public class ConnectionEventListenerAdapter implements ConnectionEventListener {
     public void connectionActive(SessionProtocol protocol,
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
-                                 AttributeMap attrs) throws Exception {}
+                                 AttributeMap attrs,
+                                 boolean isNew) throws Exception {}
 
     @Override
     public void connectionIdle(SessionProtocol protocol,
@@ -52,6 +53,6 @@ public class ConnectionEventListenerAdapter implements ConnectionEventListener {
     public void connectionClosed(SessionProtocol protocol,
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
-                                 boolean isActive,
-                                 AttributeMap attrs) throws Exception {}
+                                 AttributeMap attrs,
+                                 boolean isActive) throws Exception {}
 }

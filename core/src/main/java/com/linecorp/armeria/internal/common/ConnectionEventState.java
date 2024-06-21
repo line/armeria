@@ -53,7 +53,13 @@ public final class ConnectionEventState {
     private SessionProtocol desiredProtocol;
 
     /**
-     * Whether the connection is active.
+     * Whether the connection is a new one or not.
+     * This flag is used to handle connection active event properly.
+     */
+    private boolean isNew = true;
+
+    /**
+     * Return true if the connection is active, otherwise false that the connection is idle.
      */
     private boolean isActive;
 
@@ -73,6 +79,14 @@ public final class ConnectionEventState {
      */
     public ConnectionEventState setActualProtocol(SessionProtocol actualProtocol) {
         this.actualProtocol = actualProtocol;
+        return this;
+    }
+
+    /**
+     * Sets whether the connection is a new one or not.
+     */
+    public ConnectionEventState setNew(boolean isNew) {
+        this.isNew = isNew;
         return this;
     }
 
@@ -112,6 +126,13 @@ public final class ConnectionEventState {
     @Nullable
     public SessionProtocol desiredProtocol() {
         return desiredProtocol;
+    }
+
+    /**
+     * Returns whether the connection is a new one or not.
+     */
+    public boolean isNew() {
+        return isNew;
     }
 
     /**
