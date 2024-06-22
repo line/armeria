@@ -98,6 +98,10 @@ class HealthCheckServiceTest {
                                                                      .updatable(true)
                                                                      .startUnhealthy()
                                                                      .build());
+            sb.service("/hc_status",
+                       HealthCheckService.builder()
+                                         .updatable(HealthStatusUpdateHandler.INSTANCE)
+                                         .build());
             sb.service("/hc_custom",
                        HealthCheckService.builder()
                                          .healthyResponse(AggregatedHttpResponse.of(
@@ -451,6 +455,19 @@ class HealthCheckServiceTest {
                              "{\"healthy\":false,\"status\":\"UNHEALTHY\"}");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = { "HEALTHY", "DEGRADED", "STOPPING", "UNHEALTHY", "UNDER_MAINTENANCE" })
+    void detailedHealthCheckUpdateHandler(String status) {
+        final HealthStatus healthStatus = HealthStatus.valueOf(status);
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+
+        final AggregatedHttpResponse res = client.execute(RequestHeaders.of(
+                HttpMethod.POST, "/hc_status"), "{\"status\":\"" + healthStatus.name() + "\"}");
+        final String healthy = healthStatus.isHealthy() ? "true" : "false";
+        assertThat(res.content()).isEqualTo(
+                HttpData.ofUtf8("{\"healthy\":" + healthy + ",\"status\":\"" + healthStatus.name() + "\"}"));
+    }
+
     @Test
     void custom() {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
@@ -504,8 +521,9 @@ class HealthCheckServiceTest {
         checker.setHealthStatus(healthStatus);
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.execute(RequestHeaders.of(HttpMethod.GET, "/hc"));
-        assertThat(res.content()).isEqualTo(HttpData.ofUtf8("{\"healthy\":" + healthStatus.isHealthy() + ","
-                                                            + "\"status\":\"" + healthStatus.name() + "\"}"));
+        assertThat(res.content())
+                .isEqualTo(HttpData.ofUtf8("{\"healthy\":" + healthStatus.isHealthy() + ',' +
+                                           "\"status\":\"" + healthStatus.name() + "\"}"));
     }
 
     @Test
@@ -517,7 +535,7 @@ class HealthCheckServiceTest {
         // Because we did not poll for specific status, no response is sent.
         checker.setHealthStatus(HealthStatus.DEGRADED);
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
-        
+
         checker.setHealthStatus(HealthStatus.UNHEALTHY);
         assertThat(f.get().contentUtf8()).isEqualTo(
                 "{\"healthy\":" + "false" + ",\"status\":\"" + "UNHEALTHY" + "\"}");
@@ -531,9 +549,8 @@ class HealthCheckServiceTest {
             "unhealthy, HEALTHY",
             "unhealthy, DEGRADED",
     })
-    void pollHealthState(String longPollingState, String targetStatus)
-            throws ExecutionException, InterruptedException {
-        checker.setHealthy(longPollingState.equals("healthy"));
+    void pollHealthState(String longPollingState, String targetStatus) throws Exception {
+        checker.setHealthy("healthy".equals(longPollingState));
         final HealthStatus healthStatus = HealthStatus.valueOf(targetStatus);
         final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet(longPollingState, "/hc");
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);

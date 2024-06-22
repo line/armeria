@@ -37,9 +37,9 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * Handler which updates the healthiness of the {@link Server}. Supports {@code PUT}, {@code POST} and
- * {@code PATCH} requests and tells if the {@link Server} needs to be marked as healthy or unhealthy.
+ * {@code PATCH} requests and tells if the {@link Server} needs update its {@link HealthStatus}.
  */
-public enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler {
+enum HealthStatusUpdateHandler implements HealthCheckUpdateHandler {
 
     INSTANCE;
 
@@ -52,9 +52,9 @@ public enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
         switch (req.method()) {
             case PUT:
             case POST:
-                return req.aggregate().thenApply(DefaultHealthCheckUpdateHandler::handlePut);
+                return req.aggregate().thenApply(HealthStatusUpdateHandler::handlePut);
             case PATCH:
-                return req.aggregate().thenApply(DefaultHealthCheckUpdateHandler::handlePatch);
+                return req.aggregate().thenApply(HealthStatusUpdateHandler::handlePatch);
             default:
                 return UnmodifiableFuture.exceptionallyCompletedFuture(
                         HttpStatusException.of(HttpStatus.METHOD_NOT_ALLOWED));
@@ -67,16 +67,15 @@ public enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
 
-        final JsonNode healthy = json.get("healthy");
-        if (healthy == null) {
+        final JsonNode status = json.get("status");
+        if (status == null) {
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
-        if (healthy.getNodeType() != JsonNodeType.BOOLEAN) {
+        if (status.getNodeType() != JsonNodeType.STRING) {
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
 
-        return healthy.booleanValue() ? HealthCheckUpdateResult.HEALTHY
-                                      : HealthCheckUpdateResult.UNHEALTHY;
+        return getHealthCheckUpdateResult(status);
     }
 
     private static HealthCheckUpdateResult handlePatch(AggregatedHttpRequest req) {
@@ -92,13 +91,12 @@ public enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
         final JsonNode value = patchCommand.get("value");
         if (op == null || path == null || value == null ||
             !"replace".equals(op.textValue()) ||
-            !"/healthy".equals(path.textValue()) ||
-            !value.isBoolean()) {
+            !"/status".equals(path.textValue()) ||
+            !value.isTextual()) {
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
 
-        return value.booleanValue() ? HealthCheckUpdateResult.HEALTHY
-                                    : HealthCheckUpdateResult.UNHEALTHY;
+        return getHealthCheckUpdateResult(value);
     }
 
     private static JsonNode toJsonNode(AggregatedHttpRequest req) {
@@ -114,6 +112,23 @@ public enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
                                                           : mapper.readTree(req.content(charset));
         } catch (IOException e) {
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private static HealthCheckUpdateResult getHealthCheckUpdateResult(JsonNode status) {
+        switch (status.textValue()) {
+            case "HEALTHY":
+                return HealthCheckUpdateResult.HEALTHY;
+            case "DEGRADED":
+                return HealthCheckUpdateResult.DEGRADED;
+            case "STOPPING":
+                return HealthCheckUpdateResult.STOPPING;
+            case "UNHEALTHY":
+                return HealthCheckUpdateResult.UNHEALTHY;
+            case "UNDER_MAINTENANCE":
+                return HealthCheckUpdateResult.UNDER_MAINTENANCE;
+            default:
+                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
     }
 }

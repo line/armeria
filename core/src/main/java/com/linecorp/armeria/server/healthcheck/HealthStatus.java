@@ -18,16 +18,34 @@ package com.linecorp.armeria.server.healthcheck;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerListener;
 
 /**
  * The health status of a {@link Server}.
  */
 @UnstableApi
 public enum HealthStatus {
+    /**
+     * The {@link Server} is healthy and able to serve requests.
+     */
     HEALTHY(500, true),
+    /**
+     * The {@link Server} is degraded and may not be able to handle requests as much as the server with
+     * {@link HealthStatus#HEALTHY} status.
+     */
     DEGRADED(400, true),
+    /**
+     * The {@link Server} is stopping and unable to serve requests. This status is set when
+     * {@link ServerListener#serverStopping(Server)} is called by default.
+     */
     STOPPING(300, false),
+    /**
+     * The {@link Server} is unhealthy and unable to serve requests.
+     */
     UNHEALTHY(200, false),
+    /**
+     * The {@link Server} is under maintenance and unable to serve requests.
+     */
     UNDER_MAINTENANCE(100, false);
 
     private final int priority;
@@ -46,7 +64,7 @@ public enum HealthStatus {
     }
 
     /**
-     * Returns whether this {@link HealthStatus} is considered available.
+     * Returns whether this {@link HealthStatus} is considered healthy.
      */
     public boolean isHealthy() {
         return isHealthy;

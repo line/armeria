@@ -92,7 +92,7 @@ import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
  *   <li>{@code Prefer: wait=<seconds>}</li>
  * </ul>
  *
- * <p>To wait for specific server {@link HealthStatus}, send an HTTP request with two additional headers:<p/>
+ * <p>To wait for specific server {@link HealthStatus}, send an HTTP request with two additional headers:
  * <ul>
  *   <li>{@code If-None-Match: "status=DEGRADED"}</li>
  *   <li>{@code Prefer: wait=<seconds>}</li>
@@ -336,16 +336,16 @@ public final class HealthCheckService implements TransientHttpService {
         final boolean useLongPolling;
         boolean pollHealthStatus = false;
         if (longPollingTimeoutMillis > 0) {
-            final String expectedState = Ascii.toLowerCase(
-                    req.headers().get(HttpHeaderNames.IF_NONE_MATCH, ""));
+            final String expectedState =
+                    Ascii.toLowerCase(req.headers().get(HttpHeaderNames.IF_NONE_MATCH, ""));
             if ("\"healthy\"".equals(expectedState) || "w/\"healthy\"".equals(expectedState)) {
                 useLongPolling = healthStatus.isHealthy();
             } else if ("\"unhealthy\"".equals(expectedState) || "w/\"unhealthy\"".equals(expectedState)) {
                 useLongPolling = !healthStatus.isHealthy();
             } else {
-                Matcher matcher = IF_NONE_MATCH_SPECIFIC_STATUS.matcher(expectedState);
+                final Matcher matcher = IF_NONE_MATCH_SPECIFIC_STATUS.matcher(expectedState);
                 if (matcher.matches()) {
-                    useLongPolling = true;
+                    useLongPolling = matcher.group(1).equalsIgnoreCase(healthStatus.name());
                     pollHealthStatus = true;
                 } else {
                     useLongPolling = false;
@@ -394,9 +394,8 @@ public final class HealthCheckService implements TransientHttpService {
                     final ScheduledFuture<?> timeoutFuture = ctx.eventLoop().withoutContext().schedule(
                             new TimeoutTask(res), longPollingTimeoutMillis, TimeUnit.MILLISECONDS);
 
-                    final PendingResponse pendingResponse =
-                            new PendingResponse(method, res, pingFuture, timeoutFuture, healthStatus,
-                                                pollHealthStatus);
+                    final PendingResponse pendingResponse = new PendingResponse(
+                            method, res, pingFuture, timeoutFuture, healthStatus, pollHealthStatus);
                     pendingResponses.add(pendingResponse);
                     timeoutFuture.addListener((FutureListener<Object>) f -> {
                         lock.lock();
