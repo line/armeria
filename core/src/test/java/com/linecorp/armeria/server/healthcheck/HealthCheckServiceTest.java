@@ -32,7 +32,6 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -527,15 +526,16 @@ class HealthCheckServiceTest {
     }
 
     @Test
-    void pollSameHealthState() throws ExecutionException, InterruptedException {
+    void pollHealthState() throws Exception {
         checker.setHealthStatus(HealthStatus.HEALTHY);
         final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("healthy", "/hc");
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
 
-        // Because we did not poll for specific status, no response is sent.
+        // Because the health state is unchanged(from healthy to healthy), response is not received.
         checker.setHealthStatus(HealthStatus.DEGRADED);
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
 
+        // Because the health state is changed(from healthy to unhealthy), response is received.
         checker.setHealthStatus(HealthStatus.UNHEALTHY);
         assertThat(f.get().contentUtf8()).isEqualTo(
                 "{\"healthy\":" + "false" + ",\"status\":\"" + "UNHEALTHY" + "\"}");

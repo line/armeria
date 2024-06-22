@@ -39,7 +39,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Handler which updates the healthiness of the {@link Server}. Supports {@code PUT}, {@code POST} and
  * {@code PATCH} requests and tells if the {@link Server} needs update its {@link HealthStatus}.
  */
-enum HealthStatusUpdateHandler implements HealthCheckUpdateHandler {
+public enum HealthStatusUpdateHandler implements HealthCheckUpdateHandler {
 
     INSTANCE;
 
