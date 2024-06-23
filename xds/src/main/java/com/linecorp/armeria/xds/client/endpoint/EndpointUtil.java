@@ -100,12 +100,7 @@ final class EndpointUtil {
             }
             builder.weightTransition(WeightTransition.aggression(aggression, minWeightPercent));
         }
-        builder.timestampFunction(endpoint -> {
-            if (RampingUpKeys.hasCreatedAtNanos(endpoint)) {
-                return RampingUpKeys.createdAtNanos(endpoint);
-            }
-            return null;
-        });
+        builder.timestampFunction(RampingUpKeys::getCreatedAtNanos);
         return builder.build();
     }
 

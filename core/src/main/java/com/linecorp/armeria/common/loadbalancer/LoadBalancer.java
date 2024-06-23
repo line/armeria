@@ -44,8 +44,8 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
     }
 
     /**
-     * Returns a {@link LoadBalancer} that selects a candidate using the weighted round-robin strategy that implements
-     * <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleaved WRR</a>
+     * Returns a {@link LoadBalancer} that selects a candidate using the weighted round-robin strategy that
+     * implements <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleaved WRR</a>
      * algorithm.
      */
     static <T, C> LoadBalancer<T, C> ofWeightedRoundRobin(Iterable<? extends T> candidates,
@@ -56,7 +56,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
     }
 
     /**
-     * Returns a {@link LoadBalancer} that selects a candidate using the sticky session strategy.
+     * Returns a {@link LoadBalancer} that selects a candidate using the sticky strategy.
      * The {@link ToLongFunction} is used to compute hashes for consistent hashing.
      *
      * <p>This strategy can be useful when all requests that qualify some given criteria must be sent to
@@ -70,7 +70,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * ToLongFunction<ClientRequestContext> hasher = (ClientRequestContext ctx) -> {
      *     return ((HttpRequest) ctx.request()).headers().get(HttpHeaderNames.COOKIE).hashCode();
      * };
-     * LoadBalancer<T> strategy = LoadBalancer.ofSticky(hasher);
+     * LoadBalancer<Endpoint, ClientRequestContext> strategy = LoadBalancer.ofSticky(endpoints, hasher);
      * }</pre>
      */
     static <T, C> LoadBalancer<T, C> ofSticky(Iterable<? extends T> candidates,

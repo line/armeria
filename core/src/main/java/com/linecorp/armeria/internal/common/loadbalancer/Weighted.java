@@ -20,6 +20,7 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
+// TODO(ikhoon): Make this class interface.
 public class Weighted<T> {
     private final T element;
 

@@ -34,7 +34,7 @@ public interface WeightTransition<T> {
      * step increases.
      */
     static <T> WeightTransition<T> linear() {
-        return (endpoint, weight, currentStep, totalSteps) ->
+        return (candidate, weight, currentStep, totalSteps) ->
                 // currentStep is never greater than totalSteps so we can cast long to int.
                 Ints.saturatedCast((long) weight * currentStep / totalSteps);
     }
@@ -54,11 +54,11 @@ public interface WeightTransition<T> {
                       "minWeightPercent: %s (expected: >= 0.0, <= 1.0)", minWeightPercent);
         final int aggressionPercentage = Ints.saturatedCast(Math.round(aggression * 100));
         final double invertedAggression = 100.0 / aggressionPercentage;
-        return (endpoint, weight, currentStep, totalSteps) -> {
+        return (candidate, weight, currentStep, totalSteps) -> {
             final int minWeight = Ints.saturatedCast(Math.round(weight * minWeightPercent));
             final int computedWeight;
             if (aggressionPercentage == 100) {
-                computedWeight = linear().compute(endpoint, weight, currentStep, totalSteps);
+                computedWeight = linear().compute(candidate, weight, currentStep, totalSteps);
             } else {
                 computedWeight = (int) (weight * Math.pow(1.0 * currentStep / totalSteps, invertedAggression));
             }
