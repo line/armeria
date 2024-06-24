@@ -19,8 +19,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CountDownLatch;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -28,14 +29,6 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.netty.channel.EventLoop;
 
-/**
- * This test checks that the duplicator does not release the elements that it holds until all subscribers are
- * received all element via {@link Subscriber#onNext(Object)}.
- * Previously, the duplicator has a bug that releases the elements when the duplicator is closed even though
- * there's a subscriber that does not subscribe to the child stream message yet.
- * See <a href="https://github.com/line/armeria/pull/3337">
- * Fix not to release elements before subscribed in duplicator</a>
- */
 class StreamMessageDuplicatorChildSubscriberTest {
 
     @RegisterExtension
@@ -47,11 +40,16 @@ class StreamMessageDuplicatorChildSubscriberTest {
     @RegisterExtension
     static final EventLoopExtension eventLoop3 = new EventLoopExtension();
 
-    @Test
-    void childSubscriberMethodsMustBeCalledByExecutors() throws InterruptedException {
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void childSubscriberMethodsMustBeCalledByExecutors(boolean close) throws InterruptedException {
         final StreamWriter<String> publisher = StreamMessage.streaming();
         publisher.write("foo");
-        publisher.abort();
+        if (close) {
+            publisher.close();
+        } else {
+            publisher.abort();
+        }
 
         final StreamMessageDuplicator<String> duplicator =
                 publisher.toDuplicator(eventLoop1.get());
