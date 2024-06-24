@@ -99,7 +99,7 @@ class HealthCheckServiceTest {
                                                                      .build());
             sb.service("/hc_status",
                        HealthCheckService.builder()
-                                         .updatable(HealthStatusUpdateHandler.INSTANCE)
+                                         .updatable(DefaultHealthCheckUpdateHandler.INSTANCE)
                                          .build());
             sb.service("/hc_custom",
                        HealthCheckService.builder()
@@ -456,7 +456,7 @@ class HealthCheckServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "HEALTHY", "DEGRADED", "STOPPING", "UNHEALTHY", "UNDER_MAINTENANCE" })
-    void detailedHealthCheckUpdateHandler(String status) {
+    void useDefaultHealthCheckUpdateHandlerToUpdateStatus(String status) {
         final HealthStatus healthStatus = HealthStatus.valueOf(status);
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 

@@ -67,16 +67,35 @@ public enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
 
-        final JsonNode healthy = json.get("healthy");
-        if (healthy == null) {
-            throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
-        }
-        if (healthy.getNodeType() != JsonNodeType.BOOLEAN) {
-            throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
-        }
+        if (json.has("healthy")) {
+            final JsonNode jsonNode = json.get("healthy");
+            if (jsonNode == null) {
+                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+            }
+            if (jsonNode.getNodeType() != JsonNodeType.BOOLEAN) {
+                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+            }
 
-        return healthy.booleanValue() ? HealthCheckUpdateResult.HEALTHY
-                                      : HealthCheckUpdateResult.UNHEALTHY;
+            return jsonNode.booleanValue() ? HealthCheckUpdateResult.HEALTHY
+                                           : HealthCheckUpdateResult.UNHEALTHY;
+        } else if (json.has("status")) {
+            final JsonNode jsonNode = toJsonNode(req);
+            if (jsonNode.getNodeType() != JsonNodeType.OBJECT) {
+                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+            }
+
+            final JsonNode status = jsonNode.get("status");
+            if (status == null) {
+                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+            }
+            if (status.getNodeType() != JsonNodeType.STRING) {
+                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+            }
+
+            return getHealthCheckUpdateResult(status);
+        } else {
+            throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+        }
     }
 
     private static HealthCheckUpdateResult handlePatch(AggregatedHttpRequest req) {
@@ -91,14 +110,21 @@ public enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
         final JsonNode path = patchCommand.get("path");
         final JsonNode value = patchCommand.get("value");
         if (op == null || path == null || value == null ||
-            !"replace".equals(op.textValue()) ||
-            !"/healthy".equals(path.textValue()) ||
-            !value.isBoolean()) {
+            !"replace".equals(op.textValue())) {
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
 
-        return value.booleanValue() ? HealthCheckUpdateResult.HEALTHY
-                                    : HealthCheckUpdateResult.UNHEALTHY;
+        if ("/healthy".equals(path.textValue()) && value.isBoolean()) {
+            return value.isBoolean() ? value.booleanValue() ? HealthCheckUpdateResult.HEALTHY
+                                                            : HealthCheckUpdateResult.UNHEALTHY
+                                     : HealthCheckUpdateResult.UNHEALTHY;
+        }
+
+        if ("/status".equals(path.textValue()) && value.isTextual()) {
+            return getHealthCheckUpdateResult(value);
+        }
+
+        throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
     }
 
     private static JsonNode toJsonNode(AggregatedHttpRequest req) {
@@ -114,6 +140,23 @@ public enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler 
                                                           : mapper.readTree(req.content(charset));
         } catch (IOException e) {
             throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private static HealthCheckUpdateResult getHealthCheckUpdateResult(JsonNode status) {
+        switch (status.textValue()) {
+            case "HEALTHY":
+                return HealthCheckUpdateResult.HEALTHY;
+            case "DEGRADED":
+                return HealthCheckUpdateResult.DEGRADED;
+            case "STOPPING":
+                return HealthCheckUpdateResult.STOPPING;
+            case "UNHEALTHY":
+                return HealthCheckUpdateResult.UNHEALTHY;
+            case "UNDER_MAINTENANCE":
+                return HealthCheckUpdateResult.UNDER_MAINTENANCE;
+            default:
+                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
         }
     }
 }
