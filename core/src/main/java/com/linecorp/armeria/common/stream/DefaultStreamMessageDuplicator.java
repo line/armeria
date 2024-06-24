@@ -285,12 +285,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
         private void doSubscribe(DownstreamSubscription<T> subscription) {
             if (state == State.ABORTED) {
-                final EventExecutor executor = subscription.executor;
-                if (executor.inEventLoop()) {
-                    failLateProcessorSubscriber(subscription);
-                } else {
-                    executor.execute(() -> failLateProcessorSubscriber(subscription));
-                }
+                subscription.failLateProcessorSubscriber();
                 return;
             }
 
@@ -301,63 +296,11 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             }
         }
 
-        private static void failLateProcessorSubscriber(DownstreamSubscription<?> subscription) {
-            final Subscriber<?> lateSubscriber = subscription.subscriber();
-            try {
-                lateSubscriber.onSubscribe(NoopSubscription.get());
-                lateSubscriber.onError(
-                        new IllegalStateException("duplicator is closed or no more downstream can be added."));
-            } catch (Throwable t) {
-                throwIfFatal(t);
-                logger.warn("Subscriber should not throw an exception. subscriber: {}", lateSubscriber, t);
-            }
-        }
-
-        void unsubscribe(DownstreamSubscription<T> subscription, @Nullable Throwable cause) {
+        private void cleanupIfLastSubscription() {
             if (executor.inEventLoop()) {
-                doUnsubscribe(subscription, cause);
-            } else {
-                executor.execute(() -> doUnsubscribe(subscription, cause));
-            }
-        }
-
-        private void doUnsubscribe(DownstreamSubscription<T> subscription, @Nullable Throwable cause) {
-            if (!downstreamSubscriptions.remove(subscription)) {
-                return;
-            }
-
-            final Subscriber<? super T> subscriber = subscription.subscriber();
-            subscription.clearSubscriber();
-
-            final CompletableFuture<Void> completionFuture = subscription.whenComplete();
-            if (cause == null) {
-                try {
-                    subscriber.onComplete();
-                    completionFuture.complete(null);
-                } catch (Throwable t) {
-                    completionFuture.completeExceptionally(t);
-                    throwIfFatal(t);
-                    logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
-                                subscriber, t);
-                } finally {
-                    doCleanupIfLastSubscription();
-                }
-                return;
-            }
-
-            try {
-                if (subscription.notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
-                    subscriber.onError(cause);
-                }
-                completionFuture.completeExceptionally(cause);
-            } catch (Throwable t) {
-                final Exception composite = new CompositeException(t, cause);
-                completionFuture.completeExceptionally(composite);
-                throwIfFatal(t);
-                logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
-                            subscriber, composite);
-            } finally {
                 doCleanupIfLastSubscription();
+            } else {
+                executor.execute(this::doCleanupIfLastSubscription);
             }
         }
 
@@ -613,7 +556,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         private final StreamMessage<T> streamMessage;
         private Subscriber<? super T> subscriber;
         private final StreamMessageProcessor<T> processor;
-        private final EventExecutor executor;
+        private final EventExecutor downstreamExecutor;
         private final boolean withPooledObjects;
         private final boolean notifyCancellation;
 
@@ -640,7 +583,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             this.streamMessage = streamMessage;
             this.subscriber = subscriber;
             this.processor = processor;
-            this.executor = executor;
+            downstreamExecutor = executor;
             this.withPooledObjects = withPooledObjects;
             this.notifyCancellation = notifyCancellation;
         }
@@ -661,6 +604,25 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             }
         }
 
+        void failLateProcessorSubscriber() {
+            if (downstreamExecutor.inEventLoop()) {
+                failLateProcessorSubscriber0();
+            } else {
+                downstreamExecutor.execute(this::failLateProcessorSubscriber0);
+            }
+        }
+
+        private void failLateProcessorSubscriber0() {
+            try {
+                subscriber.onSubscribe(NoopSubscription.get());
+                subscriber.onError(
+                        new IllegalStateException("duplicator is closed or no more downstream can be added."));
+            } catch (Throwable t) {
+                throwIfFatal(t);
+                logger.warn("Subscriber should not throw an exception. subscriber: {}", subscriber, t);
+            }
+        }
+
         // Called from processor.processorExecutor
         void invokeOnSubscribe() {
             if (invokedOnSubscribe) {
@@ -668,10 +630,10 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             }
             invokedOnSubscribe = true;
 
-            if (executor.inEventLoop()) {
+            if (downstreamExecutor.inEventLoop()) {
                 invokeOnSubscribe0();
             } else {
-                executor.execute(this::invokeOnSubscribe0);
+                downstreamExecutor.execute(this::invokeOnSubscribe0);
             }
         }
 
@@ -680,7 +642,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             try {
                 subscriber.onSubscribe(this);
             } catch (Throwable t) {
-                processor.unsubscribe(this, t);
+                unsubscribe(t);
                 throwIfFatal(t);
                 logger.warn("Subscriber.onSubscribe() should not raise an exception. subscriber: {}",
                             subscriber, t);
@@ -692,7 +654,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             if (n <= 0) {
                 final Throwable cause = new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)");
-                processor.unsubscribe(this, cause);
+                unsubscribe(cause);
                 return;
             }
 
@@ -726,10 +688,10 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         void signal() {
-            if (executor.inEventLoop()) {
+            if (downstreamExecutor.inEventLoop()) {
                 doSignal();
             } else {
-                executor.execute(this::doSignal);
+                downstreamExecutor.execute(this::doSignal);
             }
         }
 
@@ -757,7 +719,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
 
             if (cancelledOrAborted != null) {
                 // Stream ended due to cancellation or abortion.
-                processor.unsubscribe(this, cancelledOrAborted);
+                unsubscribe(cancelledOrAborted);
                 return false;
             }
 
@@ -771,7 +733,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
             if (signal instanceof CloseEvent) {
                 // The stream has reached at its end.
                 offset++;
-                processor.unsubscribe(this, ((CloseEvent) signal).cause);
+                unsubscribe(((CloseEvent) signal).cause);
                 return false;
             }
 
@@ -812,7 +774,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     // If an exception such as IllegalReferenceCountException is raised while operating
                     // on the ByteBuf, catch it and notify the subscriber with it. So the
                     // subscriber does not hang forever.
-                    processor.unsubscribe(this, thrown);
+                    unsubscribe(thrown);
                     return false;
                 }
 
@@ -832,7 +794,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 try {
                     subscriber.onNext(obj);
                 } catch (Throwable t) {
-                    processor.unsubscribe(this, t);
+                    unsubscribe(t);
                     throwIfFatal(t);
                     logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
                                 obj, subscriber, t);
@@ -841,6 +803,54 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     inOnNext = false;
                 }
                 return true;
+            }
+        }
+
+        void unsubscribe(@Nullable Throwable cause) {
+            if (downstreamExecutor.inEventLoop()) {
+                doUnsubscribe(cause);
+            } else {
+                downstreamExecutor.execute(() -> doUnsubscribe(cause));
+            }
+        }
+
+        private void doUnsubscribe(@Nullable Throwable cause) {
+            if (!processor.downstreamSubscriptions.remove(this)) {
+                return;
+            }
+
+            final Subscriber<? super T> subscriber = this.subscriber;
+            clearSubscriber();
+
+            final CompletableFuture<Void> completionFuture = whenComplete();
+            if (cause == null) {
+                try {
+                    subscriber.onComplete();
+                    completionFuture.complete(null);
+                } catch (Throwable t) {
+                    completionFuture.completeExceptionally(t);
+                    throwIfFatal(t);
+                    logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
+                                subscriber, t);
+                } finally {
+                    processor.cleanupIfLastSubscription();
+                }
+                return;
+            }
+
+            try {
+                if (notifyCancellation || !(cause instanceof CancelledSubscriptionException)) {
+                    subscriber.onError(cause);
+                }
+                completionFuture.completeExceptionally(cause);
+            } catch (Throwable t) {
+                final Exception composite = new CompositeException(t, cause);
+                completionFuture.completeExceptionally(composite);
+                throwIfFatal(t);
+                logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
+                            subscriber, composite);
+            } finally {
+                processor.cleanupIfLastSubscription();
             }
         }
 
