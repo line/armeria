@@ -55,7 +55,7 @@ import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 import io.netty.channel.DefaultEventLoop;
 import io.netty.util.concurrent.ScheduledFuture;
 
-class WeightRampingUpStrategyTest {
+class RampingUpLoadBalancerTest {
 
     private static final AtomicLong ticker = new AtomicLong();
 

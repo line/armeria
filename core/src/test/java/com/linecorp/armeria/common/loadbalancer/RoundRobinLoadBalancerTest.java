@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
-class RoundRobinStrategyTest {
+class RoundRobinLoadBalancerTest {
 
     @Test
     void pick() {

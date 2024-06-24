@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 
-class StickyEndpointSelectionStrategyTest {
+class StickyLoadBalancerTest {
 
     private static final String STICKY_HEADER_NAME = "USER_COOKIE";
 
@@ -69,12 +69,8 @@ class StickyEndpointSelectionStrategyTest {
             assertThat(loadBalancer.pick(contextWithHeader(STICKY_HEADER_NAME, "armeria3"))).isEqualTo(ep3);
         }
 
-        //confirm rebuild tree of dynamic
         final Endpoint ep4 = Endpoint.parse("localhost:9494");
-        final ImmutableList<Endpoint> newEndpoints = ImmutableList.<Endpoint>builder()
-                                                                  .addAll(endpoints)
-                                                                  .add(ep4)
-                                                                  .build();
+        final List<Endpoint> newEndpoints = ImmutableList.of(ep4);
 
         final LoadBalancer<Endpoint, ClientRequestContext> loadBalancer1 =
                 LoadBalancer.ofSticky(newEndpoints, hasher);

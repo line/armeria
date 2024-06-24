@@ -250,7 +250,7 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     }
 
     private void updateWeightAndStep0(Set<CandidateAndStep<T>> candidateAndSteps) {
-        for (final Iterator<CandidateAndStep<T>> i = candidateAndSteps.iterator(); i.hasNext(); ) {
+        for (final Iterator<CandidateAndStep<T>> i = candidateAndSteps.iterator(); i.hasNext();) {
             final CandidateAndStep<T> candidateAndStep = i.next();
             final int step = candidateAndStep.incrementAndGetStep();
             final Weighted candidate = candidateAndStep.weighted();

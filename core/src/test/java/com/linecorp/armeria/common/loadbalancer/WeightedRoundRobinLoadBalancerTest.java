@@ -26,16 +26,16 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 
-class WeightedRoundRobinStrategyTest {
+class WeightedRoundRobinLoadBalancerTest {
 
     @Test
     void select() {
         final LoadBalancer<Endpoint, Void> loadBalancer =
                 LoadBalancer.ofWeightedRoundRobin(
                         ImmutableList.of(Endpoint.parse("localhost:1234"),
-                                         Endpoint.parse("localhost:2345")),
-                        Endpoint::weight);
-        assertThat(loadBalancer.pick(null)).isNull();
+                                         Endpoint.parse("localhost:2345")));
+        assertThat(loadBalancer.pick(null)).isNotNull();
+        assertThat(LoadBalancer.ofWeightedRoundRobin(ImmutableList.of()).pick(null)).isNull();
     }
 
     @Test

@@ -26,11 +26,11 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.CommonPools;
-import com.linecorp.armeria.common.loadbalancer.WeightRampingUpStrategyTest.EndpointComparator;
+import com.linecorp.armeria.common.loadbalancer.RampingUpLoadBalancerTest.EndpointComparator;
 import com.linecorp.armeria.common.loadbalancer.WeightedRandomLoadBalancer.CandidateContext;
 import com.linecorp.armeria.common.util.Exceptions;
 
-final class WeightedRandomDistributionEndpointSelectorTest {
+final class WeightedRandomLoadBalancerTest {
 
     @Test
     void zeroWeightFiltered() {
