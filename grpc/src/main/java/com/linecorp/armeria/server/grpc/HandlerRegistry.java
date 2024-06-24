@@ -349,9 +349,9 @@ final class HandlerRegistry {
                     AnnotationUtil.getAnnotatedInstances(method, clazz,
                                                          GrpcInterceptor.class,
                                                          ServerInterceptor.class,
-                                                         dependencyInjector).build().reverse();
+                                                         dependencyInjector).build();
 
-            return Stream.concat(globalInterceptors.stream(), methodAndClassInterceptors.stream())
+            return Stream.concat(methodAndClassInterceptors.stream(), globalInterceptors.stream())
                          .collect(Collectors.toList());
         }
 

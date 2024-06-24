@@ -117,10 +117,11 @@ class GrpcServerInterceptorTest {
                            .build(TestServiceBlockingStub.class);
         final SimpleRequest request = SimpleRequest.newBuilder().build();
         client.unaryCall(request);
-        assertThat(headersCapture.get().get(TEST_HEADER)).isEqualTo("foobarqux");
+        // Header order is the response order. Thus, first `foo` is called and later `bar` and `qux`.
+        assertThat(headersCapture.get().get(TEST_HEADER)).isEqualTo("quxbarfoo");
 
         client.unaryCall2(request);
-        assertThat(headersCapture.get().get(TEST_HEADER)).isEqualTo("foobar");
+        assertThat(headersCapture.get().get(TEST_HEADER)).isEqualTo("barfoo");
     }
 
     private static class NoPassInterceptor implements ServerInterceptor {
