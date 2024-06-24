@@ -31,11 +31,15 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 
 class WeightRampingUpStrategyIntegrationTest {
 
+    static {
+        CommonPools.workerGroup().next().execute(() -> {});
+    }
     private final long rampingUpIntervalNanos = TimeUnit.MILLISECONDS.toNanos(1000);
     private final long rampingUpTaskWindowNanos = TimeUnit.MILLISECONDS.toNanos(200);
     private final ClientRequestContext ctx = ClientRequestContext.of(

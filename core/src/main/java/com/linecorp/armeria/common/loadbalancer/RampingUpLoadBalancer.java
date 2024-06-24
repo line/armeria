@@ -110,12 +110,15 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     public T pick(C unused) {
         final LoadBalancer<Weighted, Void> weightedRandomLoadBalancer = this.weightedRandomLoadBalancer;
         final Weighted weighted = weightedRandomLoadBalancer.pick(null);
-        if (weighted == null || weightFunction == null) {
-            //noinspection unchecked
-            return (T) weighted;
-        } else {
+        if (weighted == null) {
+            return null;
+        }
+        if (weighted instanceof WeightedObject) {
             //noinspection unchecked
             return ((WeightedObject<T>) weighted).get();
+        } else {
+            //noinspection unchecked
+            return (T) weighted;
         }
     }
 
@@ -158,8 +161,8 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
                 final ScheduledFuture<?> scheduledFuture = executor.scheduleAtFixedRate(
                         () -> updateWeightAndStep(window), initialDelayNanos,
                         rampingUpIntervalNanos, TimeUnit.NANOSECONDS);
-                final CandidatesRampingUpEntry<T> entry = new CandidatesRampingUpEntry<>(
-                        new HashSet<>(), scheduledFuture, ticker, rampingUpIntervalNanos);
+                final CandidatesRampingUpEntry<T> entry =
+                        new CandidatesRampingUpEntry<>(new HashSet<>(), scheduledFuture);
                 rampingUpWindowsMap.put(window, entry);
             }
             final CandidatesRampingUpEntry<T> rampingUpEntry = rampingUpWindowsMap.get(window);
@@ -247,7 +250,7 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     }
 
     private void updateWeightAndStep0(Set<CandidateAndStep<T>> candidateAndSteps) {
-        for (final Iterator<CandidateAndStep<T>> i = candidateAndSteps.iterator(); i.hasNext();) {
+        for (final Iterator<CandidateAndStep<T>> i = candidateAndSteps.iterator(); i.hasNext(); ) {
             final CandidateAndStep<T> candidateAndStep = i.next();
             final int step = candidateAndStep.incrementAndGetStep();
             final Weighted candidate = candidateAndStep.weighted();
@@ -279,17 +282,12 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     static final class CandidatesRampingUpEntry<T> {
 
         private final Set<CandidateAndStep<T>> candidateAndSteps;
-        private final Ticker ticker;
-        private final long rampingUpIntervalNanos;
-
         final ScheduledFuture<?> scheduledFuture;
 
-        CandidatesRampingUpEntry(Set<CandidateAndStep<T>> candidateAndSteps, ScheduledFuture<?> scheduledFuture,
-                                 Ticker ticker, long rampingUpIntervalMillis) {
+        CandidatesRampingUpEntry(Set<CandidateAndStep<T>> candidateAndSteps,
+                                 ScheduledFuture<?> scheduledFuture) {
             this.candidateAndSteps = candidateAndSteps;
             this.scheduledFuture = scheduledFuture;
-            this.ticker = ticker;
-            rampingUpIntervalNanos = TimeUnit.MILLISECONDS.toNanos(rampingUpIntervalMillis);
         }
 
         Set<CandidateAndStep<T>> candidateAndSteps() {
@@ -304,8 +302,6 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
         public String toString() {
             return MoreObjects.toStringHelper(this)
                               .add("candidateAndSteps", candidateAndSteps)
-                              .add("ticker", ticker)
-                              .add("rampingUpIntervalNanos", rampingUpIntervalNanos)
                               .add("scheduledFuture", scheduledFuture)
                               .toString();
         }

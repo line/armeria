@@ -42,7 +42,7 @@ public interface WeightTransition<T> {
 
             @Override
             public String toString() {
-                return "linear()";
+                return "WeightTransition.linear()";
             }
         };
     }
@@ -78,7 +78,7 @@ public interface WeightTransition<T> {
 
             @Override
             public String toString() {
-                return "aggression(" + aggression + ", " + minWeightPercent + ')';
+                return "WeightTransition.aggression(" + aggression + ", " + minWeightPercent + ')';
             }
         };
     }

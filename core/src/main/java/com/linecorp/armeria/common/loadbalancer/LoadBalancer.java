@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
- * A load balancer that selects a candidate from a list of candidates based on the given strategy.
+ * A load balancer that selects a element from a list of candidates based on the given strategy.
  */
 @SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 @UnstableApi

@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -36,7 +35,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
- * {@link Endpoint}s using {@link EndpointWeightTransition},
+ * {@link Endpoint}s using {@link WeightTransition},
  * {@code rampingUpIntervalMillis} and {@code rampingUpTaskWindow}.
  * If more than one {@link Endpoint} are added within the {@code rampingUpTaskWindow}, the weights of
  * them are updated together. If there's already a scheduled job and new {@link Endpoint}s are added
@@ -62,9 +61,9 @@ final class WeightRampingUpStrategy
 
     private final WeightTransition<Endpoint> weightTransition;
     private final Supplier<EventExecutor> executorSupplier;
-    private final long rampingUpIntervalNanos;
+    private final long rampingUpIntervalMillis;
     private final int totalSteps;
-    private final long rampingUpTaskWindowNanos;
+    private final long rampingUpTaskWindowMillis;
     private final Ticker ticker;
     private final Function<Endpoint, Long> timestampFunction;
 
@@ -76,13 +75,13 @@ final class WeightRampingUpStrategy
         this.executorSupplier = requireNonNull(executorSupplier, "executorSupplier");
         checkArgument(rampingUpIntervalMillis > 0,
                       "rampingUpIntervalMillis: %s (expected: > 0)", rampingUpIntervalMillis);
-        rampingUpIntervalNanos = TimeUnit.MILLISECONDS.toNanos(rampingUpIntervalMillis);
+        this.rampingUpIntervalMillis = rampingUpIntervalMillis;
         checkArgument(totalSteps > 0, "totalSteps: %s (expected: > 0)", totalSteps);
         this.totalSteps = totalSteps;
         checkArgument(rampingUpTaskWindowMillis >= 0,
                       "rampingUpTaskWindowMillis: %s (expected: > 0)",
                       rampingUpTaskWindowMillis);
-        rampingUpTaskWindowNanos = TimeUnit.MILLISECONDS.toNanos(rampingUpTaskWindowMillis);
+        this.rampingUpTaskWindowMillis = rampingUpTaskWindowMillis;
         this.timestampFunction = timestampFunction;
         this.ticker = requireNonNull(ticker, "ticker");
     }
@@ -98,8 +97,8 @@ final class WeightRampingUpStrategy
             List<Endpoint> candidates) {
         if (oldLoadBalancer == null) {
             return LoadBalancer.<Endpoint, ClientRequestContext>builderForRampingUp(candidates)
-                               .rampingUpIntervalMillis(rampingUpIntervalNanos)
-                               .rampingUpTaskWindowMillis(rampingUpTaskWindowNanos)
+                               .rampingUpIntervalMillis(rampingUpIntervalMillis)
+                               .rampingUpTaskWindowMillis(rampingUpTaskWindowMillis)
                                .totalSteps(totalSteps)
                                .weightTransition(weightTransition)
                                .timestampFunction(timestampFunction)
