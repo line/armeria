@@ -24,7 +24,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DefaultEndpointSelector.LoadBalancerFactory;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 
@@ -50,7 +49,7 @@ final class StickyEndpointSelectionStrategy
         implements EndpointSelectionStrategy,
                    LoadBalancerFactory<LoadBalancer<Endpoint, ClientRequestContext>> {
 
-    private final ToLongFunction<RequestContext> requestContextHasher;
+    private final ToLongFunction<? super ClientRequestContext> requestContextHasher;
 
     /**
      * Creates a new {@link StickyEndpointSelectionStrategy}
@@ -59,9 +58,7 @@ final class StickyEndpointSelectionStrategy
      * @param requestContextHasher The default {@link ToLongFunction} of {@link ClientRequestContext}
      */
     StickyEndpointSelectionStrategy(ToLongFunction<? super ClientRequestContext> requestContextHasher) {
-        requireNonNull(requestContextHasher, "requestContextHasher");
-        //noinspection unchecked
-        this.requestContextHasher = (ToLongFunction<RequestContext>) requestContextHasher;
+        this.requestContextHasher = requireNonNull(requestContextHasher, "requestContextHasher");
     }
 
     /**
