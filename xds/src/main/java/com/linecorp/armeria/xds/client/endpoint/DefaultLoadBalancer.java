@@ -41,12 +41,12 @@ final class DefaultLoadBalancer implements LoadBalancer<Endpoint, ClientRequestC
 
     @Override
     @Nullable
-    public Endpoint pick(ClientRequestContext context) {
+    public Endpoint pick(ClientRequestContext ctx) {
         final PrioritySet prioritySet = lbState.prioritySet();
         if (prioritySet.priorities().isEmpty()) {
             return null;
         }
-        final int hash = EndpointUtil.hash(context);
+        final int hash = EndpointUtil.hash(ctx);
         final HostsSource hostsSource = hostSourceToUse(lbState, hash);
         if (hostsSource == null) {
             return null;
@@ -60,17 +60,17 @@ final class DefaultLoadBalancer implements LoadBalancer<Endpoint, ClientRequestC
         }
         switch (hostsSource.sourceType) {
             case ALL_HOSTS:
-                return hostSet.hostsEndpointGroup().selectNow(context);
+                return hostSet.hostsEndpointGroup().selectNow(ctx);
             case HEALTHY_HOSTS:
-                return hostSet.healthyHostsEndpointGroup().selectNow(context);
+                return hostSet.healthyHostsEndpointGroup().selectNow(ctx);
             case DEGRADED_HOSTS:
-                return hostSet.degradedHostsEndpointGroup().selectNow(context);
+                return hostSet.degradedHostsEndpointGroup().selectNow(ctx);
             case LOCALITY_HEALTHY_HOSTS:
                 final Map<Locality, EndpointGroup> healthyLocalities =
                         hostSet.healthyEndpointGroupPerLocality();
                 final EndpointGroup healthyEndpointGroup = healthyLocalities.get(hostsSource.locality);
                 if (healthyEndpointGroup != null) {
-                    return healthyEndpointGroup.selectNow(context);
+                    return healthyEndpointGroup.selectNow(ctx);
                 }
                 break;
             case LOCALITY_DEGRADED_HOSTS:
@@ -78,7 +78,7 @@ final class DefaultLoadBalancer implements LoadBalancer<Endpoint, ClientRequestC
                         hostSet.degradedEndpointGroupPerLocality();
                 final EndpointGroup degradedEndpointGroup = degradedLocalities.get(hostsSource.locality);
                 if (degradedEndpointGroup != null) {
-                    return degradedEndpointGroup.selectNow(context);
+                    return degradedEndpointGroup.selectNow(ctx);
                 }
                 break;
             default:
