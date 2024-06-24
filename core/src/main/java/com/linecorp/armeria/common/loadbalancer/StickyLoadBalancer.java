@@ -35,12 +35,12 @@ final class StickyLoadBalancer<T, C> implements LoadBalancer<T, C> {
     }
 
     @Override
-    public T pick(C ctx) {
+    public T pick(C context) {
         if (candidates.isEmpty()) {
             return null;
         }
 
-        final long key = contextHasher.applyAsLong(ctx);
+        final long key = contextHasher.applyAsLong(context);
         final int nearest = Hashing.consistentHash(key, candidates.size());
         return candidates.get(nearest);
     }

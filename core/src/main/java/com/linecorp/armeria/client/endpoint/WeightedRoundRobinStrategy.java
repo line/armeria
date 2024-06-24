@@ -40,6 +40,6 @@ final class WeightedRoundRobinStrategy
     @Override
     public LoadBalancer<Endpoint, ClientRequestContext> newLoadBalancer(
             @Nullable LoadBalancer<Endpoint, ClientRequestContext> oldLoadBalancer, List<Endpoint> candidates) {
-        return LoadBalancer.ofWeightedRoundRobin(candidates, Endpoint::weight);
+        return LoadBalancer.ofWeightedRoundRobin(candidates);
     }
 }

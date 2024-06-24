@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -65,6 +67,17 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
         requireNonNull(candidates, "candidates");
         //noinspection unchecked
         return new WeightedRoundRobinLoadBalancer<>((Iterable<T>) candidates, null);
+    }
+
+    /**
+     * Returns a {@link LoadBalancer} that selects a candidate using the weighted round-robin strategy that
+     * implements <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleaved WRR</a>
+     * algorithm.
+     */
+    @SafeVarargs
+    static <T extends Weighted, C> LoadBalancer<T, C> ofWeightedRoundRobin(T... candidates) {
+        requireNonNull(candidates, "candidates");
+        return ofWeightedRoundRobin(ImmutableList.copyOf(candidates));
     }
 
     /**
@@ -114,6 +127,15 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
     }
 
     /**
+     * Returns a {@link LoadBalancer} that selects a candidate using the weighted random distribution strategy.
+     */
+    @SafeVarargs
+    static <T extends Weighted, C> LoadBalancer<T, C> ofWeightedRandom(T... candidates) {
+        requireNonNull(candidates, "candidates");
+        return ofWeightedRandom(ImmutableList.copyOf(candidates));
+    }
+
+    /**
      * Returns a weight ramping up {@link LoadBalancer} which ramps the weight of newly added
      * candidates using {@link WeightTransition#linear()}. The candidate is selected
      * using weighted random distribution.
@@ -143,6 +165,19 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
     }
 
     /**
+     * Returns a weight ramping up {@link LoadBalancer} which ramps the weight of newly added
+     * candidates using {@link WeightTransition#linear()}. The candidate is selected
+     * using weighted random distribution.
+     * The weights of {@link Endpoint}s are ramped up by 10 percent every 2 seconds up to 100 percent
+     * by default. If you want to customize the parameters, use {@link #builderForRampingUp(Iterable)}.
+     */
+    @SafeVarargs
+    static <T extends Weighted, C> UpdatableLoadBalancer<T, C> ofRampingUp(T... candidates) {
+        requireNonNull(candidates, "candidates");
+        return ofRampingUp(ImmutableList.copyOf(candidates));
+    }
+
+    /**
      * Returns a new {@link RampingUpLoadBalancerBuilder} that builds
      * a {@link LoadBalancer} which ramps up the weight of newly added
      * candidates. The candidate is selected using weighted random distribution.
@@ -169,11 +204,22 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
     }
 
     /**
+     * Returns a new {@link RampingUpLoadBalancerBuilder} that builds
+     * a {@link LoadBalancer} which ramps up the weight of newly added
+     * candidates. The candidate is selected using weighted random distribution.
+     */
+    @SafeVarargs
+    static <T extends Weighted, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(T... candidates) {
+        requireNonNull(candidates, "candidates");
+        return builderForRampingUp(ImmutableList.copyOf(candidates));
+    }
+
+    /**
      * Selects and returns an element from the list of candidates based on the strategy.
      * {@code null} is returned if no candidate is available.
      */
     @Nullable
-    T pick(C ctx);
+    T pick(C context);
 
     @Override
     default void close() {}
