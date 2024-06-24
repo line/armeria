@@ -314,10 +314,10 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
         }
 
         void unsubscribe(DownstreamSubscription<T> subscription, @Nullable Throwable cause) {
-            if (executor.inEventLoop()) {
+            if (subscription.executor.inEventLoop()) {
                 doUnsubscribe(subscription, cause);
             } else {
-                executor.execute(() -> doUnsubscribe(subscription, cause));
+                subscription.executor.execute(() -> doUnsubscribe(subscription, cause));
             }
         }
 
@@ -340,7 +340,7 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                     logger.warn("Subscriber.onComplete() should not raise an exception. subscriber: {}",
                                 subscriber, t);
                 } finally {
-                    doCleanupIfLastSubscription();
+                    cleanupIfLastSubscription();
                 }
                 return;
             }
@@ -357,7 +357,15 @@ public class DefaultStreamMessageDuplicator<T> implements StreamMessageDuplicato
                 logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
                             subscriber, composite);
             } finally {
+                cleanupIfLastSubscription();
+            }
+        }
+
+        private void cleanupIfLastSubscription() {
+            if (executor.inEventLoop()) {
                 doCleanupIfLastSubscription();
+            } else {
+                executor.execute(this::doCleanupIfLastSubscription);
             }
         }
 
