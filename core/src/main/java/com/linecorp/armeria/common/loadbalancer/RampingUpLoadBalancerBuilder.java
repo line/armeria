@@ -16,14 +16,13 @@
 
 package com.linecorp.armeria.common.loadbalancer;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.List;
 import java.util.function.ToIntFunction;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -35,26 +34,13 @@ import io.netty.util.concurrent.EventExecutor;
 public final class RampingUpLoadBalancerBuilder<T, C>
         extends AbstractRampingUpLoadBalancerBuilder<T, RampingUpLoadBalancerBuilder<T, C>> {
 
-    private static final ToIntFunction<?> DEFAULT_WEIGHT_FUNCTION = c -> 1000;
-
     private final List<T> candidates;
+    @Nullable
+    private final ToIntFunction<T> weightFunction;
 
-    @SuppressWarnings("unchecked")
-    private ToIntFunction<T> weightFunction = (ToIntFunction<T>) DEFAULT_WEIGHT_FUNCTION;
-
-    RampingUpLoadBalancerBuilder(Iterable<T> candidates) {
+    RampingUpLoadBalancerBuilder(Iterable<T> candidates, @Nullable ToIntFunction<T> weightFunction) {
         this.candidates = ImmutableList.copyOf(candidates);
-    }
-
-    /**
-     * Sets the weight function to use to get the weight of the given candidate.
-     * The weight is used to calculate the ramp up weight of the candidate.
-     * If not set, the weight is set to 1000.
-     */
-    public RampingUpLoadBalancerBuilder<T, C> weightFunction(ToIntFunction<T> weightFunction) {
-        requireNonNull(weightFunction, "weightFunction");
         this.weightFunction = weightFunction;
-        return this;
     }
 
     /**
@@ -69,8 +55,9 @@ public final class RampingUpLoadBalancerBuilder<T, C>
             executor = CommonPools.workerGroup().next();
         }
 
-        return new RampingUpLoadBalancer<>(candidates, rampingUpIntervalMillis(), totalSteps(),
-                                           rampingUpTaskWindowMillis(), ticker(), weightTransition(),
-                                           weightFunction, timestampFunction(), executor);
+        return new RampingUpLoadBalancer<>(candidates, weightFunction, rampingUpIntervalMillis(), totalSteps(),
+                                           rampingUpTaskWindowMillis(), weightTransition(), timestampFunction(),
+                                           ticker(),
+                                           executor);
     }
 }

@@ -27,7 +27,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
-import com.linecorp.armeria.internal.common.loadbalancer.Weighted;
+import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
@@ -37,8 +37,8 @@ final class HostSet {
     private final boolean weightedPriorityHealth;
     private final int overProvisioningFactor;
 
-    private final LoadBalancer<Weighted<Locality>> healthyLocalitySelector;
-    private final LoadBalancer<Weighted<Locality>> degradedLocalitySelector;
+    private final LoadBalancer<WeightedObject<Locality>, Void> healthyLocalitySelector;
+    private final LoadBalancer<WeightedObject<Locality>, Void> degradedLocalitySelector;
 
     private final EndpointGroup hostsEndpointGroup;
     private final EndpointGroup healthyHostsEndpointGroup;
@@ -117,22 +117,22 @@ final class HostSet {
                           .toString();
     }
 
-    private static LoadBalancer<Weighted<Locality>> rebuildLocalityScheduler(
+    private static LoadBalancer<WeightedObject<Locality>, Void> rebuildLocalityScheduler(
             Map<Locality, EndpointGroup> eligibleHostsPerLocality,
             Map<Locality, EndpointGroup> allHostsPerLocality,
             Map<Locality, Integer> localityWeightsMap,
             int overProvisioningFactor) {
-        final ImmutableList.Builder<Weighted<Locality>> localityWeightsBuilder = ImmutableList.builder();
+        final ImmutableList.Builder<WeightedObject<Locality>> localityWeightsBuilder = ImmutableList.builder();
         for (Locality locality : allHostsPerLocality.keySet()) {
             final double effectiveWeight =
                     effectiveLocalityWeight(locality, eligibleHostsPerLocality, allHostsPerLocality,
                                             localityWeightsMap, overProvisioningFactor);
             if (effectiveWeight > 0) {
                 final int weight = Ints.saturatedCast(Math.round(effectiveWeight));
-                localityWeightsBuilder.add(new Weighted<>(locality, weight));
+                localityWeightsBuilder.add(new WeightedObject<>(locality, weight));
             }
         }
-        return LoadBalancer.ofWeightedRandom(localityWeightsBuilder.build(), Weighted::weight);
+        return LoadBalancer.ofWeightedRandom(localityWeightsBuilder.build());
     }
 
     static double effectiveLocalityWeight(Locality locality,
@@ -158,9 +158,7 @@ final class HostSet {
 
     @Nullable
     Locality chooseDegradedLocality() {
-        // It is safe to call pick() with null RequestContext because it is not used in the implementation
-        // of WeightedRandomLoadBalancer.
-        final Weighted<Locality> localityEntry = degradedLocalitySelector.pick(null);
+        final WeightedObject<Locality> localityEntry = degradedLocalitySelector.pick(null);
         if (localityEntry == null) {
             return null;
         }
@@ -169,9 +167,7 @@ final class HostSet {
 
     @Nullable
     Locality chooseHealthyLocality() {
-        // It is safe to call pick() with null RequestContext because it is not used in the implementation
-        // of WeightedRandomLoadBalancer.
-        final Weighted<Locality> localityEntry = healthyLocalitySelector.pick(null);
+        final WeightedObject<Locality> localityEntry = healthyLocalitySelector.pick(null);
         if (localityEntry == null) {
             return null;
         }

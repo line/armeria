@@ -22,34 +22,29 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
 
 class RoundRobinStrategyTest {
-
-    private final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
     @Test
     void pick() {
         final ImmutableList<Endpoint> endpoints = ImmutableList.of(Endpoint.parse("localhost:1234"),
                                                                    Endpoint.parse("localhost:2345"));
-        final LoadBalancer<Endpoint, ClientRequestContext> loadBalancer = LoadBalancer.ofRoundRobin(endpoints);
-        assertThat(loadBalancer.pick(ctx))
+        final LoadBalancer<Endpoint, Void> loadBalancer = LoadBalancer.ofRoundRobin(endpoints);
+        assertThat(loadBalancer.pick(null))
                 .isEqualTo(endpoints.get(0));
-        assertThat(loadBalancer.pick(ctx))
+        assertThat(loadBalancer.pick(null))
                 .isEqualTo(endpoints.get(1));
-        assertThat(loadBalancer.pick(ctx))
+        assertThat(loadBalancer.pick(null))
                 .isEqualTo(endpoints.get(0));
-        assertThat(loadBalancer.pick(ctx))
+        assertThat(loadBalancer.pick(null))
                 .isEqualTo(endpoints.get(1));
     }
 
     @Test
     void pickEmpty() {
-        final LoadBalancer<Endpoint, ClientRequestContext> loadBalancer = LoadBalancer.ofRoundRobin(
+        final LoadBalancer<Endpoint, Void> loadBalancer = LoadBalancer.ofRoundRobin(
                 ImmutableList.of());
-        assertThat(loadBalancer.pick(ctx)).isNull();
+        assertThat(loadBalancer.pick(null)).isNull();
     }
 }

@@ -53,7 +53,7 @@ final class SubsetLoadBalancer implements LoadBalancer<Endpoint, ClientRequestCo
     @Override
     @Nullable
     public Endpoint pick(ClientRequestContext ctx) {
-        return endpointGroup.selectNow((ClientRequestContext) ctx);
+        return endpointGroup.selectNow(ctx);
     }
 
     private static EndpointGroup createEndpointGroup(PrioritySet prioritySet) {

@@ -102,7 +102,6 @@ final class WeightRampingUpStrategy
                                .rampingUpTaskWindowMillis(rampingUpTaskWindowNanos)
                                .totalSteps(totalSteps)
                                .weightTransition(weightTransition)
-                               .weightFunction(Endpoint::weight)
                                .timestampFunction(timestampFunction)
                                .executor(executorSupplier.get())
                                .ticker(ticker)

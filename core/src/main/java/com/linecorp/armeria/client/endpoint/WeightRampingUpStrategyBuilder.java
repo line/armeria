@@ -113,5 +113,4 @@ public final class WeightRampingUpStrategyBuilder
     public WeightRampingUpStrategyBuilder ticker(Ticker ticker) {
         return super.ticker(ticker);
     }
-
 }

@@ -34,9 +34,17 @@ public interface WeightTransition<T> {
      * step increases.
      */
     static <T> WeightTransition<T> linear() {
-        return (candidate, weight, currentStep, totalSteps) ->
-                // currentStep is never greater than totalSteps so we can cast long to int.
-                Ints.saturatedCast((long) weight * currentStep / totalSteps);
+        return new WeightTransition<T>() {
+            @Override
+            public int compute(T candidate, int weight, int currentStep, int totalSteps) {
+                return Ints.saturatedCast((long) weight * currentStep / totalSteps);
+            }
+
+            @Override
+            public String toString() {
+                return "linear()";
+            }
+        };
     }
 
     /**
@@ -54,15 +62,24 @@ public interface WeightTransition<T> {
                       "minWeightPercent: %s (expected: >= 0.0, <= 1.0)", minWeightPercent);
         final int aggressionPercentage = Ints.saturatedCast(Math.round(aggression * 100));
         final double invertedAggression = 100.0 / aggressionPercentage;
-        return (candidate, weight, currentStep, totalSteps) -> {
-            final int minWeight = Ints.saturatedCast(Math.round(weight * minWeightPercent));
-            final int computedWeight;
-            if (aggressionPercentage == 100) {
-                computedWeight = linear().compute(candidate, weight, currentStep, totalSteps);
-            } else {
-                computedWeight = (int) (weight * Math.pow(1.0 * currentStep / totalSteps, invertedAggression));
+        return new WeightTransition<T>() {
+            @Override
+            public int compute(T candidate, int weight, int currentStep, int totalSteps) {
+                final int minWeight = Ints.saturatedCast(Math.round(weight * minWeightPercent));
+                final int computedWeight;
+                if (aggressionPercentage == 100) {
+                    computedWeight = linear().compute(candidate, weight, currentStep, totalSteps);
+                } else {
+                    computedWeight = (int) (weight * Math.pow(1.0 * currentStep / totalSteps,
+                                                              invertedAggression));
+                }
+                return Math.max(computedWeight, minWeight);
             }
-            return Math.max(computedWeight, minWeight);
+
+            @Override
+            public String toString() {
+                return "aggression(" + aggression + ", " + minWeightPercent + ')';
+            }
         };
     }
 

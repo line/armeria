@@ -47,12 +47,25 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * Returns a {@link LoadBalancer} that selects a candidate using the weighted round-robin strategy that
      * implements <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleaved WRR</a>
      * algorithm.
+     *
+     * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> LoadBalancer<T, C> ofWeightedRoundRobin(Iterable<? extends T> candidates,
-                                                          ToIntFunction<? super T> weightFunction) {
+    static <T, C> LoadBalancer<T, C> ofWeightedRoundRobin(Iterable<T> candidates,
+                                                          ToIntFunction<T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
         return new WeightedRoundRobinLoadBalancer<>(candidates, weightFunction);
+    }
+
+    /**
+     * Returns a {@link LoadBalancer} that selects a candidate using the weighted round-robin strategy that
+     * implements <a href="https://en.wikipedia.org/wiki/Weighted_round_robin#Interleaved_WRR">Interleaved WRR</a>
+     * algorithm.
+     */
+    static <T extends Weighted, C> LoadBalancer<T, C> ofWeightedRoundRobin(Iterable<? extends T> candidates) {
+        requireNonNull(candidates, "candidates");
+        //noinspection unchecked
+        return new WeightedRoundRobinLoadBalancer<>((Iterable<T>) candidates, null);
     }
 
     /**
@@ -82,12 +95,40 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
 
     /**
      * Returns a {@link LoadBalancer} that selects a candidate using the weighted random distribution strategy.
+     *
+     * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> LoadBalancer<T, C> ofWeightedRandom(Iterable<? extends T> candidates,
-                                                      ToIntFunction<? super T> weightFunction) {
+    static <T, C> LoadBalancer<T, C> ofWeightedRandom(Iterable<T> candidates,
+                                                      ToIntFunction<T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
         return new WeightedRandomLoadBalancer<>(candidates, weightFunction);
+    }
+
+    /**
+     * Returns a {@link LoadBalancer} that selects a candidate using the weighted random distribution strategy.
+     */
+    static <T extends Weighted, C> LoadBalancer<T, C> ofWeightedRandom(
+            Iterable<? extends T> candidates) {
+        requireNonNull(candidates, "candidates");
+        return new WeightedRandomLoadBalancer<>(candidates, null);
+    }
+
+    /**
+     * Returns a weight ramping up {@link EndpointSelectionStrategy} which ramps the weight of newly added
+     * candidates using {@link WeightTransition#linear()}. The candidate is selected
+     * using weighted random distribution.
+     * The weights of {@link Endpoint}s are ramped up by 10 percent every 2 seconds up to 100 percent
+     * by default. If you want to customize the parameters,
+     * use {@link #builderForRampingUp(Iterable, ToIntFunction)}.
+     *
+     * @param weightFunction the weight function which returns the weight of the candidate.
+     */
+    static <T, C> UpdatableLoadBalancer<T, C> ofRampingUp(Iterable<T> candidates,
+                                                          ToIntFunction<T> weightFunction) {
+        requireNonNull(candidates, "candidates");
+        requireNonNull(weightFunction, "weightFunction");
+        return LoadBalancer.<T, C>builderForRampingUp(candidates, weightFunction).build();
     }
 
     /**
@@ -97,7 +138,7 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * The weights of {@link Endpoint}s are ramped up by 10 percent every 2 seconds up to 100 percent
      * by default. If you want to customize the parameters, use {@link #builderForRampingUp(Iterable)}.
      */
-    static <T, C> UpdatableLoadBalancer<T, C> ofRampingUp(Iterable<? extends T> candidates) {
+    static <T extends Weighted, C> UpdatableLoadBalancer<T, C> ofRampingUp(Iterable<? extends T> candidates) {
         requireNonNull(candidates, "candidates");
         return LoadBalancer.<T, C>builderForRampingUp(candidates).build();
     }
@@ -106,13 +147,32 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      * Returns a new {@link RampingUpLoadBalancerBuilder} that builds
      * a {@link LoadBalancer} which ramps up the weight of newly added
      * candidates. The candidate is selected using weighted random distribution.
+     *
+     * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(Iterable<? extends T> candidates) {
+    static <T, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(Iterable<T> candidates,
+                                                                         ToIntFunction<T> weightFunction) {
         requireNonNull(candidates, "candidates");
-        //noinspection unchecked
-        return new RampingUpLoadBalancerBuilder<>((Iterable<T>) candidates);
+        requireNonNull(weightFunction, "weightFunction");
+        return new RampingUpLoadBalancerBuilder<>(candidates, weightFunction);
     }
 
+    /**
+     * Returns a new {@link RampingUpLoadBalancerBuilder} that builds
+     * a {@link LoadBalancer} which ramps up the weight of newly added
+     * candidates. The candidate is selected using weighted random distribution.
+     */
+    static <T extends Weighted, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(
+            Iterable<? extends T> candidates) {
+        requireNonNull(candidates, "candidates");
+        //noinspection unchecked
+        return new RampingUpLoadBalancerBuilder<>((Iterable<T>) candidates, null);
+    }
+
+    /**
+     * Selects and returns an element from the list of candidates based on the strategy.
+     * {@code null} is returned if no candidate is available.
+     */
     @Nullable
     T pick(C ctx);
 

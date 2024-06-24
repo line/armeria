@@ -29,11 +29,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Streams;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
-import com.linecorp.armeria.internal.common.loadbalancer.Weighted;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 /**
- * This {@link LoadBalancer} selects an element using random and {@link Weighted#weight()}.
+ * This {@link LoadBalancer} selects an element using random and {@link WeightedObject#weight()}.
  * If there are A(weight 10), B(weight 4) and C(weight 6) elements, the chances that
  * elements are selected are 10/20, 4/20 and 6/20, respectively. If A is selected 10 times and B and C are not
  * selected as much as their weight, then A is removed temporarily and the chances that B and C are selected are
@@ -48,11 +49,18 @@ final class WeightedRandomLoadBalancer<T, C> implements LoadBalancer<T, C> {
     private final long total;
     private long remaining;
 
-    WeightedRandomLoadBalancer(Iterable<? extends T> candidates, ToIntFunction<? super T> weightFunction) {
+    WeightedRandomLoadBalancer(Iterable<? extends T> candidates,
+                               @Nullable ToIntFunction<? super T> weightFunction) {
         @SuppressWarnings("unchecked")
         final List<CandidateContext<T>> candidateContexts =
                 Streams.stream((Iterable<T>) candidates)
-                       .map(e -> new CandidateContext<>(e, weightFunction.applyAsInt(e)))
+                       .map(e -> {
+                           if (weightFunction == null) {
+                               return new CandidateContext<>(e, ((Weighted) e).weight());
+                           } else {
+                               return new CandidateContext<>(e, weightFunction.applyAsInt(e));
+                           }
+                       })
                        .filter(e -> e.weight() > 0)
                        .collect(toImmutableList());
 
@@ -108,7 +116,7 @@ final class WeightedRandomLoadBalancer<T, C> implements LoadBalancer<T, C> {
     }
 
     @VisibleForTesting
-    static final class CandidateContext<T> extends Weighted<T> {
+    static final class CandidateContext<T> extends WeightedObject<T> {
 
         private int counter;
 

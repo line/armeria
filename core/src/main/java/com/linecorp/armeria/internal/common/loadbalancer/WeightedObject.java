@@ -20,13 +20,14 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
-// TODO(ikhoon): Make this class interface.
-public class Weighted<T> {
+import com.linecorp.armeria.common.loadbalancer.Weighted;
+
+public class WeightedObject<T> implements Weighted {
     private final T element;
 
     private final int weight;
 
-    public Weighted(T element, int weight) {
+    public WeightedObject(T element, int weight) {
         this.element = element;
         this.weight = weight;
     }
@@ -35,6 +36,7 @@ public class Weighted<T> {
         return element;
     }
 
+    @Override
     public final int weight() {
         return weight;
     }
@@ -44,10 +46,10 @@ public class Weighted<T> {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof Weighted)) {
+        if (!(o instanceof WeightedObject)) {
             return false;
         }
-        final Weighted<?> weighted = (Weighted<?>) o;
+        final WeightedObject<?> weighted = (WeightedObject<?>) o;
         return weight == weighted.weight && element.equals(weighted.element);
     }
 

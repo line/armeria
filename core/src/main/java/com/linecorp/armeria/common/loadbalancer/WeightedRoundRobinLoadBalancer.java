@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.loadbalancer.Weighted;
+import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 
 /**
  * A weighted round robin select strategy.
@@ -44,16 +44,14 @@ final class WeightedRoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
     private final AtomicInteger sequence = new AtomicInteger();
     private final CandidatesAndWeights<T> candidatesAndWeights;
 
-    WeightedRoundRobinLoadBalancer(Iterable<? extends T> candidates, ToIntFunction<? super T> weightFunction) {
-        //noinspection unchecked
-        candidatesAndWeights = new CandidatesAndWeights<>((Iterable<T>) candidates,
-                                                          (ToIntFunction<T>) weightFunction);
+    WeightedRoundRobinLoadBalancer(Iterable<T> candidates,
+                                   @Nullable ToIntFunction<T> weightFunction) {
+        candidatesAndWeights = new CandidatesAndWeights<>(candidates, weightFunction);
     }
 
     @Override
     public T pick(C unused) {
-        final Weighted<T> candidate = candidatesAndWeights.select(sequence.getAndIncrement());
-        return candidate != null ? candidate.get() : null;
+        return candidatesAndWeights.select(sequence.getAndIncrement());
     }
 
     // endpoints accumulation which are grouped by weight
@@ -107,15 +105,21 @@ final class WeightedRoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
     // and mark the start index of the group.
     //
     private static final class CandidatesAndWeights<T> {
-        private final List<Weighted<T>> candidates;
+        private final List<Weighted> candidates;
         private final boolean weighted;
         private final long totalWeight; // prevent overflow by using long
         private final List<CandidatesGroupByWeight> accumulatedGroups;
 
-        CandidatesAndWeights(Iterable<T> candidates, ToIntFunction<T> weightFunction) {
+        CandidatesAndWeights(Iterable<T> candidates, @Nullable ToIntFunction<T> weightFunction) {
             // prepare immutable candidates
             this.candidates = Streams.stream(candidates)
-                                     .map(e -> new Weighted<>(e, weightFunction.applyAsInt(e)))
+                                     .map(e -> {
+                                         if (weightFunction == null) {
+                                             return (Weighted) e;
+                                         } else {
+                                             return new WeightedObject<>(e, weightFunction.applyAsInt(e));
+                                         }
+                                     })
                                      .filter(e -> e.weight() > 0) // only process candidate with weight > 0
                                      .sorted(Comparator.comparing(Weighted::weight))
                                      .collect(toImmutableList());
@@ -127,7 +131,7 @@ final class WeightedRoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
             int numberDistinctWeight = 0;
 
             int oldWeight = -1;
-            for (Weighted<T> candidate : this.candidates) {
+            for (Weighted candidate : this.candidates) {
                 final int weight = candidate.weight();
                 minWeight = Math.min(minWeight, weight);
                 maxWeight = Math.max(maxWeight, weight);
@@ -144,7 +148,7 @@ final class WeightedRoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
             CandidatesGroupByWeight currentGroup = null;
 
             long rest = numCandidates;
-            for (Weighted<T> candidate : this.candidates) {
+            for (Weighted candidate : this.candidates) {
                 if (currentGroup == null || currentGroup.weight != candidate.weight()) {
                     totalWeight += currentGroup == null ? candidate.weight() * rest
                                                         : (candidate.weight() - currentGroup.weight) * rest;
@@ -161,8 +165,19 @@ final class WeightedRoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
             weighted = minWeight != maxWeight;
         }
 
+        @SuppressWarnings("unchecked")
         @Nullable
-        Weighted<T> select(int currentSequence) {
+        T select(int currentSequence) {
+            final Weighted selected = select0(currentSequence);
+            if (selected instanceof WeightedObject<?>) {
+                return ((WeightedObject<T>) selected).get();
+            } else {
+                return (T) selected;
+            }
+        }
+
+        @Nullable
+        Weighted select0(int currentSequence) {
             if (candidates.isEmpty()) {
                 return null;
             }

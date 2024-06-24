@@ -124,5 +124,4 @@ class WeightRampingUpStrategyIntegrationTest {
             return -1;
         }
     }
-
 }

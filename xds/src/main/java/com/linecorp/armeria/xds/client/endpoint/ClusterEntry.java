@@ -43,7 +43,7 @@ final class ClusterEntry implements AsyncCloseable {
 
     private final EndpointsPool endpointsPool;
     @Nullable
-    private volatile LoadBalancer<Endpoint> loadBalancer;
+    private volatile LoadBalancer<Endpoint, ClientRequestContext> loadBalancer;
     private final ClusterManager clusterManager;
     private final EventExecutor eventExecutor;
     private List<Endpoint> endpoints = ImmutableList.of();
@@ -58,7 +58,7 @@ final class ClusterEntry implements AsyncCloseable {
 
     @Nullable
     Endpoint selectNow(ClientRequestContext ctx) {
-        final LoadBalancer<Endpoint> loadBalancer = this.loadBalancer;
+        final LoadBalancer<Endpoint, ClientRequestContext> loadBalancer = this.loadBalancer;
         if (loadBalancer == null) {
             return null;
         }

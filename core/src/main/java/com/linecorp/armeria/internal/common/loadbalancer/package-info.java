@@ -14,14 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+/**
+ * Various classes used internally. Anything in this package can be changed or removed at any time.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.internal.common.loadbalancer;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
-
-interface EndpointLoadBalancer {
-
-    @Nullable
-    Endpoint selectNow(ClientRequestContext ctx);
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

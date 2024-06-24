@@ -53,6 +53,9 @@ public abstract class AbstractRampingUpLoadBalancerBuilder<
     @SuppressWarnings("unchecked")
     private Function<T, Long> timestampFunction = (Function<T, Long>) DEFAULT_TIMESTAMP_FUNCTION;
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractRampingUpLoadBalancerBuilder() {}
 
     /**

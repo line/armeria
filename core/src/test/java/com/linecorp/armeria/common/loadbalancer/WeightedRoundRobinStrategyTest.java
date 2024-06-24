@@ -63,7 +63,7 @@ class WeightedRoundRobinStrategyTest {
                         ImmutableList.of(
                                 Endpoint.of("127.0.0.1", 1234).withWeight(1),
                                 Endpoint.of("127.0.0.1", 2345).withWeight(2),
-                                Endpoint.of("127.0.0.1", 3456).withWeight(3)), Endpoint::weight);
+                                Endpoint.of("127.0.0.1", 3456).withWeight(3)));
 
         assertThat(loadBalancer.pick(null).authority()).isEqualTo("127.0.0.1:1234");
         assertThat(loadBalancer.pick(null).authority()).isEqualTo("127.0.0.1:2345");

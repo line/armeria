@@ -37,8 +37,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.math.IntMath;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Ticker;
-import com.linecorp.armeria.internal.common.loadbalancer.Weighted;
+import com.linecorp.armeria.internal.common.loadbalancer.WeightedObject;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -65,7 +66,7 @@ import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
 
     private static final Logger logger = LoggerFactory.getLogger(RampingUpLoadBalancer.class);
-    private static final LoadBalancer<?, ?> EMPTY_LOAD_BALANCER =
+    private static final LoadBalancer<?, ?> EMPTY_RANDOM_LOAD_BALANCER =
             LoadBalancer.ofWeightedRandom(ImmutableList.of(), x -> 0);
 
     private final long rampingUpIntervalNanos;
@@ -73,6 +74,7 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     private final long rampingUpTaskWindowNanos;
     private final Ticker ticker;
     private final WeightTransition<T> weightTransition;
+    @Nullable
     private final ToIntFunction<T> weightFunction;
     private final Function<T, Long> timestampFunction;
 
@@ -80,22 +82,22 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     private final ReentrantShortLock lock = new ReentrantShortLock(true);
 
     @SuppressWarnings("unchecked")
-    private volatile LoadBalancer<Weighted<T>, C> weightedRandomLoadBalancer =
-            (LoadBalancer<Weighted<T>, C>) EMPTY_LOAD_BALANCER;
+    private volatile LoadBalancer<Weighted, Void> weightedRandomLoadBalancer =
+            (LoadBalancer<Weighted, Void>) EMPTY_RANDOM_LOAD_BALANCER;
 
-    private final List<Weighted<T>> candidatesFinishedRampingUp = new ArrayList<>();
+    private final List<Weighted> candidatesFinishedRampingUp = new ArrayList<>();
 
     @VisibleForTesting
     final Map<Long, CandidatesRampingUpEntry<T>> rampingUpWindowsMap = new HashMap<>();
     private Object2LongOpenHashMap<T> candidateCreatedTimestamps = new Object2LongOpenHashMap<>();
 
-    RampingUpLoadBalancer(Iterable<T> candidates, long rampingUpIntervalNanos, int totalSteps,
-                          long rampingUpTaskWindowNanos, Ticker ticker,
-                          WeightTransition<T> weightTransition, ToIntFunction<T> weightFunction,
-                          Function<T, Long> timestampFunction, EventExecutor executor) {
-        this.rampingUpIntervalNanos = rampingUpIntervalNanos;
+    RampingUpLoadBalancer(Iterable<T> candidates, @Nullable ToIntFunction<T> weightFunction,
+                          long rampingUpIntervalMillis, int totalSteps, long rampingUpTaskWindowMillis,
+                          WeightTransition<T> weightTransition, Function<T, Long> timestampFunction,
+                          Ticker ticker, EventExecutor executor) {
+        rampingUpIntervalNanos = TimeUnit.MILLISECONDS.toNanos(rampingUpIntervalMillis);
         this.totalSteps = totalSteps;
-        this.rampingUpTaskWindowNanos = rampingUpTaskWindowNanos;
+        rampingUpTaskWindowNanos = TimeUnit.MILLISECONDS.toNanos(rampingUpTaskWindowMillis);
         this.ticker = ticker;
         this.weightTransition = weightTransition;
         this.weightFunction = weightFunction;
@@ -106,9 +108,15 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
 
     @Override
     public T pick(C unused) {
-        final LoadBalancer<Weighted<T>, C> weightedRandomLoadBalancer = this.weightedRandomLoadBalancer;
-        final Weighted<T> weighted = weightedRandomLoadBalancer.pick(null);
-        return weighted == null ? null : weighted.get();
+        final LoadBalancer<Weighted, Void> weightedRandomLoadBalancer = this.weightedRandomLoadBalancer;
+        final Weighted weighted = weightedRandomLoadBalancer.pick(null);
+        if (weighted == null || weightFunction == null) {
+            //noinspection unchecked
+            return (T) weighted;
+        } else {
+            //noinspection unchecked
+            return ((WeightedObject<T>) weighted).get();
+        }
     }
 
     @Override
@@ -138,8 +146,7 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
             // check if the candidate is already finished ramping up
             final int step = numStep(rampingUpIntervalNanos, ticker, createTimestamp);
             if (step >= totalSteps) {
-                candidatesFinishedRampingUp.add(
-                        new Weighted<>(candidate, weightFunction.applyAsInt(candidate)));
+                candidatesFinishedRampingUp.add(toWeighted(candidate, weightFunction));
                 continue;
             }
 
@@ -158,7 +165,7 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
             final CandidatesRampingUpEntry<T> rampingUpEntry = rampingUpWindowsMap.get(window);
 
             final CandidateAndStep<T> candidateAndStep =
-                    new CandidateAndStep<>(candidate, weightTransition, weightFunction, step, totalSteps);
+                    new CandidateAndStep<>(candidate, weightFunction, weightTransition, step, totalSteps);
             rampingUpEntry.addCandidate(candidateAndStep);
         }
         candidateCreatedTimestamps = newCreatedTimestamps;
@@ -185,20 +192,21 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     }
 
     private void buildLoadBalancer() {
-        final ImmutableList.Builder<Weighted<T>> targetCandidatesBuilder = ImmutableList.builder();
+        final ImmutableList.Builder<Weighted> targetCandidatesBuilder = ImmutableList.builder();
         targetCandidatesBuilder.addAll(candidatesFinishedRampingUp);
         for (CandidatesRampingUpEntry<T> entry : rampingUpWindowsMap.values()) {
             for (CandidateAndStep<T> candidateAndStep : entry.candidateAndSteps()) {
                 targetCandidatesBuilder.add(
-                        new Weighted<>(candidateAndStep.candidate(), candidateAndStep.currentWeight()));
+                        // Capture the current weight of the candidate for the current step.
+                        new WeightedObject<>(candidateAndStep.candidate(), candidateAndStep.currentWeight()));
             }
         }
-        final List<Weighted<T>> candidates = targetCandidatesBuilder.build();
-        weightedRandomLoadBalancer = LoadBalancer.ofWeightedRandom(candidates, Weighted::weight);
+        final List<Weighted> candidates = targetCandidatesBuilder.build();
+        weightedRandomLoadBalancer = LoadBalancer.ofWeightedRandom(candidates);
     }
 
     @VisibleForTesting
-    LoadBalancer<Weighted<T>, C> weightedRandomLoadBalancer() {
+    LoadBalancer<Weighted, Void> weightedRandomLoadBalancer() {
         return weightedRandomLoadBalancer;
     }
 
@@ -231,18 +239,18 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
         final CandidatesRampingUpEntry<T> entry = rampingUpWindowsMap.get(window);
         assert entry != null;
         final Set<CandidateAndStep<T>> candidateAndSteps = entry.candidateAndSteps();
-        updateWeightAndStep(candidateAndSteps);
+        updateWeightAndStep0(candidateAndSteps);
         if (candidateAndSteps.isEmpty()) {
             rampingUpWindowsMap.remove(window).scheduledFuture.cancel(true);
         }
         buildLoadBalancer();
     }
 
-    private void updateWeightAndStep(Set<CandidateAndStep<T>> candidateAndSteps) {
-        for (final Iterator<CandidateAndStep<T>> i = candidateAndSteps.iterator(); i.hasNext(); ) {
+    private void updateWeightAndStep0(Set<CandidateAndStep<T>> candidateAndSteps) {
+        for (final Iterator<CandidateAndStep<T>> i = candidateAndSteps.iterator(); i.hasNext();) {
             final CandidateAndStep<T> candidateAndStep = i.next();
             final int step = candidateAndStep.incrementAndGetStep();
-            final Weighted<T> candidate = candidateAndStep.weighted();
+            final Weighted candidate = candidateAndStep.weighted();
             if (step >= totalSteps) {
                 candidatesFinishedRampingUp.add(candidate);
                 i.remove();
@@ -303,17 +311,27 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
         }
     }
 
+    private static <T> Weighted toWeighted(T candidate, @Nullable ToIntFunction<T> weightFunction) {
+        if (weightFunction == null) {
+            return (Weighted) candidate;
+        } else {
+            return new WeightedObject<>(candidate, weightFunction.applyAsInt(candidate));
+        }
+    }
+
     @VisibleForTesting
     static final class CandidateAndStep<T> {
-        private final Weighted<T> candidate;
+        private final T candidate;
+        private final Weighted weighted;
         private final WeightTransition<T> weightTransition;
         private int step;
         private final int totalSteps;
         private int currentWeight;
 
-        CandidateAndStep(T candidate, WeightTransition<T> weightTransition, ToIntFunction<T> weightFunction,
-                         int step, int totalSteps) {
-            this.candidate = new Weighted<>(candidate, weightFunction.applyAsInt(candidate));
+        CandidateAndStep(T candidate, @Nullable ToIntFunction<T> weightFunction,
+                         WeightTransition<T> weightTransition, int step, int totalSteps) {
+            this.candidate = candidate;
+            weighted = toWeighted(candidate, weightFunction);
             this.weightTransition = weightTransition;
             this.step = step;
             this.totalSteps = totalSteps;
@@ -324,25 +342,25 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
         }
 
         int currentWeight() {
-            return currentWeight = computeWeight(candidate, step);
+            return currentWeight = computeWeight();
         }
 
-        private int computeWeight(Weighted<T> candidate, int step) {
-            final int calculated = weightTransition.compute(candidate.get(), candidate.weight(), step,
-                                                            totalSteps);
-            return Ints.constrainToRange(calculated, 0, candidate.weight());
+        private int computeWeight() {
+            final int originalWeight = weighted.weight();
+            final int calculated = weightTransition.compute(candidate, originalWeight, step, totalSteps);
+            return Ints.constrainToRange(calculated, 0, originalWeight);
         }
 
         int step() {
             return step;
         }
 
-        Weighted<T> weighted() {
-            return candidate;
+        Weighted weighted() {
+            return weighted;
         }
 
         T candidate() {
-            return candidate.get();
+            return candidate;
         }
 
         @Override

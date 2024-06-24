@@ -65,7 +65,7 @@ final class StickyEndpointSelectionStrategy
     }
 
     /**
-     * Creates a new sticky {@link EndpointSelector}
+     * Creates a new sticky {@link EndpointSelector}.
      */
     @Override
     public EndpointSelector newSelector(EndpointGroup endpointGroup) {
