@@ -110,7 +110,6 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
             return false;
         }
 
-
         unfinishedResponses++;
 
         keepAliveHandler().tryNotifyConnectionActive();
