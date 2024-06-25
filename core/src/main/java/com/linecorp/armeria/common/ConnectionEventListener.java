@@ -83,11 +83,12 @@ public interface ConnectionEventListener {
      * @param remoteAddress the remote address of the connection.
      * @param localAddress the local address of the connection.
      * @param attrs the attributes of the connection.
-     * @param isActive whether the connection was active or not(idle).
+     * @param isActive whether the connection was active or not(idle)
+     *                 otherwise returns null(keep-alive is disabled).
      */
     void connectionClosed(SessionProtocol protocol,
                           InetSocketAddress remoteAddress,
                           InetSocketAddress localAddress,
                           AttributeMap attrs,
-                          boolean isActive) throws Exception;
+                          @Nullable Boolean isActive) throws Exception;
 }

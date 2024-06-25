@@ -54,5 +54,5 @@ public class ConnectionEventListenerAdapter implements ConnectionEventListener {
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 boolean isActive) throws Exception {}
+                                 @Nullable Boolean isActive) throws Exception {}
 }

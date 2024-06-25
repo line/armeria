@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +25,7 @@ import java.util.Map;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
@@ -51,6 +54,9 @@ final class ClientConnectionEventMetrics {
      * Creates a new instance with the specified {@link Meter} name.
      */
     ClientConnectionEventMetrics(MeterRegistry meterRegistry, MeterIdPrefix idPrefix) {
+        requireNonNull(meterRegistry, "registry");
+        requireNonNull(idPrefix, "idPrefix");
+
         this.idPrefix = idPrefix;
         this.meterRegistry = meterRegistry;
     }
@@ -131,7 +137,7 @@ final class ClientConnectionEventMetrics {
     void closed(SessionProtocol actualProtocol,
                 InetSocketAddress remoteAddress,
                 InetSocketAddress localAddress,
-                boolean isActive) {
+                @Nullable Boolean isActive) {
         final List<Tag> commonTags = ConnMeters.commonTags(idPrefix, actualProtocol,
                                                            remoteAddress, localAddress);
 
@@ -286,11 +292,13 @@ final class ClientConnectionEventMetrics {
             return this;
         }
 
-        ConnMeters close(boolean isActive) {
-            if (isActive) {
-                activeConnections--;
-            } else {
-                idleConnections--;
+        ConnMeters close(@Nullable Boolean isActive) {
+            if (isActive != null) {
+                if (isActive) {
+                    activeConnections--;
+                } else {
+                    idleConnections--;
+                }
             }
             closed.increment();
             return this;

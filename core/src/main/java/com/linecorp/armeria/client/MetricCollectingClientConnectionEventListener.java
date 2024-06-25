@@ -19,8 +19,6 @@
  */
 package com.linecorp.armeria.client;
 
-import static java.util.Objects.requireNonNull;
-
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.SessionProtocol;
@@ -34,9 +32,6 @@ final class MetricCollectingClientConnectionEventListener implements ClientConne
     private final ClientConnectionEventMetrics clientConnectionEventMetrics;
 
     MetricCollectingClientConnectionEventListener(MeterRegistry registry, MeterIdPrefix idPrefix) {
-        requireNonNull(registry, "registry");
-        requireNonNull(idPrefix, "idPrefix");
-
         clientConnectionEventMetrics = new ClientConnectionEventMetrics(registry, idPrefix);
     }
 
@@ -89,7 +84,8 @@ final class MetricCollectingClientConnectionEventListener implements ClientConne
     public void connectionClosed(SessionProtocol protocol,
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
-                                 AttributeMap attrs, boolean isActive) throws Exception {
+                                 AttributeMap attrs,
+                                 @Nullable Boolean isActive) throws Exception {
         clientConnectionEventMetrics.closed(protocol, remoteAddress, localAddress, isActive);
     }
 }
