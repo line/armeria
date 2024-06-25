@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
@@ -28,24 +27,19 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.logging.LoggingHandler;
-import io.netty.util.concurrent.Promise;
 
 class ClientConnectionEventListenerTest {
     @RegisterExtension
@@ -142,12 +136,6 @@ class ClientConnectionEventListenerTest {
         }
     }
 
-    /**
-     * In NIO transport mode (-Dcom.linecorp.armeria.transportType), the local address may not be
-     * immediately available after invoking {@link Channel#connect(SocketAddress, ChannelPromise)} in
-     * {@link HttpChannelPool#connect(SocketAddress, SessionProtocol, SerializationFormat, PoolKey,
-     * Promise, ClientConnectionTimingsBuilder)}.
-     */
     @CsvSource({
             "H1C,0,0",
             "H1C,1000,1",
