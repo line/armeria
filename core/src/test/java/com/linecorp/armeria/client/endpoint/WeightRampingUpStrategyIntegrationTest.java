@@ -48,16 +48,21 @@ class WeightRampingUpStrategyIntegrationTest {
     private final Endpoint endpointA = Endpoint.of("a.com");
     private final Endpoint endpointB = Endpoint.of("b.com");
     private final Endpoint endpointC = Endpoint.of("c.com");
+    private final Endpoint endpointFoo = Endpoint.of("foo.com");
+    private final Endpoint endpointFoo1 = Endpoint.of("foo1.com");
 
     @Test
     void endpointIsRemovedIfNotInNewEndpoints() {
         final DynamicEndpointGroup endpointGroup = newEndpointGroup();
         setInitialEndpoints(endpointGroup);
-        final Endpoint endpoint1 = endpointGroup.selectNow(ctx);
-        final Endpoint endpoint2 = endpointGroup.selectNow(ctx);
-        assertThat(ImmutableList.of(endpoint1, endpoint2)).containsExactlyInAnyOrder(
-                Endpoint.of("foo.com"), Endpoint.of("foo1.com")
-        );
+        final Map<Endpoint, Integer> counter = new HashMap<>();
+        for (int i = 0; i < 2000; i++) {
+            final Endpoint endpoint = endpointGroup.selectNow(ctx);
+            assertThat(endpoint).isNotNull();
+            counter.compute(endpoint, (k, v) -> v == null ? 1 : v + 1);
+        }
+        assertThat(counter.get(endpointFoo)).isCloseTo(1000, Offset.offset(100));
+        assertThat(counter.get(endpointFoo1)).isCloseTo(1000, Offset.offset(100));
         // Because we set only foo1.com, foo.com is removed.
         endpointGroup.setEndpoints(ImmutableList.of(Endpoint.of("foo1.com")));
         final Endpoint endpoint3 = endpointGroup.selectNow(ctx);
@@ -108,8 +113,8 @@ class WeightRampingUpStrategyIntegrationTest {
         return new DynamicEndpointGroup(weightRampingUpStrategy);
     }
 
-    private static void setInitialEndpoints(DynamicEndpointGroup endpointGroup) {
-        final List<Endpoint> endpoints = ImmutableList.of(Endpoint.of("foo.com"), Endpoint.of("foo1.com"));
+    private void setInitialEndpoints(DynamicEndpointGroup endpointGroup) {
+        final List<Endpoint> endpoints = ImmutableList.of(endpointFoo, endpointFoo1);
         endpointGroup.setEndpoints(endpoints);
     }
 
