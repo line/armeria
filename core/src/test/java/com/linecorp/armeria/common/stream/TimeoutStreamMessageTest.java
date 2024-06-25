@@ -18,7 +18,7 @@ import org.reactivestreams.Subscription;
 import io.netty.util.concurrent.DefaultEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
 
-public class TimeoutStreamMessageTest {
+class TimeoutStreamMessageTest {
     private EventExecutor executor;
 
     @BeforeEach
@@ -31,15 +31,15 @@ public class TimeoutStreamMessageTest {
         executor.shutdownGracefully();
     }
 
-
     @Test
     public void timeoutNextMode() {
-        StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(
+        final StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(
                 Duration.ofSeconds(1), StreamTimeoutMode.UNTIL_NEXT);
-        CompletableFuture<Void> future = new CompletableFuture<>();
+        final CompletableFuture<Void> future = new CompletableFuture<>();
 
         timeoutStreamMessage.subscribe(new Subscriber<String>() {
             private Subscription subscription;
+
             @Override
             public void onSubscribe(Subscription s) {
                 subscription = s;
@@ -68,10 +68,11 @@ public class TimeoutStreamMessageTest {
     }
 
     @Test
-    public void noTimeoutNextMode() throws Exception {
-        StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(Duration.ofSeconds(1), StreamTimeoutMode.UNTIL_NEXT);
+    void noTimeoutNextMode() throws Exception {
+        final StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(
+                Duration.ofSeconds(1), StreamTimeoutMode.UNTIL_NEXT);
 
-        CompletableFuture<Void> future = new CompletableFuture<>();
+        final CompletableFuture<Void> future = new CompletableFuture<>();
 
         timeoutStreamMessage.subscribe(new Subscriber<String>() {
             @Override
@@ -98,12 +99,14 @@ public class TimeoutStreamMessageTest {
     }
 
     @Test
-    public void timeoutFirstMode() {
-        StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(Duration.ofSeconds(1), StreamTimeoutMode.UNTIL_FIRST);
-        CompletableFuture<Void> future = new CompletableFuture<>();
+    void timeoutFirstMode() {
+        final StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(
+                Duration.ofSeconds(1), StreamTimeoutMode.UNTIL_FIRST);
+        final CompletableFuture<Void> future = new CompletableFuture<>();
 
         timeoutStreamMessage.subscribe(new Subscriber<String>() {
             private Subscription subscription;
+
             @Override
             public void onSubscribe(Subscription s) {
                 subscription = s;
@@ -132,9 +135,10 @@ public class TimeoutStreamMessageTest {
     }
 
     @Test
-    public void noTimeoutModeFirst() throws Exception {
-        StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(Duration.ofSeconds(1), StreamTimeoutMode.UNTIL_FIRST);
-        CompletableFuture<Void> future = new CompletableFuture<>();
+    void noTimeoutModeFirst() throws Exception {
+        final StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(
+                Duration.ofSeconds(1), StreamTimeoutMode.UNTIL_FIRST);
+        final CompletableFuture<Void> future = new CompletableFuture<>();
 
         timeoutStreamMessage.subscribe(new Subscriber<String>() {
             @Override
@@ -161,12 +165,14 @@ public class TimeoutStreamMessageTest {
     }
 
     @Test
-    public void timeoutEOSMode() {
-        StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(Duration.ofSeconds(2), StreamTimeoutMode.UNTIL_EOS);
-        CompletableFuture<Void> future = new CompletableFuture<>();
+    void timeoutEOSMode() {
+        final StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(
+                Duration.ofSeconds(2), StreamTimeoutMode.UNTIL_EOS);
+        final CompletableFuture<Void> future = new CompletableFuture<>();
 
         timeoutStreamMessage.subscribe(new Subscriber<String>() {
             private Subscription subscription;
+
             @Override
             public void onSubscribe(Subscription s) {
                 subscription = s;
@@ -195,9 +201,10 @@ public class TimeoutStreamMessageTest {
     }
 
     @Test
-    public void noTimeoutEOSMode() throws Exception {
-        StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(Duration.ofSeconds(2), StreamTimeoutMode.UNTIL_EOS);
-        CompletableFuture<Void> future = new CompletableFuture<>();
+    void noTimeoutEOSMode() throws Exception {
+        final StreamMessage<String> timeoutStreamMessage = StreamMessage.of("message1", "message2").timeout(
+                Duration.ofSeconds(2), StreamTimeoutMode.UNTIL_EOS);
+        final CompletableFuture<Void> future = new CompletableFuture<>();
 
         timeoutStreamMessage.subscribe(new Subscriber<String>() {
             @Override
