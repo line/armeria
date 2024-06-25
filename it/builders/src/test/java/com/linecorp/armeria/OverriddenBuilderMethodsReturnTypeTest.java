@@ -94,7 +94,9 @@ class OverriddenBuilderMethodsReturnTypeTest {
                                                             "Resilience4jCircuitBreakerMappingBuilder",
                                                             "ZooKeeperEndpointGroupBuilder",
                                                             "AbstractCuratorFrameworkBuilder",
-                                                            "ZooKeeperUpdatingListenerBuilder");
+                                                            "ZooKeeperUpdatingListenerBuilder",
+                                                            "WeightRampingUpStrategyBuilder",
+                                                            "RampingUpLoadBalancerBuilder");
         final String packageName = "com.linecorp.armeria";
         findAllClasses(packageName).stream()
                                    .map(ReflectionUtils::forName)
