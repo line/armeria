@@ -116,27 +116,35 @@ public final class ConnectionEventState {
 
     /**
      * Returns the keep-alive state of the connection.
+     * If the keep-alive state is not configured, this method returns null.
      */
-    public KeepAliveState keepAliveState() {
+    @Nullable
+    public Boolean isActive() {
+        if (keepAliveState.isNone()) {
+            return null;
+        }
+        return keepAliveState.isActive();
+    }
+
+    /**
+     * Returns the keep-alive state of the connection.
+     */
+    KeepAliveState keepAliveState() {
         return keepAliveState;
     }
 
-    public enum KeepAliveState {
+    enum KeepAliveState {
         // Keep-alive is not configured
         NONE,
         ACTIVE,
         IDLE;
 
-        public boolean isNone() {
+        boolean isNone() {
             return this == NONE;
         }
 
-        public boolean isActive() {
+        boolean isActive() {
             return this == ACTIVE;
-        }
-
-        public boolean isIdle() {
-            return this == IDLE;
         }
     }
 }

@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.ConnectionEventState.KeepAliveState;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.Timer;
@@ -266,7 +267,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         try {
             connectionEventListener.connectionActive(protocol, localAddress, remoteAddress, channel, isNew);
 
-            connectionEventState.setKeepAliveState(ConnectionEventState.KeepAliveState.ACTIVE);
+            connectionEventState.setKeepAliveState(KeepAliveState.ACTIVE);
         } catch (Throwable e) {
             if (logger.isWarnEnabled()) {
                 logger.warn("{} Exception handling {}.connectionActive()",
@@ -287,7 +288,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             return;
         }
 
-        connectionEventState.setKeepAliveState(ConnectionEventState.KeepAliveState.IDLE);
+        connectionEventState.setKeepAliveState(KeepAliveState.IDLE);
 
         final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
         final InetSocketAddress localAddress = connectionEventState.localAddress();
