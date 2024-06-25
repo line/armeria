@@ -143,11 +143,10 @@ class ClientConnectionEventListenerTest {
     }
 
     /**
-     * When the transport type(-Dcom.linecorp.armeria.transportType) is NIO,
-     * sometimes local address is not available yet,
-     * right after calling {@link Channel#connect(SocketAddress, ChannelPromise)}
-     * at the {@link HttpChannelPool#connect(SocketAddress, SessionProtocol,
-     * SerializationFormat, PoolKey, Promise, ClientConnectionTimingsBuilder)}.
+     * In NIO transport mode (-Dcom.linecorp.armeria.transportType), the local address may not be
+     * immediately available after invoking {@link Channel#connect(SocketAddress, ChannelPromise)} in
+     * {@link HttpChannelPool#connect(SocketAddress, SessionProtocol, SerializationFormat, PoolKey,
+     * Promise, ClientConnectionTimingsBuilder)}.
      */
     @CsvSource({
             "H1C,0,0",

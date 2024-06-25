@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.ConnectionEventState.KeepAliveState;
 
 import io.netty.util.AttributeMap;
 
@@ -83,12 +84,11 @@ public interface ConnectionEventListener {
      * @param remoteAddress the remote address of the connection.
      * @param localAddress the local address of the connection.
      * @param attrs the attributes of the connection.
-     * @param isActive whether the connection was active or not(idle)
-     *                 otherwise returns null(keep-alive is disabled).
+     * @param keepAliveState the keep-alive state of the connection.
      */
     void connectionClosed(SessionProtocol protocol,
                           InetSocketAddress remoteAddress,
                           InetSocketAddress localAddress,
                           AttributeMap attrs,
-                          @Nullable Boolean isActive) throws Exception;
+                          KeepAliveState keepAliveState) throws Exception;
 }

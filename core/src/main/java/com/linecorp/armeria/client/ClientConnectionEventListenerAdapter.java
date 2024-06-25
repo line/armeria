@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.ConnectionEventState.KeepAliveState;
 
 import io.netty.util.AttributeMap;
 
@@ -55,7 +56,7 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
                                          InetSocketAddress remoteAddress,
                                          InetSocketAddress localAddress,
                                          AttributeMap attrs,
-                                         @Nullable Boolean isActive) throws Exception {
+                                         KeepAliveState isActive) throws Exception {
                 connectionPoolListener.connectionClosed(protocol,
                                                         remoteAddress,
                                                         localAddress,
@@ -106,5 +107,5 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 @Nullable Boolean isActive) throws Exception {}
+                                 KeepAliveState keepAliveState) throws Exception {}
 }

@@ -654,7 +654,7 @@ final class HttpChannelPool implements AsyncCloseable {
                                       connectionEventState.remoteAddress(),
                                       connectionEventState.localAddress(),
                                       channel,
-                                      connectionEventState.isNew() ? null : connectionEventState.isActive());
+                                      connectionEventState.keepAliveState());
         } catch (Throwable e) {
             if (logger.isWarnEnabled()) {
                 logger.warn("{} Exception handling {}.connectionClosed()",

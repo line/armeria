@@ -19,6 +19,7 @@ package com.linecorp.armeria.common;
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.ConnectionEventState.KeepAliveState;
 
 import io.netty.util.AttributeMap;
 
@@ -54,5 +55,5 @@ public class ConnectionEventListenerAdapter implements ConnectionEventListener {
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 @Nullable Boolean isActive) throws Exception {}
+                                 KeepAliveState isActive) throws Exception {}
 }

@@ -53,15 +53,9 @@ public final class ConnectionEventState {
     private SessionProtocol desiredProtocol;
 
     /**
-     * Whether the connection is a new one or not.
-     * This flag is used to handle connection active event properly.
+     * The connection keep-alive state.
      */
-    private boolean isNew = true;
-
-    /**
-     * Return true if the connection is active, otherwise false that the connection is idle.
-     */
-    private boolean isActive;
+    private KeepAliveState keepAliveState = KeepAliveState.NONE;
 
     /**
      * Creates a new instance.
@@ -83,18 +77,10 @@ public final class ConnectionEventState {
     }
 
     /**
-     * Sets whether the connection is a new one or not.
+     * Sets the keep-alive state of the connection.
      */
-    public ConnectionEventState setNew(boolean isNew) {
-        this.isNew = isNew;
-        return this;
-    }
-
-    /**
-     * Sets whether the connection is active.
-     */
-    public ConnectionEventState setActive(boolean isActive) {
-        this.isActive = isActive;
+    public ConnectionEventState setKeepAliveState(KeepAliveState keepAliveState) {
+        this.keepAliveState = keepAliveState;
         return this;
     }
 
@@ -129,16 +115,28 @@ public final class ConnectionEventState {
     }
 
     /**
-     * Returns whether the connection is a new one or not.
+     * Returns the keep-alive state of the connection.
      */
-    public boolean isNew() {
-        return isNew;
+    public KeepAliveState keepAliveState() {
+        return keepAliveState;
     }
 
-    /**
-     * Returns whether the connection is active or not.
-     */
-    public boolean isActive() {
-        return isActive;
+    public enum KeepAliveState {
+        // Keep-alive is not configured
+        NONE,
+        ACTIVE,
+        IDLE;
+
+        public boolean isNone() {
+            return this == NONE;
+        }
+
+        public boolean isActive() {
+            return this == ACTIVE;
+        }
+
+        public boolean isIdle() {
+            return this == IDLE;
+        }
     }
 }

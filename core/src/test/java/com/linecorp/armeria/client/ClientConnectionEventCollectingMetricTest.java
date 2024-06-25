@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
+import com.linecorp.armeria.internal.common.ConnectionEventState.KeepAliveState;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AttributeMap;
@@ -171,7 +172,8 @@ class ClientConnectionEventCollectingMetricTest {
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeBAMetricKey, 0.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleBAMetricKey, 1.0);
 
-        connectionEventListener.connectionClosed(SessionProtocol.H1, addressB, addressA, attributeMap, true);
+        connectionEventListener.connectionClosed(SessionProtocol.H1, addressB, addressA, attributeMap,
+                                                 KeepAliveState.ACTIVE);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 2.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleABMetricKey, 0.0);
@@ -180,14 +182,16 @@ class ClientConnectionEventCollectingMetricTest {
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeBAMetricKey, 0.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleBAMetricKey, 1.0);
 
-        connectionEventListener.connectionClosed(SessionProtocol.H1, addressA, addressB, attributeMap, false);
+        connectionEventListener.connectionClosed(SessionProtocol.H1, addressA, addressB, attributeMap,
+                                                 KeepAliveState.IDLE);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 2.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleABMetricKey, 0.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(closedABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).doesNotContainKey(openedBAMetricKey);
 
-        connectionEventListener.connectionClosed(SessionProtocol.H1, addressB, addressA, attributeMap, true);
+        connectionEventListener.connectionClosed(SessionProtocol.H1, addressB, addressA, attributeMap,
+                                                 KeepAliveState.ACTIVE);
         assertThat(MoreMeters.measureAll(registry)).isEmpty();
     }
 }

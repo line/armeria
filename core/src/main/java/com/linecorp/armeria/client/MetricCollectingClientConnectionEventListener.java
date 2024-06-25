@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.internal.common.ConnectionEventState.KeepAliveState;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AttributeMap;
@@ -85,7 +86,7 @@ final class MetricCollectingClientConnectionEventListener implements ClientConne
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 @Nullable Boolean isActive) throws Exception {
-        clientConnectionEventMetrics.closed(protocol, remoteAddress, localAddress, isActive);
+                                 KeepAliveState keepAliveState) throws Exception {
+        clientConnectionEventMetrics.closed(protocol, remoteAddress, localAddress, keepAliveState);
     }
 }

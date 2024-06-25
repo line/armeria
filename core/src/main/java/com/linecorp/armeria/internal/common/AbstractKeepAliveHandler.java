@@ -254,23 +254,19 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             return;
         }
 
-        if (connectionEventState.isActive()) {
+        if (connectionEventState.keepAliveState().isActive()) {
             return;
         }
-
-        connectionEventState.setActive(true);
 
         final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
         final InetSocketAddress localAddress = connectionEventState.localAddress();
         final SessionProtocol protocol = connectionEventState.actualProtocol();
-        final boolean isNew = connectionEventState.isNew();
+        final boolean isNew = connectionEventState.keepAliveState().isNone();
 
         try {
             connectionEventListener.connectionActive(protocol, localAddress, remoteAddress, channel, isNew);
 
-            if (isNew) {
-                connectionEventState.setNew(false);
-            }
+            connectionEventState.setKeepAliveState(ConnectionEventState.KeepAliveState.ACTIVE);
         } catch (Throwable e) {
             if (logger.isWarnEnabled()) {
                 logger.warn("{} Exception handling {}.connectionActive()",
@@ -287,11 +283,11 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             return;
         }
 
-        if (!connectionEventState.isActive()) {
+        if (!connectionEventState.keepAliveState().isActive()) {
             return;
         }
 
-        connectionEventState.setActive(false);
+        connectionEventState.setKeepAliveState(ConnectionEventState.KeepAliveState.IDLE);
 
         final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
         final InetSocketAddress localAddress = connectionEventState.localAddress();

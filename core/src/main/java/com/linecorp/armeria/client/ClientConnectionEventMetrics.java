@@ -25,8 +25,8 @@ import java.util.Map;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.internal.common.ConnectionEventState.KeepAliveState;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.micrometer.core.instrument.Counter;
@@ -137,7 +137,7 @@ final class ClientConnectionEventMetrics {
     void closed(SessionProtocol actualProtocol,
                 InetSocketAddress remoteAddress,
                 InetSocketAddress localAddress,
-                @Nullable Boolean isActive) {
+                KeepAliveState keepAliveState) {
         final List<Tag> commonTags = ConnMeters.commonTags(idPrefix, actualProtocol,
                                                            remoteAddress, localAddress);
 
@@ -149,7 +149,7 @@ final class ClientConnectionEventMetrics {
                 return;
             }
 
-            meters.close(isActive);
+            meters.close(keepAliveState);
 
             if (meters.activeConnections() + meters.idleConnections == 0) {
                 connMetersMap.remove(commonTags);
@@ -292,9 +292,9 @@ final class ClientConnectionEventMetrics {
             return this;
         }
 
-        ConnMeters close(@Nullable Boolean isActive) {
-            if (isActive != null) {
-                if (isActive) {
+        ConnMeters close(KeepAliveState keepAliveState) {
+            if (!keepAliveState.isNone()) {
+                if (keepAliveState.isActive()) {
                     activeConnections--;
                 } else {
                     idleConnections--;

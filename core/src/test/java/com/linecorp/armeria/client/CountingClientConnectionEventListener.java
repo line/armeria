@@ -26,6 +26,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.ConnectionEventState.KeepAliveState;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.util.AttributeMap;
@@ -113,7 +114,7 @@ public class CountingClientConnectionEventListener implements ClientConnectionEv
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 @Nullable Boolean isActive) throws Exception {
+                                 KeepAliveState isActive) throws Exception {
         try {
             lock.lock();
             final List<String> key = key("closed", protocol);
