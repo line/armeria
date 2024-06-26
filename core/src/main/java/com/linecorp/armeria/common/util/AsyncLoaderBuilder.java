@@ -105,8 +105,6 @@ public final class AsyncLoaderBuilder<T> {
 
     /**
      * Returns a newly created {@link AsyncLoader} with the entries in this builder.
-     *
-     * @throws IllegalStateException if no expiration is set.
      */
     public AsyncLoader<T> build() {
         return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, refreshIf, exceptionHandler);

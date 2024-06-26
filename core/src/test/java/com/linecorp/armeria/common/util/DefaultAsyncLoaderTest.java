@@ -652,7 +652,7 @@ class DefaultAsyncLoaderTest {
         final AsyncLoader<Integer> loader = AsyncLoader
                 .builder(loadFunc)
                 .refreshIf(i -> i == 1)
-                .expireIf(i -> true)
+                .expireIf(i -> false)
                 .build();
         assertThat(loader.load().join()).isOne();
         assertThat(refreshCounter).hasValue(0);
