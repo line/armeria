@@ -133,7 +133,7 @@ class GrpcExceptionHandlerAnnotationOnlyTest {
     private static class FirstGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("first");
             if (Objects.equals(cause.getMessage(), "first")) {
                 return Status.UNAUTHENTICATED;
@@ -145,7 +145,7 @@ class GrpcExceptionHandlerAnnotationOnlyTest {
     private static class SecondGrpcExceptionHandler  implements GrpcExceptionHandlerFunction {
 
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("second");
             if (Objects.equals(cause.getMessage(), "second")) {
                 return Status.INVALID_ARGUMENT;

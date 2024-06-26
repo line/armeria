@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -45,7 +46,10 @@ enum DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction
      * well and the protocol package.
      */
     @Override
-    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+    public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
+        if (status != null && status.getCode() != Code.UNKNOWN) {
+            return status;
+        }
         final Status s = Status.fromThrowable(cause);
         if (s.getCode() != Code.UNKNOWN) {
             return s;
@@ -54,7 +58,7 @@ enum DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction
         if (cause instanceof ClosedSessionException || cause instanceof ClosedChannelException) {
             if (ctx instanceof ServiceRequestContext) {
                 // Upstream uses CANCELLED
-                // https://github.com/grpc/grpc-java/blob/2c83ef06327adabd8e234850a5dc9dbd9ac063b0/stub/src/main/java/io/grpc/stub/ServerCalls.java#L289-L291
+                // https://github.com/grpc/grpc-java/blob/2c83ef06327adabd8e234/Users/minu/IdeaProjects/armeria/grpc/src/main/java/com/linecorp/armeria/common/grpc/GrpcExceptionHandlerFunctionBuilder.java850a5dc9dbd9ac063b0/stub/src/main/java/io/grpc/stub/ServerCalls.java#L289-L291
                 return Status.CANCELLED.withCause(cause);
             }
             // ClosedChannelException is used any time the Netty channel is closed. Proper error

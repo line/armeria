@@ -74,7 +74,7 @@ class GrpcExceptionHandlerTest {
                                   .addService("/foo", new FooTestServiceImpl())
                                   .addService("/bar", new BarTestServiceImpl(),
                                               TestServiceGrpc.getUnaryCallMethod())
-                                  .exceptionHandler((ctx, throwable, metadata) -> {
+                                  .exceptionHandler((ctx, status, throwable, metadata) -> {
                                       exceptionHandler.add("global");
                                       return Status.INTERNAL;
                                   })
@@ -88,7 +88,7 @@ class GrpcExceptionHandlerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.requestTimeoutMillis(5000)
               .service(GrpcService.builder()
-                                  .addService(new TestServiceIOException())
+                                  .addService(new ErrorTestServiceImpl())
                                   .build());
         }
     };
@@ -459,12 +459,17 @@ class GrpcExceptionHandlerTest {
                 .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
                     assertThat(e.getStatus().getCode()).isEqualTo(Status.UNAVAILABLE.getCode());
                 });
+        assertThatThrownBy(() -> client.unaryCall2(globalRequest))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
+                    assertThat(e.getStatus().getCode()).isEqualTo(Status.INVALID_ARGUMENT.getCode());
+                    assertThat(e.getStatus().getCause().getMessage()).contains("IllegalArgumentException");
+                });
     }
 
     private static class FirstGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("first");
             if (Objects.equals(cause.getMessage(), "first")) {
                 return Status.UNAUTHENTICATED;
@@ -476,7 +481,7 @@ class GrpcExceptionHandlerTest {
     private static class SecondGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("second");
             if (Objects.equals(cause.getMessage(), "second")) {
                 return Status.INVALID_ARGUMENT;
@@ -488,7 +493,7 @@ class GrpcExceptionHandlerTest {
     private static class ThirdGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("third");
             if (Objects.equals(cause.getMessage(), "third")) {
                 return Status.NOT_FOUND;
@@ -500,7 +505,7 @@ class GrpcExceptionHandlerTest {
     private static class ForthGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("forth");
             if (Objects.equals(cause.getMessage(), "forth")) {
                 return Status.UNAVAILABLE;
@@ -594,11 +599,16 @@ class GrpcExceptionHandlerTest {
         }
     }
 
-    // TestServiceIOException has DefaultGRPCExceptionHandlerFunction as fallback exception handler
-    private static class TestServiceIOException extends TestServiceImpl {
+    private static class ErrorTestServiceImpl extends TestServiceImpl {
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             responseObserver.onError(new IOException());
+        }
+
+        @Override
+        public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onError(new StatusRuntimeException(Status.INVALID_ARGUMENT.withCause(
+                    new IllegalArgumentException())));
         }
     }
 }

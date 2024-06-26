@@ -35,9 +35,9 @@ public final class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptio
     }
 
     @Override
-    public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+    public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
         final Throwable t = peelAndUnwrap(cause);
-        return delegate.apply(ctx, t, metadata);
+        return delegate.apply(ctx, status, t, metadata);
     }
 
     private static Throwable peelAndUnwrap(Throwable t) {
