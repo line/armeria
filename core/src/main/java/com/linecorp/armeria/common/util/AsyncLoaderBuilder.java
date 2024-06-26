@@ -30,9 +30,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A builder for creating a new {@link AsyncLoader}.
- *
- * <p>Expiration should be set by {@link #expireAfterLoad(Duration)} or {@link #expireIf(Predicate)}.
- * If expiration is not set, {@link #build()} will throw {@link IllegalStateException}.
  */
 @UnstableApi
 public final class AsyncLoaderBuilder<T> {
@@ -112,9 +109,6 @@ public final class AsyncLoaderBuilder<T> {
      * @throws IllegalStateException if no expiration is set.
      */
     public AsyncLoader<T> build() {
-        if (expireAfterLoad == null && expireIf == null) {
-            throw new IllegalStateException("Must set at least one of 'expireAfterLoad()` and 'expireIf()'.");
-        }
         return new DefaultAsyncLoader<>(loader, expireAfterLoad, expireIf, refreshIf, exceptionHandler);
     }
 }

@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
@@ -606,10 +607,59 @@ class DefaultAsyncLoaderTest {
     }
 
     @Test
-    void build_thrown_expiration_not_set() {
-        assertThatThrownBy(() -> AsyncLoader
-                .builder(i -> UnmodifiableFuture.completedFuture(1))
-                .build()
-        ).isInstanceOf(IllegalStateException.class);
+    void nullCache() {
+        final AtomicBoolean expire = new AtomicBoolean();
+        final AtomicReference<Integer> cache = new AtomicReference<>();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> {
+            return UnmodifiableFuture.completedFuture(cache.get());
+        };
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .expireIf(i -> expire.get())
+                .build();
+
+        assertThat(loader.get().join()).isNull();
+        assertThat(loader.get().join()).isNull();
+        cache.set(1);
+        expire.set(true);
+        assertThat(loader.get().join()).isOne();
+        cache.set(0);
+        assertThat(loader.get().join()).isZero();
+        cache.set(null);
+        assertThat(loader.get().join()).isNull();
+        cache.set(0);
+        assertThat(loader.get().join()).isZero();
+    }
+
+    @Test
+    void refreshWhileCacheIsValid() {
+        final AtomicInteger refreshCounter = new AtomicInteger();
+        final Function<Integer, CompletableFuture<Integer>> loadFunc = i -> {
+            if (i == null) {
+                return UnmodifiableFuture.completedFuture(1);
+            }
+            refreshCounter.incrementAndGet();
+            return CompletableFuture.supplyAsync(() -> {
+                try {
+                    // Sleep for 1 minute to fail the test if the loader waits for the refresh to complete.
+                    Thread.sleep(60 * 1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                return i + 1;
+            });
+        };
+        final AsyncLoader<Integer> loader = AsyncLoader
+                .builder(loadFunc)
+                .refreshIf(i -> i == 1)
+                .expireIf(i -> true)
+                .build();
+        assertThat(loader.get().join()).isOne();
+        assertThat(refreshCounter).hasValue(0);
+        assertThat(loader.get().join()).isOne();
+        assertThat(refreshCounter).hasValue(1);
+        // Should not wait for the refresh to complete.
+        assertThat(loader.get().join()).isOne();
+        assertThat(refreshCounter).hasValue(1);
     }
 }
