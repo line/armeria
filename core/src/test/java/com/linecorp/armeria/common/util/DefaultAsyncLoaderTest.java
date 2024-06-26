@@ -47,7 +47,7 @@ class DefaultAsyncLoaderTest {
 
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isOne();
+            assertThat(loader.load().join()).isOne();
             assertThat(loadCounter.get()).isOne();
         }
     }
@@ -67,7 +67,7 @@ class DefaultAsyncLoaderTest {
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
             service.execute(() -> {
-                assertThat(loader.get().join()).isOne();
+                assertThat(loader.load().join()).isOne();
                 assertThat(loadCounter.get()).isOne();
                 latch.countDown();
             });
@@ -87,14 +87,14 @@ class DefaultAsyncLoaderTest {
 
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isOne();
+            assertThat(loader.load().join()).isOne();
             assertThat(loadCounter.get()).isOne();
         }
 
         Thread.sleep(1500);
 
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(2);
+            assertThat(loader.load().join()).isEqualTo(2);
             assertThat(loadCounter.get()).isEqualTo(2);
         }
     }
@@ -114,7 +114,7 @@ class DefaultAsyncLoaderTest {
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
             service.execute(() -> {
-                assertThat(loader.get().join()).isOne();
+                assertThat(loader.load().join()).isOne();
                 assertThat(loadCounter.get()).isOne();
                 latch.countDown();
             });
@@ -126,7 +126,7 @@ class DefaultAsyncLoaderTest {
         final CountDownLatch latch2 = new CountDownLatch(5);
         for (int i = 0; i < 5; i++) {
             service.execute(() -> {
-                assertThat(loader.get().join()).isEqualTo(2);
+                assertThat(loader.load().join()).isEqualTo(2);
                 assertThat(loadCounter.get()).isEqualTo(2);
                 latch2.countDown();
             });
@@ -147,19 +147,19 @@ class DefaultAsyncLoaderTest {
 
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isOne();
+            assertThat(loader.load().join()).isOne();
             assertThat(loadCounter.get()).isOne();
         }
 
         expired.set(true);
-        assertThat(loader.get().join()).isEqualTo(2);
+        assertThat(loader.load().join()).isEqualTo(2);
         assertThat(loadCounter.get()).isEqualTo(2);
-        assertThat(loader.get().join()).isEqualTo(3);
+        assertThat(loader.load().join()).isEqualTo(3);
         assertThat(loadCounter.get()).isEqualTo(3);
 
         expired.set(false);
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(3);
+            assertThat(loader.load().join()).isEqualTo(3);
             assertThat(loadCounter.get()).isEqualTo(3);
         }
     }
@@ -180,7 +180,7 @@ class DefaultAsyncLoaderTest {
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
             service.execute(() -> {
-                assertThat(loader.get().join()).isOne();
+                assertThat(loader.load().join()).isOne();
                 assertThat(loadCounter.get()).isOne();
                 latch.countDown();
             });
@@ -188,16 +188,16 @@ class DefaultAsyncLoaderTest {
         latch.await();
 
         expired.set(true);
-        assertThat(loader.get().join()).isEqualTo(2);
+        assertThat(loader.load().join()).isEqualTo(2);
         assertThat(loadCounter.get()).isEqualTo(2);
-        assertThat(loader.get().join()).isEqualTo(3);
+        assertThat(loader.load().join()).isEqualTo(3);
         assertThat(loadCounter.get()).isEqualTo(3);
 
         expired.set(false);
         final CountDownLatch latch2 = new CountDownLatch(5);
         for (int i = 0; i < 5; i++) {
             service.execute(() -> {
-                assertThat(loader.get().join()).isEqualTo(3);
+                assertThat(loader.load().join()).isEqualTo(3);
                 assertThat(loadCounter.get()).isEqualTo(3);
                 latch2.countDown();
             });
@@ -219,31 +219,31 @@ class DefaultAsyncLoaderTest {
 
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isOne();
+            assertThat(loader.load().join()).isOne();
             assertThat(loadCounter.get()).isOne();
         }
 
         Thread.sleep(1500);
 
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(2);
+            assertThat(loader.load().join()).isEqualTo(2);
             assertThat(loadCounter.get()).isEqualTo(2);
         }
 
         expired.set(true);
-        assertThat(loader.get().join()).isEqualTo(3);
+        assertThat(loader.load().join()).isEqualTo(3);
         assertThat(loadCounter.get()).isEqualTo(3);
-        assertThat(loader.get().join()).isEqualTo(4);
+        assertThat(loader.load().join()).isEqualTo(4);
         assertThat(loadCounter.get()).isEqualTo(4);
 
         expired.set(false);
-        assertThat(loader.get().join()).isEqualTo(4);
+        assertThat(loader.load().join()).isEqualTo(4);
         assertThat(loadCounter.get()).isEqualTo(4);
 
         Thread.sleep(1500);
 
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(5);
+            assertThat(loader.load().join()).isEqualTo(5);
             assertThat(loadCounter.get()).isEqualTo(5);
         }
     }
@@ -265,7 +265,7 @@ class DefaultAsyncLoaderTest {
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
             service.execute(() -> {
-                assertThat(loader.get().join()).isOne();
+                assertThat(loader.load().join()).isOne();
                 assertThat(loadCounter.get()).isOne();
                 latch.countDown();
             });
@@ -273,13 +273,13 @@ class DefaultAsyncLoaderTest {
         latch.await();
 
         expired.set(true);
-        assertThat(loader.get().join()).isEqualTo(2);
+        assertThat(loader.load().join()).isEqualTo(2);
         assertThat(loadCounter.get()).isEqualTo(2);
-        assertThat(loader.get().join()).isEqualTo(3);
+        assertThat(loader.load().join()).isEqualTo(3);
         assertThat(loadCounter.get()).isEqualTo(3);
 
         expired.set(false);
-        assertThat(loader.get().join()).isEqualTo(3);
+        assertThat(loader.load().join()).isEqualTo(3);
         assertThat(loadCounter.get()).isEqualTo(3);
 
         Thread.sleep(1500);
@@ -287,7 +287,7 @@ class DefaultAsyncLoaderTest {
         final CountDownLatch latch2 = new CountDownLatch(5);
         for (int i = 0; i < 5; i++) {
             service.execute(() -> {
-                assertThat(loader.get().join()).isEqualTo(4);
+                assertThat(loader.load().join()).isEqualTo(4);
                 assertThat(loadCounter.get()).isEqualTo(4);
                 latch2.countDown();
             });
@@ -305,7 +305,7 @@ class DefaultAsyncLoaderTest {
                 .expireIf(i -> false)
                 .build();
 
-        assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
+        assertThatThrownBy(() -> loader.load().join()).isInstanceOfSatisfying(
                 CompletionException.class,
                 ex -> assertThat(ex.getCause()).isInstanceOf(IllegalStateException.class));
     }
@@ -322,7 +322,7 @@ class DefaultAsyncLoaderTest {
                 .expireIf(i -> false)
                 .build();
 
-        assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
+        assertThatThrownBy(() -> loader.load().join()).isInstanceOfSatisfying(
                 CompletionException.class,
                 ex -> assertThat(ex.getCause()).isInstanceOf(IllegalStateException.class));
     }
@@ -335,7 +335,7 @@ class DefaultAsyncLoaderTest {
                 .expireIf(i -> false)
                 .build();
 
-        assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
+        assertThatThrownBy(() -> loader.load().join()).isInstanceOfSatisfying(
                 CompletionException.class,
                 ex -> assertThat(ex.getCause()).isInstanceOf(NullPointerException.class));
     }
@@ -357,7 +357,7 @@ class DefaultAsyncLoaderTest {
 
         assertThat(handleExceptionCounter.get()).isZero();
         for (int i = 0; i <= 5; i++) {
-            assertThat(loader.get().join()).isOne();
+            assertThat(loader.load().join()).isOne();
             assertThat(handleExceptionCounter.get()).isOne();
         }
     }
@@ -381,7 +381,7 @@ class DefaultAsyncLoaderTest {
 
         assertThat(handleExceptionCounter.get()).isZero();
         for (int i = 0; i <= 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(1);
+            assertThat(loader.load().join()).isEqualTo(1);
             assertThat(handleExceptionCounter.get()).isOne();
         }
     }
@@ -401,7 +401,7 @@ class DefaultAsyncLoaderTest {
 
         assertThat(handleExceptionCounter.get()).isZero();
         for (int i = 0; i <= 5; i++) {
-            assertThat(loader.get().join()).isOne();
+            assertThat(loader.load().join()).isOne();
             assertThat(handleExceptionCounter.get()).isOne();
         }
     }
@@ -420,7 +420,7 @@ class DefaultAsyncLoaderTest {
                 .expireIf(i -> false)
                 .build();
 
-        assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
+        assertThatThrownBy(() -> loader.load().join()).isInstanceOfSatisfying(
                 CompletionException.class,
                 ex -> assertThat(ex.getCause()).isInstanceOf(IllegalStateException.class));
     }
@@ -443,7 +443,7 @@ class DefaultAsyncLoaderTest {
                 .expireIf(i -> false)
                 .build();
 
-        assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
+        assertThatThrownBy(() -> loader.load().join()).isInstanceOfSatisfying(
                 CompletionException.class,
                 ex -> assertThat(ex.getCause()).isInstanceOf(IllegalStateException.class));
     }
@@ -460,7 +460,7 @@ class DefaultAsyncLoaderTest {
                 .expireIf(i -> false)
                 .build();
 
-        assertThatThrownBy(() -> loader.get().join()).isInstanceOfSatisfying(
+        assertThatThrownBy(() -> loader.load().join()).isInstanceOfSatisfying(
                 CompletionException.class,
                 ex -> assertThat(ex.getCause()).isInstanceOf(NullPointerException.class));
     }
@@ -479,33 +479,33 @@ class DefaultAsyncLoaderTest {
 
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isOne();
+            assertThat(loader.load().join()).isOne();
             assertThat(loadCounter.get()).isOne();
         }
 
         // refresh 1
         refresh.set(true);
         await().untilAsserted(() -> {
-            final int val = loader.get().join();
+            final int val = loader.load().join();
             refresh.set(false);
             assertThat(val).isEqualTo(2);
         });
 
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(2);
+            assertThat(loader.load().join()).isEqualTo(2);
             assertThat(loadCounter.get()).isEqualTo(2);
         }
 
         // refresh 2
         refresh.set(true);
         await().untilAsserted(() -> {
-            final int val = loader.get().join();
+            final int val = loader.load().join();
             refresh.set(false);
             assertThat(val).isEqualTo(3);
         });
 
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(3);
+            assertThat(loader.load().join()).isEqualTo(3);
             assertThat(loadCounter.get()).isEqualTo(3);
         }
     }
@@ -525,14 +525,14 @@ class DefaultAsyncLoaderTest {
 
         assertThat(loadCounter.get()).isZero();
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isOne();
+            assertThat(loader.load().join()).isOne();
             assertThat(loadCounter.get()).isOne();
         }
 
         Thread.sleep(1500);
 
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(2);
+            assertThat(loader.load().join()).isEqualTo(2);
             assertThat(loadCounter.get()).isEqualTo(2);
         }
     }
@@ -557,19 +557,19 @@ class DefaultAsyncLoaderTest {
                 .build();
 
         assertThat(loadCounter.get()).isZero();
-        assertThat(loader.get().join()).isOne();
+        assertThat(loader.load().join()).isOne();
         assertThat(loadCounter.get()).isOne();
 
         // refresh 1 failed
-        assertThat(loader.get().join()).isOne();
+        assertThat(loader.load().join()).isOne();
         await().untilAsserted(() -> assertThat(loadCounter.get()).isEqualTo(2));
 
         // refresh 2 success
-        await().untilAsserted(() -> assertThat(loader.get().join()).isEqualTo(3));
+        await().untilAsserted(() -> assertThat(loader.load().join()).isEqualTo(3));
         assertThat(loadCounter.get()).isEqualTo(3);
 
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(3);
+            assertThat(loader.load().join()).isEqualTo(3);
             assertThat(loadCounter.get()).isEqualTo(3);
         }
     }
@@ -592,16 +592,16 @@ class DefaultAsyncLoaderTest {
                 .build();
 
         assertThat(loadCounter.get()).isZero();
-        assertThat(loader.get().join()).isOne();
+        assertThat(loader.load().join()).isOne();
         assertThat(loadCounter.get()).isOne();
 
         refresh.set(true);
-        assertThat(loader.get().join()).isEqualTo(100);
+        assertThat(loader.load().join()).isEqualTo(100);
         assertThat(loadCounter.get()).isEqualTo(2);
 
         refresh.set(false);
         for (int i = 0; i < 5; i++) {
-            assertThat(loader.get().join()).isEqualTo(100);
+            assertThat(loader.load().join()).isEqualTo(100);
             assertThat(loadCounter.get()).isEqualTo(2);
         }
     }
@@ -618,17 +618,17 @@ class DefaultAsyncLoaderTest {
                 .expireIf(i -> expire.get())
                 .build();
 
-        assertThat(loader.get().join()).isNull();
-        assertThat(loader.get().join()).isNull();
+        assertThat(loader.load().join()).isNull();
+        assertThat(loader.load().join()).isNull();
         cache.set(1);
         expire.set(true);
-        assertThat(loader.get().join()).isOne();
+        assertThat(loader.load().join()).isOne();
         cache.set(0);
-        assertThat(loader.get().join()).isZero();
+        assertThat(loader.load().join()).isZero();
         cache.set(null);
-        assertThat(loader.get().join()).isNull();
+        assertThat(loader.load().join()).isNull();
         cache.set(0);
-        assertThat(loader.get().join()).isZero();
+        assertThat(loader.load().join()).isZero();
     }
 
     @Test
@@ -654,12 +654,12 @@ class DefaultAsyncLoaderTest {
                 .refreshIf(i -> i == 1)
                 .expireIf(i -> true)
                 .build();
-        assertThat(loader.get().join()).isOne();
+        assertThat(loader.load().join()).isOne();
         assertThat(refreshCounter).hasValue(0);
-        assertThat(loader.get().join()).isOne();
+        assertThat(loader.load().join()).isOne();
         assertThat(refreshCounter).hasValue(1);
         // Should not wait for the refresh to complete.
-        assertThat(loader.get().join()).isOne();
+        assertThat(loader.load().join()).isOne();
         assertThat(refreshCounter).hasValue(1);
     }
 }

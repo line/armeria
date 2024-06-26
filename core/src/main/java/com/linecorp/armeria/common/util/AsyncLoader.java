@@ -43,18 +43,18 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  *         .build();
  *
  * // Fetch the value. This will call the loader function because the cache is empty.
- * String value1 = asyncLoader.get().join();
+ * String value1 = asyncLoader.load().join();
  * System.out.println("Loaded value: " + value1);
  *
  * // This will return the cached value because it's not expired yet.
- * String value2 = asyncLoader.get().join();
+ * String value2 = asyncLoader.load().join();
  * assert value1 == value2;
  *
  * // Wait for more than 60 seconds so that the cache is expired.
  * Thread.sleep(61000);
  *
  * // Fetch the value again. This will call the loader function because the cache has expired.
- * String value3 = asyncLoader.get().join();
+ * String value3 = asyncLoader.load().join();
  * assert value1 != value3;
  * }</pre>
  */
@@ -77,5 +77,5 @@ public interface AsyncLoader<T> {
      * Returns a {@link CompletableFuture} which will be completed with the loaded value.
      * A new value is fetched by the loader only if nothing is cached or the cache value has expired.
      */
-    CompletableFuture<T> get();
+    CompletableFuture<T> load();
 }

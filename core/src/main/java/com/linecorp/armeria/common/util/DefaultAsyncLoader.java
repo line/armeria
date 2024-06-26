@@ -71,7 +71,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     }
 
     @Override
-    public CompletableFuture<T> get() {
+    public CompletableFuture<T> load() {
         CacheEntry<T> cacheEntry = this.cacheEntry;
         boolean needsLoad = false;
         for (;;) {
@@ -101,9 +101,9 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         final T cache = cacheEntry != null ? cacheEntry.value : null;
         if (needsLoad) {
             if (isValid) {
-                logger.debug("Pre-fetching a new value. loader: {}, cache: {}", loader, cache);
+                logger.debug("Pre-fetching a new value. cache: {}, loader: {}", cache, loader);
             } else {
-                logger.debug("Loading a new value. loader: {}: cache: {}", loader, cache);
+                logger.debug("Loading a new value. cache: {}, loader: {}", cache, loader);
             }
             load(cache, loadFuture);
         }

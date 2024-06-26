@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -71,51 +70,46 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
         this.refreshBefore = refreshBefore;
         this.fallbackTokenProvider = fallbackTokenProvider;
         this.newTokenConsumer = newTokenConsumer;
-        tokenLoader = tokenLoader();
-    }
-
-    private AsyncLoader<GrantedOAuth2AccessToken> tokenLoader() {
-        final Function<GrantedOAuth2AccessToken,
-                CompletableFuture<GrantedOAuth2AccessToken>> loader = token -> {
-            final CompletableFuture<GrantedOAuth2AccessToken> newTokenFuture = new CompletableFuture<>();
-
-            if (token == null && fallbackTokenProvider != null) {
-                CompletableFuture<? extends GrantedOAuth2AccessToken> fallbackTokenFuture = null;
-                try {
-                    fallbackTokenFuture = requireNonNull(
-                            fallbackTokenProvider.get(), "fallbackTokenProvider.get() returned null");
-                } catch (Exception e) {
-                    logger.warn("Unexpected exception from fallbackTokenProvider.get()", e);
-                }
-                if (fallbackTokenFuture != null) {
-                    fallbackTokenFuture.handle((storedToken, unused) -> {
-                        if (isValidToken(storedToken)) {
-                            newTokenFuture.complete(storedToken);
-                            return null;
-                        }
-                        obtainAccessToken(newTokenFuture);
-                        return null;
-                    });
-                    return newTokenFuture;
-                }
-            }
-
-            if (token != null && token.isRefreshable()) {
-                refreshAccessToken(token, newTokenFuture);
-                return newTokenFuture;
-            }
-
-            obtainAccessToken(newTokenFuture);
-            return newTokenFuture;
-        };
-
         final AsyncLoaderBuilder<GrantedOAuth2AccessToken> loaderBuilder =
-                AsyncLoader.builder(loader)
+                AsyncLoader.builder(this::loadToken)
                            .expireIf(token -> !isValidToken(token));
         if (!refreshBefore.isZero()) {
             loaderBuilder.refreshIf(this::shouldRefresh);
         }
-        return loaderBuilder.build();
+        tokenLoader = loaderBuilder.build();
+    }
+
+    private CompletableFuture<GrantedOAuth2AccessToken> loadToken(@Nullable GrantedOAuth2AccessToken token) {
+        final CompletableFuture<GrantedOAuth2AccessToken> newTokenFuture = new CompletableFuture<>();
+
+        if (token == null && fallbackTokenProvider != null) {
+            CompletableFuture<? extends GrantedOAuth2AccessToken> fallbackTokenFuture = null;
+            try {
+                fallbackTokenFuture = requireNonNull(
+                        fallbackTokenProvider.get(), "fallbackTokenProvider.get() returned null");
+            } catch (Exception e) {
+                logger.warn("Unexpected exception from fallbackTokenProvider.get()", e);
+            }
+            if (fallbackTokenFuture != null) {
+                fallbackTokenFuture.handle((storedToken, unused) -> {
+                    if (isValidToken(storedToken)) {
+                        newTokenFuture.complete(storedToken);
+                        return null;
+                    }
+                    obtainAccessToken(newTokenFuture);
+                    return null;
+                });
+                return newTokenFuture;
+            }
+        }
+
+        if (token != null && token.isRefreshable()) {
+            refreshAccessToken(token, newTokenFuture);
+            return newTokenFuture;
+        }
+
+        obtainAccessToken(newTokenFuture);
+        return newTokenFuture;
     }
 
     /**
@@ -136,7 +130,7 @@ class DefaultOAuth2AuthorizationGrant implements OAuth2AuthorizationGrant {
      */
     @Override
     public CompletionStage<GrantedOAuth2AccessToken> getAccessToken() {
-        return tokenLoader.get();
+        return tokenLoader.load();
     }
 
     private static boolean isValidToken(@Nullable GrantedOAuth2AccessToken token) {

@@ -52,7 +52,7 @@ public final class AsyncLoaderBuilder<T> {
 
     /**
      * Expires the loaded value after the given duration since it was loaded.
-     * New value will be loaded by the loader function on next {@link AsyncLoader#get()}.
+     * New value will be loaded by the loader function on next {@link AsyncLoader#load()}.
      */
     public AsyncLoaderBuilder<T> expireAfterLoad(Duration expireAfterLoad) {
         requireNonNull(expireAfterLoad, "expireAfterLoad");
@@ -63,7 +63,7 @@ public final class AsyncLoaderBuilder<T> {
 
     /**
      * Expires the loaded value after the given milliseconds since it was loaded.
-     * New value will be loaded by the loader function on next {@link AsyncLoader#get()}.
+     * New value will be loaded by the loader function on next {@link AsyncLoader#load()}.
      */
     public AsyncLoaderBuilder<T> expireAfterLoadMillis(long expireAfterLoadMillis) {
         checkState(expireAfterLoadMillis >= 0,
@@ -74,7 +74,7 @@ public final class AsyncLoaderBuilder<T> {
 
     /**
      * Expires the loaded value if the predicate matches.
-     * New value will be loaded by the loader function on next {@link AsyncLoader#get()}.
+     * New value will be loaded by the loader function on next {@link AsyncLoader#load()}.
      */
     public AsyncLoaderBuilder<T> expireIf(Predicate<? super T> expireIf) {
         requireNonNull(expireIf, "expireIf");
@@ -94,7 +94,7 @@ public final class AsyncLoaderBuilder<T> {
 
     /**
      * Handles the exception thrown by the loader function.
-     * If the exception handler returns {@code null}, {@link AsyncLoader#get()} completes exceptionally.
+     * If the exception handler returns {@code null}, {@link AsyncLoader#load()} completes exceptionally.
      */
     public AsyncLoaderBuilder<T> exceptionHandler(BiFunction<? super Throwable, ? super @Nullable T,
             ? extends @Nullable CompletableFuture<T>> exceptionHandler) {

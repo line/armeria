@@ -45,7 +45,7 @@ class OAuth2RefreshBeforeTest {
                 final int count = refreshCount.getAndIncrement();
                 final GrantedOAuth2AccessToken token =
                         GrantedOAuth2AccessToken.builder("token" + count)
-                                                .expiresIn(Duration.ofSeconds(20))
+                                                .expiresIn(Duration.ofSeconds(10))
                                                 .build();
                 final HttpResponse response = HttpResponse.of(HttpStatus.OK, MediaType.JSON,
                                                               token.rawResponse());
@@ -53,7 +53,7 @@ class OAuth2RefreshBeforeTest {
                     return response;
                 } else {
                     // Delay the response to check the cached value is used and the refresh is triggered.
-                    return HttpResponse.delayed(response, Duration.ofSeconds(10));
+                    return HttpResponse.delayed(response, Duration.ofSeconds(5));
                 }
             });
         }
@@ -72,7 +72,7 @@ class OAuth2RefreshBeforeTest {
                 OAuth2AuthorizationGrant.builder(server.webClient(cb -> {
                                             cb.decorator(LoggingClient.newDecorator());
                                         }), "/token")
-                                        .refreshBefore(Duration.ofSeconds(10))
+                                        .refreshBefore(Duration.ofSeconds(5))
                                         .accessTokenRequest(accessTokenRequest)
                                         .build();
 
@@ -84,7 +84,7 @@ class OAuth2RefreshBeforeTest {
         assertThat(grant.getAccessToken().toCompletableFuture().join().accessToken())
                 .isEqualTo("token0");
         assertThat(server.requestContextCaptor().isEmpty()).isTrue();
-        Thread.sleep(10000);
+        Thread.sleep(5000);
         // The first token should still be used;
         assertThat(grant.getAccessToken().toCompletableFuture().join().accessToken())
                 .isEqualTo("token0");
@@ -96,8 +96,8 @@ class OAuth2RefreshBeforeTest {
                 .isEqualTo("token0");
         // Make sure the refresh is triggered only once.
         assertThat(server.requestContextCaptor().size()).isOne();
-        // The refresh response will be sent after 10 seconds.
-        Thread.sleep(10000);
+        // The refresh response will be sent after 5 seconds.
+        Thread.sleep(5000);
         assertThat(grant.getAccessToken().toCompletableFuture().join().accessToken())
                 .isEqualTo("token1");
     }
