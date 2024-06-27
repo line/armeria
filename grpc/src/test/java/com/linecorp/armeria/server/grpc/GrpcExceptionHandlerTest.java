@@ -468,8 +468,9 @@ class GrpcExceptionHandlerTest {
 
     private static class FirstGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
+        @Nullable
         @Override
-        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("first");
             if (Objects.equals(cause.getMessage(), "first")) {
                 return Status.UNAUTHENTICATED;
@@ -480,8 +481,9 @@ class GrpcExceptionHandlerTest {
 
     private static class SecondGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
+        @Nullable
         @Override
-        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("second");
             if (Objects.equals(cause.getMessage(), "second")) {
                 return Status.INVALID_ARGUMENT;
@@ -492,8 +494,9 @@ class GrpcExceptionHandlerTest {
 
     private static class ThirdGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
+        @Nullable
         @Override
-        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("third");
             if (Objects.equals(cause.getMessage(), "third")) {
                 return Status.NOT_FOUND;
@@ -504,8 +507,9 @@ class GrpcExceptionHandlerTest {
 
     private static class ForthGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
+        @Nullable
         @Override
-        public @Nullable Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("forth");
             if (Objects.equals(cause.getMessage(), "forth")) {
                 return Status.UNAVAILABLE;
