@@ -244,7 +244,7 @@ class ClientTlsProviderTest {
     @Test
     void disallowTlsProviderWhenTlsSettingsIsSet() {
         final TlsProvider tlsProvider =
-                TlsProvider.of(TlsKeyPair.ofSelfSigned());
+                TlsProvider.ofClient(TlsKeyPair.ofSelfSigned());
 
         assertThatThrownBy(() -> {
             ClientFactory.builder()

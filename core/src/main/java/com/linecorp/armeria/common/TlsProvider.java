@@ -20,11 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Consumer;
 
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientTlsProviderBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerTlsProviderBuilder;
 
 import io.netty.handler.ssl.SslContextBuilder;
@@ -37,11 +39,19 @@ import io.netty.handler.ssl.SslContextBuilder;
 public interface TlsProvider {
 
     /**
-     * Returns a {@link TlsProvider} which always returns the specified {@link TlsKeyPair}.
+     * Returns a {@link TlsProvider} for a {@link Server} which always returns the specified {@link TlsKeyPair}.
      */
-    static TlsProvider of(TlsKeyPair tlsKeyPair) {
+    static TlsProvider ofServer(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        return new StaticTlsProvider(tlsKeyPair);
+        return builderForServer().setDefault(tlsKeyPair).build();
+    }
+
+    /**
+     * Returns a {@link TlsProvider} for a {@link Client} which always returns the specified {@link TlsKeyPair}.
+     */
+    static TlsProvider ofClient(TlsKeyPair tlsKeyPair) {
+        requireNonNull(tlsKeyPair, "tlsKeyPair");
+        return builderForClient().setDefault(tlsKeyPair).build();
     }
 
     /**

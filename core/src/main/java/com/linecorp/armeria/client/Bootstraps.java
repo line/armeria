@@ -179,7 +179,7 @@ final class Bootstraps {
             hostname = ((InetSocketAddress) remoteAddress).getHostString();
         } else {
             assert remoteAddress instanceof DomainSocketAddress;
-            hostname = ((DomainSocketAddress) remoteAddress).path();
+            hostname = "unix:" + ((DomainSocketAddress) remoteAddress).path();
         }
 
         final TlsKeyPair tlsKeyPair = tlsProvider.find(hostname);
