@@ -141,6 +141,8 @@ jobs:
           -PtestJavaVersion=${{ matrix.java }} \
           ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+          # Unshaded tests are skipped for PRs to avoid running the same tests twice.
+          -PskipUnshadedTests=${{ github.ref_name != 'main' }} \
         shell: bash
         env:
           COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
