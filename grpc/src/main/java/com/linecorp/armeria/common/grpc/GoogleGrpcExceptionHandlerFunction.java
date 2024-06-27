@@ -40,7 +40,7 @@ public interface GoogleGrpcExceptionHandlerFunction extends GrpcExceptionHandler
 
     @Nullable
     @Override
-    default Status apply(RequestContext ctx, Status status, Throwable throwable, Metadata metadata) {
+    default Status apply(RequestContext ctx, @Nullable Status status, Throwable throwable, Metadata metadata) {
         return handleException(ctx, throwable, metadata, this::applyStatusProto);
     }
 
