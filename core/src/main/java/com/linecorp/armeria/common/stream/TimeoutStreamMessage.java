@@ -30,6 +30,7 @@ public class TimeoutStreamMessage<T> implements StreamMessage<T> {
     private final StreamMessage<? extends T> delegate;
     private final Duration timeoutDuration;
     private final StreamTimeoutMode timeoutMode;
+    private TimeoutSubscriber<T> timeoutSubscriber;
 
     public TimeoutStreamMessage(StreamMessage<? extends T> delegate, Duration timeoutDuration,
                                 StreamTimeoutMode timeoutMode) {
@@ -61,17 +62,25 @@ public class TimeoutStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        delegate.subscribe(new TimeoutSubscriber<T>(subscriber, executor, timeoutDuration, timeoutMode),
-                           executor, options);
+        timeoutSubscriber = new TimeoutSubscriber<T>(subscriber, executor, timeoutDuration, timeoutMode);
+        delegate.subscribe(timeoutSubscriber, executor, options);
+    }
+
+    private void cancelSchedule() {
+        if (timeoutSubscriber != null) {
+            timeoutSubscriber.cancelSchedule();
+        }
     }
 
     @Override
     public void abort() {
+        cancelSchedule();
         delegate.abort();
     }
 
     @Override
     public void abort(Throwable cause) {
+        cancelSchedule();
         delegate.abort(cause);
     }
 }

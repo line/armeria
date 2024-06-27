@@ -38,6 +38,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
     private ScheduledFuture<?> timeoutFuture;
     private Subscription subscription;
     private long lastOnNextTimeNanos;
+    private boolean isTerminated;
 
     TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
                       StreamTimeoutMode timeoutMode) {
@@ -52,7 +53,15 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
         return executor.schedule(this, delay, unit);
     }
 
-    private void cancelSchedule() {
+    private boolean attemptTerminate() {
+        if (isTerminated) {
+            return false;
+        }
+        isTerminated = true;
+        return true;
+    }
+
+    public void cancelSchedule() {
         if (!timeoutFuture.isCancelled()) {
             timeoutFuture.cancel(false);
         }
@@ -70,6 +79,9 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
                 return;
             }
         }
+        if (!attemptTerminate()) {
+            return;
+        }
         subscription.cancel();
         delegate.onError(new TimeoutException(
                 String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode)));
@@ -85,7 +97,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
 
     @Override
     public void onNext(T t) {
-        if (timeoutFuture.isCancelled()) {
+        if (isTerminated || timeoutFuture.isCancelled()) {
             return;
         }
         switch (timeoutMode) {
@@ -103,12 +115,18 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
 
     @Override
     public void onError(Throwable throwable) {
+        if(!attemptTerminate()) {
+            return;
+        }
         cancelSchedule();
         delegate.onError(throwable);
     }
 
     @Override
     public void onComplete() {
+        if(!attemptTerminate()) {
+            return;
+        }
         cancelSchedule();
         delegate.onComplete();
     }
