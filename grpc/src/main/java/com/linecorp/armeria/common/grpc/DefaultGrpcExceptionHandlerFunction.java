@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -45,7 +46,10 @@ enum DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction
      * well and the protocol package.
      */
     @Override
-    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+    public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
+        if (status != null && status.getCode() != Code.UNKNOWN) {
+            return status;
+        }
         final Status s = Status.fromThrowable(cause);
         if (s.getCode() != Code.UNKNOWN) {
             return s;

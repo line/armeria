@@ -239,7 +239,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    exceptionHandler.apply(ctx, e, metadata), metadata));
+                                    exceptionHandler.apply(ctx, null, e, metadata), metadata));
                 }
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(AbstractUnframedGrpcService.IS_UNFRAMED_GRPC))) {
@@ -320,7 +320,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            final Status status = call.exceptionHandler().apply(ctx, cancellationCause, headers);
+            final Status status = call.exceptionHandler().apply(ctx, null, cancellationCause, headers);
             assert status != null;
             call.close(new ServerStatusAndMetadata(status, new Metadata(), true, true));
             return null;
