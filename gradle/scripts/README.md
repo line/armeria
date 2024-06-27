@@ -574,7 +574,7 @@ relocations [ { from: "com.google.common", to: "com.doe.john.myproject.shaded.gu
 ```
 
 Unshaded tests are disabled by default when a shading task is configured. If you want to run unshaded tests,
-you can specify `-PskipUnshadedTests=false` option.
+you can specify `-PpreferShadedTests=false` option.
 
 ### Trimming a shaded JAR with `trim` flag
 
