@@ -68,6 +68,18 @@ class WebClientExchangeTypeTest {
     }
 
     @Test
+    void headerOverridingFixedMessage() {
+        assertExchangeType(() -> {
+            client.execute(HttpRequest.of(HttpMethod.POST, "/",
+                                          MediaType.PLAIN_TEXT, "foo")
+                                      .withHeaders(RequestHeaders.builder(HttpMethod.POST, "/")
+                                                                 .add("foo", "bar")
+                                                                 .build()))
+                  .aggregate();
+        }).isEqualTo(ExchangeType.RESPONSE_STREAMING);
+    }
+
+    @Test
     void fixedMessageWithCustomRequestOptions() {
         assertExchangeType(() -> {
             client.execute(HttpRequest.of(HttpMethod.POST, "/",
