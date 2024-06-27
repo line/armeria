@@ -34,10 +34,11 @@ public final class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptio
         delegate = handlerFunction;
     }
 
+    @Nullable
     @Override
-    public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+    public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
         final Throwable t = peelAndUnwrap(cause);
-        return delegate.apply(ctx, t, metadata);
+        return delegate.apply(ctx, status, t, metadata);
     }
 
     private static Throwable peelAndUnwrap(Throwable t) {
