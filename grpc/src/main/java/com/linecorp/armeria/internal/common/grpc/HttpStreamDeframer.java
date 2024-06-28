@@ -120,7 +120,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
                 final Metadata metadata = new Metadata();
-                transportStatusListener.transportReportStatus(exceptionHandler.apply(ctx, t, metadata),
+                transportStatusListener.transportReportStatus(exceptionHandler.apply(ctx, null, t, metadata),
                                                               metadata);
                 return;
             }
@@ -148,7 +148,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     @Override
     public void processOnError(Throwable cause) {
         final Metadata metadata = new Metadata();
-        transportStatusListener.transportReportStatus(exceptionHandler.apply(ctx, cause, metadata), metadata);
+        transportStatusListener.transportReportStatus(
+                exceptionHandler.apply(ctx, null, cause, metadata), metadata);
     }
 
     @Override

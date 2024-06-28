@@ -70,6 +70,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.SchemeAndAuthority;
@@ -284,6 +285,11 @@ public final class DefaultClientRequestContext
         }
         if (req instanceof FixedStreamMessage) {
             return ExchangeType.RESPONSE_STREAMING;
+        }
+        if (req instanceof HeaderOverridingHttpRequest) {
+            if (((HeaderOverridingHttpRequest) req).delegate() instanceof FixedStreamMessage) {
+                return ExchangeType.RESPONSE_STREAMING;
+            }
         }
         return ExchangeType.BIDI_STREAMING;
     }
