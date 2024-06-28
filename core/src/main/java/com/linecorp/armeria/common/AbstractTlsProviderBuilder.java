@@ -64,7 +64,11 @@ public abstract class AbstractTlsProviderBuilder<SELF extends AbstractTlsProvide
     public SELF set(String hostname, TlsKeyPair tlsKeyPair) {
         requireNonNull(hostname, "hostname");
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        tlsKeyPairsBuilder.put(normalizeHostname(hostname), tlsKeyPair);
+        if ("*".equals(hostname)) {
+            tlsKeyPairsBuilder.put("*", tlsKeyPair);
+        } else {
+            tlsKeyPairsBuilder.put(normalizeHostname(hostname), tlsKeyPair);
+        }
         return self();
     }
 

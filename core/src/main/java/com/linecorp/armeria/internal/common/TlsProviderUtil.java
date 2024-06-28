@@ -105,16 +105,27 @@ public final class TlsProviderUtil {
         }
     }
 
-    // Forked from https://github.com/netty/netty/blob/60430c80e7f8718ecd07ac31e01297b42a176b87/common/src/main/java/io/netty/util/DomainNameMapping.java
+    // Forked from https://github.com/netty/netty/blob/60430c80e7f8718ecd07ac31e01297b42a176b87/common/src/main/java/io/netty/util/DomainWildcardMappingBuilder.java#L78
 
     /**
      * IDNA ASCII conversion and case normalization.
      */
     public static String normalizeHostname(String hostname) {
+        if (hostname.isEmpty() || hostname.charAt(0) == '.') {
+            throw new IllegalArgumentException("Hostname '" + hostname + "' not valid");
+        }
         if (needsNormalization(hostname)) {
             hostname = IDN.toASCII(hostname, IDN.ALLOW_UNASSIGNED);
         }
-        return hostname.toLowerCase(Locale.US);
+        hostname = hostname.toLowerCase(Locale.US);
+
+        if (hostname.charAt(0) == '*') {
+            if (hostname.length() < 3 || hostname.charAt(1) != '.') {
+                throw new IllegalArgumentException("Wildcard Hostname '" + hostname + "'not valid");
+            }
+            return hostname.substring(1);
+        }
+        return hostname;
     }
 
     private static boolean needsNormalization(String hostname) {
