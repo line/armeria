@@ -52,9 +52,10 @@ public class CountingClientConnectionEventListener implements ClientConnectionEv
     @Override
     public void connectionFailed(SessionProtocol desiredProtocol,
                                  InetSocketAddress remoteAddress,
-                                 InetSocketAddress localAddress,
+                                 @Nullable InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 Throwable cause) throws Exception {
+                                 Throwable cause,
+                                 boolean wasPending) throws Exception {
         try {
             lock.lock();
             final List<String> key = key("failed", desiredProtocol);
@@ -84,7 +85,7 @@ public class CountingClientConnectionEventListener implements ClientConnectionEv
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 boolean isNew) throws Exception {
+                                 boolean wasIdle) throws Exception {
         try {
             lock.lock();
             final List<String> key = key("active", protocol);
@@ -113,7 +114,7 @@ public class CountingClientConnectionEventListener implements ClientConnectionEv
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 @Nullable Boolean isActive) throws Exception {
+                                 boolean wasIdle) throws Exception {
         try {
             lock.lock();
             final List<String> key = key("closed", protocol);

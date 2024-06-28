@@ -55,7 +55,7 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
                                          InetSocketAddress remoteAddress,
                                          InetSocketAddress localAddress,
                                          AttributeMap attrs,
-                                         @Nullable Boolean isActive) throws Exception {
+                                         boolean wasIdle) throws Exception {
                 connectionPoolListener.connectionClosed(protocol,
                                                         remoteAddress,
                                                         localAddress,
@@ -78,8 +78,8 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
     @Override
     public void connectionFailed(SessionProtocol desiredProtocol,
                                  InetSocketAddress remoteAddress,
-                                 InetSocketAddress localAddress,
-                                 AttributeMap attrs, Throwable cause) throws Exception {}
+                                 @Nullable InetSocketAddress localAddress,
+                                 AttributeMap attrs, Throwable cause, boolean wasPending) throws Exception {}
 
     @Override
     public void connectionOpened(@Nullable SessionProtocol desiredProtocol,
@@ -93,7 +93,7 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 boolean isNew) throws Exception {}
+                                 boolean wasIdle) throws Exception {}
 
     @Override
     public void connectionIdle(SessionProtocol protocol,
@@ -106,5 +106,5 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
-                                 @Nullable Boolean isActive) throws Exception {}
+                                 boolean wasIdle) throws Exception {}
 }

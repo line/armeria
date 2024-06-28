@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common.util;
 
-import static com.linecorp.armeria.internal.common.ConnectionEventState.CONNECTION_EVENT_STATE;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.net.InetSocketAddress;
@@ -43,7 +41,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.ConnectionEventState;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
@@ -51,7 +48,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.handler.ssl.SslHandler;
-import io.netty.util.Attribute;
 
 public final class ChannelUtil {
 
@@ -333,25 +329,6 @@ public final class ChannelUtil {
         } else {
             return (InetSocketAddress) ch.remoteAddress();
         }
-    }
-
-    @Nullable
-    public static ConnectionEventState connectionEventState(@Nullable Channel ch) {
-        if (ch == null) {
-            return null;
-        }
-
-        final Attribute<ConnectionEventState> attr = ch.attr(CONNECTION_EVENT_STATE);
-
-        if (attr != null) {
-            return attr.get();
-        }
-
-        return null;
-    }
-
-    public static void setConnectionEventState(Channel ch, ConnectionEventState state) {
-        ch.attr(CONNECTION_EVENT_STATE).set(state);
     }
 
     @Nullable

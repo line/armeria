@@ -55,13 +55,15 @@ public interface ConnectionEventListener {
      * @param remoteAddress the remote address of the connection.
      * @param localAddress the local address of the connection.
      * @param attrs the attributes of the connection.
-     * @param isNew whether the connection is newly created or reused.
+     * @param wasIdle whether the connection was idle.
+     *                If {@code false}, it means the connection was just created.
+     *                If {@code true}, it means the connection was idle and became active.
      */
     void connectionActive(SessionProtocol protocol,
                           InetSocketAddress remoteAddress,
                           InetSocketAddress localAddress,
                           AttributeMap attrs,
-                          boolean isNew) throws Exception;
+                          boolean wasIdle) throws Exception;
 
     /**
      * Invoked when a connection becomes idle.
@@ -83,12 +85,11 @@ public interface ConnectionEventListener {
      * @param remoteAddress the remote address of the connection.
      * @param localAddress the local address of the connection.
      * @param attrs the attributes of the connection.
-     * @param isActive whether the connection was active when it was closed or not.
-     *                 {@code null} if the keep-alive is disabled.
+     * @param wasIdle whether the connection was idle when is was closed.
      */
     void connectionClosed(SessionProtocol protocol,
                           InetSocketAddress remoteAddress,
                           InetSocketAddress localAddress,
                           AttributeMap attrs,
-                          @Nullable Boolean isActive) throws Exception;
+                          boolean wasIdle) throws Exception;
 }

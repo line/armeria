@@ -90,7 +90,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                                         "armeria.client.connections.lifespan",
                                         ImmutableList.of(Tag.of("protocol", protocol.uriText())));
             keepAliveHandler = new Http1ClientKeepAliveHandler(
-                    channel, this, keepAliveTimer, clientFactory.connectionEventListener(), idleTimeoutMillis,
+                    channel, this, keepAliveTimer, idleTimeoutMillis,
                     pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                     keepAliveOnPing);
         } else {

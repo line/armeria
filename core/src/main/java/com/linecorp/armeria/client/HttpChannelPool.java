@@ -55,8 +55,7 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
-import com.linecorp.armeria.internal.common.ConnectionEventState;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.common.DelegatingConnectionEventListener;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.bootstrap.Bootstrap;
@@ -93,7 +92,6 @@ final class HttpChannelPool implements AsyncCloseable {
     // Fields for pooling connections:
     private final Map<PoolKey, Deque<PooledChannel>>[] pool;
     private final Map<PoolKey, ChannelAcquisitionFuture>[] pendingAcquisitions;
-    private final Map<Future<Channel>, ConnectionEventState> connectionEventStates;
     private final Map<Channel, Boolean> allChannels;
     private final ClientConnectionEventListener listener;
 
@@ -112,7 +110,6 @@ final class HttpChannelPool implements AsyncCloseable {
                                           SessionProtocol.H2, SessionProtocol.H2C));
         pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
-        connectionEventStates = new IdentityHashMap<>();
         connectTimeoutMillis = (Integer) clientFactory.options()
                 .channelOptions()
                 .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
@@ -402,6 +399,9 @@ final class HttpChannelPool implements AsyncCloseable {
                     channel.attr(TIMINGS_BUILDER_KEY).set(timingsBuilder);
                 }
 
+                final DelegatingConnectionEventListener connectionEventListener =
+                        new DelegatingConnectionEventListener(listener, channel, desiredProtocol);
+
                 // should be invoked right before channel.connect() is invoked as defined in javadocs
                 clientFactory.channelPipelineCustomizer().accept(channel.pipeline());
 
@@ -410,39 +410,22 @@ final class HttpChannelPool implements AsyncCloseable {
                 // to HttpSessionHandler.
                 connectionPromise.addListener((ChannelFuture connectFuture) -> {
                     if (connectFuture.isSuccess()) {
-                        // When the transport type(-Dcom.linecorp.armeria.transportType) is NIO,
-                        // sometimes local address is not available yet.
-                        if (ChannelUtil.connectionEventState(channel) == null) {
-                            final InetSocketAddress remoteAddr = ChannelUtil.remoteAddress(channel);
-                            final InetSocketAddress localAddr = ChannelUtil.localAddress(channel);
-
-                            assert remoteAddr != null && localAddr != null;
-
-                            notifyConnectionPending(desiredProtocol, remoteAddr, localAddr,
-                                                    channel, sessionPromise);
-                        }
+                        connectionEventListener.connectionPending();
+                        sessionPromise.addListener(future -> {
+                            if (!future.isSuccess()) {
+                                connectionEventListener.connectionFailed(future.cause(), true);
+                            }
+                        });
 
                         initSession(desiredProtocol, serializationFormat,
                                     poolKey, connectFuture, sessionPromise);
                     } else {
                         maybeHandleProxyFailure(desiredProtocol, poolKey, connectFuture.cause());
                         sessionPromise.tryFailure(connectFuture.cause());
-                        notifyConnectionFailed(sessionPromise, connectFuture.cause());
+                        connectionEventListener.connectionFailed(connectFuture.cause(), false);
                     }
                 });
                 channel.connect(remoteAddress, connectionPromise);
-
-                final InetSocketAddress remoteInetAddress = poolKey.endpoint.toSocketAddress(-1);
-                final InetSocketAddress localAddress = ChannelUtil.localAddress(channel);
-
-                if (localAddress == null) {
-                    // When the transport type(-Dcom.linecorp.armeria.transportType) is NIO,
-                    // sometimes local address is not available yet.
-                    return;
-                }
-
-                notifyConnectionPending(desiredProtocol, remoteInetAddress, localAddress,
-                                        channel, sessionPromise);
             } catch (Throwable cause) {
                 maybeHandleProxyFailure(desiredProtocol, poolKey, cause);
                 sessionPromise.tryFailure(cause);
@@ -494,26 +477,21 @@ final class HttpChannelPool implements AsyncCloseable {
         removePendingAcquisition(desiredProtocol, key);
 
         timingsBuilder.socketConnectEnd();
-
         try {
             if (future.isSuccess()) {
                 final Channel channel = future.getNow();
                 final SessionProtocol protocol = getProtocolIfHealthy(channel);
                 if (protocol == null || closeable.isClosing()) {
                     channel.close();
-                    final UnprocessedRequestException cause = UnprocessedRequestException.of(
-                            new ClosedSessionException("acquired an unhealthy connection"));
-                    promise.completeExceptionally(cause);
-                    notifyConnectionFailed(future, cause);
+                    promise.completeExceptionally(
+                            UnprocessedRequestException.of(
+                                    new ClosedSessionException("acquired an unhealthy connection")));
                     return;
                 }
 
                 allChannels.put(channel, Boolean.TRUE);
 
                 final HttpSession session = HttpSession.get(channel);
-
-                notifyConnectionOpened(future, channel, protocol);
-
                 if (session.incrementNumUnfinishedResponses()) {
                     if (protocol.isMultiplex()) {
                         final Http2PooledChannel pooledChannel = new Http2PooledChannel(channel, protocol);
@@ -525,7 +503,8 @@ final class HttpChannelPool implements AsyncCloseable {
                 } else {
                     // Server set MAX_CONCURRENT_STREAMS to 0, which means we can't send anything.
                     channel.close();
-                    promise.completeExceptionally(UnprocessedRequestException.of(RefusedStreamException.get()));
+                    promise.completeExceptionally(
+                            UnprocessedRequestException.of(RefusedStreamException.get()));
                 }
 
                 channel.closeFuture().addListener(f -> {
@@ -542,127 +521,17 @@ final class HttpChannelPool implements AsyncCloseable {
                             queue.removeFirst();
                         }
                     }
-
-                    notifyConnectionClosed(future, channel, protocol);
                 });
             } else {
                 final Throwable throwable = future.cause();
                 if (throwable instanceof ProxyConnectException) {
                     maybeHandleProxyFailure(desiredProtocol, key, throwable);
                 }
-                final UnprocessedRequestException cause = UnprocessedRequestException.of(throwable);
-                promise.completeExceptionally(cause);
-                notifyConnectionFailed(future, cause);
+                promise.completeExceptionally(UnprocessedRequestException.of(throwable));
             }
         } catch (Exception e) {
-            final UnprocessedRequestException cause = UnprocessedRequestException.of(e);
-            promise.completeExceptionally(cause);
-            notifyConnectionFailed(future, cause);
+            promise.completeExceptionally(UnprocessedRequestException.of(e));
         }
-    }
-
-    private void notifyConnectionPending(SessionProtocol desiredProtocol,
-                                         InetSocketAddress remoteAddress,
-                                         InetSocketAddress localAddress,
-                                         Channel channel,
-                                         Future<Channel> sessionPromise) {
-
-        final ConnectionEventState connectionEventState = new ConnectionEventState(remoteAddress,
-                                                                                   localAddress,
-                                                                                   desiredProtocol);
-
-        ChannelUtil.setConnectionEventState(channel, connectionEventState);
-        connectionEventStates.put(sessionPromise, connectionEventState);
-
-        try {
-            listener.connectionPending(
-                    desiredProtocol,
-                    connectionEventState.remoteAddress(),
-                    connectionEventState.localAddress(),
-                    channel);
-        } catch (Throwable e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("{} Exception handling {}.connectionPending()",
-                            channel, listener.getClass().getName(), e);
-            }
-        }
-    }
-
-    private void notifyConnectionFailed(Future<Channel> sessionPromise, Throwable cause) {
-        final Channel channel = sessionPromise.getNow();
-        final ConnectionEventState connectionEventState = connectionEventStates.get(sessionPromise);
-
-        // In case the remote host does not support the desired protocol, it immediately fails before pending.
-        // Or sometimes when the transport type(-Dcom.linecorp.armeria.transportType) is NIO,
-        // local address is not available yet.
-        if (connectionEventState == null) {
-            return;
-        }
-
-        final SessionProtocol desiredProtocol = connectionEventState.desiredProtocol();
-        final InetSocketAddress remoteAddr = connectionEventState.remoteAddress();
-        final InetSocketAddress localAddr = connectionEventState.localAddress();
-
-        assert desiredProtocol != null;
-
-        try {
-            listener.connectionFailed(
-                    desiredProtocol,
-                    remoteAddr,
-                    localAddr,
-                    channel,
-                    cause);
-        } catch (Throwable e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("{} Exception handling {}.connectionFailed()",
-                            channel, listener.getClass().getName(), e);
-            }
-        }
-
-        connectionEventStates.remove(sessionPromise);
-    }
-
-    private void notifyConnectionOpened(Future<Channel> sessionPromise,
-                                        Channel channel,
-                                        SessionProtocol actualProtocol) {
-        final ConnectionEventState connectionEventState = connectionEventStates.get(sessionPromise);
-
-        connectionEventState.setActualProtocol(actualProtocol);
-
-        try {
-            listener.connectionOpened(
-                    connectionEventState.desiredProtocol(),
-                    actualProtocol,
-                    connectionEventState.remoteAddress(),
-                    connectionEventState.localAddress(),
-                    channel
-            );
-        } catch (Throwable e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("{} Exception handling {}.connectionOpen()",
-                            channel, listener.getClass().getName(), e);
-            }
-        }
-    }
-
-    private void notifyConnectionClosed(Future<Channel> sessionPromise, Channel channel,
-                                        SessionProtocol protocol) {
-        final ConnectionEventState connectionEventState = connectionEventStates.get(sessionPromise);
-
-        try {
-            listener.connectionClosed(protocol,
-                                      connectionEventState.remoteAddress(),
-                                      connectionEventState.localAddress(),
-                                      channel,
-                                      connectionEventState.isActive());
-        } catch (Throwable e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("{} Exception handling {}.connectionClosed()",
-                            channel, listener.getClass().getName(), e);
-            }
-        }
-
-        connectionEventStates.remove(sessionPromise);
     }
 
     /**

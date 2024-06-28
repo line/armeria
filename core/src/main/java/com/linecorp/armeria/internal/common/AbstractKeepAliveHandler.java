@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import java.net.InetSocketAddress;
-import java.util.Objects;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -29,12 +27,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 
-import com.linecorp.armeria.common.ConnectionEventListener;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.ConnectionEventState.KeepAliveState;
-import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
@@ -61,9 +55,8 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private final String name;
     private final boolean isServer;
     private final Timer keepAliveTimer;
-    private final ConnectionEventListener connectionEventListener;
     @Nullable
-    private ConnectionEventState connectionEventState;
+    private final DelegatingConnectionEventListener connectionEventListener;
     private final long maxNumRequestsPerConnection;
     private long currentNumRequests;
 
@@ -84,10 +77,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private final long maxConnectionAgeNanos;
     private boolean isMaxConnectionAgeExceeded;
 
-    private boolean isInitialized;
     private boolean closed;
     private boolean disconnectWhenFinished;
     private PingState pingState = PingState.IDLE;
+    private KeepAliveState keepAliveState = KeepAliveState.NONE;
 
     @Nullable
     private ChannelFuture pingWriteFuture;
@@ -95,7 +88,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private Future<?> shutdownFuture;
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
-                                       ConnectionEventListener connectionEventListener,
                                        long idleTimeoutMillis, long pingIntervalMillis,
                                        long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
                                        boolean keepAliveOnPing) {
@@ -103,7 +95,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         this.name = name;
         isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
-        this.connectionEventListener = connectionEventListener;
+        if (isServer) {
+            // TODO(ikhoon): Support ConnectionEventListener for server-side
+            connectionEventListener = null;
+        } else {
+            connectionEventListener = DelegatingConnectionEventListener.get(channel);
+        }
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
         this.keepAliveOnPing = keepAliveOnPing;
 
@@ -130,14 +127,22 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     public final void initialize(ChannelHandlerContext ctx) {
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
-        if (isInitialized) {
+        if (keepAliveState != KeepAliveState.NONE) {
             return;
         }
-        isInitialized = true;
+
+        keepAliveState = KeepAliveState.INITIALIZED;
+        if (connectionEventListener != null) {
+            connectionEventListener.connectionOpened();
+        }
 
         final long connectionStartTimeNanos = System.nanoTime();
         ctx.channel().closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
+
+            if (connectionEventListener != null) {
+                connectionEventListener.connectionClosed(keepAliveState == KeepAliveState.IDLE);
+            }
             destroy();
         });
 
@@ -162,8 +167,9 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             return;
         }
 
+        // TODO(ikhoon): Unify `closed` and `keepAliveState` to simplify the logic.
         closed = true;
-        isInitialized = true;
+        keepAliveState = KeepAliveState.INITIALIZED;
         if (connectionIdleTimeout != null) {
             connectionIdleTimeout.cancel(false);
             connectionIdleTimeout = null;
@@ -244,63 +250,32 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     }
 
     @Override
-    public void tryNotifyConnectionActive() {
-        final ConnectionEventState connectionEventState = connectionEventState();
+    public void notifyActive() {
+        assert keepAliveState != KeepAliveState.NONE && keepAliveState != KeepAliveState.ACTIVE;
 
-        /*
-            If the actual protocol is null, it means that the protocol is undetermined.
-            e.g. HTTP protocol upgrade
-         */
-        if (connectionEventState == null || connectionEventState.actualProtocol() == null) {
-            return;
-        }
-
-        if (connectionEventState.keepAliveState().isActive()) {
-            return;
-        }
-
-        final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
-        final InetSocketAddress localAddress = connectionEventState.localAddress();
-        final SessionProtocol protocol = connectionEventState.actualProtocol();
-        final boolean isNew = connectionEventState.keepAliveState().isNone();
-
-        try {
-            connectionEventListener.connectionActive(protocol, localAddress, remoteAddress, channel, isNew);
-
-            connectionEventState.setKeepAliveState(KeepAliveState.ACTIVE);
-        } catch (Throwable e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("{} Exception handling {}.connectionActive()",
-                            channel, connectionEventListener.getClass().getName(), e);
-            }
+        switch (keepAliveState) {
+            case INITIALIZED:
+                keepAliveState = KeepAliveState.ACTIVE;
+                if (connectionEventListener != null) {
+                    connectionEventListener.connectionActive(false);
+                }
+                break;
+            case IDLE:
+                keepAliveState = KeepAliveState.ACTIVE;
+                if (connectionEventListener != null) {
+                    connectionEventListener.connectionActive(true);
+                }
+                break;
+            default:
+                throw new Error();
         }
     }
 
     @Override
-    public void tryNotifyConnectionIdle() {
-        final ConnectionEventState connectionEventState = connectionEventState();
-
-        if (connectionEventState == null) {
-            return;
-        }
-
-        if (!connectionEventState.keepAliveState().isActive()) {
-            return;
-        }
-
-        connectionEventState.setKeepAliveState(KeepAliveState.IDLE);
-
-        final InetSocketAddress remoteAddress = connectionEventState.remoteAddress();
-        final InetSocketAddress localAddress = connectionEventState.localAddress();
-        final SessionProtocol protocol = Objects.requireNonNull(connectionEventState.actualProtocol());
-
-        try {
-            connectionEventListener.connectionIdle(protocol, localAddress, remoteAddress, channel);
-        } catch (Throwable e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn("{} Exception handling {}.connectionIdle()",
-                            channel, connectionEventListener.getClass().getName(), e);
-            }
+    public void notifyIdle() {
+        assert keepAliveState == KeepAliveState.ACTIVE;
+        if (connectionEventListener != null) {
+            connectionEventListener.connectionIdle();
         }
     }
 
@@ -317,17 +292,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected final boolean isPendingPingAck() {
         return pingState == PingState.PENDING_PING_ACK;
-    }
-
-    @Nullable
-    private ConnectionEventState connectionEventState() {
-        if (connectionEventState != null) {
-            return connectionEventState;
-        }
-
-        connectionEventState = ChannelUtil.connectionEventState(channel);
-
-        return connectionEventState;
     }
 
     @VisibleForTesting
@@ -456,7 +420,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 connectionIdleTimeout = executor().schedule(this, connectionIdleTimeNanos,
                                                             TimeUnit.NANOSECONDS);
                 try {
-                    if (!hasRequestsInProgress(ctx)) {
+                    if (keepAliveState == KeepAliveState.IDLE) {
                         pingState = PingState.SHUTDOWN;
                         logger.debug("{} Closing an idle {} connection", ctx.channel(), name);
                         ctx.channel().close();
@@ -544,5 +508,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 logger.warn("Unexpected error occurred while closing a connection exceeding the max age", e);
             }
         }
+    }
+
+    private enum KeepAliveState {
+        NONE,
+        INITIALIZED,
+        ACTIVE,
+        IDLE
     }
 }

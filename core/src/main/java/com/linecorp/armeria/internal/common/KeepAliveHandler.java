@@ -78,12 +78,12 @@ public interface KeepAliveHandler {
     void increaseNumRequests();
 
     /**
-     * Try to notify connection active event.
+     * Notify connection active event.
      */
-    void tryNotifyConnectionActive();
+    void notifyActive();
 
     /**
-     * Try to notify connection idle event.
+     * Notify connection idle event.
      */
-    void tryNotifyConnectionIdle();
+    void notifyIdle();
 }

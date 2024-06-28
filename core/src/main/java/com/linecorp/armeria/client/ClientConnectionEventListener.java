@@ -20,6 +20,7 @@ import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.ConnectionEventListener;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
@@ -28,6 +29,25 @@ import io.netty.util.AttributeMap;
 
 /**
  * Listens to the client connection events.
+ *
+ * <p>Connection state diagram:
+ * <pre>{@code
+ *  +--------------+           +--------------+        | +--------------+ |       +--------------+
+ *  |              |           |              |        | |              | |       |              |
+ *  |    Initial   |  ----->   |    Pending   | -----> | |    Opened    | |-----> |    Closed    |
+ *  |              |           |              |        | |              | |       |              |
+ *  +--------------+           +--------------+        | +--------------+ |       +--------------+
+ *          |                                          |                  |
+ *          |                                          |      Active      |
+ *          |                                          |         ^        |
+ *          v                                          |         |        |
+ *   +--------------+                                  |         |        |
+ *   |              |                                  |         |        |
+ *   |    Failed    |                                  |         v        |
+ *   |              |                                  |       Idle       |
+ *   +--------------+                                  |                  |
+ *                                                     +------------------+
+ * }</pre>
  */
 public interface ClientConnectionEventListener extends ConnectionEventListener {
     /**
@@ -136,12 +156,19 @@ public interface ClientConnectionEventListener extends ConnectionEventListener {
      *
      * @param desiredProtocol the protocol that the client requested to use.
      * @param remoteAddress the remote address of the connection.
-     * @param localAddress the local address of the connection.
+     * @param localAddress the local address of the connection. It will be {@code null} if the connection is
+     *                     failed before entering the {@link #connectionPending(SessionProtocol, InetSocketAddress, InetSocketAddress, AttributeMap)}}
+     *                     state.
      * @param attrs the attributes of the connection.
+     * @param cause the cause of the failure.
+     * @param wasPending whether the connection was pending.
+     *                   If {@code true}, it means the session negotiation failed after the TCP connection was
+     *                   established.
+     *                   If {@code false}, it means the connection attempt failed during the TCP handshake.
      */
     void connectionFailed(SessionProtocol desiredProtocol,
                           InetSocketAddress remoteAddress,
-                          InetSocketAddress localAddress,
+                          @Nullable InetSocketAddress localAddress,
                           AttributeMap attrs,
-                          Throwable cause) throws Exception;
+                          Throwable cause, boolean wasPending) throws Exception;
 }
