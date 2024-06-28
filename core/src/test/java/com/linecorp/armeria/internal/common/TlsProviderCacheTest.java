@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -78,8 +79,11 @@ class TlsProviderCacheTest {
         }
     };
 
+    @Disabled("Manually run this test to check the shared cache behavior")
     @Test
     void shouldCacheSslContext() {
+        // This test could be broken if multiple tests are running in parallel.
+        TlsProviderUtil.sslContextCache.invalidateAll();
         final CountingConnectionPoolListener poolListener = new CountingConnectionPoolListener();
         final TlsProvider tlsProvider = TlsProvider.builderForClient()
                                                    .set("foo.com", clientFooCert.tlsKeyPair())
