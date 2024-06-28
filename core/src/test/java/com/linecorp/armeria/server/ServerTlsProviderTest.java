@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 
@@ -47,6 +49,8 @@ class ServerTlsProviderTest {
                     TlsProvider.builderForServer()
                                .set("*", TlsKeyPair.ofSelfSigned("default"))
                                .set("example.com", TlsKeyPair.ofSelfSigned("example.com"))
+                               .set("api.example.com", TlsKeyPair.ofSelfSigned("api.example.com"))
+                               .set("*.example.com", TlsKeyPair.ofSelfSigned("*.example.com"))
                                .build();
 
             sb.https(0)
@@ -55,10 +59,16 @@ class ServerTlsProviderTest {
                   final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
               })
-              .virtualHost("example.com")
+              .virtualHost("api.example.com")
               .service("/", (ctx, req) -> {
                   final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
-                  return HttpResponse.of("virtual:" + commonName);
+                  return HttpResponse.of("nested:" + commonName);
+              })
+              .and()
+              .virtualHost("*.example.com")
+              .service("/", (ctx, req) -> {
+                  final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
+                  return HttpResponse.of("wild:" + commonName);
               });
         }
     };
@@ -83,22 +93,37 @@ class ServerTlsProviderTest {
     }
 
     @Test
-    void shouldUseTlsProviderForTlsHandshake() {
+    void testDefault() {
         BlockingWebClient client = WebClient.builder(server.uri(SessionProtocol.HTTPS))
                                             .factory(ClientFactory.insecure())
                                             .build()
                                             .blocking();
         assertThat(client.get("/").contentUtf8()).isEqualTo("default:default");
+    }
+
+    @CsvSource({
+            "example.com, wild:example.com",
+            "api.example.com, nested:api.example.com",
+            "foo.example.com, wild:*.example.com",
+            "example.org, default:default",
+            "api.example.org, default:default",
+            "foo.example.org, default:default",
+            "bar.example.org, default:default",
+            "baz.bar.example.org, default:default"
+    })
+    @ParameterizedTest
+    void wildcardMatch(String host, String expected) {
         try (ClientFactory factory = ClientFactory.builder()
-                                                   .tlsNoVerify()
-                                                   .addressResolverGroupFactory(
-                                                           unused -> MockAddressResolverGroup.localhost())
-                                                   .build()) {
-            client = WebClient.builder("https://example.com:" + server.httpsPort())
-                              .factory(factory)
-                              .build()
-                              .blocking();
-            assertThat(client.get("/").contentUtf8()).isEqualTo("virtual:example.com");
+                                                  .tlsNoVerify()
+                                                  .addressResolverGroupFactory(
+                                                          unused -> MockAddressResolverGroup.localhost())
+                                                  .build()) {
+            assertThat(WebClient.builder("https://" + host + ':' + server.httpsPort())
+                                .factory(factory)
+                                .build()
+                                .blocking()
+                                .get("/")
+                                .contentUtf8()).isEqualTo(expected);
         }
     }
 
