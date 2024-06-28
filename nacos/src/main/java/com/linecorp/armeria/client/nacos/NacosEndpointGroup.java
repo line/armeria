@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.nacos;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -28,16 +27,15 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.nacos.NacosClient;
 
-import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A Nacos-based {@link EndpointGroup} implementation that retrieves the list of {@link Endpoint} from Nacos
@@ -72,8 +70,10 @@ class NacosEndpointGroup extends DynamicEndpointGroup {
 
     private final long registryFetchIntervalMillis;
 
+    private final EventExecutor eventLoop;
+
     @Nullable
-    private volatile ScheduledFuture<?> scheduledFuture;
+    private ScheduledFuture<?> scheduledFuture;
 
     NacosEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
                        long selectionTimeoutMillis, NacosClient nacosClient,
@@ -81,6 +81,7 @@ class NacosEndpointGroup extends DynamicEndpointGroup {
         super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
         this.nacosClient = requireNonNull(nacosClient, "nacosClient");
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
+        eventLoop = CommonPools.workerGroup().next();
 
         update();
     }
@@ -90,37 +91,36 @@ class NacosEndpointGroup extends DynamicEndpointGroup {
             return;
         }
 
-        final CompletableFuture<List<Endpoint>> response;
-        final EventLoop eventLoop;
+        nacosClient.endpoints()
+                   .handleAsync((endpoints, cause) -> {
+                       if (isClosing()) {
+                           return null;
+                       }
 
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            response = nacosClient.endpoints();
-            eventLoop = captor.get().eventLoop().withoutContext();
-        }
+                       if (cause != null) {
+                           logger.warn("Unexpected exception while fetching the registry from: {}",
+                                       nacosClient.uri(), cause);
+                       } else {
+                           setEndpoints(endpoints);
+                       }
 
-        response.handle((endpoints, cause) -> {
-            if (isClosing()) {
-                return null;
-            }
-            if (cause != null) {
-                logger.warn("Unexpected exception while fetching the registry from: {}",
-                            nacosClient.uri(), cause);
-            } else {
-                setEndpoints(endpoints);
-            }
-
-            scheduledFuture = eventLoop.schedule(this::update,
-                                                 registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
-            return null;
-        });
+                       scheduledFuture = eventLoop.schedule(this::update, registryFetchIntervalMillis,
+                                                            TimeUnit.MILLISECONDS);
+                       return null;
+                   }, eventLoop);
     }
 
     @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
-        final ScheduledFuture<?> scheduledFuture = this.scheduledFuture;
+        if (!eventLoop.inEventLoop()) {
+            eventLoop.execute(() -> doCloseAsync(future));
+            return;
+        }
+
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
         }
+
         future.complete(null);
     }
 
