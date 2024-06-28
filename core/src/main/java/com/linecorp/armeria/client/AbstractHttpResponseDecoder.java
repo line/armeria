@@ -58,10 +58,11 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
     }
 
     @Override
-    public HttpResponseWrapper addResponse(
-            int id, DecodedHttpResponse res, ClientRequestContext ctx, EventLoop eventLoop) {
+    public HttpResponseWrapper addResponse(@Nullable AbstractHttpRequestHandler requestHandler,
+                                           int id, DecodedHttpResponse res,
+                                           ClientRequestContext ctx, EventLoop eventLoop) {
         final HttpResponseWrapper newRes =
-                new HttpResponseWrapper(res, eventLoop, ctx,
+                new HttpResponseWrapper(requestHandler, res, eventLoop, ctx,
                                         ctx.responseTimeoutMillis(), ctx.maxResponseLength());
         final HttpResponseWrapper oldRes = responses.put(id, newRes);
         keepAliveHandler().increaseNumRequests();
