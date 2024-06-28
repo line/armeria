@@ -248,7 +248,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(compressor, metadata, remainingNanos);
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
-                (unused, cause) -> HttpResponse.ofFailure(exceptionHandler.apply(ctx, cause, metadata)
+                (unused, cause) -> HttpResponse.ofFailure(exceptionHandler.apply(ctx, null, cause, metadata)
                                                                           .withDescription(cause.getMessage())
                                                                           .asRuntimeException());
         final HttpResponse res = initContextAndExecuteWithFallback(
@@ -454,7 +454,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             });
         } catch (Throwable t) {
             final Metadata metadata = new Metadata();
-            close(exceptionHandler.apply(ctx, t, metadata), metadata);
+            close(exceptionHandler.apply(ctx, null, t, metadata), metadata);
         }
     }
 
@@ -511,7 +511,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
     private void closeWhenListenerThrows(Throwable t) {
         final Metadata metadata = new Metadata();
-        closeWhenEos(exceptionHandler.apply(ctx, t, metadata), metadata);
+        closeWhenEos(exceptionHandler.apply(ctx, null, t, metadata), metadata);
     }
 
     private void closeWhenEos(Status status, Metadata metadata) {

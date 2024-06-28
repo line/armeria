@@ -44,6 +44,7 @@
 *.cprapid.com
 *.cryptonomic.net
 *.customer-oci.com
+*.d.crm.dev
 *.dapps.earth
 *.database.run
 *.dev-builder.code.com
@@ -151,9 +152,16 @@
 *.usercontent.goog
 *.vps.myjino.ru
 *.vultrobjects.com
+*.w.crm.dev
+*.wa.crm.dev
 *.wadl.top
+*.wb.crm.dev
+*.wc.crm.dev
+*.wd.crm.dev
+*.we.crm.dev
 *.webhare.dev
 *.webpaas.ovh.net
+*.wf.crm.dev
 *.xmit.co
 *.yokohama.jp
 0.bg
@@ -1523,7 +1531,6 @@ cn.eu.org
 cn.in
 cn.it
 cn.ua
-cn.vu
 cng.br
 cnpy.gdn
 cnt.br
@@ -5510,6 +5517,7 @@ mypsx.net
 myqnapcloud.cn
 myqnapcloud.com
 myradweb.net
+myrdbx.io
 mysecuritycamera.com
 mysecuritycamera.net
 mysecuritycamera.org
@@ -5834,6 +5842,7 @@ net.za
 net.zm
 netbank
 netflix
+netfy.app
 netgamers.jp
 netlify.app
 network
@@ -6116,6 +6125,7 @@ obihiro.hokkaido.jp
 obira.hokkaido.jp
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
+obl.ong
 obninsk.su
 observablehq.cloud
 observer
@@ -7027,7 +7037,6 @@ rn.leg.br
 ro
 ro.eu.org
 ro.gov.br
-ro.im
 ro.it
 ro.leg.br
 roan.no
@@ -7803,6 +7812,7 @@ siracusa.it
 sirdal.no
 sisko.replit.dev
 site
+site.rb-hosting.io
 site.tb-hosting.com
 site.transip.me
 siteleaf.net
@@ -9107,11 +9117,13 @@ works.aero
 world
 worse-than.tv
 wow
+wp2.host
 wpdevcloud.com
 wpenginepowered.com
 wphostedmail.com
 wpmucdn.com
 wpmudev.host
+wpsquared.site
 writesthisblog.com
 wroc.pl
 wroclaw.pl

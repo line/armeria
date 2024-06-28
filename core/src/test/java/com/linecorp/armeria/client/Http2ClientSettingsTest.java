@@ -259,7 +259,7 @@ class Http2ClientSettingsTest {
         readBytes(in, payloadLength);
     }
 
-    private static int payloadLength(byte[] buf) {
+    static int payloadLength(byte[] buf) {
         return (buf[0] & 0xff) << 16 | (buf[1] & 0xff) << 8 | (buf[2] & 0xff);
     }
 

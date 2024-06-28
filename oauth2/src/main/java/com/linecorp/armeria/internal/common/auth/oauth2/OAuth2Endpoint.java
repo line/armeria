@@ -18,7 +18,9 @@ package com.linecorp.armeria.internal.common.auth.oauth2;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.auth.oauth2.OAuth2Request;
@@ -28,6 +30,11 @@ import com.linecorp.armeria.common.auth.oauth2.OAuth2ResponseHandler;
  * A simple wrapper around a WebClient that makes it easy to execute {@link OAuth2Request}s.
  */
 public final class OAuth2Endpoint<T> {
+
+    private static final RequestOptions UNARY_REQUEST_OPTIONS =
+            RequestOptions.builder()
+                          .exchangeType(ExchangeType.UNARY)
+                          .build();
 
     private final WebClient endpoint;
     private final String endpointPath;
@@ -43,7 +50,7 @@ public final class OAuth2Endpoint<T> {
     public CompletableFuture<T> execute(OAuth2Request oAuth2Request) {
         final HttpRequest request = oAuth2Request.asHttpRequest(endpointPath);
         final QueryParams requestParams = oAuth2Request.bodyParams();
-        return endpoint.execute(request)
+        return endpoint.execute(request, UNARY_REQUEST_OPTIONS)
                        .aggregate()
                        .thenApply(response -> responseHandler.handle(response, requestParams));
     }

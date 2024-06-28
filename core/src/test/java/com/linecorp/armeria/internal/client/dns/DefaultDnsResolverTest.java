@@ -155,8 +155,6 @@ class DefaultDnsResolverTest {
                             NoopDnsCache.INSTANCE, eventLoop, ImmutableList.of(), 1,
                             queryTimeoutMillis, HostsFileEntriesResolver.DEFAULT);
 
-            final DnsQuestionContext ctx = new DnsQuestionContext(eventLoop, queryTimeoutMillis);
-
             final Stopwatch stopwatch = Stopwatch.createStarted();
             final List<DefaultDnsQuestion> questions;
             if (resolvedAddressType == ResolvedAddressTypes.IPV4_PREFERRED) {
@@ -169,9 +167,9 @@ class DefaultDnsResolverTest {
                         new DefaultDnsQuestion("foo.com.", DnsRecordType.A));
             }
 
-            // resolver.resolveAll() should be executed by the event loop set to DnsNameResolver.
+            // resolver.resolve() should be executed by the event loop set to DnsNameResolver.
             final CompletableFuture<List<DnsRecord>> result = eventLoop.submit(() -> {
-                return resolver.resolveAll(ctx, questions, "");
+                return resolver.resolve(questions, "");
             }).get();
 
             final List<DnsRecord> records = result.join();

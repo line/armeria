@@ -31,6 +31,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RestClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.websocket.WebSocketClient;
+import com.linecorp.armeria.client.websocket.WebSocketClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -67,6 +69,12 @@ public abstract class ServerRule extends ExternalResource {
             @Override
             public void configureWebClient(WebClientBuilder wcb) throws Exception {
                 ServerRule.this.configureWebClient(wcb);
+            }
+
+            @Override
+            public void configureWebSocketClient(WebSocketClientBuilder wscb)
+                    throws Exception {
+                ServerRule.this.configureWebSocketClient(wscb);
             }
         };
     }
@@ -108,6 +116,12 @@ public abstract class ServerRule extends ExternalResource {
      * You can get the configured {@link WebClient} using {@link #webClient()}.
      */
     protected void configureWebClient(WebClientBuilder webClientBuilder) throws Exception {}
+
+    /**
+     * Configures the {@link WebSocketClient} with the given {@link WebSocketClientBuilder}.
+     * You can get the configured {@link WebSocketClient} using {@link #webSocketClient()}.
+     */
+    protected void configureWebSocketClient(WebSocketClientBuilder webSocketClientBuilder) throws Exception {}
 
     /**
      * Stops the {@link Server} asynchronously.
@@ -343,5 +357,14 @@ public abstract class ServerRule extends ExternalResource {
     public RestClient restClient(Consumer<WebClientBuilder> webClientCustomizer) {
         requireNonNull(webClientCustomizer, "webClientCustomizer");
         return delegate.restClient(webClientCustomizer);
+    }
+
+    /**
+     * Returns the {@link WebSocketClient} configured
+     * by {@link #configureWebSocketClient(WebSocketClientBuilder)}.
+     */
+    @UnstableApi
+    public WebSocketClient webSocketClient() {
+        return delegate.webSocketClient();
     }
 }
