@@ -156,6 +156,10 @@ public final class ClientOptions
     public static final ClientOption<Supplier<? extends AutoCloseable>> CONTEXT_HOOK =
             ClientOption.define("CONTEXT_HOOK", NOOP_CONTEXT_HOOK);
 
+    @UnstableApi
+    public static final ClientOption<ResponseTimeoutMode> RESPONSE_TIMEOUT_MODE =
+            ClientOption.define("RESPONSE_TIMEOUT_MODE", ResponseTimeoutMode.RESPONSE_WRITE);
+
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.HTTP2_SETTINGS,
             HttpHeaderNames.METHOD,
@@ -393,6 +397,14 @@ public final class ClientOptions
     @SuppressWarnings("unchecked")
     public Supplier<AutoCloseable> contextHook() {
         return (Supplier<AutoCloseable>) get(CONTEXT_HOOK);
+    }
+
+    /**
+     * TBU.
+     */
+    @UnstableApi
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return get(RESPONSE_TIMEOUT_MODE);
     }
 
     /**

@@ -51,29 +51,23 @@ public interface CancellationScheduler {
         return NoopCancellationScheduler.INSTANCE;
     }
 
-    CancellationTask noopCancellationTask = new CancellationTask() {
-        @Override
-        public boolean canSchedule() {
-            return true;
-        }
-
-        @Override
-        public void run(Throwable cause) { /* no-op */ }
-    };
+    CancellationTask noopCancellationTask = cause -> {};
 
     void initAndStart(EventExecutor eventLoop, CancellationTask task);
 
     void init(EventExecutor eventLoop);
 
-    void start(CancellationTask task);
+    void start();
 
     void clearTimeout();
 
-    void clearTimeout(boolean resetTimeout);
+    boolean cancelScheduled();
 
     void setTimeoutNanos(TimeoutMode mode, long timeoutNanos);
 
-    void finishNow();
+    default void finishNow() {
+        finishNow(null);
+    }
 
     void finishNow(@Nullable Throwable cause);
 
@@ -89,18 +83,12 @@ public interface CancellationScheduler {
 
     CompletableFuture<Throwable> whenCancelled();
 
-    @Deprecated
-    CompletableFuture<Void> whenTimingOut();
-
-    @Deprecated
-    CompletableFuture<Void> whenTimedOut();
+    void updateTask(CancellationTask cancellationTask);
 
     enum State {
         INIT,
-        INACTIVE,
-        SCHEDULED,
-        FINISHING,
-        FINISHED
+        PENDING,
+        FINISHED,
     }
 
     /**
@@ -110,7 +98,9 @@ public interface CancellationScheduler {
         /**
          * Returns {@code true} if the cancellation task can be scheduled.
          */
-        boolean canSchedule();
+        default boolean canSchedule() {
+            return true;
+        }
 
         /**
          * Invoked by the scheduler with the cause of cancellation.

@@ -31,6 +31,7 @@ import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
 import com.linecorp.armeria.client.AbstractWebClientBuilder;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
@@ -430,6 +432,11 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
     public EurekaEndpointGroupBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (EurekaEndpointGroupBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (EurekaEndpointGroupBuilder) super.responseTimeoutMode(responseTimeoutMode);
     }
 
     @Override
