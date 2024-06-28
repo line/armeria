@@ -140,7 +140,9 @@ jobs:
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
           ${{ matrix.min-java && format('-PminimumJavaVersion={0}', matrix.min-java) || '' }} \
-          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }} \
+          -PpreferShadedTests=${{ github.ref_name != 'main' }}
+          # Unshaded tests are skipped for PRs to avoid running the same tests twice.
         shell: bash
         env:
           COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
