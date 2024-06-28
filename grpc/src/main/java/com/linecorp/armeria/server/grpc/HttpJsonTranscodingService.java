@@ -454,30 +454,32 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         // Ignore the spec if the method is HttpBody. The response body is already in the correct format.
         if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getOutputType())) {
             return httpResponse -> {
-                final JsonNode jsonNode = extractHttpBody(httpResponse.content());
+                try (HttpData data = httpResponse.content()) {
+                    final JsonNode jsonNode = extractHttpBody(data);
 
-                // Failed to parse the JSON body, return the original response.
-                if (jsonNode == null) {
-                    return httpResponse;
-                }
-
-                // The data field is base64 encoded.
-                // https://protobuf.dev/programming-guides/proto3/#json
-                final String httpBody = jsonNode.get("data").asText();
-                final byte[] httpBodyBytes = Base64.getDecoder().decode(httpBody);
-
-                final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
-                    final JsonNode contentType = jsonNode.get("contentType");
-
-                    if (contentType != null && contentType.isTextual()) {
-                        builder.set(HttpHeaderNames.CONTENT_TYPE, contentType.textValue());
-                    } else {
-                        builder.remove(HttpHeaderNames.CONTENT_TYPE);
+                    // Failed to parse the JSON body, return the original response.
+                    if (jsonNode == null) {
+                        return httpResponse;
                     }
-                    builder.contentLength(httpBodyBytes.length);
-                });
 
-                return AggregatedHttpResponse.of(newHeaders, HttpData.wrap(httpBodyBytes));
+                    // The data field is base64 encoded.
+                    // https://protobuf.dev/programming-guides/proto3/#json
+                    final String httpBody = jsonNode.get("data").asText();
+                    final byte[] httpBodyBytes = Base64.getDecoder().decode(httpBody);
+
+                    final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
+                        final JsonNode contentType = jsonNode.get("contentType");
+
+                        if (contentType != null && contentType.isTextual()) {
+                            builder.set(HttpHeaderNames.CONTENT_TYPE, contentType.textValue());
+                        } else {
+                            builder.remove(HttpHeaderNames.CONTENT_TYPE);
+                        }
+                        builder.contentLength(httpBodyBytes.length);
+                    });
+
+                    return AggregatedHttpResponse.of(newHeaders, HttpData.wrap(httpBodyBytes));
+                }
             };
         }
 
@@ -488,11 +490,13 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         }
 
         return httpResponse -> {
-            final HttpData convertedData = convertHttpDataForResponseBody(responseBody, httpResponse.content());
-            final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
-                builder.contentLength(convertedData.length());
-            });
-            return AggregatedHttpResponse.of(newHeaders, convertedData);
+            try (HttpData data = httpResponse.content()) {
+                final HttpData convertedData = convertHttpDataForResponseBody(responseBody, data);
+                final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
+                    builder.contentLength(convertedData.length());
+                });
+                return AggregatedHttpResponse.of(newHeaders, convertedData);
+            }
         };
     }
 
