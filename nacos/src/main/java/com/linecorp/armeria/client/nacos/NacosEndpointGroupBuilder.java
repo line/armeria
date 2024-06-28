@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 import java.time.Duration;
 
-import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
@@ -38,7 +37,8 @@ import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
  * sb.serverListener(listener);
  * }</pre>
  */
-public final class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder<NacosEndpointGroupBuilder> {
+public final class NacosEndpointGroupBuilder
+        extends AbstractDynamicEndpointGroupBuilder<NacosEndpointGroupBuilder> {
 
     private static final long DEFAULT_CHECK_INTERVAL_MILLIS = 30_000;
 
@@ -154,30 +154,5 @@ public final class NacosEndpointGroupBuilder extends AbstractDynamicEndpointGrou
     public NacosEndpointGroup build() {
         return new NacosEndpointGroup(selectionStrategy, shouldAllowEmptyEndpoints(), selectionTimeoutMillis(),
                 nacosClientBuilder.build(), registryFetchIntervalMillis);
-    }
-
-    @Override
-    public NacosEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
-        return super.allowEmptyEndpoints(allowEmptyEndpoints);
-    }
-
-    /**
-     * Sets the timeout to wait until a successful {@link Endpoint} selection.
-     * {@link Duration#ZERO} disables the timeout.
-     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
-     */
-    @Override
-    public NacosEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
-        return super.selectionTimeout(selectionTimeout);
-    }
-
-    /**
-     * Sets the timeout to wait until a successful {@link Endpoint} selection.
-     * {@code 0} disables the timeout.
-     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
-     */
-    @Override
-    public NacosEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
-        return super.selectionTimeoutMillis(selectionTimeoutMillis);
     }
 }
