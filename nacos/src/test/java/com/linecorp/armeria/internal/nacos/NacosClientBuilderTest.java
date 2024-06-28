@@ -41,7 +41,7 @@ class NacosClientBuilderTest extends NacosTestBase {
     void nacosApiVersionCanNotStartsWithSlash() {
         assertThrows(IllegalArgumentException.class, () ->
                 NacosClient.builder(URI.create("http://localhost:8500"), serviceName).nacosApiVersion("/v1"));
-        assertDoesNotThrow(() ->
-                NacosClient.builder(URI.create("http://localhost:8500"), serviceName).nacosApiVersion("v1"));
+        assertDoesNotThrow(() -> NacosClient.builder(URI.create("http://localhost:8500"), serviceName)
+                                            .nacosApiVersion("v1"));
     }
 }

@@ -34,8 +34,8 @@ public final class NacosClient {
 
     private static final Function<? super HttpClient, RetryingClient> retryingClientDecorator =
             RetryingClient.newDecorator(RetryConfig.builder(RetryRule.onServerErrorStatus())
-                    .maxTotalAttempts(3)
-                    .build());
+                                                   .maxTotalAttempts(3)
+                                                   .build());
 
     public static NacosClientBuilder builder(URI nacosUri, String serviceName) {
         return new NacosClientBuilder(nacosUri, serviceName);
@@ -51,7 +51,7 @@ public final class NacosClient {
                 String serviceName, @Nullable String namespaceId, @Nullable String groupName,
                 @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
         final WebClientBuilder builder = WebClient.builder(uri)
-                .decorator(retryingClientDecorator);
+                                                  .decorator(retryingClientDecorator);
 
         if (username != null && password != null) {
             builder.decorator(LoginClient.newDecorator(builder.build(), username, password));
@@ -60,9 +60,9 @@ public final class NacosClient {
         webClient = builder.build();
 
         queryInstancesClient = QueryInstancesClient.of(this, nacosApiVersion, serviceName, namespaceId,
-                groupName, clusterName, healthyOnly, app);
+                                                       groupName, clusterName, healthyOnly, app);
         registerInstanceClient = RegisterInstanceClient.of(this, nacosApiVersion, serviceName, namespaceId,
-                groupName, clusterName, app);
+                                                           groupName, clusterName, app);
     }
 
     public CompletableFuture<List<Endpoint>> endpoints() {

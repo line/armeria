@@ -47,48 +47,63 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * <a href="https://nacos.io/en-us/docs/auth.html">Nacos Authentication</a>.
  */
 final class LoginClient extends SimpleDecoratingHttpClient {
+    private static final String NACOS_ACCESS_TOKEN_CACHE_KEY = "NACOS_ACCESS_TOKEN_CACHE_KEY";
+
     public static Function<? super HttpClient, LoginClient> newDecorator(WebClient webClient,
                                                                          String username, String password) {
         return delegate -> new LoginClient(delegate, webClient, username, password);
     }
 
-    private static final String NACOS_ACCESS_TOKEN_CACHE_KEY = "NACOS_ACCESS_TOKEN_CACHE_KEY";
+    private final HttpClient delegate;
+    private final WebClient webClient;
+    private final String queryParamsForLogin;
 
     // TODO: Replace the caffeine AsyncLoadingCache with internally implemented AsyncLoader, if #5590 merged.
-    private final AsyncLoadingCache<String, LoginResult> tokenCache = Caffeine.newBuilder()
-            .maximumSize(1)
-            .expireAfter(new Expiry<String, LoginResult>() {
-                @Override
-                public long expireAfterCreate(@NonNull String key, @NonNull LoginResult loginResult,
-                                              long currentTime) {
-                    return loginResult.tokenTtl.longValue();
-                }
+    private final AsyncLoadingCache<String, LoginResult> tokenCache =
+            Caffeine.newBuilder()
+                    .maximumSize(1)
+                    .expireAfter(
+                            new Expiry<String, LoginResult>() {
+                                @Override
+                                public long expireAfterCreate(
+                                        @NonNull
+                                        String key,
+                                        @NonNull
+                                        LoginResult loginResult,
+                                        long currentTime) {
+                                    return loginResult.tokenTtl.longValue();
+                                }
 
-                @Override
-                public long expireAfterUpdate(@NonNull String key, @NonNull LoginResult loginResult,
-                                              long currentTime, long currentDuration) {
-                    return loginResult.tokenTtl.longValue();
-                }
+                                @Override
+                                public long expireAfterUpdate(
+                                        @NonNull
+                                        String key,
+                                        @NonNull
+                                        LoginResult loginResult,
+                                        long currentTime,
+                                        long currentDuration) {
+                                    return loginResult.tokenTtl.longValue();
+                                }
 
-                @Override
-                public long expireAfterRead(@NonNull String key, @NonNull LoginResult loginResult,
-                                            long currentTime, long currentDuration) {
-                    return currentDuration;
-                }
-            })
-            .buildAsync((key, executor) -> {
-                try {
-                    return loginInternal();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
-
-    private final HttpClient delegate;
-
-    private final WebClient webClient;
-
-    private final String queryParamsForLogin;
+                                @Override
+                                public long expireAfterRead(
+                                        @NonNull
+                                        String key,
+                                        @NonNull
+                                        LoginResult loginResult,
+                                        long currentTime,
+                                        long currentDuration) {
+                                    return currentDuration;
+                                }
+                            })
+                    .buildAsync((key, executor) -> {
+                        try {
+                            return loginInternal();
+                        } catch (Exception e) {
+                            throw new RuntimeException(
+                                    e);
+                        }
+                    });
 
     LoginClient(HttpClient delegate, WebClient webClient, String username, String password) {
         super(delegate);
@@ -96,31 +111,33 @@ final class LoginClient extends SimpleDecoratingHttpClient {
         this.delegate = requireNonNull(delegate, "delegate");
         this.webClient = requireNonNull(webClient, "webClient");
         queryParamsForLogin = QueryParams.builder()
-                .add("username", requireNonNull(username, "username"))
-                .add("password", requireNonNull(password, "password"))
-                .toQueryString();
+                                         .add("username", requireNonNull(username, "username"))
+                                         .add("password", requireNonNull(password, "password"))
+                                         .toQueryString();
     }
 
     private CompletableFuture<String> login() {
         return tokenCache.get(NACOS_ACCESS_TOKEN_CACHE_KEY)
-                .thenApply(loginResult -> loginResult.accessToken);
+                         .thenApply(loginResult -> loginResult.accessToken);
     }
 
     private CompletableFuture<LoginResult> loginInternal() {
         return webClient.prepare().post("/v1/auth/login")
-                .content(MediaType.FORM_DATA, queryParamsForLogin)
-                .asJson(LoginResult.class)
-                .as(HttpEntity::content)
-                .execute();
+                        .content(MediaType.FORM_DATA, queryParamsForLogin)
+                        .asJson(LoginResult.class)
+                        .as(HttpEntity::content)
+                        .execute();
     }
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
         final CompletableFuture<HttpResponse> future = login().thenApply(accessToken -> {
             try {
-                return delegate.execute(ctx, req.mapHeaders(headers -> headers.toBuilder()
-                        .set(HttpHeaderNames.AUTHORIZATION, "Bearer " + accessToken)
-                        .build()));
+                return delegate.execute(ctx,
+                                        req.mapHeaders(headers -> headers.toBuilder()
+                                                                         .set(HttpHeaderNames.AUTHORIZATION,
+                                                                              "Bearer " + accessToken)
+                                                                         .build()));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -149,11 +166,11 @@ final class LoginClient extends SimpleDecoratingHttpClient {
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
-                    .omitNullValues()
-                    .add("accessToken", accessToken)
-                    .add("tokenTtl", tokenTtl)
-                    .add("globalAdmin", globalAdmin)
-                    .toString();
+                              .omitNullValues()
+                              .add("accessToken", accessToken)
+                              .add("tokenTtl", tokenTtl)
+                              .add("globalAdmin", globalAdmin)
+                              .toString();
         }
     }
 }

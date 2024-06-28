@@ -41,6 +41,8 @@ final class NacosClientUtil {
 
     private static final String WEIGHT_PARAM = "weight";
 
+    private NacosClientUtil() {}
+
     /**
      * Encodes common Nacos API parameters as {@code QueryParamsBuilder}.
      */
@@ -79,6 +81,4 @@ final class NacosClientUtil {
         }
         return paramsBuilder.build();
     }
-
-    private NacosClientUtil() {}
 }

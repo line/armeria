@@ -40,16 +40,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class QueryInstancesClient {
 
-    static QueryInstancesClient of(NacosClient nacosClient, String nacosApiVersion, String serviceName,
-                                   @Nullable String namespaceId, @Nullable String groupName,
-                                   @Nullable String clusterName, @Nullable Boolean healthyOnly,
-                                   @Nullable String app) {
-        return new QueryInstancesClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName,
-                                        clusterName, healthyOnly, app);
-    }
-
     private final WebClient webClient;
-
     private final String pathForQuery;
 
     QueryInstancesClient(NacosClient nacosClient, String nacosApiVersion, String serviceName,
@@ -62,26 +53,18 @@ final class QueryInstancesClient {
                 .append("/ns/instance/list?");
         final QueryParams params = NacosClientUtil
                 .queryParams(namespaceId, groupName, requireNonNull(serviceName, "serviceName"),
-                        clusterName, healthyOnly, app, null, null, null);
+                             clusterName, healthyOnly, app, null, null, null);
         pathBuilder.append(params.toQueryString());
 
         pathForQuery = pathBuilder.toString();
     }
 
-    CompletableFuture<List<Endpoint>> endpoints() {
-        return queryInstances()
-                .thenApply(response -> response.data.hosts.stream()
-                        .map(QueryInstancesClient::toEndpoint)
-                        .filter(Objects::nonNull)
-                        .collect(toImmutableList()));
-    }
-
-    CompletableFuture<QueryInstancesResponse> queryInstances() {
-        return webClient.prepare()
-                .get(pathForQuery)
-                .asJson(QueryInstancesResponse.class)
-                .as(HttpEntity::content)
-                .execute();
+    static QueryInstancesClient of(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+                                   @Nullable String namespaceId, @Nullable String groupName,
+                                   @Nullable String clusterName, @Nullable Boolean healthyOnly,
+                                   @Nullable String app) {
+        return new QueryInstancesClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName,
+                                        clusterName, healthyOnly, app);
     }
 
     @Nullable
@@ -93,6 +76,22 @@ final class QueryInstancesClient {
         } else {
             return Endpoint.of(host.ip, host.port);
         }
+    }
+
+    CompletableFuture<List<Endpoint>> endpoints() {
+        return queryInstances()
+                .thenApply(response -> response.data.hosts.stream()
+                                                          .map(QueryInstancesClient::toEndpoint)
+                                                          .filter(Objects::nonNull)
+                                                          .collect(toImmutableList()));
+    }
+
+    CompletableFuture<QueryInstancesResponse> queryInstances() {
+        return webClient.prepare()
+                        .get(pathForQuery)
+                        .asJson(QueryInstancesResponse.class)
+                        .as(HttpEntity::content)
+                        .execute();
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -190,22 +189,22 @@ final class QueryInstancesClient {
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
-                    .omitNullValues()
-                    .add("instanceId", instanceId)
-                    .add("ip", ip)
-                    .add("port", port)
-                    .add("weight", weight)
-                    .add("healthy", healthy)
-                    .add("enabled", enabled)
-                    .add("ephemeral", ephemeral)
-                    .add("clusterName", clusterName)
-                    .add("serviceName", serviceName)
-                    .add("metaData", metadata)
-                    .add("instanceHeartBeatInterval", instanceHeartBeatInterval)
-                    .add("instanceIdGenerator", instanceIdGenerator)
-                    .add("instanceHeartBeatTimeOut", instanceHeartBeatTimeOut)
-                    .add("ipDeleteTimeout", ipDeleteTimeout)
-                    .toString();
+                              .omitNullValues()
+                              .add("instanceId", instanceId)
+                              .add("ip", ip)
+                              .add("port", port)
+                              .add("weight", weight)
+                              .add("healthy", healthy)
+                              .add("enabled", enabled)
+                              .add("ephemeral", ephemeral)
+                              .add("clusterName", clusterName)
+                              .add("serviceName", serviceName)
+                              .add("metaData", metadata)
+                              .add("instanceHeartBeatInterval", instanceHeartBeatInterval)
+                              .add("instanceIdGenerator", instanceIdGenerator)
+                              .add("instanceHeartBeatTimeOut", instanceHeartBeatTimeOut)
+                              .add("ipDeleteTimeout", ipDeleteTimeout)
+                              .toString();
         }
     }
 }

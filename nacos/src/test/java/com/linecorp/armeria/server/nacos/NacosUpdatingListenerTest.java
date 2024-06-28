@@ -76,16 +76,16 @@ class NacosUpdatingListenerTest extends NacosTestBase {
     @Test
     void testBuild() {
         assertThat(NacosUpdatingListener.builder(nacosUri(), serviceName)
-                                         .build()).isNotNull();
+                                        .build()).isNotNull();
         assertThat(NacosUpdatingListener.builder(nacosUri(), serviceName)
-                                         .build()).isNotNull();
+                                        .build()).isNotNull();
     }
 
     @Test
     void testEndpointsCountOfListeningServiceWithAServerStopAndStart() {
         // Checks sample endpoints created when initialized.
         await().untilAsserted(() -> assertThat(client(null, null).endpoints()
-                                                             .join()).hasSameSizeAs(sampleEndpoints));
+                                                                 .join()).hasSameSizeAs(sampleEndpoints));
 
         // When we close one server then the listener deregister it automatically from nacos.
         servers.get(0).stop().join();
@@ -100,7 +100,7 @@ class NacosUpdatingListenerTest extends NacosTestBase {
         servers.get(0).start().join();
 
         await().untilAsserted(() -> assertThat(client(null, null).endpoints()
-                                                             .join()).hasSameSizeAs(sampleEndpoints));
+                                                                 .join()).hasSameSizeAs(sampleEndpoints));
     }
 
     @Test

@@ -54,14 +54,6 @@ public abstract class NacosTestBase {
     protected static final String serviceName = "testService";
     protected static final String NACOS_AUTH_TOKEN = "armeriaarmeriaarmeriaarmeriaarmeriaarmeriaarmeriaarmeria";
     protected static final String NACOS_AUTH_SECRET = "nacos";
-
-    protected static List<Endpoint> newSampleEndpoints() {
-        final int[] ports = unusedPorts(3);
-        return ImmutableList.of(Endpoint.of("host.docker.internal", ports[0]).withWeight(2),
-                                Endpoint.of("host.docker.internal", ports[1]).withWeight(4),
-                                Endpoint.of("host.docker.internal", ports[2]).withWeight(2));
-    }
-
     @Container
     static final GenericContainer nacosContainer =
             new GenericContainer(DockerImageName.parse("nacos/nacos-server:v2.3.0-slim"))
@@ -71,11 +63,17 @@ public abstract class NacosTestBase {
                     .withEnv("NACOS_AUTH_TOKEN", NACOS_AUTH_TOKEN)
                     .withEnv("NACOS_AUTH_IDENTITY_KEY", NACOS_AUTH_SECRET)
                     .withEnv("NACOS_AUTH_IDENTITY_VALUE", NACOS_AUTH_SECRET);
-
     @Nullable
     private static URI nacosUri;
 
     protected NacosTestBase() {}
+
+    protected static List<Endpoint> newSampleEndpoints() {
+        final int[] ports = unusedPorts(3);
+        return ImmutableList.of(Endpoint.of("host.docker.internal", ports[0]).withWeight(2),
+                                Endpoint.of("host.docker.internal", ports[1]).withWeight(4),
+                                Endpoint.of("host.docker.internal", ports[2]).withWeight(2));
+    }
 
     @BeforeAll
     static void start() {
@@ -96,7 +94,7 @@ public abstract class NacosTestBase {
             builder.groupName(groupName);
         }
         return builder.authorization(NACOS_AUTH_SECRET, NACOS_AUTH_SECRET)
-                .build();
+                      .build();
     }
 
     protected static URI nacosUri() {
@@ -108,7 +106,7 @@ public abstract class NacosTestBase {
         final int[] ports = new int[numPorts];
         final Random random = ThreadLocalRandom.current();
         for (int i = 0; i < numPorts; i++) {
-            for (;;) {
+            for (; ; ) {
                 final int candidatePort = random.nextInt(64512) + 1024;
                 try (ServerSocket ss = new ServerSocket()) {
                     ss.bind(new InetSocketAddress("127.0.0.1", candidatePort));

@@ -29,17 +29,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class RegisterInstanceClient {
 
-    static RegisterInstanceClient of(NacosClient nacosClient, String nacosApiVersion, String serviceName,
-                                     @Nullable String namespaceId, @Nullable String groupName,
-                                     @Nullable String clusterName, @Nullable String app) {
-        return new RegisterInstanceClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName,
-                clusterName, app);
-    }
-
     private final WebClient webClient;
-
     private final String instanceApiPath;
-
     private final String serviceName;
 
     @Nullable
@@ -67,31 +58,34 @@ final class RegisterInstanceClient {
         this.app = app;
     }
 
+    static RegisterInstanceClient of(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+                                     @Nullable String namespaceId, @Nullable String groupName,
+                                     @Nullable String clusterName, @Nullable String app) {
+        return new RegisterInstanceClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName,
+                                          clusterName, app);
+    }
+
     /**
      * Registers a service into the Nacos.
      */
     HttpResponse register(String ip, int port, int weight) {
-        final QueryParams params = NacosClientUtil
-                .queryParams(namespaceId, groupName, serviceName, clusterName, null, app,
-                        requireNonNull(ip, "ip"), port, weight);
+        final QueryParams params = NacosClientUtil.queryParams(namespaceId, groupName, serviceName, clusterName,
+                                                               null, app, requireNonNull(ip, "ip"), port,
+                                                               weight);
 
-        return webClient.prepare()
-                .post(instanceApiPath)
-                .content(MediaType.FORM_DATA, params.toQueryString())
-                .execute();
+        return webClient.prepare().post(instanceApiPath).content(MediaType.FORM_DATA, params.toQueryString())
+                        .execute();
     }
 
     /**
      * De-registers a service from the Nacos.
      */
     HttpResponse deregister(String ip, int port, int weight) {
-        final QueryParams params = NacosClientUtil
-                .queryParams(namespaceId, groupName, serviceName, clusterName, null, app,
-                        requireNonNull(ip, "ip"), port, weight);
+        final QueryParams params = NacosClientUtil.queryParams(namespaceId, groupName, serviceName, clusterName,
+                                                               null, app, requireNonNull(ip, "ip"), port,
+                                                               weight);
 
-        return webClient.prepare()
-                .delete(instanceApiPath)
-                .content(MediaType.FORM_DATA, params.toQueryString())
-                .execute();
+        return webClient.prepare().delete(instanceApiPath).content(MediaType.FORM_DATA, params.toQueryString())
+                        .execute();
     }
 }

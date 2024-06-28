@@ -28,7 +28,7 @@ class NacosEndpointGroupBuilderTest {
     @Test
     void selectionTimeoutDefault() {
         try (NacosEndpointGroup group = NacosEndpointGroup.of(URI.create("http://127.0.0.1/node"),
-                                                                "testService")) {
+                                                              "testService")) {
             assertThat(group.selectionTimeoutMillis()).isEqualTo(Flags.defaultResponseTimeoutMillis());
         }
     }
@@ -37,8 +37,8 @@ class NacosEndpointGroupBuilderTest {
     void selectionTimeoutCustom() {
         try (NacosEndpointGroup group =
                      NacosEndpointGroup.builder(URI.create("http://127.0.0.1/node"), "testService")
-                                        .selectionTimeoutMillis(4000)
-                                        .build()) {
+                                       .selectionTimeoutMillis(4000)
+                                       .build()) {
             assertThat(group.selectionTimeoutMillis()).isEqualTo(4000);
         }
     }

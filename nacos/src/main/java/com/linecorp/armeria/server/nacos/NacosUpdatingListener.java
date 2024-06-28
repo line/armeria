@@ -64,42 +64,6 @@ public class NacosUpdatingListener extends ServerListenerAdapter {
         this.endpoint = endpoint;
     }
 
-    @Override
-    public void serverStarted(Server server) {
-        final Endpoint endpoint = getEndpoint(server);
-        nacosClient.register(endpoint)
-                .aggregate()
-                .handle((res, cause) -> {
-                    if (cause != null) {
-                        logger.warn("Failed to register {}:{} to Nacos: {}",
-                                    endpoint.host(), endpoint.port(), nacosClient.uri(), cause);
-                        return null;
-                    }
-
-                    if (res.status() != HttpStatus.OK) {
-                        logger.warn("Failed to register {}:{} to Nacos: {} (status: {}, content: {})",
-                                    endpoint.host(), endpoint.port(), nacosClient.uri(), res.status(),
-                                    res.contentUtf8());
-                        return null;
-                    }
-
-                    logger.info("Registered {}:{} to Nacos: {}",
-                                endpoint.host(), endpoint.port(), nacosClient.uri());
-                    isRegistered = true;
-                    return null;
-                });
-    }
-
-    private Endpoint getEndpoint(Server server) {
-        if (endpoint != null) {
-            if (endpoint.hasPort()) {
-                warnIfInactivePort(server, endpoint.port());
-            }
-            return endpoint;
-        }
-        return defaultEndpoint(server);
-    }
-
     private static Endpoint defaultEndpoint(Server server) {
         final ServerPort serverPort = server.activePort();
         assert serverPort != null;
@@ -120,22 +84,59 @@ public class NacosUpdatingListener extends ServerListenerAdapter {
     }
 
     @Override
+    public void serverStarted(Server server) {
+        final Endpoint endpoint = getEndpoint(server);
+        nacosClient.register(endpoint)
+                   .aggregate()
+                   .handle((res, cause) -> {
+                       if (cause != null) {
+                           logger.warn("Failed to register {}:{} to Nacos: {}",
+                                       endpoint.host(), endpoint.port(), nacosClient.uri(), cause);
+                           return null;
+                       }
+
+                       if (res.status() != HttpStatus.OK) {
+                           logger.warn("Failed to register {}:{} to Nacos: {} (status: {}, content: {})",
+                                       endpoint.host(), endpoint.port(), nacosClient.uri(), res.status(),
+                                       res.contentUtf8());
+                           return null;
+                       }
+
+                       logger.info("Registered {}:{} to Nacos: {}",
+                                   endpoint.host(), endpoint.port(), nacosClient.uri());
+                       isRegistered = true;
+                       return null;
+                   });
+    }
+
+    private Endpoint getEndpoint(Server server) {
+        if (endpoint != null) {
+            if (endpoint.hasPort()) {
+                warnIfInactivePort(server, endpoint.port());
+            }
+            return endpoint;
+        }
+        return defaultEndpoint(server);
+    }
+
+    @Override
     public void serverStopping(Server server) {
         final Endpoint endpoint = getEndpoint(server);
         if (isRegistered) {
             nacosClient.deregister(endpoint)
-                    .aggregate()
-                    .handle((res, cause) -> {
-                        if (cause != null) {
-                            logger.warn("Failed to deregister {}:{} from Nacos: {}",
-                                        endpoint.ipAddr(), endpoint.port(), nacosClient.uri(), cause);
-                        } else if (res.status() != HttpStatus.OK) {
-                            logger.warn("Failed to deregister {}:{} from Nacos: {}. (status: {}, content: {})",
-                                        endpoint.ipAddr(), endpoint.port(), nacosClient.uri(), res.status(),
-                                        res.contentUtf8());
-                        }
-                        return null;
-                    });
+                       .aggregate()
+                       .handle((res, cause) -> {
+                           if (cause != null) {
+                               logger.warn("Failed to deregister {}:{} from Nacos: {}",
+                                           endpoint.ipAddr(), endpoint.port(), nacosClient.uri(), cause);
+                           } else if (res.status() != HttpStatus.OK) {
+                               logger.warn(
+                                       "Failed to deregister {}:{} from Nacos: {}. (status: {}, content: {})",
+                                       endpoint.ipAddr(), endpoint.port(), nacosClient.uri(), res.status(),
+                                       res.contentUtf8());
+                           }
+                           return null;
+                       });
         }
     }
 }

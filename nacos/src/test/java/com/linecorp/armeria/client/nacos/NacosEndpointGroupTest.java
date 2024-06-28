@@ -39,9 +39,8 @@ import com.linecorp.armeria.server.nacos.NacosUpdatingListener;
 class NacosEndpointGroupTest extends NacosTestBase {
 
     private static final List<Server> servers = new ArrayList<>();
-    private static volatile List<Endpoint> sampleEndpoints;
-
     private static final String DEFAULT_CLUSTER_NAME = "c1";
+    private static volatile List<Endpoint> sampleEndpoints;
 
     @BeforeAll
     static void startServers() {

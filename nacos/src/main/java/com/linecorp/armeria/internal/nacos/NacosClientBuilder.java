@@ -28,7 +28,9 @@ import com.linecorp.armeria.common.nacos.NacosConfigSetters;
 public final class NacosClientBuilder implements NacosConfigSetters<NacosClientBuilder> {
     public static final String DEFAULT_NACOS_API_VERSION = "v2";
     private static final Pattern NACOS_API_VERSION_PATTERN = Pattern.compile("^v[0-9][-._a-zA-Z0-9]*$");
+
     private final URI nacosUri;
+    private final String serviceName;
 
     private String nacosApiVersion = DEFAULT_NACOS_API_VERSION;
 
@@ -37,8 +39,6 @@ public final class NacosClientBuilder implements NacosConfigSetters<NacosClientB
 
     @Nullable
     private String password;
-
-    private final String serviceName;
 
     @Nullable
     private String namespaceId;
@@ -115,7 +115,7 @@ public final class NacosClientBuilder implements NacosConfigSetters<NacosClientB
         final URI uri;
         try {
             uri = new URI(nacosUri.getScheme(), null, nacosUri.getHost(), nacosUri.getPort(),
-                    "/nacos", null, null);
+                          "/nacos", null, null);
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }
