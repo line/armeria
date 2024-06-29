@@ -41,7 +41,6 @@
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
 *.compute.estate
-*.cprapid.com
 *.cryptonomic.net
 *.customer-oci.com
 *.d.crm.dev
@@ -1822,6 +1821,7 @@ courses
 coz.br
 cpa
 cpa.pro
+cprapid.com
 cpserver.com
 cq.cn
 cr
@@ -2102,6 +2102,7 @@ duckdns.org
 dunlop
 dupont
 durban
+durumis.com
 dvag
 dvr
 dvrcam.info
