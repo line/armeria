@@ -20,15 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.regex.Pattern;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.nacos.NacosConfigSetters;
 
 public final class NacosClientBuilder implements NacosConfigSetters<NacosClientBuilder> {
-    public static final String DEFAULT_NACOS_API_VERSION = "v2";
-    private static final Pattern NACOS_API_VERSION_PATTERN = Pattern.compile("^v[0-9][-._a-zA-Z0-9]*$");
-
     private final URI nacosUri;
     private final String serviceName;
 
@@ -61,11 +57,39 @@ public final class NacosClientBuilder implements NacosConfigSetters<NacosClientB
     }
 
     @Override
+    public NacosClientBuilder namespaceId(String namespaceId) {
+        this.namespaceId = requireNonNull(namespaceId);
+
+        return this;
+    }
+
+    @Override
+    public NacosClientBuilder groupName(String groupName) {
+        this.groupName = requireNonNull(groupName);
+
+        return this;
+    }
+
+    @Override
+    public NacosClientBuilder clusterName(String clusterName) {
+        this.clusterName = requireNonNull(clusterName);
+
+        return this;
+    }
+
+    @Override
+    public NacosClientBuilder app(String app) {
+        this.app = requireNonNull(app);
+
+        return this;
+    }
+
+    @Override
     public NacosClientBuilder nacosApiVersion(String nacosApiVersion) {
-        this.nacosApiVersion = requireNonNull(nacosApiVersion, "nacosApiVersion");
         checkArgument(NACOS_API_VERSION_PATTERN.matcher(nacosApiVersion).matches(),
                       "nacosApiVersion: %s (expected: a version string that starts with 'v', e.g. 'v1')",
                       nacosApiVersion);
+        this.nacosApiVersion = requireNonNull(nacosApiVersion, "nacosApiVersion");
 
         return this;
     }
@@ -81,32 +105,8 @@ public final class NacosClientBuilder implements NacosConfigSetters<NacosClientB
         return this;
     }
 
-    public NacosClientBuilder namespaceId(String namespaceId) {
-        this.namespaceId = requireNonNull(namespaceId);
-
-        return this;
-    }
-
-    public NacosClientBuilder groupName(String groupName) {
-        this.groupName = requireNonNull(groupName);
-
-        return this;
-    }
-
-    public NacosClientBuilder clusterName(String clusterName) {
-        this.clusterName = requireNonNull(clusterName);
-
-        return this;
-    }
-
     public NacosClientBuilder healthyOnly(Boolean healthyOnly) {
         this.healthyOnly = requireNonNull(healthyOnly);
-
-        return this;
-    }
-
-    public NacosClientBuilder app(String app) {
-        this.app = requireNonNull(app);
 
         return this;
     }

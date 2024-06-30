@@ -24,6 +24,7 @@ import java.time.Duration;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.nacos.NacosConfigSetters;
 import com.linecorp.armeria.internal.nacos.NacosClient;
 import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
 
@@ -38,15 +39,13 @@ import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
  * }</pre>
  */
 public final class NacosEndpointGroupBuilder
-        extends AbstractDynamicEndpointGroupBuilder<NacosEndpointGroupBuilder> {
+        extends AbstractDynamicEndpointGroupBuilder<NacosEndpointGroupBuilder>
+        implements NacosConfigSetters<NacosEndpointGroupBuilder> {
 
     private static final long DEFAULT_CHECK_INTERVAL_MILLIS = 30_000;
-
-    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
-
-    private long registryFetchIntervalMillis = DEFAULT_CHECK_INTERVAL_MILLIS;
-
     private final NacosClientBuilder nacosClientBuilder;
+    private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
+    private long registryFetchIntervalMillis = DEFAULT_CHECK_INTERVAL_MILLIS;
 
     NacosEndpointGroupBuilder(URI nacosUri, String serviceName) {
         super(Flags.defaultResponseTimeoutMillis());
@@ -61,43 +60,39 @@ public final class NacosEndpointGroupBuilder
         return this;
     }
 
-    /**
-     * Sets the 'namespaceId' parameter used to filter instances in a Nacos query.
-     * This method configures the NacosEndpointGroup to query only instances
-     * that match the specified 'namespaceId' value.
-     */
+    @Override
     public NacosEndpointGroupBuilder namespaceId(String namespaceId) {
         nacosClientBuilder.namespaceId(namespaceId);
         return this;
     }
 
-    /**
-     * Sets the 'groupName' parameter used to filter instances in a Nacos query.
-     * This method configures the NacosEndpointGroup to query only instances
-     * that match the specified 'groupName' value.
-     */
+    @Override
     public NacosEndpointGroupBuilder groupName(String groupName) {
         nacosClientBuilder.groupName(groupName);
         return this;
     }
 
-    /**
-     * Sets the 'clusterName' parameter used to filter instances in a Nacos query.
-     * This method configures the NacosEndpointGroup to query only instances
-     * that match the specified 'clusterName' value.
-     */
+    @Override
     public NacosEndpointGroupBuilder clusterName(String clusterName) {
         nacosClientBuilder.clusterName(clusterName);
         return this;
     }
 
-    /**
-     * Sets the 'app' parameter used to filter instances in a Nacos query.
-     * This method configures the NacosEndpointGroup
-     * to query only instances that match the specified 'app' value.
-     */
+    @Override
     public NacosEndpointGroupBuilder app(String app) {
         nacosClientBuilder.app(app);
+        return this;
+    }
+
+    @Override
+    public NacosEndpointGroupBuilder nacosApiVersion(String nacosApiVersion) {
+        nacosClientBuilder.nacosApiVersion(nacosApiVersion);
+        return this;
+    }
+
+    @Override
+    public NacosEndpointGroupBuilder authorization(String username, String password) {
+        nacosClientBuilder.authorization(username, password);
         return this;
     }
 
@@ -118,8 +113,8 @@ public final class NacosEndpointGroupBuilder
     public NacosEndpointGroupBuilder registryFetchInterval(Duration registryFetchInterval) {
         requireNonNull(registryFetchInterval, "registryFetchInterval");
         checkArgument(!registryFetchInterval.isZero() && !registryFetchInterval.isNegative(),
-                "registryFetchInterval: %s (expected: > 0)",
-                registryFetchInterval);
+                      "registryFetchInterval: %s (expected: > 0)",
+                      registryFetchInterval);
         return registryFetchIntervalMillis(registryFetchInterval.toMillis());
     }
 
@@ -129,22 +124,8 @@ public final class NacosEndpointGroupBuilder
      */
     public NacosEndpointGroupBuilder registryFetchIntervalMillis(long registryFetchIntervalMillis) {
         checkArgument(registryFetchIntervalMillis > 0, "registryFetchIntervalMillis: %s (expected: > 0)",
-                registryFetchIntervalMillis);
+                      registryFetchIntervalMillis);
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
-        return this;
-    }
-
-    /**
-     * Sets the username and password pair for Nacos's API.
-     * Please refer to the
-     * <a href=https://nacos.io/en-us/docs/v2/guide/user/auth.html>Nacos Authentication Document</a>
-     * for more details.
-     *
-     * @param username the username for access Nacos API, default: {@code null}
-     * @param password the password for access Nacos API, default: {@code null}
-     */
-    public NacosEndpointGroupBuilder authorization(String username, String password) {
-        nacosClientBuilder.authorization(username, password);
         return this;
     }
 
@@ -153,6 +134,6 @@ public final class NacosEndpointGroupBuilder
      */
     public NacosEndpointGroup build() {
         return new NacosEndpointGroup(selectionStrategy, shouldAllowEmptyEndpoints(), selectionTimeoutMillis(),
-                nacosClientBuilder.build(), registryFetchIntervalMillis);
+                                      nacosClientBuilder.build(), registryFetchIntervalMillis);
     }
 }

@@ -33,7 +33,7 @@ import com.linecorp.armeria.server.Server;
  * <h2>Examples</h2>
  * <pre>{@code
  * NacosUpdatingListener listener = NacosUpdatingListener.builder(nacosUri, "myService")
- *                                                         .build();
+ *                                                       .build();
  * ServerBuilder sb = Server.builder();
  * sb.serverListener(listener);
  * }</pre>
@@ -66,41 +66,25 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters<Na
         return this;
     }
 
-    /**
-     * Sets the namespace ID to register the instance.
-     *
-     * @param namespaceId the namespace ID to register.
-     */
+    @Override
     public NacosUpdatingListenerBuilder namespaceId(String namespaceId) {
         nacosClientBuilder.namespaceId(namespaceId);
         return this;
     }
 
-    /**
-     * Sets the group name of the instance.
-     *
-     * @param groupName the group name of the instance.
-     */
+    @Override
     public NacosUpdatingListenerBuilder groupName(String groupName) {
         nacosClientBuilder.groupName(groupName);
         return this;
     }
 
-    /**
-     * Sets the cluster name of the instance.
-     *
-     * @param clusterName the cluster name of the instance.
-     */
+    @Override
     public NacosUpdatingListenerBuilder clusterName(String clusterName) {
         nacosClientBuilder.clusterName(clusterName);
         return this;
     }
 
-    /**
-     * Sets the app name of the instance.
-     *
-     * @param app app name of the instance.
-     */
+    @Override
     public NacosUpdatingListenerBuilder app(String app) {
         nacosClientBuilder.app(app);
         return this;

@@ -15,18 +15,50 @@
  */
 package com.linecorp.armeria.common.nacos;
 
+import java.util.regex.Pattern;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
 
 /**
  * Sets properties for building a Nacos client.
  */
 @UnstableApi
 public interface NacosConfigSetters<SELF extends NacosConfigSetters<SELF>> {
+    String DEFAULT_NACOS_API_VERSION = "v2";
+    Pattern NACOS_API_VERSION_PATTERN = Pattern.compile("^v[0-9][-._a-zA-Z0-9]*$");
+
+    /**
+     * Sets the namespace ID to query or register instances.
+     *
+     * @param namespaceId the namespace ID.
+     */
+    SELF namespaceId(String namespaceId);
+
+    /**
+     * Sets the group name to query or register instances.
+     *
+     * @param groupName the group name.
+     */
+    SELF groupName(String groupName);
+
+    /**
+     * Sets the cluster name to query or register instances.
+     *
+     * @param clusterName the cluster name.
+     */
+    SELF clusterName(String clusterName);
+
+    /**
+     * Sets the app name to query or register instances.
+     *
+     * @param app app name.
+     */
+    SELF app(String app);
+
     /**
      * Sets the specified Nacos's API version.
      * @param nacosApiVersion the version of Nacos API service, default: {@value
-     *                         NacosClientBuilder#DEFAULT_NACOS_API_VERSION}
+     *                         NacosConfigSetters#DEFAULT_NACOS_API_VERSION}
      */
     SELF nacosApiVersion(String nacosApiVersion);
 
