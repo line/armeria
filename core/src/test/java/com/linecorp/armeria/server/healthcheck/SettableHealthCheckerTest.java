@@ -26,34 +26,34 @@ public class SettableHealthCheckerTest {
     @Test
     public void justCreated() {
         final SettableHealthChecker checker = new SettableHealthChecker();
-        assertTrue(checker.isHealthy());
+        assertTrue(checker.healthStatus().isHealthy());
     }
 
     @Test
     public void justCreatedExplicit() {
         final SettableHealthChecker checker = new SettableHealthChecker(false);
-        assertFalse(checker.isHealthy());
+        assertFalse(checker.healthStatus().isHealthy());
     }
 
     @Test
     public void setHealthy() {
         final SettableHealthChecker checker = new SettableHealthChecker();
         checker.setHealthy(true);
-        assertTrue(checker.isHealthy());
+        assertTrue(checker.healthStatus().isHealthy());
     }
 
     @Test
     public void setUnHealthy() {
         final SettableHealthChecker checker = new SettableHealthChecker();
         checker.setHealthy(false);
-        assertFalse(checker.isHealthy());
+        assertFalse(checker.healthStatus().isHealthy());
     }
 
     @Test
     public void setHealthStatus() {
         final SettableHealthChecker checker = new SettableHealthChecker();
         checker.setHealthStatus(HealthStatus.DEGRADED);
-        assertTrue(checker.isHealthy());
+        assertTrue(checker.healthStatus().isHealthy());
         assertEquals(HealthStatus.DEGRADED, checker.healthStatus());
     }
 }

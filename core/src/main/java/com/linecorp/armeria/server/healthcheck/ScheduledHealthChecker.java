@@ -20,7 +20,6 @@ import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -46,7 +45,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
     private final Duration fallbackTtl;
     private final EventExecutor eventExecutor;
     private final Consumer<HealthChecker> onHealthCheckerUpdate;
-    private final AtomicBoolean isHealthy = new AtomicBoolean();
+    private final AtomicReference<HealthStatus> healthStatusAtomicReference;
     private final AtomicInteger requestCount = new AtomicInteger();
     private final AtomicReference<ScheduledHealthCheckerImpl> impl = new AtomicReference<>();
 
@@ -55,16 +54,22 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
         this.healthChecker = healthChecker;
         this.fallbackTtl = fallbackTtl;
         this.eventExecutor = eventExecutor;
+        healthStatusAtomicReference = new AtomicReference<>(HealthStatus.UNHEALTHY);
 
         onHealthCheckerUpdate = latestValue -> {
-            isHealthy.set(latestValue.isHealthy());
+            healthStatusAtomicReference.set(latestValue.healthStatus());
             notifyListeners(latestValue);
         };
     }
 
     @Override
     public boolean isHealthy() {
-        return isHealthy.get();
+        return healthStatusAtomicReference.get().isHealthy();
+    }
+
+    @Override
+    public HealthStatus healthStatus() {
+        return healthStatusAtomicReference.get();
     }
 
     void startHealthChecker() {

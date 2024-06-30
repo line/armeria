@@ -44,7 +44,7 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
      * changed using {@link #setHealthy(boolean)}.
      */
     public SettableHealthChecker(boolean isHealthy) {
-        this.healthStatus = isHealthy ? HealthStatus.HEALTHY : HealthStatus.UNHEALTHY;
+        healthStatus = isHealthy ? HealthStatus.HEALTHY : HealthStatus.UNHEALTHY;
     }
 
     /**
@@ -57,7 +57,7 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
 
     @Override
     public boolean isHealthy() {
-        return this.healthStatus.isHealthy();
+        return healthStatus.isHealthy();
     }
 
     /**

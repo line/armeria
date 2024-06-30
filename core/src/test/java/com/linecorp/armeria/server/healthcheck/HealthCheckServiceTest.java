@@ -515,7 +515,7 @@ class HealthCheckServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "DEGRADED", "STOPPING", "UNHEALTHY", "UNDER_MAINTENANCE" })
-    void checkStatus(String status) {
+    void checkHealthStatus(String status) {
         final HealthStatus healthStatus = HealthStatus.valueOf(status);
         checker.setHealthStatus(healthStatus);
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
@@ -526,7 +526,7 @@ class HealthCheckServiceTest {
     }
 
     @Test
-    void pollHealthState() throws Exception {
+    void healthStateChangeNotificationByHealthStatusUpdate() throws Exception {
         checker.setHealthStatus(HealthStatus.HEALTHY);
         final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet("healthy", "/hc");
         assertThatThrownBy(() -> f.get(1, TimeUnit.SECONDS)).isInstanceOf(TimeoutException.class);
@@ -549,7 +549,8 @@ class HealthCheckServiceTest {
             "unhealthy, HEALTHY",
             "unhealthy, DEGRADED",
     })
-    void pollHealthState(String longPollingState, String targetStatus) throws Exception {
+    void pollHealthStateChangeAndUpdateHealthStatus(String longPollingState, String targetStatus)
+            throws Exception {
         checker.setHealthy("healthy".equals(longPollingState));
         final HealthStatus healthStatus = HealthStatus.valueOf(targetStatus);
         final CompletableFuture<AggregatedHttpResponse> f = sendLongPollingGet(longPollingState, "/hc");
