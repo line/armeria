@@ -75,4 +75,33 @@ final class RandomBackoff extends AbstractBackoff {
                           .add("maxDelayMillis", maxDelayMillis)
                           .toString();
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private long minDelayMillis;
+        private long maxDelayMillis;
+        private Supplier<Random> randomSupplier;
+
+        RandomBackoff build() {
+            return new RandomBackoff(minDelayMillis, maxDelayMillis, randomSupplier);
+        }
+
+        public Builder minDelayMillis(long minDelayMillis) {
+            this.minDelayMillis = minDelayMillis;
+            return this;
+        }
+
+        public Builder maxDelayMillis(long maxDelayMillis) {
+            this.maxDelayMillis = maxDelayMillis;
+            return this;
+        }
+
+        public Builder randomSupplier(Supplier<Random> randomSupplier) {
+            this.randomSupplier = randomSupplier;
+            return this;
+        }
+    }
 }

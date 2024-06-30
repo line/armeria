@@ -95,4 +95,33 @@ final class ExponentialBackoff extends AbstractBackoff {
                           .add("multiplier", multiplier)
                           .toString();
     }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static class Builder {
+        private long initialDelayMillis;
+        private long maxDelayMillis;
+        private double multiplier;
+
+        ExponentialBackoff build() {
+            return new ExponentialBackoff(initialDelayMillis, maxDelayMillis, multiplier);
+        }
+
+        public Builder initialDelayMillis(long initialDelayMillis) {
+            this.initialDelayMillis = initialDelayMillis;
+            return this;
+        }
+
+        public Builder maxDelayMillis(long maxDelayMillis) {
+            this.maxDelayMillis = maxDelayMillis;
+            return this;
+        }
+
+        public Builder multiplier(double multiplier) {
+            this.multiplier = multiplier;
+            return this;
+        }
+    }
 }
