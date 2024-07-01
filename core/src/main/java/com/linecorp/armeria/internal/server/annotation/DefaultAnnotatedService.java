@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtil.newResponseConverter;
 import static java.util.Objects.requireNonNull;
 
@@ -111,6 +112,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
 
     private final ResponseType responseType;
     private final boolean useBlockingTaskExecutor;
+    private final List<String> parameters;
     @Nullable
     private final String name;
 
@@ -135,6 +137,9 @@ final class DefaultAnnotatedService implements AnnotatedService {
                       method.getDeclaringClass().getSimpleName(), method.getName());
         isKotlinSuspendingMethod = KotlinUtil.isSuspendingFunction(method);
         this.resolvers = requireNonNull(resolvers, "resolvers");
+        parameters = resolvers.stream()
+                              .map(AnnotatedValueResolver::httpElementName)
+                              .collect(toImmutableList());
 
         requireNonNull(exceptionHandlers, "exceptionHandlers");
         if (exceptionHandlers.isEmpty()) {
@@ -347,7 +352,8 @@ final class DefaultAnnotatedService implements AnnotatedService {
         final CompletableFuture<AggregatedResult> f;
         switch (aggregationType) {
             case MULTIPART:
-                f = FileAggregatedMultipart.aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
+                f = FileAggregatedMultipart.aggregateMultipart(ctx, req, parameters)
+                                           .thenApply(AggregatedResult::new);
                 break;
             case ALL:
                 f = req.aggregate().thenApply(AggregatedResult::new);
