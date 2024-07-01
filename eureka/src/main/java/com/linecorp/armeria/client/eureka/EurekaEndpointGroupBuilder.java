@@ -31,7 +31,6 @@ import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
 import com.linecorp.armeria.client.AbstractWebClientBuilder;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientFactory;
