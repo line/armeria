@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -176,17 +175,17 @@ final class HttpClientFactory implements ClientFactory {
             unixBaseBootstrap = null;
         }
 
-        final ImmutableList<? extends Consumer<? super SslContextBuilder>> tlsCustomizers =
-                ImmutableList.of(options.tlsCustomizer());
+        final Consumer<? super SslContextBuilder> tlsCustomizer =
+                options.tlsCustomizer();
         final boolean tlsAllowUnsafeCiphers = options.tlsAllowUnsafeCiphers();
         final List<X509Certificate> keyCertChainCaptor = new ArrayList<>();
         final TlsEngineType tlsEngineType = options.tlsEngineType();
         sslCtxHttp1Or2 = SslContextUtil
                 .createSslContext(SslContextBuilder::forClient, false, tlsEngineType,
-                                  tlsAllowUnsafeCiphers, tlsCustomizers, keyCertChainCaptor);
+                                  tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
         sslCtxHttp1Only = SslContextUtil
                 .createSslContext(SslContextBuilder::forClient, true, tlsEngineType,
-                                  tlsAllowUnsafeCiphers, tlsCustomizers, keyCertChainCaptor);
+                                  tlsAllowUnsafeCiphers, tlsCustomizer, keyCertChainCaptor);
         setupTlsMetrics(keyCertChainCaptor, options.meterRegistry());
 
         http2InitialConnectionWindowSize = options.http2InitialConnectionWindowSize();

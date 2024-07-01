@@ -111,8 +111,8 @@ final class HttpChannelPool implements AsyncCloseable {
         pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
         connectTimeoutMillis = (Integer) clientFactory.options()
-                .channelOptions()
-                .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+                                                      .channelOptions()
+                                                      .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
     }
 
@@ -154,7 +154,7 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = bootstraps.determineSslContext(desiredProtocol);
+            final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
             ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
         }
     }
@@ -379,7 +379,7 @@ final class HttpChannelPool implements AsyncCloseable {
                  @Nullable ClientConnectionTimingsBuilder timingsBuilder) {
         final Bootstrap bootstrap;
         try {
-            bootstrap = bootstraps.get(remoteAddress, desiredProtocol, serializationFormat);
+            bootstrap = bootstraps.getOrCreate(remoteAddress, desiredProtocol, serializationFormat);
         } catch (Exception e) {
             sessionPromise.tryFailure(e);
             return;

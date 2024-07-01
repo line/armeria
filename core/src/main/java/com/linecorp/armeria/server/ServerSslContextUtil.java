@@ -26,8 +26,7 @@ import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLSession;
 
-import com.google.common.collect.ImmutableList;
-
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
@@ -65,7 +64,7 @@ final class ServerSslContextUtil {
             final SslContext sslContextClient =
                     buildSslContext(() -> SslContextBuilder.forClient()
                                                            .trustManager(InsecureTrustManagerFactory.INSTANCE),
-                                    tlsEngineType, true, ImmutableList.of());
+                                    tlsEngineType, true, null);
             clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
             clientEngine.setUseClientMode(true);
             clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());
@@ -99,10 +98,10 @@ final class ServerSslContextUtil {
             Supplier<SslContextBuilder> sslContextBuilderSupplier,
             TlsEngineType tlsEngineType,
             boolean tlsAllowUnsafeCiphers,
-            Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
+            @Nullable Consumer<? super SslContextBuilder> tlsCustomizer) {
         return SslContextUtil
                 .createSslContext(sslContextBuilderSupplier,/* forceHttp1 */ false, tlsEngineType,
-                                  tlsAllowUnsafeCiphers, tlsCustomizers, null);
+                                  tlsAllowUnsafeCiphers, tlsCustomizer, null);
     }
 
     private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {

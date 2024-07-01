@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 
+import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 
@@ -49,6 +50,9 @@ public final class SelfSignedCertificateRuleDelegate {
 
     @Nullable
     private SelfSignedCertificate certificate;
+
+    @Nullable
+    private TlsKeyPair tlsKeyPair;
 
     /**
      * Creates a new instance.
@@ -207,6 +211,16 @@ public final class SelfSignedCertificateRuleDelegate {
     public File privateKeyFile() {
         ensureCertificate();
         return certificate.privateKey();
+    }
+
+    /**
+     * Returns the {@link TlsKeyPair} of the self-signed certificate.
+     */
+    public TlsKeyPair tlsKeyPair() {
+        if (tlsKeyPair == null) {
+            tlsKeyPair = TlsKeyPair.of(privateKey(), certificate());
+        }
+        return tlsKeyPair;
     }
 
     private void ensureCertificate() {
