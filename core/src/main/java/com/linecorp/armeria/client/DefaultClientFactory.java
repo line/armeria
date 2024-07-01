@@ -36,6 +36,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -80,6 +81,16 @@ final class DefaultClientFactory implements ClientFactory {
             try {
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     if (!shutdownHookDisabled) {
+                        final long gracefulShutdownTimeoutMillis =
+                                Flags.defaultClientFactoryGracefulShutdownTimeoutMillis();
+                        if (gracefulShutdownTimeoutMillis > 0) {
+                            try {
+                                Thread.sleep(gracefulShutdownTimeoutMillis);
+                            } catch (InterruptedException e) {
+                                logger.warn("Interrupted while waiting for the graceful shutdown of " +
+                                            "the default ClientFactory.", e);
+                            }
+                        }
                         ClientFactory.closeDefault();
                     }
                 }));
