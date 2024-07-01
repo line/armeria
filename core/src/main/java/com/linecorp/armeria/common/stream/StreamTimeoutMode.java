@@ -16,6 +16,23 @@
 
 package com.linecorp.armeria.common.stream;
 
+import com.linecorp.armeria.common.TimeoutException;
+
+/**
+ * Stream Timeout Mode consists of three modes.
+ *
+ * <ul>
+ *   <li>{@code UNTIL_FIRST} - Based on the first data chunk.
+ *   If the first data chunk is not received within the specified time,
+ *   a {@link TimeoutException} is thrown.</li>
+ *   <li>{@code UNTIL_NEXT} - Based on each data chunk.
+ *   If each data chunk is not received within the specified time after the previous chunk,
+ *   a {@link TimeoutException} is thrown.</li>
+ *   <li>{@code UNTIL_EOS} - Based on the entire stream.
+ *   If all data chunks are not received within the specified time before the end of the stream,
+ *   a {@link TimeoutException} is thrown.</li>
+ * </ul>
+ */
 public enum StreamTimeoutMode {
     UNTIL_FIRST,
     UNTIL_NEXT,

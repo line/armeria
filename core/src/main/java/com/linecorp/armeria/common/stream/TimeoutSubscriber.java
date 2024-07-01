@@ -20,10 +20,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.linecorp.armeria.common.TimeoutException;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -115,7 +116,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
 
     @Override
     public void onError(Throwable throwable) {
-        if(!attemptTerminate()) {
+        if (!attemptTerminate()) {
             return;
         }
         cancelSchedule();
@@ -124,7 +125,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
 
     @Override
     public void onComplete() {
-        if(!attemptTerminate()) {
+        if (!attemptTerminate()) {
             return;
         }
         cancelSchedule();

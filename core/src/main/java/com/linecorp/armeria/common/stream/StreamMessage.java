@@ -1205,11 +1205,43 @@ public interface StreamMessage<T> extends Publisher<T> {
         return new SubscribeOnStreamMessage<>(this, eventExecutor);
     }
 
+    /**
+     * Configures a timeout for the stream based on the specified duration.
+     * The default timeout mode is {@link StreamTimeoutMode#UNTIL_NEXT}.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * StreamMessage<String> stream = ...;
+     * StreamMessage<String> timeoutStream = stream.timeout(Duration.ofSeconds(10));
+     * }</pre>
+     *
+     * @param timeoutDuration the duration before a timeout occurs
+     * @return a new {@link TimeoutStreamMessage} with the specified timeout duration and default mode
+     * @throws NullPointerException if {@code timeoutDuration} is null
+     */
     default StreamMessage<T> timeout(Duration timeoutDuration) {
         requireNonNull(timeoutDuration, "timeoutDuration");
         return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
     }
 
+    /**
+     * Configures a timeout for the stream based on the specified duration and mode.
+     * Internally, it creates and returns a {@link TimeoutStreamMessage} with the specified parameters.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * StreamMessage<String> stream = ...;
+     * StreamMessage<String> timeoutStream = stream.timeout(
+     *     Duration.ofSeconds(10),
+     *     StreamTimeoutMode.UNTIL_FIRST
+     * );
+     * }</pre>
+     *
+     * @param timeoutDuration the duration before a timeout occurs
+     * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
+     * @return a new {@link TimeoutStreamMessage} with the specified timeout duration and mode applied
+     * @throws NullPointerException if {@code timeoutDuration} or {@code timeoutMode} is null
+     */
     default StreamMessage<T> timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
         requireNonNull(timeoutDuration, "timeoutDuration");
         requireNonNull(timeoutMode, "timeoutMode");
