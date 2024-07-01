@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
+import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
 import com.linecorp.armeria.internal.common.stream.SurroundingPublisher;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -478,8 +479,7 @@ public interface HttpRequest extends Request, HttpMessage {
             // Just check the reference only to avoid heavy comparison.
             return this;
         }
-
-        return new HeaderOverridingHttpRequest(this, newHeaders);
+        return HeaderOverridingHttpRequest.of(this, newHeaders);
     }
 
     /**

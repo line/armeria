@@ -8,7 +8,7 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
     id 'com.gradle.develocity' version '3.17.5'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.2'
 }
 
 import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
@@ -266,6 +266,7 @@ includeWithFlags ':examples:graphql-kotlin-example',               'java17', 'ko
 project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
 includeWithFlags ':examples:graphql-sangria-example',              'java11', 'scala_2.13'
 project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')
+includeWithFlags ':examples:grpc-envoy',                           'java11'
 includeWithFlags ':examples:grpc-example',                         'java11'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                          'java11', 'kotlin-grpc', 'kotlin'

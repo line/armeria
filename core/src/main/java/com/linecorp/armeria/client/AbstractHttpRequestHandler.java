@@ -33,8 +33,10 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseCompleteException;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -50,6 +52,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.proxy.ProxyConnectException;
 
@@ -61,6 +64,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         NEEDS_TO_WRITE_FIRST_HEADER,
         NEEDS_DATA,
         NEEDS_DATA_OR_TRAILERS,
+        NEEDS_100_CONTINUE,
         DONE
     }
 
@@ -143,6 +147,11 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                     responseWrapper.initTimeout();
                 }
 
+                if (state == State.NEEDS_100_CONTINUE) {
+                    assert responseWrapper != null;
+                    responseWrapper.initTimeout();
+                }
+
                 onWriteSuccess();
                 return;
             }
@@ -176,7 +185,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         }
 
         this.session = session;
-        responseWrapper = responseDecoder.addResponse(id, originalRes, ctx, ch.eventLoop());
+        responseWrapper = responseDecoder.addResponse(this, id, originalRes, ctx, ch.eventLoop());
 
         if (timeoutMillis > 0) {
             // The timer would be executed if the first message has not been sent out within the timeout.
@@ -187,24 +196,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         return true;
     }
 
-    /**
-     * Writes the {@link RequestHeaders} to the {@link Channel}.
-     * The {@link RequestHeaders} is merged with {@link ClientRequestContext#additionalRequestHeaders()}
-     * before being written.
-     * Note that the written data is not flushed by this method. The caller should explicitly call
-     * {@link Channel#flush()} when each write unit is done.
-     */
-    final void writeHeaders(RequestHeaders headers) {
-        final SessionProtocol protocol = session.protocol();
-        assert protocol != null;
-        if (headersOnly) {
-            state = State.DONE;
-        } else if (allowTrailers) {
-            state = State.NEEDS_DATA_OR_TRAILERS;
-        } else {
-            state = State.NEEDS_DATA;
-        }
-
+    RequestHeaders mergedRequestHeaders(RequestHeaders headers) {
         final HttpHeaders internalHeaders;
         final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
         if (ctxExtension == null) {
@@ -212,9 +204,31 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         } else {
             internalHeaders = ctxExtension.internalRequestHeaders();
         }
-        final RequestHeaders merged = mergeRequestHeaders(
+        return mergeRequestHeaders(
                 headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders(), internalHeaders);
-        logBuilder.requestHeaders(merged);
+    }
+
+    /**
+     * Writes the {@link RequestHeaders} to the {@link Channel}.
+     * The {@link RequestHeaders} is merged with {@link ClientRequestContext#additionalRequestHeaders()}
+     * before being written.
+     * Note that the written data is not flushed by this method. The caller should explicitly call
+     * {@link Channel#flush()} when each write unit is done.
+     */
+    final void writeHeaders(RequestHeaders headers, boolean needs100Continue) {
+        final SessionProtocol protocol = session.protocol();
+        assert protocol != null;
+        if (needs100Continue) {
+            state = State.NEEDS_100_CONTINUE;
+        } else if (headersOnly) {
+            state = State.DONE;
+        } else if (allowTrailers) {
+            state = State.NEEDS_DATA_OR_TRAILERS;
+        } else {
+            state = State.NEEDS_DATA;
+        }
+
+        logBuilder.requestHeaders(headers);
 
         final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
         if (CLOSE_STRING.equalsIgnoreCase(connectionOption) || !keepAlive) {
@@ -230,8 +244,36 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         // Attach a listener first to make the listener early handle a cause raised while writing headers
         // before any other callbacks like `onStreamClosed()` are invoked.
         promise.addListener(this);
-        encoder.writeHeaders(id, streamId(), merged, headersOnly, promise);
+        encoder.writeHeaders(id, streamId(), headers, headersOnly, promise);
     }
+
+    static boolean needs100Continue(RequestHeaders headers) {
+        return headers.contains(HttpHeaderNames.EXPECT, HttpHeaderValues.CONTINUE.toString());
+    }
+
+    void handle100Continue(ResponseHeaders responseHeaders) {
+        if (state != State.NEEDS_100_CONTINUE) {
+            return;
+        }
+
+        if (responseHeaders.status() == HttpStatus.CONTINUE) {
+            state = State.NEEDS_DATA_OR_TRAILERS;
+            resume();
+            // TODO(minwoox): reset the timeout
+        } else {
+            // We do not retry the request when HttpStatus.EXPECTATION_FAILED is received
+            // because:
+            // - Most servers support 100-continue.
+            // - It's much simpler to just fail the request and let the user retry.
+            state = State.DONE;
+            logBuilder.endRequest();
+            discardRequestBody();
+        }
+    }
+
+    abstract void resume();
+
+    abstract void discardRequestBody();
 
     /**
      * Writes the {@link HttpData} to the {@link Channel}.

@@ -254,8 +254,13 @@ configure(relocatedProjects) {
 
     gradle.taskGraph.whenReady {
         // Skip unshaded tests if shaded tests will run.
+        // To enable, set the property 'preferShadedTests' to 'false'.
+        boolean runUnshadedTests = false
+        if (rootProject.hasProperty('preferShadedTests') && "false" == rootProject.property('preferShadedTests')) {
+            runUnshadedTests = true
+        }
         if (gradle.taskGraph.hasTask(tasks.shadedTest)) {
-            tasks.test.onlyIf { false }
+            tasks.test.onlyIf { runUnshadedTests }
         }
     }
 }

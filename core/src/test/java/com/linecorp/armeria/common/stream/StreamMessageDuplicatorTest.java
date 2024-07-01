@@ -42,8 +42,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Charsets;
 
@@ -60,8 +58,6 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 class StreamMessageDuplicatorTest {
-
-    private static final Logger logger = LoggerFactory.getLogger(StreamMessageDuplicatorTest.class);
 
     private static final List<ByteBuf> byteBufs = new ArrayList<>();
 

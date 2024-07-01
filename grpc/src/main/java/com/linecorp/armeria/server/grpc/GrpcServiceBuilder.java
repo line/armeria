@@ -878,7 +878,8 @@ public final class GrpcServiceBuilder {
     @Deprecated
     public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction statusFunction) {
         requireNonNull(statusFunction, "statusFunction");
-        return exceptionHandler(statusFunction::apply);
+        return exceptionHandler(
+                (ctx, status, throwable, metadata) -> statusFunction.apply(ctx, throwable, metadata));
     }
 
     /**
@@ -943,7 +944,9 @@ public final class GrpcServiceBuilder {
         checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
-        exceptionMappingsBuilder().on(exceptionType, statusFunction::apply);
+        exceptionMappingsBuilder().on(exceptionType,
+                                      (ctx, status, throwable, metadata) ->
+                                              statusFunction.apply(ctx, throwable, metadata));
         return this;
     }
 

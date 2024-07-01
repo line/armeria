@@ -50,6 +50,8 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpResponseWrapper.class);
 
+    @Nullable
+    private final AbstractHttpRequestHandler requestHandler;
     private final DecodedHttpResponse delegate;
     private final EventLoop eventLoop;
     private final ClientRequestContext ctx;
@@ -62,8 +64,10 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
     private boolean done;
     private boolean closed;
 
-    HttpResponseWrapper(DecodedHttpResponse delegate, EventLoop eventLoop, ClientRequestContext ctx,
+    HttpResponseWrapper(@Nullable AbstractHttpRequestHandler requestHandler,
+                        DecodedHttpResponse delegate, EventLoop eventLoop, ClientRequestContext ctx,
                         long responseTimeoutMillis, long maxContentLength) {
+        this.requestHandler = requestHandler;
         this.delegate = delegate;
         this.eventLoop = eventLoop;
         this.ctx = ctx;
@@ -71,12 +75,14 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         this.responseTimeoutMillis = responseTimeoutMillis;
     }
 
-    DecodedHttpResponse delegate() {
-        return delegate;
+    void handle100Continue(ResponseHeaders responseHeaders) {
+        if (requestHandler != null) {
+            requestHandler.handle100Continue(responseHeaders);
+        }
     }
 
-    EventLoop eventLoop() {
-        return eventLoop;
+    DecodedHttpResponse delegate() {
+        return delegate;
     }
 
     long maxContentLength() {
