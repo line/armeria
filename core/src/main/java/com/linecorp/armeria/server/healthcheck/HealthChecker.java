@@ -106,6 +106,20 @@ public interface HealthChecker {
     }
 
     /**
+     * Creates a new instance of {@link HealthChecker}
+     * which reports health based on disk space of specific file path.
+     * Both free disk space and total disk space must be (inclusive) lower than the specified threshold in order
+     * for the {@link HealthChecker} to report as healthy.
+     *
+     * @param targetFreeDiskSpace Target free disk space in bytes.
+     * @param targetTotalDiskSpace Target total disk space in bytes.
+     * @return an instance of {@link HealthChecker} configured with the provided disk memory space targets.
+     */
+    static HealthChecker ofDisk(long targetFreeDiskSpace, long targetTotalDiskSpace, String path) {
+        return new DiskMemoryHealthChecker(targetFreeDiskSpace, targetTotalDiskSpace, path);
+    }
+
+    /**
      * Returns {@code true} if and only if the {@link Server} is healthy.
      */
     boolean isHealthy();
