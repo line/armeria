@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint.healthcheck;
+package com.linecorp.armeria.internal.client.endpoint.healthcheck;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
@@ -23,15 +23,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.Exceptions;
 
-final class HealthCheckContextGroup {
+public final class HealthCheckContextGroup {
     private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
 
     private final Map<Endpoint, DefaultHealthCheckerContext> contexts;
@@ -48,12 +51,18 @@ final class HealthCheckContextGroup {
         this.checkerFactory = checkerFactory;
     }
 
-    Map<Endpoint, DefaultHealthCheckerContext> contexts() {
+    @VisibleForTesting
+    public Map<Endpoint, DefaultHealthCheckerContext> contexts() {
         return contexts;
     }
 
-    List<Endpoint> candidates() {
-        return candidates;
+    @VisibleForTesting
+    public List<Endpoint> candidates() {
+        return candidates.stream().map(endpoint -> {
+            final DefaultHealthCheckerContext context = contexts.get(endpoint);
+            assert context != null;
+            return endpoint.withAttrs(context.endpointAttributes());
+        }).collect(Collectors.toList());
     }
 
     void initialize() {
@@ -98,7 +107,8 @@ final class HealthCheckContextGroup {
         });
     }
 
-    CompletableFuture<?> whenInitialized() {
+    @VisibleForTesting
+    public CompletableFuture<?> whenInitialized() {
         assert initFutures != null : "Should call initialize() before invoking this method.";
         return initFutures;
     }

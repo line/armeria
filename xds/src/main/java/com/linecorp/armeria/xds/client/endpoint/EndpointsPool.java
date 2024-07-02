@@ -42,6 +42,7 @@ final class EndpointsPool implements AsyncCloseable {
     private Map<Endpoint, Long> createdTimestamps = ImmutableMap.of();
     private final EventExecutor eventExecutor;
     private Consumer<List<Endpoint>> listener = ignored -> {};
+    private final EndpointGroupConverter endpointGroupConverter = new EndpointGroupConverter();
 
     EndpointsPool(EventExecutor eventExecutor) {
         this.eventExecutor = eventExecutor;
@@ -53,7 +54,7 @@ final class EndpointsPool implements AsyncCloseable {
         delegate.closeAsync();
 
         // set the new endpoint and listener
-        delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot);
+        delegate = endpointGroupConverter.convertEndpointGroup(newSnapshot);
         listener = endpoints -> eventExecutor.execute(
                 () -> endpointsListener.accept(attachTimestampsAndDelegate(endpoints)));
         delegate.addListener(listener, true);

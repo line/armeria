@@ -29,12 +29,15 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.EndpointWeightTransition;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.HealthCheckAttributes;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbPolicy;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.SlowStartConfig;
+import io.envoyproxy.envoy.config.core.v3.HealthStatus;
 import io.envoyproxy.envoy.config.core.v3.Locality;
+import io.envoyproxy.envoy.config.core.v3.TransportSocket;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment.Policy;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
@@ -110,16 +113,18 @@ final class EndpointUtil {
 
     static CoarseHealth coarseHealth(Endpoint endpoint) {
         final LbEndpoint lbEndpoint = lbEndpoint(endpoint);
-        switch (lbEndpoint.getHealthStatus()) {
-            // Assume UNKNOWN means health check wasn't performed
-            case UNKNOWN:
-            case HEALTHY:
-                return CoarseHealth.HEALTHY;
-            case DEGRADED:
-                return CoarseHealth.DEGRADED;
-            default:
-                return CoarseHealth.UNHEALTHY;
+        // If any of the unhealthy flags are set, host is unhealthy.
+        if (lbEndpoint.getHealthStatus() == HealthStatus.UNHEALTHY ||
+            Boolean.FALSE.equals(HealthCheckAttributes.healthy(endpoint))) {
+            return CoarseHealth.UNHEALTHY;
         }
+        // If any of the degraded flags are set, host is degraded.
+        if (lbEndpoint.getHealthStatus() == HealthStatus.DEGRADED ||
+            Boolean.TRUE.equals(HealthCheckAttributes.degraded(endpoint))) {
+            return CoarseHealth.DEGRADED;
+        }
+        // The host must have no flags or be pending removal.
+        return CoarseHealth.HEALTHY;
     }
 
     static int hash(ClientRequestContext ctx) {
@@ -143,13 +148,13 @@ final class EndpointUtil {
         return localityLbEndpoints(endpoint).getLoadBalancingWeight().getValue();
     }
 
-    private static LbEndpoint lbEndpoint(Endpoint endpoint) {
+    static LbEndpoint lbEndpoint(Endpoint endpoint) {
         final LbEndpoint lbEndpoint = endpoint.attr(XdsAttributeKeys.LB_ENDPOINT_KEY);
         assert lbEndpoint != null;
         return lbEndpoint;
     }
 
-    private static LocalityLbEndpoints localityLbEndpoints(Endpoint endpoint) {
+    static LocalityLbEndpoints localityLbEndpoints(Endpoint endpoint) {
         final LocalityLbEndpoints localityLbEndpoints = endpoint.attr(
                 XdsAttributeKeys.LOCALITY_LB_ENDPOINTS_KEY);
         assert localityLbEndpoints != null;
@@ -178,6 +183,19 @@ final class EndpointUtil {
             return 50;
         }
         return Math.min((int) Math.round(commonLbConfig.getHealthyPanicThreshold().getValue()), 100);
+    }
+
+    static int endpointWeight(LbEndpoint lbEndpoint) {
+        return lbEndpoint.hasLoadBalancingWeight() ?
+               Math.max(1, lbEndpoint.getLoadBalancingWeight().getValue()) : 1;
+    }
+
+    static boolean isTls(Cluster cluster) {
+        if (!cluster.hasTransportSocket()) {
+            return false;
+        }
+        final TransportSocket transportSocket = cluster.getTransportSocket();
+        return "envoy.transport_sockets.tls".equals(transportSocket.getName());
     }
 
     enum CoarseHealth {

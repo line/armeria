@@ -23,6 +23,7 @@ import java.util.function.Function;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.HttpHealthChecker;
 
 /**
  * A builder for creating a new {@link HealthCheckedEndpointGroup} that sends HTTP health check requests.
@@ -55,26 +56,20 @@ public final class HealthCheckedEndpointGroupBuilder
         return this;
     }
 
-    @Override
-    protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
-        return new HttpHealthCheckerFactory(path, useGet);
+    boolean useGet() {
+        return useGet;
     }
 
-    private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {
+    String path() {
+        return path;
+    }
 
-        private final String path;
-        private final boolean useGet;
-
-        HttpHealthCheckerFactory(String path, boolean useGet) {
-            this.path = path;
-            this.useGet = useGet;
-        }
-
-        @Override
-        public AsyncCloseable apply(HealthCheckerContext ctx) {
-            final HttpHealthChecker checker = new HttpHealthChecker(ctx, path, useGet);
+    @Override
+    protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+        return ctx -> {
+            final HttpHealthChecker checker = new HttpHealthChecker(ctx);
             checker.start();
             return checker;
-        }
+        };
     }
 }

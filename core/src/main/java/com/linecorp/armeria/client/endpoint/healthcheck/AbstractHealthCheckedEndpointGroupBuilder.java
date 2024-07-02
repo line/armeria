@@ -36,6 +36,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -387,12 +388,25 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
                 LongMath.saturatedAdd(this.initialSelectionTimeoutMillis, delegate.selectionTimeoutMillis());
         final long selectionTimeoutMillis =
                 LongMath.saturatedAdd(this.selectionTimeoutMillis, delegate.selectionTimeoutMillis());
+        final SessionProtocol protocol = this.protocol;
+        final int port = this.port;
+        final Function<Endpoint, HealthCheckerParams> paramsFactory;
+        if (this instanceof HealthCheckedEndpointGroupBuilder) {
+            final HealthCheckedEndpointGroupBuilder builder = (HealthCheckedEndpointGroupBuilder) this;
+            final boolean useGet = builder.useGet();
+            final String path = builder.path();
+            paramsFactory = endpoint -> HealthCheckerParams.of(path, useGet ? HttpMethod.GET : HttpMethod.HEAD,
+                                                               null, protocol, port, endpoint);
+        } else {
+            // a dummy factory in case a custom checkerFactory is used
+            paramsFactory = endpoint -> HealthCheckerParams.of("/", HttpMethod.GET,
+                                                               null, protocol, port, endpoint);
+        }
 
         return new HealthCheckedEndpointGroup(delegate, shouldAllowEmptyEndpoints(),
                                               initialSelectionTimeoutMillis, selectionTimeoutMillis,
-                                              protocol, port, retryBackoff,
-                                              clientOptionsBuilder.build(),
-                                              newCheckerFactory(), healthCheckStrategy);
+                                              retryBackoff, clientOptionsBuilder.build(),
+                                              newCheckerFactory(), healthCheckStrategy, paramsFactory);
     }
 
     /**

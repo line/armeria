@@ -49,7 +49,7 @@ final class XdsAttributeAssigningEndpointGroup extends DynamicEndpointGroup
                 endpoints.stream()
                          .map(endpoint -> endpoint.withAttr(LB_ENDPOINT_KEY, lbEndpoint)
                                                   .withAttr(LOCALITY_LB_ENDPOINTS_KEY, localityLbEndpoints)
-                                                  .withWeight(XdsEndpointUtil.endpointWeight(lbEndpoint)))
+                                                  .withWeight(EndpointUtil.endpointWeight(lbEndpoint)))
                          .collect(Collectors.toList());
         setEndpoints(mappedEndpoints);
     }

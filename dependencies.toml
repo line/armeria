@@ -608,6 +608,8 @@ module = "com.fasterxml.jackson.module:jackson-module-scala_2.12"
 module = "com.fasterxml.jackson.module:jackson-module-scala_2.13"
 [libraries.jackson-scala_v3]
 module = "com.fasterxml.jackson.module:jackson-module-scala_3"
+[libraries.jackson-yaml]
+module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml"
 
 [libraries.javax-annotation]
 module = "javax.annotation:javax.annotation-api"

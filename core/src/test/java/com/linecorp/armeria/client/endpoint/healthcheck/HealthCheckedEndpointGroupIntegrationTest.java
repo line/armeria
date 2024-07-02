@@ -212,7 +212,7 @@ class HealthCheckedEndpointGroupIntegrationTest {
             endpointGroup.whenReady().join();
             endpointGroup.newMeterBinder("baz").bindTo(registry);
 
-            assertThat(endpointGroup.endpoints())
+            assertThat(endpointGroup.endpointPool().healthyEndpoints())
                     .hasSize(3)
                     .containsOnly(Endpoint.of("127.0.0.1", portOne));
 

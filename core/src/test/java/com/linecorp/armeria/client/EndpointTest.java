@@ -745,8 +745,8 @@ class EndpointTest {
         attrs2.set(key1, "value1-2");
         attrs2.set(key3, "value3");
 
-        final Endpoint endpointB = endpoint.withAttrs(attrs.build());
-        final Endpoint endpointC = endpointB.withAttrs(attrs2.build());
+        final Endpoint endpointB = endpoint.replaceAttrs(attrs.build());
+        final Endpoint endpointC = endpointB.replaceAttrs(attrs2.build());
 
         assertThat(endpointB.attr(key1))
                 .isEqualTo("value1");
@@ -767,10 +767,10 @@ class EndpointTest {
                                            Maps.immutableEntry(key3, "value3"));
 
         // Reset attrs with an empty attributes.
-        final Endpoint newEndpointB = endpointB.withAttrs(Attributes.of());
+        final Endpoint newEndpointB = endpointB.replaceAttrs(Attributes.of());
         assertThat(newEndpointB.attrs().isEmpty()).isTrue();
 
-        final Endpoint sameEndpoint = endpoint.withAttrs(Attributes.of());
+        final Endpoint sameEndpoint = endpoint.replaceAttrs(Attributes.of());
         assertThat(sameEndpoint).isSameAs(endpoint);
     }
 }

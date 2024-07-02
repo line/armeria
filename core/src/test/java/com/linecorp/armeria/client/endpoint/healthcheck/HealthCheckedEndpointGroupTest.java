@@ -53,13 +53,13 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.HealthCheckContextGroup;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -174,7 +174,7 @@ class HealthCheckedEndpointGroupTest {
             // 'foo' should not be healthy even if `ctx.updateHealth()` was called.
             ctx.updateHealth(1, null, null, null);
             assertThat(group.endpoints()).isEmpty();
-            assertThat(group.healthyEndpoints).isEmpty();
+            assertThat(group.endpointPool().healthyEndpoints()).isEmpty();
 
             // An attempt to schedule a new task for a disappeared endpoint must fail.
             assertThatThrownBy(() -> ctx.executor().execute(() -> {}))
@@ -229,7 +229,7 @@ class HealthCheckedEndpointGroupTest {
             // 'foo' should not be healthy after `bar` become healthy.
             ctx2.updateHealth(1, null, null, null);
             assertThat(group.endpoints()).containsOnly(endpoint2);
-            assertThat(group.healthyEndpoints).containsOnly(endpoint2);
+            assertThat(group.endpointPool().healthyEndpoints()).containsOnly(endpoint2);
         }
     }
 
@@ -254,17 +254,17 @@ class HealthCheckedEndpointGroupTest {
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
                                                     10000, 10000,
-                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    TestHealthCheckParamsFactory.INSTANCE)) {
 
-            assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
+            assertThat(group.endpointPool().healthyEndpoints()).containsOnly(candidate1, candidate2);
 
             final ClientRequestContext mockCtx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/health"));
             firstSelectedCandidates.get().updateHealth(UNHEALTHY, mockCtx, null, new AnticipatedException());
-            assertThat(group.healthyEndpoints).containsOnly(candidate2);
+            assertThat(group.endpointPool().healthyEndpoints()).containsOnly(candidate2);
         }
     }
 
@@ -284,10 +284,10 @@ class HealthCheckedEndpointGroupTest {
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
                                                     10000, 10000,
-                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    TestHealthCheckParamsFactory.INSTANCE)) {
 
             assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
                                          .containsOnly(candidate1, candidate2);
@@ -315,10 +315,10 @@ class HealthCheckedEndpointGroupTest {
         try (HealthCheckedEndpointGroup unused =
                      new HealthCheckedEndpointGroup(delegate, true,
                                                     10000, 10000,
-                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    TestHealthCheckParamsFactory.INSTANCE)) {
             assertThat(counter.get()).isEqualTo(2);
         }
     }
@@ -339,14 +339,15 @@ class HealthCheckedEndpointGroupTest {
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
                                                     10000, 10000,
-                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    TestHealthCheckParamsFactory.INSTANCE)) {
             final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
             endpointGroup.addListener(healthyEndpointsList::add, true);
             delegate.set(candidate1, candidate3);
-            final HealthCheckContextGroup contextGroup = endpointGroup.contextGroupChain().poll();
+            final HealthCheckContextGroup contextGroup =
+                    endpointGroup.endpointPool().contextGroupChain().poll();
             assertThat(contextGroup.candidates()).containsExactly(candidate1, candidate3);
             assertThat(contextGroup.whenInitialized()).isDone();
             assertThat(healthyEndpointsList).hasSize(3);
@@ -408,9 +409,7 @@ class HealthCheckedEndpointGroupTest {
         checkerContextRef.get().updateHealth(1, null, null, null);
         assertThat(group.whenReady().join()).containsExactly(delegate);
         group.close();
-        // If an inflight health check request can invoke `allHealthyEndpoints`
-        // while a `HealthCheckedEndpointGroup` is closing or closed.
-        assertThat(group.allHealthyEndpoints()).isEmpty();
+        assertThat(group.endpointPool().healthyEndpoints()).isEmpty();
     }
 
     @Test
