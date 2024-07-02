@@ -98,6 +98,26 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         }
     }
 
+    private void load(@Nullable T cache, CompletableFuture<T> future) {
+        try {
+            loader.apply(cache).handle((newValue, cause) -> {
+                if (cause != null) {
+                    logger.warn("Failed to load a new value from loader: {}. cache: {}",
+                                loader, cache, cause);
+                    handleException(cause, cache, future);
+                } else {
+                    logger.debug("Loaded a new value: {}", newValue);
+                    cacheEntry = new CacheEntry<>(newValue);
+                    future.complete(newValue);
+                }
+                return null;
+            });
+        } catch (Exception e) {
+            logger.warn("Unexpected exception from loader.apply()", e);
+            handleException(e, cache, future);
+        }
+    }
+
     @Nonnull
     private CompletableFuture<T> logAndLoad(@Nullable CacheEntry<T> cacheEntry, boolean isValid,
                                             CompletableFuture<T> newFuture) {
@@ -125,26 +145,6 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
             return UnmodifiableFuture.completedFuture(cacheEntry.value);
         }
         return future;
-    }
-
-    private void load(@Nullable T cache, CompletableFuture<T> future) {
-        try {
-            loader.apply(cache).handle((newValue, cause) -> {
-                if (cause != null) {
-                    logger.warn("Failed to load a new value from loader: {}. cache: {}",
-                                loader, cache, cause);
-                    handleException(cause, cache, future);
-                } else {
-                    logger.debug("Loaded a new value: {}", newValue);
-                    cacheEntry = new CacheEntry<>(newValue);
-                    future.complete(newValue);
-                }
-                return null;
-            });
-        } catch (Exception e) {
-            logger.warn("Unexpected exception from loader.apply()", e);
-            handleException(e, cache, future);
-        }
     }
 
     private boolean needsRefresh(CacheEntry<T> cacheEntry) {
