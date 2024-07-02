@@ -27,6 +27,7 @@ import "google/protobuf/wrappers.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/any.proto";
 import "google/protobuf/field_mask.proto";
+import "google/api/httpbody.proto";
 
 service HttpJsonTranscodingTestService {
   rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
@@ -224,6 +225,18 @@ service HttpJsonTranscodingTestService {
       }
     };
   }
+
+  rpc ArbitraryHttp(google.api.HttpBody) returns (google.api.HttpBody) {
+    option (google.api.http) = {
+      post: "/v1/arbitrary"
+    };
+  }
+
+  rpc ArbitraryHttpWrapped(ArbitraryHttpWrappedRequest) returns (ArbitraryHttpWrappedResponse) {
+    option (google.api.http) = {
+      post: "/v1/arbitrary_wrapped"
+    };
+  }
 }
 
 message GetMessageRequestV1 {
@@ -406,4 +419,14 @@ message EchoNestedMessageRequest {
 
 message EchoNestedMessageResponse {
   TopLevelMessage.NestedMessage nested = 1;
+}
+
+message ArbitraryHttpWrappedRequest {
+  string request_id = 1;
+  google.api.HttpBody body = 2;
+}
+
+message ArbitraryHttpWrappedResponse {
+  string response_id = 1;
+  google.api.HttpBody body = 2;
 }
