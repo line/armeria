@@ -1375,6 +1375,7 @@ cf
 cf-ipfs.com
 cfa
 cfd
+cfolks.pl
 cg
 ch
 ch.eu.org
@@ -1827,6 +1828,7 @@ cq.cn
 cr
 cr.it
 cr.ua
+craft.me
 crafting.xyz
 cranky.jp
 crap.jp
@@ -2945,7 +2947,6 @@ fylkesbibl.no
 fyresdal.no
 g.bg
 g.se
-g.vbrplsbx.io
 g12.br
 ga
 ga.us
@@ -3438,6 +3439,12 @@ hasuda.saitama.jp
 hasura-app.io
 hasura.app
 hasvik.no
+hateblo.jp
+hatenablog.com
+hatenablog.jp
+hatenadiary.com
+hatenadiary.jp
+hatenadiary.org
 hatinh.vn
 hatogaya.saitama.jp
 hatoyama.saitama.jp
