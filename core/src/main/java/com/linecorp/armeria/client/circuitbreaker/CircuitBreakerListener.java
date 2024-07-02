@@ -133,8 +133,19 @@ public interface CircuitBreakerListener {
 
     /**
      * Invoked when the circuit breaker's internal {@link EventCount} is updated.
+     *
+     * @deprecated Use {@link #onEventCountUpdated(String, com.linecorp.armeria.common.util.EventCount)}
+     *             instead.
      */
+    @Deprecated
     void onEventCountUpdated(String circuitBreakerName, EventCount eventCount) throws Exception;
+
+    /**
+     * Invoked when the circuit breaker's internal {@link com.linecorp.armeria.common.util.EventCount} is
+     * updated.
+     */
+    default void onEventCountUpdated(String circuitBreakerName,
+                                     com.linecorp.armeria.common.util.EventCount eventCount) throws Exception {}
 
     /**
      * Invoked when the circuit breaker rejects a request.

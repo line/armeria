@@ -31,6 +31,8 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
+import com.linecorp.armeria.common.util.EventCount;
+import com.linecorp.armeria.common.util.EventCounter;
 import com.linecorp.armeria.common.util.Ticker;
 
 /**
@@ -192,8 +194,8 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
         return new State(
                 CircuitState.CLOSED,
                 Duration.ZERO,
-                new SlidingWindowCounter(ticker, config.counterSlidingWindow(),
-                                         config.counterUpdateInterval()));
+                EventCounter.ofSlidingWindow(ticker, config.counterSlidingWindow(),
+                                             config.counterUpdateInterval()));
     }
 
     private State newForcedOpenState() {
@@ -246,7 +248,13 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     private void notifyCountUpdated(CircuitBreakerListener listener, EventCount count) {
         try {
-            listener.onEventCountUpdated(name(), count);
+            final String name = name();
+            listener.onEventCountUpdated(name, count);
+            // Deprecated but still supported for backward compatibility.
+            //noinspection deprecation
+            listener.onEventCountUpdated(name,
+                                         com.linecorp.armeria.client.circuitbreaker.EventCount.of(
+                                                 count.success(), count.failure()));
         } catch (Throwable t) {
             logger.warn("An error occurred when notifying an EventCountUpdated event", t);
         }

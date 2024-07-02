@@ -38,9 +38,15 @@ import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.outlier.OutlierDetectingRule;
+import com.linecorp.armeria.common.outlier.OutlierDetection;
+import com.linecorp.armeria.common.outlier.OutlierDetectionDecision;
+import com.linecorp.armeria.common.outlier.OutlierDetector;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -79,6 +85,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private final SerializationFormat serializationFormat;
     private final PoolKey poolKey;
     private final HttpClientFactory clientFactory;
+    @Nullable
+    private final OutlierDetector outlierDetector;
+    @Nullable
+    private final OutlierDetectingRule outlierDetectingRule;
 
     @Nullable
     private ScheduledFuture<?> sessionTimeoutFuture;
@@ -140,6 +150,14 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         this.serializationFormat = serializationFormat;
         this.poolKey = poolKey;
         this.clientFactory = clientFactory;
+        final OutlierDetection outlierDetection = clientFactory.options().connectionOutlierDetection();
+        if (outlierDetection != OutlierDetection.disabled()) {
+            outlierDetector = outlierDetection.newDetector();
+            outlierDetectingRule = outlierDetection.rule();
+        } else {
+            outlierDetector = null;
+            outlierDetectingRule = null;
+        }
 
         if (!poolKey.proxyConfig.proxyType().isForwardProxy()) {
             scheduleSessionTimeout(channel, sessionPromise, connectionTimeoutMillis, desiredProtocol);
@@ -215,6 +233,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
                        HttpRequest req, DecodedHttpResponse res) {
+        applyOutlierDetection(ctx);
         if (handleEarlyCancellation(ctx, req, res)) {
             pooledChannel.release();
             return;
@@ -560,6 +579,62 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             ctx.close();
         } else {
             // Netty will close the connection automatically on an IOException.
+        }
+    }
+
+    private void applyOutlierDetection(ClientRequestContext ctx) {
+        if (outlierDetectingRule == null || !isAcquirable()) {
+            return;
+        }
+        assert outlierDetector != null;
+        if (outlierDetector.isOutlier()) {
+            return;
+        }
+
+        ctx.log().whenComplete().thenAccept(this::detectOutlier);
+    }
+
+    private void detectOutlier(RequestLog log) {
+        final RequestContext context = log.context();
+        if (!context.eventLoop().inEventLoop()) {
+            // Execute in the event loop to prevent a connection from being marked as an outlier as a request is
+            // about to be sent.
+            detectOutlier(log);
+            return;
+        }
+
+        final OutlierDetectionDecision decision;
+        try {
+            decision = outlierDetectingRule.decide(context, log.responseHeaders(), log.responseCause());
+        } catch (Exception e) {
+            logger.warn("Unexpected exception from an OutlierDetectingRule: {}", outlierDetectingRule, e);
+            return;
+        }
+
+        if (decision == null) {
+            return;
+        }
+        switch (decision) {
+            // NEXT is assumed as SUCCESS.
+            case SUCCESS:
+            case NEXT:
+                outlierDetector.onSuccess();
+                // The connection was marked as an outlier, but it's back to normal.
+                if (outlierDetector.isOutlier()) {
+                    markUnacquirable();
+                }
+                break;
+            case FAILURE:
+                outlierDetector.onFailure();
+                if (outlierDetector.isOutlier()) {
+                    markUnacquirable();
+                }
+                break;
+            case FATAL:
+                markUnacquirable();
+                break;
+            case IGNORE:
+                break;
         }
     }
 }
