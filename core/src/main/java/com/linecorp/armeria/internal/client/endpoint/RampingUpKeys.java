@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.client.endpoint;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
@@ -31,6 +32,11 @@ public final class RampingUpKeys {
         final Long createdAtNanos = endpoint.attr(CREATED_AT_NANOS_KEY);
         checkState(createdAtNanos != null, "createdAtNanos doesn't exist for '%s'", endpoint);
         return createdAtNanos;
+    }
+
+    @Nullable
+    public static Long getCreatedAtNanos(Endpoint endpoint) {
+        return endpoint.attr(CREATED_AT_NANOS_KEY);
     }
 
     public static Endpoint withCreatedAtNanos(Endpoint endpoint, long timestampNanos) {

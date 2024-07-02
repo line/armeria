@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.endpoint;
+package com.linecorp.armeria.common.loadbalancer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -25,15 +25,15 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.client.Endpoint;
 
-class EndpointWeightTransitionTest {
+class WeightTransitionTest {
 
     @ParameterizedTest
     @ValueSource(doubles = { 0.1, Double.MIN_VALUE, 1, 100, Double.MAX_VALUE })
     void aggressionBoundaries(double aggression) {
         final Endpoint endpoint = Endpoint.of("foo.com").withWeight(100);
         for (int i = 1; i <= 10; i++) {
-            final int weight = EndpointWeightTransition.aggression(aggression, 0.0)
-                                                       .compute(endpoint, i, 10);
+            final int weight = WeightTransition.aggression(aggression, 0.0)
+                                               .compute(endpoint, endpoint.weight(), i, 10);
             assertThat(weight).isBetween(0, 100);
         }
     }
@@ -41,22 +41,22 @@ class EndpointWeightTransitionTest {
     @Test
     void minWeight() {
         final Endpoint endpoint = Endpoint.of("foo.com").withWeight(100);
-        final EndpointWeightTransition weightTransition = EndpointWeightTransition.aggression(1, 0.5);
+        final WeightTransition<Endpoint> weightTransition = WeightTransition.aggression(1, 0.5);
         for (int i = 0; i <= 5; i++) {
-            assertThat(weightTransition.compute(endpoint, i, 10)).isEqualTo(50);
+            assertThat(weightTransition.compute(endpoint, endpoint.weight(), i, 10)).isEqualTo(50);
         }
         for (int i = 6; i <= 10; i++) {
-            assertThat(weightTransition.compute(endpoint, i, 10)).isEqualTo(i * 10);
+            assertThat(weightTransition.compute(endpoint, endpoint.weight(), i, 10)).isEqualTo(i * 10);
         }
     }
 
     @Test
     void invalidParameters() {
-        assertThatThrownBy(() -> EndpointWeightTransition.aggression(0, 0.5));
-        assertThatThrownBy(() -> EndpointWeightTransition.aggression(-1, 0.5));
-        assertThatThrownBy(() -> EndpointWeightTransition.aggression(0.1, 1.2));
-        assertThatThrownBy(() -> EndpointWeightTransition.aggression(0.1, -1.2));
-        assertThatThrownBy(() -> EndpointWeightTransition.aggression(Double.NaN, 0.5));
-        assertThatThrownBy(() -> EndpointWeightTransition.aggression(0.5, Double.NaN));
+        assertThatThrownBy(() -> WeightTransition.aggression(0, 0.5));
+        assertThatThrownBy(() -> WeightTransition.aggression(-1, 0.5));
+        assertThatThrownBy(() -> WeightTransition.aggression(0.1, 1.2));
+        assertThatThrownBy(() -> WeightTransition.aggression(0.1, -1.2));
+        assertThatThrownBy(() -> WeightTransition.aggression(Double.NaN, 0.5));
+        assertThatThrownBy(() -> WeightTransition.aggression(0.5, Double.NaN));
     }
 }
