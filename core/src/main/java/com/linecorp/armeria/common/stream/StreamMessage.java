@@ -28,6 +28,7 @@ import java.io.OutputStream;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -1202,5 +1203,48 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> subscribeOn(EventExecutor eventExecutor) {
         requireNonNull(eventExecutor, "eventExecutor");
         return new SubscribeOnStreamMessage<>(this, eventExecutor);
+    }
+
+    /**
+     * Configures a timeout for the stream based on the specified duration.
+     * The default timeout mode is {@link StreamTimeoutMode#UNTIL_NEXT}.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * StreamMessage<String> stream = ...;
+     * StreamMessage<String> timeoutStream = stream.timeout(Duration.ofSeconds(10));
+     * }</pre>
+     *
+     * @param timeoutDuration the duration before a timeout occurs
+     * @return a new {@link TimeoutStreamMessage} with the specified timeout duration and default mode
+     */
+    @UnstableApi
+    default StreamMessage<T> timeout(Duration timeoutDuration) {
+        requireNonNull(timeoutDuration, "timeoutDuration");
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    /**
+     * Configures a timeout for the stream based on the specified duration and mode.
+     * Internally, it creates and returns a {@link TimeoutStreamMessage} with the specified parameters.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * StreamMessage<String> stream = ...;
+     * StreamMessage<String> timeoutStream = stream.timeout(
+     *     Duration.ofSeconds(10),
+     *     StreamTimeoutMode.UNTIL_FIRST
+     * );
+     * }</pre>
+     *
+     * @param timeoutDuration the duration before a timeout occurs
+     * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
+     * @return a new {@link TimeoutStreamMessage} with the specified timeout duration and mode applied
+     */
+    @UnstableApi
+    default StreamMessage<T> timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        requireNonNull(timeoutDuration, "timeoutDuration");
+        requireNonNull(timeoutMode, "timeoutMode");
+        return new TimeoutStreamMessage<>(this, timeoutDuration, timeoutMode);
     }
 }
