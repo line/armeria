@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
+import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -192,6 +193,14 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             timeoutFuture = ch.eventLoop().schedule(
                     () -> failAndReset(WriteTimeoutException.get()),
                     timeoutMillis, TimeUnit.MILLISECONDS);
+            final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+            if (ctxExt != null) {
+                final CancellationScheduler scheduler = ctxExt.responseCancellationScheduler();
+                scheduler.updateTask(this::failAndReset);
+                if (ctx.responseTimeoutMode() == ResponseTimeoutMode.REQUEST_WRITE) {
+                    scheduler.start();
+                }
+            }
         }
         return true;
     }
@@ -371,6 +380,10 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     }
 
     final void failAndReset(Throwable cause) {
+        if (!ch.eventLoop().inEventLoop()) {
+            ch.eventLoop().execute(() -> failAndReset(cause));
+            return;
+        }
         if (cause instanceof WriteTimeoutException) {
             final HttpSession session = HttpSession.get(ch);
             // Mark the session as unhealthy so that subsequent requests do not use it.

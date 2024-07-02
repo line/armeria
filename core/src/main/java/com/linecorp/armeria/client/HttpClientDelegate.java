@@ -33,9 +33,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
-import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
@@ -95,10 +95,16 @@ final class HttpClientDelegate implements HttpClient {
             return earlyFailedResponse(t, ctx, req);
         }
 
+        final Throwable cancellationCause = ctx.cancellationCause();
+        if (cancellationCause != null) {
+            return earlyFailedResponse(cancellationCause, ctx, req);
+        }
+
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         // TODO(ikhoon) Use ctx.exchangeType() to create an optimized HttpResponse for non-streaming response.
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
+        updateCancellationTask(ctx, req, res);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
@@ -121,6 +127,20 @@ final class HttpClientDelegate implements HttpClient {
         }
 
         return res;
+    }
+
+    private static void updateCancellationTask(ClientRequestContext ctx, HttpRequest req,
+                                               DecodedHttpResponse res) {
+        final ClientRequestContextExtension ctxExt = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExt == null) {
+            return;
+        }
+        ctxExt.responseCancellationScheduler().updateTask(cause -> {
+            req.abort(cause);
+            ctx.logBuilder().endRequest(cause);
+            ctx.logBuilder().endResponse(cause);
+            res.close(cause);
+        });
     }
 
     private void resolveAddress(Endpoint endpoint, ClientRequestContext ctx,
@@ -234,16 +254,12 @@ final class HttpClientDelegate implements HttpClient {
                                             DecodedHttpResponse res) {
         final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
         handleEarlyRequestException(ctx, req, cause);
-        res.close(cause);
     }
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
         try (SafeCloseable ignored = RequestContextUtil.pop()) {
-            req.abort(cause);
-            final RequestLogBuilder logBuilder = ctx.logBuilder();
-            logBuilder.endRequest(cause);
-            logBuilder.endResponse(cause);
+            ctx.cancel(cause);
         }
     }
 

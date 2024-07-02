@@ -40,6 +40,7 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
@@ -70,6 +71,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
@@ -445,7 +447,7 @@ public final class DefaultClientRequestContext
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
-            responseCancellationScheduler.init(eventLoop());
+            initializeResponseCancellationScheduler();
         }
     }
 
@@ -545,9 +547,26 @@ public final class DefaultClientRequestContext
         // the root context.
         if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
             eventLoop = ctx.eventLoop().withoutContext();
-            responseCancellationScheduler.init(eventLoop());
+            initializeResponseCancellationScheduler();
         } else {
             acquireEventLoop(endpoint);
+        }
+    }
+
+    private void initializeResponseCancellationScheduler() {
+        final CancellationTask cancellationTask = cause -> {
+            final HttpRequest request = request();
+            if (request != null) {
+                request.abort(cause);
+            }
+            log.endRequest(cause);
+            log.endResponse(cause);
+        };
+        if (options.responseTimeoutMode() == ResponseTimeoutMode.REQUEST_START) {
+            responseCancellationScheduler.initAndStart(eventLoop().withoutContext(), cancellationTask);
+        } else {
+            responseCancellationScheduler.init(eventLoop().withoutContext());
+            responseCancellationScheduler.updateTask(cancellationTask);
         }
     }
 
@@ -926,13 +945,13 @@ public final class DefaultClientRequestContext
     @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
-        return responseCancellationScheduler.whenTimingOut();
+        return whenResponseCancelling().handle((v, e) -> null);
     }
 
     @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
-        return responseCancellationScheduler.whenTimedOut();
+        return whenResponseCancelled().handle((v, e) -> null);
     }
 
     @Override
@@ -1023,5 +1042,10 @@ public final class DefaultClientRequestContext
             }
         });
         return completableFuture;
+    }
+
+    @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return options.responseTimeoutMode();
     }
 }

@@ -596,6 +596,12 @@ public interface ClientRequestContext extends RequestContext {
     @UnstableApi
     ExchangeType exchangeType();
 
+    /**
+     * TBU.
+     */
+    @UnstableApi
+    ResponseTimeoutMode responseTimeoutMode();
+
     @Override
     default ClientRequestContext unwrap() {
         return (ClientRequestContext) RequestContext.super.unwrap();

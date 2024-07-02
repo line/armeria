@@ -259,7 +259,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
         if (responseCancellationScheduler == null || !responseCancellationScheduler.isFinished()) {
             if (responseCancellationScheduler != null) {
-                responseCancellationScheduler.clearTimeout(false);
+                responseCancellationScheduler.cancelScheduled();
             }
             // There's no timeout or the response has not been timed out.
             if (cancel) {
@@ -297,7 +297,10 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         if (ctxExtension != null) {
             final CancellationScheduler responseCancellationScheduler =
                     ctxExtension.responseCancellationScheduler();
-            responseCancellationScheduler.start(newCancellationTask());
+            responseCancellationScheduler.updateTask(newCancellationTask());
+            if (ctx.responseTimeoutMode() == ResponseTimeoutMode.RESPONSE_WRITE) {
+                responseCancellationScheduler.start();
+            }
         }
     }
 

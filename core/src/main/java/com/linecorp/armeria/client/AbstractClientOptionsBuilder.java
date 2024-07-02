@@ -507,6 +507,15 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * TBU.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return option(ClientOptions.RESPONSE_TIMEOUT_MODE,
+                      requireNonNull(responseTimeoutMode, "responseTimeoutMode"));
+    }
+
+    /**
      * Builds {@link ClientOptions} with the given options and the
      * {@linkplain ClientOptions#of() default options}.
      */
