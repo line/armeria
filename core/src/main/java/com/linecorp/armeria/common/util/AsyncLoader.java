@@ -68,7 +68,7 @@ public interface AsyncLoader<T> {
      * @param loader function to load value. {@code T} is the previously cached value.
      */
     static <T> AsyncLoaderBuilder<T> builder(
-            Function<@Nullable ? super T, ? extends CompletableFuture<T>> loader) {
+            Function<@Nullable ? super T, ? extends CompletableFuture<? extends T>> loader) {
         //noinspection unchecked
         return new AsyncLoaderBuilder<>((Function<T, CompletableFuture<T>>) loader);
     }

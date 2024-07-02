@@ -26,6 +26,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import javax.annotation.Nonnull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,7 +42,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<
             DefaultAsyncLoader, CompletableFuture> loadFutureUpdater = AtomicReferenceFieldUpdater
-            .newUpdater(DefaultAsyncLoader.class, CompletableFuture.class, "loadFuture");
+            .newUpdater(DefaultAsyncLoader.class, CompletableFuture.class, "loadingFuture");
 
     private final Function<@Nullable T, CompletableFuture<T>> loader;
     private final long expireAfterLoadNanos;
@@ -54,7 +56,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     @Nullable
     private volatile CacheEntry<T> cacheEntry;
-    private volatile CompletableFuture<T> loadFuture = UnmodifiableFuture.completedFuture(null);
+    private volatile CompletableFuture<T> loadingFuture = UnmodifiableFuture.completedFuture(null);
 
     DefaultAsyncLoader(Function<@Nullable T, CompletableFuture<T>> loader,
                        @Nullable Duration expireAfterLoad,
@@ -72,46 +74,57 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
 
     @Override
     public CompletableFuture<T> load() {
-        CacheEntry<T> cacheEntry = this.cacheEntry;
-        boolean needsLoad = false;
-        for (;;) {
-            final CompletableFuture<T> loadFuture = this.loadFuture;
-            if (!loadFuture.isDone()) {
-                // A load is in progress.
-                break;
-            }
-
-            // A new `cacheEntry` is set before `loadFuture` is completed.
-            cacheEntry = this.cacheEntry;
-            final boolean isValid = isValid(cacheEntry);
-            final boolean tryLoad = !isValid || needsRefresh(cacheEntry);
-            if (tryLoad) {
-                final CompletableFuture<T> future = new CompletableFuture<>();
-                if (loadFutureUpdater.compareAndSet(this, loadFuture, future)) {
-                    needsLoad = true;
-                    break;
-                }
-            } else {
-                // The cache is still valid and no need to refresh.
-                break;
-            }
+        final CompletableFuture<T> loadingFuture = this.loadingFuture;
+        if (!loadingFuture.isDone()) {
+            // A load is in progress.
+            return cacheOrFuture(cacheEntry, loadingFuture);
         }
 
+        // A new `cacheEntry` is set before `loadingFuture` is completed.
+        final CacheEntry<T> cacheEntry = this.cacheEntry;
         final boolean isValid = isValid(cacheEntry);
-        final T cache = cacheEntry != null ? cacheEntry.value : null;
-        if (needsLoad) {
-            if (isValid) {
-                logger.debug("Pre-fetching a new value. cache: {}, loader: {}", cache, loader);
+        final boolean tryLoad = !isValid || needsRefresh(cacheEntry);
+        if (tryLoad) {
+            final CompletableFuture<T> newFuture = new CompletableFuture<>();
+            if (loadFutureUpdater.compareAndSet(this, loadingFuture, newFuture)) {
+                return logAndLoad(cacheEntry, isValid, newFuture);
             } else {
-                logger.debug("Loading a new value. cache: {}, loader: {}", cache, loader);
+                // Re-read the cacheEntry and loadingFuture because they may be updated by another thread.
+                return cacheOrFuture(this.cacheEntry, this.loadingFuture);
             }
-            load(cache, loadFuture);
+        } else {
+            // The cache is still valid and no need to refresh.
+            return cacheOrFuture(cacheEntry, loadingFuture);
         }
+    }
+
+    @Nonnull
+    private CompletableFuture<T> logAndLoad(@Nullable CacheEntry<T> cacheEntry, boolean isValid,
+                                            CompletableFuture<T> newFuture) {
+        // cacheEntry is not null if isValid == true
+        assert !isValid || cacheEntry != null;
+        final T cache = cacheEntry != null ? cacheEntry.value : null;
+        if (isValid) {
+            logger.debug("Pre-fetching a new value. cache: {}, loader: {}", cache, loader);
+        } else {
+            logger.debug("Loading a new value. cache: {}, loader: {}", cache, loader);
+        }
+
+        load(cache, newFuture);
 
         if (isValid) {
             return UnmodifiableFuture.completedFuture(cache);
+        } else {
+            return newFuture;
         }
-        return loadFuture;
+    }
+
+    private CompletableFuture<T> cacheOrFuture(@Nullable CacheEntry<T> cacheEntry,
+                                               CompletableFuture<T> future) {
+        if (isValid(cacheEntry)) {
+            return UnmodifiableFuture.completedFuture(cacheEntry.value);
+        }
+        return future;
     }
 
     private void load(@Nullable T cache, CompletableFuture<T> future) {

@@ -68,7 +68,7 @@ public final class AsyncLoaderBuilder<T> {
     public AsyncLoaderBuilder<T> expireAfterLoadMillis(long expireAfterLoadMillis) {
         checkState(expireAfterLoadMillis >= 0,
                    "expireAfterLoadMillis: %s (expected: >= 0)", expireAfterLoadMillis);
-        this.expireAfterLoad = Duration.ofMillis(expireAfterLoadMillis);
+        expireAfterLoad = Duration.ofMillis(expireAfterLoadMillis);
         return this;
     }
 
