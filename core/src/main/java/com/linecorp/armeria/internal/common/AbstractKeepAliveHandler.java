@@ -55,7 +55,8 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private final String name;
     private final boolean isServer;
     private final Timer keepAliveTimer;
-
+    @Nullable
+    private final DelegatingConnectionEventListener connectionEventListener;
     private final long maxNumRequestsPerConnection;
     private long currentNumRequests;
 
@@ -76,10 +77,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private final long maxConnectionAgeNanos;
     private boolean isMaxConnectionAgeExceeded;
 
-    private boolean isInitialized;
     private boolean closed;
     private boolean disconnectWhenFinished;
     private PingState pingState = PingState.IDLE;
+    private KeepAliveState keepAliveState = KeepAliveState.NONE;
 
     @Nullable
     private ChannelFuture pingWriteFuture;
@@ -94,6 +95,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         this.name = name;
         isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
+        if (isServer) {
+            // TODO(ikhoon): Support ConnectionEventListener for server-side
+            connectionEventListener = null;
+        } else {
+            connectionEventListener = DelegatingConnectionEventListener.get(channel);
+        }
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
         this.keepAliveOnPing = keepAliveOnPing;
 
@@ -120,14 +127,22 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     public final void initialize(ChannelHandlerContext ctx) {
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
-        if (isInitialized) {
+        if (keepAliveState != KeepAliveState.NONE) {
             return;
         }
-        isInitialized = true;
+
+        keepAliveState = KeepAliveState.INITIALIZED;
+        if (connectionEventListener != null) {
+            connectionEventListener.connectionOpened();
+        }
 
         final long connectionStartTimeNanos = System.nanoTime();
         ctx.channel().closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
+
+            if (connectionEventListener != null) {
+                connectionEventListener.connectionClosed(keepAliveState == KeepAliveState.IDLE);
+            }
             destroy();
         });
 
@@ -152,8 +167,9 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             return;
         }
 
+        // TODO(ikhoon): Unify `closed` and `keepAliveState` to simplify the logic.
         closed = true;
-        isInitialized = true;
+        keepAliveState = KeepAliveState.INITIALIZED;
         if (connectionIdleTimeout != null) {
             connectionIdleTimeout.cancel(false);
             connectionIdleTimeout = null;
@@ -231,6 +247,36 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             return;
         }
         currentNumRequests++;
+    }
+
+    @Override
+    public void notifyActive() {
+        assert keepAliveState != KeepAliveState.NONE && keepAliveState != KeepAliveState.ACTIVE;
+
+        switch (keepAliveState) {
+            case INITIALIZED:
+                keepAliveState = KeepAliveState.ACTIVE;
+                if (connectionEventListener != null) {
+                    connectionEventListener.connectionActive(false);
+                }
+                break;
+            case IDLE:
+                keepAliveState = KeepAliveState.ACTIVE;
+                if (connectionEventListener != null) {
+                    connectionEventListener.connectionActive(true);
+                }
+                break;
+            default:
+                throw new Error();
+        }
+    }
+
+    @Override
+    public void notifyIdle() {
+        assert keepAliveState == KeepAliveState.ACTIVE;
+        if (connectionEventListener != null) {
+            connectionEventListener.connectionIdle();
+        }
     }
 
     protected abstract ChannelFuture writePing(ChannelHandlerContext ctx);
@@ -374,7 +420,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 connectionIdleTimeout = executor().schedule(this, connectionIdleTimeNanos,
                                                             TimeUnit.NANOSECONDS);
                 try {
-                    if (!hasRequestsInProgress(ctx)) {
+                    if (keepAliveState == KeepAliveState.IDLE) {
                         pingState = PingState.SHUTDOWN;
                         logger.debug("{} Closing an idle {} connection", ctx.channel(), name);
                         ctx.channel().close();
@@ -462,5 +508,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
                 logger.warn("Unexpected error occurred while closing a connection exceeding the max age", e);
             }
         }
+    }
+
+    private enum KeepAliveState {
+        NONE,
+        INITIALIZED,
+        ACTIVE,
+        IDLE
     }
 }

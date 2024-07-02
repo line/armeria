@@ -92,6 +92,10 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
         if (removed != null) {
             unfinishedResponses--;
             assert unfinishedResponses >= 0 : unfinishedResponses;
+
+            if (unfinishedResponses == 0) {
+                keepAliveHandler().notifyIdle();
+            }
         }
         return removed;
     }
@@ -107,6 +111,9 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
             return false;
         }
 
+        if (unfinishedResponses == 0) {
+            keepAliveHandler().notifyActive();
+        }
         unfinishedResponses++;
         return true;
     }

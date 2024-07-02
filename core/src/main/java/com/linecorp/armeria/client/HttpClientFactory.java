@@ -122,6 +122,7 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp1Pipelining;
     private final ConnectionPoolListener connectionPoolListener;
     private final long http2GracefulShutdownTimeoutMillis;
+    private final ClientConnectionEventListener connectionEventListener;
     private MeterRegistry meterRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
     private final Http1HeaderNaming http1HeaderNaming;
@@ -204,6 +205,7 @@ final class HttpClientFactory implements ClientFactory {
         useHttp1Pipelining = options.useHttp1Pipelining();
         connectionPoolListener = options.connectionPoolListener();
         http2GracefulShutdownTimeoutMillis = options.http2GracefulShutdownTimeoutMillis();
+        connectionEventListener = options.connectionEventListener();
         meterRegistry = options.meterRegistry();
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();
@@ -299,8 +301,17 @@ final class HttpClientFactory implements ClientFactory {
         return useHttp1Pipelining;
     }
 
+    /**
+     * Returns the {@link ConnectionPoolListener} which is notified on {@link HttpChannelPool} events.
+     * @deprecated Use {@link #connectionEventListener()} instead.
+     */
+    @Deprecated
     ConnectionPoolListener connectionPoolListener() {
         return connectionPoolListener;
+    }
+
+    ClientConnectionEventListener connectionEventListener() {
+        return connectionEventListener;
     }
 
     long http2GracefulShutdownTimeoutMillis() {
@@ -495,6 +506,6 @@ final class HttpClientFactory implements ClientFactory {
         return pools.computeIfAbsent(eventLoop,
                                      e -> new HttpChannelPool(this, eventLoop,
                                                               sslCtxHttp1Or2, sslCtxHttp1Only,
-                                                              connectionPoolListener()));
+                                                              connectionEventListener()));
     }
 }

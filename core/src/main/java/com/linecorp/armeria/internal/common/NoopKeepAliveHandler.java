@@ -23,6 +23,8 @@ public class NoopKeepAliveHandler implements KeepAliveHandler {
     private boolean closed;
     private boolean disconnectWhenFinished;
 
+    // TODO(ikhoon): Notify connection events with DelegatingConnectionEventListener
+
     @Override
     public void initialize(ChannelHandlerContext ctx) {}
 
@@ -64,4 +66,10 @@ public class NoopKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public void increaseNumRequests() {}
+
+    @Override
+    public void notifyActive() {}
+
+    @Override
+    public void notifyIdle() {}
 }

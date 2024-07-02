@@ -796,11 +796,25 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the listener which is notified on a connection pool event.
+     * This option won't work in case the connectionEventListener is already set.
+     *
+     * @deprecated Use {@link #connectionEventListener} instead.
      */
+    @Deprecated
     public ClientFactoryBuilder connectionPoolListener(
             ConnectionPoolListener connectionPoolListener) {
         option(ClientFactoryOptions.CONNECTION_POOL_LISTENER,
                requireNonNull(connectionPoolListener, "connectionPoolListener"));
+        return this;
+    }
+
+    /**
+     * Sets the listener which is notified on a connection event.
+     */
+    public ClientFactoryBuilder connectionEventListener(
+            ClientConnectionEventListener connectionEventListener) {
+        option(ClientFactoryOptions.CONNECTION_EVENT_LISTENER,
+               requireNonNull(connectionEventListener, "connectionEventListener"));
         return this;
     }
 
@@ -945,6 +959,16 @@ public final class ClientFactoryBuilder implements TlsSetters {
                     };
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
+
+        if (options.containsKey(ClientFactoryOptions.CONNECTION_POOL_LISTENER) &&
+            !options.containsKey(ClientFactoryOptions.CONNECTION_EVENT_LISTENER)) {
+            final ConnectionPoolListener connectionPoolListener =
+                    (ConnectionPoolListener) options.get(ClientFactoryOptions.CONNECTION_POOL_LISTENER).value();
+
+            options.put(ClientFactoryOptions.CONNECTION_EVENT_LISTENER,
+                        ClientFactoryOptions.CONNECTION_EVENT_LISTENER
+                                .newValue(ClientConnectionEventListenerAdapter.of(connectionPoolListener)));
+        }
 
         if (tlsNoVerifySet) {
             tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
