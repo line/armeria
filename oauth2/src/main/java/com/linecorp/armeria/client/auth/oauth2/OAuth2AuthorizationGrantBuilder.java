@@ -99,7 +99,9 @@ public final class OAuth2AuthorizationGrantBuilder {
      * Sets a period when the token should be refreshed proactively prior to its expiry.
      */
     public OAuth2AuthorizationGrantBuilder refreshBefore(Duration refreshBefore) {
-        this.refreshBefore = requireNonNull(refreshBefore, "refreshBefore");
+        requireNonNull(refreshBefore, "refreshBefore");
+        checkState(!refreshBefore.isNegative(), "refreshBefore: %s (expected: >= 0)", refreshBefore);
+        this.refreshBefore = refreshBefore;
         return this;
     }
 
