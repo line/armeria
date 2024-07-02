@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -37,11 +38,12 @@ import io.netty.util.concurrent.EventExecutor;
  *
  * @param <T> the type of the elements signaled
  */
-public class TimeoutStreamMessage<T> implements StreamMessage<T> {
+final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
     private final StreamMessage<? extends T> delegate;
     private final Duration timeoutDuration;
     private final StreamTimeoutMode timeoutMode;
+    @Nullable
     private TimeoutSubscriber<T> timeoutSubscriber;
 
     /**
@@ -51,7 +53,7 @@ public class TimeoutStreamMessage<T> implements StreamMessage<T> {
      * @param timeoutDuration the duration before a timeout occurs
      * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
      */
-    public TimeoutStreamMessage(StreamMessage<? extends T> delegate, Duration timeoutDuration,
+    TimeoutStreamMessage(StreamMessage<? extends T> delegate, Duration timeoutDuration,
                                 StreamTimeoutMode timeoutMode) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");

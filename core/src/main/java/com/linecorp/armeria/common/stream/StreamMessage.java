@@ -1217,8 +1217,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * @param timeoutDuration the duration before a timeout occurs
      * @return a new {@link TimeoutStreamMessage} with the specified timeout duration and default mode
-     * @throws NullPointerException if {@code timeoutDuration} is null
      */
+    @UnstableApi
     default StreamMessage<T> timeout(Duration timeoutDuration) {
         requireNonNull(timeoutDuration, "timeoutDuration");
         return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
@@ -1240,8 +1240,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param timeoutDuration the duration before a timeout occurs
      * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
      * @return a new {@link TimeoutStreamMessage} with the specified timeout duration and mode applied
-     * @throws NullPointerException if {@code timeoutDuration} or {@code timeoutMode} is null
      */
+    @UnstableApi
     default StreamMessage<T> timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
         requireNonNull(timeoutDuration, "timeoutDuration");
         requireNonNull(timeoutMode, "timeoutMode");

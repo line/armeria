@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.TimeoutException;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
-final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
+final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscription {
     private static final String TIMEOUT_MESSAGE = "Stream timed out after %d ms (timeout mode: %s)";
     private final Subscriber<? super T> delegate;
     private final EventExecutor executor;
@@ -38,7 +38,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
     private final long timeoutNanos;
     private ScheduledFuture<?> timeoutFuture;
     private Subscription subscription;
-    private long lastOnNextTimeNanos;
+    private long lastEventTimeNanos;
     private boolean isTerminated;
 
     TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
@@ -50,7 +50,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
         this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
     }
 
-    private ScheduledFuture<?> createTimeoutSchedule(long delay, TimeUnit unit) {
+    private ScheduledFuture<?> scheduleTimeout(long delay, TimeUnit unit) {
         return executor.schedule(this, delay, unit);
     }
 
@@ -72,27 +72,27 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
     public void run() {
         if (timeoutMode == StreamTimeoutMode.UNTIL_NEXT) {
             final long currentTimeNanos = System.nanoTime();
-            final long elapsedNanos = currentTimeNanos - lastOnNextTimeNanos;
+            final long elapsedNanos = currentTimeNanos - lastEventTimeNanos;
 
             if (elapsedNanos < timeoutNanos) {
                 final long delayNanos = timeoutNanos - elapsedNanos;
-                timeoutFuture = createTimeoutSchedule(delayNanos, TimeUnit.NANOSECONDS);
+                timeoutFuture = scheduleTimeout(delayNanos, TimeUnit.NANOSECONDS);
                 return;
             }
         }
         if (!attemptTerminate()) {
             return;
         }
-        subscription.cancel();
         delegate.onError(new TimeoutException(
                 String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode)));
+        subscription.cancel();
     }
 
     @Override
     public void onSubscribe(Subscription s) {
         subscription = s;
-        lastOnNextTimeNanos = System.nanoTime();
-        timeoutFuture = createTimeoutSchedule(timeoutNanos, TimeUnit.NANOSECONDS);
+        lastEventTimeNanos = System.nanoTime();
+        timeoutFuture = scheduleTimeout(timeoutNanos, TimeUnit.NANOSECONDS);
         delegate.onSubscribe(s);
     }
 
@@ -103,7 +103,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
         }
         switch (timeoutMode) {
             case UNTIL_NEXT:
-                lastOnNextTimeNanos = System.nanoTime();
+                lastEventTimeNanos = System.nanoTime();
                 break;
             case UNTIL_FIRST:
                 timeoutFuture.cancel(false);
@@ -130,5 +130,16 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T> {
         }
         cancelSchedule();
         delegate.onComplete();
+    }
+
+    @Override
+    public void request(long l) {
+        subscription.request(l);
+    }
+
+    @Override
+    public void cancel() {
+        cancelSchedule();
+        subscription.cancel();
     }
 }
