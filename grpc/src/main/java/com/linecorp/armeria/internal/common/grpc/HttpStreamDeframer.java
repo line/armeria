@@ -125,7 +125,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
                 }
                 Status grpcStatus0 = Status.fromThrowable(t);
                 if (grpcStatus0.getCause() != null) {
-                    grpcStatus0 = exceptionHandler.apply(ctx, grpcStatus0, t, metadata);
+                    grpcStatus0 = exceptionHandler.apply(ctx, grpcStatus0, grpcStatus0.getCause(), metadata);
                 }
                 assert grpcStatus0 != null;
                 transportStatusListener.transportReportStatus(grpcStatus0, metadata);
@@ -160,7 +160,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
         }
         Status status = Status.fromThrowable(cause);
         if (status.getCause() != null) {
-            status = exceptionHandler.apply(ctx, status, cause, metadata);
+            status = exceptionHandler.apply(ctx, status, status.getCause(), metadata);
         }
         assert status != null;
         transportStatusListener.transportReportStatus(status, metadata);

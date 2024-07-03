@@ -327,7 +327,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             }
             Status status = Status.fromThrowable(cancellationCause);
             if (status.getCause() != null) {
-                status = call.exceptionHandler().apply(ctx, status, cancellationCause, metadata);
+                status = call.exceptionHandler().apply(ctx, status, status.getCause(), metadata);
             }
             assert status != null;
             call.close(new ServerStatusAndMetadata(status, metadata, true, true));

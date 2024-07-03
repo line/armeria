@@ -471,7 +471,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             }
             Status status = Status.fromThrowable(t);
             if (status.getCause() != null) {
-                status = exceptionHandler.apply(ctx, status, t, metadata);
+                status = exceptionHandler.apply(ctx, status, status.getCause(), metadata);
             }
             assert status != null;
             close(status, metadata);
@@ -536,7 +536,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
         Status status = Status.fromThrowable(t);
         if (status.getCause() != null) {
-            status = exceptionHandler.apply(ctx, status, t, metadata);
+            status = exceptionHandler.apply(ctx, status, status.getCause(), metadata);
         }
         assert status != null;
         closeWhenEos(status, metadata);
