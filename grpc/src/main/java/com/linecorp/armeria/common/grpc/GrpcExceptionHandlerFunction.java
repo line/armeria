@@ -51,10 +51,8 @@ public interface GrpcExceptionHandlerFunction {
      * Maps the specified {@link Throwable} to a gRPC {@link Status} and mutates the specified {@link Metadata}.
      * If {@code null} is returned, {@link #of()} will be used to return {@link Status} as the default.
      *
-     * <p>The {@link Status} may also be specified as a parameter if it is created by
-     * the upstream gRPC framework.
-     * You can return the {@link Status} or any other {@link Status} as needed. If the exception is raised
-     * internally in Armeria, no {@link Status} created, so {@code null} will be specified.
+     * <p>The specified {@link Status} parameter was created via {@link Status#fromThrowable(Throwable).
+     * You can return the {@link Status} or any other {@link Status} as needed.
      */
     @Nullable
     Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata);
