@@ -57,7 +57,7 @@ public interface GrpcExceptionHandlerFunction {
      * internally in Armeria, no {@link Status} created, so {@code null} will be specified.
      */
     @Nullable
-    Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata);
+    Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata);
 
     /**
      * Returns a {@link GrpcExceptionHandlerFunction} that returns the result of this function

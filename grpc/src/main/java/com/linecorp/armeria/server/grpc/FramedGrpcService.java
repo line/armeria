@@ -236,10 +236,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 } catch (IllegalArgumentException e) {
                     final Metadata metadata = new Metadata();
                     final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(method);
+                    final Status status = Status.UNKNOWN.withCause(e);
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    exceptionHandler.apply(ctx, null, e, metadata), metadata));
+                                    exceptionHandler.apply(ctx, status, e, metadata), metadata));
                 }
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(AbstractUnframedGrpcService.IS_UNFRAMED_GRPC))) {
@@ -320,9 +321,16 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            final Status status = call.exceptionHandler().apply(ctx, null, cancellationCause, headers);
+            Metadata metadata = Status.trailersFromThrowable(cancellationCause);
+            if (metadata == null) {
+                metadata = new Metadata();
+            }
+            Status status = Status.fromThrowable(cancellationCause);
+            if (status.getCause() != null) {
+                status = call.exceptionHandler().apply(ctx, status, cancellationCause, metadata);
+            }
             assert status != null;
-            call.close(new ServerStatusAndMetadata(status, new Metadata(), true, true));
+            call.close(new ServerStatusAndMetadata(status, metadata, true, true));
             return null;
         });
     }

@@ -27,23 +27,24 @@ import com.linecorp.armeria.common.util.Exceptions;
 import io.grpc.Metadata;
 import io.grpc.Status;
 
-public final class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptionHandlerFunction {
+public final class UnwrappingGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction {
     private final GrpcExceptionHandlerFunction delegate;
 
-    public UnwrappingGrpcExceptionHandleFunction(GrpcExceptionHandlerFunction handlerFunction) {
+    public UnwrappingGrpcExceptionHandlerFunction(GrpcExceptionHandlerFunction handlerFunction) {
         delegate = handlerFunction;
     }
 
     @Nullable
     @Override
-    public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
+    public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
         final Throwable t = peelAndUnwrap(cause);
         return delegate.apply(ctx, status, t, metadata);
     }
 
     private static Throwable peelAndUnwrap(Throwable t) {
         requireNonNull(t, "t");
-        Throwable cause = Exceptions.peel(t);
+        t = Exceptions.peel(t);
+        Throwable cause = t;
         while (cause != null) {
             if (cause instanceof ArmeriaStatusException) {
                 return StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);

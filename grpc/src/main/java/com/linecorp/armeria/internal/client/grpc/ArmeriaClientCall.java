@@ -248,9 +248,21 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(compressor, metadata, remainingNanos);
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
-                (unused, cause) -> HttpResponse.ofFailure(exceptionHandler.apply(ctx, null, cause, metadata)
-                                                                          .withDescription(cause.getMessage())
-                                                                          .asRuntimeException());
+                (unused, cause) -> {
+                    Metadata responseMetadata = Status.trailersFromThrowable(cause);
+                    if (responseMetadata == null) {
+                        responseMetadata = new Metadata();
+                    }
+                    Status status = Status.fromThrowable(cause);
+                    if (status.getCause() != null) {
+                        status = exceptionHandler.apply(ctx, status, cause, responseMetadata);
+                    }
+                    assert status != null;
+                    if (status.getDescription() == null) {
+                        status = status.withDescription(cause.getMessage());
+                    }
+                    return HttpResponse.ofFailure(status.asRuntimeException());
+                };
         final HttpResponse res = initContextAndExecuteWithFallback(
                 httpClient, ctx, endpointGroup, HttpResponse::of, errorResponseFactory);
 
@@ -453,8 +465,16 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             });
         } catch (Throwable t) {
-            final Metadata metadata = new Metadata();
-            close(exceptionHandler.apply(ctx, null, t, metadata), metadata);
+            Metadata metadata = Status.trailersFromThrowable(t);
+            if (metadata == null) {
+                metadata = new Metadata();
+            }
+            Status status = Status.fromThrowable(t);
+            if (status.getCause() != null) {
+                status = exceptionHandler.apply(ctx, status, t, metadata);
+            }
+            assert status != null;
+            close(status, metadata);
         }
     }
 
@@ -510,8 +530,16 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void closeWhenListenerThrows(Throwable t) {
-        final Metadata metadata = new Metadata();
-        closeWhenEos(exceptionHandler.apply(ctx, null, t, metadata), metadata);
+        Metadata metadata = Status.trailersFromThrowable(t);
+        if (metadata == null) {
+            metadata = new Metadata();
+        }
+        Status status = Status.fromThrowable(t);
+        if (status.getCause() != null) {
+            status = exceptionHandler.apply(ctx, status, t, metadata);
+        }
+        assert status != null;
+        closeWhenEos(status, metadata);
     }
 
     private void closeWhenEos(Status status, Metadata metadata) {
