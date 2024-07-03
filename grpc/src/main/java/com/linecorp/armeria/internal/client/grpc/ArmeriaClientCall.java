@@ -17,6 +17,8 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil.messageBuf;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.fromThrowable;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -249,15 +251,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
                 (unused, cause) -> {
-                    Metadata responseMetadata = Status.trailersFromThrowable(cause);
-                    if (responseMetadata == null) {
-                        responseMetadata = new Metadata();
-                    }
-                    Status status = Status.fromThrowable(cause);
-                    if (status.getCause() != null) {
-                        status = exceptionHandler.apply(ctx, status, cause, responseMetadata);
-                    }
-                    assert status != null;
+                    final Metadata responseMetadata = generateMetadataFromThrowable(cause);
+                    Status status = fromThrowable(ctx, exceptionHandler, cause, responseMetadata);
                     if (status.getDescription() == null) {
                         status = status.withDescription(cause.getMessage());
                     }
@@ -465,16 +460,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             });
         } catch (Throwable t) {
-            Metadata metadata = Status.trailersFromThrowable(t);
-            if (metadata == null) {
-                metadata = new Metadata();
-            }
-            Status status = Status.fromThrowable(t);
-            if (status.getCause() != null) {
-                status = exceptionHandler.apply(ctx, status, status.getCause(), metadata);
-            }
-            assert status != null;
-            close(status, metadata);
+            final Metadata metadata = generateMetadataFromThrowable(t);
+            close(fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
         }
     }
 
@@ -530,16 +517,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void closeWhenListenerThrows(Throwable t) {
-        Metadata metadata = Status.trailersFromThrowable(t);
-        if (metadata == null) {
-            metadata = new Metadata();
-        }
-        Status status = Status.fromThrowable(t);
-        if (status.getCause() != null) {
-            status = exceptionHandler.apply(ctx, status, status.getCause(), metadata);
-        }
-        assert status != null;
-        closeWhenEos(status, metadata);
+        final Metadata metadata = generateMetadataFromThrowable(t);
+        closeWhenEos(fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
     }
 
     private void closeWhenEos(Status status, Metadata metadata) {

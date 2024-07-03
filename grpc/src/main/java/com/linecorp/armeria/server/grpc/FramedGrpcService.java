@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.fromThrowable;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static com.linecorp.armeria.internal.common.grpc.GrpcExchangeTypeUtil.toExchangeType;
 import static java.util.Objects.requireNonNull;
 
@@ -236,7 +238,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 } catch (IllegalArgumentException e) {
                     final Metadata metadata = new Metadata();
                     final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(method);
-                    final Status status = Status.UNKNOWN.withCause(e);
+                    final Status status = Status.INVALID_ARGUMENT.withCause(e);
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
@@ -298,9 +300,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         }
     }
 
-    private <I, O> void startCall(ServerMethodDefinition<I, O> methodDef, ServiceRequestContext ctx,
-                                  HttpRequest req, MethodDescriptor<I, O> methodDescriptor,
-                                  AbstractServerCall<I, O> call) {
+    private static <I, O> void startCall(ServerMethodDefinition<I, O> methodDef, ServiceRequestContext ctx,
+                                         HttpRequest req, MethodDescriptor<I, O> methodDescriptor,
+                                         AbstractServerCall<I, O> call) {
         final Listener<I> listener;
         final Metadata headers = MetadataUtil.copyFromHeaders(req.headers());
         try {
@@ -321,16 +323,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            Metadata metadata = Status.trailersFromThrowable(cancellationCause);
-            if (metadata == null) {
-                metadata = new Metadata();
-            }
-            Status status = Status.fromThrowable(cancellationCause);
-            if (status.getCause() != null) {
-                status = call.exceptionHandler().apply(ctx, status, status.getCause(), metadata);
-            }
-            assert status != null;
-            call.close(new ServerStatusAndMetadata(status, metadata, true, true));
+            final Metadata metadata = generateMetadataFromThrowable(cancellationCause);
+            call.close(new ServerStatusAndMetadata(
+                    fromThrowable(ctx, call.exceptionHandler(), cancellationCause, metadata),
+                    metadata, true, true));
             return null;
         });
     }

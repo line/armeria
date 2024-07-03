@@ -17,6 +17,8 @@
 package com.linecorp.armeria.internal.common.grpc;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.fromThrowable;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -119,16 +121,9 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             try {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
-                Metadata metadata = Status.trailersFromThrowable(t);
-                if (metadata == null) {
-                    metadata = new Metadata();
-                }
-                Status grpcStatus0 = Status.fromThrowable(t);
-                if (grpcStatus0.getCause() != null) {
-                    grpcStatus0 = exceptionHandler.apply(ctx, grpcStatus0, grpcStatus0.getCause(), metadata);
-                }
-                assert grpcStatus0 != null;
-                transportStatusListener.transportReportStatus(grpcStatus0, metadata);
+                final Metadata metadata = generateMetadataFromThrowable(t);
+                transportStatusListener.transportReportStatus(
+                        fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
                 return;
             }
         }
@@ -154,16 +149,9 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Override
     public void processOnError(Throwable cause) {
-        Metadata metadata = Status.trailersFromThrowable(cause);
-        if (metadata == null) {
-            metadata = new Metadata();
-        }
-        Status status = Status.fromThrowable(cause);
-        if (status.getCause() != null) {
-            status = exceptionHandler.apply(ctx, status, status.getCause(), metadata);
-        }
-        assert status != null;
-        transportStatusListener.transportReportStatus(status, metadata);
+        final Metadata metadata = generateMetadataFromThrowable(cause);
+        transportStatusListener.transportReportStatus(
+                fromThrowable(ctx, exceptionHandler, cause, metadata), metadata);
     }
 
     @Override

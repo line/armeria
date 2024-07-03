@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil.serializeTrailersAsMessage;
 import static java.util.Objects.requireNonNull;
 
@@ -223,7 +224,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private void close(Status status, Metadata metadata, boolean cancelled,
-                       @Nullable Throwable originalCauseForLogging) {
+                       @Nullable Throwable originalCause) {
         final Throwable cause = status.getCause();
         if (cause == null) {
             close(new ServerStatusAndMetadata(status, metadata, false, cancelled));
@@ -236,7 +237,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
         final ServerStatusAndMetadata statusAndMetadata =
                 new ServerStatusAndMetadata(newStatus, metadata, false, cancelled);
-        close(statusAndMetadata, originalCauseForLogging != null ? originalCauseForLogging : cause);
+        close(statusAndMetadata, originalCause != null ? originalCause : cause);
     }
 
     public final void close(ServerStatusAndMetadata statusAndMetadata) {
@@ -601,12 +602,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
         responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
-    }
-
-    private static Metadata generateMetadataFromThrowable(Throwable exception) {
-        @Nullable
-        final Metadata metadata = Status.trailersFromThrowable(exception);
-        return metadata != null ? metadata : new Metadata();
     }
 
     @Nullable

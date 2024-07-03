@@ -51,7 +51,7 @@ public interface GrpcExceptionHandlerFunction {
      * Maps the specified {@link Throwable} to a gRPC {@link Status} and mutates the specified {@link Metadata}.
      * If {@code null} is returned, {@link #of()} will be used to return {@link Status} as the default.
      *
-     * <p>The specified {@link Status} parameter was created via {@link Status#fromThrowable(Throwable).
+     * <p>The specified {@link Status} parameter was created via {@link Status#fromThrowable(Throwable)}.
      * You can return the {@link Status} or any other {@link Status} as needed.
      */
     @Nullable
