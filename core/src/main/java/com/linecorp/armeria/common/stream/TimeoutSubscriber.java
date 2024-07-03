@@ -87,7 +87,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscriptio
         subscription = s;
         lastEventTimeNanos = System.nanoTime();
         timeoutFuture = scheduleTimeout(timeoutNanos, TimeUnit.NANOSECONDS);
-        delegate.onSubscribe(s);
+        delegate.onSubscribe(this);
     }
 
     @Override
