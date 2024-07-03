@@ -25,21 +25,25 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 
 final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscription {
+
     private static final String TIMEOUT_MESSAGE = "Stream timed out after %d ms (timeout mode: %s)";
     private final Subscriber<? super T> delegate;
     private final EventExecutor executor;
     private final StreamTimeoutMode timeoutMode;
     private final Duration timeoutDuration;
     private final long timeoutNanos;
+    @Nullable
     private ScheduledFuture<?> timeoutFuture;
+    @Nullable
     private Subscription subscription;
     private long lastEventTimeNanos;
-    private boolean isTerminated;
+    private boolean completed;
 
     TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
                       StreamTimeoutMode timeoutMode) {
@@ -54,16 +58,8 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscriptio
         return executor.schedule(this, delay, unit);
     }
 
-    private boolean attemptTerminate() {
-        if (isTerminated) {
-            return false;
-        }
-        isTerminated = true;
-        return true;
-    }
-
-    public void cancelSchedule() {
-        if (!timeoutFuture.isCancelled()) {
+    void cancelSchedule() {
+        if (timeoutFuture != null && !timeoutFuture.isCancelled()) {
             timeoutFuture.cancel(false);
         }
     }
@@ -80,9 +76,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscriptio
                 return;
             }
         }
-        if (!attemptTerminate()) {
-            return;
-        }
+        completed = true;
         delegate.onError(new TimeoutException(
                 String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode)));
         subscription.cancel();
@@ -98,7 +92,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscriptio
 
     @Override
     public void onNext(T t) {
-        if (isTerminated || timeoutFuture.isCancelled()) {
+        if (completed) {
             return;
         }
         switch (timeoutMode) {
@@ -106,7 +100,7 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscriptio
                 lastEventTimeNanos = System.nanoTime();
                 break;
             case UNTIL_FIRST:
-                timeoutFuture.cancel(false);
+                cancelSchedule();
                 break;
             case UNTIL_EOS:
                 break;
@@ -116,18 +110,20 @@ final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscriptio
 
     @Override
     public void onError(Throwable throwable) {
-        if (!attemptTerminate()) {
+        if (completed) {
             return;
         }
+        completed = true;
         cancelSchedule();
         delegate.onError(throwable);
     }
 
     @Override
     public void onComplete() {
-        if (!attemptTerminate()) {
+        if (completed) {
             return;
         }
+        completed = true;
         cancelSchedule();
         delegate.onComplete();
     }

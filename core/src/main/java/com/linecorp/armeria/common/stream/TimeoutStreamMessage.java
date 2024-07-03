@@ -54,7 +54,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
      * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
      */
     TimeoutStreamMessage(StreamMessage<? extends T> delegate, Duration timeoutDuration,
-                                StreamTimeoutMode timeoutMode) {
+                         StreamTimeoutMode timeoutMode) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
         this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
@@ -114,7 +114,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        timeoutSubscriber = new TimeoutSubscriber<T>(subscriber, executor, timeoutDuration, timeoutMode);
+        timeoutSubscriber = new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode);
         delegate.subscribe(timeoutSubscriber, executor, options);
     }
 
