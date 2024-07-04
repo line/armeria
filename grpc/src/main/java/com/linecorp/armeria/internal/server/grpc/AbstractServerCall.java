@@ -16,8 +16,10 @@
 
 package com.linecorp.armeria.internal.server.grpc;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.applyExceptionHandler;
 import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil.serializeTrailersAsMessage;
 import static java.util.Objects.requireNonNull;
@@ -230,14 +232,13 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             close(new ServerStatusAndMetadata(status, metadata, false, cancelled));
             return;
         }
-        Status newStatus = exceptionHandler.apply(ctx, status, cause, metadata);
-        assert newStatus != null;
+        Status newStatus = applyExceptionHandler(ctx, exceptionHandler, status, cause, metadata);
         if (status.getDescription() != null) {
             newStatus = newStatus.withDescription(status.getDescription());
         }
         final ServerStatusAndMetadata statusAndMetadata =
                 new ServerStatusAndMetadata(newStatus, metadata, false, cancelled);
-        close(statusAndMetadata, originalCause != null ? originalCause : cause);
+        close(statusAndMetadata, firstNonNull(originalCause, cause));
     }
 
     public final void close(ServerStatusAndMetadata statusAndMetadata) {

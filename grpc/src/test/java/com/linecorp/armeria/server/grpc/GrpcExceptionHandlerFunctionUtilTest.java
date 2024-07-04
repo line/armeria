@@ -38,7 +38,7 @@ import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
-class UnwrappingGrpcExceptionHandlerFunctionTest {
+class GrpcExceptionHandlerFunctionUtilTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
