@@ -41,7 +41,6 @@
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
 *.compute.estate
-*.cprapid.com
 *.cryptonomic.net
 *.customer-oci.com
 *.d.crm.dev
@@ -1376,6 +1375,7 @@ cf
 cf-ipfs.com
 cfa
 cfd
+cfolks.pl
 cg
 ch
 ch.eu.org
@@ -1822,11 +1822,13 @@ courses
 coz.br
 cpa
 cpa.pro
+cprapid.com
 cpserver.com
 cq.cn
 cr
 cr.it
 cr.ua
+craft.me
 crafting.xyz
 cranky.jp
 crap.jp
@@ -2102,6 +2104,7 @@ duckdns.org
 dunlop
 dupont
 durban
+durumis.com
 dvag
 dvr
 dvrcam.info
@@ -2944,7 +2947,6 @@ fylkesbibl.no
 fyresdal.no
 g.bg
 g.se
-g.vbrplsbx.io
 g12.br
 ga
 ga.us
@@ -3437,6 +3439,12 @@ hasuda.saitama.jp
 hasura-app.io
 hasura.app
 hasvik.no
+hateblo.jp
+hatenablog.com
+hatenablog.jp
+hatenadiary.com
+hatenadiary.jp
+hatenadiary.org
 hatinh.vn
 hatogaya.saitama.jp
 hatoyama.saitama.jp
@@ -3874,7 +3882,6 @@ ink
 ino.kochi.jp
 instance.datadetect.com
 instances.spawn.cc
-instantcloud.cn
 institute
 insurance
 insurance.aero
