@@ -85,15 +85,15 @@ class GrpcClientExceptionHandlerTest {
         final RuntimeException exception = new RuntimeException();
         final TestServiceBlockingStub stub =
                 GrpcClients.builder(server.httpUri())
-                           .exceptionHandler(((ctx, cause, metadata) -> {
+                           .exceptionHandler(((ctx, status, cause, metadata) -> {
                                stringDeque.add("1");
                                return null;
                            }))
-                           .exceptionHandler(((ctx, cause, metadata) -> {
+                           .exceptionHandler(((ctx, status, cause, metadata) -> {
                                stringDeque.add("2");
                                return null;
                            }))
-                           .exceptionHandler(((ctx, cause, metadata) -> {
+                           .exceptionHandler(((ctx, status, cause, metadata) -> {
                                if (cause == exception) {
                                    stringDeque.add("3");
                                    return Status.DATA_LOSS;

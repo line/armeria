@@ -31,7 +31,7 @@ class HttpRequestSubscriber extends AbstractHttpRequestSubscriber {
     HttpRequestSubscriber(Channel ch, ClientHttpObjectEncoder encoder, HttpResponseDecoder responseDecoder,
                           HttpRequest request, DecodedHttpResponse originalRes,
                           ClientRequestContext ctx, long timeoutMillis) {
-        super(ch, encoder, responseDecoder, request, originalRes, ctx, timeoutMillis, true, true);
+        super(ch, encoder, responseDecoder, request, originalRes, ctx, timeoutMillis, true, true, false);
     }
 
     @Override

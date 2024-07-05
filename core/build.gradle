@@ -227,6 +227,9 @@ if (tasks.findByName('trimShadedJar')) {
         keep "class com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.ec.** { *; }"
         keep "class com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.rsa.** { *; }"
         keep "class com.linecorp.armeria.internal.shaded.bouncycastle.jcajce.provider.asymmetric.x509.** { *; }"
+        // Keep the Guava classes accessed during testing.
+        keep "class com.linecorp.armeria.internal.shaded.guava.net.HttpHeaders { *; }"
+        keep "class com.linecorp.armeria.internal.shaded.guava.net.MediaType { *; }"
         dontnote
     }
 }

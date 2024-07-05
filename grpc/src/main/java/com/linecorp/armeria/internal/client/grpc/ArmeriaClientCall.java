@@ -17,6 +17,8 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil.messageBuf;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.fromThrowable;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -248,9 +250,14 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         prepareHeaders(compressor, metadata, remainingNanos);
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
-                (unused, cause) -> HttpResponse.ofFailure(exceptionHandler.apply(ctx, cause, metadata)
-                                                                          .withDescription(cause.getMessage())
-                                                                          .asRuntimeException());
+                (unused, cause) -> {
+                    final Metadata responseMetadata = generateMetadataFromThrowable(cause);
+                    Status status = fromThrowable(ctx, exceptionHandler, cause, responseMetadata);
+                    if (status.getDescription() == null) {
+                        status = status.withDescription(cause.getMessage());
+                    }
+                    return HttpResponse.ofFailure(status.asRuntimeException());
+                };
         final HttpResponse res = initContextAndExecuteWithFallback(
                 httpClient, ctx, endpointGroup, HttpResponse::of, errorResponseFactory);
 
@@ -453,8 +460,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             });
         } catch (Throwable t) {
-            final Metadata metadata = new Metadata();
-            close(exceptionHandler.apply(ctx, t, metadata), metadata);
+            final Metadata metadata = generateMetadataFromThrowable(t);
+            close(fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
         }
     }
 
@@ -510,8 +517,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void closeWhenListenerThrows(Throwable t) {
-        final Metadata metadata = new Metadata();
-        closeWhenEos(exceptionHandler.apply(ctx, t, metadata), metadata);
+        final Metadata metadata = generateMetadataFromThrowable(t);
+        closeWhenEos(fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
     }
 
     private void closeWhenEos(Status status, Metadata metadata) {
