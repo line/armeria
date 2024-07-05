@@ -79,10 +79,9 @@ final class ClusterEntry implements AsyncCloseable {
         if (logger.isTraceEnabled()) {
             logger.trace("XdsEndpointGroup is using a new PrioritySet({})", prioritySet);
         }
+        loadBalancer = new DefaultLoadBalancer(prioritySet);
         if (clusterSnapshot.xdsResource().resource().hasLbSubsetConfig()) {
-            loadBalancer = new SubsetLoadBalancer(prioritySet);
-        } else {
-            loadBalancer = new DefaultLoadBalancer(prioritySet);
+            loadBalancer = new SubsetLoadBalancer(prioritySet, loadBalancer);
         }
         clusterManager.notifyListeners();
     }
