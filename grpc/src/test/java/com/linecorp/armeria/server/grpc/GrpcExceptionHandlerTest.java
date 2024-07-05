@@ -470,7 +470,7 @@ class GrpcExceptionHandlerTest {
 
         @Nullable
         @Override
-        public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("first");
             if (Objects.equals(cause.getMessage(), "first")) {
                 return Status.UNAUTHENTICATED;
@@ -483,7 +483,7 @@ class GrpcExceptionHandlerTest {
 
         @Nullable
         @Override
-        public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("second");
             if (Objects.equals(cause.getMessage(), "second")) {
                 return Status.INVALID_ARGUMENT;
@@ -496,7 +496,7 @@ class GrpcExceptionHandlerTest {
 
         @Nullable
         @Override
-        public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("third");
             if (Objects.equals(cause.getMessage(), "third")) {
                 return Status.NOT_FOUND;
@@ -509,7 +509,7 @@ class GrpcExceptionHandlerTest {
 
         @Nullable
         @Override
-        public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("forth");
             if (Objects.equals(cause.getMessage(), "forth")) {
                 return Status.UNAVAILABLE;
