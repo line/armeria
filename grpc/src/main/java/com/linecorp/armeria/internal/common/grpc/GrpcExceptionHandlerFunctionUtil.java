@@ -34,7 +34,7 @@ public final class GrpcExceptionHandlerFunctionUtil {
 
     public static Status fromThrowable(RequestContext ctx, GrpcExceptionHandlerFunction exceptionHandler,
                                        Throwable t, Metadata metadata) {
-        final Status status = Status.fromThrowable(t);
+        final Status status = Status.fromThrowable(peelAndUnwrap(t));
         final Throwable cause = status.getCause();
         if (cause == null) {
             return status;
