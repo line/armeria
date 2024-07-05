@@ -18,6 +18,10 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.bootstrapCluster;
+import static com.linecorp.armeria.xds.XdsTestResources.createStaticCluster;
+import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
+import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
+import static com.linecorp.armeria.xds.XdsTestResources.staticBootstrap;
 import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
 import static com.linecorp.armeria.xds.XdsTestResources.stringValue;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
@@ -25,6 +29,9 @@ import static com.linecorp.armeria.xds.client.endpoint.XdsConverterUtilTest.samp
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -40,6 +47,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.XdsTestResources;
 
@@ -54,8 +62,12 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetSele
 import io.envoyproxy.envoy.config.core.v3.AggregatedConfigSource;
 import io.envoyproxy.envoy.config.core.v3.ApiVersion;
 import io.envoyproxy.envoy.config.core.v3.ConfigSource;
+import io.envoyproxy.envoy.config.core.v3.HealthStatus;
+import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.core.v3.Metadata;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
+import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
+import io.envoyproxy.envoy.config.listener.v3.Listener;
 
 class RouteMetadataSubsetTest {
 
@@ -186,6 +198,62 @@ class RouteMetadataSubsetTest {
                 assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8081));
                 assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
             }
+        }
+    }
+
+    @Test
+    void differentPriorities() {
+        final Metadata metadata = Metadata.newBuilder().putFilterMetadata(
+                SUBSET_LOAD_BALANCING_FILTER_NAME, Struct.newBuilder()
+                                                         .putFields("foo", stringValue("bar"))
+                                                         .build()).build();
+        final Listener listener = staticResourceListener(metadata);
+
+        final List<LbEndpoint> lbEndpoints0 =
+                ImmutableList.of(endpoint("127.0.0.1", 8080, metadata, 1, HealthStatus.HEALTHY),
+                                 endpoint("127.0.0.1", 8081, metadata, 1, HealthStatus.DEGRADED),
+                                 // no metadata
+                                 endpoint("127.0.0.1", 9001, HealthStatus.HEALTHY),
+                                 endpoint("127.0.0.1", 9002, HealthStatus.DEGRADED));
+        final List<LbEndpoint> lbEndpoints1 =
+                ImmutableList.of(endpoint("127.0.0.1", 8082, metadata, 1, HealthStatus.HEALTHY),
+                                 endpoint("127.0.0.1", 8083, metadata, 1, HealthStatus.DEGRADED),
+                                 // no metadata
+                                 endpoint("127.0.0.1", 9003, HealthStatus.HEALTHY),
+                                 endpoint("127.0.0.1", 9004, HealthStatus.DEGRADED));
+        final ClusterLoadAssignment loadAssignment =
+                ClusterLoadAssignment
+                        .newBuilder()
+                        .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints0, 0))
+                        .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), lbEndpoints1, 1))
+                        .build();
+        final Cluster cluster = createStaticCluster("cluster", loadAssignment)
+                .toBuilder().setLbSubsetConfig(
+                        LbSubsetConfig.newBuilder()
+                                      .addSubsetSelectors(LbSubsetSelector.newBuilder()
+                                                                          .addKeys("foo")))
+                .build();
+
+        final Bootstrap bootstrap = staticBootstrap(listener, cluster);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
+            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
+            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+            final ClientRequestContext ctx =
+                    ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+            // default overprovisioning factor (140) * 0.5 = 70 will be routed
+            // to healthy endpoints for priority 0
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 0);
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 68);
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
+
+            // 100 - 70 (priority 0) = 30 will be routed to healthy endpoints for priority 1
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 70);
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
+            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 99);
+            assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
     }
 }
