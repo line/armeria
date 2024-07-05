@@ -26,6 +26,7 @@ import java.util.function.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
@@ -100,6 +101,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final String DNS_CACHE_SPEC = "maximumSize=4096";
     static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
     static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS = 3000;
+    static final ResponseTimeoutMode DEFAULT_RESPONSE_TIMEOUT_MODE = ResponseTimeoutMode.RESPONSE_READ;
 
     private DefaultFlagsProvider() {}
 
@@ -510,5 +512,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultHttp1ConnectionCloseDelayMillis() {
         return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
+    }
+
+    @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return DEFAULT_RESPONSE_TIMEOUT_MODE;
     }
 }

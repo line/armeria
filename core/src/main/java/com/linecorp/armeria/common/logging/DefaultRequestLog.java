@@ -428,7 +428,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private static void completeSatisfiedFutures(RequestLogFuture[] satisfiedFutures, RequestLog log,
                                                  RequestContext ctx) {
         if (!ctx.eventLoop().inEventLoop()) {
-            ctx.eventLoop().execute(() -> completeSatisfiedFutures(satisfiedFutures, log, ctx));
+            ctx.eventLoop().withoutContext().execute(
+                    () -> completeSatisfiedFutures(satisfiedFutures, log, ctx));
             return;
         }
         for (RequestLogFuture f : satisfiedFutures) {

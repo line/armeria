@@ -198,6 +198,9 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         final CancellationScheduler scheduler = cancellationScheduler();
         if (scheduler != null) {
             scheduler.updateTask(newCancellationTask());
+            if (ctx.responseTimeoutMode() == ResponseTimeoutMode.REQUEST_WRITE) {
+                scheduler.start();
+            }
         }
         if (ctx.isCancelled()) {
             // The previous cancellation task wraps the cause with an UnprocessedRequestException

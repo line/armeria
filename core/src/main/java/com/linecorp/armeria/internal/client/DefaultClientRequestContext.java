@@ -40,6 +40,7 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
@@ -569,8 +570,12 @@ public final class DefaultClientRequestContext
                 log.endResponse(cause);
             }
         };
-        responseCancellationScheduler.init(eventLoop().withoutContext());
-        responseCancellationScheduler.updateTask(cancellationTask);
+        if (options.responseTimeoutMode() == ResponseTimeoutMode.REQUEST_START) {
+            responseCancellationScheduler.initAndStart(eventLoop().withoutContext(), cancellationTask);
+        } else {
+            responseCancellationScheduler.init(eventLoop().withoutContext());
+            responseCancellationScheduler.updateTask(cancellationTask);
+        }
     }
 
     @Nullable
@@ -1052,5 +1057,10 @@ public final class DefaultClientRequestContext
             }
         });
         return completableFuture;
+    }
+
+    @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return options.responseTimeoutMode();
     }
 }
