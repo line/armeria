@@ -28,7 +28,7 @@ import io.grpc.Status;
 public final class GrpcExceptionHandlerFunctionUtil {
 
     public static Metadata generateMetadataFromThrowable(Throwable exception) {
-        final Metadata metadata = Status.trailersFromThrowable(exception);
+        final Metadata metadata = Status.trailersFromThrowable(peelAndUnwrap(exception));
         return metadata != null ? metadata : new Metadata();
     }
 
