@@ -31,17 +31,17 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.RequestTimeoutException;
 
-class OutlierDetectingRuleTest {
+class OutlierRuleTest {
 
     @Test
     void onException() {
-        final OutlierDetectingRule rule =
-                OutlierDetectingRule.builder()
-                                    .onException(AnticipatedException.class, OutlierDetectionDecision.IGNORE)
-                                    .onException(WriteTimeoutException.class, OutlierDetectionDecision.FATAL)
-                                    .onException(RequestTimeoutException.class,
+        final OutlierRule rule =
+                OutlierRule.builder()
+                           .onException(AnticipatedException.class, OutlierDetectionDecision.IGNORE)
+                           .onException(WriteTimeoutException.class, OutlierDetectionDecision.FATAL)
+                           .onException(RequestTimeoutException.class,
                                                  OutlierDetectionDecision.FAILURE)
-                                    .build();
+                           .build();
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertThat(rule.decide(ctx, null, new AnticipatedException()))
                 .isEqualTo(OutlierDetectionDecision.IGNORE);
@@ -57,13 +57,13 @@ class OutlierDetectingRuleTest {
 
     @Test
     void onStatus() {
-        final OutlierDetectingRule rule =
-                OutlierDetectingRule.builder()
-                                    .onStatus(HttpStatus::isClientError, OutlierDetectionDecision.IGNORE)
-                                    .onStatus(status -> status == HttpStatus.SERVICE_UNAVAILABLE,
+        final OutlierRule rule =
+                OutlierRule.builder()
+                           .onStatus(HttpStatus::isClientError, OutlierDetectionDecision.IGNORE)
+                           .onStatus(status -> status == HttpStatus.SERVICE_UNAVAILABLE,
                                               OutlierDetectionDecision.FATAL)
-                                    .onStatus(HttpStatus::isServerError, OutlierDetectionDecision.FAILURE)
-                                    .build();
+                           .onStatus(HttpStatus::isServerError, OutlierDetectionDecision.FAILURE)
+                           .build();
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertThat(rule.decide(ctx, ResponseHeaders.of(200), null))
                 .isEqualTo(OutlierDetectionDecision.NEXT);
@@ -75,15 +75,15 @@ class OutlierDetectingRuleTest {
 
     @Test
     void onResponseHeaders() {
-        final OutlierDetectingRule rule =
-                OutlierDetectingRule.builder()
-                                    .onResponseHeaders((ctx, headers) -> {
+        final OutlierRule rule =
+                OutlierRule.builder()
+                           .onResponseHeaders((ctx, headers) -> {
                                         if (headers.status().isServerError()) {
                                             return OutlierDetectionDecision.FAILURE;
                                         }
                                         return OutlierDetectionDecision.SUCCESS;
                                     })
-                                    .build();
+                           .build();
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         assertThat(rule.decide(ctx, ResponseHeaders.of(200), null))
                 .isEqualTo(OutlierDetectionDecision.SUCCESS);
@@ -93,7 +93,7 @@ class OutlierDetectingRuleTest {
 
     @Test
     void shouldRaiseExceptionIfNoRuleSet() {
-        assertThatThrownBy(() -> OutlierDetectingRule.builder().build())
+        assertThatThrownBy(() -> OutlierRule.builder().build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("No rule has been added.");
     }

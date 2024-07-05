@@ -29,19 +29,19 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A builder for creating an {@link OutlierDetectingRule}.
+ * A builder for creating an {@link OutlierRule}.
  */
 @UnstableApi
 public final class OutlierDetectingRuleBuilder {
 
-    static final OutlierDetectingRule DEFAULT_RULE =
-            OutlierDetectingRule.builder()
-                                .onServerError()
-                                .onException()
-                                .build();
+    static final OutlierRule DEFAULT_RULE =
+            OutlierRule.builder()
+                       .onServerError()
+                       .onException()
+                       .build();
 
     @Nullable
-    private OutlierDetectingRule rules;
+    private OutlierRule rules;
 
     OutlierDetectingRuleBuilder() {}
 
@@ -97,7 +97,7 @@ public final class OutlierDetectingRuleBuilder {
     public OutlierDetectingRuleBuilder onResponseHeaders(
             BiFunction<? super RequestContext, ? super ResponseHeaders, OutlierDetectionDecision> function) {
         requireNonNull(function, "function");
-        final OutlierDetectingRule rule = (ctx, headers, cause) -> {
+        final OutlierRule rule = (ctx, headers, cause) -> {
             if (headers == null) {
                 return OutlierDetectionDecision.NEXT;
             }
@@ -113,7 +113,7 @@ public final class OutlierDetectingRuleBuilder {
     public OutlierDetectingRuleBuilder onException(
             BiFunction<? super RequestContext, ? super Throwable, OutlierDetectionDecision> function) {
         requireNonNull(function, "function");
-        final OutlierDetectingRule rule = (ctx, headers, cause) -> {
+        final OutlierRule rule = (ctx, headers, cause) -> {
             if (cause == null) {
                 return OutlierDetectionDecision.NEXT;
             }
@@ -153,7 +153,7 @@ public final class OutlierDetectingRuleBuilder {
         return this;
     }
 
-    private void addRule(OutlierDetectingRule newRule) {
+    private void addRule(OutlierRule newRule) {
         if (rules == null) {
             rules = newRule;
         } else {
@@ -162,9 +162,9 @@ public final class OutlierDetectingRuleBuilder {
     }
 
     /**
-     * Builds a new {@link OutlierDetectingRule} based on the added rules.
+     * Builds a new {@link OutlierRule} based on the added rules.
      */
-    public OutlierDetectingRule build() {
+    public OutlierRule build() {
         checkState(rules != null, "No rule has been added.");
         return rules;
     }

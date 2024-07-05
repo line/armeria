@@ -21,7 +21,7 @@ enum DisabledOutlierDetection implements OutlierDetection {
     INSTANCE;
 
     @Override
-    public OutlierDetectingRule rule() {
+    public OutlierRule rule() {
         throw new UnsupportedOperationException();
     }
 

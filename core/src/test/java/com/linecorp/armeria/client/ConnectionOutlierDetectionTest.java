@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.outlier.OutlierDetectingRule;
+import com.linecorp.armeria.common.outlier.OutlierRule;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.outlier.OutlierDetectionDecision;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
@@ -52,12 +52,12 @@ class ConnectionOutlierDetectionTest {
 
     @Test
     void inactiveConnectionWhenExceedingThreshold() throws Exception {
-        final OutlierDetectingRule detectingRule =
-                OutlierDetectingRule.builder()
-                                    .onStatus(HttpStatus.SERVICE_UNAVAILABLE, OutlierDetectionDecision.FATAL)
-                                    .onStatus(HttpStatus.INTERNAL_SERVER_ERROR,
+        final OutlierRule detectingRule =
+                OutlierRule.builder()
+                           .onStatus(HttpStatus.SERVICE_UNAVAILABLE, OutlierDetectionDecision.FATAL)
+                           .onStatus(HttpStatus.INTERNAL_SERVER_ERROR,
                                               OutlierDetectionDecision.FAILURE)
-                                    .build();
+                           .build();
         final int minimumRequestThreshold = 5;
         final double failureRateThreshold = 0.8;
         final TestTicker ticker = new TestTicker();
@@ -116,12 +116,12 @@ class ConnectionOutlierDetectionTest {
 
     @Test
     void immediatelyInactiveConnectionOnFatal() throws Exception {
-        final OutlierDetectingRule detectingRule =
-                OutlierDetectingRule.builder()
-                                    .onStatus(HttpStatus.SERVICE_UNAVAILABLE, OutlierDetectionDecision.FATAL)
-                                    .onStatus(HttpStatus.INTERNAL_SERVER_ERROR,
+        final OutlierRule detectingRule =
+                OutlierRule.builder()
+                           .onStatus(HttpStatus.SERVICE_UNAVAILABLE, OutlierDetectionDecision.FATAL)
+                           .onStatus(HttpStatus.INTERNAL_SERVER_ERROR,
                                               OutlierDetectionDecision.FAILURE)
-                                    .build();
+                           .build();
         final int minimumRequestThreshold = 5;
         final double failureRateThreshold = 0.8;
         final TestTicker ticker = new TestTicker();
@@ -156,11 +156,11 @@ class ConnectionOutlierDetectionTest {
 
     @Test
     void immediatelyInactiveConnectionOnException() throws Exception {
-        final OutlierDetectingRule detectingRule =
-                OutlierDetectingRule.builder()
-                                    .onException(AbortedStreamException.class, OutlierDetectionDecision.FAILURE)
-                                    .onException(AnticipatedException.class, OutlierDetectionDecision.FATAL)
-                                    .build();
+        final OutlierRule detectingRule =
+                OutlierRule.builder()
+                           .onException(AbortedStreamException.class, OutlierDetectionDecision.FAILURE)
+                           .onException(AnticipatedException.class, OutlierDetectionDecision.FATAL)
+                           .build();
         final int minimumRequestThreshold = 5;
         final double failureRateThreshold = 0.8;
         final TestTicker ticker = new TestTicker();
@@ -194,11 +194,11 @@ class ConnectionOutlierDetectionTest {
 
     @Test
     void inactiveConnectionWhenExceedingThresholdByException() throws Exception {
-        final OutlierDetectingRule detectingRule =
-                OutlierDetectingRule.builder()
-                                    .onException(AbortedStreamException.class, OutlierDetectionDecision.FAILURE)
-                                    .onException(AnticipatedException.class, OutlierDetectionDecision.FATAL)
-                                    .build();
+        final OutlierRule detectingRule =
+                OutlierRule.builder()
+                           .onException(AbortedStreamException.class, OutlierDetectionDecision.FAILURE)
+                           .onException(AnticipatedException.class, OutlierDetectionDecision.FATAL)
+                           .build();
         final int minimumRequestThreshold = 5;
         final double failureRateThreshold = 0.8;
         final TestTicker ticker = new TestTicker();

@@ -42,7 +42,7 @@ public enum OutlierDetectionDecision {
      */
     IGNORE,
     /**
-     * The outlier detection should be delegated to the next {@link OutlierDetectingRule}.
+     * The outlier detection should be delegated to the next {@link OutlierRule}.
      */
     NEXT
 }

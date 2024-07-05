@@ -36,10 +36,10 @@ public final class OutlierDetectionBuilder {
     private static final long DEFAULT_MINIMUM_REQUEST_THRESHOLD = 10;
 
     static final OutlierDetection DEFAULT_DETECTION =
-            OutlierDetection.builder(OutlierDetectingRule.of())
+            OutlierDetection.builder(OutlierRule.of())
                             .build();
 
-    private final OutlierDetectingRule rule;
+    private final OutlierRule rule;
 
     private Ticker ticker = Ticker.systemTicker();
     private Duration counterSlidingWindow = Duration.ofSeconds(DEFAULT_COUNTER_SLIDING_WINDOW_SECONDS);
@@ -47,7 +47,7 @@ public final class OutlierDetectionBuilder {
     private double failureRateThreshold = DEFAULT_FAILURE_RATE_THRESHOLD;
     private long minimumRequestThreshold = DEFAULT_MINIMUM_REQUEST_THRESHOLD;
 
-    OutlierDetectionBuilder(OutlierDetectingRule rule) {
+    OutlierDetectionBuilder(OutlierRule rule) {
         requireNonNull(rule, "rule");
         this.rule = rule;
     }

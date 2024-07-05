@@ -25,14 +25,14 @@ import com.linecorp.armeria.common.util.Ticker;
 
 final class DefaultOutlierDetection implements OutlierDetection {
 
-    private final OutlierDetectingRule rule;
+    private final OutlierRule rule;
     private final Ticker ticker;
     private final Duration counterSlidingWindow;
     private final Duration counterUpdateInterval;
     private final double failureRateThreshold;
     private final long minimumRequestThreshold;
 
-    DefaultOutlierDetection(OutlierDetectingRule rule, Ticker ticker,
+    DefaultOutlierDetection(OutlierRule rule, Ticker ticker,
                             Duration counterSlidingWindow, Duration counterUpdateInterval,
                             double failureRateThreshold, long minimumRequestThreshold) {
         this.rule = rule;
@@ -44,7 +44,7 @@ final class DefaultOutlierDetection implements OutlierDetection {
     }
 
     @Override
-    public OutlierDetectingRule rule() {
+    public OutlierRule rule() {
         return rule;
     }
 

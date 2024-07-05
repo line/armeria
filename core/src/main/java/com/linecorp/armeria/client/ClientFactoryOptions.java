@@ -597,6 +597,7 @@ public final class ClientFactoryOptions
     /**
      * Returns the {@link OutlierDetection} which is used to detect unhealthy connections.
      */
+    @UnstableApi
     public OutlierDetection connectionOutlierDetection() {
         return get(CONNECTION_OUTLIER_DETECTION);
     }

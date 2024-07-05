@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.outlier;
 
 import static com.linecorp.armeria.common.outlier.OutlierDetectingRuleBuilder.DEFAULT_RULE;
+import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -41,13 +42,13 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 @FunctionalInterface
-public interface OutlierDetectingRule {
+public interface OutlierRule {
 
     /**
-     * Returns the default {@link OutlierDetectingRule} that detects 5xx as a failure and any exception as a
+     * Returns the default {@link OutlierRule} that detects 5xx statuses and any exception as a
      * failure.
      */
-    static OutlierDetectingRule of() {
+    static OutlierRule of() {
         return DEFAULT_RULE;
     }
 
@@ -66,11 +67,12 @@ public interface OutlierDetectingRule {
                                     @Nullable Throwable cause);
 
     /**
-     * Returns a composed {@link OutlierDetectingRule} that represents a logical OR of
-     * this {@link OutlierDetectingRule} and another. If this {@link OutlierDetectingRule} returns
+     * Returns a composed {@link OutlierRule} that represents a logical OR of
+     * this {@link OutlierRule} and another. If this {@link OutlierRule} returns
      * {@link OutlierDetectionDecision#NEXT}, then other {@link OutlierDetectionDecision} is evaluated.
      */
-    default OutlierDetectingRule orElse(OutlierDetectingRule other) {
+    default OutlierRule orElse(OutlierRule other) {
+        requireNonNull(other, "other");
         return (ctx, headers, cause) -> {
             final OutlierDetectionDecision decision = decide(ctx, headers, cause);
             if (decision == null || decision == OutlierDetectionDecision.NEXT) {

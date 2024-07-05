@@ -23,34 +23,34 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An outlier detection provides a mechanism for identifying outliers using the specified
- * {@link OutlierDetectingRule} and {@link OutlierDetector}.
+ * {@link OutlierRule} and {@link OutlierDetector}.
  */
 @UnstableApi
 public interface OutlierDetection {
 
     /**
-     * Returns a new {@link OutlierDetection} with the specified {@link OutlierDetectingRule}.
+     * Returns a new {@link OutlierDetection} with the specified {@link OutlierRule}.
      */
-    static OutlierDetection of(OutlierDetectingRule rule) {
+    static OutlierDetection of(OutlierRule rule) {
         requireNonNull(rule, "rule");
 
-        if (rule == OutlierDetectingRule.of()) {
+        if (rule == OutlierRule.of()) {
             return of();
         }
         return builder(rule).build();
     }
 
     /**
-     * Returns a new {@link OutlierDetection} with the default {@link OutlierDetectingRule}.
+     * Returns a new {@link OutlierDetection} with the default {@link OutlierRule}.
      */
     static OutlierDetection of() {
         return DEFAULT_DETECTION;
     }
 
     /**
-     * Returns a new {@link OutlierDetectionBuilder} with the specified {@link OutlierDetectingRule}.
+     * Returns a new {@link OutlierDetectionBuilder} with the specified {@link OutlierRule}.
      */
-    static OutlierDetectionBuilder builder(OutlierDetectingRule rule) {
+    static OutlierDetectionBuilder builder(OutlierRule rule) {
         requireNonNull(rule, "rule");
         return new OutlierDetectionBuilder(rule);
     }
@@ -65,7 +65,7 @@ public interface OutlierDetection {
     /**
      * Returns the rule used for detecting failures.
      */
-    OutlierDetectingRule rule();
+    OutlierRule rule();
 
     /**
      * Creates a new detector for detecting outliers.

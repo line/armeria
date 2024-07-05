@@ -37,13 +37,14 @@ import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.proxy.ProxyType;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.outlier.OutlierDetectingRule;
+import com.linecorp.armeria.common.outlier.OutlierRule;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.outlier.OutlierDetectionDecision;
 import com.linecorp.armeria.common.outlier.OutlierDetector;
@@ -88,7 +89,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Nullable
     private final OutlierDetector outlierDetector;
     @Nullable
-    private final OutlierDetectingRule outlierDetectingRule;
+    private final OutlierRule outlierRule;
 
     @Nullable
     private ScheduledFuture<?> sessionTimeoutFuture;
@@ -153,10 +154,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         final OutlierDetection outlierDetection = clientFactory.options().connectionOutlierDetection();
         if (outlierDetection != OutlierDetection.disabled()) {
             outlierDetector = outlierDetection.newDetector();
-            outlierDetectingRule = outlierDetection.rule();
+            outlierRule = outlierDetection.rule();
         } else {
             outlierDetector = null;
-            outlierDetectingRule = null;
+            outlierRule = null;
         }
 
         if (!poolKey.proxyConfig.proxyType().isForwardProxy()) {
@@ -583,7 +584,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     private void applyOutlierDetection(ClientRequestContext ctx) {
-        if (outlierDetectingRule == null || !isAcquirable()) {
+        if (outlierRule == null || !isAcquirable()) {
             return;
         }
         assert outlierDetector != null;
@@ -596,18 +597,19 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     private void detectOutlier(RequestLog log) {
         final RequestContext context = log.context();
-        if (!context.eventLoop().inEventLoop()) {
+        final ContextAwareEventLoop eventLoop = context.eventLoop();
+        if (!eventLoop.inEventLoop()) {
             // Execute in the event loop to prevent a connection from being marked as an outlier as a request is
             // about to be sent.
-            detectOutlier(log);
+            eventLoop.execute(() -> detectOutlier(log));
             return;
         }
 
         final OutlierDetectionDecision decision;
         try {
-            decision = outlierDetectingRule.decide(context, log.responseHeaders(), log.responseCause());
+            decision = outlierRule.decide(context, log.responseHeaders(), log.responseCause());
         } catch (Exception e) {
-            logger.warn("Unexpected exception from an OutlierDetectingRule: {}", outlierDetectingRule, e);
+            logger.warn("Unexpected exception from an OutlierDetectingRule: {}", outlierRule, e);
             return;
         }
 

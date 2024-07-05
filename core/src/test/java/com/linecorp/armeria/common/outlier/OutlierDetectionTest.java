@@ -34,7 +34,7 @@ class OutlierDetectionTest {
         final TestTicker ticker = new TestTicker();
         final double failureRateThreshold = 0.5;
         final OutlierDetection detection =
-                OutlierDetection.builder(OutlierDetectingRule.of())
+                OutlierDetection.builder(OutlierRule.of())
                                 .counterSlidingWindow(slidingWindow)
                                 .counterUpdateInterval(updateInterval)
                                 .failureRateThreshold(failureRateThreshold)
@@ -71,7 +71,7 @@ class OutlierDetectionTest {
         final TestTicker ticker = new TestTicker();
         final double failureRateThreshold = 0.51;
         final OutlierDetection detection =
-                OutlierDetection.builder(OutlierDetectingRule.of())
+                OutlierDetection.builder(OutlierRule.of())
                                 .counterSlidingWindow(slidingWindow)
                                 .counterUpdateInterval(updateInterval)
                                 .failureRateThreshold(failureRateThreshold)
