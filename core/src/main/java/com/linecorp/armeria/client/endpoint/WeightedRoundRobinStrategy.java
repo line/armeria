@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableList;
@@ -29,7 +28,6 @@ import com.google.common.collect.Streams;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
 
@@ -64,12 +62,11 @@ final class WeightedRoundRobinStrategy implements EndpointSelectionStrategy {
         }
 
         @Override
-        protected CompletableFuture<Void> updateNewEndpoints(List<Endpoint> endpoints) {
+        protected void updateNewEndpoints(List<Endpoint> endpoints) {
             final EndpointsAndWeights endpointsAndWeights = this.endpointsAndWeights;
             if (endpointsAndWeights == null || endpointsAndWeights.endpoints != endpoints) {
                 this.endpointsAndWeights = new EndpointsAndWeights(endpoints);
             }
-            return UnmodifiableFuture.completedFuture(null);
         }
 
         @Override
