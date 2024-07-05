@@ -37,10 +37,12 @@ import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.EventLoop;
@@ -213,7 +215,7 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         }
         done = true;
         closed = true;
-        cancelTimeoutOrLog(cause, cancel);
+        cancelTimeoutAndLog(cause, cancel);
         final HttpRequest request = ctx.request();
         assert request != null;
         if (cause != null) {
@@ -250,32 +252,24 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         }
     }
 
-    private void cancelTimeoutOrLog(@Nullable Throwable cause, boolean cancel) {
-        CancellationScheduler responseCancellationScheduler = null;
+    private void cancelTimeoutAndLog(@Nullable Throwable cause, boolean cancel) {
         final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
         if (ctxExtension != null) {
-            responseCancellationScheduler = ctxExtension.responseCancellationScheduler();
+            // best-effort attempt to cancel the scheduled timeout task so that RequestContext#cause
+            // isn't set unnecessarily
+            ctxExtension.responseCancellationScheduler().cancelScheduled();
         }
 
-        if (responseCancellationScheduler == null || !responseCancellationScheduler.isFinished()) {
-            if (responseCancellationScheduler != null) {
-                responseCancellationScheduler.clearTimeout(false);
-            }
-            // There's no timeout or the response has not been timed out.
-            if (cancel) {
-                cancelAction(cause);
-            } else {
-                closeAction(cause);
-            }
+        if (cancel) {
+            cancelAction(cause);
             return;
         }
         if (delegate.isOpen()) {
             closeAction(cause);
         }
 
-        // Response has been timed out already.
-        // Log only when it's not a ResponseTimeoutException.
-        if (cause instanceof ResponseTimeoutException) {
+        // the context has been cancelled either by timeout or by user invocation
+        if (cause == ctx.cancellationCause()) {
             return;
         }
 
@@ -297,7 +291,8 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         if (ctxExtension != null) {
             final CancellationScheduler responseCancellationScheduler =
                     ctxExtension.responseCancellationScheduler();
-            responseCancellationScheduler.start(newCancellationTask());
+            responseCancellationScheduler.updateTask(newCancellationTask());
+            responseCancellationScheduler.start();
         }
     }
 
@@ -310,9 +305,13 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
 
             @Override
             public void run(Throwable cause) {
-                delegate.close(cause);
-                ctx.request().abort(cause);
-                ctx.logBuilder().endResponse(cause);
+                if (ctx.eventLoop().inEventLoop()) {
+                    try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                        close(cause);
+                    }
+                } else {
+                    ctx.eventLoop().withoutContext().execute(() -> close(cause));
+                }
             }
         };
     }

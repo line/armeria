@@ -135,7 +135,9 @@ class ContextPushHookTest {
             hookEvents.clear();
             response = client.get("http://foo.com:" + server.httpPort() + "/virtualhost");
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
-            assertThat(hookEvents).containsExactly(
+            // we don't do containsExactly here because there is no easy way to guarantee that
+            // all context hooks from the previous request have been completed
+            assertThat(hookEvents).contains(
                     "ClientBuilder/push",
                     "ClientContext/push",
                     "ServerBuilder/push",
