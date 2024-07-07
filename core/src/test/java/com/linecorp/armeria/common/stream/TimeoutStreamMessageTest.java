@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,29 +24,19 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
-import io.netty.util.concurrent.DefaultEventExecutor;
-import io.netty.util.concurrent.EventExecutor;
 
 class TimeoutStreamMessageTest {
-    private EventExecutor executor;
 
-    @BeforeEach
-    public void setUp() {
-        executor = new DefaultEventExecutor();
-    }
-
-    @AfterEach
-    public void tearDown() {
-        executor.shutdownGracefully();
-    }
+    @RegisterExtension
+    static final EventLoopExtension executor = new EventLoopExtension();
 
     @Test
     public void timeoutNextMode() {
@@ -65,7 +55,7 @@ class TimeoutStreamMessageTest {
 
             @Override
             public void onNext(String s) {
-                executor.schedule(() -> subscription.request(1), 2, TimeUnit.SECONDS);
+                executor.get().schedule(() -> subscription.request(1), 2, TimeUnit.SECONDS);
             }
 
             @Override
@@ -77,7 +67,7 @@ class TimeoutStreamMessageTest {
             public void onComplete() {
                 future.complete(null);
             }
-        }, executor);
+        }, executor.get());
 
         assertThatThrownBy(future::get)
                 .isInstanceOf(ExecutionException.class)
@@ -110,7 +100,7 @@ class TimeoutStreamMessageTest {
             public void onComplete() {
                 future.complete(null);
             }
-        }, executor);
+        }, executor.get());
 
         assertThat(future.get()).isNull();
     }
@@ -127,7 +117,7 @@ class TimeoutStreamMessageTest {
             @Override
             public void onSubscribe(Subscription s) {
                 subscription = s;
-                executor.schedule(() -> subscription.request(1), 2, TimeUnit.SECONDS);
+                executor.get().schedule(() -> subscription.request(1), 2, TimeUnit.SECONDS);
             }
 
             @Override
@@ -144,7 +134,7 @@ class TimeoutStreamMessageTest {
             public void onComplete() {
                 future.complete(null);
             }
-        }, executor);
+        }, executor.get());
 
         assertThatThrownBy(future::get)
                 .isInstanceOf(ExecutionException.class)
@@ -176,7 +166,7 @@ class TimeoutStreamMessageTest {
             public void onComplete() {
                 future.complete(null);
             }
-        }, executor);
+        }, executor.get());
 
         assertThat(future.get()).isNull();
     }
@@ -193,12 +183,12 @@ class TimeoutStreamMessageTest {
             @Override
             public void onSubscribe(Subscription s) {
                 subscription = s;
-                executor.schedule(() -> subscription.request(1), 1, TimeUnit.SECONDS);
+                executor.get().schedule(() -> subscription.request(1), 1, TimeUnit.SECONDS);
             }
 
             @Override
             public void onNext(String s) {
-                executor.schedule(() -> subscription.request(1), 2, TimeUnit.SECONDS);
+                executor.get().schedule(() -> subscription.request(1), 2, TimeUnit.SECONDS);
             }
 
             @Override
@@ -210,7 +200,7 @@ class TimeoutStreamMessageTest {
             public void onComplete() {
                 future.complete(null);
             }
-        }, executor);
+        }, executor.get());
 
         assertThatThrownBy(future::get)
                 .isInstanceOf(ExecutionException.class)
@@ -242,7 +232,7 @@ class TimeoutStreamMessageTest {
             public void onComplete() {
                 future.complete(null);
             }
-        }, executor);
+        }, executor.get());
 
         assertThat(future.get()).isNull();
     }

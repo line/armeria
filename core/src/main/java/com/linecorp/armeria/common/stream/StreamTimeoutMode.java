@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -34,7 +34,26 @@ import com.linecorp.armeria.common.TimeoutException;
  * </ul>
  */
 public enum StreamTimeoutMode {
+
+    /**
+     * Based on the first data chunk.
+     * If the first data chunk is not received within the specified time,
+     * a {@link TimeoutException} is thrown.
+     */
     UNTIL_FIRST,
+
+    /**
+     * Based on each data chunk.
+     * If each data chunk is not received within the specified time after the previous chunk,
+     * a {@link TimeoutException} is thrown.
+     */
+
     UNTIL_NEXT,
+
+    /**
+     * Based on the entire stream.
+     * If all data chunks are not received within the specified time before the end of the stream,
+     * a {@link TimeoutException} is thrown.
+     */
     UNTIL_EOS
 }
