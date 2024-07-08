@@ -102,6 +102,10 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
         return self();
     }
 
+    SessionProtocol protocol() {
+        return protocol;
+    }
+
     /**
      * Sets the port where a health check request will be sent instead of the original port number
      * specified by {@link EndpointGroup}'s {@link Endpoint}s. This property is useful when your
@@ -112,6 +116,10 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
                       "port: %s (expected: 1-65535)", port);
         this.port = port;
         return self();
+    }
+
+    int port() {
+        return port;
     }
 
     /**

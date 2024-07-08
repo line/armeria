@@ -146,6 +146,11 @@ final class DefaultHealthCheckerContext
         return endpoint;
     }
 
+    @Override
+    public Endpoint originalEndpoint() {
+        return originalEndpoint;
+    }
+
     Attributes endpointAttributes() {
         return endpointAttributes;
     }

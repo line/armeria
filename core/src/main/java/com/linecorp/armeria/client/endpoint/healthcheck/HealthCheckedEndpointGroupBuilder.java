@@ -22,7 +22,9 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.HttpHealthChecker;
 
 /**
  * A builder for creating a new {@link HealthCheckedEndpointGroup} that sends HTTP health check requests.
@@ -57,22 +59,35 @@ public final class HealthCheckedEndpointGroupBuilder
 
     @Override
     protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
-        return new HttpHealthCheckerFactory(path, useGet);
+        return new HttpHealthCheckerFactory(path, useGet, protocol(), port());
     }
 
     private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {
 
         private final String path;
         private final boolean useGet;
+        private final SessionProtocol protocol;
+        private final int port;
 
-        HttpHealthCheckerFactory(String path, boolean useGet) {
+        HttpHealthCheckerFactory(String path, boolean useGet, SessionProtocol protocol, int port) {
             this.path = path;
             this.useGet = useGet;
+            this.protocol = protocol;
+            this.port = port;
         }
 
         @Override
         public AsyncCloseable apply(HealthCheckerContext ctx) {
-            final HttpHealthChecker checker = new HttpHealthChecker(ctx, path, useGet);
+            Endpoint endpoint = ctx.originalEndpoint();
+            if (port == 0) {
+                endpoint = endpoint.withoutDefaultPort(protocol);
+            } else if (port == protocol.defaultPort()) {
+                endpoint = endpoint.withoutPort();
+            } else {
+                endpoint = endpoint.withPort(port);
+            }
+            final HttpHealthChecker checker = new HttpHealthChecker(ctx, endpoint, path, useGet, protocol,
+                                                                    null);
             checker.start();
             return checker;
         }
