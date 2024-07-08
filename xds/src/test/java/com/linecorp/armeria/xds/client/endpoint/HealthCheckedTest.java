@@ -113,11 +113,13 @@ class HealthCheckedTest {
                         .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
                         .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
                         .build();
+        final HttpHealthCheck httpHealthCheck = HttpHealthCheck.newBuilder()
+                                                               .setPath("/monitor/healthcheck")
+                                                               .build();
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
                 .toBuilder()
                 .addHealthChecks(HealthCheck.newBuilder()
-                                            .setHttpHealthCheck(HttpHealthCheck.newBuilder()
-                                                                               .setPath("/monitor/healthcheck")))
+                                            .setHttpHealthCheck(httpHealthCheck))
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
