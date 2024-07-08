@@ -16,7 +16,6 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.linecorp.armeria.client.endpoint.EndpointWeightTransition.linear;
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.withCreatedAtNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -47,6 +46,7 @@ import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.RampingUpEnd
 import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys;
 
 import io.netty.channel.DefaultEventLoop;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -394,7 +394,8 @@ final class WeightRampingUpStrategyTest {
                                       .containsExactlyInAnyOrder(Endpoint.of("foo.com"));
 
         // as far as the selector is concerned, the endpoint is added at ticker#get now
-        final Endpoint endpoint = withCreatedAtNanos(Endpoint.of("foo.com"), ticker.get());
+        Endpoint endpoint = Endpoint.of("foo.com");
+        endpoint = endpoint.withAttr(EndpointAttributeKeys.CREATED_AT_NANOS_KEY, ticker.get());
         endpointGroup.setEndpoints(ImmutableList.of(endpoint));
 
         final long window = selector.windowIndex(ticker.get());

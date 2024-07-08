@@ -25,6 +25,8 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.base.Predicates;
+
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -59,7 +61,8 @@ class HealthCheckContextGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE,
+                                                    Predicates.alwaysFalse())) {
             assertThat(contexts).hasSize(2);
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();
@@ -128,7 +131,8 @@ class HealthCheckContextGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE,
+                                                    Predicates.alwaysFalse())) {
             assertThat(contexts).hasSize(2);
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();

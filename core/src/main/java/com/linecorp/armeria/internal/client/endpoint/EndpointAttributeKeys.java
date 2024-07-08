@@ -25,7 +25,7 @@ import io.netty.util.AttributeKey;
 
 public final class EndpointAttributeKeys {
 
-    private static final AttributeKey<Long> CREATED_AT_NANOS_KEY =
+    public static final AttributeKey<Long> CREATED_AT_NANOS_KEY =
             AttributeKey.valueOf(EndpointAttributeKeys.class, "createdAtNanos");
     public static final AttributeKey<Boolean> HEALTHY_ATTR =
             AttributeKey.valueOf(EndpointAttributeKeys.class, "HEALTHY");
@@ -36,10 +36,6 @@ public final class EndpointAttributeKeys {
         final Long createdAtNanos = endpoint.attr(CREATED_AT_NANOS_KEY);
         checkState(createdAtNanos != null, "createdAtNanos doesn't exist for '%s'", endpoint);
         return createdAtNanos;
-    }
-
-    public static Endpoint withCreatedAtNanos(Endpoint endpoint, long timestampNanos) {
-        return endpoint.withAttr(CREATED_AT_NANOS_KEY, timestampNanos);
     }
 
     public static boolean hasCreatedAtNanos(Endpoint endpoint) {

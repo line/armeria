@@ -18,6 +18,7 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.HEALTHY_ATTR;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 
 import java.util.List;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
@@ -81,7 +83,8 @@ final class XdsEndpointUtil {
         return true;
     }
 
-    static EndpointGroup convertEndpointGroup(ClusterSnapshot clusterSnapshot) {
+    static EndpointGroup convertEndpointGroup(ClusterSnapshot clusterSnapshot,
+                                              Map<Endpoint, Attributes> endpointAttrs) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         if (endpointSnapshot == null) {
             return EndpointGroup.of();
@@ -105,12 +108,13 @@ final class XdsEndpointUtil {
         if (!cluster.getHealthChecksList().isEmpty()) {
             // multiple health-checks aren't supported
             final HealthCheck healthCheck = cluster.getHealthChecksList().get(0);
-            return maybeHealthChecked(endpointGroup, healthCheck);
+            return maybeHealthChecked(endpointGroup, healthCheck, endpointAttrs);
         }
         return endpointGroup;
     }
 
-    private static EndpointGroup maybeHealthChecked(EndpointGroup delegate, HealthCheck healthCheck) {
+    private static EndpointGroup maybeHealthChecked(EndpointGroup delegate, HealthCheck healthCheck,
+                                                    Map<Endpoint, Attributes> endpointAttrs) {
         if (!healthCheck.hasHttpHealthCheck()) {
             return delegate;
         }
@@ -123,6 +127,13 @@ final class XdsEndpointUtil {
         return HealthCheckedEndpointGroup.builder(delegate, path)
                                          .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
                                          .useGet(healthCheckMethod(httpHealthCheck) == HttpMethod.GET)
+                                         .initialStateResolver(endpoint -> {
+                                             final Attributes attrs = endpointAttrs.get(endpoint);
+                                             if (attrs == null) {
+                                                 return false;
+                                             }
+                                             return Boolean.TRUE.equals(attrs.attr(HEALTHY_ATTR));
+                                         })
                                          .build();
     }
 

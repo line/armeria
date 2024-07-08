@@ -94,7 +94,8 @@ final class DefaultHealthCheckerContext
         this.clientOptions = clientOptions;
         this.retryBackoff = retryBackoff;
         this.onUpdateHealth = onUpdateHealth;
-        endpointAttributes = Attributes.of(HEALTHY_ATTR, false);
+        endpointAttributes = Attributes.of(HEALTHY_ATTR, false,
+                                           DEGRADED_ATTR, false);
     }
 
     void init(AsyncCloseable handle) {
@@ -132,7 +133,8 @@ final class DefaultHealthCheckerContext
                 lock.unlock();
             }
 
-            endpointAttributes = Attributes.of(HEALTHY_ATTR, false);
+            endpointAttributes = Attributes.of(HEALTHY_ATTR, false,
+                                               DEGRADED_ATTR, false);
             onUpdateHealth.accept(originalEndpoint, false);
 
             return null;
@@ -189,7 +191,8 @@ final class DefaultHealthCheckerContext
             endpointAttributes = Attributes.of(HEALTHY_ATTR, isHealthy,
                                                DEGRADED_ATTR, true);
         } else {
-            endpointAttributes = Attributes.of(HEALTHY_ATTR, isHealthy);
+            endpointAttributes = Attributes.of(HEALTHY_ATTR, isHealthy,
+                                               DEGRADED_ATTR, false);
         }
         onUpdateHealth.accept(originalEndpoint, isHealthy);
 

@@ -40,6 +40,7 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -259,7 +260,8 @@ class HealthCheckedEndpointGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE,
+                                                    Predicates.alwaysFalse())) {
 
             assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
 
@@ -290,7 +292,8 @@ class HealthCheckedEndpointGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE,
+                                                    Predicates.alwaysFalse())) {
 
             assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
                                          .containsOnly(candidate1, candidate2);
@@ -322,7 +325,8 @@ class HealthCheckedEndpointGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE,
+                                                    Predicates.alwaysFalse())) {
             assertThat(counter.get()).isEqualTo(2);
         }
     }
@@ -347,7 +351,8 @@ class HealthCheckedEndpointGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE,
+                                                    Predicates.alwaysFalse())) {
             final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
             endpointGroup.addListener(healthyEndpointsList::add, true);
             delegate.set(candidate1, candidate3);

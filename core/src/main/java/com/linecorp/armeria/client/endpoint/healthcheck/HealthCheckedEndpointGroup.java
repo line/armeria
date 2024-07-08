@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.HEALTHY_ATTR;
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
@@ -114,6 +113,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
     private final Predicate<Endpoint> healthCheckedEndpointPredicate;
+    private final Predicate<Endpoint> initialStateResolver;
 
     private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
@@ -136,7 +136,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             Backoff retryBackoff, ClientOptions clientOptions,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy,
-            Predicate<Endpoint> healthCheckedEndpointPredicate) {
+            Predicate<Endpoint> healthCheckedEndpointPredicate,
+            Predicate<Endpoint> initialStateResolver) {
 
         super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
 
@@ -151,12 +152,15 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
         this.healthCheckedEndpointPredicate =
                 requireNonNull(healthCheckedEndpointPredicate, "healthCheckedEndpointPredicate");
+        this.initialStateResolver = requireNonNull(initialStateResolver, "initialStateResolver");
 
         clientOptions.factory().whenClosed().thenRun(this::closeAsync);
         delegate.addListener(this::setCandidates, true);
     }
 
     private void setCandidates(List<Endpoint> endpoints) {
+        maybeApplyInitialResolver(endpoints);
+
         final List<Endpoint> candidates = healthCheckStrategy.select(endpoints);
         final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(candidates.size());
 
@@ -199,6 +203,21 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             });
         } finally {
             lock.unlock();
+        }
+    }
+
+    private void maybeApplyInitialResolver(List<Endpoint> endpoints) {
+        if (initialized) {
+            return;
+        }
+        final List<Endpoint> initialEndpoints = new ArrayList<>();
+        for (Endpoint endpoint : endpoints) {
+            if (!initialStateResolver.test(endpoint)) {
+                initialEndpoints.add(endpoint);
+            }
+        }
+        if (initialEndpoints.isEmpty()) {
+            setEndpoints(initialEndpoints);
         }
     }
 

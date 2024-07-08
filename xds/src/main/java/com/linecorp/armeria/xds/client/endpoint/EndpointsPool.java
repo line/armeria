@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.createdAtNanos;
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.hasCreatedAtNanos;
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.withCreatedAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.CREATED_AT_NANOS_KEY;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.DEGRADED_ATTR;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.HEALTHY_ATTR;
 
 import java.util.List;
 import java.util.Map;
@@ -31,6 +31,8 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.Attributes;
+import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
@@ -39,7 +41,7 @@ import io.netty.util.concurrent.EventExecutor;
 final class EndpointsPool implements AsyncCloseable {
 
     private EndpointGroup delegate = EndpointGroup.of();
-    private Map<Endpoint, Long> createdTimestamps = ImmutableMap.of();
+    private Map<Endpoint, Attributes> endpointAttrs = ImmutableMap.of();
     private final EventExecutor eventExecutor;
     private Consumer<List<Endpoint>> listener = ignored -> {};
 
@@ -53,28 +55,34 @@ final class EndpointsPool implements AsyncCloseable {
         delegate.closeAsync();
 
         // set the new endpoint and listener
-        delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot);
+        delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot, endpointAttrs);
         listener = endpoints -> eventExecutor.execute(
-                () -> endpointsListener.accept(attachTimestampsAndDelegate(endpoints)));
+                () -> endpointsListener.accept(cacheAttributesAndDelegate(endpoints)));
         delegate.addListener(listener, true);
     }
 
-    private List<Endpoint> attachTimestampsAndDelegate(List<Endpoint> endpoints) {
+    private List<Endpoint> cacheAttributesAndDelegate(List<Endpoint> endpoints) {
         final long defaultTimestamp = System.nanoTime();
-        final ImmutableMap.Builder<Endpoint, Long> timestampsBuilder = ImmutableMap.builder();
+        final ImmutableMap.Builder<Endpoint, Attributes> endpoint2AttrsBuilder = ImmutableMap.builder();
         final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();
         for (Endpoint endpoint: endpoints) {
-            final long timestamp;
-            if (hasCreatedAtNanos(endpoint)) {
-                timestamp = createdAtNanos(endpoint);
-            } else {
-                timestamp = createdTimestamps.getOrDefault(endpoint, defaultTimestamp);
+            final Attributes prevAttrs = endpointAttrs.getOrDefault(endpoint, Attributes.of());
+            AttributesBuilder attrsBuilder = prevAttrs.toBuilder();
+            if (endpoint.attr(CREATED_AT_NANOS_KEY) == null && !prevAttrs.hasAttr(CREATED_AT_NANOS_KEY)) {
+                attrsBuilder = attrsBuilder.set(CREATED_AT_NANOS_KEY, defaultTimestamp);
             }
-            final Endpoint endpointWithTimestamp = withCreatedAtNanos(endpoint, timestamp);
-            timestampsBuilder.put(endpointWithTimestamp, timestamp);
-            endpointsBuilder.add(endpointWithTimestamp);
+            if (endpoint.attr(HEALTHY_ATTR) == null && !prevAttrs.hasAttr(HEALTHY_ATTR)) {
+                attrsBuilder = attrsBuilder.set(HEALTHY_ATTR, true);
+            }
+            if (endpoint.attr(DEGRADED_ATTR) == null && !prevAttrs.hasAttr(DEGRADED_ATTR)) {
+                attrsBuilder = attrsBuilder.set(DEGRADED_ATTR, false);
+            }
+            final Attributes attrs = attrsBuilder.build();
+            endpoint = endpoint.withAttrs(attrs);
+            endpoint2AttrsBuilder.put(endpoint, attrs);
+            endpointsBuilder.add(endpoint);
         }
-        createdTimestamps = timestampsBuilder.buildKeepingLast();
+        endpointAttrs = endpoint2AttrsBuilder.buildKeepingLast();
         return endpointsBuilder.build();
     }
 
