@@ -32,7 +32,6 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
-
 class TimeoutStreamMessageTest {
 
     @RegisterExtension

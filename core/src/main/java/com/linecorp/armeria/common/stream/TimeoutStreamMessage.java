@@ -210,7 +210,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         public void onSubscribe(Subscription s) {
             subscription = s;
             delegate.onSubscribe(this);
-            if(completed) {
+            if (completed) {
                 return;
             }
             lastEventTimeNanos = System.nanoTime();
