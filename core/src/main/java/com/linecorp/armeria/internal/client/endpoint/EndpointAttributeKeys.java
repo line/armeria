@@ -19,13 +19,18 @@ package com.linecorp.armeria.internal.client.endpoint;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-public final class RampingUpKeys {
+public final class EndpointAttributeKeys {
 
     private static final AttributeKey<Long> CREATED_AT_NANOS_KEY =
-            AttributeKey.valueOf(RampingUpKeys.class, "createdAtNanos");
+            AttributeKey.valueOf(EndpointAttributeKeys.class, "createdAtNanos");
+    public static final AttributeKey<Boolean> HEALTHY_ATTR =
+            AttributeKey.valueOf(EndpointAttributeKeys.class, "HEALTHY");
+    public static final AttributeKey<Boolean> DEGRADED_ATTR =
+            AttributeKey.valueOf(EndpointAttributeKeys.class, "DEGRADED");
 
     public static long createdAtNanos(Endpoint endpoint) {
         final Long createdAtNanos = endpoint.attr(CREATED_AT_NANOS_KEY);
@@ -41,5 +46,15 @@ public final class RampingUpKeys {
         return endpoint.attr(CREATED_AT_NANOS_KEY) != null;
     }
 
-    private RampingUpKeys() {}
+    @Nullable
+    public static Boolean healthy(Endpoint endpoint) {
+        return endpoint.attr(HEALTHY_ATTR);
+    }
+
+    @Nullable
+    public static Boolean degraded(Endpoint endpoint) {
+        return endpoint.attr(DEGRADED_ATTR);
+    }
+
+    private EndpointAttributeKeys() {}
 }

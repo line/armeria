@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.HEALTHY_ATTR;
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
@@ -30,6 +31,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,6 +113,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory;
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
+    private final Predicate<Endpoint> healthCheckedEndpointPredicate;
 
     private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
@@ -131,7 +135,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             SessionProtocol protocol, int port,
             Backoff retryBackoff, ClientOptions clientOptions,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
-            HealthCheckStrategy healthCheckStrategy) {
+            HealthCheckStrategy healthCheckStrategy,
+            Predicate<Endpoint> healthCheckedEndpointPredicate) {
 
         super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
 
@@ -144,6 +149,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         this.clientOptions = requireNonNull(clientOptions, "clientOptions");
         this.checkerFactory = requireNonNull(checkerFactory, "checkerFactory");
         this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
+        this.healthCheckedEndpointPredicate =
+                requireNonNull(healthCheckedEndpointPredicate, "healthCheckedEndpointPredicate");
 
         clientOptions.factory().whenClosed().thenRun(this::closeAsync);
         delegate.addListener(this::setCandidates, true);
@@ -205,31 +212,35 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     List<Endpoint> allHealthyEndpoints() {
         lock.lock();
         try {
+            return allEndpoints().stream().filter(healthCheckedEndpointPredicate).collect(Collectors.toList());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    List<Endpoint> allEndpoints() {
+        lock.lock();
+        try {
             final HealthCheckContextGroup newGroup = contextGroupChain.peekLast();
             if (newGroup == null) {
                 return ImmutableList.of();
             }
 
-            final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
-            for (Endpoint candidate : newGroup.candidates()) {
-                if (healthyEndpoints.contains(candidate)) {
-                    allHealthyEndpoints.add(candidate);
-                }
-            }
+            final List<Endpoint> allEndpoints = new ArrayList<>(newGroup.candidates());
 
             for (HealthCheckContextGroup oldGroup : contextGroupChain) {
                 if (oldGroup == newGroup) {
                     break;
                 }
                 for (Endpoint candidate : oldGroup.candidates()) {
-                    if (!allHealthyEndpoints.contains(candidate) && healthyEndpoints.contains(candidate)) {
+                    if (!allEndpoints.contains(candidate)) {
                         // Add old Endpoints that do not exist in newGroup. When the first check for newGroup is
                         // completed, the old Endpoints will be removed.
-                        allHealthyEndpoints.add(candidate);
+                        allEndpoints.add(candidate);
                     }
                 }
             }
-            return allHealthyEndpoints;
+            return allEndpoints;
         } finally {
             lock.unlock();
         }

@@ -16,7 +16,7 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.linecorp.armeria.client.endpoint.EndpointWeightTransition.linear;
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.withCreatedAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.withCreatedAtNanos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder.DEFAULT_ENDPOINT_PREDICATE;
 import static com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEndpointGroupBuilder.DEFAULT_HEALTH_CHECK_RETRY_BACKOFF;
 import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -257,7 +258,8 @@ class HealthCheckedEndpointGroupTest {
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
 
             assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
 
@@ -287,7 +289,8 @@ class HealthCheckedEndpointGroupTest {
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
 
             assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
                                          .containsOnly(candidate1, candidate2);
@@ -318,7 +321,8 @@ class HealthCheckedEndpointGroupTest {
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
             assertThat(counter.get()).isEqualTo(2);
         }
     }
@@ -342,7 +346,8 @@ class HealthCheckedEndpointGroupTest {
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
             final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
             endpointGroup.addListener(healthyEndpointsList::add, true);
             delegate.set(candidate1, candidate3);

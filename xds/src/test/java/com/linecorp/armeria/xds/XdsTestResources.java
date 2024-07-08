@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
@@ -77,6 +78,11 @@ public final class XdsTestResources {
     public static LbEndpoint endpoint(String address, int port) {
         return endpoint(address, port, Metadata.getDefaultInstance(), 1,
                         HealthStatus.HEALTHY);
+    }
+
+    public static LbEndpoint endpoint(InetSocketAddress address, int weight) {
+        return endpoint(address.getAddress().getHostAddress(), address.getPort(),
+                        Metadata.getDefaultInstance(), weight, HealthStatus.HEALTHY);
     }
 
     public static LbEndpoint endpoint(String address, int port, int weight) {

@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 
+import com.google.common.base.Predicates;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
@@ -120,6 +121,7 @@ final class XdsEndpointUtil {
         // per-cluster-member health checking, etc without refactoring how we deal with health checking.
         // For now, just simply health check all targets depending on the cluster configuration.
         return HealthCheckedEndpointGroup.builder(delegate, path)
+                                         .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
                                          .useGet(healthCheckMethod(httpHealthCheck) == HttpMethod.GET)
                                          .build();
     }

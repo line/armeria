@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.DEGRADED_ATTR;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.HEALTHY_ATTR;
+
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +42,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseException;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -72,6 +76,7 @@ final class DefaultHealthCheckerContext
     private AsyncCloseable handle;
     private boolean destroyed;
     private int refCnt = 1;
+    private Attributes endpointAttributes;
 
     DefaultHealthCheckerContext(Endpoint endpoint, int port, SessionProtocol protocol,
                                 ClientOptions clientOptions, Backoff retryBackoff,
@@ -89,6 +94,7 @@ final class DefaultHealthCheckerContext
         this.clientOptions = clientOptions;
         this.retryBackoff = retryBackoff;
         this.onUpdateHealth = onUpdateHealth;
+        endpointAttributes = Attributes.of(HEALTHY_ATTR, false);
     }
 
     void init(AsyncCloseable handle) {
@@ -126,6 +132,7 @@ final class DefaultHealthCheckerContext
                 lock.unlock();
             }
 
+            endpointAttributes = Attributes.of(HEALTHY_ATTR, false);
             onUpdateHealth.accept(originalEndpoint, false);
 
             return null;
@@ -135,6 +142,10 @@ final class DefaultHealthCheckerContext
     @Override
     public Endpoint endpoint() {
         return endpoint;
+    }
+
+    Attributes endpointAttributes() {
+        return endpointAttributes;
     }
 
     @Override
@@ -174,6 +185,12 @@ final class DefaultHealthCheckerContext
     public void updateHealth(double health, ClientRequestContext ctx,
                              @Nullable ResponseHeaders headers, @Nullable Throwable cause) {
         final boolean isHealthy = health > 0;
+        if (headers != null && headers.contains("x-envoy-degraded")) {
+            endpointAttributes = Attributes.of(HEALTHY_ATTR, isHealthy,
+                                               DEGRADED_ATTR, true);
+        } else {
+            endpointAttributes = Attributes.of(HEALTHY_ATTR, isHealthy);
+        }
         onUpdateHealth.accept(originalEndpoint, isHealthy);
 
         if (!initialCheckFuture.isDone()) {

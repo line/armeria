@@ -29,11 +29,13 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.EndpointWeightTransition;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbPolicy;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.SlowStartConfig;
+import io.envoyproxy.envoy.config.core.v3.HealthStatus;
 import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment.Policy;
@@ -110,16 +112,18 @@ final class EndpointUtil {
 
     static CoarseHealth coarseHealth(Endpoint endpoint) {
         final LbEndpoint lbEndpoint = lbEndpoint(endpoint);
-        switch (lbEndpoint.getHealthStatus()) {
-            // Assume UNKNOWN means health check wasn't performed
-            case UNKNOWN:
-            case HEALTHY:
-                return CoarseHealth.HEALTHY;
-            case DEGRADED:
-                return CoarseHealth.DEGRADED;
-            default:
-                return CoarseHealth.UNHEALTHY;
+        // If any of the unhealthy flags are set, host is unhealthy.
+        if (lbEndpoint.getHealthStatus() == HealthStatus.UNHEALTHY ||
+            Boolean.FALSE.equals(EndpointAttributeKeys.healthy(endpoint))) {
+            return CoarseHealth.UNHEALTHY;
         }
+        // If any of the degraded flags are set, host is degraded.
+        if (lbEndpoint.getHealthStatus() == HealthStatus.DEGRADED ||
+            Boolean.TRUE.equals(EndpointAttributeKeys.degraded(endpoint))) {
+            return CoarseHealth.DEGRADED;
+        }
+        // The host must have no flags or be pending removal.
+        return CoarseHealth.HEALTHY;
     }
 
     static int hash(ClientRequestContext ctx) {

@@ -25,11 +25,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 
@@ -47,13 +53,17 @@ import com.linecorp.armeria.xds.XdsBootstrap;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig.ZoneAwareLbConfig;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
+import io.envoyproxy.envoy.config.core.v3.HealthStatus;
 import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment.Policy;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
+import io.envoyproxy.envoy.type.v3.Percent;
 
 class HealthCheckedTest {
 
@@ -74,6 +84,8 @@ class HealthCheckedTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.http(0);
+            sb.http(0);
+            sb.http(0);
             sb.service("/", (ctx, req) -> HttpResponse.of(200));
         }
     };
@@ -83,19 +95,17 @@ class HealthCheckedTest {
         final Listener listener = staticResourceListener();
         final int weight = 6;
 
-        final List<Integer> healthyPorts = server.server().activePorts().keySet()
-                                          .stream().map(InetSocketAddress::getPort)
-                                          .collect(Collectors.toList());
-        assertThat(healthyPorts).hasSize(3);
-
-        final List<LbEndpoint> healthyEndpoints =
-                healthyPorts.stream()
-                     .map(port -> endpoint("127.0.0.1", port, weight))
-                     .collect(Collectors.toList());
-        final LbEndpoint noHealthyEndpoint = endpoint("127.0.0.1", noHealthCheck.httpPort(), weight);
+        final List<LbEndpoint> healthyEndpoints = server.server().activePorts().keySet()
+                                                        .stream().map(addr -> endpoint(addr, weight))
+                                                        .collect(Collectors.toList());
+        assertThat(healthyEndpoints).hasSize(3);
+        final List<LbEndpoint> unhealthyEndpoints = noHealthCheck.server().activePorts().keySet()
+                                                                 .stream().map(addr -> endpoint(addr, weight))
+                                                                 .collect(Collectors.toList());
+        assertThat(unhealthyEndpoints).hasSize(3);
         final List<LbEndpoint> allEndpoints = ImmutableList.<LbEndpoint>builder()
                                                            .addAll(healthyEndpoints)
-                                                           .add(noHealthyEndpoint).build();
+                                                           .addAll(unhealthyEndpoints).build();
 
         final ClusterLoadAssignment loadAssignment =
                 ClusterLoadAssignment
@@ -106,8 +116,8 @@ class HealthCheckedTest {
         final Cluster cluster = createStaticCluster("cluster", loadAssignment)
                 .toBuilder()
                 .addHealthChecks(HealthCheck.newBuilder()
-                                         .setHttpHealthCheck(HttpHealthCheck.newBuilder()
-                                                                            .setPath("/monitor/healthcheck")))
+                                            .setHttpHealthCheck(HttpHealthCheck.newBuilder()
+                                                                               .setPath("/monitor/healthcheck")))
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
@@ -121,8 +131,98 @@ class HealthCheckedTest {
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final Endpoint endpoint = endpointGroup.selectNow(ctx);
             assertThat(endpoint).isNotNull();
+            final Set<Integer> healthyPorts = server.server().activePorts().values().stream()
+                                                    .map(port -> port.localAddress().getPort())
+                                                    .collect(Collectors.toSet());
             assertThat(endpoint.port()).isIn(healthyPorts);
             assertThat(endpoint.weight()).isEqualTo(weight);
         }
+    }
+
+    static Stream<Arguments> panicCaseArgs() {
+        return Stream.of(
+                // Since there are 3 healthy endpoints and 3 unhealthy endpoints,
+                // the limit for panic mode is at 50
+                Arguments.of(30, false),
+                Arguments.of(50, false),
+                Arguments.of(51, true),
+                Arguments.of(70, true)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("panicCaseArgs")
+    void panicCase(double panicThreshold, boolean panicMode) {
+        final List<Integer> healthyPorts = ports(server);
+        final LbEndpoint healthy1 = endpoint("127.0.0.1", healthyPorts.get(0), HealthStatus.HEALTHY);
+        final LbEndpoint healthy2 = endpoint("127.0.0.1", healthyPorts.get(1), HealthStatus.HEALTHY);
+        final LbEndpoint degraded1 = endpoint("127.0.0.1", healthyPorts.get(2), HealthStatus.DEGRADED);
+        final List<Integer> noHcPorts = ports(noHealthCheck);
+        final LbEndpoint healthy3 = endpoint("127.0.0.1", noHcPorts.get(0), HealthStatus.HEALTHY);
+        final LbEndpoint healthy4 = endpoint("127.0.0.1", noHcPorts.get(1), HealthStatus.HEALTHY);
+        final LbEndpoint degraded2 = endpoint("127.0.0.1", noHcPorts.get(2), HealthStatus.DEGRADED);
+        final List<LbEndpoint> allEndpoints =
+                ImmutableList.<LbEndpoint>builder().add(healthy1).add(healthy2).add(degraded1)
+                             .add(healthy3).add(healthy4).add(degraded2).build();
+
+        final ClusterLoadAssignment loadAssignment =
+                ClusterLoadAssignment
+                        .newBuilder()
+                        .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
+                        .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
+                        .build();
+        final CommonLbConfig commonLbConfig =
+                CommonLbConfig.newBuilder()
+                              .setZoneAwareLbConfig(ZoneAwareLbConfig.newBuilder()
+                                                                     .setFailTrafficOnPanic(true))
+                              .setHealthyPanicThreshold(Percent.newBuilder().setValue(panicThreshold))
+                              .build();
+        final HealthCheck healthCheck =
+                HealthCheck.newBuilder()
+                           .setHttpHealthCheck(HttpHealthCheck.newBuilder()
+                                                              .setPath("/monitor/healthcheck"))
+                           .build();
+        final Cluster cluster = createStaticCluster("cluster", loadAssignment)
+                .toBuilder()
+                .setCommonLbConfig(commonLbConfig)
+                .addHealthChecks(healthCheck)
+                .build();
+
+        final Listener listener = staticResourceListener();
+        final Bootstrap bootstrap = staticBootstrap(listener, cluster);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
+            // disable allowEmptyEndpoints since the first update iteration in no available healthy endpoints
+            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot, false);
+            await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
+
+            final ClientRequestContext ctx =
+                    ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            final Set<Endpoint> selectedEndpoints = new HashSet<>();
+            for (int i = 0; i < allEndpoints.size(); i++) {
+                // try to hit all the ranges of the selection hash
+                final int hash = 100 / allEndpoints.size() * i;
+                // WeightedRoundRobinStrategy guarantees that each endpoint will be selected at least once
+                ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, hash);
+                final Endpoint selected = endpointGroup.selectNow(ctx);
+                if (selected != null) {
+                    selectedEndpoints.add(selected);
+                }
+            }
+            if (panicMode) {
+                assertThat(selectedEndpoints).isEmpty();
+            } else {
+                assertThat(selectedEndpoints).containsExactlyInAnyOrder(
+                        Endpoint.of("127.0.0.1", healthyPorts.get(0)),
+                        Endpoint.of("127.0.0.1", healthyPorts.get(1)),
+                        Endpoint.of("127.0.0.1", healthyPorts.get(2))
+                );
+            }
+        }
+    }
+
+    private static List<Integer> ports(ServerExtension server) {
+        return server.server().activePorts().keySet().stream()
+                     .map(InetSocketAddress::getPort).collect(Collectors.toList());
     }
 }

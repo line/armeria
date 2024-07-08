@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
 
@@ -53,7 +54,11 @@ final class HealthCheckContextGroup {
     }
 
     List<Endpoint> candidates() {
-        return candidates;
+        return candidates.stream().map(endpoint -> {
+            final DefaultHealthCheckerContext context = contexts.get(endpoint);
+            assert context != null;
+            return endpoint.withAttrs(context.endpointAttributes());
+        }).collect(Collectors.toList());
     }
 
     void initialize() {
