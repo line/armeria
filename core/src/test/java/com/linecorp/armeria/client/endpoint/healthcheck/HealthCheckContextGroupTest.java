@@ -32,9 +32,9 @@ import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGro
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroupTest.MockEndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.DefaultHealthCheckerContext;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 class HealthCheckContextGroupTest {
@@ -54,10 +54,10 @@ class HealthCheckContextGroupTest {
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
                                                     10000, 10000,
-                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    TestHealthCheckParamsFactory.INSTANCE)) {
             assertThat(contexts).hasSize(2);
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();
@@ -122,10 +122,10 @@ class HealthCheckContextGroupTest {
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
                                                     10000, 10000,
-                                                    SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
-                                                    HealthCheckStrategy.all())) {
+                                                    HealthCheckStrategy.all(),
+                                                    TestHealthCheckParamsFactory.INSTANCE)) {
             assertThat(contexts).hasSize(2);
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();

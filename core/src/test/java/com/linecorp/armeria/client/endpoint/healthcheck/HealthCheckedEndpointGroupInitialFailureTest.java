@@ -100,8 +100,8 @@ class HealthCheckedEndpointGroupInitialFailureTest {
                 EndpointGroup.of(Endpoint.of("health.foo.com"), Endpoint.of("health.bar.com"));
         try (HealthCheckedEndpointGroup endpointGroup = newHealthCheckedEndpointGroup(delegate)) {
             assertThat(endpointGroup.whenReady().join()).hasSize(2);
-            assertThat(endpointGroup.contextGroupChain().size()).isOne();
-            assertThat(endpointGroup.contextGroupChain().poll().whenInitialized()).isCompleted();
+            assertThat(endpointGroup.endpointPool().contextGroupChain().size()).isOne();
+            assertThat(endpointGroup.endpointPool().contextGroupChain().poll().whenInitialized()).isCompleted();
         }
     }
 
@@ -113,9 +113,10 @@ class HealthCheckedEndpointGroupInitialFailureTest {
                 EndpointGroup.of(foo, Endpoint.of(unhealthyHost));
         try (HealthCheckedEndpointGroup endpointGroup = newHealthCheckedEndpointGroup(delegate)) {
             assertThat(endpointGroup.whenReady().join()).containsExactly(foo);
-            assertThat(endpointGroup.contextGroupChain().size()).isOne();
+            assertThat(endpointGroup.endpointPool().contextGroupChain().size()).isOne();
             // Since there is one healthy endpoint, `whenInitialized()` should not complete with an error.
-            assertThat(endpointGroup.contextGroupChain().poll().whenInitialized()).isCompleted();
+            assertThat(endpointGroup.endpointPool().contextGroupChain()
+                                    .poll().whenInitialized()).isCompleted();
         }
     }
 
@@ -125,9 +126,10 @@ class HealthCheckedEndpointGroupInitialFailureTest {
                 EndpointGroup.of(Endpoint.of("slow.foo.com"), Endpoint.of("slow.bar.com"));
         try (HealthCheckedEndpointGroup endpointGroup = newHealthCheckedEndpointGroup(delegate)) {
             assertThat(endpointGroup.whenReady().join()).isEmpty();
-            assertThat(endpointGroup.contextGroupChain().size()).isOne();
+            assertThat(endpointGroup.endpointPool().contextGroupChain().size()).isOne();
             final Throwable cause =
-                    catchThrowable(() -> endpointGroup.contextGroupChain().poll().whenInitialized().join());
+                    catchThrowable(() -> endpointGroup.endpointPool().contextGroupChain().poll()
+                                                      .whenInitialized().join());
             assertThat(cause)
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ResponseTimeoutException.class);
@@ -143,9 +145,10 @@ class HealthCheckedEndpointGroupInitialFailureTest {
                 EndpointGroup.of(Endpoint.of("500.foo.com"), Endpoint.of("500.bar.com"));
         try (HealthCheckedEndpointGroup endpointGroup = newHealthCheckedEndpointGroup(delegate)) {
             assertThat(endpointGroup.whenReady().join()).isEmpty();
-            assertThat(endpointGroup.contextGroupChain().size()).isOne();
+            assertThat(endpointGroup.endpointPool().contextGroupChain().size()).isOne();
             final Throwable cause =
-                    catchThrowable(() -> endpointGroup.contextGroupChain().poll().whenInitialized().join());
+                    catchThrowable(() -> endpointGroup.endpointPool().contextGroupChain()
+                                                      .poll().whenInitialized().join());
             assertThat(cause)
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(InvalidResponseException.class)
@@ -163,9 +166,10 @@ class HealthCheckedEndpointGroupInitialFailureTest {
                 EndpointGroup.of(Endpoint.of("slow.foo.com"), Endpoint.of("500.bar.com"));
         try (HealthCheckedEndpointGroup endpointGroup = newHealthCheckedEndpointGroup(delegate)) {
             assertThat(endpointGroup.whenReady().join()).isEmpty();
-            assertThat(endpointGroup.contextGroupChain().size()).isOne();
+            assertThat(endpointGroup.endpointPool().contextGroupChain().size()).isOne();
             final Throwable cause =
-                    catchThrowable(() -> endpointGroup.contextGroupChain().poll().whenInitialized().join());
+                    catchThrowable(() -> endpointGroup.endpointPool().contextGroupChain()
+                                                      .poll().whenInitialized().join());
             assertThat(cause)
                     .isInstanceOf(CompletionException.class)
                     .hasCauseInstanceOf(ResponseTimeoutException.class);

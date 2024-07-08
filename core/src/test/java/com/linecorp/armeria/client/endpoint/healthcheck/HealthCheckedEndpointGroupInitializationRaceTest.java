@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.HealthCheckContextGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -66,14 +67,14 @@ class HealthCheckedEndpointGroupInitializationRaceTest {
                                                server1.httpEndpoint(), server1.httpEndpoint()));
         final HealthCheckedEndpointGroup healthGroup = HealthCheckedEndpointGroup.of(group,
                                                                                      "/health");
-        Queue<HealthCheckContextGroup> contextGroupChain = healthGroup.contextGroupChain();
+        Queue<HealthCheckContextGroup> contextGroupChain = healthGroup.endpointPool().contextGroupChain();
         assertThat(contextGroupChain).hasSize(1);
         assertThat(contextGroupChain.peek().contexts().values())
                 .allSatisfy(ctx -> assertThat(ctx.refCnt()).isOne());
 
         group.updateEndpoints(ImmutableList.of(server0.httpEndpoint(), server0.httpEndpoint(),
                                                server1.httpEndpoint()));
-        contextGroupChain = healthGroup.contextGroupChain();
+        contextGroupChain = healthGroup.endpointPool().contextGroupChain();
         assertThat(contextGroupChain).hasSize(2);
         for (HealthCheckContextGroup checkContextGroup : contextGroupChain) {
             assertThat(checkContextGroup.contexts().values())
@@ -82,7 +83,7 @@ class HealthCheckedEndpointGroupInitializationRaceTest {
 
         group.updateEndpoints(ImmutableList.of(server0.httpEndpoint(), server0.httpEndpoint(),
                                                server1.httpEndpoint(), server1.httpEndpoint()));
-        contextGroupChain = healthGroup.contextGroupChain();
+        contextGroupChain = healthGroup.endpointPool().contextGroupChain();
         assertThat(contextGroupChain).hasSize(3);
         for (HealthCheckContextGroup checkContextGroup : contextGroupChain) {
             assertThat(checkContextGroup.contexts().values())
@@ -95,7 +96,7 @@ class HealthCheckedEndpointGroupInitializationRaceTest {
         assertThat(endpoints).containsExactlyInAnyOrder(server0.httpEndpoint(), server0.httpEndpoint(),
                                                         server1.httpEndpoint(), server1.httpEndpoint());
 
-        contextGroupChain = healthGroup.contextGroupChain();
+        contextGroupChain = healthGroup.endpointPool().contextGroupChain();
         contextGroupChain.peek().whenInitialized().join();
         // Should clean up the old context groups and decrease the `refCnt`s.
         assertThat(contextGroupChain).hasSize(1);
