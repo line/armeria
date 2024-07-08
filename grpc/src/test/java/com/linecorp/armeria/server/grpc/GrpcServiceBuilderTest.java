@@ -132,13 +132,13 @@ class GrpcServiceBuilderTest {
         assertThatThrownBy(() -> GrpcService.builder()
                                             .addExceptionMapping(A1Exception.class, Status.RESOURCE_EXHAUSTED)
                                             .exceptionHandler(
-                                                    (ctx, cause, metadata) -> Status.PERMISSION_DENIED))
+                                                    (ctx, status, cause, metadata) -> Status.PERMISSION_DENIED))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("addExceptionMapping() and exceptionHandler() are mutually exclusive.");
 
         assertThatThrownBy(() -> GrpcService.builder()
                                             .exceptionHandler(
-                                                    (ctx, cause, metadata) -> Status.PERMISSION_DENIED)
+                                                    (ctx, status, cause, metadata) -> Status.PERMISSION_DENIED)
                                             .addExceptionMapping(A1Exception.class, Status.RESOURCE_EXHAUSTED))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("addExceptionMapping() and exceptionHandler() are mutually exclusive.");

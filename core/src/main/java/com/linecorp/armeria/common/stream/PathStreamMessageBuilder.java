@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.stream;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
-import java.util.concurrent.ExecutorService;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -31,7 +30,8 @@ import io.netty.buffer.ByteBufAllocator;
  * using {@link HttpData}.
  */
 @UnstableApi
-public final class PathStreamMessageBuilder extends AbstractByteStreamMessageBuilder {
+public final class PathStreamMessageBuilder
+        extends AbstractByteStreamMessageBuilder<PathStreamMessageBuilder> {
 
     private ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
     private final Path path;
@@ -53,17 +53,5 @@ public final class PathStreamMessageBuilder extends AbstractByteStreamMessageBui
     @Override
     public ByteStreamMessage build() {
         return new PathStreamMessage(path, executor(), alloc, bufferSize());
-    }
-
-    // Override the return type of the chaining methods in the superclass.
-
-    @Override
-    public PathStreamMessageBuilder executor(ExecutorService executor) {
-        return (PathStreamMessageBuilder) super.executor(executor);
-    }
-
-    @Override
-    public PathStreamMessageBuilder bufferSize(int bufferSize) {
-        return (PathStreamMessageBuilder) super.bufferSize(bufferSize);
     }
 }

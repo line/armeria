@@ -39,7 +39,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.internal.logging.ContentPreviewingUtil;
@@ -51,10 +51,10 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.metric.MetricCollectingService;
-import com.linecorp.armeria.server.metric.PrometheusExpositionService;
+import com.linecorp.armeria.server.prometheus.PrometheusExpositionService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 
 class ContentPreviewerCancellationTest {
 
@@ -77,7 +77,8 @@ class ContentPreviewerCancellationTest {
                               .newDecorator()
               )
               .annotatedService(new TestService())
-              .service("/metrics", PrometheusExpositionService.of(registry.getPrometheusRegistry()));
+              .service("/metrics",
+                       PrometheusExpositionService.of(registry.getPrometheusRegistry()));
         }
     };
 

@@ -96,7 +96,8 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
     }
 
     @Override
-    public HttpResponseWrapper addResponse(int id, DecodedHttpResponse decodedHttpResponse,
+    public HttpResponseWrapper addResponse(@Nullable AbstractHttpRequestHandler requestHandler,
+                                           int id, DecodedHttpResponse decodedHttpResponse,
                                            ClientRequestContext ctx, EventLoop eventLoop) {
         assert res == null;
         res = new WebSocketHttp1ResponseWrapper(decodedHttpResponse, eventLoop, ctx,
@@ -180,7 +181,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                     }
 
                     if (!HttpUtil.isKeepAlive(nettyRes)) {
-                        session().deactivate();
+                        session().markUnacquirable();
                     }
 
                     if (res == null && ArmeriaHttpUtil.isRequestTimeoutResponse(nettyRes)) {

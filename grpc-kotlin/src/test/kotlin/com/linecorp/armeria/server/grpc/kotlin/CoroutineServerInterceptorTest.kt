@@ -228,7 +228,12 @@ internal class CoroutineServerInterceptorTest {
             object : ServerExtension() {
                 override fun configure(sb: ServerBuilder) {
                     val exceptionHandler =
-                        GrpcExceptionHandlerFunction { _: RequestContext, throwable: Throwable, _: Metadata ->
+                        GrpcExceptionHandlerFunction {
+                                _: RequestContext,
+                                _: Status,
+                                throwable: Throwable,
+                                _: Metadata,
+                            ->
                             if (throwable is AnticipatedException && throwable.message == "Invalid access") {
                                 return@GrpcExceptionHandlerFunction Status.UNAUTHENTICATED
                             }

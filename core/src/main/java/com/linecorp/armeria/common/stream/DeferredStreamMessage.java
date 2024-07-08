@@ -482,10 +482,8 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
     }
 
     private static SubscriptionImpl noopSubscription() {
-        final DefaultStreamMessage<?> streamMessage = new DefaultStreamMessage<>();
-        streamMessage.close();
-        return new SubscriptionImpl(streamMessage, NoopSubscriber.get(), ImmediateEventExecutor.INSTANCE,
-                                    EMPTY_OPTIONS);
+        return new SubscriptionImpl(NoopCancellableStreamMessage.INSTANCE, NoopSubscriber.get(),
+                                    ImmediateEventExecutor.INSTANCE, EMPTY_OPTIONS);
     }
 
     private final class ForwardingSubscriber implements Subscriber<T> {

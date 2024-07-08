@@ -16,8 +16,11 @@
 
 package com.linecorp.armeria.internal.server.grpc;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.applyExceptionHandler;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil.serializeTrailersAsMessage;
 import static java.util.Objects.requireNonNull;
 
@@ -113,7 +116,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     @Nullable
     private final Executor blockingExecutor;
-    @Nullable
     private final GrpcExceptionHandlerFunction exceptionHandler;
 
     // Only set once.
@@ -149,7 +151,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                                  @Nullable GrpcJsonMarshaller jsonMarshaller,
                                  boolean unsafeWrapRequestBuffers,
                                  ResponseHeaders defaultHeaders,
-                                 @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                                 GrpcExceptionHandlerFunction exceptionHandler,
                                  @Nullable Executor blockingExecutor,
                                  boolean autoCompression,
                                  boolean useMethodMarshaller) {
@@ -214,17 +216,29 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Throwable exception, boolean cancelled) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        final Status status = GrpcStatus.fromThrowable(exceptionHandler, ctx, exception, metadata);
-        close(new ServerStatusAndMetadata(status, metadata, false, cancelled), exception);
+        final Status status = Status.fromThrowable(exception);
+        close(status, metadata, cancelled, exception);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
+        close(status, metadata, false, null);
+    }
+
+    private void close(Status status, Metadata metadata, boolean cancelled,
+                       @Nullable Throwable originalCause) {
+        final Throwable cause = status.getCause();
+        if (cause == null) {
+            close(new ServerStatusAndMetadata(status, metadata, false, cancelled));
+            return;
+        }
+        Status newStatus = applyExceptionHandler(ctx, exceptionHandler, status, cause, metadata);
+        if (status.getDescription() != null) {
+            newStatus = newStatus.withDescription(status.getDescription());
+        }
         final ServerStatusAndMetadata statusAndMetadata =
-                new ServerStatusAndMetadata(GrpcStatus.fromExceptionHandler(exceptionHandler, ctx,
-                                                                            status, metadata),
-                                            metadata, false);
-        close(statusAndMetadata);
+                new ServerStatusAndMetadata(newStatus, metadata, false, cancelled);
+        close(statusAndMetadata, firstNonNull(originalCause, cause));
     }
 
     public final void close(ServerStatusAndMetadata statusAndMetadata) {
@@ -591,12 +605,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
     }
 
-    private static Metadata generateMetadataFromThrowable(Throwable exception) {
-        @Nullable
-        final Metadata metadata = Status.trailersFromThrowable(exception);
-        return metadata != null ? metadata : new Metadata();
-    }
-
     @Nullable
     protected static Decompressor clientDecompressor(HttpHeaders headers, DecompressorRegistry registry) {
         final String encoding = headers.get(GrpcHeaderNames.GRPC_ENCODING);
@@ -660,5 +668,9 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     public final ServiceRequestContext ctx() {
         return ctx;
+    }
+
+    public final GrpcExceptionHandlerFunction exceptionHandler() {
+        return exceptionHandler;
     }
 }

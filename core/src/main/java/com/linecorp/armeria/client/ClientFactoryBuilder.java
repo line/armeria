@@ -67,6 +67,7 @@ import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -477,6 +478,17 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the {@link TlsEngineType} that will be used for processing TLS connections.
+     *
+     * @param tlsEngineType the {@link TlsEngineType} to use
+     */
+    @UnstableApi
+    public ClientFactoryBuilder tlsEngineType(TlsEngineType tlsEngineType) {
+        option(ClientFactoryOptions.TLS_ENGINE_TYPE, tlsEngineType);
+        return this;
+    }
+
+    /**
      * Sets the factory that creates a {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
      *
@@ -789,6 +801,28 @@ public final class ClientFactoryBuilder implements TlsSetters {
             ConnectionPoolListener connectionPoolListener) {
         option(ClientFactoryOptions.CONNECTION_POOL_LISTENER,
                requireNonNull(connectionPoolListener, "connectionPoolListener"));
+        return this;
+    }
+
+    /**
+     * Sets the graceful connection shutdown timeout in milliseconds.
+     * {@code 0} disables the timeout and closes the connection immediately after sending a GOAWAY frame.
+     */
+    public ClientFactoryBuilder http2GracefulShutdownTimeout(Duration duration) {
+        requireNonNull(duration, "duration");
+        return http2GracefulShutdownTimeoutMillis(duration.toMillis());
+    }
+
+    /**
+     * Sets the graceful connection shutdown timeout in milliseconds.
+     * {@code 0} disables the timeout and closes the connection immediately after sending a GOAWAY frame.
+     */
+    public ClientFactoryBuilder http2GracefulShutdownTimeoutMillis(long http2GracefulShutdownTimeoutMillis) {
+        checkArgument(http2GracefulShutdownTimeoutMillis >= 0,
+                      "http2GracefulShutdownTimeoutMillis: %s (expected: >= 0)",
+                      http2GracefulShutdownTimeoutMillis);
+        option(ClientFactoryOptions.HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS,
+               http2GracefulShutdownTimeoutMillis);
         return this;
     }
 

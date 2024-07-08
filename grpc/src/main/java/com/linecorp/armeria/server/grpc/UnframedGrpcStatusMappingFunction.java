@@ -37,7 +37,7 @@ public interface UnframedGrpcStatusMappingFunction {
      * code.proto</a>.
      */
     static UnframedGrpcStatusMappingFunction of() {
-        return (ctx, status, response) -> GrpcStatus.grpcStatusToHttpStatus(status);
+        return (ctx, status, response) -> GrpcStatus.grpcStatusToHttpStatus(ctx, status);
     }
 
     /**

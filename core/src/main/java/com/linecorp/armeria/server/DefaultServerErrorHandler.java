@@ -19,9 +19,6 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 
 import javax.annotation.Nonnull;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
@@ -32,6 +29,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.annotation.AnnotatedService;
 
@@ -48,8 +46,6 @@ import com.linecorp.armeria.server.annotation.AnnotatedService;
 enum DefaultServerErrorHandler implements ServerErrorHandler {
 
     INSTANCE;
-
-    private static final Logger logger = LoggerFactory.getLogger(DefaultServerErrorHandler.class);
 
     /**
      * Converts the specified {@link Throwable} to an {@link HttpResponse}.
@@ -86,8 +82,17 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         }
 
         if (cause instanceof RequestTimeoutException) {
-            return internalRenderStatus(ctx, ctx.request().headers(),
-                                        HttpStatus.SERVICE_UNAVAILABLE, cause);
+            final HttpStatus status;
+            final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+            assert ctxExtension != null;
+            final DecodedHttpRequest request = (DecodedHttpRequest) ctxExtension.originalRequest();
+            if (request.isClosedSuccessfully()) {
+                status = HttpStatus.SERVICE_UNAVAILABLE;
+            } else {
+                // The server didn't receive the request fully yet.
+                status = HttpStatus.REQUEST_TIMEOUT;
+            }
+            return internalRenderStatus(ctx, ctx.request().headers(), status, cause);
         }
 
         return internalRenderStatus(ctx, ctx.request().headers(),

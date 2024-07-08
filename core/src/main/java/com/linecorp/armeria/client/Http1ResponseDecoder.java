@@ -183,7 +183,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                         }
 
                         if (!HttpUtil.isKeepAlive(nettyRes)) {
-                            session().deactivate();
+                            session().markUnacquirable();
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);
@@ -196,6 +196,9 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
 
                         res.startResponse();
                         final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
+
+                        res.handle100Continue(responseHeaders);
+
                         final boolean written;
                         if (responseHeaders.status().codeClass() == HttpStatusClass.INFORMATIONAL) {
                             state = State.NEED_INFORMATIONAL_DATA;
