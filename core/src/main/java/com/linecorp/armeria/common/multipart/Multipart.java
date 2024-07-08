@@ -440,7 +440,7 @@ public interface Multipart {
      * @param predicate certain conditions
      * @return multipart matching the condition
      */
-    default Multipart filterBodyParts(Predicate<? super BodyPart> predicate) {
+    default Multipart filterBodyParts(Predicate<BodyPart> predicate) {
         requireNonNull(predicate, "predicate");
         final StreamMessage<BodyPart> filteredParts = bodyParts().filter(predicate);
         return new DefaultMultipart(boundary(), filteredParts);

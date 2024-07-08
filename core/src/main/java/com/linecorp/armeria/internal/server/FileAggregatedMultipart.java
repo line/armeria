@@ -59,10 +59,10 @@ public final class FileAggregatedMultipart {
         return files;
     }
 
-    private static boolean shouldSkip(BodyPart bodyPart, List<String> parameters) {
+    private static boolean shouldHandle(BodyPart bodyPart, List<String> parameters) {
         final String name = bodyPart.name();
         assert name != null;
-        return !parameters.isEmpty() && !parameters.contains(name);
+        return !parameters.isEmpty() && parameters.contains(name);
     }
 
     public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
@@ -74,7 +74,7 @@ public final class FileAggregatedMultipart {
             ServiceRequestContext ctx, HttpRequest req, List<String> parameters) {
         final Path destination = ctx.config().multipartUploadsLocation();
         return Multipart.from(req)
-                        .filterBodyParts(bodyPart -> !shouldSkip(bodyPart, parameters)).collect(bodyPart -> {
+                        .filterBodyParts(bodyPart -> shouldHandle(bodyPart, parameters)).collect(bodyPart -> {
             final String name = bodyPart.name();
             assert name != null;
             final String filename = bodyPart.filename();
