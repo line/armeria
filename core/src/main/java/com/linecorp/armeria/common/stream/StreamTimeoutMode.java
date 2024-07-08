@@ -47,7 +47,6 @@ public enum StreamTimeoutMode {
      * If each data chunk is not received within the specified time after the previous chunk,
      * a {@link TimeoutException} is thrown.
      */
-
     UNTIL_NEXT,
 
     /**
