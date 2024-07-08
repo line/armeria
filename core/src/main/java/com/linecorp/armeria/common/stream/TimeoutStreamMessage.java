@@ -20,13 +20,16 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * This class provides timeout functionality to a base StreamMessage.
@@ -149,5 +152,119 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     public void abort(Throwable cause) {
         cancelSchedule();
         delegate.abort(cause);
+    }
+
+    static final class TimeoutSubscriber<T> implements Runnable, Subscriber<T>, Subscription {
+
+        private static final String TIMEOUT_MESSAGE = "Stream timed out after %d ms (timeout mode: %s)";
+        private final Subscriber<? super T> delegate;
+        private final EventExecutor executor;
+        private final StreamTimeoutMode timeoutMode;
+        private final Duration timeoutDuration;
+        private final long timeoutNanos;
+        @Nullable
+        private ScheduledFuture<?> timeoutFuture;
+        @Nullable
+        private Subscription subscription;
+        private long lastEventTimeNanos;
+        private boolean completed;
+
+        TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
+                          StreamTimeoutMode timeoutMode) {
+            this.delegate = requireNonNull(delegate, "delegate");
+            this.executor = requireNonNull(executor, "executor");
+            this.timeoutDuration = requireNonNull(timeoutDuration, "timeoutDuration");
+            timeoutNanos = timeoutDuration.toNanos();
+            this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
+        }
+
+        private ScheduledFuture<?> scheduleTimeout(long delay, TimeUnit unit) {
+            return executor.schedule(this, delay, unit);
+        }
+
+        void cancelSchedule() {
+            if (timeoutFuture != null && !timeoutFuture.isCancelled()) {
+                timeoutFuture.cancel(false);
+            }
+        }
+
+        @Override
+        public void run() {
+            if (timeoutMode == StreamTimeoutMode.UNTIL_NEXT) {
+                final long currentTimeNanos = System.nanoTime();
+                final long elapsedNanos = currentTimeNanos - lastEventTimeNanos;
+
+                if (elapsedNanos < timeoutNanos) {
+                    final long delayNanos = timeoutNanos - elapsedNanos;
+                    timeoutFuture = scheduleTimeout(delayNanos, TimeUnit.NANOSECONDS);
+                    return;
+                }
+            }
+            completed = true;
+            delegate.onError(new TimeoutException(
+                    String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode)));
+            subscription.cancel();
+        }
+
+        @Override
+        public void onSubscribe(Subscription s) {
+            subscription = s;
+            delegate.onSubscribe(this);
+            if(completed) {
+                return;
+            }
+            lastEventTimeNanos = System.nanoTime();
+            timeoutFuture = scheduleTimeout(timeoutNanos, TimeUnit.NANOSECONDS);
+        }
+
+        @Override
+        public void onNext(T t) {
+            if (completed) {
+                return;
+            }
+            switch (timeoutMode) {
+                case UNTIL_NEXT:
+                    lastEventTimeNanos = System.nanoTime();
+                    break;
+                case UNTIL_FIRST:
+                    cancelSchedule();
+                    break;
+                case UNTIL_EOS:
+                    break;
+            }
+            delegate.onNext(t);
+        }
+
+        @Override
+        public void onError(Throwable throwable) {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            cancelSchedule();
+            delegate.onError(throwable);
+        }
+
+        @Override
+        public void onComplete() {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            cancelSchedule();
+            delegate.onComplete();
+        }
+
+        @Override
+        public void request(long l) {
+            subscription.request(l);
+        }
+
+        @Override
+        public void cancel() {
+            completed = true;
+            cancelSchedule();
+            subscription.cancel();
+        }
     }
 }
