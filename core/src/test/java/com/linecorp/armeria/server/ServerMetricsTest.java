@@ -19,13 +19,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.assertj.core.api.Condition;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.WebClient;
@@ -37,14 +40,31 @@ import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.common.metric.MoreMeters;
+import com.linecorp.armeria.common.prometheus.PrometheusMeterRegistries;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 
 class ServerMetricsTest {
 
     @RegisterExtension
-    private static final ServerExtension server = new ServerExtension() {
+    final ServerExtension server = new ServerExtension() {
+        @Override
+        protected boolean runForEachTest() {
+            return true;
+        }
+
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            final PrometheusMeterRegistry prometheusMeterRegistry = PrometheusMeterRegistries.newRegistry();
+            sb.meterRegistry(prometheusMeterRegistry);
+            // Use 'armeria.server' to make sure that the metric names are not conflicted with `ServerMetrics`.
+            sb.decorator(MetricCollectingService.newDecorator(
+                    MeterIdPrefixFunction.ofDefault("armeria.server")));
+
             sb.requestTimeoutMillis(0)
               .requestAutoAbortDelayMillis(0)
               .service("/ok/http", new HttpService() {
@@ -256,5 +276,28 @@ class ServerMetricsTest {
             assertThat(serverMetrics.activeRequests()).isZero();
             await().until(() -> serverMetrics.activeConnections() == 0);
         }
+    }
+
+    @CsvSource({ "H1C", "H2C" })
+    @ParameterizedTest
+    void meterNames(SessionProtocol protocol) {
+        final BlockingWebClient client = BlockingWebClient.of(server.uri(protocol));
+        assertThat(client.get("/ok/http").status()).isEqualTo(HttpStatus.OK);
+
+        await().untilAsserted(() -> {
+            final Map<String, Double> meters = MoreMeters.measureAll(server.server().meterRegistry());
+            // armeria.server.active.requests#value is measured by MetricCollectingService
+            assertThat(meters).hasKeySatisfying(new Condition<String>("armeria.server.active.requests#value") {
+                @Override
+                public boolean matches(String key) {
+                    return key.startsWith("armeria.server.active.requests#value{hostname.pattern=");
+                }
+            });
+
+            final String protocolName = protocol == SessionProtocol.H1C ? "http1" : "http2";
+            // armeria.server.active.requests.all#value is measured by ServerMetrics
+            assertThat(meters).containsKey("armeria.server.active.requests.all#value{protocol=" + protocolName +
+                                           '}');
+        });
     }
 }

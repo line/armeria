@@ -162,11 +162,12 @@ public final class ServerMetrics implements MeterBinder {
         meterRegistry.gauge("armeria.server.pending.requests",
                             ImmutableList.of(Tag.of("protocol", "http2")), pendingHttp2Requests);
         // Active requests
-        meterRegistry.gauge("armeria.server.active.requests", ImmutableList.of(Tag.of("protocol", "http1")),
+        final String activeRequestMeterName = "armeria.server.active.requests.all";
+        meterRegistry.gauge(activeRequestMeterName, ImmutableList.of(Tag.of("protocol", "http1")),
                             activeHttp1Requests);
-        meterRegistry.gauge("armeria.server.active.requests", ImmutableList.of(Tag.of("protocol", "http2")),
+        meterRegistry.gauge(activeRequestMeterName, ImmutableList.of(Tag.of("protocol", "http2")),
                             activeHttp2Requests);
-        meterRegistry.gauge("armeria.server.active.requests",
+        meterRegistry.gauge(activeRequestMeterName,
                             ImmutableList.of(Tag.of("protocol", "http1.websocket")),
                             activeHttp1WebSocketRequests);
     }
