@@ -65,7 +65,7 @@ public final class FileServiceBuilder {
     MediaTypeResolver mediaTypeResolver = MediaTypeResolver.ofDefault();
 
     @Nullable
-    private ImmutableList.Builder<String> fileExtensions;
+    private ImmutableList.Builder<String> fallbackFileExtensions;
 
     FileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -169,9 +169,9 @@ public final class FileServiceBuilder {
      * {@link FileService} will attempt to serve {@code "/index.html"} if {@code "/index"} is not found.
      */
     @UnstableApi
-    public FileServiceBuilder fileExtensions(String... extensions) {
+    public FileServiceBuilder fallbackFileExtensions(String... extensions) {
         requireNonNull(extensions, "extensions");
-        return fileExtensions(ImmutableList.copyOf(extensions));
+        return fallbackFileExtensions(ImmutableList.copyOf(extensions));
     }
 
     /**
@@ -183,21 +183,21 @@ public final class FileServiceBuilder {
      * {@link FileService} will attempt to serve {@code "/index.html"} if {@code "/index"} is not found.
      */
     @UnstableApi
-    public FileServiceBuilder fileExtensions(Iterable<String> extensions) {
+    public FileServiceBuilder fallbackFileExtensions(Iterable<String> extensions) {
         requireNonNull(extensions, "extensions");
         for (String extension : extensions) {
             checkArgument(!extension.isEmpty(), "extension is empty");
             checkArgument(extension.charAt(0) != '.', "extension: %s (expected: without a dot)", extension);
         }
-        if (fileExtensions == null) {
-            fileExtensions = ImmutableList.builder();
+        if (fallbackFileExtensions == null) {
+            fallbackFileExtensions = ImmutableList.builder();
         }
-        fileExtensions.addAll(extensions);
+        fallbackFileExtensions.addAll(extensions);
         return this;
     }
 
-    private List<String> fileExtensions() {
-        return fileExtensions != null ? fileExtensions.build() : ImmutableList.of();
+    private List<String> fallbackFileExtensions() {
+        return fallbackFileExtensions != null ? fallbackFileExtensions.build() : ImmutableList.of();
     }
 
     /**
@@ -295,13 +295,13 @@ public final class FileServiceBuilder {
         return new FileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
                 serveCompressedFiles, autoDecompress, autoIndex, buildHeaders(),
-                mediaTypeResolver.orElse(MediaTypeResolver.ofDefault()), fileExtensions()));
+                mediaTypeResolver.orElse(MediaTypeResolver.ofDefault()), fallbackFileExtensions()));
     }
 
     @Override
     public String toString() {
         return FileServiceConfig.toString(this, vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
                                           serveCompressedFiles, autoIndex, headers, mediaTypeResolver,
-                                          fileExtensions());
+                                          fallbackFileExtensions());
     }
 }

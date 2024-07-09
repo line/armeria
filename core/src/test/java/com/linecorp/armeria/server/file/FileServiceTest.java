@@ -183,12 +183,12 @@ class FileServiceTest {
             sb.serviceUnder(
                     "/extension",
                     FileService.builder(classLoader, baseResourceDir + "foo")
-                               .fileExtensions("txt")
+                               .fallbackFileExtensions("txt")
                                .build());
             sb.serviceUnder(
                     "/extension/decompress",
                     FileService.builder(classLoader, baseResourceDir + "foo")
-                               .fileExtensions("txt")
+                               .fallbackFileExtensions("txt")
                                .serveCompressedFiles(true)
                                .autoDecompress(true)
                                .build());

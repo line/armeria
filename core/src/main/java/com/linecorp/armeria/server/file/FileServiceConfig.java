@@ -48,12 +48,12 @@ public final class FileServiceConfig {
     private final boolean autoIndex;
     private final HttpHeaders headers;
     private final MediaTypeResolver mediaTypeResolver;
-    private final List<String> fileExtensions;
+    private final List<String> fallbackFileExtensions;
 
     FileServiceConfig(HttpVfs vfs, Clock clock, @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
                       boolean serveCompressedFiles, boolean autoDecompress, boolean autoIndex,
                       HttpHeaders headers, MediaTypeResolver mediaTypeResolver,
-                      List<String> fileExtensions) {
+                      List<String> fallbackFileExtensions) {
         this.vfs = requireNonNull(vfs, "vfs");
         this.clock = requireNonNull(clock, "clock");
         this.entryCacheSpec = validateEntryCacheSpec(entryCacheSpec);
@@ -63,7 +63,7 @@ public final class FileServiceConfig {
         this.autoIndex = autoIndex;
         this.headers = requireNonNull(headers, "headers");
         this.mediaTypeResolver = requireNonNull(mediaTypeResolver, "mediaTypeResolver");
-        this.fileExtensions = requireNonNull(fileExtensions, "fileExtensions");
+        this.fallbackFileExtensions = requireNonNull(fallbackFileExtensions, "fallbackFileExtensions");
     }
 
     @Nullable
@@ -161,21 +161,22 @@ public final class FileServiceConfig {
      * Returns the file extensions that are appended to the file name when the file is not found.
      */
     @UnstableApi
-    public List<String> fileExtensions() {
-        return fileExtensions;
+    public List<String> fallbackFileExtensions() {
+        return fallbackFileExtensions;
     }
 
     @Override
     public String toString() {
         return toString(this, vfs(), clock(), entryCacheSpec(), maxCacheEntrySizeBytes(),
-                        serveCompressedFiles(), autoIndex(), headers(), mediaTypeResolver(), fileExtensions());
+                        serveCompressedFiles(), autoIndex(), headers(), mediaTypeResolver(),
+                        fallbackFileExtensions());
     }
 
     static String toString(Object holder, HttpVfs vfs, Clock clock,
                            @Nullable String entryCacheSpec, int maxCacheEntrySizeBytes,
                            boolean serveCompressedFiles, boolean autoIndex,
                            @Nullable Iterable<Entry<AsciiString, String>> headers,
-                           MediaTypeResolver mediaTypeResolver, @Nullable List<String> fileExtensions) {
+                           MediaTypeResolver mediaTypeResolver, @Nullable List<String> fallbackFileExtensions) {
 
         return MoreObjects.toStringHelper(holder).omitNullValues()
                           .add("vfs", vfs)
@@ -186,7 +187,7 @@ public final class FileServiceConfig {
                           .add("autoIndex", autoIndex)
                           .add("headers", headers)
                           .add("mediaTypeResolver", mediaTypeResolver)
-                          .add("fileExtensions", fileExtensions)
+                          .add("fallbackFileExtensions", fallbackFileExtensions)
                           .toString();
     }
 }

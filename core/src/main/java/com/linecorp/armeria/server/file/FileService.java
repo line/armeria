@@ -258,13 +258,13 @@ public final class FileService extends AbstractHttpService {
                     });
                 });
             } else {
-                final List<String> extensions = config.fileExtensions();
-                if (extensions.isEmpty()) {
+                final List<String> fallbackExtensions = config.fallbackFileExtensions();
+                if (fallbackExtensions.isEmpty()) {
                     return findFileWithIndexPath(ctx, decodedMappedPath, encodings, decompress);
                 }
 
                 // Try appending file extensions if it was a file access and file extensions are configured.
-                return findFileWithExtensions(ctx, extensions.iterator(), decodedMappedPath,
+                return findFileWithExtensions(ctx, fallbackExtensions.iterator(), decodedMappedPath,
                                               encodings, decompress).thenCompose(fileWithExtension -> {
                     if (fileWithExtension != null) {
                         return UnmodifiableFuture.completedFuture(fileWithExtension);
