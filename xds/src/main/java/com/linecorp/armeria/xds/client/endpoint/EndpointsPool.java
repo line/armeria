@@ -79,9 +79,13 @@ final class EndpointsPool implements AsyncCloseable {
         if (hasCreatedAtNanos(endpoint)) {
             return createdAtNanos(endpoint);
         }
+        Long timestamp = null;
         final Attributes prevAttr = prevAttrs.get(endpoint);
-        if (prevAttr != null && prevAttr.hasAttr(CREATED_AT_NANOS_KEY)) {
-            return prevAttr.attr(CREATED_AT_NANOS_KEY);
+        if (prevAttr != null) {
+            timestamp = prevAttr.attr(CREATED_AT_NANOS_KEY);
+        }
+        if (timestamp != null) {
+            return timestamp;
         }
         return defaultTimestamp;
     }
