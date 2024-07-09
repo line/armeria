@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.file;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.server.file.FileServiceConfig.validateEntryCacheSpec;
 import static com.linecorp.armeria.server.file.FileServiceConfig.validateMaxCacheEntrySizeBytes;
@@ -23,9 +24,11 @@ import static com.linecorp.armeria.server.file.FileServiceConfig.validateNonNega
 import static java.util.Objects.requireNonNull;
 
 import java.time.Clock;
+import java.util.List;
 import java.util.Map.Entry;
 
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CacheControl;
 import com.linecorp.armeria.common.Flags;
@@ -35,6 +38,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Builds a new {@link FileService} and its {@link FileServiceConfig}. Use the factory methods in
@@ -59,6 +63,9 @@ public final class FileServiceBuilder {
     @Nullable
     HttpHeadersBuilder headers;
     MediaTypeResolver mediaTypeResolver = MediaTypeResolver.ofDefault();
+
+    @Nullable
+    private ImmutableList.Builder<String> fileExtensions;
 
     FileServiceBuilder(HttpVfs vfs) {
         this.vfs = requireNonNull(vfs, "vfs");
@@ -151,6 +158,46 @@ public final class FileServiceBuilder {
     public FileServiceBuilder autoIndex(boolean autoIndex) {
         this.autoIndex = autoIndex;
         return this;
+    }
+
+    /**
+     * Adds the file extensions to be considered when resolving file names.
+     * This method allows specifying alternative file names by appending the provided extensions
+     * to the requested file name if the initially requested resource is not found.
+     *
+     * <p>For instance, if {@code "/index"} is requested and {@code "html"} is an added extension,
+     * {@link FileService} will attempt to serve {@code "/index.html"} if {@code "/index"} is not found.
+     */
+    @UnstableApi
+    public FileServiceBuilder fileExtensions(String... extensions) {
+        requireNonNull(extensions, "extensions");
+        return fileExtensions(ImmutableList.copyOf(extensions));
+    }
+
+    /**
+     * Adds the file extensions to be considered when resolving file names.
+     * This method allows specifying alternative file names by appending the provided extensions
+     * to the requested file name if the initially requested resource is not found.
+     *
+     * <p>For instance, if {@code "/index"} is requested and {@code "html"} is an added extension,
+     * {@link FileService} will attempt to serve {@code "/index.html"} if {@code "/index"} is not found.
+     */
+    @UnstableApi
+    public FileServiceBuilder fileExtensions(Iterable<String> extensions) {
+        requireNonNull(extensions, "extensions");
+        for (String extension : extensions) {
+            checkArgument(!extension.isEmpty(), "extension is empty");
+            checkArgument(extension.charAt(0) != '.', "extension: %s (expected: without a dot)", extension);
+        }
+        if (fileExtensions == null) {
+            fileExtensions = ImmutableList.builder();
+        }
+        fileExtensions.addAll(extensions);
+        return this;
+    }
+
+    private List<String> fileExtensions() {
+        return fileExtensions != null ? fileExtensions.build() : ImmutableList.of();
     }
 
     /**
@@ -248,12 +295,13 @@ public final class FileServiceBuilder {
         return new FileService(new FileServiceConfig(
                 vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
                 serveCompressedFiles, autoDecompress, autoIndex, buildHeaders(),
-                mediaTypeResolver.orElse(MediaTypeResolver.ofDefault())));
+                mediaTypeResolver.orElse(MediaTypeResolver.ofDefault()), fileExtensions()));
     }
 
     @Override
     public String toString() {
         return FileServiceConfig.toString(this, vfs, clock, entryCacheSpec, maxCacheEntrySizeBytes,
-                                          serveCompressedFiles, autoIndex, headers, mediaTypeResolver);
+                                          serveCompressedFiles, autoIndex, headers, mediaTypeResolver,
+                                          fileExtensions());
     }
 }
