@@ -711,6 +711,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * {@link Attributes}. For attributes with the same {@link AttributeKey}, the attribute
      * in {@param newAttributes} has higher precedence.
      */
+    @UnstableApi
     @SuppressWarnings("unchecked")
     public Endpoint withAttrs(Attributes newAttributes) {
         requireNonNull(newAttributes, "newAttributes");
