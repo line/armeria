@@ -29,7 +29,6 @@ import com.linecorp.armeria.client.endpoint.healthcheck.AbstractHealthCheckedEnd
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.internal.client.endpoint.healthcheck.HttpHealthChecker;
 
@@ -58,20 +57,19 @@ final class XdsHealthCheckedEndpointGroupBuilder
         return ctx -> {
             final LbEndpoint lbEndpoint = EndpointUtil.lbEndpoint(ctx.originalEndpoint());
             final HealthCheckConfig healthCheckConfig = lbEndpoint.getEndpoint().getHealthCheckConfig();
+            final String path = httpHealthCheck.getPath();
+            final String host = Strings.emptyToNull(httpHealthCheck.getHost());
+
             final HttpHealthChecker checker =
                     new HttpHealthChecker(ctx, endpoint(healthCheckConfig, ctx.originalEndpoint()),
-                                          path(), httpMethod() == HttpMethod.GET,
-                                          protocol(), host());
+                                          path, httpMethod(httpHealthCheck) == HttpMethod.GET,
+                                          protocol(cluster), host);
             checker.start();
             return checker;
         };
     }
 
-    public String path() {
-        return httpHealthCheck.getPath();
-    }
-
-    public HttpMethod httpMethod() {
+    private static HttpMethod httpMethod(HttpHealthCheck httpHealthCheck) {
         final HttpMethod method = EndpointUtil.convert(httpHealthCheck.getMethod(), HttpMethod.GET);
         if (method != HttpMethod.GET && method != HttpMethod.HEAD) {
             logger.warn("Unsupported http method: {}. Only GET and HEAD are supported. " +
@@ -81,12 +79,7 @@ final class XdsHealthCheckedEndpointGroupBuilder
         return method;
     }
 
-    @Nullable
-    public String host() {
-        return Strings.emptyToNull(httpHealthCheck.getHost());
-    }
-
-    public SessionProtocol protocol() {
+    private static SessionProtocol protocol(Cluster cluster) {
         // Not using httpHealthCheck.getCodecClientType() because
         // HTTP[S] covers both HTTP/1 and HTTP/2.
         if (EndpointUtil.isTls(cluster)) {
@@ -96,7 +89,7 @@ final class XdsHealthCheckedEndpointGroupBuilder
         }
     }
 
-    public Endpoint endpoint(HealthCheckConfig healthCheckConfig, Endpoint endpoint) {
+    private static Endpoint endpoint(HealthCheckConfig healthCheckConfig, Endpoint endpoint) {
         if (healthCheckConfig == HealthCheckConfig.getDefaultInstance()) {
             return endpoint;
         }

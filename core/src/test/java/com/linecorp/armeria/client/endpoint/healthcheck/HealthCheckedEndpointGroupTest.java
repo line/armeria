@@ -40,7 +40,6 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -176,7 +175,7 @@ class HealthCheckedEndpointGroupTest {
             // 'foo' should not be healthy even if `ctx.updateHealth()` was called.
             ctx.updateHealth(1, null, null, null);
             assertThat(group.endpoints()).isEmpty();
-            assertThat(group.healthyEndpoints).isEmpty();
+            assertThat(group.allHealthyEndpoints()).isEmpty();
 
             // An attempt to schedule a new task for a disappeared endpoint must fail.
             assertThatThrownBy(() -> ctx.executor().execute(() -> {}))
@@ -231,7 +230,7 @@ class HealthCheckedEndpointGroupTest {
             // 'foo' should not be healthy after `bar` become healthy.
             ctx2.updateHealth(1, null, null, null);
             assertThat(group.endpoints()).containsOnly(endpoint2);
-            assertThat(group.healthyEndpoints).containsOnly(endpoint2);
+            assertThat(group.allHealthyEndpoints()).containsOnly(endpoint2);
         }
     }
 
@@ -261,14 +260,14 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    Predicates.alwaysFalse())) {
+                                                    endpoints -> ImmutableList.of())) {
 
-            assertThat(group.healthyEndpoints).containsOnly(candidate1, candidate2);
+            assertThat(group.allHealthyEndpoints()).containsOnly(candidate1, candidate2);
 
             final ClientRequestContext mockCtx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/health"));
             firstSelectedCandidates.get().updateHealth(UNHEALTHY, mockCtx, null, new AnticipatedException());
-            assertThat(group.healthyEndpoints).containsOnly(candidate2);
+            assertThat(group.allHealthyEndpoints()).containsOnly(candidate2);
         }
     }
 
@@ -293,7 +292,7 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    Predicates.alwaysFalse())) {
+                                                    endpoints -> ImmutableList.of())) {
 
             assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
                                          .containsOnly(candidate1, candidate2);
@@ -326,7 +325,7 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    Predicates.alwaysFalse())) {
+                                                    endpoints -> ImmutableList.of())) {
             assertThat(counter.get()).isEqualTo(2);
         }
     }
@@ -352,7 +351,7 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    Predicates.alwaysFalse())) {
+                                                    endpoints -> ImmutableList.of())) {
             final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
             endpointGroup.addListener(healthyEndpointsList::add, true);
             delegate.set(candidate1, candidate3);

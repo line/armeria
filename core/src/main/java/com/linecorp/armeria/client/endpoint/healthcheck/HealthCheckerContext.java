@@ -38,7 +38,7 @@ public interface HealthCheckerContext {
     Endpoint endpoint();
 
     /**
-     * The original {@link Endpoint} which is health checked.
+     * The original {@link Endpoint} which is considered for health checking.
      */
     @UnstableApi
     Endpoint originalEndpoint();

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.linecorp.armeria.server.TransientServiceOption.WITH_SERVICE_LOGGING;
+import static com.linecorp.armeria.xds.XdsTestResources.address;
 import static com.linecorp.armeria.xds.XdsTestResources.createStaticCluster;
 import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
@@ -24,7 +25,9 @@ import static com.linecorp.armeria.xds.XdsTestResources.staticResourceListener;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -56,13 +59,16 @@ import io.envoyproxy.controlplane.cache.v3.Snapshot;
 import io.envoyproxy.controlplane.server.V3DiscoveryServer;
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
 import io.envoyproxy.envoy.config.core.v3.Locality;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment.Policy;
+import io.envoyproxy.envoy.config.endpoint.v3.Endpoint.HealthCheckConfig;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
 import io.envoyproxy.envoy.config.listener.v3.Listener;
+import io.envoyproxy.envoy.type.v3.Percent;
 
 class DynamicHealthCheckTest {
 
@@ -126,7 +132,7 @@ class DynamicHealthCheckTest {
 
     @BeforeEach
     void beforeEach() {
-        server1Hc1.setHealthy(true);
+        server1Hc1.setHealthy(false);
         server1Hc1CtxRef.set(null);
         server1Hc2CtxRef.set(null);
     }
@@ -153,6 +159,8 @@ class DynamicHealthCheckTest {
         Cluster cluster = createStaticCluster("cluster", loadAssignment)
                 .toBuilder()
                 .addHealthChecks(hc1)
+                .setCommonLbConfig(CommonLbConfig.newBuilder()
+                                                 .setHealthyPanicThreshold(Percent.newBuilder().setValue(0)))
                 .build();
         cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(),
                                                  ImmutableList.of(listener), ImmutableList.of(),
@@ -214,6 +222,8 @@ class DynamicHealthCheckTest {
         Cluster cluster = createStaticCluster("cluster", loadAssignment)
                 .toBuilder()
                 .addHealthChecks(hc1)
+                .setCommonLbConfig(CommonLbConfig.newBuilder()
+                                                 .setHealthyPanicThreshold(Percent.newBuilder().setValue(0)))
                 .build();
         cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(),
                                                  ImmutableList.of(listener), ImmutableList.of(),
@@ -228,6 +238,7 @@ class DynamicHealthCheckTest {
                 final Endpoint endpoint = endpointGroup.select(ctx, CommonPools.workerGroup()).get();
                 assertThat(endpoint.port()).isEqualTo(server1.httpPort());
             }
+            assertThat(server1Hc2CtxRef).hasNullValue();
 
             // now update the cluster information
             hc1 = HealthCheck.newBuilder()
@@ -237,6 +248,9 @@ class DynamicHealthCheckTest {
             cluster = createStaticCluster("cluster", loadAssignment)
                     .toBuilder()
                     .addHealthChecks(hc1)
+                    .setCommonLbConfig(CommonLbConfig.newBuilder()
+                                                     .setHealthyPanicThreshold(Percent.newBuilder()
+                                                                                      .setValue(0)))
                     .build();
             cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(),
                                                      ImmutableList.of(listener), ImmutableList.of(),
@@ -256,6 +270,57 @@ class DynamicHealthCheckTest {
             // check that server 1 connection hasn't been reset for the new health check path
             await().untilAsserted(() -> assertThat(server1Hc2CtxRef.get()).isNotNull());
             assertThat(server1Hc2CtxRef.get().remoteAddress()).isEqualTo(server1Hc1Ctx.remoteAddress());
+        }
+    }
+
+    @Test
+    void perEndpointHealthCheck() throws Exception {
+        server1Hc1.setHealthy(false);
+        final Bootstrap bootstrap = XdsTestResources.bootstrap(server1.httpUri());
+        final Listener listener = staticResourceListener();
+        final io.envoyproxy.envoy.config.endpoint.v3.Endpoint endpointWithServer2Hc =
+                io.envoyproxy.envoy.config.endpoint.v3.Endpoint
+                        .newBuilder()
+                        .setAddress(address("127.0.0.1", server1.httpPort()))
+                        .setHealthCheckConfig(HealthCheckConfig.newBuilder()
+                                                               // portValue is used instead of the address port
+                                                               .setAddress(address("127.0.0.1", 1234))
+                                                               .setPortValue(server2.httpPort())).build();
+        final LbEndpoint endpoint1 =
+                LbEndpoint.newBuilder().setEndpoint(endpointWithServer2Hc).build();
+        final LbEndpoint endpoint2 = endpoint("127.0.0.1", server2.httpPort());
+        final List<LbEndpoint> allEndpoints = ImmutableList.of(endpoint1, endpoint2);
+        final ClusterLoadAssignment loadAssignment =
+                ClusterLoadAssignment
+                        .newBuilder()
+                        .addEndpoints(localityLbEndpoints(Locality.getDefaultInstance(), allEndpoints))
+                        .setPolicy(Policy.newBuilder().setWeightedPriorityHealth(true))
+                        .build();
+        final Cluster cluster = createStaticCluster("cluster", loadAssignment)
+                .toBuilder()
+                .addHealthChecks(HealthCheck.newBuilder()
+                                            .setHttpHealthCheck(
+                                                    HttpHealthCheck.newBuilder()
+                                                                   .setPath("/monitor/healthcheck2"))
+                                            .build())
+                .setCommonLbConfig(CommonLbConfig.newBuilder()
+                                                 .setHealthyPanicThreshold(Percent.newBuilder().setValue(0)))
+                .build();
+        cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(),
+                                                 ImmutableList.of(listener), ImmutableList.of(),
+                                                 ImmutableList.of(), "v3"));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
+            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+            endpointGroup.whenReady().get();
+            final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            // WeightRampingUpStrategy guarantees that all endpoints will be considered, so
+            // trying 4 times should be more than enough
+            final Set<Integer> healthyPorts = new HashSet<>();
+            for (int i = 0; i < 4; i++) {
+                final Endpoint endpoint = endpointGroup.select(ctx, CommonPools.workerGroup()).get();
+                healthyPorts.add(endpoint.port());
+            }
+            assertThat(healthyPorts).containsExactlyInAnyOrder(server1.httpPort(), server2.httpPort());
         }
     }
 }

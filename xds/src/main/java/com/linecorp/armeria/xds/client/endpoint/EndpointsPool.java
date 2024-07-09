@@ -50,7 +50,8 @@ final class EndpointsPool implements AsyncCloseable {
     }
 
     void updateClusterSnapshot(ClusterSnapshot newSnapshot, Consumer<List<Endpoint>> endpointsListener) {
-        // clean up the old endpoint and listener
+        // it is very important that the listener is removed first so that endpoints aren't deemed
+        // unhealthy due to closing a HealthCheckedEndpointGroup
         delegate.removeListener(listener);
         delegate.closeAsync();
 

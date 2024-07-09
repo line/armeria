@@ -18,7 +18,6 @@ package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.HEALTHY_ATTR;
 import static com.linecorp.armeria.xds.client.endpoint.XdsConstants.SUBSET_LOAD_BALANCING_FILTER_NAME;
 
 import java.util.List;
@@ -37,10 +36,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
-import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.Attributes;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
@@ -48,7 +45,6 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.RefreshRate;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
-import io.envoyproxy.envoy.config.core.v3.RequestMethod;
 import io.envoyproxy.envoy.config.core.v3.SocketAddress;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
@@ -108,40 +104,35 @@ final class XdsEndpointUtil {
         if (!cluster.getHealthChecksList().isEmpty()) {
             // multiple health-checks aren't supported
             final HealthCheck healthCheck = cluster.getHealthChecksList().get(0);
-            return maybeHealthChecked(endpointGroup, healthCheck, endpointAttrs);
+            if (healthCheck.hasHttpHealthCheck()) {
+                return maybeHealthChecked(endpointGroup, cluster, healthCheck, endpointAttrs);
+            }
         }
         return endpointGroup;
     }
 
-    private static EndpointGroup maybeHealthChecked(EndpointGroup delegate, HealthCheck healthCheck,
+    private static EndpointGroup maybeHealthChecked(EndpointGroup delegate, Cluster cluster,
+                                                    HealthCheck healthCheck,
                                                     Map<Endpoint, Attributes> endpointAttrs) {
-        if (!healthCheck.hasHttpHealthCheck()) {
-            return delegate;
-        }
+
         final HttpHealthCheck httpHealthCheck = healthCheck.getHttpHealthCheck();
-        final String path = httpHealthCheck.getPath();
 
         // We can't support SessionProtocol, excluded endpoints,
         // per-cluster-member health checking, etc without refactoring how we deal with health checking.
         // For now, just simply health check all targets depending on the cluster configuration.
-        return HealthCheckedEndpointGroup.builder(delegate, path)
-                                         .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
-                                         .useGet(healthCheckMethod(httpHealthCheck) == HttpMethod.GET)
-                                         .initialStateResolver(endpoint -> {
-                                             final Attributes attrs = endpointAttrs.get(endpoint);
-                                             if (attrs == null) {
-                                                 return false;
-                                             }
-                                             return Boolean.TRUE.equals(attrs.attr(HEALTHY_ATTR));
-                                         })
-                                         .build();
-    }
-
-    private static HttpMethod healthCheckMethod(HttpHealthCheck httpHealthCheck) {
-        if (httpHealthCheck.getMethod() == RequestMethod.HEAD) {
-            return HttpMethod.HEAD;
-        }
-        return HttpMethod.GET;
+        return new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck)
+                .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
+                .initialStateResolver(endpoints -> {
+                    final ImmutableList.Builder<Endpoint> newEndpoints = ImmutableList.builder();
+                    for (Endpoint endpoint : endpoints) {
+                        final Attributes attributes = endpointAttrs.get(endpoint);
+                        if (attributes != null) {
+                            newEndpoints.add(endpoint.withAttrs(attributes));
+                        }
+                    }
+                    return newEndpoints.build();
+                })
+                .build();
     }
 
     private static EndpointGroup staticEndpointGroup(ClusterSnapshot clusterSnapshot) {

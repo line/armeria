@@ -113,7 +113,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
     private final Predicate<Endpoint> healthCheckedEndpointPredicate;
-    private final Predicate<Endpoint> initialStateResolver;
+    private final Function<? super List<Endpoint>, ? extends List<Endpoint>> initialStateResolver;
 
     private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
@@ -137,7 +137,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy,
             Predicate<Endpoint> healthCheckedEndpointPredicate,
-            Predicate<Endpoint> initialStateResolver) {
+            Function<? super List<Endpoint>, ? extends List<Endpoint>> initialStateResolver) {
 
         super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
 
@@ -159,7 +159,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void setCandidates(List<Endpoint> endpoints) {
-        maybeApplyInitialResolver(endpoints);
+        if (!initialized) {
+            maybeApplyInitialResolver(endpoints);
+        }
 
         final List<Endpoint> candidates = healthCheckStrategy.select(endpoints);
         final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(candidates.size());
@@ -207,17 +209,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void maybeApplyInitialResolver(List<Endpoint> endpoints) {
-        if (initialized) {
-            return;
-        }
-        final List<Endpoint> initialEndpoints = new ArrayList<>();
-        for (Endpoint endpoint : endpoints) {
-            if (!initialStateResolver.test(endpoint)) {
-                initialEndpoints.add(endpoint);
+        try {
+            final List<Endpoint> mappedEndpoints = initialStateResolver.apply(endpoints);
+            if (!mappedEndpoints.isEmpty()) {
+                setEndpoints(mappedEndpoints);
             }
-        }
-        if (initialEndpoints.isEmpty()) {
-            setEndpoints(initialEndpoints);
+        } catch (Throwable t) {
+            logger.warn("Unexpected error while applying initialStateResolver: ", t);
         }
     }
 
