@@ -296,8 +296,10 @@ class ServerMetricsTest {
 
             final String protocolName = protocol == SessionProtocol.H1C ? "http1" : "http2";
             // armeria.server.active.requests.all#value is measured by ServerMetrics
-            assertThat(meters).containsKey("armeria.server.active.requests.all#value{protocol=" + protocolName +
-                                           '}');
+            assertThat(meters).containsKey("armeria.server.all.requests#value{protocol=" + protocolName +
+                                           ",state=active}");
+            assertThat(meters).containsKey("armeria.server.all.requests#value{protocol=" + protocolName +
+                                           ",state=pending}");
         });
     }
 }
