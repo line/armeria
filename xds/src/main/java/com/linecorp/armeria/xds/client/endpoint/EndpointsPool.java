@@ -17,8 +17,8 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.CREATED_AT_NANOS_KEY;
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.DEGRADED_ATTR;
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.HEALTHY_ATTR;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.createdAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.hasCreatedAtNanos;
 
 import java.util.List;
 import java.util.Map;
@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Attributes;
-import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
@@ -41,7 +40,7 @@ import io.netty.util.concurrent.EventExecutor;
 final class EndpointsPool implements AsyncCloseable {
 
     private EndpointGroup delegate = EndpointGroup.of();
-    private Map<Endpoint, Attributes> endpointAttrs = ImmutableMap.of();
+    private Map<Endpoint, Attributes> prevAttrs = ImmutableMap.of();
     private final EventExecutor eventExecutor;
     private Consumer<List<Endpoint>> listener = ignored -> {};
 
@@ -56,7 +55,7 @@ final class EndpointsPool implements AsyncCloseable {
         delegate.closeAsync();
 
         // set the new endpoint and listener
-        delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot, endpointAttrs);
+        delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot, prevAttrs);
         listener = endpoints -> eventExecutor.execute(
                 () -> endpointsListener.accept(cacheAttributesAndDelegate(endpoints)));
         delegate.addListener(listener, true);
@@ -64,27 +63,27 @@ final class EndpointsPool implements AsyncCloseable {
 
     private List<Endpoint> cacheAttributesAndDelegate(List<Endpoint> endpoints) {
         final long defaultTimestamp = System.nanoTime();
-        final ImmutableMap.Builder<Endpoint, Attributes> endpoint2AttrsBuilder = ImmutableMap.builder();
         final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();
+        final ImmutableMap.Builder<Endpoint, Attributes> prevAttrsBuilder = ImmutableMap.builder();
         for (Endpoint endpoint: endpoints) {
-            final Attributes prevAttrs = endpointAttrs.getOrDefault(endpoint, Attributes.of());
-            AttributesBuilder attrsBuilder = prevAttrs.toBuilder();
-            if (endpoint.attr(CREATED_AT_NANOS_KEY) == null && !prevAttrs.hasAttr(CREATED_AT_NANOS_KEY)) {
-                attrsBuilder = attrsBuilder.set(CREATED_AT_NANOS_KEY, defaultTimestamp);
-            }
-            if (endpoint.attr(HEALTHY_ATTR) == null && !prevAttrs.hasAttr(HEALTHY_ATTR)) {
-                attrsBuilder = attrsBuilder.set(HEALTHY_ATTR, true);
-            }
-            if (endpoint.attr(DEGRADED_ATTR) == null && !prevAttrs.hasAttr(DEGRADED_ATTR)) {
-                attrsBuilder = attrsBuilder.set(DEGRADED_ATTR, false);
-            }
-            final Attributes attrs = attrsBuilder.build();
-            endpoint = endpoint.withAttrs(attrs);
-            endpoint2AttrsBuilder.put(endpoint, attrs);
-            endpointsBuilder.add(endpoint);
+            final long timestamp = computeTimestamp(endpoint, defaultTimestamp);
+            final Endpoint endpointWithTimestamp = endpoint.withAttr(CREATED_AT_NANOS_KEY, timestamp);
+            endpointsBuilder.add(endpointWithTimestamp);
+            prevAttrsBuilder.put(endpoint, endpointWithTimestamp.attrs());
         }
-        endpointAttrs = endpoint2AttrsBuilder.buildKeepingLast();
+        prevAttrs = prevAttrsBuilder.buildKeepingLast();
         return endpointsBuilder.build();
+    }
+
+    private long computeTimestamp(Endpoint endpoint, long defaultTimestamp) {
+        if (hasCreatedAtNanos(endpoint)) {
+            return createdAtNanos(endpoint);
+        }
+        final Attributes prevAttr = prevAttrs.get(endpoint);
+        if (prevAttr != null && prevAttr.hasAttr(CREATED_AT_NANOS_KEY)) {
+            return prevAttr.attr(CREATED_AT_NANOS_KEY);
+        }
+        return defaultTimestamp;
     }
 
     @Override

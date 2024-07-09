@@ -80,7 +80,7 @@ final class XdsEndpointUtil {
     }
 
     static EndpointGroup convertEndpointGroup(ClusterSnapshot clusterSnapshot,
-                                              Map<Endpoint, Attributes> endpointAttrs) {
+                                              Map<Endpoint, Attributes> prevAttrs) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         if (endpointSnapshot == null) {
             return EndpointGroup.of();
@@ -105,7 +105,7 @@ final class XdsEndpointUtil {
             // multiple health-checks aren't supported
             final HealthCheck healthCheck = cluster.getHealthChecksList().get(0);
             if (healthCheck.hasHttpHealthCheck()) {
-                return maybeHealthChecked(endpointGroup, cluster, healthCheck, endpointAttrs);
+                return maybeHealthChecked(endpointGroup, cluster, healthCheck, prevAttrs);
             }
         }
         return endpointGroup;
@@ -113,19 +113,14 @@ final class XdsEndpointUtil {
 
     private static EndpointGroup maybeHealthChecked(EndpointGroup delegate, Cluster cluster,
                                                     HealthCheck healthCheck,
-                                                    Map<Endpoint, Attributes> endpointAttrs) {
-
+                                                    Map<Endpoint, Attributes> prevAttrs) {
         final HttpHealthCheck httpHealthCheck = healthCheck.getHttpHealthCheck();
-
-        // We can't support SessionProtocol, excluded endpoints,
-        // per-cluster-member health checking, etc without refactoring how we deal with health checking.
-        // For now, just simply health check all targets depending on the cluster configuration.
         return new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck)
                 .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
                 .initialStateResolver(endpoints -> {
                     final ImmutableList.Builder<Endpoint> newEndpoints = ImmutableList.builder();
                     for (Endpoint endpoint : endpoints) {
-                        final Attributes attributes = endpointAttrs.get(endpoint);
+                        final Attributes attributes = prevAttrs.get(endpoint);
                         if (attributes != null) {
                             newEndpoints.add(endpoint.withAttrs(attributes));
                         }
