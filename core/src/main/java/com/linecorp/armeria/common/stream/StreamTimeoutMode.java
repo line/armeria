@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Stream Timeout Mode consists of three modes.
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.TimeoutException;
  *   a {@link TimeoutException} is thrown.</li>
  * </ul>
  */
+@UnstableApi
 public enum StreamTimeoutMode {
 
     /**

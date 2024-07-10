@@ -27,6 +27,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -220,6 +221,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         @Override
         public void onNext(T t) {
             if (completed) {
+                PooledObjects.close(t);
                 return;
             }
             switch (timeoutMode) {
@@ -262,7 +264,6 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void cancel() {
-            completed = true;
             cancelSchedule();
             subscription.cancel();
         }

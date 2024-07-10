@@ -1185,12 +1185,14 @@ public interface HttpResponse extends Response, HttpMessage {
         return of(HttpMessage.super.subscribeOn(eventExecutor));
     }
 
+    @UnstableApi
     @Override
     default HttpResponse timeout(Duration timeoutDuration) {
         requireNonNull(timeoutDuration, "timeoutDuration");
         return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
     }
 
+    @UnstableApi
     @Override
     default HttpResponse timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
         requireNonNull(timeoutDuration, "timeoutDuration");
