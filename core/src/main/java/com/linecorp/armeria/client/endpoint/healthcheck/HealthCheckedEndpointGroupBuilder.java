@@ -22,7 +22,6 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.internal.client.endpoint.healthcheck.HttpHealthChecker;
 
@@ -59,35 +58,23 @@ public final class HealthCheckedEndpointGroupBuilder
 
     @Override
     protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
-        return new HttpHealthCheckerFactory(path, useGet, protocol(), port());
+        return new HttpHealthCheckerFactory(path, useGet);
     }
 
     private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {
 
         private final String path;
         private final boolean useGet;
-        private final SessionProtocol protocol;
-        private final int port;
 
-        HttpHealthCheckerFactory(String path, boolean useGet, SessionProtocol protocol, int port) {
+        HttpHealthCheckerFactory(String path, boolean useGet) {
             this.path = path;
             this.useGet = useGet;
-            this.protocol = protocol;
-            this.port = port;
         }
 
         @Override
         public AsyncCloseable apply(HealthCheckerContext ctx) {
-            Endpoint endpoint = ctx.originalEndpoint();
-            if (port == 0) {
-                endpoint = endpoint.withoutDefaultPort(protocol);
-            } else if (port == protocol.defaultPort()) {
-                endpoint = endpoint.withoutPort();
-            } else {
-                endpoint = endpoint.withPort(port);
-            }
-            final HttpHealthChecker checker = new HttpHealthChecker(ctx, endpoint, path, useGet, protocol,
-                                                                    null);
+            final HttpHealthChecker checker = new HttpHealthChecker(ctx, ctx.endpoint(), path, useGet,
+                                                                    ctx.protocol(), null);
             checker.start();
             return checker;
         }
