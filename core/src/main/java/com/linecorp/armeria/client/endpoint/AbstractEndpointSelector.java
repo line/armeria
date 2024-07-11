@@ -147,24 +147,20 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
 
     private void refreshEndpoints(List<Endpoint> endpoints) {
         // Allow subclasses to update the endpoints first.
-        updateNewEndpoints(endpoints).handle((ignored, e) -> {
-            lock.lock();
-            try {
-                pendingFutures.removeIf(ListeningFuture::tryComplete);
-            } finally {
-                lock.unlock();
-            }
-            return null;
-        });
+        updateNewEndpoints(endpoints);
+        lock.lock();
+        try {
+            pendingFutures.removeIf(ListeningFuture::tryComplete);
+        } finally {
+            lock.unlock();
+        }
     }
 
     /**
      * Invoked when the {@link EndpointGroup} has been updated.
      */
     @UnstableApi
-    protected CompletableFuture<Void> updateNewEndpoints(List<Endpoint> endpoints) {
-        return UnmodifiableFuture.completedFuture(null);
-    }
+    protected void updateNewEndpoints(List<Endpoint> endpoints) {}
 
     private void addPendingFuture(ListeningFuture future) {
         lock.lock();

@@ -230,7 +230,7 @@ internal class CoroutineServerInterceptorTest {
                     val exceptionHandler =
                         GrpcExceptionHandlerFunction {
                                 _: RequestContext,
-                                _: Status?,
+                                _: Status,
                                 throwable: Throwable,
                                 _: Metadata,
                             ->

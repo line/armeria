@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 abstract class AbstractContextPathServiceBindingBuilder
         <SELF extends AbstractContextPathServiceBindingBuilder<SELF, T>,
                 T extends AbstractContextPathServicesBuilder<?, ?>>
-        extends AbstractServiceBindingBuilder<AbstractContextPathServiceBindingBuilder<SELF, T>> {
+        extends AbstractServiceBindingBuilder<SELF> {
 
     private final T contextPathServicesBuilder;
 
