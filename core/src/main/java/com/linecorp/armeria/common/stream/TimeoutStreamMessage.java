@@ -169,6 +169,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         private Subscription subscription;
         private long lastEventTimeNanos;
         private boolean completed;
+        private boolean canceled;
 
         TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
                           StreamTimeoutMode timeoutMode) {
@@ -211,7 +212,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         public void onSubscribe(Subscription s) {
             subscription = s;
             delegate.onSubscribe(this);
-            if (completed) {
+            if (completed || canceled) {
                 return;
             }
             lastEventTimeNanos = System.nanoTime();
@@ -220,7 +221,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void onNext(T t) {
-            if (completed) {
+            if (completed || canceled) {
                 PooledObjects.close(t);
                 return;
             }
@@ -264,6 +265,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void cancel() {
+            canceled = true;
             cancelSchedule();
             subscription.cancel();
         }
