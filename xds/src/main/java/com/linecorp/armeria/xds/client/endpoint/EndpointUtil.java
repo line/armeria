@@ -16,14 +16,11 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.protobuf.Duration;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.endpoint.EndpointWeightTransition;
@@ -120,15 +117,6 @@ final class EndpointUtil {
             default:
                 return CoarseHealth.UNHEALTHY;
         }
-    }
-
-    static int hash(ClientRequestContext ctx) {
-        if (ctx.hasAttr(XdsAttributeKeys.SELECTION_HASH)) {
-            final Integer selectionHash = ctx.attr(XdsAttributeKeys.SELECTION_HASH);
-            assert selectionHash != null;
-            return Math.max(0, selectionHash);
-        }
-        return ThreadLocalRandom.current().nextInt(0, Integer.MAX_VALUE);
     }
 
     static int priority(Endpoint endpoint) {

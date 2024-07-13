@@ -20,44 +20,56 @@ import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
-import com.linecorp.armeria.xds.EndpointSnapshot;
+import com.linecorp.armeria.xds.client.endpoint.ClusterManager.LocalCluster;
+import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class ClusterEntry implements AsyncCloseable {
+final class ClusterEntry extends AbstractListenable<XdsLoadBalancer> implements AsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterEntry.class);
+    private final Consumer<XdsLoadBalancer> localClusterEntryListener = this::updateLocalLoadBalancer;
 
+    @Nullable
+    private volatile XdsLoadBalancer loadBalancer;
+    @Nullable
+    private XdsLoadBalancer localLoadBalancer;
+    @Nullable
+    private EndpointsState endpointsState;
     private final EndpointsPool endpointsPool;
     @Nullable
-    private volatile LoadBalancer loadBalancer;
-    private final ClusterManager clusterManager;
+    private final LocalCluster localCluster;
     private final EventExecutor eventExecutor;
-    private List<Endpoint> endpoints = ImmutableList.of();
+    private boolean closing;
+    private final CompletableFuture<Void> initialLocalEntryStateFuture = new CompletableFuture<>();
 
-    ClusterEntry(ClusterSnapshot clusterSnapshot,
-                 ClusterManager clusterManager, EventExecutor eventExecutor) {
-        this.clusterManager = clusterManager;
+    ClusterEntry(EventExecutor eventExecutor, @Nullable LocalCluster localCluster) {
         this.eventExecutor = eventExecutor;
         endpointsPool = new EndpointsPool(eventExecutor);
-        updateClusterSnapshot(clusterSnapshot);
+        this.localCluster = localCluster;
+        if (localCluster != null) {
+            localCluster.clusterEntry().addListener(localClusterEntryListener, true);
+        }
     }
 
     @Nullable
     Endpoint selectNow(ClientRequestContext ctx) {
-        final LoadBalancer loadBalancer = this.loadBalancer;
+        final LoadBalancer loadBalancer = latestValue();
         if (loadBalancer == null) {
             return null;
         }
@@ -65,34 +77,83 @@ final class ClusterEntry implements AsyncCloseable {
     }
 
     void updateClusterSnapshot(ClusterSnapshot clusterSnapshot) {
-        final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
-        assert endpointSnapshot != null;
-        endpointsPool.updateClusterSnapshot(clusterSnapshot, endpoints -> {
-            accept(clusterSnapshot, endpoints);
-        });
+        endpointsPool.updateClusterSnapshot(clusterSnapshot, this::updateEndpoints);
     }
 
-    void accept(ClusterSnapshot clusterSnapshot, List<Endpoint> endpoints) {
+    void updateEndpoints(EndpointsState endpointsState) {
         assert eventExecutor.inEventLoop();
-        this.endpoints = ImmutableList.copyOf(endpoints);
+        this.endpointsState = endpointsState;
+        tryRefresh();
+    }
+
+    private void updateLocalLoadBalancer(XdsLoadBalancer localLoadBalancer) {
+        assert eventExecutor.inEventLoop();
+        this.localLoadBalancer = localLoadBalancer;
+        tryRefresh();
+    }
+
+    void tryRefresh() {
+        if (closing) {
+            return;
+        }
+        final EndpointsState endpointsState = this.endpointsState;
+        if (endpointsState == null) {
+            return;
+        }
+
+        final ClusterSnapshot clusterSnapshot = endpointsState.clusterSnapshot;
+        final List<Endpoint> endpoints = endpointsState.endpoints;
+
         final PrioritySet prioritySet = new PriorityStateManager(clusterSnapshot, endpoints).build();
         if (logger.isTraceEnabled()) {
             logger.trace("XdsEndpointGroup is using a new PrioritySet({})", prioritySet);
         }
+
+        LocalityRoutingState localityRoutingState = null;
+        if (localLoadBalancer != null) {
+            assert localCluster != null;
+            localityRoutingState = localCluster.stateFactory().create(prioritySet,
+                                                                      localLoadBalancer.prioritySet());
+            logger.trace("Local routing is enabled with LocalityRoutingState({})", localityRoutingState);
+        }
+        final XdsLoadBalancer loadBalancer;
         if (clusterSnapshot.xdsResource().resource().hasLbSubsetConfig()) {
             loadBalancer = new SubsetLoadBalancer(prioritySet);
         } else {
-            loadBalancer = new DefaultLoadBalancer(prioritySet);
+            loadBalancer = new DefaultLoadBalancer(prioritySet, localityRoutingState);
         }
-        clusterManager.notifyListeners();
+        this.loadBalancer = loadBalancer;
+        if (localLoadBalancer != null && !initialLocalEntryStateFuture.isDone()) {
+            initialLocalEntryStateFuture.complete(null);
+        }
+        notifyListeners(loadBalancer);
+    }
+
+    @Override
+    @Nullable
+    protected XdsLoadBalancer latestValue() {
+        return loadBalancer;
+    }
+
+    @VisibleForTesting
+    CompletableFuture<Void> initialLocalEntryStateFuture() {
+        return initialLocalEntryStateFuture;
     }
 
     List<Endpoint> allEndpoints() {
-        return endpoints;
+        final EndpointsState endpointsState = this.endpointsState;
+        if (endpointsState == null) {
+            return ImmutableList.of();
+        }
+        return endpointsState.endpoints;
     }
 
     @Override
     public CompletableFuture<?> closeAsync() {
+        closing = true;
+        if (localCluster != null) {
+            localCluster.clusterEntry().removeListener(localClusterEntryListener);
+        }
         return endpointsPool.closeAsync();
     }
 
@@ -106,8 +167,26 @@ final class ClusterEntry implements AsyncCloseable {
         return MoreObjects.toStringHelper(this)
                           .add("endpointsPool", endpointsPool)
                           .add("loadBalancer", loadBalancer)
-                          .add("numEndpoints", endpoints.size())
-                          .add("endpoints", truncate(endpoints, 10))
+                          .add("endpointsState", endpointsState)
                           .toString();
+    }
+
+    static final class EndpointsState {
+        private final ClusterSnapshot clusterSnapshot;
+        private final List<Endpoint> endpoints;
+
+        EndpointsState(ClusterSnapshot clusterSnapshot, List<Endpoint> endpoints) {
+            this.clusterSnapshot = clusterSnapshot;
+            this.endpoints = ImmutableList.copyOf(endpoints);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this)
+                              .add("clusterSnapshot", clusterSnapshot)
+                              .add("numEndpoints", endpoints.size())
+                              .add("endpoints", truncate(endpoints, 10))
+                              .toString();
+        }
     }
 }

@@ -142,8 +142,8 @@ class RouteMetadataSubsetTest {
         Bootstrap bootstrap = XdsTestResources.bootstrap(
                 configSource, staticResourceListener(routeMetadataMatch1, clusterName),
                 bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
 
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -157,8 +157,8 @@ class RouteMetadataSubsetTest {
         bootstrap = XdsTestResources.bootstrap(configSource,
                                                staticResourceListener(routeMetadataMatch2, clusterName),
                                                bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
 
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -174,8 +174,8 @@ class RouteMetadataSubsetTest {
         bootstrap = XdsTestResources.bootstrap(configSource,
                                                staticResourceListener(routeMetadataMatch3, clusterName),
                                                bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
 
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));

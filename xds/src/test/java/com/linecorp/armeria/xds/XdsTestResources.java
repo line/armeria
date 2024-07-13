@@ -142,6 +142,13 @@ public final class XdsTestResources {
                                     .build();
     }
 
+    public static ClusterLoadAssignment loadAssignment(String clusterName,
+                                                       LocalityLbEndpoints... localityLbEndpoints) {
+        return ClusterLoadAssignment.newBuilder().setClusterName(clusterName)
+                                    .addAllEndpoints(ImmutableList.copyOf(localityLbEndpoints))
+                                    .build();
+    }
+
     public static Cluster bootstrapCluster(URI uri, String bootstrapClusterName) {
         final ClusterLoadAssignment loadAssignment =
                 loadAssignment(bootstrapClusterName, uri.getHost(), uri.getPort());
@@ -396,11 +403,11 @@ public final class XdsTestResources {
                        .build();
     }
 
-    public static Bootstrap staticBootstrap(Listener listener, Cluster cluster) {
+    public static Bootstrap staticBootstrap(Listener listener, Cluster... clusters) {
         return Bootstrap.newBuilder()
                         .setStaticResources(StaticResources.newBuilder()
                                                            .addListeners(listener)
-                                                           .addClusters(cluster)
+                                                           .addAllClusters(ImmutableList.copyOf(clusters))
                                                            .build()).build();
     }
 

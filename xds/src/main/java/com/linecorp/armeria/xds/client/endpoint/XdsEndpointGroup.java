@@ -21,11 +21,13 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Lock;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
@@ -38,7 +40,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.xds.ClusterSnapshot;
-import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.client.endpoint.ClusterManager.State;
 
@@ -66,17 +67,16 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
     /**
      * Creates a {@link XdsEndpointGroup} which listens to the specified listener.
      */
-    public static EndpointGroup of(ListenerRoot listenerRoot) {
-        requireNonNull(listenerRoot, "listenerRoot");
-        return of(listenerRoot, false);
+    public static XdsEndpointGroup of(String listenerName, XdsBootstrap xdsBootstrap) {
+        return of(listenerName, xdsBootstrap, false);
     }
 
     /**
      * Creates a {@link XdsEndpointGroup} which listens to the specified listener.
      */
-    public static EndpointGroup of(ListenerRoot listenerRoot, boolean allowEmptyEndpoints) {
-        requireNonNull(listenerRoot, "listenerRoot");
-        return new XdsEndpointGroup(new ClusterManager(listenerRoot), allowEmptyEndpoints);
+    public static XdsEndpointGroup of(String listenerName, XdsBootstrap xdsBootstrap,
+                                   boolean allowEmptyEndpoints) {
+        return new XdsEndpointGroup(new ClusterManager(listenerName, xdsBootstrap), allowEmptyEndpoints);
     }
 
     /**
@@ -85,7 +85,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
      * a {@link GrpcService}.
      */
     @UnstableApi
-    public static EndpointGroup of(ClusterSnapshot clusterSnapshot) {
+    public static XdsEndpointGroup of(ClusterSnapshot clusterSnapshot) {
         requireNonNull(clusterSnapshot, "clusterSnapshot");
         return new XdsEndpointGroup(new ClusterManager(clusterSnapshot), false);
     }
@@ -146,6 +146,11 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
         } else {
             return endpoints;
         }
+    }
+
+    @VisibleForTesting
+    Map<String, ClusterEntry> clusterEntries() {
+        return clusterManager.clusterEntries();
     }
 
     @Override

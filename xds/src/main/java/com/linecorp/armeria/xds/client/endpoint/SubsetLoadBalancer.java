@@ -39,14 +39,16 @@ import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetFallbackPolicy;
 
-final class SubsetLoadBalancer implements LoadBalancer {
+final class SubsetLoadBalancer implements XdsLoadBalancer {
 
     private static final Logger logger = LoggerFactory.getLogger(SubsetLoadBalancer.class);
 
     private final EndpointGroup endpointGroup;
+    private final PrioritySet prioritySet;
 
     SubsetLoadBalancer(PrioritySet prioritySet) {
         endpointGroup = createEndpointGroup(prioritySet);
+        this.prioritySet = prioritySet;
     }
 
     @Override
@@ -106,5 +108,10 @@ final class SubsetLoadBalancer implements LoadBalancer {
         return MoreObjects.toStringHelper(this)
                           .add("endpointGroup", endpointGroup)
                           .toString();
+    }
+
+    @Override
+    public PrioritySet prioritySet() {
+        return prioritySet;
     }
 }
