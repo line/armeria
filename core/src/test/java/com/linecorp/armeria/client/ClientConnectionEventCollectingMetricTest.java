@@ -72,27 +72,34 @@ class ClientConnectionEventCollectingMetricTest {
         final AttributeMap attributeMap = new DefaultAttributeMap();
         final Exception e = new Exception();
 
-        connectionEventListener.connectionPending(SessionProtocol.H1, remoteAddress, localAddress, attributeMap);
+        connectionEventListener.connectionPending(SessionProtocol.H1, remoteAddress,
+                                                  localAddress, attributeMap);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 1.0);
 
-        connectionEventListener.connectionFailed(SessionProtocol.H1, remoteAddress, localAddress, attributeMap, e, true);
+        connectionEventListener.connectionFailed(SessionProtocol.H1, remoteAddress, localAddress,
+                                                 attributeMap, e, true);
         assertThat(MoreMeters.measureAll(registry)).doesNotContainKey(pendingABMetricKey);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 1.0);
 
-        connectionEventListener.connectionPending(SessionProtocol.H1, remoteAddress, localAddress, attributeMap);
+        connectionEventListener.connectionPending(SessionProtocol.H1, remoteAddress,
+                                                  localAddress, attributeMap);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 1.0);
 
-        connectionEventListener.connectionPending(SessionProtocol.H1, remoteAddress, localAddress, attributeMap);
+        connectionEventListener.connectionPending(SessionProtocol.H1, remoteAddress,
+                                                  localAddress, attributeMap);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 2.0);
 
-        connectionEventListener.connectionPending(SessionProtocol.H1, remoteAddress, localAddress, attributeMap);
+        connectionEventListener.connectionPending(SessionProtocol.H1, remoteAddress,
+                                                  localAddress, attributeMap);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 3.0);
 
-        connectionEventListener.connectionFailed(SessionProtocol.H1, remoteAddress, localAddress, attributeMap, e, true);
+        connectionEventListener.connectionFailed(SessionProtocol.H1, remoteAddress,
+                                                 localAddress, attributeMap, e, true);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 2.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 2.0);
 
-        connectionEventListener.connectionFailed(SessionProtocol.H1, remoteAddress, null, attributeMap, e, false);
+        connectionEventListener.connectionFailed(SessionProtocol.H1, remoteAddress, null,
+                                                 attributeMap, e, false);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 3.0);
         connectionEventListener.connectionOpened(SessionProtocol.H1, SessionProtocol.H1, remoteAddress,
                                                  localAddress, attributeMap);
@@ -100,28 +107,32 @@ class ClientConnectionEventCollectingMetricTest {
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 3.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 1.0);
 
-        connectionEventListener.connectionActive(SessionProtocol.H1, remoteAddress, localAddress, attributeMap, false);
+        connectionEventListener.connectionActive(SessionProtocol.H1, remoteAddress, localAddress,
+                                                 attributeMap, false);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 3.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleABMetricKey, 0.0);
 
-        connectionEventListener.connectionIdle(SessionProtocol.H1, remoteAddress, localAddress, attributeMap);
+        connectionEventListener.connectionIdle(SessionProtocol.H1, remoteAddress, localAddress,
+                                               attributeMap);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 3.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeABMetricKey, 0.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleABMetricKey, 1.0);
 
-        connectionEventListener.connectionActive(SessionProtocol.H1, remoteAddress, localAddress, attributeMap, true);
+        connectionEventListener.connectionActive(SessionProtocol.H1, remoteAddress, localAddress,
+                                                 attributeMap, true);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 3.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleABMetricKey, 0.0);
 
-        connectionEventListener.connectionPending(SessionProtocol.H1, localAddress, remoteAddress, attributeMap);
+        connectionEventListener.connectionPending(SessionProtocol.H1, localAddress, remoteAddress,
+                                                  attributeMap);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 3.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 1.0);
@@ -129,8 +140,8 @@ class ClientConnectionEventCollectingMetricTest {
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleABMetricKey, 0.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingBAMetricKey, 1.0);
 
-        connectionEventListener.connectionOpened(SessionProtocol.H1, SessionProtocol.H1, localAddress, remoteAddress,
-                                                 attributeMap);
+        connectionEventListener.connectionOpened(SessionProtocol.H1, SessionProtocol.H1, localAddress,
+                                                 remoteAddress, attributeMap);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 3.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 1.0);
@@ -139,7 +150,8 @@ class ClientConnectionEventCollectingMetricTest {
         assertThat(MoreMeters.measureAll(registry)).doesNotContainKey(pendingBAMetricKey);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedBAMetricKey, 1.0);
 
-        connectionEventListener.connectionActive(SessionProtocol.H1, localAddress, remoteAddress, attributeMap, false);
+        connectionEventListener.connectionActive(SessionProtocol.H1, localAddress, remoteAddress,
+                                                 attributeMap, false);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(pendingABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(failedABMetricKey, 3.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 1.0);
@@ -158,8 +170,8 @@ class ClientConnectionEventCollectingMetricTest {
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeBAMetricKey, 0.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleBAMetricKey, 1.0);
 
-        connectionEventListener.connectionOpened(SessionProtocol.H1, SessionProtocol.H1, remoteAddress, localAddress,
-                                                 attributeMap);
+        connectionEventListener.connectionOpened(SessionProtocol.H1, SessionProtocol.H1,
+                                                 remoteAddress, localAddress, attributeMap);
         assertThat(MoreMeters.measureAll(registry)).doesNotContainKey(pendingABMetricKey);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 2.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeABMetricKey, 1.0);
@@ -168,7 +180,8 @@ class ClientConnectionEventCollectingMetricTest {
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeBAMetricKey, 0.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleBAMetricKey, 1.0);
 
-        connectionEventListener.connectionActive(SessionProtocol.H1, remoteAddress, localAddress, attributeMap, false);
+        connectionEventListener.connectionActive(SessionProtocol.H1, remoteAddress, localAddress,
+                                                 attributeMap, false);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 2.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeABMetricKey, 2.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleABMetricKey, 0.0);
@@ -176,8 +189,8 @@ class ClientConnectionEventCollectingMetricTest {
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeBAMetricKey, 0.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleBAMetricKey, 1.0);
 
-        connectionEventListener.connectionClosed(SessionProtocol.H1, remoteAddress, localAddress, attributeMap,
-                                                 false);
+        connectionEventListener.connectionClosed(SessionProtocol.H1, remoteAddress, localAddress,
+                                                 attributeMap, false);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(openedABMetricKey, 2.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(activeABMetricKey, 1.0);
         assertThat(MoreMeters.measureAll(registry)).containsEntry(idleABMetricKey, 0.0);

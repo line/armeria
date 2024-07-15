@@ -400,7 +400,8 @@ final class HttpChannelPool implements AsyncCloseable {
                 }
 
                 final DelegatingConnectionEventListener connectionEventListener =
-                        new DelegatingConnectionEventListener(listener, channel, desiredProtocol);
+                        new DelegatingConnectionEventListener(listener, channel, desiredProtocol,
+                                                              poolKey.endpoint.toSocketAddress(-1));
 
                 // should be invoked right before channel.connect() is invoked as defined in javadocs
                 clientFactory.channelPipelineCustomizer().accept(channel.pipeline());

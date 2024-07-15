@@ -74,7 +74,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
         if (!needsKeepAliveHandler) {
-            return new NoopKeepAliveHandler();
+            return new NoopKeepAliveHandler(true, channel);
         }
 
         return new Http2ServerKeepAliveHandler(

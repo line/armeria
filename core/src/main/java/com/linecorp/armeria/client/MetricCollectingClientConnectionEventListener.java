@@ -130,6 +130,7 @@ final class MetricCollectingClientConnectionEventListener implements ClientConne
         }
     }
 
+    @SuppressWarnings("GuardedBy")
     private void decreasePending(List<Tag> acquisitionTags) {
         final ConnectionAcquisitionMeter requestMeters = acquisitionMeters
                 .computeIfAbsent(acquisitionTags,

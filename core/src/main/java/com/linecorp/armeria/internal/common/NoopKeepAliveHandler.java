@@ -16,17 +16,44 @@
 
 package com.linecorp.armeria.internal.common;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 
 public class NoopKeepAliveHandler implements KeepAliveHandler {
 
     private boolean closed;
     private boolean disconnectWhenFinished;
+    private boolean isInitialized;
 
-    // TODO(ikhoon): Notify connection events with DelegatingConnectionEventListener
+    @Nullable
+    private final DelegatingConnectionEventListener connectionEventListener;
+
+    public NoopKeepAliveHandler(boolean isServer, Channel channel) {
+        if (isServer) {
+            connectionEventListener = null;
+        } else {
+            connectionEventListener = DelegatingConnectionEventListener.get(channel);
+        }
+    }
 
     @Override
-    public void initialize(ChannelHandlerContext ctx) {}
+    public void initialize(ChannelHandlerContext ctx) {
+        // Avoid the case where destroy() is called before scheduling timeouts.
+        // See: https://github.com/netty/netty/issues/143
+        if (isInitialized) {
+            return;
+        }
+        isInitialized = true;
+
+        if (connectionEventListener != null) {
+            connectionEventListener.connectionOpened();
+            ctx.channel().closeFuture().addListener(unused -> {
+                connectionEventListener.connectionClosed(false);
+            });
+        }
+    }
 
     @Override
     public void destroy() {
@@ -68,7 +95,13 @@ public class NoopKeepAliveHandler implements KeepAliveHandler {
     public void increaseNumRequests() {}
 
     @Override
-    public void notifyActive() {}
+    public void notifyActive() {
+        assert isInitialized;
+
+        if (connectionEventListener != null) {
+            connectionEventListener.connectionActive(false);
+        }
+    }
 
     @Override
     public void notifyIdle() {}

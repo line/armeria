@@ -94,7 +94,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
                     pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                     keepAliveOnPing);
         } else {
-            keepAliveHandler = new NoopKeepAliveHandler();
+            keepAliveHandler = new NoopKeepAliveHandler(false, channel);
         }
     }
 

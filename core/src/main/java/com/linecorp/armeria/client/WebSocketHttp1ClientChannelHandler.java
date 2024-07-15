@@ -82,7 +82,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
         // - a Ping frame is not sent by the keepAliveHandler but by the upper layer.
         // TODO(minwoox): Provide a dedicated KeepAliveHandler to the upper layer (e.g. WebSocketClient)
         //                that handles Ping frames for WebSocket.
-        keepAliveHandler = new NoopKeepAliveHandler();
+        keepAliveHandler = new NoopKeepAliveHandler(true, channel);
     }
 
     @Override

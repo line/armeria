@@ -157,7 +157,8 @@ public interface ClientConnectionEventListener extends ConnectionEventListener {
      * @param desiredProtocol the protocol that the client requested to use.
      * @param remoteAddress the remote address of the connection.
      * @param localAddress the local address of the connection. It will be {@code null} if the connection is
-     *                     failed before entering the {@link #connectionPending(SessionProtocol, InetSocketAddress, InetSocketAddress, AttributeMap)}}
+     *                     failed before entering the {@link #connectionPending(SessionProtocol,
+     *                     InetSocketAddress, InetSocketAddress, AttributeMap)}}
      *                     state.
      * @param attrs the attributes of the connection.
      * @param cause the cause of the failure.

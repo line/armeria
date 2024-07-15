@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 
@@ -42,9 +41,7 @@ public final class DelegatingConnectionEventListener {
 
     @Nullable
     public static DelegatingConnectionEventListener getOrNull(Channel channel) {
-        {
-            return channel.attr(CONNECTION_EVENT_LISTENER_KEY).get();
-        }
+        return channel.attr(CONNECTION_EVENT_LISTENER_KEY).get();
     }
 
     public static DelegatingConnectionEventListener get(Channel channel) {
@@ -68,10 +65,10 @@ public final class DelegatingConnectionEventListener {
     private SessionProtocol actualProtocol;
 
     public DelegatingConnectionEventListener(ConnectionEventListener delegate, Channel channel,
-                                             SessionProtocol desiredProtocol) {
+                                             SessionProtocol desiredProtocol, InetSocketAddress remoteAddress) {
         this.delegate = delegate;
         this.channel = channel;
-        remoteAddress = requireNonNull(ChannelUtil.remoteAddress(channel), "remoteAddress");
+        this.remoteAddress = remoteAddress;
         this.desiredProtocol = desiredProtocol;
         channel.attr(CONNECTION_EVENT_LISTENER_KEY).set(this);
     }
