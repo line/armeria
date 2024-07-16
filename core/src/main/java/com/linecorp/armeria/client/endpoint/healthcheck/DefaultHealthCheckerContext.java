@@ -135,7 +135,7 @@ final class DefaultHealthCheckerContext
 
             endpointAttributes = Attributes.of(HEALTHY_ATTR, false,
                                                DEGRADED_ATTR, false);
-            onUpdateHealth.accept(originalEndpoint, false);
+            onUpdateHealth.accept(originalEndpoint.withAttrs(endpointAttributes), false);
 
             return null;
         });
@@ -199,7 +199,7 @@ final class DefaultHealthCheckerContext
             endpointAttributes = Attributes.of(HEALTHY_ATTR, isHealthy,
                                                DEGRADED_ATTR, false);
         }
-        onUpdateHealth.accept(originalEndpoint, isHealthy);
+        onUpdateHealth.accept(originalEndpoint.withAttrs(endpointAttributes), isHealthy);
 
         if (!initialCheckFuture.isDone()) {
             if (isHealthy) {

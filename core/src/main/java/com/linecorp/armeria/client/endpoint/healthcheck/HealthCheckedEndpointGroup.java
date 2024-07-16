@@ -24,8 +24,8 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -123,7 +123,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     // from the internal array. The remaining value is revived if a new value having the same hash code is
     // added.
     @VisibleForTesting
-    final Set<Endpoint> healthyEndpoints = ConcurrentHashMap.newKeySet();
+    final Map<Endpoint, Endpoint> cachedEndpoints = new ConcurrentHashMap<>();
     private volatile boolean initialized;
 
     /**
@@ -235,7 +235,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         }
     }
 
-    List<Endpoint> allEndpoints() {
+    private List<Endpoint> allEndpoints() {
         lock.lock();
         try {
             final HealthCheckContextGroup newGroup = contextGroupChain.peekLast();
@@ -311,9 +311,12 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         final boolean updated;
         // A healthy endpoint should be a valid checker context.
         if (health && findContext(endpoint) != null) {
-            updated = healthyEndpoints.add(endpoint);
+            final Endpoint cached = cachedEndpoints.get(endpoint);
+            cachedEndpoints.put(endpoint, endpoint);
+            // the previous endpoin didn't exist, or the attributes changed
+            updated = (cached == null) || !cached.attrs().equals(endpoint.attrs());
         } else {
-            updated = healthyEndpoints.remove(endpoint);
+            updated = cachedEndpoints.remove(endpoint, endpoint);
         }
 
         // Each new health status will be updated after initialization of the first context group.

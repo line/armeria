@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Lock;
@@ -116,13 +115,9 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
         }
         stateLock.lock();
         try {
-            // The listenerSnapshot should be checked along with the endpoint list
-            // to be sure that there is no meaningful change.
-            // For instance, if header matching rules are updated, even with no
-            // endpoint update the endpoint selection result could be completely different.
-            if (Objects.equals(this.state, state)) {
-                return;
-            }
+            // It is too much work to keep track of the snapshot/endpoints/attributes that determine
+            // whether the state is cacheable or not. For now, to prevent bugs we just set the
+            // state transparently and don't decide whether to notify an event based on the cache.
             this.state = state;
         } finally {
             stateLock.unlock();
