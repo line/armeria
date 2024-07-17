@@ -1216,17 +1216,15 @@ public interface StreamMessage<T> extends Publisher<T> {
      * }</pre>
      *
      * @param timeoutDuration the duration before a timeout occurs
-     * @return a new {@link TimeoutStreamMessage} with the specified timeout duration and default mode
+     * @return a new {@link StreamMessage} with the specified timeout duration and default mode
      */
     @UnstableApi
     default StreamMessage<T> timeout(Duration timeoutDuration) {
-        requireNonNull(timeoutDuration, "timeoutDuration");
         return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
     }
 
     /**
      * Configures a timeout for the stream based on the specified duration and mode.
-     * Internally, it creates and returns a {@link TimeoutStreamMessage} with the specified parameters.
      *
      * <p>Example usage:
      * <pre>{@code
@@ -1239,7 +1237,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * @param timeoutDuration the duration before a timeout occurs
      * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
-     * @return a new {@link TimeoutStreamMessage} with the specified timeout duration and mode applied
+     * @return a new {@link StreamMessage} with the specified timeout duration and mode applied
      */
     @UnstableApi
     default StreamMessage<T> timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {

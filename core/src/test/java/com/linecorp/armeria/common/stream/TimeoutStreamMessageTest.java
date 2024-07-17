@@ -29,7 +29,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 class TimeoutStreamMessageTest {
@@ -70,7 +70,7 @@ class TimeoutStreamMessageTest {
 
         assertThatThrownBy(future::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(TimeoutException.class);
+                .hasCauseInstanceOf(StreamTimeoutException.class);
     }
 
     @Test
@@ -137,7 +137,7 @@ class TimeoutStreamMessageTest {
 
         assertThatThrownBy(future::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(TimeoutException.class);
+                .hasCauseInstanceOf(StreamTimeoutException.class);
     }
 
     @Test
@@ -203,7 +203,7 @@ class TimeoutStreamMessageTest {
 
         assertThatThrownBy(future::get)
                 .isInstanceOf(ExecutionException.class)
-                .hasCauseInstanceOf(TimeoutException.class);
+                .hasCauseInstanceOf(StreamTimeoutException.class);
     }
 
     @Test

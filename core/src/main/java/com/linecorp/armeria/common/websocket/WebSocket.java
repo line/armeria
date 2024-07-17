@@ -15,8 +15,13 @@
  */
 package com.linecorp.armeria.common.websocket;
 
+import static java.util.Objects.requireNonNull;
+
+import java.time.Duration;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamTimeoutMode;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 
 /**
@@ -38,5 +43,17 @@ public interface WebSocket extends StreamMessage<WebSocketFrame> {
     @UnstableApi
     static WebSocket of(StreamMessage<WebSocketFrame> delegate) {
         return new WebSocketWrapper(delegate);
+    }
+
+    @UnstableApi
+    @Override
+    default WebSocket timeout(Duration timeoutDuration) {
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    @UnstableApi
+    @Override
+    default WebSocket timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        return of(StreamMessage.super.timeout(timeoutDuration, timeoutMode));
     }
 }

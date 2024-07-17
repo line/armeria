@@ -822,15 +822,12 @@ public interface HttpRequest extends Request, HttpMessage {
     @UnstableApi
     @Override
     default HttpRequest timeout(Duration timeoutDuration) {
-        requireNonNull(timeoutDuration, "timeoutDuration");
         return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
     }
 
     @UnstableApi
     @Override
     default HttpRequest timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
-        requireNonNull(timeoutDuration, "timeoutDuration");
-        requireNonNull(timeoutMode, "timeoutMode");
         return of(headers(), HttpMessage.super.timeout(timeoutDuration, timeoutMode));
     }
 }

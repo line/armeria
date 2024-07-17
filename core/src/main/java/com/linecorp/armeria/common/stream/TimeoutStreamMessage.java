@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -34,7 +34,7 @@ import io.netty.util.concurrent.ScheduledFuture;
 
 /**
  * This class provides timeout functionality to a base StreamMessage.
- * If data is not received within the specified time, a {@link TimeoutException} is thrown.
+ * If data is not received within the specified time, a {@link StreamTimeoutException} is thrown.
  *
  * <p>The timeout functionality helps to release resources and throw appropriate exceptions
  * if the stream becomes inactive or data is not received within a certain time frame,
@@ -47,8 +47,6 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     private final StreamMessage<? extends T> delegate;
     private final Duration timeoutDuration;
     private final StreamTimeoutMode timeoutMode;
-    @Nullable
-    private TimeoutSubscriber<T> timeoutSubscriber;
 
     /**
      * Creates a new TimeoutStreamMessage with the specified base stream message and timeout settings.
@@ -64,51 +62,28 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
     }
 
-    /**
-     * Returns {@code true} if this stream is still open.
-     *
-     * @return {@code true} if the stream is open, otherwise {@code false}
-     */
     @Override
     public boolean isOpen() {
         return delegate.isOpen();
     }
 
-    /**
-     * Returns {@code true} if this stream is closed and did not publish any elements.
-     *
-     * @return {@code true} if the stream is empty, otherwise {@code false}
-     */
     @Override
     public boolean isEmpty() {
         return delegate.isEmpty();
     }
 
-    /**
-     * Returns the current demand of this stream.
-     *
-     * @return the current demand
-     */
     @Override
     public long demand() {
         return delegate.demand();
     }
 
-    /**
-     * Returns a {@link CompletableFuture} that completes when this stream is complete,
-     * either successfully or exceptionally.
-     *
-     * @return a future that completes when the stream is complete
-     */
     @Override
     public CompletableFuture<Void> whenComplete() {
         return delegate.whenComplete();
     }
 
     /**
-     * Creates a {@link TimeoutSubscriber} with timeout logic applied using the specified
-     * subscriber, executor, duration, and mode.
-     * Then subscribes to the original stream with the TimeoutSubscriber, executor, and options.
+     * Subscribes the given subscriber to this stream with timeout logic applied.
      *
      * @param subscriber the subscriber to this stream
      * @param executor the executor for running timeout tasks and stream operations
@@ -118,40 +93,17 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
     @Override
     public void subscribe(Subscriber<? super T> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        timeoutSubscriber = new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode);
-        delegate.subscribe(timeoutSubscriber, executor, options);
+        delegate.subscribe(new TimeoutSubscriber<>(subscriber, executor, timeoutDuration, timeoutMode),
+                           executor, options);
     }
 
-    /**
-     * Cancels the timeout schedule if it is set.
-     */
-    private void cancelSchedule() {
-        if (timeoutSubscriber != null) {
-            timeoutSubscriber.cancelSchedule();
-        }
-    }
-
-    /**
-     * Aborts the stream with an {@link AbortedStreamException} and prevents further subscriptions.
-     * Calling this method on a closed or aborted stream has no effect.
-     * Cancels the timeout schedule if it is set.
-     */
     @Override
     public void abort() {
-        cancelSchedule();
         delegate.abort();
     }
 
-    /**
-     * Aborts the stream with the specified {@link Throwable} and prevents further subscriptions.
-     * Calling this method on a closed or aborted stream has no effect.
-     * Cancels the timeout schedule if it is set.
-     *
-     * @param cause the cause of the abort
-     */
     @Override
     public void abort(Throwable cause) {
-        cancelSchedule();
         delegate.abort(cause);
     }
 
@@ -169,7 +121,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         private Subscription subscription;
         private long lastEventTimeNanos;
         private boolean completed;
-        private boolean canceled;
+        private volatile boolean canceled;
 
         TimeoutSubscriber(Subscriber<? super T> delegate, EventExecutor executor, Duration timeoutDuration,
                           StreamTimeoutMode timeoutMode) {
@@ -180,8 +132,8 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             this.timeoutMode = requireNonNull(timeoutMode, "timeoutMode");
         }
 
-        private ScheduledFuture<?> scheduleTimeout(long delay, TimeUnit unit) {
-            return executor.schedule(this, delay, unit);
+        private ScheduledFuture<?> scheduleTimeout(long delay) {
+            return executor.schedule(this, delay, TimeUnit.NANOSECONDS);
         }
 
         void cancelSchedule() {
@@ -198,12 +150,12 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
                 if (elapsedNanos < timeoutNanos) {
                     final long delayNanos = timeoutNanos - elapsedNanos;
-                    timeoutFuture = scheduleTimeout(delayNanos, TimeUnit.NANOSECONDS);
+                    timeoutFuture = scheduleTimeout(delayNanos);
                     return;
                 }
             }
             completed = true;
-            delegate.onError(new TimeoutException(
+            delegate.onError(new StreamTimeoutException(
                     String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode)));
             subscription.cancel();
         }
@@ -216,7 +168,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
                 return;
             }
             lastEventTimeNanos = System.nanoTime();
-            timeoutFuture = scheduleTimeout(timeoutNanos, TimeUnit.NANOSECONDS);
+            timeoutFuture = scheduleTimeout(timeoutNanos);
         }
 
         @Override
@@ -231,6 +183,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
                     break;
                 case UNTIL_FIRST:
                     cancelSchedule();
+                    timeoutFuture = null;
                     break;
                 case UNTIL_EOS:
                     break;
