@@ -79,12 +79,7 @@ enum DefaultHealthCheckUpdateHandler implements HealthCheckUpdateHandler {
             return jsonNode.booleanValue() ? HealthCheckUpdateResult.HEALTHY
                                            : HealthCheckUpdateResult.UNHEALTHY;
         } else if (json.has("status")) {
-            final JsonNode jsonNode = toJsonNode(req);
-            if (jsonNode.getNodeType() != JsonNodeType.OBJECT) {
-                throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
-            }
-
-            final JsonNode status = jsonNode.get("status");
+            final JsonNode status = json.get("status");
             if (status == null) {
                 throw HttpStatusException.of(HttpStatus.BAD_REQUEST);
             }

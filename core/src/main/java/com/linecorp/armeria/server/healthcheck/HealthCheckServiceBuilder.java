@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.server.TransientServiceOptionsBuilder;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.Service;
@@ -132,6 +133,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      *
      * @return {@code this}
      */
+    @UnstableApi
     public HealthCheckServiceBuilder degradedResponse(AggregatedHttpResponse degradedResponse) {
         requireNonNull(degradedResponse, "degradedResponse");
         this.degradedResponse = copyResponse(degradedResponse);
@@ -151,6 +153,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      *
      * @return {@code this}
      */
+    @UnstableApi
     public HealthCheckServiceBuilder stoppingResponse(AggregatedHttpResponse stoppingResponse) {
         requireNonNull(stoppingResponse, "stoppingResponse");
         this.stoppingResponse = copyResponse(stoppingResponse);
@@ -189,6 +192,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
      *
      * @return {@code this}
      */
+    @UnstableApi
     public HealthCheckServiceBuilder underMaintenanceResponse(AggregatedHttpResponse underMaintenanceResponse) {
         requireNonNull(underMaintenanceResponse, "underMaintenanceResponse");
         this.underMaintenanceResponse = copyResponse(underMaintenanceResponse);

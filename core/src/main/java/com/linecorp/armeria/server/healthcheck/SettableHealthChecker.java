@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.healthcheck;
 
 import javax.annotation.Nonnull;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.server.Server;
 
@@ -51,6 +52,7 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
      * Constructs a new {@link SettableHealthChecker} which starts out in the specified health status and can
      * be changed using {@link #setHealthStatus(HealthStatus)}.
      */
+    @UnstableApi
     public SettableHealthChecker(HealthStatus healthStatus) {
         this.healthStatus = healthStatus;
     }
@@ -76,6 +78,7 @@ public final class SettableHealthChecker extends AbstractListenable<HealthChecke
     /**
      * Sets the {@link HealthStatus} of the {@link Server}.
      */
+    @UnstableApi
     public SettableHealthChecker setHealthStatus(HealthStatus healthStatus) {
         final HealthStatus oldValue = this.healthStatus;
         this.healthStatus = healthStatus;
