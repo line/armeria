@@ -28,5 +28,5 @@ public final class StreamTimeoutException extends TimeoutException {
     /**
      * Creates a new instance with the specified {@code message}.
      */
-    public StreamTimeoutException(@Nullable String message) {super(message);}
+    public StreamTimeoutException(@Nullable String message) { super(message); }
 }

@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.common.websocket;
 
-import static java.util.Objects.requireNonNull;
-
 import java.time.Duration;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
