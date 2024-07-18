@@ -116,7 +116,6 @@ class GraphqlErrorHandlerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
 
-            sb.requestTimeoutMillis(0);
             final GraphqlService service =
                     GraphqlService.builder()
                                   .graphql(newGraphQL())
@@ -131,7 +130,6 @@ class GraphqlErrorHandlerTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
 
-            sb.requestTimeoutMillis(0);
             final GraphqlService service =
                     GraphqlService.builder()
                                   .graphql(newGraphQL())
@@ -154,8 +152,7 @@ class GraphqlErrorHandlerTest {
                                                .content(MediaType.GRAPHQL, "{foo}")
                                                .build();
         final ServerExtension server = blocking ? blockingServer : GraphqlErrorHandlerTest.server;
-        final AggregatedHttpResponse response = server.blockingWebClient(cb -> cb.responseTimeoutMillis(0))
-                                                      .execute(request);
+        final AggregatedHttpResponse response = server.blockingWebClient().execute(request);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
