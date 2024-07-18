@@ -1,6 +1,7 @@
 type Query {
     foo: String
     error: String
+    exception: String
     optionalInput(value: ComplexTypeInput): String
 }
 
