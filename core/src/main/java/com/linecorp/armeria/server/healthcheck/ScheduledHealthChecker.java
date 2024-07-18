@@ -182,24 +182,24 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
             }
             try {
                 healthChecker.get().handle((result, throwable) -> {
-                    final boolean isHealthy;
+                    final HealthStatus healthStatus;
                     final long intervalMillis;
                     if (throwable != null) {
                         logger.warn("Health checker throws an exception, schedule the next check after {}ms.",
                                     fallbackTtl.toMillis(), throwable);
-                        isHealthy = false;
+                        healthStatus = HealthStatus.UNHEALTHY;
                         intervalMillis = fallbackTtl.toMillis();
                     } else if (result == null) {
                         logger.warn("Health checker returns an unexpected null result, " +
                                     "schedule the next check after {}ms.",
                                     fallbackTtl.toMillis());
-                        isHealthy = false;
+                        healthStatus = HealthStatus.UNHEALTHY;
                         intervalMillis = fallbackTtl.toMillis();
                     } else {
-                        isHealthy = result.isHealthy();
+                        healthStatus = result.healthStatus();
                         intervalMillis = result.ttlMillis();
                     }
-                    settableHealthChecker.setHealthy(isHealthy);
+                    settableHealthChecker.setHealthStatus(healthStatus);
                     scheduledFuture = eventExecutor.schedule(this::runHealthCheck, intervalMillis,
                                                              TimeUnit.MILLISECONDS);
                     return null;
@@ -207,7 +207,7 @@ final class ScheduledHealthChecker extends AbstractListenable<HealthChecker>
             } catch (Throwable throwable) {
                 logger.warn("Health checker throws an exception, schedule the next check after {}ms.",
                             fallbackTtl.toMillis(), throwable);
-                settableHealthChecker.setHealthy(false);
+                settableHealthChecker.setHealthStatus(HealthStatus.UNHEALTHY);
                 scheduledFuture = eventExecutor.schedule(this::runHealthCheck, fallbackTtl.toMillis(),
                                                          TimeUnit.MILLISECONDS);
             }
