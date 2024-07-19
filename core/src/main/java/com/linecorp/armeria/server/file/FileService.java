@@ -23,6 +23,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -257,35 +258,18 @@ public final class FileService extends AbstractHttpService {
                     });
                 });
             } else {
-                // Redirect to the slash appended path if:
-                // 1) /index.html exists or
-                // 2) it has a directory listing.
-                final String indexPath = decodedMappedPath + "/index.html";
-                return findFile(ctx, indexPath, encodings, decompress).thenCompose(indexFile -> {
-                    if (indexFile != null) {
-                        return UnmodifiableFuture.completedFuture(true);
-                    }
+                final List<String> fallbackExtensions = config.fallbackFileExtensions();
+                if (fallbackExtensions.isEmpty()) {
+                    return findFileWithIndexPath(ctx, decodedMappedPath, encodings, decompress);
+                }
 
-                    if (!config.autoIndex()) {
-                        return UnmodifiableFuture.completedFuture(false);
+                // Try appending file extensions if it was a file access and file extensions are configured.
+                return findFileWithExtensions(ctx, fallbackExtensions.iterator(), decodedMappedPath,
+                                              encodings, decompress).thenCompose(fileWithExtension -> {
+                    if (fileWithExtension != null) {
+                        return UnmodifiableFuture.completedFuture(fileWithExtension);
                     }
-
-                    return config.vfs().canList(ctx.blockingTaskExecutor(), decodedMappedPath);
-                }).thenApply(canList -> {
-                    if (canList) {
-                        try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
-                            final StringBuilder locationBuilder = ttl.stringBuilder()
-                                                                     .append(ctx.path())
-                                                                     .append('/');
-                            if (ctx.query() != null) {
-                                locationBuilder.append('?')
-                                               .append(ctx.query());
-                            }
-                            return HttpFile.ofRedirect(locationBuilder.toString());
-                        }
-                    } else {
-                        return HttpFile.nonExistent();
-                    }
+                    return findFileWithIndexPath(ctx, decodedMappedPath, encodings, decompress);
                 });
             }
         }));
@@ -382,6 +366,58 @@ public final class FileService extends AbstractHttpService {
             // Cache hit, but the cached file is out of date. Replace the old entry from the cache.
             cache.invalidate(pathAndEncoding);
             return cache(ctx, pathAndEncoding, uncachedFile, encoding, decompress);
+        });
+    }
+
+    private CompletableFuture<@Nullable HttpFile> findFileWithIndexPath(
+            ServiceRequestContext ctx, String decodedMappedPath,
+            Set<ContentEncoding> encodings, boolean decompress) {
+        // Redirect to the slash appended path if:
+        // 1) /index.html exists or
+        // 2) it has a directory listing.
+        final String indexPath = decodedMappedPath + "/index.html";
+        return findFile(ctx, indexPath, encodings, decompress).thenCompose(indexFile -> {
+            if (indexFile != null) {
+                return UnmodifiableFuture.completedFuture(true);
+            }
+
+            if (!config.autoIndex()) {
+                return UnmodifiableFuture.completedFuture(false);
+            }
+
+            return config.vfs().canList(ctx.blockingTaskExecutor(), decodedMappedPath);
+        }).thenApply(canList -> {
+            if (canList) {
+                try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+                    final StringBuilder locationBuilder = ttl.stringBuilder()
+                                                             .append(ctx.path())
+                                                             .append('/');
+                    if (ctx.query() != null) {
+                        locationBuilder.append('?')
+                                       .append(ctx.query());
+                    }
+                    return HttpFile.ofRedirect(locationBuilder.toString());
+                }
+            } else {
+                return HttpFile.nonExistent();
+            }
+        });
+    }
+
+    private CompletableFuture<@Nullable HttpFile> findFileWithExtensions(
+            ServiceRequestContext ctx, @Nullable Iterator<String> extensionIterator, String path,
+            Set<ContentEncoding> supportedEncodings, boolean decompress) {
+        if (extensionIterator == null || !extensionIterator.hasNext()) {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        final String extension = extensionIterator.next();
+        return findFile(ctx, path + '.' + extension, supportedEncodings, decompress).thenCompose(file -> {
+            if (file != null) {
+                return UnmodifiableFuture.completedFuture(file);
+            }
+
+            return findFileWithExtensions(ctx, extensionIterator, path, supportedEncodings, decompress);
         });
     }
 

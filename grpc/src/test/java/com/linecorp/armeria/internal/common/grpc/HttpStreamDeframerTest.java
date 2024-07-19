@@ -58,8 +58,7 @@ class HttpStreamDeframerTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final TransportStatusListener statusListener = (status, metadata) -> statusRef.set(status);
         deframer = new HttpStreamDeframer(DecompressorRegistry.getDefaultInstance(), ctx, statusListener,
-                                          new UnwrappingGrpcExceptionHandleFunction(
-                                                  GrpcExceptionHandlerFunction.of()), Integer.MAX_VALUE,
+                                          GrpcExceptionHandlerFunction.of(), Integer.MAX_VALUE,
                                           false, true);
     }
 

@@ -11,13 +11,16 @@
 *.advisor.ws
 *.af-south-1.airflow.amazonaws.com
 *.alces.network
-*.amplifyapp.com
 *.ap-east-1.airflow.amazonaws.com
 *.ap-northeast-1.airflow.amazonaws.com
 *.ap-northeast-2.airflow.amazonaws.com
+*.ap-northeast-3.airflow.amazonaws.com
 *.ap-south-1.airflow.amazonaws.com
+*.ap-south-2.airflow.amazonaws.com
 *.ap-southeast-1.airflow.amazonaws.com
 *.ap-southeast-2.airflow.amazonaws.com
+*.ap-southeast-3.airflow.amazonaws.com
+*.ap-southeast-4.airflow.amazonaws.com
 *.awdev.ca
 *.awsapprunner.com
 *.azurecontainer.io
@@ -30,6 +33,7 @@
 *.bzz.dapps.earth
 *.c.ts.net
 *.ca-central-1.airflow.amazonaws.com
+*.ca-west-1.airflow.amazonaws.com
 *.ck
 *.cloud.metacentrum.cz
 *.cloudera.site
@@ -41,9 +45,9 @@
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
 *.compute.estate
-*.cprapid.com
 *.cryptonomic.net
 *.customer-oci.com
+*.d.crm.dev
 *.dapps.earth
 *.database.run
 *.dev-builder.code.com
@@ -57,14 +61,17 @@
 *.elb.amazonaws.com.cn
 *.er
 *.eu-central-1.airflow.amazonaws.com
+*.eu-central-2.airflow.amazonaws.com
 *.eu-north-1.airflow.amazonaws.com
 *.eu-south-1.airflow.amazonaws.com
+*.eu-south-2.airflow.amazonaws.com
 *.eu-west-1.airflow.amazonaws.com
 *.eu-west-2.airflow.amazonaws.com
 *.eu-west-3.airflow.amazonaws.com
 *.ewp.live
 *.ex.futurecms.at
 *.ex.ortsinfo.at
+*.experiments.sagemaker.aws
 *.firenet.ch
 *.fk
 *.frusky.de
@@ -74,6 +81,7 @@
 *.hosting.myjino.ru
 *.hosting.ovh.net
 *.id.pub
+*.il-central-1.airflow.amazonaws.com
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
@@ -88,6 +96,7 @@
 *.lclstage.dev
 *.linodeobjects.com
 *.magentosite.cloud
+*.me-central-1.airflow.amazonaws.com
 *.me-south-1.airflow.amazonaws.com
 *.migration.run
 *.mm
@@ -151,9 +160,16 @@
 *.usercontent.goog
 *.vps.myjino.ru
 *.vultrobjects.com
+*.w.crm.dev
+*.wa.crm.dev
 *.wadl.top
+*.wb.crm.dev
+*.wc.crm.dev
+*.wd.crm.dev
+*.we.crm.dev
 *.webhare.dev
 *.webpaas.ovh.net
+*.wf.crm.dev
 *.xmit.co
 *.yokohama.jp
 0.bg
@@ -478,9 +494,9 @@ ami.ibaraki.jp
 amica
 amli.no
 amot.no
+amplifyapp.com
 amscompute.com
 amsterdam
-amusement.aero
 an.it
 analytics
 analytics-gateway.ap-northeast-1.amazonaws.com
@@ -607,6 +623,7 @@ arts.ro
 arts.ve
 arvo.network
 as
+as.sh.cn
 as.us
 asago.hyogo.jp
 asahi.chiba.jp
@@ -696,6 +713,7 @@ auth-fips.us-gov-west-1.amazoncognito.com
 auth-fips.us-west-1.amazoncognito.com
 auth-fips.us-west-2.amazoncognito.com
 auth.af-south-1.amazoncognito.com
+auth.ap-east-1.amazoncognito.com
 auth.ap-northeast-1.amazoncognito.com
 auth.ap-northeast-2.amazoncognito.com
 auth.ap-northeast-3.amazoncognito.com
@@ -706,6 +724,7 @@ auth.ap-southeast-2.amazoncognito.com
 auth.ap-southeast-3.amazoncognito.com
 auth.ap-southeast-4.amazoncognito.com
 auth.ca-central-1.amazoncognito.com
+auth.ca-west-1.amazoncognito.com
 auth.eu-central-1.amazoncognito.com
 auth.eu-central-2.amazoncognito.com
 auth.eu-north-1.amazoncognito.com
@@ -823,7 +842,9 @@ barsy.ca
 barsy.club
 barsy.co.uk
 barsy.de
+barsy.dev
 barsy.eu
+barsy.gr
 barsy.in
 barsy.info
 barsy.io
@@ -836,13 +857,17 @@ barsy.org
 barsy.pro
 barsy.pub
 barsy.ro
+barsy.rs
 barsy.shop
 barsy.site
+barsy.store
 barsy.support
 barsy.uk
 barsycenter.com
 barsyonline.co.uk
 barsyonline.com
+barsyonline.menu
+barsyonline.shop
 barueri.br
 barum.no
 bas.it
@@ -1361,6 +1386,7 @@ cf
 cf-ipfs.com
 cfa
 cfd
+cfolks.pl
 cg
 ch
 ch.eu.org
@@ -1516,7 +1542,6 @@ cn.eu.org
 cn.in
 cn.it
 cn.ua
-cn.vu
 cng.br
 cnpy.gdn
 cnt.br
@@ -1808,11 +1833,13 @@ courses
 coz.br
 cpa
 cpa.pro
+cprapid.com
 cpserver.com
 cq.cn
 cr
 cr.it
 cr.ua
+craft.me
 crafting.xyz
 cranky.jp
 crap.jp
@@ -1981,6 +2008,7 @@ development.run
 devices.resinstaging.io
 df.gov.br
 df.leg.br
+dfirma.pl
 dgca.aero
 dh.bytemark.co.uk
 dhl
@@ -2014,6 +2042,7 @@ diy
 dj
 dk
 dk.eu.org
+dkonto.pl
 dlugoleka.pl
 dm
 dn.ua
@@ -2088,6 +2117,7 @@ duckdns.org
 dunlop
 dupont
 durban
+durumis.com
 dvag
 dvr
 dvrcam.info
@@ -2783,6 +2813,7 @@ freemyip.com
 freesite.host
 freetls.fastly.net
 frei.no
+freight.aero
 frenchkiss.jp
 fresenius
 friuli-v-giulia.it
@@ -2930,7 +2961,6 @@ fylkesbibl.no
 fyresdal.no
 g.bg
 g.se
-g.vbrplsbx.io
 g12.br
 ga
 ga.us
@@ -3423,6 +3453,12 @@ hasuda.saitama.jp
 hasura-app.io
 hasura.app
 hasvik.no
+hateblo.jp
+hatenablog.com
+hatenablog.jp
+hatenadiary.com
+hatenadiary.jp
+hatenadiary.org
 hatinh.vn
 hatogaya.saitama.jp
 hatoyama.saitama.jp
@@ -3447,6 +3483,7 @@ health.vn
 healthcare
 heavy.jp
 heguri.nara.jp
+heiyu.space
 hekinan.aichi.jp
 helioho.st
 heliohost.us
@@ -3798,6 +3835,7 @@ ind.br
 ind.gt
 ind.in
 ind.kw
+ind.mom
 ind.tn
 independent-commission.uk
 independent-inquest.uk
@@ -3858,7 +3896,6 @@ ink
 ino.kochi.jp
 instance.datadetect.com
 instances.spawn.cc
-instantcloud.cn
 institute
 insurance
 insurance.aero
@@ -4953,6 +4990,7 @@ macapa.br
 maceio.br
 macerata.it
 machida.tokyo.jp
+madethis.site
 madrid
 maebashi.gunma.jp
 magazine.aero
@@ -4994,6 +5032,7 @@ maringa.br
 marker.no
 market
 marketing
+marketplace.aero
 markets
 marnardal.no
 marriott
@@ -5078,6 +5117,7 @@ media
 media.aero
 media.hu
 media.pl
+media.strapiapp.com
 mediatech.by
 mediatech.dev
 medicina.bo
@@ -5499,6 +5539,7 @@ mypsx.net
 myqnapcloud.cn
 myqnapcloud.com
 myradweb.net
+myrdbx.io
 mysecuritycamera.com
 mysecuritycamera.net
 mysecuritycamera.org
@@ -5648,7 +5689,6 @@ nasushiobara.tochigi.jp
 nat.tn
 natal.br
 natori.miyagi.jp
-natura
 natural.bo
 naturbruksgymn.se
 naustdal.no
@@ -5824,6 +5864,7 @@ net.za
 net.zm
 netbank
 netflix
+netfy.app
 netgamers.jp
 netlify.app
 network
@@ -6106,6 +6147,7 @@ obihiro.hokkaido.jp
 obira.hokkaido.jp
 objects.lpg.cloudscale.ch
 objects.rma.cloudscale.ch
+obl.ong
 obninsk.su
 observablehq.cloud
 observer
@@ -6935,6 +6977,8 @@ reit
 reklam.hu
 rel.ht
 rel.pl
+relay.evervault.app
+relay.evervault.dev
 reliance
 remotewd.com
 ren
@@ -7015,7 +7059,6 @@ rn.leg.br
 ro
 ro.eu.org
 ro.gov.br
-ro.im
 ro.it
 ro.leg.br
 roan.no
@@ -7650,7 +7693,6 @@ shakotan.hokkaido.jp
 shangrila
 shari.hokkaido.jp
 sharp
-shaw
 sheezy.games
 shell
 shia
@@ -7791,6 +7833,7 @@ siracusa.it
 sirdal.no
 sisko.replit.dev
 site
+site.rb-hosting.io
 site.tb-hosting.com
 site.transip.me
 siteleaf.net
@@ -7987,6 +8030,7 @@ storipress.app
 storj.farm
 strand.no
 stranda.no
+strapiapp.com
 streak-link.com
 streaklinks.com
 streakusercontent.com
@@ -8220,6 +8264,7 @@ tattoo
 tawaramoto.nara.jp
 tax
 taxi
+taxi.aero
 taxi.br
 tayninh.vn
 tc
@@ -9094,11 +9139,13 @@ works.aero
 world
 worse-than.tv
 wow
+wp2.host
 wpdevcloud.com
 wpenginepowered.com
 wphostedmail.com
 wpmucdn.com
 wpmudev.host
+wpsquared.site
 writesthisblog.com
 wroc.pl
 wroclaw.pl
@@ -9700,6 +9747,7 @@ yoshinogari.saga.jp
 yoshioka.gunma.jp
 yotsukaido.chiba.jp
 you
+you2.pl
 youtube
 yt
 yuasa.wakayama.jp

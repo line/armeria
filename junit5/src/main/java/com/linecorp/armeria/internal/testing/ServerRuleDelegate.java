@@ -32,6 +32,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RestClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
+import com.linecorp.armeria.client.websocket.WebSocketClient;
+import com.linecorp.armeria.client.websocket.WebSocketClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -49,6 +51,7 @@ public abstract class ServerRuleDelegate {
     private final boolean autoStart;
 
     private final AtomicReference<WebClient> webClient = new AtomicReference<>();
+    private final AtomicReference<WebSocketClient> webSocketClient = new AtomicReference<>();
 
     /**
      * Creates a new instance.
@@ -113,6 +116,14 @@ public abstract class ServerRuleDelegate {
      * You can get the configured {@link WebClient} using {@link #webClient()}.
      */
     public abstract void configureWebClient(WebClientBuilder webClientBuilder) throws Exception;
+
+    /**
+     * Configures the {@link WebSocketClient} with the given {@link WebSocketClientBuilder}.
+     * You can get the configured {@link WebSocketClient} using {@link #webSocketClient()}.
+     */
+    @UnstableApi
+    public abstract void configureWebSocketClient(WebSocketClientBuilder webSocketClientBuilder)
+            throws Exception;
 
     /**
      * Stops the {@link Server} asynchronously.
@@ -404,6 +415,25 @@ public abstract class ServerRuleDelegate {
         return webClient(webClientCustomizer).asRestClient();
     }
 
+    /**
+     * Returns the {@link WebSocketClient} configured
+     * by {@link #configureWebSocketClient(WebSocketClientBuilder)}.
+     */
+    @UnstableApi
+    public WebSocketClient webSocketClient() {
+        final WebSocketClient webSocketClient = this.webSocketClient.get();
+        if (webSocketClient != null) {
+            return webSocketClient;
+        }
+
+        final WebSocketClient newWebSocketClient = webSocketClientBuilder().build();
+        if (this.webSocketClient.compareAndSet(null, newWebSocketClient)) {
+            return newWebSocketClient;
+        } else {
+            return this.webSocketClient.get();
+        }
+    }
+
     private void ensureStarted() {
         // This will ensure that the server has started.
         server();
@@ -421,5 +451,22 @@ public abstract class ServerRuleDelegate {
             throw new IllegalStateException("failed to configure a WebClient", e);
         }
         return webClientBuilder;
+    }
+
+    private WebSocketClientBuilder webSocketClientBuilder() {
+        final boolean hasHttps = hasHttps();
+        final String hostAndPort = hasHttps ? "wss://" + httpsUri().getAuthority()
+                                            : "ws://" + httpUri().getAuthority();
+        final WebSocketClientBuilder webSocketClientBuilder = WebSocketClient.builder(hostAndPort);
+        if (hasHttps) {
+            webSocketClientBuilder.factory(ClientFactory.insecure());
+        }
+
+        try {
+            configureWebSocketClient(webSocketClientBuilder);
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to configure a WebSocketClient", e);
+        }
+        return webSocketClientBuilder;
     }
 }

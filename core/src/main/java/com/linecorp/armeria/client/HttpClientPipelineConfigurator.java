@@ -570,7 +570,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     System.nanoTime(), SystemInfo.currentTimeMicros());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, reqCtx, ctx.channel().eventLoop());
+            responseDecoder.addResponse(null, 0, res, reqCtx, ctx.channel().eventLoop());
             ctx.fireChannelActive();
         }
 
@@ -805,7 +805,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            HttpSession.get(ctx.channel()).deactivate();
+            HttpSession.get(ctx.channel()).markUnacquirable();
             super.close(ctx, promise);
         }
     }

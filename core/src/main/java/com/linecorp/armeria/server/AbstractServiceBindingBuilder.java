@@ -44,8 +44,7 @@ import io.netty.channel.EventLoopGroup;
  * @see VirtualHostServiceBindingBuilder
  */
 abstract class AbstractServiceBindingBuilder<SELF extends AbstractServiceBindingBuilder<SELF>>
-        extends AbstractBindingBuilder<SELF>
-        implements ServiceConfigSetters<AbstractServiceBindingBuilder<SELF>> {
+        extends AbstractBindingBuilder<SELF> implements ServiceConfigSetters<SELF> {
 
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
 
@@ -260,15 +259,5 @@ abstract class AbstractServiceBindingBuilder<SELF extends AbstractServiceBinding
                 serviceConfigBuilder(serviceConfigBuilder);
             }
         }
-    }
-
-    final void build0(HttpService service, Route mappedRoute) {
-        final List<Route> routes = buildRouteList(ImmutableSet.of());
-        assert routes.size() == 1; // Only one route is set via addRoute().
-        final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
-        final ServiceConfigBuilder serviceConfigBuilder =
-                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), "/", decoratedService);
-        serviceConfigBuilder.addMappedRoute(mappedRoute);
-        serviceConfigBuilder(serviceConfigBuilder);
     }
 }
