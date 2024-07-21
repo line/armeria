@@ -35,8 +35,7 @@ import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
  * <pre>{@code
  * NacosEndpointGroup endpointGroup = NacosEndpointGroup.builder(nacosUri, "myService")
  *                                                      .build();
- * List<Endpoint> endpoints = endpointGroup.endpoints();
- * sb.serverListener(listener);
+ * WebClient client = WebClient.of(SessionProtocol.HTTPS, endpointGroup);
  * }</pre>
  */
 @UnstableApi
