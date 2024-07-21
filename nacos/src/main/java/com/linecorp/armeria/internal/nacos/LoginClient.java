@@ -47,7 +47,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 final class LoginClient extends SimpleDecoratingHttpClient {
     private static final String NACOS_ACCESS_TOKEN_CACHE_KEY = "NACOS_ACCESS_TOKEN_CACHE_KEY";
 
-    public static Function<? super HttpClient, LoginClient> newDecorator(WebClient webClient,
+    static Function<? super HttpClient, LoginClient> newDecorator(WebClient webClient,
                                                                          String username, String password) {
         return delegate -> new LoginClient(delegate, webClient, username, password);
     }
