@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.nacos.NacosConfigSetters;
 
 public final class NacosClientBuilder implements NacosConfigSetters<NacosClientBuilder> {
+
     private final URI nacosUri;
     private final String serviceName;
 
