@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.nacos.NacosClient;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -42,7 +43,8 @@ import io.netty.util.concurrent.EventExecutor;
  * using <a href="https://nacos.io/en-us/docs/v2/guide/user/open-api.html">Nacos's HTTP Open API</a>
  * and updates the {@link Endpoint}s periodically.
  */
-class NacosEndpointGroup extends DynamicEndpointGroup {
+@UnstableApi
+public final class NacosEndpointGroup extends DynamicEndpointGroup {
     private static final Logger logger = LoggerFactory.getLogger(NacosEndpointGroup.class);
 
     /**
