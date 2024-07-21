@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -65,34 +63,20 @@ final class LoginClient extends SimpleDecoratingHttpClient {
                     .expireAfter(
                             new Expiry<String, LoginResult>() {
                                 @Override
-                                public long expireAfterCreate(
-                                        @NonNull
-                                        String key,
-                                        @NonNull
-                                        LoginResult loginResult,
-                                        long currentTime) {
+                                public long expireAfterCreate(String key, LoginResult loginResult,
+                                                              long currentTime) {
                                     return loginResult.tokenTtl.longValue();
                                 }
 
                                 @Override
-                                public long expireAfterUpdate(
-                                        @NonNull
-                                        String key,
-                                        @NonNull
-                                        LoginResult loginResult,
-                                        long currentTime,
-                                        long currentDuration) {
+                                public long expireAfterUpdate(String key, LoginResult loginResult,
+                                                              long currentTime, long currentDuration) {
                                     return loginResult.tokenTtl.longValue();
                                 }
 
                                 @Override
-                                public long expireAfterRead(
-                                        @NonNull
-                                        String key,
-                                        @NonNull
-                                        LoginResult loginResult,
-                                        long currentTime,
-                                        long currentDuration) {
+                                public long expireAfterRead(String key, LoginResult loginResult,
+                                                            long currentTime, long currentDuration) {
                                     return currentDuration;
                                 }
                             })
