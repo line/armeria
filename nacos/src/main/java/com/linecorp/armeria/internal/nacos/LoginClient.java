@@ -121,11 +121,12 @@ final class LoginClient extends SimpleDecoratingHttpClient {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
         final CompletableFuture<HttpResponse> future = login().thenApply(accessToken -> {
             try {
-                return delegate.execute(ctx,
-                                        req.mapHeaders(headers -> headers.toBuilder()
-                                                                         .set(HttpHeaderNames.AUTHORIZATION,
-                                                                              "Bearer " + accessToken)
-                                                                         .build()));
+                final HttpRequest newReq = req.mapHeaders(headers -> headers.toBuilder()
+                                                                            .set(HttpHeaderNames.AUTHORIZATION,
+                                                                                 "Bearer " + accessToken)
+                                                                            .build());
+                ctx.updateRequest(newReq);
+                return delegate.execute(ctx, newReq);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
