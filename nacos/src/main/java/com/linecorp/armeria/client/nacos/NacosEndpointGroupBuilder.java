@@ -114,9 +114,6 @@ public final class NacosEndpointGroupBuilder
      */
     public NacosEndpointGroupBuilder registryFetchInterval(Duration registryFetchInterval) {
         requireNonNull(registryFetchInterval, "registryFetchInterval");
-        checkArgument(!registryFetchInterval.isZero() && !registryFetchInterval.isNegative(),
-                      "registryFetchInterval: %s (expected: > 0)",
-                      registryFetchInterval);
         return registryFetchIntervalMillis(registryFetchInterval.toMillis());
     }
 
