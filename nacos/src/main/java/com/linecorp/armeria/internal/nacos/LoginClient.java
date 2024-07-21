@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A Nacos client that is responsible for
@@ -128,7 +129,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
                 ctx.updateRequest(newReq);
                 return delegate.execute(ctx, newReq);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                return Exceptions.throwUnsafely(e);
             }
         });
 
