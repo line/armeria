@@ -65,19 +65,23 @@ final class LoginClient extends SimpleDecoratingHttpClient {
                                 @Override
                                 public long expireAfterCreate(String key, LoginResult loginResult,
                                                               long currentTime) {
-                                    return loginResult.tokenTtl.longValue();
+                                    return ttlToNanoSeconds(loginResult.tokenTtl);
                                 }
 
                                 @Override
                                 public long expireAfterUpdate(String key, LoginResult loginResult,
                                                               long currentTime, long currentDuration) {
-                                    return loginResult.tokenTtl.longValue();
+                                    return ttlToNanoSeconds(loginResult.tokenTtl);
                                 }
 
                                 @Override
                                 public long expireAfterRead(String key, LoginResult loginResult,
                                                             long currentTime, long currentDuration) {
                                     return currentDuration;
+                                }
+
+                                private long ttlToNanoSeconds(int ttlInSeconds) {
+                                    return ttlInSeconds * 1_000_000_000L;
                                 }
                             })
                     .buildAsync((key, executor) -> {
@@ -134,7 +138,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
     private static final class LoginResult {
         private final String accessToken;
 
-        private final Integer tokenTtl;
+        private final int tokenTtl;
 
         @Nullable
         private final Boolean globalAdmin;
