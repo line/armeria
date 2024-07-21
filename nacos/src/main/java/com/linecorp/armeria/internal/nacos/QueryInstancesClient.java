@@ -69,7 +69,7 @@ final class QueryInstancesClient {
 
     @Nullable
     private static Endpoint toEndpoint(Host host) {
-        if (host.enabled != null && !host.enabled) {
+        if (Boolean.FALSE.equals(host.enabled)) {
             return null;
         } else if (host.weight != null && host.weight.intValue() >= 0) {
             return Endpoint.of(host.ip, host.port).withWeight(host.weight.intValue());
