@@ -59,7 +59,7 @@ public final class NacosEndpointGroup extends DynamicEndpointGroup {
      * and {@code serviceName} to build {@link NacosEndpointGroupBuilder}.
      *
      * @param nacosUri the URI of Nacos API service, including the path up to but not including API version.
-     * (example: http://localhost:8848/nacos)
+     *                 (example: http://localhost:8848/nacos)
      */
     public static NacosEndpointGroupBuilder builder(URI nacosUri, String serviceName) {
         return new NacosEndpointGroupBuilder(nacosUri, serviceName);

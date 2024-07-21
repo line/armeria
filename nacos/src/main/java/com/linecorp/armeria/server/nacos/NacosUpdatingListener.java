@@ -48,7 +48,7 @@ public class NacosUpdatingListener extends ServerListenerAdapter {
      * and {@code serviceName} to build {@link NacosUpdatingListener}.
      *
      * @param nacosUri the URI of Nacos API service, including the path up to but not including API version.
-     * (example: http://localhost:8848/nacos)
+     *                 (example: http://localhost:8848/nacos)
      */
     public static NacosUpdatingListenerBuilder builder(URI nacosUri, String serviceName) {
         return new NacosUpdatingListenerBuilder(nacosUri, serviceName);
