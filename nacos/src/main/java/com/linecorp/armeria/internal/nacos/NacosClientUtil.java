@@ -46,20 +46,17 @@ final class NacosClientUtil {
     /**
      * Encodes common Nacos API parameters as {@code QueryParamsBuilder}.
      */
-    static QueryParams queryParams(@Nullable String namespaceId, @Nullable String groupName,
-                                   @Nullable String serviceName, @Nullable String clusterName,
-                                   @Nullable Boolean healthyOnly, @Nullable String app,
-                                   @Nullable String ip, @Nullable Integer port,
+    static QueryParams queryParams(String serviceName, @Nullable String namespaceId, @Nullable String groupName,
+                                   @Nullable String clusterName, @Nullable Boolean healthyOnly,
+                                   @Nullable String app, @Nullable String ip, @Nullable Integer port,
                                    @Nullable Integer weight) {
         final QueryParamsBuilder paramsBuilder = QueryParams.builder();
+        paramsBuilder.add(SERVICE_NAME_PARAM, serviceName);
         if (namespaceId != null) {
             paramsBuilder.add(NAMESPACE_ID_PARAM, namespaceId);
         }
         if (groupName != null) {
             paramsBuilder.add(GROUP_NAME_PARAM, groupName);
-        }
-        if (serviceName != null) {
-            paramsBuilder.add(SERVICE_NAME_PARAM, serviceName);
         }
         if (clusterName != null) {
             paramsBuilder.add(CLUSTER_NAME_PARAM, clusterName);

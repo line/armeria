@@ -52,7 +52,7 @@ final class QueryInstancesClient {
                 .append(nacosApiVersion)
                 .append("/ns/instance/list?");
         final QueryParams params = NacosClientUtil
-                .queryParams(namespaceId, groupName, requireNonNull(serviceName, "serviceName"),
+                .queryParams(requireNonNull(serviceName, "serviceName"), namespaceId, groupName,
                              clusterName, healthyOnly, app, null, null, null);
         pathBuilder.append(params.toQueryString());
 

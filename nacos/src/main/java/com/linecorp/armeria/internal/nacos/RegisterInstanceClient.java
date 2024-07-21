@@ -69,7 +69,7 @@ final class RegisterInstanceClient {
      * Registers a service into the Nacos.
      */
     HttpResponse register(String ip, int port, int weight) {
-        final QueryParams params = NacosClientUtil.queryParams(namespaceId, groupName, serviceName, clusterName,
+        final QueryParams params = NacosClientUtil.queryParams(serviceName, namespaceId, groupName, clusterName,
                                                                null, app, requireNonNull(ip, "ip"), port,
                                                                weight);
 
@@ -81,7 +81,7 @@ final class RegisterInstanceClient {
      * De-registers a service from the Nacos.
      */
     HttpResponse deregister(String ip, int port, int weight) {
-        final QueryParams params = NacosClientUtil.queryParams(namespaceId, groupName, serviceName, clusterName,
+        final QueryParams params = NacosClientUtil.queryParams(serviceName, namespaceId, groupName, clusterName,
                                                                null, app, requireNonNull(ip, "ip"), port,
                                                                weight);
 
