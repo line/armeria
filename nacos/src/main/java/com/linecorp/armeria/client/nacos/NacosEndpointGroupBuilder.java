@@ -45,6 +45,7 @@ public final class NacosEndpointGroupBuilder
         implements NacosConfigSetters<NacosEndpointGroupBuilder> {
 
     private static final long DEFAULT_CHECK_INTERVAL_MILLIS = 30_000;
+
     private final NacosClientBuilder nacosClientBuilder;
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
     private long registryFetchIntervalMillis = DEFAULT_CHECK_INTERVAL_MILLIS;
