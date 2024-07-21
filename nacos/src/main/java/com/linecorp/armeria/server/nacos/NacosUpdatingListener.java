@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.nacos.NacosClient;
 import com.linecorp.armeria.server.Server;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.server.ServerPort;
  * A {@link ServerListener} which registers the current {@link Server} to
  * <a href="https://nacos.io">Nacos</a>.
  */
+@UnstableApi
 public class NacosUpdatingListener extends ServerListenerAdapter {
 
     private static final Logger logger = LoggerFactory.getLogger(NacosUpdatingListener.class);
