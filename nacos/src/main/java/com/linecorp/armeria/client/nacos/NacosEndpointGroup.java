@@ -129,7 +129,6 @@ public final class NacosEndpointGroup extends DynamicEndpointGroup {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
                           .add("registryFetchIntervalMillis", registryFetchIntervalMillis)
                           .toString();
     }
