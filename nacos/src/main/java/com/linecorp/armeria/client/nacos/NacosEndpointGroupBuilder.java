@@ -24,6 +24,7 @@ import java.time.Duration;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.nacos.NacosConfigSetters;
 import com.linecorp.armeria.internal.nacos.NacosClient;
 import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.internal.nacos.NacosClientBuilder;
  * sb.serverListener(listener);
  * }</pre>
  */
+@UnstableApi
 public final class NacosEndpointGroupBuilder
         extends AbstractDynamicEndpointGroupBuilder<NacosEndpointGroupBuilder>
         implements NacosConfigSetters<NacosEndpointGroupBuilder> {
