@@ -40,6 +40,7 @@ import com.linecorp.armeria.server.Server;
  */
 @UnstableApi
 public final class NacosUpdatingListenerBuilder implements NacosConfigSetters<NacosUpdatingListenerBuilder> {
+
     private final NacosClientBuilder nacosClientBuilder;
     @Nullable
     private Endpoint endpoint;

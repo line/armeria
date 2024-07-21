@@ -45,6 +45,7 @@ import io.netty.util.concurrent.EventExecutor;
  */
 @UnstableApi
 public final class NacosEndpointGroup extends DynamicEndpointGroup {
+
     private static final Logger logger = LoggerFactory.getLogger(NacosEndpointGroup.class);
 
     /**

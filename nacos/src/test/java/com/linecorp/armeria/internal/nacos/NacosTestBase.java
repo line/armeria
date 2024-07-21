@@ -51,6 +51,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 @FlakyTest
 @Testcontainers(disabledWithoutDocker = true)
 public abstract class NacosTestBase {
+
     protected static final String serviceName = "testService";
     protected static final String NACOS_AUTH_TOKEN = "armeriaarmeriaarmeriaarmeriaarmeriaarmeriaarmeriaarmeria";
     protected static final String NACOS_AUTH_SECRET = "nacos";

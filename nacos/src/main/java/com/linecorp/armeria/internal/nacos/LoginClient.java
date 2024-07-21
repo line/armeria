@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.util.Exceptions;
  * <a href="https://nacos.io/en-us/docs/auth.html">Nacos Authentication</a>.
  */
 final class LoginClient extends SimpleDecoratingHttpClient {
+
     private static final String NACOS_ACCESS_TOKEN_CACHE_KEY = "NACOS_ACCESS_TOKEN_CACHE_KEY";
 
     static Function<? super HttpClient, LoginClient> newDecorator(WebClient webClient,

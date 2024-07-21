@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * Utility methods related to Nacos clients.
  */
 final class NacosClientUtil {
+
     private static final String NAMESPACE_ID_PARAM = "namespaceId";
 
     private static final String GROUP_NAME_PARAM = "groupName";
