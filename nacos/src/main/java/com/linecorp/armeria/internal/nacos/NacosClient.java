@@ -52,11 +52,12 @@ public final class NacosClient {
                 @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
         this.uri = uri;
 
-        final WebClientBuilder builder = WebClient.builder(uri)
-                                                  .decorator(retryingClientDecorator);
+        WebClientBuilder builder = WebClient.builder(uri);
         if (username != null && password != null) {
-            builder.decorator(LoginClient.newDecorator(builder.build(), username, password));
+            builder = builder.decorator(LoginClient.newDecorator(builder.build(), username, password));
         }
+        builder = builder.decorator(retryingClientDecorator);
+
         final WebClient webClient = builder.build();
 
         queryInstancesClient = QueryInstancesClient.of(webClient, nacosApiVersion, serviceName, namespaceId,
