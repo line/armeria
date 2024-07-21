@@ -112,15 +112,7 @@ public final class NacosClientBuilder implements NacosConfigSetters<NacosClientB
     }
 
     public NacosClient build() {
-        final URI uri;
-        try {
-            uri = new URI(nacosUri.getScheme(), null, nacosUri.getHost(), nacosUri.getPort(),
-                          "/nacos", null, null);
-        } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(e);
-        }
-
-        return new NacosClient(uri, nacosApiVersion, username, password, serviceName, namespaceId,
-                               groupName, clusterName, healthyOnly, app);
+        return new NacosClient(nacosUri.resolve("/nacos"), nacosApiVersion, username, password, serviceName,
+                               namespaceId, groupName, clusterName, healthyOnly, app);
     }
 }
