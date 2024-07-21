@@ -80,10 +80,14 @@ final class QueryInstancesClient {
 
     CompletableFuture<List<Endpoint>> endpoints() {
         return queryInstances()
-                .thenApply(response -> response.data.hosts.stream()
-                                                          .map(QueryInstancesClient::toEndpoint)
-                                                          .filter(Objects::nonNull)
-                                                          .collect(toImmutableList()));
+                .thenApply(response -> {
+                    requireNonNull(response.data, "Response data cannot be null");
+                    requireNonNull(response.data.hosts, "Response data.hosts cannot be null");
+                    return response.data.hosts.stream()
+                                              .map(QueryInstancesClient::toEndpoint)
+                                              .filter(Objects::nonNull)
+                                              .collect(toImmutableList());
+                });
     }
 
     CompletableFuture<QueryInstancesResponse> queryInstances() {
@@ -96,6 +100,7 @@ final class QueryInstancesClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class QueryInstancesResponse {
+        @Nullable
         private final Data data;
 
         @JsonCreator
@@ -106,6 +111,7 @@ final class QueryInstancesClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class Data {
+        @Nullable
         private final List<Host> hosts;
 
         @JsonCreator
