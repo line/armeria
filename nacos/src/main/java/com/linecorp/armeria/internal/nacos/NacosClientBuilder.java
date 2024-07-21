@@ -116,7 +116,7 @@ public final class NacosClientBuilder implements NacosConfigSetters<NacosClientB
     }
 
     public NacosClient build() {
-        return new NacosClient(nacosUri.resolve("/nacos"), nacosApiVersion, username, password, serviceName,
-                               namespaceId, groupName, clusterName, healthyOnly, app);
+        return new NacosClient(nacosUri, nacosApiVersion, username, password, serviceName, namespaceId,
+                               groupName, clusterName, healthyOnly, app);
     }
 }
