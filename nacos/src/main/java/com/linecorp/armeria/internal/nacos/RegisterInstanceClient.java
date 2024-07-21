@@ -45,10 +45,10 @@ final class RegisterInstanceClient {
     @Nullable
     private final String app;
 
-    RegisterInstanceClient(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+    RegisterInstanceClient(WebClient webClient, String nacosApiVersion, String serviceName,
                            @Nullable String namespaceId, @Nullable String groupName,
                            @Nullable String clusterName, @Nullable String app) {
-        webClient = nacosClient.nacosWebClient();
+        this.webClient = webClient;
         instanceApiPath = new StringBuilder("/").append(nacosApiVersion).append("/ns/instance").toString();
 
         this.serviceName = requireNonNull(serviceName, "serviceName");
@@ -58,10 +58,10 @@ final class RegisterInstanceClient {
         this.app = app;
     }
 
-    static RegisterInstanceClient of(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+    static RegisterInstanceClient of(WebClient webClient, String nacosApiVersion, String serviceName,
                                      @Nullable String namespaceId, @Nullable String groupName,
                                      @Nullable String clusterName, @Nullable String app) {
-        return new RegisterInstanceClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName,
+        return new RegisterInstanceClient(webClient, nacosApiVersion, serviceName, namespaceId, groupName,
                                           clusterName, app);
     }
 

@@ -43,10 +43,10 @@ final class QueryInstancesClient {
     private final WebClient webClient;
     private final String pathForQuery;
 
-    QueryInstancesClient(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+    QueryInstancesClient(WebClient webClient, String nacosApiVersion, String serviceName,
                          @Nullable String namespaceId, @Nullable String groupName,
                          @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
-        webClient = nacosClient.nacosWebClient();
+        this.webClient = webClient;
 
         final StringBuilder pathBuilder = new StringBuilder("/")
                 .append(nacosApiVersion)
@@ -59,11 +59,11 @@ final class QueryInstancesClient {
         pathForQuery = pathBuilder.toString();
     }
 
-    static QueryInstancesClient of(NacosClient nacosClient, String nacosApiVersion, String serviceName,
+    static QueryInstancesClient of(WebClient webClient, String nacosApiVersion, String serviceName,
                                    @Nullable String namespaceId, @Nullable String groupName,
                                    @Nullable String clusterName, @Nullable Boolean healthyOnly,
                                    @Nullable String app) {
-        return new QueryInstancesClient(nacosClient, nacosApiVersion, serviceName, namespaceId, groupName,
+        return new QueryInstancesClient(webClient, nacosApiVersion, serviceName, namespaceId, groupName,
                                         clusterName, healthyOnly, app);
     }
 

@@ -41,7 +41,7 @@ public final class NacosClient {
         return new NacosClientBuilder(nacosUri, serviceName);
     }
 
-    private final WebClient webClient;
+    private final URI uri;
 
     private final QueryInstancesClient queryInstancesClient;
 
@@ -50,18 +50,18 @@ public final class NacosClient {
     NacosClient(URI uri, String nacosApiVersion, @Nullable String username, @Nullable String password,
                 String serviceName, @Nullable String namespaceId, @Nullable String groupName,
                 @Nullable String clusterName, @Nullable Boolean healthyOnly, @Nullable String app) {
+        this.uri = uri;
+
         final WebClientBuilder builder = WebClient.builder(uri)
                                                   .decorator(retryingClientDecorator);
-
         if (username != null && password != null) {
             builder.decorator(LoginClient.newDecorator(builder.build(), username, password));
         }
+        final WebClient webClient = builder.build();
 
-        webClient = builder.build();
-
-        queryInstancesClient = QueryInstancesClient.of(this, nacosApiVersion, serviceName, namespaceId,
+        queryInstancesClient = QueryInstancesClient.of(webClient, nacosApiVersion, serviceName, namespaceId,
                                                        groupName, clusterName, healthyOnly, app);
-        registerInstanceClient = RegisterInstanceClient.of(this, nacosApiVersion, serviceName, namespaceId,
+        registerInstanceClient = RegisterInstanceClient.of(webClient, nacosApiVersion, serviceName, namespaceId,
                                                            groupName, clusterName, app);
     }
 
@@ -90,16 +90,9 @@ public final class NacosClient {
     }
 
     /**
-     * Returns a {@code WebClient} for accessing to Nacos server.
-     */
-    WebClient nacosWebClient() {
-        return webClient;
-    }
-
-    /**
      * Returns the {@link URI} of Nacos uri.
      */
     public URI uri() {
-        return webClient.uri();
+        return uri;
     }
 }
