@@ -49,9 +49,6 @@ public final class NacosEndpointGroup extends DynamicEndpointGroup {
 
     /**
      * Returns a {@link NacosEndpointGroup} with the specified {@code serviceName}.
-     *
-     * @param nacosUri the URI of Nacos API service
-     * @param serviceName the service name to register
      */
     public static NacosEndpointGroup of(URI nacosUri, String serviceName) {
         return builder(nacosUri, serviceName).build();
@@ -60,9 +57,6 @@ public final class NacosEndpointGroup extends DynamicEndpointGroup {
     /**
      * Returns a newly-created {@link NacosEndpointGroupBuilder} with the specified {@code nacosUri}
      * and {@code serviceName} to build {@link NacosEndpointGroupBuilder}.
-     *
-     * @param nacosUri the URI of Nacos API service
-     * @param serviceName the service name to register
      */
     public static NacosEndpointGroupBuilder builder(URI nacosUri, String serviceName) {
         return new NacosEndpointGroupBuilder(nacosUri, serviceName);

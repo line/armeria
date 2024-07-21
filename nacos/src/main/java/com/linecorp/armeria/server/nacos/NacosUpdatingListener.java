@@ -46,9 +46,6 @@ public class NacosUpdatingListener extends ServerListenerAdapter {
     /**
      * Returns a newly-created {@link NacosUpdatingListenerBuilder} with the specified {@code nacosUri}
      * and {@code serviceName} to build {@link NacosUpdatingListener}.
-     *
-     * @param nacosUri the URI of Nacos API service
-     * @param serviceName the service name which is registered into Nacos.
      */
     public static NacosUpdatingListenerBuilder builder(URI nacosUri, String serviceName) {
         return new NacosUpdatingListenerBuilder(nacosUri, serviceName);

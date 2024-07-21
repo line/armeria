@@ -46,9 +46,6 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters<Na
 
     /**
      * Creates a {@link NacosUpdatingListenerBuilder} with a service name.
-     *
-     * @param nacosUri the URI of Nacos API service
-     * @param serviceName the service name to register
      */
     NacosUpdatingListenerBuilder(URI nacosUri, String serviceName) {
         requireNonNull(serviceName, "serviceName");
@@ -58,8 +55,6 @@ public final class NacosUpdatingListenerBuilder implements NacosConfigSetters<Na
 
     /**
      * Sets the {@link Endpoint} to register. If not set, the current host name is used by default.
-     *
-     * @param endpoint the {@link Endpoint} to register
      */
     public NacosUpdatingListenerBuilder endpoint(Endpoint endpoint) {
         this.endpoint = requireNonNull(endpoint, "endpoint");

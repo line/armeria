@@ -73,7 +73,6 @@ public final class NacosClient {
     /**
      * Registers a instance to Nacos with service name.
      *
-     * @param endpoint an endpoint of service to register
      * @return a {@link HttpResponse} indicating the result of the registration operation.
      */
     public HttpResponse register(Endpoint endpoint) {
@@ -83,7 +82,6 @@ public final class NacosClient {
     /**
      * De-registers a instance to Nacos with service name.
      *
-     * @param endpoint an endpoint of service to register
      * @return a {@link HttpResponse} indicating the result of the de-registration operation.
      */
     public HttpResponse deregister(Endpoint endpoint) {

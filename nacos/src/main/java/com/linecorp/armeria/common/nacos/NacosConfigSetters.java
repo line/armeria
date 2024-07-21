@@ -29,29 +29,21 @@ public interface NacosConfigSetters<SELF extends NacosConfigSetters<SELF>> {
 
     /**
      * Sets the namespace ID to query or register instances.
-     *
-     * @param namespaceId the namespace ID.
      */
     SELF namespaceId(String namespaceId);
 
     /**
      * Sets the group name to query or register instances.
-     *
-     * @param groupName the group name.
      */
     SELF groupName(String groupName);
 
     /**
      * Sets the cluster name to query or register instances.
-     *
-     * @param clusterName the cluster name.
      */
     SELF clusterName(String clusterName);
 
     /**
      * Sets the app name to query or register instances.
-     *
-     * @param app app name.
      */
     SELF app(String app);
 
