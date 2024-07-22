@@ -18,20 +18,9 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.security.GeneralSecurityException;
+import java.util.EnumSet;
+import java.util.Map.Entry;
 
-import javax.net.ssl.SSLContext;
-
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.conn.ssl.TrustStrategy;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.ssl.SSLContextBuilder;
-import org.apache.http.util.EntityUtils;
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
@@ -39,28 +28,18 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.internal.ApacheClientUtils;
 
 import io.netty.util.AsciiString;
 import testing.thrift.main.SleepService;
 
 public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
+
     @Override
     protected TTransport newTransport(String uri, HttpHeaders headers) throws TTransportException {
-        final SSLContext sslContext;
-        try {
-            sslContext = SSLContextBuilder.create()
-                                          .loadTrustMaterial((TrustStrategy) (chain, authType) -> true)
-                                          .build();
-        } catch (GeneralSecurityException e) {
-            throw new TTransportException("failed to initialize an SSL context", e);
-        }
-
-        final THttpClient client = new THttpClient(
-                uri, HttpClientBuilder.create()
-                                      .setSSLHostnameVerifier((hostname, session) -> true)
-                                      .setSSLContext(sslContext)
-                                      .build());
+        final THttpClient client = ApacheClientUtils.allTrustClient(uri);
         client.setCustomHeaders(
                 headers.names().stream()
                        .collect(toImmutableMap(AsciiString::toString,
@@ -70,20 +49,13 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
 
     @Test
     public void testNonPostRequest() throws Exception {
-        final HttpUriRequest[] reqs = {
-                new HttpGet(newUri("http", "/hello")),
-                new HttpDelete(newUri("http", "/hello"))
-        };
-
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            for (HttpUriRequest r: reqs) {
-                try (CloseableHttpResponse res = hc.execute(r)) {
-                    assertThat(res.getStatusLine().toString()).isEqualTo(
-                            "HTTP/1.1 405 Method Not Allowed");
-                    assertThat(EntityUtils.toString(res.getEntity()))
-                              .isNotEqualTo("Hello, world!");
-                }
-            }
+        final EnumSet<HttpMethod> httpMethods = EnumSet.of(HttpMethod.GET, HttpMethod.DELETE);
+        for (HttpMethod httpMethod: httpMethods) {
+            final Entry<String, String> res =
+                    ApacheClientUtils.makeApacheHttpRequest(newUri("http", "/hello"), httpMethod);
+            assertThat(res.getKey()).contains("HTTP/1.1");
+            assertThat(res.getValue()).contains("405 Method Not Allowed");
+            assertThat(res.getValue()).isNotEqualTo("Hello, world!");
         }
     }
 

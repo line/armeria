@@ -24,12 +24,9 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.junit.ClassRule;
 import org.junit.Test;
 
@@ -43,9 +40,11 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.ApacheClientUtils;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.internal.testing.TestUtil;
@@ -257,12 +256,10 @@ public class ThriftDocServiceTest {
 
     @Test
     public void testMethodNotAllowed() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            final HttpPost req = new HttpPost(server.httpUri() + "/docs/specification.json");
-
-            try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 405 Method Not Allowed");
-            }
-        }
+        final Map.Entry<String, String> res =
+                ApacheClientUtils.makeApacheHttpRequest(server.httpUri() + "/docs/specification.json",
+                                                        HttpMethod.POST);
+        assertThat(res.getKey()).contains("HTTP/1.1");
+        assertThat(res.getValue()).contains("405 Method Not Allowed");
     }
 }

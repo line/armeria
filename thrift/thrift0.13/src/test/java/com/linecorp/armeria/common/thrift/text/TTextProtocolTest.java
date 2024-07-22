@@ -34,15 +34,17 @@ import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.hasToString;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.EnumSet;
 import java.util.regex.Pattern;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TMessage;
@@ -85,7 +87,7 @@ class TTextProtocolTest {
 
     private String testData;
     private String namedEnumSerialized;
-    private Base64 base64Encoder;
+    private Base64.Decoder base64Decoder;
 
     /**
      * Load a file containing a serialized thrift message in from disk.
@@ -94,7 +96,7 @@ class TTextProtocolTest {
     void setUp() throws IOException {
         testData = readFile("TTextProtocol_TestData.txt");
         namedEnumSerialized = readFile("TTextProtocol_NamedEnum_Serialized.txt");
-        base64Encoder = new Base64();
+        base64Decoder = Base64.getDecoder();
     }
 
     /**
@@ -139,9 +141,14 @@ class TTextProtocolTest {
         msg1.write(new TTextProtocol(new TIOStreamTransport(baos), true));
         final byte[] bytes = baos.toByteArray();
 
+        // ignore y since it can be serialized to either 1 (<0.19) or ALPHA (>=0.19)
         assertThatJson(CR_PATTERN.matcher(baos.toString()).replaceAll(""))
                 .when(IGNORING_ARRAY_ORDER)
+                .whenIgnoringPaths("y")
                 .isEqualTo(namedEnumSerialized);
+        assertThatJson(CR_PATTERN.matcher(baos.toString()).replaceAll(""))
+                .node("y")
+                .matches(anyOf(hasToString("1"), hasToString("ALPHA")));
 
         // Deserialize that string back to a thrift message.
         final ByteArrayInputStream bais2 = new ByteArrayInputStream(bytes);
@@ -174,7 +181,7 @@ class TTextProtocolTest {
                         (short) 5, ImmutableList.of(false)
                 ))
                 .setK(ImmutableSet.of(true, false, false, false, true))
-                .setL(base64Encoder.decode("SGVsbG8gV29ybGQ="))
+                .setL(base64Decoder.decode("SGVsbG8gV29ybGQ="))
                 .setM("hello \"spherical\" world!")
                 .setN((short) 678)
                 .setP(Letter.CHARLIE)
@@ -190,7 +197,7 @@ class TTextProtocolTest {
                 .setU(ImmutableMap.of("foo", Letter.ALPHA, "bar", Letter.DELTA))
                 .setV(Letter.BETA)
                 .setW(TestUnion.f2(4))
-                .setX(ImmutableList.of(TestUnion.f2(5), TestUnion.f1(base64Encoder.decode("SGVsbG8gV29ybGQ="))))
+                .setX(ImmutableList.of(TestUnion.f2(5), TestUnion.f1(base64Decoder.decode("SGVsbG8gV29ybGQ="))))
                 .setY(Letter.ALPHA)
                 .setAa(ImmutableMap.of(Letter.ALPHA, 2, Letter.BETA, 4))
                 .setAb(ImmutableMap.of(Letter.CHARLIE, Number.ONE,

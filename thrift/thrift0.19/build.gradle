@@ -9,11 +9,11 @@ dependencies {
     testImplementation project(':prometheus1')
 
     // thrift api depends on httpclient4
-    testImplementation libs.apache.httpclient4
+    testImplementation libs.apache.httpclient5
 
     // Jetty, for testing TServlet interoperability.
-    testImplementation libs.jetty94.webapp
-    testImplementation libs.jetty94.http2.server
+    testImplementation libs.jetty11.webapp
+    testImplementation libs.jetty11.http2.server
 
     // Dropwizard and Prometheus, for testing metrics integration
     testImplementation libs.dropwizard.metrics.core
@@ -24,6 +24,7 @@ dependencies {
         exclude group: "org.mockito"
     }
     testImplementation libs.brave6.instrumentation.http.tests
+    testImplementation libs.logback14
 }
 
 // Use the sources from ':thrift0.13' and ':thrift0.14'. ':thrift0.15' is empty so no need to copy anything.
@@ -49,6 +50,8 @@ task generateTestSources(type: Copy) {
     from("${thrift013ProjectDir}/src/test/java") {
         exclude '**/THttp2Client.java'
         exclude '**/ThriftDocServicePluginTest.java'
+        exclude '**/ApacheClientUtils.java'
+        exclude '**/ServletTestUtils.java'
     }
     from "${thrift014ProjectDir}/src/test/java"
     from "${thrift017ProjectDir}/src/test/java"
