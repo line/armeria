@@ -32,7 +32,6 @@ import javax.annotation.meta.When;
  * @see NonNullByDefault
  */
 @Documented
-@Inherited
 @TypeQualifierNickname
 @Nonnull(when = When.MAYBE)
 @Retention(RetentionPolicy.RUNTIME)
