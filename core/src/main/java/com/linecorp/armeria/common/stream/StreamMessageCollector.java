@@ -56,6 +56,7 @@ final class StreamMessageCollector<T> implements Subscriber<T> {
     public void onNext(T o) {
         requireNonNull(o, "o");
 
+        assert elementsBuilder != null;
         elementsBuilder.add(touchOrCopyAndClose(o, withPooledObjects));
     }
 
@@ -64,6 +65,7 @@ final class StreamMessageCollector<T> implements Subscriber<T> {
         if (future.isDone()) {
             return;
         }
+        assert elementsBuilder != null;
         future.complete(elementsBuilder.build());
         elementsBuilder = null;
     }
@@ -73,6 +75,7 @@ final class StreamMessageCollector<T> implements Subscriber<T> {
         if (future.isDone()) {
             return;
         }
+        assert elementsBuilder != null;
         final ImmutableList<T> elements = elementsBuilder.build();
         for (T element : elements) {
             StreamMessageUtil.closeOrAbort(element, t);

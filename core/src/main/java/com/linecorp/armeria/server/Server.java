@@ -550,6 +550,9 @@ public final class Server implements ListenableAsyncCloseable {
                 return thread;
             });
 
+            final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
+            assert gracefulShutdownSupport != null;
+
             b.group(bossGroup, config.workerGroup());
             b.handler(connectionLimitingHandler);
             b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport,

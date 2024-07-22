@@ -115,6 +115,11 @@ public final class ChannelUtil {
 
     static {
         final ImmutableSet.Builder<ChannelOption<?>> tcpOptionsBuilder = ImmutableSet.builder();
+        
+        ChannelOption<Integer> epollTcpUserTimeout = null;
+        ChannelOption<Integer> epollTcpKeepidle = null;
+        ChannelOption<Integer> epollTcpKeepintvl = null;
+        
         try {
             final Class<?> clazz = Class.forName(
                     CHANNEL_PACKAGE_NAME + ".epoll.EpollChannelOption", false,
@@ -126,14 +131,28 @@ public final class ChannelUtil {
             //noinspection unchecked
             epollTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
 
-            tcpOptionsBuilder.add(epollTcpUserTimeout);
-            tcpOptionsBuilder.add(epollTcpKeepidle);
-            tcpOptionsBuilder.add(epollTcpKeepintvl);
+            if (epollTcpUserTimeout != null) {
+                tcpOptionsBuilder.add(epollTcpUserTimeout);
+            }
+            if (epollTcpKeepidle != null) {
+                tcpOptionsBuilder.add(epollTcpKeepidle);
+            }
+            if (epollTcpKeepintvl != null) {
+                tcpOptionsBuilder.add(epollTcpKeepintvl);
+            }
         } catch (Throwable ignored) {
             // Ignore
         }
+        
+        ChannelUtil.epollTcpUserTimeout = epollTcpUserTimeout;
+        ChannelUtil.epollTcpKeepidle = epollTcpKeepidle;
+        ChannelUtil.epollTcpKeepintvl = epollTcpKeepintvl;
 
         if (INCUBATOR_CHANNEL_PACKAGE_NAME != null) {
+            ChannelOption<Integer> ioUringTcpUserTimeout = null;
+            ChannelOption<Integer> ioUringTcpKeepidle = null;
+            ChannelOption<Integer> ioUringTcpKeepintvl = null;
+
             try {
                 final Class<?> clazz = Class.forName(
                         INCUBATOR_CHANNEL_PACKAGE_NAME + ".uring.IOUringChannelOption", false,
@@ -145,19 +164,29 @@ public final class ChannelUtil {
                 //noinspection unchecked
                 ioUringTcpKeepintvl = (ChannelOption<Integer>) findChannelOption(clazz, "TCP_KEEPINTVL");
 
-                tcpOptionsBuilder.add(ioUringTcpUserTimeout);
-                tcpOptionsBuilder.add(ioUringTcpKeepidle);
-                tcpOptionsBuilder.add(ioUringTcpKeepintvl);
+                if (ioUringTcpUserTimeout != null) {
+                    tcpOptionsBuilder.add(ioUringTcpUserTimeout);
+                }
+                if (ioUringTcpKeepidle != null) {
+                    tcpOptionsBuilder.add(ioUringTcpKeepidle);
+                }
+                if (ioUringTcpKeepintvl != null) {
+                    tcpOptionsBuilder.add(ioUringTcpKeepintvl);
+                }
             } catch (Throwable ignored) {
                 // Ignore
             }
+
+            ChannelUtil.ioUringTcpUserTimeout = ioUringTcpUserTimeout;
+            ChannelUtil.ioUringTcpKeepidle = ioUringTcpKeepidle;
+            ChannelUtil.ioUringTcpKeepintvl = ioUringTcpKeepintvl;
         }
 
         tcpOptions = tcpOptionsBuilder.build();
     }
 
     @Nullable
-    private static ChannelOption<?> findChannelOption(Class<?> clazz, String fieldName) throws Throwable {
+    private static ChannelOption<?> findChannelOption(Class<?> clazz, String fieldName) {
         try {
             final MethodHandle methodHandle = MethodHandles.publicLookup().findStaticGetter(
                     clazz, fieldName, ChannelOption.class);
@@ -257,9 +286,11 @@ public final class ChannelUtil {
             final int tcpUserTimeout = Ints.saturatedCast(idleTimeoutMillis + TCP_USER_TIMEOUT_BUFFER_MILLIS);
             if (transportType == TransportType.EPOLL &&
                 canAddChannelOption(epollTcpUserTimeout, channelOptions)) {
+                assert epollTcpUserTimeout != null;
                 putChannelOption(newChannelOptionsBuilder, epollTcpUserTimeout, tcpUserTimeout);
             } else if (transportType == TransportType.IO_URING &&
                        canAddChannelOption(ioUringTcpUserTimeout, channelOptions)) {
+                assert ioUringTcpUserTimeout != null;
                 putChannelOption(newChannelOptionsBuilder, ioUringTcpUserTimeout, tcpUserTimeout);
             }
         }
@@ -270,6 +301,8 @@ public final class ChannelUtil {
                 canAddChannelOption(epollTcpKeepidle, channelOptions) &&
                 canAddChannelOption(epollTcpKeepintvl, channelOptions) &&
                 canAddChannelOption(ChannelOption.SO_KEEPALIVE, channelOptions)) {
+                assert epollTcpKeepidle != null;
+                assert epollTcpKeepintvl != null;
                 putChannelOption(newChannelOptionsBuilder, ChannelOption.SO_KEEPALIVE, true);
                 putChannelOption(newChannelOptionsBuilder, epollTcpKeepidle, intPingIntervalMillis);
                 putChannelOption(newChannelOptionsBuilder, epollTcpKeepintvl, intPingIntervalMillis);
@@ -277,6 +310,8 @@ public final class ChannelUtil {
                        canAddChannelOption(ioUringTcpKeepidle, channelOptions) &&
                        canAddChannelOption(ioUringTcpKeepintvl, channelOptions) &&
                        canAddChannelOption(ChannelOption.SO_KEEPALIVE, channelOptions)) {
+                assert ioUringTcpKeepidle != null;
+                assert ioUringTcpKeepintvl != null;
                 putChannelOption(newChannelOptionsBuilder, ChannelOption.SO_KEEPALIVE, true);
                 putChannelOption(newChannelOptionsBuilder, ioUringTcpKeepidle, intPingIntervalMillis);
                 putChannelOption(newChannelOptionsBuilder, ioUringTcpKeepintvl, intPingIntervalMillis);

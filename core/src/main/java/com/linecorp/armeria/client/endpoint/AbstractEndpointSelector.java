@@ -227,7 +227,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         }
 
         @Override
-        public boolean complete(Endpoint value) {
+        public boolean complete(@Nullable Endpoint value) {
             cleanup(true);
             return super.complete(value);
         }

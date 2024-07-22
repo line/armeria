@@ -159,6 +159,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
             if (position >= end) {
                 // Drop tail bytes. Fully received the desired data already.
                 data.close();
+                assert upstream != null;
                 upstream.cancel();
                 return;
             }
@@ -196,6 +197,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
             }
 
             assert position <= end;
+            assert upstream != null;
             if (position == end) {
                 onComplete();
                 upstream.cancel();
@@ -207,6 +209,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         }
 
         private void requestOneOrCancel() {
+            assert upstream != null;
             if (position < end) {
                 upstream.request(1);
             } else {
@@ -249,6 +252,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         }
 
         private void request0(long n) {
+            assert upstream != null;
             if (n <= 0) {
                 onError(new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
@@ -281,6 +285,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
                 return;
             }
             completed = true;
+            assert upstream != null;
             upstream.cancel();
         }
     }

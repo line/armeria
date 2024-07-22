@@ -235,11 +235,13 @@ public final class DefaultRequestTarget implements RequestTarget {
         return form;
     }
 
+    @Nullable
     @Override
     public String scheme() {
         return scheme;
     }
 
+    @Nullable
     @Override
     public String authority() {
         return authority;
@@ -266,11 +268,13 @@ public final class DefaultRequestTarget implements RequestTarget {
         return maybePathWithMatrixVariables;
     }
 
+    @Nullable
     @Override
     public String query() {
         return query;
     }
 
+    @Nullable
     @Override
     public String fragment() {
         return fragment;

@@ -42,6 +42,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class ServerSentEventResponseConverterFunction implements ResponseConverterFunction {
 
+    @Nullable
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
         final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));

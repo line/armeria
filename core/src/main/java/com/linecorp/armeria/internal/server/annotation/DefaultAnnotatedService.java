@@ -250,6 +250,7 @@ final class DefaultAnnotatedService implements AnnotatedService {
         return builder.build();
     }
 
+    @Nullable
     @Override
     public String name() {
         return name;
@@ -328,7 +329,9 @@ final class DefaultAnnotatedService implements AnnotatedService {
             // Fast-path: No aggregation required and blocking task executor is not used.
             switch (responseType) {
                 case HTTP_RESPONSE:
-                    return (HttpResponse) invoke(ctx, req, AggregatedResult.EMPTY);
+                    final HttpResponse res = (HttpResponse) invoke(ctx, req, AggregatedResult.EMPTY);
+                    assert res != null;
+                    return res;
                 case OTHER_OBJECTS:
                     return convertResponse(ctx, invoke(ctx, req, AggregatedResult.EMPTY));
             }

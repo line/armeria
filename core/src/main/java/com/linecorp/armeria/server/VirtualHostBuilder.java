@@ -1325,24 +1325,37 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         ensureHostnamePatternMatchesDefaultHostname(hostnamePattern, defaultHostname);
 
         // Retrieve all settings as a local copy. Use default builder's properties if not set.
+        assert template.defaultServiceNaming != null;
         final ServiceNaming defaultServiceNaming =
                 this.defaultServiceNaming != null ?
                 this.defaultServiceNaming : template.defaultServiceNaming;
+
+        assert template.defaultLogName != null;
         final String defaultLogName =
                 this.defaultLogName != null ?
                 this.defaultLogName : template.defaultLogName;
+
+        assert template.requestTimeoutMillis != null;
         final long requestTimeoutMillis =
                 this.requestTimeoutMillis != null ?
                 this.requestTimeoutMillis : template.requestTimeoutMillis;
+
+        assert template.maxRequestLength != null;
         final long maxRequestLength =
                 this.maxRequestLength != null ?
                 this.maxRequestLength : template.maxRequestLength;
+
+        assert template.verboseResponses != null;
         final boolean verboseResponses =
                 this.verboseResponses != null ?
                 this.verboseResponses : template.verboseResponses;
+
+        assert template.requestAutoAbortDelayMillis != null;
         final long requestAutoAbortDelayMillis =
                 this.requestAutoAbortDelayMillis != null ?
                 this.requestAutoAbortDelayMillis : template.requestAutoAbortDelayMillis;
+
+        assert template.rejectedRouteHandler != null;
         final RejectedRouteHandler rejectedRouteHandler =
                 this.rejectedRouteHandler != null ?
                 this.rejectedRouteHandler : template.rejectedRouteHandler;
@@ -1493,6 +1506,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
         try {
+            assert template.tlsAllowUnsafeCiphers != null;
             final boolean tlsAllowUnsafeCiphers =
                     this.tlsAllowUnsafeCiphers != null ?
                     this.tlsAllowUnsafeCiphers : template.tlsAllowUnsafeCiphers;
@@ -1521,6 +1535,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                     tlsCustomizers = this.tlsCustomizers;
                     sslContextFromThis = true;
                 } else {
+                    assert template.tlsSelfSigned != null;
                     tlsSelfSigned = template.tlsSelfSigned;
                     tlsCustomizers = template.tlsCustomizers;
                 }
@@ -1562,6 +1577,7 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
     private SelfSignedCertificate selfSignedCertificate() throws CertificateException {
         if (selfSignedCertificate == null) {
+            assert defaultHostname != null;
             return selfSignedCertificate = new SelfSignedCertificate(defaultHostname);
         }
         return selfSignedCertificate;
