@@ -1,8 +1,8 @@
-// This module builds and publishes 'armeria-thrift0.19', which is compiled with
+// This module builds and publishes 'armeria-thrift0.20', which is compiled with
 // the source code of ':thrift0.13', ':thrift0.14.0'.
 
 dependencies {
-    api libs.thrift019
+    api libs.thrift020
 
     api libs.javax.annotation
 
@@ -35,6 +35,7 @@ def thrift013ProjectDir = "${rootProject.projectDir}/thrift/thrift0.13"
 def thrift014ProjectDir = "${rootProject.projectDir}/thrift/thrift0.14"
 def thrift017ProjectDir = "${rootProject.projectDir}/thrift/thrift0.17"
 def thrift018ProjectDir = "${rootProject.projectDir}/thrift/thrift0.18"
+def thrift019ProjectDir = "${rootProject.projectDir}/thrift/thrift0.19"
 
 // Copy common files from ':thrift0.13' and ':thrift0.14' to gen-src directory
 // in order to use them as a source set.
@@ -57,10 +58,11 @@ task generateTestSources(type: Copy) {
     from "${thrift014ProjectDir}/src/test/java"
     from "${thrift017ProjectDir}/src/test/java"
     from "${thrift018ProjectDir}/src/test/java"
+    from "${thrift019ProjectDir}/src/test/java"
     into "${project.ext.genSrcDir}/test/java"
 }
 
-def thriftFullVersion = libs.thrift019.get().versionConstraint.requiredVersion
+def thriftFullVersion = libs.thrift020.get().versionConstraint.requiredVersion
 ext {
     thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'));
     testThriftSrcDirs = ["$thrift013ProjectDir/src/test/thrift", "$projectDir/src/test/thrift"]
