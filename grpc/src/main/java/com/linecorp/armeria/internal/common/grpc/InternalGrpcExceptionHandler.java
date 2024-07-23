@@ -13,6 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.internal.common.grpc;
 
 import static java.util.Objects.requireNonNull;
@@ -24,29 +25,40 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
+import io.grpc.StatusException;
+import io.grpc.StatusRuntimeException;
 
-public final class GrpcExceptionHandlerFunctionUtil {
+public final class InternalGrpcExceptionHandler {
 
-    public static Metadata generateMetadataFromThrowable(Throwable exception) {
-        final Metadata metadata = Status.trailersFromThrowable(peelAndUnwrap(exception));
-        return metadata != null ? metadata : new Metadata();
+    private final GrpcExceptionHandlerFunction delegate;
+
+    public InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction delegate) {
+        this.delegate = delegate;
     }
 
-    public static Status fromThrowable(RequestContext ctx, GrpcExceptionHandlerFunction exceptionHandler,
-                                       Throwable t, Metadata metadata) {
-        final Status status = Status.fromThrowable(peelAndUnwrap(t));
-        final Throwable cause = status.getCause();
-        if (cause == null) {
-            return status;
+    public StatusAndMetadata handle(RequestContext ctx, Throwable t) {
+        final Throwable peeled = peelAndUnwrap(t);
+        Metadata metadata = Status.trailersFromThrowable(peeled);
+        if (metadata == null) {
+            metadata = new Metadata();
         }
-        return applyExceptionHandler(ctx, exceptionHandler, status, cause, metadata);
+        Status status = Status.fromThrowable(peeled);
+        status = handle(ctx, status, peeled, metadata);
+        return new StatusAndMetadata(status, metadata);
     }
 
-    public static Status applyExceptionHandler(RequestContext ctx,
-                                               GrpcExceptionHandlerFunction exceptionHandler,
-                                               Status status, Throwable cause, Metadata metadata) {
+    public Status handle(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
         final Throwable peeled = peelAndUnwrap(cause);
-        status = exceptionHandler.apply(ctx, status, peeled, metadata);
+        if (status == Status.UNKNOWN) {
+            // If ArmeriaStatusException is thrown, it is converted to UNKNOWN and passed through close(Status).
+            // So try to restore the original status.
+            if (peeled instanceof StatusRuntimeException) {
+                status = ((StatusRuntimeException) peeled).getStatus();
+            } else if (peeled instanceof StatusException) {
+                status = ((StatusException) peeled).getStatus();
+            }
+        }
+        status = delegate.apply(ctx, status, peeled, metadata);
         assert status != null;
         return status;
     }
@@ -63,6 +75,4 @@ public final class GrpcExceptionHandlerFunctionUtil {
         }
         return t;
     }
-
-    private GrpcExceptionHandlerFunctionUtil() {}
 }

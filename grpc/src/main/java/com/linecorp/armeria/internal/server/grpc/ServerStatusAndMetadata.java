@@ -50,20 +50,20 @@ public final class ServerStatusAndMetadata extends StatusAndMetadata {
      * Tries to mark whether the call should be cancelled. If a call path
      * has already set the status to be cancelled, subsequent calls have no effect.
      */
-    public void shouldCancel() {
-        shouldCancel = true;
+    public void shouldCancel(boolean cancel) {
+        shouldCancel = cancel;
     }
 
-    public void setResponseContent(boolean setResponseContent) {
+    public void shouldSetResponseContent(boolean setResponseContent) {
         this.setResponseContent = setResponseContent;
     }
 
-    public boolean setResponseContent() {
+    public boolean shouldSetResponseContent() {
         return setResponseContent;
     }
 
     public ServerStatusAndMetadata withStatus(Status status) {
-        return new ServerStatusAndMetadata(status, metadata(), setResponseContent(), isShouldCancel());
+        return new ServerStatusAndMetadata(status, metadata(), shouldSetResponseContent(), isShouldCancel());
     }
 
     @Override
