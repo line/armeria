@@ -43,22 +43,26 @@ public final class InternalGrpcExceptionHandler {
             metadata = new Metadata();
         }
         Status status = Status.fromThrowable(peeled);
-        status = handle(ctx, status, peeled, metadata);
+        status = handle0(ctx, status, peeled, metadata);
         return new StatusAndMetadata(status, metadata);
     }
 
     public Status handle(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
         final Throwable peeled = peelAndUnwrap(cause);
+        return handle0(ctx, status, peeled, metadata);
+    }
+
+    private Status handle0(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
         if (status == Status.UNKNOWN) {
             // If ArmeriaStatusException is thrown, it is converted to UNKNOWN and passed through close(Status).
             // So try to restore the original status.
-            if (peeled instanceof StatusRuntimeException) {
-                status = ((StatusRuntimeException) peeled).getStatus();
-            } else if (peeled instanceof StatusException) {
-                status = ((StatusException) peeled).getStatus();
+            if (cause instanceof StatusRuntimeException) {
+                status = ((StatusRuntimeException) cause).getStatus();
+            } else if (cause instanceof StatusException) {
+                status = ((StatusException) cause).getStatus();
             }
         }
-        status = delegate.apply(ctx, status, peeled, metadata);
+        status = delegate.apply(ctx, status, cause, metadata);
         assert status != null;
         return status;
     }
