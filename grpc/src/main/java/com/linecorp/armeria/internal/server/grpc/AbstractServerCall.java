@@ -280,7 +280,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     protected abstract void doClose(ServerStatusAndMetadata statusAndMetadata);
 
     protected final void closeListener(ServerStatusAndMetadata statusAndMetadata) {
-        final boolean cancelled = statusAndMetadata.isShouldCancel();
+        final boolean cancelled = statusAndMetadata.shouldCancel();
         if (!listenerClosed) {
             listenerClosed = true;
 

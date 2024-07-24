@@ -37,7 +37,7 @@ public final class ServerStatusAndMetadata extends StatusAndMetadata {
         this.shouldCancel = shouldCancel;
     }
 
-    public boolean isShouldCancel() {
+    public boolean shouldCancel() {
         return shouldCancel;
     }
 
@@ -50,7 +50,7 @@ public final class ServerStatusAndMetadata extends StatusAndMetadata {
     }
 
     public ServerStatusAndMetadata withStatus(Status status) {
-        return new ServerStatusAndMetadata(status, metadata(), isShouldCancel());
+        return new ServerStatusAndMetadata(status, metadata(), shouldCancel());
     }
 
     @Override
