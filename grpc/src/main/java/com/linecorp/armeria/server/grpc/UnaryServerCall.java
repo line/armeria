@@ -181,7 +181,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             final Status status = statusAndMetadata0.status();
             final Metadata metadata = statusAndMetadata0.metadata();
             assert metadata != null;
-            statusAndMetadata = new ServerStatusAndMetadata(status, metadata);
+            statusAndMetadata = new ServerStatusAndMetadata(status, metadata, true);
 
             final ResponseHeadersBuilder trailersBuilder = defaultResponseHeaders().toBuilder();
             final HttpResponse response = HttpResponse.of(

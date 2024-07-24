@@ -41,10 +41,6 @@ public final class ServerStatusAndMetadata extends StatusAndMetadata {
         return shouldCancel;
     }
 
-    /**
-     * Tries to mark whether the call should be cancelled. If a call path
-     * has already set the status to be cancelled, subsequent calls have no effect.
-     */
     public void shouldCancel(boolean cancel) {
         shouldCancel = cancel;
     }
