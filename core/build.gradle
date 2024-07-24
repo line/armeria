@@ -62,9 +62,12 @@ tasks.withType(Jar) {
 // Proguard can't handle multi-release jars so we recreate it here.
 tasks.trimShadedJar.doLast {
     // outjars is a file, so only one jar generated for sure
-    def trimmed = tasks.trimShadedJar.outJarFiles[0].toPath()
+    def outJarFile = tasks.trimShadedJar.outJarFiles[0]
+    def trimmed = outJarFile.toPath().toString()
+    def tmp = "${trimmed}.tmp"
 
-    ant.jar(destfile: trimmed.toString(), update: true, duplicate: 'fail') {
+    ant.jar(destfile: tmp, duplicate: 'fail', filesetmanifest:'merge') {
+        zipfileset(src: outJarFile, excludes: 'META-INF/services/java.security.Provider')
         zipfileset(src: tasks.shadedJar.archiveFile.get().asFile) {
             include(name: 'META-INF/versions/**')
         }
@@ -74,6 +77,7 @@ tasks.trimShadedJar.doLast {
             attribute(name: 'Created-By', value: "Gradle ${gradle.gradleVersion}")
         }
     }
+    ant.move(file: tmp, tofile: trimmed)
 }
 
 tasks.shadedTest.exclude 'META-INF/versions/**'
