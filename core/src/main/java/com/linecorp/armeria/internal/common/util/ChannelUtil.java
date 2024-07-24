@@ -115,11 +115,11 @@ public final class ChannelUtil {
 
     static {
         final ImmutableSet.Builder<ChannelOption<?>> tcpOptionsBuilder = ImmutableSet.builder();
-        
+
         ChannelOption<Integer> epollTcpUserTimeout = null;
         ChannelOption<Integer> epollTcpKeepidle = null;
         ChannelOption<Integer> epollTcpKeepintvl = null;
-        
+
         try {
             final Class<?> clazz = Class.forName(
                     CHANNEL_PACKAGE_NAME + ".epoll.EpollChannelOption", false,
@@ -143,7 +143,7 @@ public final class ChannelUtil {
         } catch (Throwable ignored) {
             // Ignore
         }
-        
+
         ChannelUtil.epollTcpUserTimeout = epollTcpUserTimeout;
         ChannelUtil.epollTcpKeepidle = epollTcpKeepidle;
         ChannelUtil.epollTcpKeepintvl = epollTcpKeepintvl;

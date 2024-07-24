@@ -22,7 +22,6 @@ import org.springframework.beans.factory.BeanFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.DependencyInjector;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
