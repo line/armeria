@@ -1215,7 +1215,6 @@ bz.it
 bzh
 c.bg
 c.cdn77.org
-c.la
 c.se
 c66.me
 ca
@@ -1889,11 +1888,6 @@ cx
 cx.ua
 cy
 cy.eu.org
-cya.gg
-cyclic-app.com
-cyclic.app
-cyclic.cloud
-cyclic.co.in
 cymru
 cyon.link
 cyon.site
@@ -2672,12 +2666,6 @@ fi.it
 fidelity
 fido
 fie.ee
-filegear-au.me
-filegear-de.me
-filegear-gb.me
-filegear-ie.me
-filegear-jp.me
-filegear-sg.me
 filegear.me
 film
 film.hu
@@ -3793,8 +3781,6 @@ imizu.toyama.jp
 immo
 immobilien
 imperia.it
-impertrix.com
-impertrixcdn.com
 in
 in-addr.arpa
 in-berlin.de
@@ -5909,7 +5895,6 @@ nic.za
 nichinan.miyazaki.jp
 nichinan.tottori.jp
 nico
-nid.io
 nieruchomosci.pl
 niigata.jp
 niigata.niigata.jp
@@ -6271,7 +6256,6 @@ oncilla.mythic-beasts.com
 ondigitalocean.app
 one
 onfabrica.com
-onflashdrive.app
 ong
 ong.br
 onga.fukuoka.jp
