@@ -1330,7 +1330,6 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                 this.defaultServiceNaming != null ?
                 this.defaultServiceNaming : template.defaultServiceNaming;
 
-        assert template.defaultLogName != null;
         final String defaultLogName =
                 this.defaultLogName != null ?
                 this.defaultLogName : template.defaultLogName;
@@ -1441,9 +1440,9 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
                                         cfgSetters.getClass().getSimpleName());
                     }
                 }).map(cfgBuilder -> {
-                    return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
-                                            verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                            successFunction, requestAutoAbortDelayMillis,
+                    return cfgBuilder.build(defaultServiceNaming, defaultLogName, requestTimeoutMillis,
+                                            maxRequestLength, verboseResponses, accessLogWriter,
+                                            blockingTaskExecutor, successFunction, requestAutoAbortDelayMillis,
                                             multipartUploadsLocation, multipartRemovalStrategy,
                                             serviceWorkerGroup, defaultHeaders,
                                             requestIdGenerator, defaultErrorHandler,
@@ -1452,8 +1451,8 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, "/", FallbackService.INSTANCE)
-                        .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, successFunction,
+                        .build(defaultServiceNaming, defaultLogName, requestTimeoutMillis, maxRequestLength,
+                               verboseResponses, accessLogWriter, blockingTaskExecutor, successFunction,
                                requestAutoAbortDelayMillis, multipartUploadsLocation, multipartRemovalStrategy,
                                serviceWorkerGroup, defaultHeaders, requestIdGenerator,
                                defaultErrorHandler, unloggedExceptionsReporter, "/", contextHook);
