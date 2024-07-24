@@ -57,10 +57,14 @@ public final class InternalGrpcExceptionHandler {
         if (status.getCode() == Code.UNKNOWN) {
             // If ArmeriaStatusException is thrown, it is converted to UNKNOWN and passed through close(Status).
             // So try to restore the original status.
+            Status newStatus = null;
             if (cause instanceof StatusRuntimeException) {
-                status = ((StatusRuntimeException) cause).getStatus();
+                newStatus = ((StatusRuntimeException) cause).getStatus();
             } else if (cause instanceof StatusException) {
-                status = ((StatusException) cause).getStatus();
+                newStatus = ((StatusException) cause).getStatus();
+            }
+            if (newStatus != null && newStatus.getCode() != Code.UNKNOWN) {
+                status = newStatus;
             }
         }
         status = delegate.apply(ctx, status, cause, metadata);
