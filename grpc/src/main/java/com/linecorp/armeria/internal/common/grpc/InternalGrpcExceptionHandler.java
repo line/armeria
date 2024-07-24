@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 import io.grpc.Metadata;
 import io.grpc.Status;
+import io.grpc.Status.Code;
 import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 
@@ -53,7 +54,7 @@ public final class InternalGrpcExceptionHandler {
     }
 
     private Status handle0(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
-        if (status == Status.UNKNOWN) {
+        if (status.getCode() == Code.UNKNOWN) {
             // If ArmeriaStatusException is thrown, it is converted to UNKNOWN and passed through close(Status).
             // So try to restore the original status.
             if (cause instanceof StatusRuntimeException) {

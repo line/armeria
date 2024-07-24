@@ -26,10 +26,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Status;
+import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import testing.grpc.Messages.SimpleRequest;
@@ -38,7 +40,7 @@ import testing.grpc.Messages.SimpleResponse;
 import testing.grpc.TestServiceGrpc.TestServiceBlockingStub;
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
-class GrpcExceptionHandlerFunctionUtilTest {
+class InternalGrpcExceptionHandlerTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -51,6 +53,19 @@ class GrpcExceptionHandlerFunctionUtilTest {
                                       return Status.INTERNAL;
                                   })
                                   .build());
+
+            sb.serviceUnder("/status",
+                            GrpcService.builder()
+                                       .addService(new TestServiceImpl())
+                                       .exceptionHandler((ctx, status, throwable, metadata) -> {
+                                           assertThat(throwable).isInstanceOf(StatusRuntimeException.class);
+                                           assertThat(status.getCode())
+                                                   .isEqualTo(((StatusRuntimeException) throwable).getStatus()
+                                                                                                  .getCode());
+                                           // Delegate to the default exception handler
+                                           return null;
+                                       })
+                                       .build());
         }
     };
 
@@ -70,6 +85,25 @@ class GrpcExceptionHandlerFunctionUtilTest {
                                         e -> assertThat(e.getStatus()).isEqualTo(Status.INTERNAL));
     }
 
+    @CsvSource({ "onError", "throw" })
+    @ParameterizedTest
+    void shouldPreserveCodeInArmeriaStatusException(String exceptionType) {
+        final TestServiceBlockingStub client =
+                GrpcClients.builder(server.httpUri())
+                           .pathPrefix("/status")
+                           .build(TestServiceBlockingStub.class);
+
+        final SimpleRequest globalRequest =
+                SimpleRequest.newBuilder()
+                             .setNestedRequest(NestedRequest.newBuilder().setNestedPayload(exceptionType)
+                                                            .build())
+                             .build();
+        assertThatThrownBy(() -> client.unaryCall2(globalRequest))
+                .isInstanceOfSatisfying(StatusRuntimeException.class,
+                                        e -> assertThat(e.getStatus().getCode())
+                                                .isEqualTo(Code.FAILED_PRECONDITION));
+    }
+
     private static class TestServiceImpl extends TestServiceImplBase {
 
         @Override
@@ -86,6 +120,24 @@ class GrpcExceptionHandlerFunctionUtilTest {
                     break;
                 case "throwStatus":
                     throw Status.INTERNAL.withCause(exception).asRuntimeException();
+                case "onError.ArmeriaStatusException":
+                case "throw.ArmeriaStatusException":
+
+                default:
+                    throw new IllegalArgumentException("unknown payload");
+            }
+        }
+
+        @Override
+        public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            final ArmeriaStatusException exception =
+                    new ArmeriaStatusException(Code.FAILED_PRECONDITION.value(), "failed");
+            switch (request.getNestedRequest().getNestedPayload()) {
+                case "onError":
+                    responseObserver.onError(exception);
+                    break;
+                case "throw":
+                    throw exception;
                 default:
                     throw new IllegalArgumentException("unknown payload");
             }
