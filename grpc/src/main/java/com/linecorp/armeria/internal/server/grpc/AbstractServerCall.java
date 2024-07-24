@@ -201,7 +201,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         if (!closeCalled) {
             cancelled = true;
             try (SafeCloseable ignore = ctx.push()) {
-                close(new ServerStatusAndMetadata(Status.CANCELLED, new Metadata(), true, true));
+                close(new ServerStatusAndMetadata(Status.CANCELLED, new Metadata(), true));
             }
         }
     }
@@ -210,7 +210,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Status status, Metadata metadata) {
         final Throwable cause = status.getCause();
         if (cause == null) {
-            close(new ServerStatusAndMetadata(status, metadata, false));
+            close(new ServerStatusAndMetadata(status, metadata));
             return;
         }
 
@@ -218,7 +218,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         if (status.getDescription() != null) {
             newStatus = newStatus.withDescription(status.getDescription());
         }
-        close(new ServerStatusAndMetadata(newStatus, metadata, true), cause);
+        close(new ServerStatusAndMetadata(newStatus, metadata), cause);
     }
 
     public final void close(Throwable exception) {
@@ -227,7 +227,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     protected final void close(Throwable exception, boolean cancelled) {
         final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, exception);
-        close(new ServerStatusAndMetadata(statusAndMetadata.status(), statusAndMetadata.metadata(), true,
+        close(new ServerStatusAndMetadata(statusAndMetadata.status(), statusAndMetadata.metadata(),
                                           cancelled), exception);
     }
 
@@ -252,14 +252,12 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         if (isCancelled()) {
             // No need to write anything to client if cancelled already.
             statusAndMetadata.shouldCancel(true);
-            statusAndMetadata.shouldSetResponseContent(true);
             closeListener(statusAndMetadata);
             return;
         }
 
         if (status.getCode() == Code.CANCELLED && status.getCause() instanceof ClosedStreamException) {
             statusAndMetadata.shouldCancel(true);
-            statusAndMetadata.shouldSetResponseContent(true);
             closeListener(statusAndMetadata);
             return;
         }
@@ -282,7 +280,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     protected abstract void doClose(ServerStatusAndMetadata statusAndMetadata);
 
     protected final void closeListener(ServerStatusAndMetadata statusAndMetadata) {
-        final boolean setResponseContent = statusAndMetadata.shouldSetResponseContent();
         final boolean cancelled = statusAndMetadata.isShouldCancel();
         if (!listenerClosed) {
             listenerClosed = true;
@@ -292,7 +289,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
             }
 
-            if (setResponseContent) {
+            if (!ctx.log().isAvailable(RequestLogProperty.RESPONSE_CONTENT)) {
                 ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse()),
                                                  null);
             }
@@ -339,7 +336,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                     final Status status = Status.INTERNAL.withDescription(
                             "More than one request messages for unary call or server streaming " +
                             "call");
-                    closeListener(new ServerStatusAndMetadata(status, new Metadata(), true, true));
+                    closeListener(new ServerStatusAndMetadata(status, new Metadata(), true));
                     return;
                 }
                 messageReceived = true;

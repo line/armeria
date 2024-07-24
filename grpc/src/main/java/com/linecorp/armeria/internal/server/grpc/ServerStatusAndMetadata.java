@@ -27,18 +27,13 @@ import io.grpc.Status;
 public final class ServerStatusAndMetadata extends StatusAndMetadata {
 
     private boolean shouldCancel;
-    // Set true if response content log should be written
-    private boolean setResponseContent;
 
-    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata, boolean setResponseContent) {
+    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata) {
         super(status, metadata);
-        this.setResponseContent = setResponseContent;
     }
 
-    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata, boolean setResponseContent,
-                                   boolean shouldCancel) {
+    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata, boolean shouldCancel) {
         super(status, metadata);
-        this.setResponseContent = setResponseContent;
         this.shouldCancel = shouldCancel;
     }
 
@@ -54,16 +49,8 @@ public final class ServerStatusAndMetadata extends StatusAndMetadata {
         shouldCancel = cancel;
     }
 
-    public void shouldSetResponseContent(boolean setResponseContent) {
-        this.setResponseContent = setResponseContent;
-    }
-
-    public boolean shouldSetResponseContent() {
-        return setResponseContent;
-    }
-
     public ServerStatusAndMetadata withStatus(Status status) {
-        return new ServerStatusAndMetadata(status, metadata(), shouldSetResponseContent(), isShouldCancel());
+        return new ServerStatusAndMetadata(status, metadata(), isShouldCancel());
     }
 
     @Override
@@ -72,7 +59,6 @@ public final class ServerStatusAndMetadata extends StatusAndMetadata {
                           .add("status", status())
                           .add("metadata", metadata())
                           .add("shouldCancel", shouldCancel)
-                          .add("setResponseContent", setResponseContent)
                           .toString();
     }
 }
