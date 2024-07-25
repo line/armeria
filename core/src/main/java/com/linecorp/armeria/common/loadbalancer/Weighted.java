@@ -19,7 +19,7 @@ package com.linecorp.armeria.common.loadbalancer;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A interface that returns the weight of an object.
+ * An interface that returns the weight of an object.
  */
 @FunctionalInterface
 @UnstableApi

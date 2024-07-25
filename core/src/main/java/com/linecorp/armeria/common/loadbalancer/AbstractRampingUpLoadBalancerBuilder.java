@@ -41,7 +41,7 @@ public abstract class AbstractRampingUpLoadBalancerBuilder<
     private static final long DEFAULT_RAMPING_UP_INTERVAL_MILLIS = 2000;
     private static final int DEFAULT_TOTAL_STEPS = 10;
     private static final int DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS = 500;
-    private static final Function<?, Long> DEFAULT_TIMESTAMP_FUNCTION = c -> null;
+    private static final Function<?, @Nullable Long> DEFAULT_TIMESTAMP_FUNCTION = c -> null;
 
     private WeightTransition<T> weightTransition = WeightTransition.linear();
     @Nullable

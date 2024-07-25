@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import static java.util.Objects.requireNonNull;
+
 import java.time.Duration;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -47,6 +49,7 @@ public final class WeightRampingUpStrategyBuilder
      */
     @Deprecated
     public WeightRampingUpStrategyBuilder transition(EndpointWeightTransition transition) {
+        requireNonNull(transition, "transition");
         return weightTransition((endpoint, weight, currentStep, totalSteps) -> {
             return transition.compute(endpoint, currentStep, totalSteps);
         });

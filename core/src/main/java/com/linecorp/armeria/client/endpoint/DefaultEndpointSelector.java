@@ -23,6 +23,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
+import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientRequestContext>>
         extends AbstractEndpointSelector {
@@ -30,6 +31,8 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
     private final LoadBalancerFactory<T> loadBalancerFactory;
     @Nullable
     private volatile T loadBalancer;
+    private volatile boolean closed;
+    private final ReentrantShortLock lock = new ReentrantShortLock();
 
     DefaultEndpointSelector(EndpointGroup endpointGroup,
                             LoadBalancerFactory<T> loadBalancerFactory) {
@@ -37,9 +40,15 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
         this.loadBalancerFactory = loadBalancerFactory;
         if (endpointGroup instanceof ListenableAsyncCloseable) {
             ((ListenableAsyncCloseable) endpointGroup).whenClosed().thenAccept(unused -> {
-                final T loadBalancer = this.loadBalancer;
-                if (loadBalancer != null) {
-                    loadBalancer.close();
+                lock.lock();
+                try {
+                    closed = true;
+                    final T loadBalancer = this.loadBalancer;
+                    if (loadBalancer != null) {
+                        loadBalancer.close();
+                    }
+                } finally {
+                    lock.unlock();
                 }
             });
         }
@@ -48,7 +57,15 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
 
     @Override
     protected void updateNewEndpoints(List<Endpoint> endpoints) {
-        loadBalancer = loadBalancerFactory.newLoadBalancer(loadBalancer, endpoints);
+        lock.lock();
+        try {
+            if (closed) {
+                return;
+            }
+            loadBalancer = loadBalancerFactory.newLoadBalancer(loadBalancer, endpoints);
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
