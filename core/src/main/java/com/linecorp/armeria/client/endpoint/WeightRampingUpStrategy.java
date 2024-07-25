@@ -47,6 +47,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsRampingUpEntry.EndpointAndStep;
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.Ticker;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
@@ -166,6 +167,7 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
             return ticker.read();
         }
 
+        @Nullable
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
             return endpointSelector.selectEndpoint();

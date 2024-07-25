@@ -93,8 +93,8 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    ServiceConfig(Route route, Route mappedRoute, HttpService service, @Nullable String defaultLogName,
-                  @Nullable String defaultServiceName, ServiceNaming defaultServiceNaming,
+    ServiceConfig(Route route, Route mappedRoute, HttpService service, @Nullable String defaultServiceName,
+                  ServiceNaming defaultServiceNaming, @Nullable String defaultLogName,
                   long requestTimeoutMillis, long maxRequestLength,
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
                   BlockingTaskExecutor blockingTaskExecutor,

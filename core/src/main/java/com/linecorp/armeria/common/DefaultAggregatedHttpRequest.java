@@ -47,11 +47,13 @@ final class DefaultAggregatedHttpRequest extends AbstractAggregatedHttpMessage
         return headers.path();
     }
 
+    @Nullable
     @Override
     public String scheme() {
         return headers.scheme();
     }
 
+    @Nullable
     @Override
     public String authority() {
         return headers.authority();

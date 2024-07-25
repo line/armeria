@@ -727,7 +727,9 @@ final class AnnotatedValueResolver {
             return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> {
                         final String filename = getName(annotatedElement);
-                        return Iterables.getFirst(ctx.aggregatedMultipart().files().get(filename), null);
+                        final FileAggregatedMultipart aggregatedMultipart = ctx.aggregatedMultipart();
+                        assert aggregatedMultipart != null;
+                        return Iterables.getFirst(aggregatedMultipart.files().get(filename), null);
                     })
                     .aggregation(AggregationStrategy.ALWAYS)
                     .build();
@@ -1597,6 +1599,7 @@ final class AnnotatedValueResolver {
         @Nullable
         private final AggregatedResult aggregatedResult;
 
+        @Nullable
         private volatile QueryParams queryParams;
 
         ResolverContext(ServiceRequestContext context, HttpRequest request,
@@ -1616,11 +1619,13 @@ final class AnnotatedValueResolver {
 
         @Nullable
         AggregatedHttpRequest aggregatedRequest() {
+            assert aggregatedResult != null;
             return aggregatedResult.aggregatedHttpRequest;
         }
 
         @Nullable
         FileAggregatedMultipart aggregatedMultipart() {
+            assert aggregatedResult != null;
             return aggregatedResult.aggregatedMultipart;
         }
 
@@ -1629,6 +1634,7 @@ final class AnnotatedValueResolver {
             if (result == null) {
                 result = queryParams;
                 if (result == null) {
+                    assert aggregatedResult != null;
                     queryParams = result = queryParamsOf(context.query(),
                                                          request.contentType(),
                                                          aggregatedResult);
@@ -1665,6 +1671,7 @@ final class AnnotatedValueResolver {
                 final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
                 QueryParams params2 = null;
                 if (isFormData(contentType)) {
+                    assert contentType != null;
                     final AggregatedHttpRequest message = result.aggregatedHttpRequest;
                     if (message != null) {
                         // Respect 'charset' attribute of the 'content-type' header if it exists.

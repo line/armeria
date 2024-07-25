@@ -206,7 +206,7 @@ class ServerMetricsTest {
 
             assertThat(result.status()).isSameAs(HttpStatus.OK);
             assertThat(serverMetrics.pendingRequests()).isZero();
-            assertThat(serverMetrics.activeRequests()).isZero();
+            await().untilAsserted(() -> assertThat(serverMetrics.activeRequests()).isZero());
             await().until(() -> serverMetrics.activeConnections() == 0);
         }
     }
@@ -273,7 +273,7 @@ class ServerMetricsTest {
 
             assertThat(result.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
             assertThat(serverMetrics.pendingRequests()).isZero();
-            assertThat(serverMetrics.activeRequests()).isZero();
+            await().untilAsserted(() -> assertThat(serverMetrics.activeRequests()).isZero());
             await().until(() -> serverMetrics.activeConnections() == 0);
         }
     }

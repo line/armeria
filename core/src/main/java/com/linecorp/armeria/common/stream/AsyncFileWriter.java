@@ -95,12 +95,14 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
     public void onNext(HttpData httpData) {
         if (httpData.isEmpty()) {
             httpData.close();
+            assert subscription != null;
             subscription.request(1);
         } else {
             final ByteBuf byteBuf = httpData.byteBuf();
             final ByteBuffer byteBuffer = byteBuf.nioBuffer();
             writing = true;
             try {
+                assert fileChannel != null;
                 fileChannel.write(byteBuffer, position, Maps.immutableEntry(byteBuffer, byteBuf), this);
             } catch (Throwable ex) {
                 maybeCloseFileChannel(ex, false);
@@ -130,12 +132,14 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
     public void completed(Integer result, Entry<ByteBuffer, ByteBuf> attachment) {
         assert subscription != null;
         eventExecutor.execute(() -> {
+            assert subscription != null;
             final ByteBuf byteBuf = attachment.getValue();
             if (result > -1) {
                 position += result;
                 final ByteBuffer byteBuffer = attachment.getKey();
                 if (byteBuffer.hasRemaining()) {
                     try {
+                        assert fileChannel != null;
                         fileChannel.write(byteBuffer, position, attachment, this);
                     } catch (Throwable ex) {
                         byteBuf.release();
@@ -178,6 +182,7 @@ final class AsyncFileWriter implements Subscriber<HttpData>,
             completionFuture.complete(null);
         } else {
             if (!onError) {
+                assert subscription != null;
                 subscription.cancel();
             }
             completionFuture.completeExceptionally(cause);

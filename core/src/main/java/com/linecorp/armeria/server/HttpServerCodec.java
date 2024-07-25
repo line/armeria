@@ -38,6 +38,8 @@ import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.CombinedChannelDuplexHandler;
@@ -64,7 +66,7 @@ final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDeco
     // Forked from https://github.com/netty/netty/blob/cf624c93c5f97097f1b13fe926ed50c32c8b1430/codec-http/src/main/java/io/netty/handler/codec/http/HttpServerCodec.java
 
     /** A queue that is used for correlating a request and a response. */
-    private final Queue<HttpMethod> queue = new ArrayDeque<HttpMethod>();
+    private final Queue<HttpMethod> queue = new ArrayDeque<>();
 
     /**
      * Creates a new instance with the default decoder options
@@ -121,6 +123,7 @@ final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDeco
 
     private final class HttpServerResponseEncoder extends HttpResponseEncoder {
 
+        @Nullable
         private HttpMethod method;
 
         @Override
