@@ -48,6 +48,7 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -1206,12 +1207,14 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Configures a timeout for the stream based on the specified duration.
-     * The default timeout mode is {@link StreamTimeoutMode#UNTIL_NEXT}.
+     * Configures a timeout for the stream based on the specified duration with
+     * {@link StreamTimeoutMode#UNTIL_NEXT}. If no events are received within the specified duration,
+     * the stream will be terminated with a {@link StreamTimeoutException}.
      *
      * <p>Example usage:
      * <pre>{@code
      * StreamMessage<String> stream = ...;
+     * // An item must be received within 10 seconds of the previous item to avoid a timeout.
      * StreamMessage<String> timeoutStream = stream.timeout(Duration.ofSeconds(10));
      * }</pre>
      *
@@ -1224,7 +1227,8 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Configures a timeout for the stream based on the specified duration and mode.
+     * Configures a timeout for the stream based on the specified duration and mode. >If no events are received
+     * within the specified duration, the stream will be terminated with a {@link StreamTimeoutException}.
      *
      * <p>Example usage:
      * <pre>{@code

@@ -16,10 +16,15 @@
 
 package com.linecorp.armeria.common;
 
+import java.time.Duration;
+
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
  * A {@link TimeoutException} raised when a stream operation exceeds the configured timeout.
+ *
+ * @see StreamMessage#timeout(Duration)
  */
 public final class StreamTimeoutException extends TimeoutException {
 

@@ -16,22 +16,22 @@
 
 package com.linecorp.armeria.common.stream;
 
-import com.linecorp.armeria.common.TimeoutException;
+import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Stream Timeout Mode consists of three modes.
  *
  * <ul>
- *   <li>{@code UNTIL_FIRST} - Based on the first data chunk.
+ *   <li>{@link #UNTIL_FIRST} - Based on the first data chunk.
  *   If the first data chunk is not received within the specified time,
- *   a {@link TimeoutException} is thrown.</li>
- *   <li>{@code UNTIL_NEXT} - Based on each data chunk.
+ *   a {@link StreamTimeoutException} is thrown.</li>
+ *   <li>{@link #UNTIL_NEXT} - Based on each data chunk.
  *   If each data chunk is not received within the specified time after the previous chunk,
- *   a {@link TimeoutException} is thrown.</li>
- *   <li>{@code UNTIL_EOS} - Based on the entire stream.
+ *   a {@link StreamTimeoutException} is thrown.</li>
+ *   <li>{@link #UNTIL_EOS} - Based on the entire stream.
  *   If all data chunks are not received within the specified time before the end of the stream,
- *   a {@link TimeoutException} is thrown.</li>
+ *   a {@link StreamTimeoutException} is thrown.</li>
  * </ul>
  */
 @UnstableApi
@@ -40,21 +40,21 @@ public enum StreamTimeoutMode {
     /**
      * Based on the first data chunk.
      * If the first data chunk is not received within the specified time,
-     * a {@link TimeoutException} is thrown.
+     * a {@link StreamTimeoutException} is thrown.
      */
     UNTIL_FIRST,
 
     /**
      * Based on each data chunk.
      * If each data chunk is not received within the specified time after the previous chunk,
-     * a {@link TimeoutException} is thrown.
+     * a {@link StreamTimeoutException} is thrown.
      */
     UNTIL_NEXT,
 
     /**
      * Based on the entire stream.
      * If all data chunks are not received within the specified time before the end of the stream,
-     * a {@link TimeoutException} is thrown.
+     * a {@link StreamTimeoutException} is thrown.
      */
     UNTIL_EOS
 }
