@@ -958,6 +958,7 @@ public final class HttpHeaderNames {
             }
         }
         map = builder.build();
+        assert inverseMapBuilder != null;
         inverseMap = inverseMapBuilder.build();
         // inverseMapBuilder is used only when building inverseMap.
         inverseMapBuilder = null;
@@ -965,6 +966,7 @@ public final class HttpHeaderNames {
 
     private static AsciiString create(String name) {
         final AsciiString cached = AsciiString.cached(Ascii.toLowerCase(name));
+        assert inverseMapBuilder != null;
         inverseMapBuilder.put(cached, name);
         return cached;
     }

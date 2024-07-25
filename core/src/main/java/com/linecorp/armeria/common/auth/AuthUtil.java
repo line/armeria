@@ -24,8 +24,15 @@ final class AuthUtil {
      * Compares two specified strings in the secure way.
      */
     static boolean secureEquals(@Nullable String a, @Nullable String b) {
-        final int aLength = a != null ? a.length() : 0;
-        final int bLength = b != null ? b.length() : 0;
+        if (a == null) {
+            return b == null;
+        }
+        if (b == null) {
+            return false;
+        }
+
+        final int aLength = a.length();
+        final int bLength = b.length();
         final int length = Math.min(aLength, bLength);
         int result = 0;
         for (int i = 0; i < length; i++) {

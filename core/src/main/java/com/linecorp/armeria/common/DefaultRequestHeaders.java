@@ -52,6 +52,7 @@ final class DefaultRequestHeaders extends DefaultHttpHeaders implements RequestH
         return super.selectLocale(supportedLocales);
     }
 
+    @Nullable
     @Override
     public List<LanguageRange> acceptLanguages() {
         return super.acceptLanguages();

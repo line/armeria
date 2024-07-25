@@ -216,6 +216,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
      * {@link Channel#flush()} when each write unit is done.
      */
     final void writeHeaders(RequestHeaders headers, boolean needs100Continue) {
+        assert session != null;
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
         if (needs100Continue) {

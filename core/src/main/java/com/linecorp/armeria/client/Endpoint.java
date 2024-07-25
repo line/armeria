@@ -37,6 +37,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 
+import javax.annotation.Nonnull;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
@@ -323,6 +325,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return EndpointSelectionStrategy.weightedRoundRobin();
     }
 
+    @Nonnull
     @Override
     public Endpoint selectNow(ClientRequestContext ctx) {
         return this;

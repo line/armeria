@@ -23,6 +23,7 @@ plugins {
     alias libs.plugins.kotlin apply false
     alias libs.plugins.ktlint apply false
     alias libs.plugins.errorprone apply false
+    alias libs.plugins.nullaway apply false
 }
 
 allprojects {
@@ -171,13 +172,34 @@ configure(projectsWithFlags('java')) {
     // Error Prone compiler
     if (!rootProject.hasProperty('noLint')) {
         apply plugin: 'net.ltgt.errorprone'
+        apply plugin: 'net.ltgt.nullaway'
 
         dependencies {
             errorprone libs.errorprone.core
+            errorprone libs.nullaway
+        }
+
+        nullaway {
+            annotatedPackages.add("com.linecorp.armeria")
         }
 
         tasks.withType(JavaCompile) {
             options.errorprone.excludedPaths = '.*/gen-src/.*'
+            options.errorprone.nullaway {
+                if (name.toLowerCase().contains("test")) {
+                    // Disable NullAway for tests for now.
+                    disable()
+                } else if (name.matches(/compileJava[0-9]+.*/)) {
+                    // Disable MR-JAR classes which seem to confuse NullAway and break the build.
+                    disable()
+                } else if (project != project(':core')) {
+                    // TODO(trustin): Enable NullAway for all projects once we fix all violations.
+                    warn()
+                } else {
+                    error()
+                    assertsEnabled = true
+                }
+            }
         }
     }
 

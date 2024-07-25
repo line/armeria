@@ -184,6 +184,7 @@ final class DefaultClientFactory implements ClientFactory {
                 "No ClientFactory for scheme: " + scheme + " matched clientType: " + clientType);
     }
 
+    @Nullable
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
         final T params = ClientFactory.super.unwrap(client, type);
