@@ -127,6 +127,7 @@ public final class DecodedStreamMessage<I, O>
 
         initialized = true;
         if (cancelled) {
+            assert upstream != null;
             upstream.cancel();
             return;
         }

@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getNameOrDefault;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.toHeaderName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
@@ -64,6 +65,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.primitives.Primitives;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
@@ -84,6 +86,8 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.annotation.Attribute;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Delimiter;
@@ -99,6 +103,7 @@ import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 import io.netty.handler.codec.http.HttpConstants;
+import io.netty.util.AttributeKey;
 import scala.concurrent.ExecutionContext;
 
 final class AnnotatedValueResolver {
@@ -444,9 +449,16 @@ final class AnnotatedValueResolver {
         requireNonNull(dependencyInjector, "dependencyInjector");
 
         final DescriptionInfo description = findDescription(annotatedElement);
+
+        final Attribute attr = annotatedElement.getAnnotation(Attribute.class);
+        if (attr != null) {
+            final String name = findName(typeElement, attr.value());
+            return ofAttribute(name, attr, annotatedElement, typeElement, type, description);
+        }
+
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
-            final String name = findName(param, typeElement);
+            final String name = findName(typeElement, param.value());
             if (type == File.class || type == Path.class || type == MultipartFile.class) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
@@ -459,7 +471,7 @@ final class AnnotatedValueResolver {
 
         final Header header = annotatedElement.getAnnotation(Header.class);
         if (header != null) {
-            final String name = findName(header, typeElement);
+            final String name = toHeaderName(findName(typeElement, header.value()));
             return ofHeader(name, annotatedElement, typeElement, type, description);
         }
 
@@ -520,6 +532,7 @@ final class AnnotatedValueResolver {
 
     private static boolean isAnnotationPresent(AnnotatedElement element) {
         return element.isAnnotationPresent(Param.class) ||
+               element.isAnnotationPresent(Attribute.class) ||
                element.isAnnotationPresent(Header.class) ||
                element.isAnnotationPresent(RequestObject.class);
     }
@@ -621,6 +634,34 @@ final class AnnotatedValueResolver {
                 .build();
     }
 
+    private static AnnotatedValueResolver ofAttribute(String name,
+                                                      Attribute attr,
+                                                      AnnotatedElement annotatedElement,
+                                                      AnnotatedElement typeElement, Class<?> type,
+                                                      DescriptionInfo description) {
+
+        final ImmutableList.Builder<AttributeKey<?>> builder = ImmutableList.builder();
+
+        if (attr.prefix() != Attribute.class) {
+            builder.add(AttributeKey.valueOf(attr.prefix(), name));
+        } else {
+            final Class<?> serviceClass = ((Parameter) annotatedElement).getDeclaringExecutable()
+                                                                        .getDeclaringClass();
+            builder.add(AttributeKey.valueOf(serviceClass, name));
+            builder.add(AttributeKey.valueOf(name));
+        }
+
+        final ImmutableList<AttributeKey<?>> attrKeys = builder.build();
+        return new Builder(annotatedElement, type, name)
+                .annotationType(Attribute.class)
+                .typeElement(typeElement)
+                .supportDefault(true)
+                .supportContainer(true)
+                .description(description)
+                .resolver(attributeResolver(attrKeys))
+                .build();
+    }
+
     @Nullable
     private static AnnotatedValueResolver ofInjectableTypes(String name, AnnotatedElement annotatedElement,
                                                             Class<?> type, boolean useBlockingExecutor) {
@@ -686,7 +727,9 @@ final class AnnotatedValueResolver {
             return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> {
                         final String filename = getName(annotatedElement);
-                        return Iterables.getFirst(ctx.aggregatedMultipart().files().get(filename), null);
+                        final FileAggregatedMultipart aggregatedMultipart = ctx.aggregatedMultipart();
+                        assert aggregatedMultipart != null;
+                        return Iterables.getFirst(aggregatedMultipart.files().get(filename), null);
                     })
                     .aggregation(AggregationStrategy.ALWAYS)
                     .build();
@@ -818,6 +861,36 @@ final class AnnotatedValueResolver {
         };
     }
 
+    /**
+     * Returns an attribute resolver which retrieves a value specified by {@code attrKeys}
+     * from the {@link RequestContext}.
+     */
+    private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
+    attributeResolver(Iterable<AttributeKey<?>> attrKeys) {
+        return (resolver, ctx) -> {
+            Class<?> targetType = resolver.rawType();
+            if (targetType.isPrimitive()) {
+                targetType = Primitives.wrap(targetType);
+            }
+
+            for (AttributeKey<?> attrKey : attrKeys) {
+                final Object value = ctx.context.attr(attrKey);
+                if (value != null) {
+                    if (!targetType.isInstance(value)) {
+                        throw new IllegalStateException(
+                                String.format("Cannot inject the attribute '%s' due to " +
+                                              "mismatching type (expected: %s, actual: %s)",
+                                              attrKey.name(),
+                                              targetType.getName(),
+                                              value.getClass().getName()));
+                    }
+                    return value;
+                }
+            }
+            return resolver.defaultOrException();
+        };
+    }
+
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object> fileResolver() {
         return (resolver, ctx) -> {
             final FileAggregatedMultipart fileAggregatedMultipart = ctx.aggregatedMultipart();
@@ -896,6 +969,7 @@ final class AnnotatedValueResolver {
 
     @Nullable
     private final Class<?> containerType;
+    private final Class<?> rawType;
     private final Class<?> elementType;
     @Nullable
     private final ParameterizedType parameterizedElementType;
@@ -920,6 +994,7 @@ final class AnnotatedValueResolver {
                                    boolean isPathVariable, boolean shouldExist,
                                    boolean shouldWrapValueAsOptional,
                                    @Nullable Class<?> containerType, Class<?> elementType,
+                                   Class<?> rawType,
                                    @Nullable ParameterizedType parameterizedElementType,
                                    @Nullable String defaultValue,
                                    DescriptionInfo description,
@@ -935,6 +1010,7 @@ final class AnnotatedValueResolver {
         this.parameterizedElementType = parameterizedElementType;
         this.description = requireNonNull(description, "description");
         this.containerType = containerType;
+        this.rawType = rawType;
         this.resolver = requireNonNull(resolver, "resolver");
         this.beanFactoryId = beanFactoryId;
         this.aggregationStrategy = requireNonNull(aggregationStrategy, "aggregationStrategy");
@@ -978,6 +1054,10 @@ final class AnnotatedValueResolver {
     Class<?> containerType() {
         // 'List' or 'Set'
         return containerType;
+    }
+
+    Class<?> rawType() {
+        return rawType;
     }
 
     Class<?> elementType() {
@@ -1052,7 +1132,8 @@ final class AnnotatedValueResolver {
             }
             return defaultValue;
         }
-        throw new IllegalArgumentException("Mandatory parameter/header is missing: " + httpElementName);
+        throw new IllegalArgumentException("Mandatory parameter/header/attribute is missing: " +
+                                           httpElementName);
     }
 
     @Override
@@ -1106,6 +1187,7 @@ final class AnnotatedValueResolver {
          */
         private Builder annotationType(Class<? extends Annotation> annotationType) {
             assert annotationType == Param.class ||
+                   annotationType == Attribute.class ||
                    annotationType == Header.class ||
                    annotationType == RequestObject.class : annotationType.getSimpleName();
             this.annotationType = annotationType;
@@ -1240,6 +1322,13 @@ final class AnnotatedValueResolver {
             }
 
             final Class<?> containerType = getContainerType(unwrappedParameterizedType);
+            final Class<?> rawType;
+            final Class<?> mayRawType = toRawType(unwrappedParameterizedType);
+            if (mayRawType.isPrimitive()) {
+                rawType = Primitives.wrap(mayRawType);
+            } else {
+                rawType = mayRawType;
+            }
             final Class<?> elementType;
             final ParameterizedType parameterizedElementType;
 
@@ -1268,7 +1357,7 @@ final class AnnotatedValueResolver {
             }
 
             return new AnnotatedValueResolver(annotationType, httpElementName, pathVariable, shouldExist,
-                                              isOptional, containerType, elementType,
+                                              isOptional, containerType, elementType, rawType,
                                               parameterizedElementType, defaultValue, description, resolver,
                                               beanFactoryId, aggregation);
         }
@@ -1510,6 +1599,7 @@ final class AnnotatedValueResolver {
         @Nullable
         private final AggregatedResult aggregatedResult;
 
+        @Nullable
         private volatile QueryParams queryParams;
 
         ResolverContext(ServiceRequestContext context, HttpRequest request,
@@ -1529,11 +1619,13 @@ final class AnnotatedValueResolver {
 
         @Nullable
         AggregatedHttpRequest aggregatedRequest() {
+            assert aggregatedResult != null;
             return aggregatedResult.aggregatedHttpRequest;
         }
 
         @Nullable
         FileAggregatedMultipart aggregatedMultipart() {
+            assert aggregatedResult != null;
             return aggregatedResult.aggregatedMultipart;
         }
 
@@ -1542,6 +1634,7 @@ final class AnnotatedValueResolver {
             if (result == null) {
                 result = queryParams;
                 if (result == null) {
+                    assert aggregatedResult != null;
                     queryParams = result = queryParamsOf(context.query(),
                                                          request.contentType(),
                                                          aggregatedResult);
@@ -1578,6 +1671,7 @@ final class AnnotatedValueResolver {
                 final QueryParams params1 = query != null ? QueryParams.fromQueryString(query) : null;
                 QueryParams params2 = null;
                 if (isFormData(contentType)) {
+                    assert contentType != null;
                     final AggregatedHttpRequest message = result.aggregatedHttpRequest;
                     if (message != null) {
                         // Respect 'charset' attribute of the 'content-type' header if it exists.

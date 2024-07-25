@@ -25,6 +25,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -45,6 +46,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.AnnotationsProto;
+import com.google.api.HttpBody;
 import com.google.api.HttpRule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CaseFormat;
@@ -78,7 +80,9 @@ import com.google.protobuf.UInt64Value;
 import com.google.protobuf.Value;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -87,6 +91,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
@@ -105,7 +110,9 @@ import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegmen
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.PathSegment.PathMappingType;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.Stringifier;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VariablePathSegment;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingPathParser.VerbPathSegment;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingService.PathVariable.ValueDefinition.Type;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerMethodDefinition;
@@ -194,11 +201,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             = toRouteAndPathVariables(additionalHttpRule);
                     if (additionalRouteAndVariables != null) {
                         specs.put(additionalRouteAndVariables.getKey(),
-                                    new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
-                                                        serviceDesc, methodDesc, originalFields,
-                                                        camelCaseFields,
-                                                        additionalRouteAndVariables.getValue(),
-                                                        responseBody));
+                                  new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
+                                                      serviceDesc, methodDesc, originalFields,
+                                                      camelCaseFields,
+                                                      additionalRouteAndVariables.getValue(),
+                                                      responseBody));
                     }
                 }
             }
@@ -283,14 +290,19 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
         final List<PathSegment> segments = HttpJsonTranscodingPathParser.parse(path);
 
-        final PathMappingType pathMappingType =
+        PathMappingType pathMappingType =
                 segments.stream().allMatch(segment -> segment.support(PathMappingType.PARAMETERIZED)) ?
                 PathMappingType.PARAMETERIZED : PathMappingType.GLOB;
+        if (segments.get(segments.size() - 1) instanceof VerbPathSegment) {
+            pathMappingType = PathMappingType.REGEX;
+        }
 
         if (pathMappingType == PathMappingType.PARAMETERIZED) {
-            builder.path(Stringifier.asParameterizedPath(segments, true));
+            builder.path(Stringifier.segmentsToPath(PathMappingType.PARAMETERIZED, segments, true));
+        } else if (pathMappingType == PathMappingType.GLOB) {
+            builder.glob(Stringifier.segmentsToPath(PathMappingType.GLOB, segments, true));
         } else {
-            builder.glob(Stringifier.asGlobPath(segments, true));
+            builder.regex(Stringifier.segmentsToPath(PathMappingType.REGEX, segments, true));
         }
         return new SimpleImmutableEntry<>(builder.build(), PathVariable.from(segments, pathMappingType));
     }
@@ -429,7 +441,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         if (StringUtil.isNullOrEmpty(responseBody)) {
             return null;
         }
-        for (FieldDescriptor fieldDescriptor: topLevelFields) {
+        for (FieldDescriptor fieldDescriptor : topLevelFields) {
             if (fieldDescriptor.getName().equals(responseBody)) {
                 return responseBody;
             }
@@ -438,41 +450,93 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     }
 
     @Nullable
-    private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
-        @Nullable final String responseBody = spec.responseBody;
+    private static Function<AggregatedHttpResponse, AggregatedHttpResponse> generateResponseConverter(
+            TranscodingSpec spec) {
+        // Ignore the spec if the method is HttpBody. The response body is already in the correct format.
+        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getOutputType())) {
+            return httpResponse -> {
+                final HttpData data = httpResponse.content();
+                final JsonNode jsonNode = extractHttpBody(data);
+
+                // Failed to parse the JSON body, return the original response.
+                if (jsonNode == null) {
+                    return httpResponse;
+                }
+
+                PooledObjects.close(data);
+
+                // The data field is base64 encoded.
+                // https://protobuf.dev/programming-guides/proto3/#json
+                final String httpBody = jsonNode.get("data").asText();
+                final byte[] httpBodyBytes = Base64.getDecoder().decode(httpBody);
+
+                final ResponseHeaders newHeaders = httpResponse.headers().withMutations(builder -> {
+                    final JsonNode contentType = jsonNode.get("contentType");
+
+                    if (contentType != null && contentType.isTextual()) {
+                        builder.set(HttpHeaderNames.CONTENT_TYPE, contentType.textValue());
+                    } else {
+                        builder.remove(HttpHeaderNames.CONTENT_TYPE);
+                    }
+                });
+
+                return AggregatedHttpResponse.of(newHeaders, HttpData.wrap(httpBodyBytes));
+            };
+        }
+
+        @Nullable
+        final String responseBody = spec.responseBody;
         if (responseBody == null) {
             return null;
-        } else {
-            return httpData -> {
-                try (HttpData data = httpData) {
-                    final byte[] array = data.array();
-                    try {
-                        final JsonNode jsonNode = mapper.readValue(array, JsonNode.class);
-                        // we try to convert lower snake case response body to camel case
-                        final String lowerCamelCaseResponseBody =
-                                CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
-                        final Iterator<Entry<String, JsonNode>> fields = jsonNode.fields();
-                        while (fields.hasNext()) {
-                            final Entry<String, JsonNode> entry = fields.next();
-                            final String fieldName = entry.getKey();
-                            final JsonNode responseBodyJsonNode = entry.getValue();
-                            // try to match field name and response body
-                            // 1. by default the marshaller would use lowerCamelCase in json field
-                            // 2. when the marshaller use original name in .proto file when serializing messages
-                            if (fieldName.equals(lowerCamelCaseResponseBody) ||
-                                fieldName.equals(responseBody)) {
-                                final byte[] bytes = mapper.writeValueAsBytes(responseBodyJsonNode);
-                                return HttpData.wrap(bytes);
-                            }
-                        }
-                        return HttpData.ofUtf8("null");
-                    } catch (IOException e) {
-                        logger.warn("Unexpected exception while extracting responseBody '{}' from {}",
-                                    responseBody, data, e);
-                        return HttpData.wrap(array);
-                    }
+        }
+
+        return httpResponse -> {
+            try (HttpData data = httpResponse.content()) {
+                final HttpData convertedData = convertHttpDataForResponseBody(responseBody, data);
+                return AggregatedHttpResponse.of(httpResponse.headers(), convertedData);
+            }
+        };
+    }
+
+    @Nullable
+    private static JsonNode extractHttpBody(HttpData data) {
+        final byte[] array = data.array();
+
+        try {
+            return mapper.readValue(array, JsonNode.class);
+        } catch (IOException e) {
+            logger.warn("Unexpected exception while parsing HttpBody from {}", data, e);
+            return null;
+        }
+    }
+
+    private static HttpData convertHttpDataForResponseBody(String responseBody, HttpData data) {
+        final byte[] array = data.array();
+        try {
+            final JsonNode jsonNode = mapper.readValue(array, JsonNode.class);
+
+            // we try to convert lower snake case response body to camel case
+            final String lowerCamelCaseResponseBody =
+                    CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
+            final Iterator<Entry<String, JsonNode>> fields = jsonNode.fields();
+            while (fields.hasNext()) {
+                final Entry<String, JsonNode> entry = fields.next();
+                final String fieldName = entry.getKey();
+                final JsonNode responseBodyJsonNode = entry.getValue();
+                // try to match field name and response body
+                // 1. by default the marshaller would use lowerCamelCase in json field
+                // 2. when the marshaller use original name in .proto file when serializing messages
+                if (fieldName.equals(lowerCamelCaseResponseBody) ||
+                    fieldName.equals(responseBody)) {
+                    final byte[] bytes = mapper.writeValueAsBytes(responseBodyJsonNode);
+                    return HttpData.wrap(bytes);
                 }
-            };
+            }
+            return HttpData.ofUtf8("null");
+        } catch (IOException e) {
+            logger.warn("Unexpected exception while extracting responseBody '{}' from {}",
+                        responseBody, data, e);
+            return HttpData.wrap(array);
         }
     }
 
@@ -576,10 +640,20 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 } else {
                     try {
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
-                        // Set JSON media type (https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content)
+                        final HttpData requestContent;
+
+                        // https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content
+                        if (HttpBody.getDescriptor().equals(spec.methodDescriptor.getInputType())) {
+                            // Convert the HTTP request to a JSON representation of HttpBody.
+                            requestContent = convertToHttpBody(clientRequest);
+                        } else {
+                            // Convert the HTTP request to gRPC JSON.
+                            requestContent = convertToJson(ctx, clientRequest, spec);
+                        }
+
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
-                                      convertToJson(ctx, clientRequest, spec), responseFuture,
-                                      generateResponseBodyConverter(spec), MediaType.JSON_UTF_8);
+                                      requestContent, responseFuture,
+                                      generateResponseConverter(spec));
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
@@ -591,6 +665,29 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             return null;
         });
         return HttpResponse.of(responseFuture);
+    }
+
+    private static HttpData convertToHttpBody(AggregatedHttpRequest request) throws IOException {
+        final ObjectNode body = mapper.createObjectNode();
+
+        try (HttpData content = request.content()) {
+            final MediaType contentType;
+
+            @Nullable
+            final MediaType requestContentType = request.contentType();
+            if (requestContentType != null) {
+                contentType = requestContentType;
+            } else {
+                contentType = MediaType.OCTET_STREAM;
+            }
+
+            body.put("content_type", contentType.toString());
+            // Jackson converts byte array to base64 string. gRPC transcoding spec also returns base64 string.
+            // https://protobuf.dev/programming-guides/proto3/#json
+            body.put("data", content.array());
+
+            return HttpData.wrap(mapper.writeValueAsBytes(body));
+        }
     }
 
     /**
@@ -619,7 +716,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             root = mapper.createObjectNode();
                         } else {
                             throw new IllegalArgumentException("Unexpected JSON: " +
-                                    body + ", (expected: ObjectNode or null).");
+                                                               body + ", (expected: ObjectNode or null).");
                         }
                         return setParametersAndWriteJson(root, ctx, spec);
                     }

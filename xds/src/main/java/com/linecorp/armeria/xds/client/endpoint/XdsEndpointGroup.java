@@ -26,6 +26,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Lock;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
@@ -137,6 +139,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
         }
     }
 
+    @Nullable
     @Override
     protected List<Endpoint> latestValue() {
         final List<Endpoint> endpoints = state.endpoints();
@@ -157,6 +160,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
         return selectionStrategy;
     }
 
+    @Nullable
     @Override
     public Endpoint selectNow(ClientRequestContext ctx) {
         return selector.selectNow(ctx);
@@ -192,6 +196,17 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
     @Override
     public void close() {
         closeAsync().join();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("selectionStrategy", selectionStrategy)
+                          .add("allowEmptyEndpoints", allowEmptyEndpoints)
+                          .add("initialized", initialEndpointsFuture.isDone())
+                          .add("state", state)
+                          .add("clusterManager", clusterManager)
+                          .toString();
     }
 
     private static class XdsEndpointSelectionStrategy implements EndpointSelectionStrategy {

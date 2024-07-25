@@ -17,6 +17,7 @@
 package com.linecorp.armeria.xds.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +34,7 @@ import javax.annotation.concurrent.GuardedBy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -57,17 +59,16 @@ import com.linecorp.armeria.xds.client.endpoint.ClusterManager.State;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCloseable,
-                                      Listenable<State>, Consumer<List<Endpoint>> {
+final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCloseable, Listenable<State> {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterManager.class);
-    private static final Map<ClusterSnapshot, ClusterEntry> INITIAL_CLUSTER_ENTRIES = new HashMap<>();
+    private static final Map<String, ClusterEntry> INITIAL_CLUSTER_ENTRIES = new HashMap<>();
 
     private final EventExecutor eventLoop;
     private final SafeCloseable safeCloseable;
     private final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
 
-    private volatile Map<ClusterSnapshot, ClusterEntry> clusterEntries = INITIAL_CLUSTER_ENTRIES;
+    private volatile Map<String, ClusterEntry> clusterEntries = INITIAL_CLUSTER_ENTRIES;
     @Nullable
     private volatile ListenerSnapshot listenerSnapshot;
     private final Set<CompletableFuture<?>> pendingRemovals = Sets.newConcurrentHashSet();
@@ -87,14 +88,15 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         checkArgument(clusterSnapshot.endpointSnapshot() != null,
                       "An endpoint snapshot must exist for the provided (%s)", clusterSnapshot);
         eventLoop = CommonPools.workerGroup().next();
-        clusterEntries = ImmutableMap.of(clusterSnapshot, new ClusterEntry(clusterSnapshot, this));
+        clusterEntries = ImmutableMap.of(clusterSnapshot.xdsResource().name(),
+                                         new ClusterEntry(clusterSnapshot, this, eventLoop));
         safeCloseable = () -> {};
     }
 
     @Nullable
     Endpoint selectNow(ClientRequestContext ctx) {
-        final Map<ClusterSnapshot, ClusterEntry> clusterEntries = this.clusterEntries;
-        for (Entry<ClusterSnapshot, ClusterEntry> entry: clusterEntries.entrySet()) {
+        final Map<String, ClusterEntry> clusterEntries = this.clusterEntries;
+        for (Entry<String, ClusterEntry> entry: clusterEntries.entrySet()) {
             // Just use the first snapshot for now
             final ClusterEntry clusterEntry = entry.getValue();
             return clusterEntry.selectNow(ctx);
@@ -114,29 +116,32 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
 
         // it is important that the entries are added in order of ClusterSnapshot#index
         // so that the first matching route is selected in #selectNow
-        final ImmutableMap.Builder<ClusterSnapshot, ClusterEntry> mappingBuilder =
+        final ImmutableMap.Builder<String, ClusterEntry> mappingBuilder =
                 ImmutableMap.builder();
-        final Map<ClusterSnapshot, ClusterEntry> oldEndpointGroups = clusterEntries;
+        final Map<String, ClusterEntry> oldEndpointGroups = clusterEntries;
         for (ClusterSnapshot clusterSnapshot : routeSnapshot.clusterSnapshots()) {
             if (clusterSnapshot.endpointSnapshot() == null) {
                 continue;
             }
-            ClusterEntry clusterEntry = oldEndpointGroups.get(clusterSnapshot);
+            final String clusterName = clusterSnapshot.xdsResource().name();
+            ClusterEntry clusterEntry = oldEndpointGroups.get(clusterName);
             if (clusterEntry == null) {
-                clusterEntry = new ClusterEntry(clusterSnapshot, this);
+                clusterEntry = new ClusterEntry(clusterSnapshot, this, eventLoop);
+            } else {
+                clusterEntry.updateClusterSnapshot(clusterSnapshot);
             }
-            mappingBuilder.put(clusterSnapshot, clusterEntry);
+            mappingBuilder.put(clusterName, clusterEntry);
         }
-        final ImmutableMap<ClusterSnapshot, ClusterEntry> newClusterEntries = mappingBuilder.build();
+        final ImmutableMap<String, ClusterEntry> newClusterEntries = mappingBuilder.build();
         clusterEntries = newClusterEntries;
         this.listenerSnapshot = listenerSnapshot;
         notifyListeners();
         cleanupEndpointGroups(newClusterEntries, oldEndpointGroups);
     }
 
-    private void cleanupEndpointGroups(Map<ClusterSnapshot, ClusterEntry> newEndpointGroups,
-                                       Map<ClusterSnapshot, ClusterEntry> oldEndpointGroups) {
-        for (Entry<ClusterSnapshot, ClusterEntry> entry : oldEndpointGroups.entrySet()) {
+    private void cleanupEndpointGroups(Map<String, ClusterEntry> newEndpointGroups,
+                                       Map<String, ClusterEntry> oldEndpointGroups) {
+        for (Entry<String, ClusterEntry> entry : oldEndpointGroups.entrySet()) {
             if (newEndpointGroups.containsKey(entry.getKey())) {
                 continue;
             }
@@ -173,13 +178,8 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         }
     }
 
-    @Override
-    public void accept(List<Endpoint> endpoints) {
-        notifyListeners();
-    }
-
     private State state() {
-        final Map<ClusterSnapshot, ClusterEntry> clusterEntries = this.clusterEntries;
+        final Map<String, ClusterEntry> clusterEntries = this.clusterEntries;
         if (clusterEntries.isEmpty()) {
             return new State(listenerSnapshot, ImmutableList.of());
         }
@@ -190,7 +190,7 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         return new State(listenerSnapshot, endpointsBuilder.build());
     }
 
-    private void notifyListeners() {
+    void notifyListeners() {
         if (clusterEntries == INITIAL_CLUSTER_ENTRIES) {
             return;
         }
@@ -232,6 +232,16 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         closeAsync().join();
     }
 
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("eventLoop", eventLoop)
+                          .add("clusterEntries", clusterEntries)
+                          .add("listenerSnapshot", listenerSnapshot)
+                          .add("closed", closed)
+                          .toString();
+    }
+
     static final class State {
 
         static final State INITIAL_STATE = new State(null, ImmutableList.of());
@@ -268,6 +278,15 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
         @Override
         public int hashCode() {
             return Objects.hashCode(listenerSnapshot, endpoints);
+        }
+
+        @Override
+        public String toString() {
+            return MoreObjects.toStringHelper(this).omitNullValues()
+                              .add("listenerSnapshot", listenerSnapshot)
+                              .add("numEndpoints", endpoints.size())
+                              .add("endpoints", truncate(endpoints, 10))
+                              .toString();
         }
     }
 }

@@ -22,6 +22,8 @@ import static java.util.Objects.requireNonNull;
 import java.time.Duration;
 import java.util.function.Supplier;
 
+import com.google.common.primitives.Ints;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -40,6 +42,10 @@ public final class WeightRampingUpStrategyBuilder {
     static final long DEFAULT_RAMPING_UP_INTERVAL_MILLIS = 2000;
     static final int DEFAULT_TOTAL_STEPS = 10;
     static final int DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS = 500;
+    static final EndpointWeightTransition DEFAULT_LINEAR_TRANSITION =
+            (endpoint, currentStep, totalSteps) ->
+                    // currentStep is never greater than totalSteps so we can cast long to int.
+                    Ints.saturatedCast((long) endpoint.weight() * currentStep / totalSteps);
     static final EndpointWeightTransition defaultTransition = EndpointWeightTransition.linear();
 
     private EndpointWeightTransition transition = defaultTransition;

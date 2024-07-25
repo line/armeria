@@ -24,6 +24,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
@@ -71,6 +72,7 @@ public interface Client<I extends Request, O extends Response> extends Unwrappab
      * @see ClientFactory#unwrap(Object, Class)
      * @see Unwrappable
      */
+    @Nullable
     @Override
     default <T> T as(Class<T> type) {
         requireNonNull(type, "type");

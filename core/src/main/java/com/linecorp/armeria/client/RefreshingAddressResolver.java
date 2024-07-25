@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
+import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsQuestion;
@@ -298,7 +299,7 @@ final class RefreshingAddressResolver
                 //                because Netty can change the behavior while we are not noticing that.
                 //                So sending a PR to upstream would be the best solution.
                 final UnknownHostException unknownHostException = (UnknownHostException) cause;
-                cacheable = unknownHostException.getCause() == null;
+                cacheable = !DnsUtil.isDnsQueryTimedOut(unknownHostException.getCause());
 
                 if (cacheable) {
                     negativeCacheFuture = executor().schedule(() -> addressResolverCache.invalidate(hostname),
@@ -349,6 +350,7 @@ final class RefreshingAddressResolver
             }
             refreshing = true;
 
+            assert address != null;
             final String hostname = address.getHostName();
             // 'sendQueries()' always successfully completes.
             sendQueries(questions, hostname, originalCreationTimeNanos).thenAccept(entry -> {
@@ -369,6 +371,7 @@ final class RefreshingAddressResolver
 
             final Throwable cause = entry.cause();
             if (cause != null) {
+                assert autoRefreshBackoff != null;
                 final long nextDelayMillis = autoRefreshBackoff.nextDelayMillis(numAttemptsSoFar++);
 
                 if (nextDelayMillis < 0) {
@@ -399,6 +402,8 @@ final class RefreshingAddressResolver
             if (address == null) {
                 return false;
             }
+
+            assert autoRefreshTimeoutFunction != null;
 
             if (autoRefreshTimeoutFunction == DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION) {
                 return true;

@@ -46,7 +46,8 @@ public interface GraphqlErrorHandler {
      */
     @Nullable
     HttpResponse handle(
-            ServiceRequestContext ctx, ExecutionInput input, ExecutionResult result, @Nullable Throwable cause);
+            ServiceRequestContext ctx, ExecutionInput input, @Nullable ExecutionResult result,
+            @Nullable Throwable cause);
 
     /**
      * Returns a composed {@link GraphqlErrorHandler} that applies this first and the specified

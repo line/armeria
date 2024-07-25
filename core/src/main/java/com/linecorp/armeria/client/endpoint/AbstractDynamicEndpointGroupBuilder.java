@@ -17,8 +17,6 @@ package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.time.Duration;
-
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -26,7 +24,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A skeletal builder implementation for a {@link DynamicEndpointGroup} and its subtypes.
  */
 @UnstableApi
-public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndpointGroupSetters {
+public abstract class AbstractDynamicEndpointGroupBuilder
+        <SELF extends AbstractDynamicEndpointGroupBuilder<SELF>> implements DynamicEndpointGroupSetters<SELF> {
 
     private boolean allowEmptyEndpoints = true;
     private long selectionTimeoutMillis;
@@ -40,14 +39,22 @@ public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndp
         this.selectionTimeoutMillis = selectionTimeoutMillis;
     }
 
+    /**
+     * Return {@code this}.
+     */
+    @SuppressWarnings("unchecked")
+    protected final SELF self() {
+        return (SELF) this;
+    }
+
     // Note that we don't have `selectionStrategy()` here because some subclasses are delegating and
     // thus they use the `EndpointSelectionStrategy` of the delegate.
     // See: AbstractHealthCheckedEndpointGroupBuilder
 
     @Override
-    public AbstractDynamicEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+    public SELF allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         this.allowEmptyEndpoints = allowEmptyEndpoints;
-        return this;
+        return self();
     }
 
     /**
@@ -58,20 +65,14 @@ public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndp
     }
 
     @Override
-    public AbstractDynamicEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
-        return (AbstractDynamicEndpointGroupBuilder)
-                DynamicEndpointGroupSetters.super.selectionTimeout(selectionTimeout);
-    }
-
-    @Override
-    public AbstractDynamicEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+    public SELF selectionTimeoutMillis(long selectionTimeoutMillis) {
         checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
                       selectionTimeoutMillis);
         if (selectionTimeoutMillis == 0) {
             selectionTimeoutMillis = Long.MAX_VALUE;
         }
         this.selectionTimeoutMillis = selectionTimeoutMillis;
-        return this;
+        return self();
     }
 
     /**

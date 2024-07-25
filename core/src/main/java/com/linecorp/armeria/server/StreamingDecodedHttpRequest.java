@@ -54,6 +54,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Nullable
     private Throwable abortResponseCause;
 
+    private boolean isNormallyClosed;
+
     StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
@@ -79,11 +81,6 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public void init(ServiceRequestContext ctx) {
         this.ctx = ctx;
-    }
-
-    @Override
-    public boolean isInitialized() {
-        return ctx != null;
     }
 
     @Override
@@ -171,6 +168,17 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
+    public void close() {
+        isNormallyClosed = true;
+        super.close();
+    }
+
+    @Override
+    public boolean isClosedSuccessfully() {
+        return isNormallyClosed;
+    }
+
+    @Override
     public void setResponse(HttpResponse response) {
         if (abortResponseCause != null) {
             // This means that we already tried to close the request, so abort the response immediately.
@@ -203,11 +211,6 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public boolean isResponseAborted() {
         return abortResponseCause != null;
-    }
-
-    @Override
-    public boolean needsAggregation() {
-        return false;
     }
 
     @Override

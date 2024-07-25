@@ -171,6 +171,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             return;
         }
         if (isInitialized()) {
+            assert eventLoop != null;
             if (eventLoop.inEventLoop()) {
                 clearTimeout0(resetTimeout);
             } else {
@@ -223,6 +224,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             return;
         }
         if (isInitialized()) {
+            assert eventLoop != null;
             if (eventLoop.inEventLoop()) {
                 setTimeoutNanosFromStart0(timeoutNanos);
             } else {
@@ -254,6 +256,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             return;
         }
         if (isInitialized()) {
+            assert eventLoop != null;
             if (eventLoop.inEventLoop()) {
                 extendTimeoutNanos0(adjustmentNanos);
             } else {
@@ -285,6 +288,7 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private void setTimeoutNanosFromNow(long timeoutNanos) {
         checkArgument(timeoutNanos > 0, "timeoutNanos: %s (expected: > 0)", timeoutNanos);
         if (isInitialized()) {
+            assert eventLoop != null;
             if (eventLoop.inEventLoop()) {
                 setTimeoutNanosFromNow0(timeoutNanos);
             } else {
@@ -393,7 +397,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (whenCancellingUpdater.compareAndSet(this, null, cancellationFuture)) {
             return cancellationFuture;
         } else {
-            return this.whenCancelling;
+            final CancellationFuture oldWhenCancelling = this.whenCancelling;
+            assert oldWhenCancelling != null;
+            return oldWhenCancelling;
         }
     }
 
@@ -407,7 +413,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (whenCancelledUpdater.compareAndSet(this, null, cancellationFuture)) {
             return cancellationFuture;
         } else {
-            return this.whenCancelled;
+            final CancellationFuture oldWhenCancelled = this.whenCancelled;
+            assert oldWhenCancelled != null;
+            return oldWhenCancelled;
         }
     }
 
@@ -427,7 +435,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             });
             return timeoutFuture;
         } else {
-            return this.whenTimingOut;
+            final TimeoutFuture oldWhenTimingOut = this.whenTimingOut;
+            assert oldWhenTimingOut != null;
+            return oldWhenTimingOut;
         }
     }
 
@@ -447,7 +457,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             });
             return timeoutFuture;
         } else {
-            return this.whenTimedOut;
+            final TimeoutFuture oldWhenTimedOut = this.whenTimedOut;
+            assert oldWhenTimedOut != null;
+            return oldWhenTimedOut;
         }
     }
 

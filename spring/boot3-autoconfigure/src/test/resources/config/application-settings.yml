@@ -17,3 +17,5 @@ armeria:
   request-timeout: 8000
   max-request-length: 0
   verbose-responses: true
+  graceful-shutdown-quiet-period-millis: 2000
+  graceful-shutdown-timeout-millis: 20000

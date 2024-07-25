@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.net.HostAndPort;
 
@@ -44,11 +45,13 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.internal.common.websocket.WebSocketWrapper;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceOptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolHandler;
 import com.linecorp.armeria.server.websocket.WebSocketService;
@@ -96,12 +99,13 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     @Nullable
     private final Predicate<? super String> originPredicate;
     private final boolean aggregateContinuation;
+    private final ServiceOptions serviceOptions;
 
     public DefaultWebSocketService(WebSocketServiceHandler handler, @Nullable HttpService fallbackService,
                                    int maxFramePayloadLength, boolean allowMaskMismatch,
                                    Set<String> subprotocols, boolean allowAnyOrigin,
                                    @Nullable Predicate<? super String> originPredicate,
-                                   boolean aggregateContinuation) {
+                                   boolean aggregateContinuation, ServiceOptions serviceOptions) {
         this.handler = handler;
         this.fallbackService = fallbackService;
         this.maxFramePayloadLength = maxFramePayloadLength;
@@ -110,6 +114,7 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
         this.allowAnyOrigin = allowAnyOrigin;
         this.originPredicate = originPredicate;
         this.aggregateContinuation = aggregateContinuation;
+        this.serviceOptions = serviceOptions;
     }
 
     @Override
@@ -204,6 +209,27 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     private HttpResponse failOrFallback(ServiceRequestContext ctx, HttpRequest req,
                                         Supplier<HttpResponse> invalidResponse) throws Exception {
         if (fallbackService != null) {
+            // Try to apply ServiceOptions from fallbackService first. If not set, use the settings of the
+            // virtual host.
+            final ServiceOptions options = fallbackService.options();
+            long requestTimeoutMillis = options.requestTimeoutMillis();
+            if (requestTimeoutMillis < 0) {
+                requestTimeoutMillis = ctx.config().virtualHost().requestTimeoutMillis();
+            }
+            ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, requestTimeoutMillis);
+
+            long maxRequestLength = options.maxRequestLength();
+            if (maxRequestLength < 0) {
+                maxRequestLength = ctx.config().virtualHost().maxRequestLength();
+            }
+            ctx.setMaxRequestLength(maxRequestLength);
+
+            long requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
+            if (requestAutoAbortDelayMillis < 0) {
+                requestAutoAbortDelayMillis = ctx.config().virtualHost().requestAutoAbortDelayMillis();
+            }
+            ctx.setRequestAutoAbortDelayMillis(requestAutoAbortDelayMillis);
+
             return fallbackService.serve(ctx, req);
         } else {
             return invalidResponse.get();
@@ -289,17 +315,18 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
                                    "missing the origin header");
         }
 
+        final String lowerCaseOrigin = Ascii.toLowerCase(origin);
         if (originPredicate == null) {
             // Only the same-origin is allowed.
-            if (!isSameOrigin(ctx, headers, origin)) {
+            if (!isSameOrigin(ctx, headers, lowerCaseOrigin)) {
                 return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
-                                       "not allowed origin: " + origin);
+                                       "not allowed origin: " + lowerCaseOrigin);
             }
             return null;
         }
-        if (!originPredicate.test(origin)) {
+        if (!originPredicate.test(lowerCaseOrigin)) {
             return HttpResponse.of(HttpStatus.FORBIDDEN, MediaType.PLAIN_TEXT_UTF_8,
-                                   "not allowed origin: " + origin);
+                                   "not allowed origin: " + lowerCaseOrigin);
         }
         return null;
     }
@@ -394,5 +421,10 @@ public final class DefaultWebSocketService implements WebSocketService, WebSocke
     @Override
     public WebSocketProtocolHandler protocolHandler() {
         return this;
+    }
+
+    @Override
+    public ServiceOptions options() {
+        return serviceOptions;
     }
 }

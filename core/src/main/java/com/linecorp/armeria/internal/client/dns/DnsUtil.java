@@ -36,6 +36,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
+import io.netty.resolver.dns.DnsErrorCauseException;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
@@ -130,8 +131,14 @@ public final class DnsUtil {
         return DEFAULT_DNS_QUERY_TIMEOUT_MILLIS;
     }
 
-    public static boolean isDnsQueryTimedOut(Throwable cause) {
+    public static boolean isDnsQueryTimedOut(@Nullable Throwable cause) {
+        if (cause == null) {
+            return false;
+        }
         final Throwable rootCause = Throwables.getRootCause(cause);
+        if (rootCause instanceof DnsErrorCauseException) {
+            return false;
+        }
         if (rootCause instanceof DnsTimeoutException ||
             rootCause instanceof DnsNameResolverTimeoutException) {
             return true;

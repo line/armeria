@@ -192,6 +192,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                 retryConfig.retryRuleWithContent() : retryConfig.fromRetryRule();
         res.handle((unused1, cause) -> {
             try {
+                assert retryRule != null;
                 retryRule.shouldRetry(derivedCtx, res, cause).handle((decision, unused3) -> {
                     final Backoff backoff = decision != null ? decision.backoff() : null;
                     if (backoff != null) {

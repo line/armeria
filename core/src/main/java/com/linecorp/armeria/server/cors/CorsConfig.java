@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutingContext;
 
@@ -100,13 +101,13 @@ public final class CorsConfig {
         }
 
         final String lowerCaseOrigin = Ascii.toLowerCase(origin);
-        final boolean isNullOrigin = CorsService.NULL_ORIGIN.equals(lowerCaseOrigin);
+        final boolean isNullOrigin = CorsHeaderUtil.NULL_ORIGIN.equals(lowerCaseOrigin);
         for (final CorsPolicy policy : policies) {
             if (isNullOrigin && policy.isNullOriginAllowed() &&
                 isPathMatched(policy, routingContext)) {
                 return policy;
             } else if (!isNullOrigin && isPathMatched(policy, routingContext)) {
-                if (policy.originPredicate().test(origin)) {
+                if (policy.originPredicate().test(lowerCaseOrigin)) {
                     return policy;
                 }
             }

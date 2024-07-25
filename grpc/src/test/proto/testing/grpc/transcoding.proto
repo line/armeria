@@ -27,11 +27,17 @@ import "google/protobuf/wrappers.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/any.proto";
 import "google/protobuf/field_mask.proto";
+import "google/api/httpbody.proto";
 
 service HttpJsonTranscodingTestService {
   rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
     option (google.api.http) = {
       get: "/v1/{name=messages/*}"
+
+      additional_bindings {
+        post: "/v1/{name=messages/*}:get"
+        body: "*"
+      }
     };
   }
   rpc GetMessageV2(GetMessageRequestV2) returns (Message) {
@@ -69,7 +75,14 @@ service HttpJsonTranscodingTestService {
 
   rpc EchoTimestampAndDuration(EchoTimestampAndDurationRequest) returns (EchoTimestampAndDurationResponse) {
     option (google.api.http) = {
-      get: "/v1/echo/{timestamp}/{duration}"
+      get: "/v1/echo/timestamp/{timestamp}/{duration}"
+    };
+  }
+
+  rpc EchoTimestamp(EchoTimestampRequest) returns (EchoTimestampResponse) {
+    option (google.api.http) = {
+      post: "/v1/echo/timestamp/{timestamp}:get",
+      body: "*"
     };
   }
 
@@ -212,6 +225,18 @@ service HttpJsonTranscodingTestService {
       }
     };
   }
+
+  rpc ArbitraryHttp(google.api.HttpBody) returns (google.api.HttpBody) {
+    option (google.api.http) = {
+      post: "/v1/arbitrary"
+    };
+  }
+
+  rpc ArbitraryHttpWrapped(ArbitraryHttpWrappedRequest) returns (ArbitraryHttpWrappedResponse) {
+    option (google.api.http) = {
+      post: "/v1/arbitrary_wrapped"
+    };
+  }
 }
 
 message GetMessageRequestV1 {
@@ -238,8 +263,8 @@ message GetMessageRequestV4 {
   string query_parameter = 2;
   ParentMessage parent_field = 3;
   message ParentMessage {
-     string child_field = 1;
-     string child_field_2 = 2;
+    string child_field = 1;
+    string child_field_2 = 2;
   }
 }
 
@@ -276,6 +301,14 @@ message EchoTimestampAndDurationRequest {
 message EchoTimestampAndDurationResponse {
   google.protobuf.Timestamp timestamp = 1;
   google.protobuf.Duration duration = 2;
+}
+
+message EchoTimestampRequest {
+  google.protobuf.Timestamp timestamp = 1;
+}
+
+message EchoTimestampResponse {
+  google.protobuf.Timestamp timestamp = 1;
 }
 
 message EchoFieldMaskRequest {
@@ -386,4 +419,14 @@ message EchoNestedMessageRequest {
 
 message EchoNestedMessageResponse {
   TopLevelMessage.NestedMessage nested = 1;
+}
+
+message ArbitraryHttpWrappedRequest {
+  string request_id = 1;
+  google.api.HttpBody body = 2;
+}
+
+message ArbitraryHttpWrappedResponse {
+  string response_id = 1;
+  google.api.HttpBody body = 2;
 }

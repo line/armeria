@@ -165,6 +165,7 @@ final class DefaultRoutingContext implements RoutingContext {
         this.deferredCause = requireNonNull(deferredCause, "deferredCause");
     }
 
+    @Nullable
     @Override
     public HttpStatusException deferredStatusException() {
         return deferredCause;

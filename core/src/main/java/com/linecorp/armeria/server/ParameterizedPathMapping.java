@@ -46,7 +46,14 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class ParameterizedPathMapping extends AbstractPathMapping {
 
-    private static final Pattern VALID_PATTERN = Pattern.compile("(/[^/{}:]+|/:[^/{}]+|/\\{[^/{}]+})+/?");
+    private static final Pattern VALID_PATTERN = Pattern.compile(
+            '(' +
+            // If the segment doesn't start with ':' or '{', the behavior should be the same as ExactPathMapping
+            "/[^:{][^/]*|" +
+            "/:[^/{}]+|" +
+            "/\\{[^/{}]+}" +
+            ")+/?"
+    );
 
     private static final Pattern CAPTURE_REST_PATTERN = Pattern.compile("/\\{\\*([^/{}]*)}|/:\\*([^/{}]*)");
 
@@ -76,7 +83,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      * Skeletal form of given path, which is used for duplicated routing rule detection.
      * For example, "/{a}/{b}" and "/{c}/{d}" has same skeletal form and regarded as duplicated.
      *
-     * <p>e.g. "/{x}/{y}/{z}" -> "/:/:/:"</p>
+     * <p>e.g. "/{x}/{y}/{z}" -> "/\0/\0/\0"</p>
      * <p>Set a skeletal form with the patterns described in {@link Route#paths()}.</p>
      */
     private final String skeleton;
@@ -136,7 +143,12 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         for (String token : PATH_SPLITTER.split(pathPattern)) {
             final String paramName = paramName(token);
             if (paramName == null) {
-                // If the given token is a constant, do not manipulate it.
+                // If the token escapes the first colon, then clean it. We don't need to handle '{'
+                // since it's not an allowed path character per rfc3986.
+                if (token.startsWith("\\:")) {
+                    token = token.substring(1);
+                }
+
                 patternJoiner.add(token);
                 normalizedPatternJoiner.add(token);
                 skeletonJoiner.add(token);
@@ -160,7 +172,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
             }
 
             normalizedPatternJoiner.add((captureRestPathMatching ? ":*" : ':') + paramName);
-            skeletonJoiner.add(captureRestPathMatching ? "*" : ":");
+            skeletonJoiner.add(captureRestPathMatching ? "*" : "\0");
         }
 
         this.pathPattern = pathPattern;

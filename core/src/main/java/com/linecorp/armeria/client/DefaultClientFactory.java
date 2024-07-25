@@ -167,6 +167,9 @@ final class DefaultClientFactory implements ClientFactory {
 
     @Override
     public Object newClient(ClientBuilderParams params) {
+        if (isClosing()) {
+            throw new IllegalStateException("Cannot create a client because the factory is closing.");
+        }
         validateParams(params);
         final Scheme scheme = params.scheme();
         final Class<?> clientType = params.clientType();
@@ -181,6 +184,7 @@ final class DefaultClientFactory implements ClientFactory {
                 "No ClientFactory for scheme: " + scheme + " matched clientType: " + clientType);
     }
 
+    @Nullable
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
         final T params = ClientFactory.super.unwrap(client, type);

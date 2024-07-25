@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.server.sangria
 
-import com.linecorp.armeria.client.{WebClient, WebClientBuilder}
-import com.linecorp.armeria.client.logging.LoggingClient
+import com.linecorp.armeria.client.WebClientBuilder
+import com.linecorp.armeria.client.websocket.WebSocketClientBuilder
 import com.linecorp.armeria.internal.testing.ServerRuleDelegate
 import com.linecorp.armeria.server.ServerBuilder
 import munit.Suite
@@ -33,6 +33,8 @@ trait ServerSuite {
 
   protected def configureWebClient: WebClientBuilder => Unit = _ => ()
 
+  protected def configureWebSocketClient: WebSocketClientBuilder => Unit = _ => ()
+
   protected def server: ServerRuleDelegate = delegate
 
   /**
@@ -46,6 +48,9 @@ trait ServerSuite {
       override def configure(sb: ServerBuilder): Unit = configureServer(sb)
 
       override def configureWebClient(wcb: WebClientBuilder): Unit = self.configureWebClient(wcb)
+
+      override def configureWebSocketClient(webSocketClientBuilder: WebSocketClientBuilder): Unit =
+        self.configureWebSocketClient(webSocketClientBuilder)
     }
 
     if (!runServerForEachTest) {

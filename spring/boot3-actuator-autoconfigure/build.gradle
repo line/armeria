@@ -3,8 +3,8 @@ dependencies {
     api libs.jakarta.inject
     compileOnly libs.jakarta.validation
 
-    // TODO(anuraaga): Consider removing these since this module does not have related functionality.
-    optionalApi libs.micrometer.prometheus
+    optionalApi project(':prometheus1')
+    optionalApi libs.micrometer.prometheus.legacy
     optionalApi libs.dropwizard.metrics.json
 
     implementation libs.spring.boot3.autoconfigure

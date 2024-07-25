@@ -121,6 +121,7 @@ public final class RoutingResult {
      */
     public String path() {
         ensurePresence();
+        assert path != null;
         return path;
     }
 
@@ -142,6 +143,7 @@ public final class RoutingResult {
             return decodedPath;
         }
 
+        assert path != null;
         return this.decodedPath = ArmeriaHttpUtil.decodePath(path);
     }
 
