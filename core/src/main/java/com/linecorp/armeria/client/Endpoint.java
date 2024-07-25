@@ -696,7 +696,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             if (value == null) {
                 return this;
             }
-            return withAttrs(Attributes.of(key, value));
+            return replaceAttrs(Attributes.of(key, value));
         }
 
         if (attributes.attr(key) == value) {
@@ -704,8 +704,32 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         } else {
             final AttributesBuilder attributesBuilder = attributes.toBuilder();
             attributesBuilder.set(key, value);
-            return withAttrs(attributesBuilder.build());
+            return replaceAttrs(attributesBuilder.build());
         }
+    }
+
+    /**
+     * Returns a new {@link Endpoint} with the specified {@link Attributes}.
+     * Note that the {@link #attrs()} of this {@link Endpoint} is merged with the specified
+     * {@link Attributes}. For attributes with the same {@link AttributeKey}, the attribute
+     * in {@param newAttributes} has higher precedence.
+     */
+    @UnstableApi
+    @SuppressWarnings("unchecked")
+    public Endpoint withAttrs(Attributes newAttributes) {
+        requireNonNull(newAttributes, "newAttributes");
+        if (newAttributes.isEmpty()) {
+            return this;
+        }
+        if (attrs().isEmpty()) {
+            return replaceAttrs(newAttributes);
+        }
+        final AttributesBuilder builder = attrs().toBuilder();
+        newAttributes.attrs().forEachRemaining(entry -> {
+            final AttributeKey<Object> key = (AttributeKey<Object>) entry.getKey();
+            builder.set(key, entry.getValue());
+        });
+        return new Endpoint(type, host, ipAddr, port, weight, builder.build());
     }
 
     /**
@@ -714,7 +738,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * {@link Attributes}.
      */
     @UnstableApi
-    public Endpoint withAttrs(Attributes newAttributes) {
+    public Endpoint replaceAttrs(Attributes newAttributes) {
         requireNonNull(newAttributes, "newAttributes");
         if (attrs().isEmpty() && newAttributes.isEmpty()) {
             return this;
