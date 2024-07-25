@@ -83,7 +83,14 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
         // A new `cacheEntry` is set before `loadingFuture` is completed.
         final CacheEntry<T> cacheEntry = this.cacheEntry;
         final boolean isValid = isValid(cacheEntry);
-        final boolean tryLoad = !isValid || needsRefresh(cacheEntry);
+        final boolean tryLoad;
+        if (isValid) {
+            assert cacheEntry != null;
+            tryLoad = needsRefresh(cacheEntry);
+        } else {
+            tryLoad = true;
+        }
+
         if (tryLoad) {
             final CompletableFuture<T> newFuture = new CompletableFuture<>();
             if (loadFutureUpdater.compareAndSet(this, loadingFuture, newFuture)) {
@@ -142,6 +149,7 @@ final class DefaultAsyncLoader<T> implements AsyncLoader<T> {
     private CompletableFuture<T> cacheOrFuture(@Nullable CacheEntry<T> cacheEntry,
                                                CompletableFuture<T> future) {
         if (isValid(cacheEntry)) {
+            assert cacheEntry != null;
             return UnmodifiableFuture.completedFuture(cacheEntry.value);
         }
         return future;
