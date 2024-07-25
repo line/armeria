@@ -82,8 +82,8 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
     private final ReentrantShortLock lock = new ReentrantShortLock(true);
 
     @SuppressWarnings("unchecked")
-    private volatile LoadBalancer<Weighted, Void> weightedRandomLoadBalancer =
-            (LoadBalancer<Weighted, Void>) EMPTY_RANDOM_LOAD_BALANCER;
+    private volatile LoadBalancer<Weighted, @Nullable Void> weightedRandomLoadBalancer =
+            (LoadBalancer<Weighted, @Nullable Void>) EMPTY_RANDOM_LOAD_BALANCER;
 
     private final List<Weighted> candidatesFinishedRampingUp = new ArrayList<>();
 
@@ -106,10 +106,12 @@ final class RampingUpLoadBalancer<T, C> implements UpdatableLoadBalancer<T, C> {
         updateCandidates(candidates);
     }
 
+    @Nullable
     @Override
     public T pick(C unused) {
-        final LoadBalancer<Weighted, Void> weightedRandomLoadBalancer = this.weightedRandomLoadBalancer;
-        final Weighted weighted = weightedRandomLoadBalancer.pick(null);
+        final LoadBalancer<Weighted, @Nullable Void> loadBalancer = weightedRandomLoadBalancer;
+        @SuppressWarnings("NullAway")
+        final Weighted weighted = loadBalancer.pick(null);
         if (weighted == null) {
             return null;
         }

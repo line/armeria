@@ -75,6 +75,7 @@ final class WeightedRandomLoadBalancer<T, C> implements LoadBalancer<T, C> {
         return allEntries;
     }
 
+    @Nullable
     @Override
     public T pick(C context) {
         if (allEntries.isEmpty()) {

@@ -21,6 +21,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * A round robin {@link LoadBalancer}.
  *
@@ -35,6 +37,7 @@ final class RoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
         this.candidates = ImmutableList.copyOf(candidates);
     }
 
+    @Nullable
     @Override
     public T pick(C unused) {
         if (candidates.isEmpty()) {

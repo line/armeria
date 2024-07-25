@@ -49,6 +49,7 @@ final class WeightedRoundRobinLoadBalancer<T, C> implements LoadBalancer<T, C> {
         candidatesAndWeights = new CandidatesAndWeights<>(candidates, weightFunction);
     }
 
+    @Nullable
     @Override
     public T pick(C unused) {
         return candidatesAndWeights.select(sequence.getAndIncrement());

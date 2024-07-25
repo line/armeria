@@ -22,6 +22,8 @@ import java.util.function.ToLongFunction;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class StickyLoadBalancer<T, C> implements LoadBalancer<T, C> {
 
     private final ToLongFunction<? super C> contextHasher;
@@ -30,10 +32,10 @@ final class StickyLoadBalancer<T, C> implements LoadBalancer<T, C> {
     StickyLoadBalancer(Iterable<? extends T> candidates,
                        ToLongFunction<? super C> contextHasher) {
         this.candidates = ImmutableList.copyOf(candidates);
-        //noinspection unchecked
         this.contextHasher = contextHasher;
     }
 
+    @Nullable
     @Override
     public T pick(C context) {
         if (candidates.isEmpty()) {

@@ -190,8 +190,8 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(Iterable<? extends T> candidates,
-                                                                         ToIntFunction<? super T> weightFunction) {
+    static <T, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(
+            Iterable<? extends T> candidates, ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
         //noinspection unchecked
