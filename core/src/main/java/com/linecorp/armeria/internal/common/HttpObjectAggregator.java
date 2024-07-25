@@ -121,6 +121,7 @@ public abstract class HttpObjectAggregator<T extends AggregatedHttpObject> imple
             if (dataLength > 0) {
                 final int allowedMaxDataLength = Integer.MAX_VALUE - contentLength;
                 if (dataLength > allowedMaxDataLength) {
+                    assert subscription != null;
                     subscription.cancel();
                     fail(new IllegalStateException("content length greater than Integer.MAX_VALUE"));
                     return;

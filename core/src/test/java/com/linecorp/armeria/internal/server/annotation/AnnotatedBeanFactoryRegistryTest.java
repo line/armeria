@@ -39,8 +39,9 @@ import com.linecorp.armeria.server.annotation.Param;
 public class AnnotatedBeanFactoryRegistryTest {
 
     public static final DependencyInjector noopDependencyInjector = new DependencyInjector() {
+        @Nullable
         @Override
-        public <T> @Nullable T getInstance(Class<T> type) {
+        public <T> T getInstance(Class<T> type) {
             return null;
         }
 

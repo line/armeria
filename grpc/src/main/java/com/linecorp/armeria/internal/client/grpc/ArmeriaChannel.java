@@ -221,6 +221,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         return params.options();
     }
 
+    @Nullable
     @Override
     public <T> T as(Class<T> type) {
         final T unwrapped = Unwrappable.super.as(type);

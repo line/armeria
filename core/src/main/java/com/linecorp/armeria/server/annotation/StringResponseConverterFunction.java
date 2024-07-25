@@ -45,6 +45,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class StringResponseConverterFunction implements ResponseConverterFunction {
 
+    @Nullable
     @Override
     public Boolean isResponseStreaming(Type resultType, @Nullable MediaType contentType) {
         if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {

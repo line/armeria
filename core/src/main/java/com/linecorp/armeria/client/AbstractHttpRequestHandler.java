@@ -54,7 +54,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Error;
-import io.netty.handler.proxy.ProxyConnectException;
 
 abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
@@ -216,6 +215,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
      * {@link Channel#flush()} when each write unit is done.
      */
     final void writeHeaders(RequestHeaders headers, boolean needs100Continue) {
+        assert session != null;
         final SessionProtocol protocol = session.protocol();
         assert protocol != null;
         if (needs100Continue) {
@@ -377,8 +377,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             session.markUnacquirable();
         }
 
-        if (cause instanceof ProxyConnectException || cause instanceof ResponseCompleteException) {
-            // - ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
+        if (cause instanceof ResponseCompleteException) {
             // - ResponseCompleteException means the response is successfully received.
             state = State.DONE;
             cancel();

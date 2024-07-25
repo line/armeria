@@ -66,9 +66,15 @@ final class RouteCache {
      */
     static Router<ServiceConfig> wrapVirtualHostRouter(Router<ServiceConfig> delegate,
                                                        Set<Route> dynamicPredicateRoutes) {
-        return FIND_CACHE == null ? delegate
-                                  : new CachingRouter<>(delegate, ServiceConfig::route,
-                                                        FIND_CACHE, FIND_ALL_CACHE, dynamicPredicateRoutes);
+        if (FIND_CACHE == null) {
+            return delegate;
+        }
+
+        assert FIND_ALL_CACHE != null;
+        return new CachingRouter<>(delegate,
+                                   ServiceConfig::route,
+                                   FIND_CACHE, FIND_ALL_CACHE,
+                                   dynamicPredicateRoutes);
     }
 
     /**
@@ -77,11 +83,16 @@ final class RouteCache {
      */
     static Router<RouteDecoratingService> wrapRouteDecoratingServiceRouter(
             Router<RouteDecoratingService> delegate, Set<Route> dynamicPredicateRoutes) {
-        return DECORATOR_FIND_CACHE == null ? delegate
-                                            : new CachingRouter<>(delegate, RouteDecoratingService::route,
-                                                                  DECORATOR_FIND_CACHE,
-                                                                  DECORATOR_FIND_ALL_CACHE,
-                                                                  dynamicPredicateRoutes);
+        if (DECORATOR_FIND_CACHE == null) {
+            return delegate;
+        }
+
+        assert DECORATOR_FIND_ALL_CACHE != null;
+        return new CachingRouter<>(delegate,
+                                   RouteDecoratingService::route,
+                                   DECORATOR_FIND_CACHE,
+                                   DECORATOR_FIND_ALL_CACHE,
+                                   dynamicPredicateRoutes);
     }
 
     private static <T> Cache<RoutingContext, T> buildCache(String spec) {

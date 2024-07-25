@@ -445,7 +445,9 @@ public final class FileService extends AbstractHttpService {
             if (decompress && encoding != null) {
                 assert aggregated instanceof HttpDataFile;
                 aggregated = decompress((HttpDataFile) aggregated, encoding, alloc);
-                if (aggregated.attributes().length() > config.maxCacheEntrySizeBytes()) {
+                final HttpFileAttributes attrs = aggregated.attributes();
+                assert attrs != null;
+                if (attrs.length() > config.maxCacheEntrySizeBytes()) {
                     // Invalidate the cache just in case the file was small previously.
                     cache.invalidate(pathAndEncoding);
                     return aggregated.toHttpFile();

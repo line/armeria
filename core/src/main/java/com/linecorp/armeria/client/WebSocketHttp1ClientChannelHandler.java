@@ -189,6 +189,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                         return;
                     }
 
+                    assert res != null;
                     res.startResponse();
                     final ResponseHeaders responseHeaders = ArmeriaHttpUtil.toArmeria(nettyRes);
                     if (responseHeaders.status() == HttpStatus.SWITCHING_PROTOCOLS) {
@@ -215,6 +216,7 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
                     final ByteBuf data = (ByteBuf) msg;
                     final int dataLength = data.readableBytes();
                     if (dataLength > 0) {
+                        assert res != null;
                         final long maxContentLength = res.maxContentLength();
                         final long writtenBytes = res.writtenBytes();
                         if (maxContentLength > 0 && writtenBytes > maxContentLength - dataLength) {

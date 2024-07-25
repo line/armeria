@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ThreadFactories;
@@ -75,6 +76,7 @@ import com.linecorp.armeria.server.file.AbstractHttpVfs;
 import com.linecorp.armeria.server.file.AggregatedHttpFile;
 import com.linecorp.armeria.server.file.FileService;
 import com.linecorp.armeria.server.file.HttpFile;
+import com.linecorp.armeria.server.file.HttpFileAttributes;
 import com.linecorp.armeria.server.file.HttpFileBuilder;
 import com.linecorp.armeria.server.file.HttpVfs;
 import com.linecorp.armeria.server.file.MediaTypeResolver;
@@ -422,11 +424,18 @@ public final class DocService extends SimpleDecoratingHttpService {
             if (specificationLoader.contains(path)) {
                 return HttpFile.from(specificationLoader.get(path).thenApply(file -> {
                     assert file != AggregatedHttpFile.nonExistent();
-                    final HttpFileBuilder builder = HttpFile.builder(file.content(),
-                                                                     file.attributes().lastModifiedMillis());
+                    final HttpData fileContent = file.content();
+                    final ResponseHeaders fileHeaders = file.headers();
+                    final HttpFileAttributes fileAttrs = file.attributes();
+                    assert fileContent != null;
+                    assert fileHeaders != null;
+                    assert fileAttrs != null;
+
+                    final HttpFileBuilder builder = HttpFile.builder(fileContent,
+                                                                     fileAttrs.lastModifiedMillis());
                     builder.autoDetectedContentType(false);
                     builder.clock(clock);
-                    builder.setHeaders(file.headers());
+                    builder.setHeaders(fileHeaders);
                     builder.setHeaders(additionalHeaders);
                     if (contentEncoding != null) {
                         builder.setHeader(HttpHeaderNames.CONTENT_ENCODING, contentEncoding);

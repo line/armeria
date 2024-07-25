@@ -156,7 +156,11 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 });
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
+
+                final Subscription upstream = this.upstream;
+                assert upstream != null;
                 upstream.cancel();
+
                 onError(ex);
             }
         }
@@ -169,6 +173,9 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
 
                 return;
             }
+
+            final Subscription upstream = this.upstream;
+            assert upstream != null;
 
             try {
                 if (cause != null) {
@@ -195,7 +202,9 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                     }
                 }
             } catch (Throwable ex) {
-                StreamMessageUtil.closeOrAbort(item, ex);
+                if (item != null) {
+                    StreamMessageUtil.closeOrAbort(item, ex);
+                }
                 upstream.cancel();
                 onError(ex);
             }
@@ -230,6 +239,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             if (n <= 0) {
                 onError(new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+                final Subscription upstream = this.upstream;
+                assert upstream != null;
                 upstream.cancel();
                 return;
             }
@@ -256,6 +267,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
                 }
 
                 requestedFromUpstream = IntMath.saturatedAdd(requestedFromUpstream, (int) toRequest);
+                final Subscription upstream = this.upstream;
+                assert upstream != null;
                 upstream.request(toRequest);
             }
         }
@@ -267,6 +280,8 @@ final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
             }
 
             canceled = true;
+            final Subscription upstream = this.upstream;
+            assert upstream != null;
             upstream.cancel();
         }
     }
