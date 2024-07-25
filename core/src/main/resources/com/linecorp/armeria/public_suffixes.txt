@@ -797,7 +797,6 @@ babymilk.jp
 bacgiang.vn
 backan.vn
 backdrop.jp
-backplaneapp.io
 baclieu.vn
 bacninh.vn
 badaddja.no
@@ -5272,7 +5271,6 @@ minoh.osaka.jp
 minokamo.gifu.jp
 minowa.nagano.jp
 mint
-mintere.site
 mints.ne.jp
 mircloud.host
 mircloud.ru
@@ -5413,7 +5411,6 @@ motoyama.kochi.jp
 mov
 movie
 movimiento.bo
-mozilla-iot.org
 mp
 mp.br
 mq
@@ -6606,7 +6603,6 @@ pb.leg.br
 pc.it
 pc.pl
 pccw
-pcloud.host
 pd.it
 pdns.page
 pe
@@ -7691,8 +7687,6 @@ shibukawa.gunma.jp
 shibuya.tokyo.jp
 shichikashuku.miyagi.jp
 shichinohe.aomori.jp
-shiftcrypto.dev
-shiftcrypto.io
 shiftedit.io
 shiga.jp
 shiiba.miyazaki.jp
