@@ -30,7 +30,10 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
- * A load balancer that selects a element from a list of candidates based on the given strategy.
+ * A load balancer that selects an element from a list of candidates based on the given strategy.
+ *
+ * @param <T> the type of the candidate to be selected
+ * @param <C> the type of the context used for selecting a candidate
  */
 @SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 @UnstableApi
@@ -51,11 +54,13 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> LoadBalancer<T, C> ofWeightedRoundRobin(Iterable<T> candidates,
-                                                          ToIntFunction<T> weightFunction) {
+    static <T, C> LoadBalancer<T, C> ofWeightedRoundRobin(Iterable<? extends T> candidates,
+                                                          ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
-        return new WeightedRoundRobinLoadBalancer<>(candidates, weightFunction);
+        //noinspection unchecked
+        return new WeightedRoundRobinLoadBalancer<>((Iterable<T>) candidates,
+                                                    (ToIntFunction<T>) weightFunction);
     }
 
     /**
@@ -110,8 +115,8 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> LoadBalancer<T, C> ofWeightedRandom(Iterable<T> candidates,
-                                                      ToIntFunction<T> weightFunction) {
+    static <T, C> LoadBalancer<T, C> ofWeightedRandom(Iterable<? extends T> candidates,
+                                                      ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
         return new WeightedRandomLoadBalancer<>(candidates, weightFunction);
@@ -145,11 +150,12 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> UpdatableLoadBalancer<T, C> ofRampingUp(Iterable<T> candidates,
-                                                          ToIntFunction<T> weightFunction) {
+    static <T, C> UpdatableLoadBalancer<T, C> ofRampingUp(Iterable<? extends T> candidates,
+                                                          ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
-        return LoadBalancer.<T, C>builderForRampingUp(candidates, weightFunction).build();
+        return LoadBalancer.<T, C>builderForRampingUp(candidates, weightFunction)
+                           .build();
     }
 
     /**
@@ -184,11 +190,12 @@ public interface LoadBalancer<T, C> extends SafeCloseable {
      *
      * @param weightFunction the weight function which returns the weight of the candidate.
      */
-    static <T, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(Iterable<T> candidates,
-                                                                         ToIntFunction<T> weightFunction) {
+    static <T, C> RampingUpLoadBalancerBuilder<T, C> builderForRampingUp(Iterable<? extends T> candidates,
+                                                                         ToIntFunction<? super T> weightFunction) {
         requireNonNull(candidates, "candidates");
         requireNonNull(weightFunction, "weightFunction");
-        return new RampingUpLoadBalancerBuilder<>(candidates, weightFunction);
+        //noinspection unchecked
+        return new RampingUpLoadBalancerBuilder<>((Iterable<T>) candidates, (ToIntFunction<T>) weightFunction);
     }
 
     /**

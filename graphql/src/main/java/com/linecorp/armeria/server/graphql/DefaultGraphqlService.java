@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
@@ -49,7 +50,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
     private final GraphQL graphQL;
 
     private final Function<? super ServiceRequestContext,
-                           ? extends DataLoaderRegistry> dataLoaderRegistryFunction;
+            ? extends DataLoaderRegistry> dataLoaderRegistryFunction;
 
     private final boolean useBlockingTaskExecutor;
 
@@ -111,25 +112,35 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private HttpResponse execute(
             ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
-        final CompletableFuture<ExecutionResult> future = executeGraphql(ctx, input);
-        return HttpResponse.of(
-                future.handle((executionResult, cause) -> {
-                    if (executionResult.getData() instanceof Publisher) {
-                        logger.warn("executionResult.getData() returns a {} that is not supported yet.",
-                                    executionResult.getData().toString());
+        try {
+            final CompletableFuture<ExecutionResult> future = executeGraphql(ctx, input);
+            return HttpResponse.of(
+                    future.handle((executionResult, cause) -> {
+                        if (cause != null) {
+                            cause = Exceptions.peel(cause);
+                            return errorHandler.handle(ctx, input, null, cause);
+                        }
 
-                        return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
-                                                   produceType,
-                                                   toSpecification(
-                                                           "Use GraphQL over WebSocket for subscription"));
-                    }
+                        if (executionResult.getData() instanceof Publisher) {
+                            logger.warn("Use GraphQL over WebSocket for subscription. " +
+                                        "executionResult.getData(): {}", executionResult.getData().toString());
 
-                    if (executionResult.getErrors().isEmpty() && cause == null) {
-                        return HttpResponse.ofJson(produceType, executionResult.toSpecification());
-                    }
+                            return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
+                                                       produceType,
+                                                       toSpecification(
+                                                               "Use GraphQL over WebSocket for subscription"));
+                        }
 
-                    return errorHandler.handle(ctx, input, executionResult, cause);
-                }));
+                        if (executionResult.getErrors().isEmpty()) {
+                            return HttpResponse.ofJson(produceType, executionResult.toSpecification());
+                        }
+
+                        return errorHandler.handle(ctx, input, executionResult, null);
+                    }));
+        } catch (Throwable cause) {
+            cause = Exceptions.peel(cause);
+            return errorHandler.handle(ctx, input, null, cause);
+        }
     }
 
     static Map<String, Object> toSpecification(String message) {

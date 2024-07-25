@@ -16,8 +16,11 @@
 
 package com.linecorp.armeria.internal.server.grpc;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.applyExceptionHandler;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil.serializeTrailersAsMessage;
 import static java.util.Objects.requireNonNull;
 
@@ -213,24 +216,29 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     public final void close(Throwable exception, boolean cancelled) {
         exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        final Status status = exceptionHandler.apply(ctx, exception, metadata);
-        close(new ServerStatusAndMetadata(status, metadata, false, cancelled), exception);
+        final Status status = Status.fromThrowable(exception);
+        close(status, metadata, cancelled, exception);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
-        if (status.getCause() == null) {
-            close(new ServerStatusAndMetadata(status, metadata, false));
+        close(status, metadata, false, null);
+    }
+
+    private void close(Status status, Metadata metadata, boolean cancelled,
+                       @Nullable Throwable originalCause) {
+        final Throwable cause = status.getCause();
+        if (cause == null) {
+            close(new ServerStatusAndMetadata(status, metadata, false, cancelled));
             return;
         }
-        Status newStatus = exceptionHandler.apply(ctx, status.getCause(), metadata);
-        assert newStatus != null;
+        Status newStatus = applyExceptionHandler(ctx, exceptionHandler, status, cause, metadata);
         if (status.getDescription() != null) {
             newStatus = newStatus.withDescription(status.getDescription());
         }
         final ServerStatusAndMetadata statusAndMetadata =
-                new ServerStatusAndMetadata(newStatus, metadata, false);
-        close(statusAndMetadata);
+                new ServerStatusAndMetadata(newStatus, metadata, false, cancelled);
+        close(statusAndMetadata, firstNonNull(originalCause, cause));
     }
 
     public final void close(ServerStatusAndMetadata statusAndMetadata) {
@@ -595,12 +603,6 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
         responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
-    }
-
-    private static Metadata generateMetadataFromThrowable(Throwable exception) {
-        @Nullable
-        final Metadata metadata = Status.trailersFromThrowable(exception);
-        return metadata != null ? metadata : new Metadata();
     }
 
     @Nullable

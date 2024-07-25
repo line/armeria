@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 
@@ -31,6 +32,8 @@ import io.netty.channel.EventLoop;
 final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         implements BiFunction<AggregatedHttpRequest, Throwable, Void> {
 
+    @Nullable
+    private AggregatedHttpRequest request;
     private boolean cancelled;
 
     AggregatedHttpRequestHandler(Channel ch, ClientHttpObjectEncoder encoder,
@@ -58,32 +61,51 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         }
 
         assert request != null;
-        if (!tryInitialize()) {
-            request.content().close();
+        final RequestHeaders merged = mergedRequestHeaders(request.headers());
+        final boolean needs100Continue = needs100Continue(merged);
+        final HttpData content = request.content();
+        if (needs100Continue && content.isEmpty()) {
+            content.close();
+            failRequest(new IllegalArgumentException(
+                    "an empty content is not allowed with Expect: 100-continue header"));
             return;
         }
 
-        writeHeaders(request.headers());
+        if (!tryInitialize()) {
+            content.close();
+            return;
+        }
+
+        writeHeaders(merged, needs100Continue);
         if (cancelled) {
-            request.content().close();
+            content.close();
             // If the headers size exceeds the limit, the headers write fails immediately.
             return;
         }
 
-        HttpData content = request.content();
+        if (!needs100Continue) {
+            writeDataAndTrailers(request);
+        } else {
+            this.request = request;
+        }
+        channel().flush();
+    }
+
+    private void writeDataAndTrailers(AggregatedHttpRequest request) {
+        final HttpData content = request.content();
         final boolean contentEmpty = content.isEmpty();
         final HttpHeaders trailers = request.trailers();
         final boolean trailersEmpty = trailers.isEmpty();
         if (!contentEmpty) {
             if (trailersEmpty) {
-                content = content.withEndOfStream();
+                writeData(content.withEndOfStream());
+            } else {
+                writeData(content);
             }
-            writeData(content);
         }
         if (!trailersEmpty) {
             writeTrailers(trailers);
         }
-        channel().flush();
     }
 
     @Override
@@ -94,5 +116,18 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
     @Override
     void cancel() {
         cancelled = true;
+    }
+
+    @Override
+    void resume() {
+        assert request != null;
+        writeDataAndTrailers(request);
+        channel().flush();
+    }
+
+    @Override
+    void discardRequestBody() {
+        assert request != null;
+        request.content().close();
     }
 }

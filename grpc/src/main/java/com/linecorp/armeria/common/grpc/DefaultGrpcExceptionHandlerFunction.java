@@ -45,7 +45,10 @@ enum DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction
      * well and the protocol package.
      */
     @Override
-    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+    public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+        if (status.getCode() != Code.UNKNOWN) {
+            return status;
+        }
         final Status s = Status.fromThrowable(cause);
         if (s.getCode() != Code.UNKNOWN) {
             return s;

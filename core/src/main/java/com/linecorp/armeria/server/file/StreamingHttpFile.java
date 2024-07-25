@@ -79,6 +79,7 @@ public abstract class StreamingHttpFile<T extends Closeable> extends AbstractHtt
         super(contentType, clock, dateEnabled, lastModifiedEnabled, entityTagFunction, headers);
     }
 
+    @Nullable
     @Override
     protected final HttpResponse doRead(ResponseHeaders headers, long length,
                                         Executor fileReadExecutor, ByteBufAllocator alloc) throws IOException {

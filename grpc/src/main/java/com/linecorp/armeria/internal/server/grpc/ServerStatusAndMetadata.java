@@ -30,12 +30,12 @@ public final class ServerStatusAndMetadata extends StatusAndMetadata {
     // Set true if response content log should be written
     private boolean setResponseContent;
 
-    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata,  boolean setResponseContent) {
+    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata, boolean setResponseContent) {
         super(status, metadata);
         this.setResponseContent = setResponseContent;
     }
 
-    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata,  boolean setResponseContent,
+    public ServerStatusAndMetadata(Status status, @Nullable Metadata metadata, boolean setResponseContent,
                                    boolean shouldCancel) {
         super(status, metadata);
         this.setResponseContent = setResponseContent;

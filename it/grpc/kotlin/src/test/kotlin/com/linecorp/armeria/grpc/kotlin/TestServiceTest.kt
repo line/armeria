@@ -206,7 +206,7 @@ class TestServiceTest {
                 .service(
                     GrpcService.builder()
                         .addService(TestServiceImpl())
-                        .exceptionHandler { _, throwable, _ ->
+                        .exceptionHandler { _, _, throwable, _ ->
                             when (throwable) {
                                 is AuthError -> {
                                     Status.UNAUTHENTICATED

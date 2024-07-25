@@ -17,14 +17,12 @@
 package com.linecorp.armeria.client.endpoint;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientRequestContext>>
         extends AbstractEndpointSelector {
@@ -49,9 +47,8 @@ final class DefaultEndpointSelector<T extends LoadBalancer<Endpoint, ClientReque
     }
 
     @Override
-    protected CompletableFuture<Void> updateNewEndpoints(List<Endpoint> endpoints) {
+    protected void updateNewEndpoints(List<Endpoint> endpoints) {
         loadBalancer = loadBalancerFactory.newLoadBalancer(loadBalancer, endpoints);
-        return UnmodifiableFuture.completedFuture(null);
     }
 
     @Override

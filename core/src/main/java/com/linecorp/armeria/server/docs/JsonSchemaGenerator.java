@@ -77,7 +77,7 @@ final class JsonSchemaGenerator {
                 ImmutableMap.builderWithExpectedSize(serviceSpecification.structs().size());
         for (StructInfo struct : serviceSpecification.structs()) {
             typeSignatureToStructMappingBuilder.put(struct.name(), struct);
-            if (struct.alias() != null) {
+            if (struct.alias() != null && !struct.alias().equals(struct.name())) {
                 // TypeSignature.signature() could be StructInfo.alias() if the type is a protobuf Message.
                 typeSignatureToStructMappingBuilder.put(struct.alias(), struct);
             }

@@ -17,6 +17,8 @@
 package com.linecorp.armeria.internal.common.grpc;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.fromThrowable;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -119,9 +121,9 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             try {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
-                final Metadata metadata = new Metadata();
-                transportStatusListener.transportReportStatus(exceptionHandler.apply(ctx, t, metadata),
-                                                              metadata);
+                final Metadata metadata = generateMetadataFromThrowable(t);
+                transportStatusListener.transportReportStatus(
+                        fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
                 return;
             }
         }
@@ -147,8 +149,9 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Override
     public void processOnError(Throwable cause) {
-        final Metadata metadata = new Metadata();
-        transportStatusListener.transportReportStatus(exceptionHandler.apply(ctx, cause, metadata), metadata);
+        final Metadata metadata = generateMetadataFromThrowable(cause);
+        transportStatusListener.transportReportStatus(
+                fromThrowable(ctx, exceptionHandler, cause, metadata), metadata);
     }
 
     @Override

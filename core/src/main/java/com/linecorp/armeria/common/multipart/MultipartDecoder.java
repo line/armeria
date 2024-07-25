@@ -144,6 +144,8 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, StreamDecoder<H
         if (!delegatedSubscriberUpdater.compareAndSet(this, null, multipartSubscriber)) {
             // Avoid calling method on late multipartSubscriber.
             // Because it's not static, so it will affect MultipartDecoder.
+            final MultipartSubscriber delegatedSubscriber = this.delegatedSubscriber;
+            assert delegatedSubscriber != null;
             SubscriberUtil.failLateSubscriber(executor, subscriber, delegatedSubscriber.subscriber);
             return;
         }
@@ -279,13 +281,13 @@ final class MultipartDecoder implements StreamMessage<BodyPart>, StreamDecoder<H
             }
         }
 
-        @SuppressWarnings("UnstableApiUsage")
         private void request0(long n) {
             final long oldDemand = demandOfMultipart;
             demandOfMultipart = LongMath.saturatedAdd(oldDemand, n);
             if (oldDemand == 0) {
                 // We want first body publisher
                 if (currentExposedBodyPartPublisher == null) {
+                    assert subscription != null;
                     //This will trigger DecodedHttpStreamMessage's upstream.
                     subscription.request(1);
                 } else {

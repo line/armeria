@@ -50,6 +50,7 @@ import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.Unwrappable;
@@ -225,6 +226,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
                 params.clientType(), optionsBuilder.build());
     }
 
+    @Nullable
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
         final T unwrapped = super.unwrap(client, type);
