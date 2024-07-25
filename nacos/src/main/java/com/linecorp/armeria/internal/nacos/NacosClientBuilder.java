@@ -62,39 +62,35 @@ public final class NacosClientBuilder implements NacosConfigSetters<NacosClientB
 
     @Override
     public NacosClientBuilder namespaceId(String namespaceId) {
-        this.namespaceId = requireNonNull(namespaceId);
-
+        this.namespaceId = requireNonNull(namespaceId, "namespaceId");
         return this;
     }
 
     @Override
     public NacosClientBuilder groupName(String groupName) {
-        this.groupName = requireNonNull(groupName);
-
+        this.groupName = requireNonNull(groupName, "groupName");
         return this;
     }
 
     @Override
     public NacosClientBuilder clusterName(String clusterName) {
-        this.clusterName = requireNonNull(clusterName);
-
+        this.clusterName = requireNonNull(clusterName, "clusterName");
         return this;
     }
 
     @Override
     public NacosClientBuilder app(String app) {
-        this.app = requireNonNull(app);
-
+        this.app = requireNonNull(app, "app");
         return this;
     }
 
     @Override
     public NacosClientBuilder nacosApiVersion(String nacosApiVersion) {
+        requireNonNull(nacosApiVersion, "nacosApiVersion");
         checkArgument(NACOS_API_VERSION_PATTERN.matcher(nacosApiVersion).matches(),
                       "nacosApiVersion: %s (expected: a version string that starts with 'v', e.g. 'v1')",
                       nacosApiVersion);
-        this.nacosApiVersion = requireNonNull(nacosApiVersion, "nacosApiVersion");
-
+        this.nacosApiVersion = nacosApiVersion;
         return this;
     }
 

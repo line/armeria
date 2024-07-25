@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.nacos;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -39,6 +40,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.Exceptions;
 
 /**
@@ -50,7 +52,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
     private static final String NACOS_ACCESS_TOKEN_CACHE_KEY = "NACOS_ACCESS_TOKEN_CACHE_KEY";
 
     static Function<? super HttpClient, LoginClient> newDecorator(WebClient webClient,
-                                                                         String username, String password) {
+                                                                  String username, String password) {
         return delegate -> new LoginClient(delegate, webClient, username, password);
     }
 
@@ -62,38 +64,27 @@ final class LoginClient extends SimpleDecoratingHttpClient {
     private final AsyncLoadingCache<String, LoginResult> tokenCache =
             Caffeine.newBuilder()
                     .maximumSize(1)
-                    .expireAfter(
-                            new Expiry<String, LoginResult>() {
-                                @Override
-                                public long expireAfterCreate(String key, LoginResult loginResult,
-                                                              long currentTime) {
-                                    return ttlToNanoSeconds(loginResult.tokenTtl);
-                                }
-
-                                @Override
-                                public long expireAfterUpdate(String key, LoginResult loginResult,
-                                                              long currentTime, long currentDuration) {
-                                    return ttlToNanoSeconds(loginResult.tokenTtl);
-                                }
-
-                                @Override
-                                public long expireAfterRead(String key, LoginResult loginResult,
-                                                            long currentTime, long currentDuration) {
-                                    return currentDuration;
-                                }
-
-                                private long ttlToNanoSeconds(int ttlInSeconds) {
-                                    return ttlInSeconds * 1_000_000_000L;
-                                }
-                            })
-                    .buildAsync((key, executor) -> {
-                        try {
-                            return loginInternal();
-                        } catch (Exception e) {
-                            throw new RuntimeException(
-                                    e);
+                    .expireAfter(new Expiry<String, LoginResult>() {
+                        @Override
+                        public long expireAfterCreate(String key, LoginResult loginResult,
+                                                      long currentTime) {
+                            return TimeUnit.SECONDS.toNanos(loginResult.tokenTtl);
                         }
-                    });
+
+                        @Override
+                        public long expireAfterUpdate(String key, LoginResult loginResult,
+                                                      long currentTime, long currentDuration) {
+                            return TimeUnit.SECONDS.toNanos(loginResult.tokenTtl);
+                        }
+
+                        @Override
+                        public long expireAfterRead(String key, LoginResult loginResult,
+                                                    long currentTime, long currentDuration) {
+                            return currentDuration;
+                        }
+
+                    })
+                    .buildAsync((key, executor) -> loginInternal());
 
     LoginClient(HttpClient delegate, WebClient webClient, String username, String password) {
         super(delegate);
@@ -106,7 +97,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
                                          .toQueryString();
     }
 
-    private CompletableFuture<String> login() {
+    private CompletableFuture<AuthToken> login() {
         return tokenCache.get(NACOS_ACCESS_TOKEN_CACHE_KEY)
                          .thenApply(loginResult -> loginResult.accessToken);
     }
@@ -123,10 +114,11 @@ final class LoginClient extends SimpleDecoratingHttpClient {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
         final CompletableFuture<HttpResponse> future = login().thenApply(accessToken -> {
             try {
-                final HttpRequest newReq = req.mapHeaders(headers -> headers.toBuilder()
-                                                                            .set(HttpHeaderNames.AUTHORIZATION,
-                                                                                 "Bearer " + accessToken)
-                                                                            .build());
+                final HttpRequest newReq = req.mapHeaders(headers -> {
+                    return headers.toBuilder()
+                                  .set(HttpHeaderNames.AUTHORIZATION, accessToken.asHeaderValue())
+                                  .build();
+                });
                 ctx.updateRequest(newReq);
                 return delegate.execute(ctx, newReq);
             } catch (Exception e) {
@@ -139,7 +131,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private static final class LoginResult {
-        private final String accessToken;
+        private final AuthToken accessToken;
 
         private final int tokenTtl;
 
@@ -149,7 +141,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
         @JsonCreator
         LoginResult(@JsonProperty("accessToken") String accessToken, @JsonProperty("tokenTtl") Integer tokenTtl,
                     @JsonProperty("globalAdmin") @Nullable Boolean globalAdmin) {
-            this.accessToken = accessToken;
+            this.accessToken = AuthToken.ofOAuth2(accessToken);
             this.tokenTtl = tokenTtl;
             this.globalAdmin = globalAdmin;
         }
