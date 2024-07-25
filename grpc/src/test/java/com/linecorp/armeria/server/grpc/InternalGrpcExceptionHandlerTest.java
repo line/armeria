@@ -120,9 +120,6 @@ class InternalGrpcExceptionHandlerTest {
                     break;
                 case "throwStatus":
                     throw Status.INTERNAL.withCause(exception).asRuntimeException();
-                case "onError.ArmeriaStatusException":
-                case "throw.ArmeriaStatusException":
-
                 default:
                     throw new IllegalArgumentException("unknown payload");
             }
