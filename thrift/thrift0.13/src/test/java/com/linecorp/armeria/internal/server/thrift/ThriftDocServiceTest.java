@@ -24,7 +24,6 @@ import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.junit.ClassRule;
@@ -40,11 +39,10 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
-import com.linecorp.armeria.internal.ApacheClientUtils;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.Entry;
 import com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.EntryBuilder;
 import com.linecorp.armeria.internal.testing.TestUtil;
@@ -256,10 +254,9 @@ public class ThriftDocServiceTest {
 
     @Test
     public void testMethodNotAllowed() throws Exception {
-        final Map.Entry<String, String> res =
-                ApacheClientUtils.makeApacheHttpRequest(server.httpUri() + "/docs/specification.json",
-                                                        HttpMethod.POST);
-        assertThat(res.getKey()).contains("HTTP/1.1");
-        assertThat(res.getValue()).contains("405 Method Not Allowed");
+        final AggregatedHttpResponse res =
+                WebClient.of(server.uri(SessionProtocol.H1C, SerializationFormat.NONE))
+                         .blocking().post("/docs/specification.json", "");
+        assertThat(res.status().code()).isEqualTo(405);
     }
 }

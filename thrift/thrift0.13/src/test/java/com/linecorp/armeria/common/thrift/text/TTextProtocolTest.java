@@ -34,8 +34,6 @@ import static net.javacrumbs.jsonunit.core.Option.IGNORING_ARRAY_ORDER;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.hasToString;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -61,6 +59,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Resources;
 
 import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
+import com.linecorp.armeria.internal.server.thrift.ThriftVersionDetector;
 
 import testing.thrift.debug.RpcDebugService;
 import testing.thrift.debug.RpcDebugService.doDebug_args;
@@ -141,14 +140,18 @@ class TTextProtocolTest {
         msg1.write(new TTextProtocol(new TIOStreamTransport(baos), true));
         final byte[] bytes = baos.toByteArray();
 
-        // ignore y since it can be serialized to either 1 (<0.19) or ALPHA (>=0.19)
+        // y can be serialized to either 1 (<0.19) or ALPHA (>=0.19)
         assertThatJson(CR_PATTERN.matcher(baos.toString()).replaceAll(""))
                 .when(IGNORING_ARRAY_ORDER)
                 .whenIgnoringPaths("y")
                 .isEqualTo(namedEnumSerialized);
-        assertThatJson(CR_PATTERN.matcher(baos.toString()).replaceAll(""))
-                .node("y")
-                .matches(anyOf(hasToString("1"), hasToString("ALPHA")));
+        if (ThriftVersionDetector.majorVersion() == 0 && ThriftVersionDetector.minorVersion() < 19) {
+            assertThatJson(CR_PATTERN.matcher(baos.toString()).replaceAll(""))
+                    .node("y").isEqualTo("1");
+        } else {
+            assertThatJson(CR_PATTERN.matcher(baos.toString()).replaceAll(""))
+                    .node("y").isEqualTo("ALPHA");
+        }
 
         // Deserialize that string back to a thrift message.
         final ByteArrayInputStream bais2 = new ByteArrayInputStream(bytes);

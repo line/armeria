@@ -16,26 +16,12 @@
 
 package com.linecorp.armeria.internal;
 
-import java.io.IOException;
-import java.util.AbstractMap;
-import java.util.Map.Entry;
-
 import javax.net.ssl.SSLContext;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.conn.ssl.TrustStrategy;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContextBuilder;
-import org.apache.http.util.EntityUtils;
 import org.apache.thrift.transport.THttpClient;
-
-import com.linecorp.armeria.common.HttpMethod;
 
 public final class ApacheClientUtils {
 
@@ -53,31 +39,6 @@ public final class ApacheClientUtils {
                                           .setSSLContext(sslContext)
                                           .build());
         } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static Entry<String, String> makeApacheHttpRequest(String uri, HttpMethod method) {
-        final HttpUriRequest req;
-        switch (method) {
-            case GET:
-                req = new HttpGet(uri);
-                break;
-            case DELETE:
-                req = new HttpDelete(uri);
-                break;
-            case POST:
-                req = new HttpPost(uri);
-                break;
-            default:
-                throw new UnsupportedOperationException("Unsupported HTTP method: " + method);
-        }
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            try (CloseableHttpResponse res = hc.execute(req)) {
-                return new AbstractMap.SimpleEntry<>(res.getProtocolVersion().toString(),
-                                                     EntityUtils.toString(res.getEntity()));
-            }
-        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }

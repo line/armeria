@@ -18,24 +18,28 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.EnumSet;
-import java.util.Map.Entry;
-
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.internal.ApacheClientUtils;
 
 import io.netty.util.AsciiString;
 import testing.thrift.main.SleepService;
 
-public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
+class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
 
     @Override
     protected TTransport newTransport(String uri, HttpHeaders headers) throws TTransportException {
@@ -47,21 +51,20 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
         return client;
     }
 
-    @Test
-    public void testNonPostRequest() throws Exception {
-        final EnumSet<HttpMethod> httpMethods = EnumSet.of(HttpMethod.GET, HttpMethod.DELETE);
-        for (HttpMethod httpMethod: httpMethods) {
-            final Entry<String, String> res =
-                    ApacheClientUtils.makeApacheHttpRequest(newUri("http", "/hello"), httpMethod);
-            assertThat(res.getKey()).contains("HTTP/1.1");
-            assertThat(res.getValue()).contains("405 Method Not Allowed");
-            assertThat(res.getValue()).isNotEqualTo("Hello, world!");
-        }
+    @ParameterizedTest
+    @EnumSource(value = HttpMethod.class, names = {"DELETE", "GET"})
+    void testNonPostRequest(HttpMethod method) throws Exception {
+        final AggregatedHttpResponse res =
+                WebClient.of(server.uri(SessionProtocol.H1C, SerializationFormat.NONE))
+                         .blocking()
+                         .execute(HttpRequest.of(method, "/hello"));
+        assertThat(res.status().code()).isEqualTo(405);
+        assertThat(res.contentUtf8()).doesNotContain("Hello, world!");
     }
 
     @Test
-    @Ignore
-    public void testPipelinedHttpInvocation() throws Exception {
+    @Disabled
+    void testPipelinedHttpInvocation() throws Exception {
         // FIXME: Enable this test once we have a working Thrift-over-HTTP/1 client with pipelining.
         try (TTransport transport = newTransport("http", "/sleep")) {
             final SleepService.Client client = new SleepService.Client.Factory().getClient(

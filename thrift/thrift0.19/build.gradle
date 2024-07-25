@@ -8,7 +8,7 @@ dependencies {
 
     testImplementation project(':prometheus1')
 
-    // thrift api depends on httpclient4
+    // thrift api depends on httpclient5
     testImplementation libs.apache.httpclient5
 
     // Jetty, for testing TServlet interoperability.
