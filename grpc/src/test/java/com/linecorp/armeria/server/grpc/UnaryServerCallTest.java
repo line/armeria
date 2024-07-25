@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.util.EventLoopGroups;
@@ -329,7 +330,7 @@ class UnaryServerCallTest {
                         ResponseHeaders.builder(HttpStatus.OK)
                                        .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                        .build(),
-                        /* exceptionMappings */ null,
+                        GrpcExceptionHandlerFunction.of(),
                         /* blockingExecutor */ null,
                         /* autoCompress */ false,
                         /* useMethodMarshaller */ false);
@@ -375,7 +376,7 @@ class UnaryServerCallTest {
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build(),
-                /* exceptionMappings */ null,
+                GrpcExceptionHandlerFunction.of(),
                 /* blockingExecutor */ null,
                 /* autoCompress */ false,
                 /* useMethodMarshaller */ false);

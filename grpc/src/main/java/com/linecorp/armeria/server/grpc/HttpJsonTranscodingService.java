@@ -506,6 +506,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                           .contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
     }
 
+    @Nullable
     @Override
     public HttpEndpointSpecification httpEndpointSpecification(Route route) {
         requireNonNull(route, "route");
@@ -537,6 +538,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return routes;
     }
 
+    @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         final TranscodingSpec spec = routeAndSpecs.get(ctx.config().mappedRoute());

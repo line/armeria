@@ -161,11 +161,14 @@ public final class SamlIdentityProviderConfigBuilder {
      * Builds a {@link SamlIdentityProviderConfig}.
      */
     SamlIdentityProviderConfig build(CredentialResolverAdapter credentialResolver) {
-        checkState(entityId != null, "entity ID of the identity provider is not set");
+        checkState(entityId != null, "entity ID of the identity provider is not set.");
+        checkState(ssoEndpoint != null, "SSO endpoint is not set.");
 
         // Use the entityId as a default key name.
         final Credential signing = credentialResolver.apply(firstNonNull(signingKey, entityId));
+        checkState(signing != null, "CredentialResolver.apply() returned null for a signing key.");
         final Credential encryption = credentialResolver.apply(firstNonNull(encryptionKey, entityId));
+        checkState(encryption != null, "CredentialResolver.apply() returned null for an encryption key.");
 
         return new SamlIdentityProviderConfig(entityId,
                                               signing,

@@ -46,7 +46,9 @@ final class TomcatUtil {
             }
         };
 
-        return configUrlRef.get();
+        final URL url = configUrlRef.get();
+        assert url != null;
+        return url;
     }
 
     static String noDefaultWebXmlPath() {

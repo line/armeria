@@ -522,6 +522,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         if (compressor != Codec.Identity.NONE || InternalMetadata.headerCount(metadata) > 0) {
             headers = headers.withMutations(builder -> {
                 if (compressor != Codec.Identity.NONE) {
+                    assert compressor != null;
                     builder.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
                 }
                 MetadataUtil.fillHeaders(metadata, builder);
@@ -548,7 +549,7 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     protected final HttpObject responseTrailers(ServiceRequestContext ctx, Status status,
-                                                Metadata metadata, boolean trailersOnly) {
+                                                @Nullable Metadata metadata, boolean trailersOnly) {
         final HttpHeadersBuilder defaultTrailers =
                 trailersOnly ? defaultResponseHeaders.toBuilder() : HttpHeaders.builder();
         final HttpHeaders trailers = statusToTrailers(ctx, defaultTrailers, status, metadata);
@@ -564,7 +565,8 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     // Returns ResponseHeaders if headersSent == false or HttpHeaders otherwise.
     public static HttpHeaders statusToTrailers(
-            ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
+            ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder,
+            Status status, @Nullable Metadata metadata) {
         try {
             MetadataUtil.fillHeaders(metadata, trailersBuilder);
         } catch (Exception e) {

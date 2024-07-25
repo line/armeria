@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
@@ -284,7 +285,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                 } else if (appName != null) {
                     filter = instanceInfo -> appName.equals(instanceInfo.getAppName());
                 } else {
-                    filter = instanceInfo -> instanceId.equals(instanceInfo.getInstanceId());
+                    filter = instanceInfo -> Objects.equals(instanceId, instanceInfo.getInstanceId());
                 }
             }
             final StringJoiner joiner = new StringJoiner(",");

@@ -133,6 +133,7 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
 
     private final EurekaWebClient client;
     private final InstanceInfo initialInstanceInfo;
+    @Nullable
     private InstanceInfo instanceInfo;
     @Nullable
     private volatile ScheduledFuture<?> heartBeatFuture;
@@ -335,8 +336,9 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         if (heartBeatFuture != null) {
             heartBeatFuture.cancel(false);
         }
+        final InstanceInfo instanceInfo = this.instanceInfo;
         final String appName = this.appName;
-        if (appName != null) {
+        if (instanceInfo != null && appName != null) {
             final String instanceId = instanceInfo.getInstanceId();
             assert instanceId != null;
             client.cancel(appName, instanceId).aggregate().handle((res, cause) -> {

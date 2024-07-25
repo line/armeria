@@ -217,10 +217,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
+            final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
+            assert defaultHeaders != null;
             return HttpResponse.of(
                     (ResponseHeaders) AbstractServerCall.statusToTrailers(
                             ctx,
-                            defaultHeaders.get(serializationFormat).toBuilder(),
+                            defaultHeaders.toBuilder(),
                             Status.UNIMPLEMENTED.withDescription(
                                     "Method not found: " + ctx.config().route().patternString()),
                             new Metadata()));
@@ -241,9 +243,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(method);
                     assert exceptionHandler != null;
                     final Status status = Status.INVALID_ARGUMENT.withCause(e);
+                    final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
+                    assert defaultHeaders != null;
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
-                                    ctx, defaultHeaders.get(serializationFormat).toBuilder(),
+                                    ctx, defaultHeaders.toBuilder(),
                                     applyExceptionHandler(ctx, exceptionHandler, status, e, metadata),
                                     metadata));
                 }
@@ -339,9 +343,14 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             ServiceRequestContext ctx, HttpRequest req,
             HttpResponse res, @Nullable CompletableFuture<HttpResponse> resFuture,
             SerializationFormat serializationFormat, @Nullable Executor blockingExecutor) {
+
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
-        final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(
-                methodDef);
+        final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(methodDef);
+        assert exceptionHandler != null;
+        final GrpcJsonMarshaller jsonMarshaller = jsonMarshallers.get(methodDescriptor.getServiceName());
+        final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
+        assert defaultHeaders != null;
+
         if (methodDescriptor.getType() == MethodType.UNARY) {
             assert resFuture != null;
             return new UnaryServerCall<>(
@@ -356,9 +365,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     maxResponseMessageLength,
                     ctx,
                     serializationFormat,
-                    jsonMarshallers.get(methodDescriptor.getServiceName()),
+                    jsonMarshaller,
                     unsafeWrapRequestBuffers,
-                    defaultHeaders.get(serializationFormat),
+                    defaultHeaders,
                     exceptionHandler,
                     blockingExecutor,
                     autoCompression,
@@ -375,9 +384,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     maxResponseMessageLength,
                     ctx,
                     serializationFormat,
-                    jsonMarshallers.get(methodDescriptor.getServiceName()),
+                    jsonMarshaller,
                     unsafeWrapRequestBuffers,
-                    defaultHeaders.get(serializationFormat),
+                    defaultHeaders,
                     exceptionHandler,
                     blockingExecutor,
                     autoCompression,
@@ -412,6 +421,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         }
     }
 
+    @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         // method could be set in HttpJsonTranscodingService.

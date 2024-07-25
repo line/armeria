@@ -84,7 +84,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                         ServiceRequestContext ctx, SerializationFormat serializationFormat,
                         @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
                         ResponseHeaders defaultHeaders,
-                        @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                        GrpcExceptionHandlerFunction exceptionHandler,
                         @Nullable Executor blockingExecutor, boolean autoCompress,
                         boolean useMethodMarshaller) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,

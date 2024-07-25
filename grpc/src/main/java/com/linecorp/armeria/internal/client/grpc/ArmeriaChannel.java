@@ -239,6 +239,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         assert reqTarget != null : path;
         RequestTargetCache.putForClient(path, reqTarget);
 
+        final RequestOptions requestOptions = REQUEST_OPTIONS_MAP.get(methodDescriptor.getType());
+        assert requestOptions != null;
+
         return new DefaultClientRequestContext(
                 meterRegistry,
                 sessionProtocol,
@@ -248,7 +251,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 options(),
                 req,
                 null,
-                REQUEST_OPTIONS_MAP.get(methodDescriptor.getType()),
+                requestOptions,
                 System.nanoTime(),
                 SystemInfo.currentTimeMicros());
     }

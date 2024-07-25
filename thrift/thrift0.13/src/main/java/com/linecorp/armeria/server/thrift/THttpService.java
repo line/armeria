@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
@@ -504,8 +505,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         try (HttpData content = req.content()) {
             final ByteBuf buf = content.byteBuf();
             final TByteBufTransport inTransport = new TByteBufTransport(buf);
-            final TProtocol inProto = requestProtocolFactories.get(serializationFormat)
-                                                              .getProtocol(inTransport);
+            final TProtocolFactory protocolFactory = requestProtocolFactories.get(serializationFormat);
+            assert protocolFactory != null;
+            final TProtocol inProto = protocolFactory.getProtocol(inTransport);
 
             final TMessage header;
             final TBase<?, ?> args;
@@ -525,7 +527,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 if (e instanceof TProtocolException &&
                     ((TProtocolException) e).getType() == TProtocolException.SIZE_LIMIT) {
                     httpStatus = HttpStatus.REQUEST_ENTITY_TOO_LARGE;
-                    message = e.getMessage();
+                    message = firstNonNull(e.getMessage(), httpStatus.toString());
                 } else {
                     httpStatus = HttpStatus.BAD_REQUEST;
                     message = "Failed to decode a " + serializationFormat + " header";
@@ -774,8 +776,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = responseProtocolFactories.get(serializationFormat)
-                                                                .getProtocol(transport);
+            final TProtocolFactory protocolFactory = responseProtocolFactories.get(serializationFormat);
+            assert protocolFactory != null;
+            final TProtocol outProto = protocolFactory.getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.REPLY, seqId);
             outProto.writeMessageBegin(header);
             result.write(outProto);
@@ -822,8 +825,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = responseProtocolFactories.get(serializationFormat)
-                                                                .getProtocol(transport);
+            final TProtocolFactory protocolFactory = responseProtocolFactories.get(serializationFormat);
+            assert protocolFactory != null;
+            final TProtocol outProto = protocolFactory.getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.EXCEPTION, seqId);
             outProto.writeMessageBegin(header);
             appException.write(outProto);
