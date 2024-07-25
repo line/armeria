@@ -186,6 +186,8 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
         }
 
         void nextSource() {
+            final Subscription upstream = this.upstream;
+            assert upstream != null;
             upstream.request(1);
         }
     }
@@ -235,6 +237,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
             // Reset 'completed' to subscribe to new Publisher
             currentPublisherCompleted = false;
             setUpstreamSubscription(subscription);
+            assert outerSubscriber != null;
             outerSubscriber.inInnerOnSubscribe = false;
         }
 
@@ -270,6 +273,7 @@ final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
                 return;
             }
             currentPublisherCompleted = true;
+            assert outerSubscriber != null;
             if (outerSubscriber.completed) {
                 downstream.onComplete();
             } else {

@@ -67,6 +67,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         return "sysprops";
     }
 
+    @Nullable
     @Override
     public Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
         final String spec = getNormalized("verboseExceptions");
@@ -82,16 +83,19 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         return new ExceptionSampler(spec);
     }
 
+    @Nullable
     @Override
     public Boolean verboseSocketExceptions() {
         return getBoolean("verboseSocketExceptions");
     }
 
+    @Nullable
     @Override
     public Boolean verboseResponses() {
         return getBoolean("verboseResponses");
     }
 
+    @Nullable
     @Override
     public RequestContextStorageProvider requestContextStorageProvider() {
         final String providerFqcn = System.getProperty(PREFIX + "requestContextStorageProvider");
@@ -122,11 +126,13 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         return matchedCandidates.get(0);
     }
 
+    @Nullable
     @Override
     public Boolean warnNettyVersions() {
         return getBoolean("warnNettyVersions");
     }
 
+    @Nullable
     @Override
     public TransportType transportType() {
         final String strTransportType = getNormalized("transportType");
@@ -145,11 +151,13 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         }
     }
 
+    @Nullable
     @Override
     public Boolean useOpenSsl() {
         return getBoolean("useOpenSsl");
     }
 
+    @Nullable
     @Override
     public TlsEngineType tlsEngineType() {
         final String strTlsEngineType = getNormalized("tlsEngineType");
@@ -167,201 +175,241 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         }
     }
 
+    @Nullable
     @Override
     public Boolean dumpOpenSslInfo() {
         return getBoolean("dumpOpenSslInfo");
     }
 
+    @Nullable
     @Override
     public Integer maxNumConnections() {
         return getInt("maxNumConnections");
     }
 
+    @Nullable
     @Override
     public Integer numCommonWorkers(TransportType transportType) {
         return getInt("numCommonWorkers");
     }
 
+    @Nullable
     @Override
     public Integer numCommonBlockingTaskThreads() {
         return getInt("numCommonBlockingTaskThreads");
     }
 
+    @Nullable
     @Override
     public Long defaultMaxRequestLength() {
         return getLong("defaultMaxRequestLength");
     }
 
+    @Nullable
     @Override
     public Long defaultMaxResponseLength() {
         return getLong("defaultMaxResponseLength");
     }
 
+    @Nullable
     @Override
     public Long defaultRequestTimeoutMillis() {
         return getLong("defaultRequestTimeoutMillis");
     }
 
+    @Nullable
     @Override
     public Long defaultResponseTimeoutMillis() {
         return getLong("defaultResponseTimeoutMillis");
     }
 
+    @Nullable
     @Override
     public Long defaultConnectTimeoutMillis() {
         return getLong("defaultConnectTimeoutMillis");
     }
 
+    @Nullable
     @Override
     public Long defaultWriteTimeoutMillis() {
         return getLong("defaultWriteTimeoutMillis");
     }
 
+    @Nullable
     @Override
     public Long defaultServerIdleTimeoutMillis() {
         return getLong("defaultServerIdleTimeoutMillis");
     }
 
+    @Nullable
     @Override
     public Long defaultClientIdleTimeoutMillis() {
         return getLong("defaultClientIdleTimeoutMillis");
     }
 
+    @Nullable
     @Override
     public Integer defaultHttp1MaxInitialLineLength() {
         return getInt("defaultHttp1MaxInitialLineLength");
     }
 
+    @Nullable
     @Override
     public Integer defaultHttp1MaxHeaderSize() {
         return getInt("defaultHttp1MaxHeaderSize");
     }
 
+    @Nullable
     @Override
     public Integer defaultHttp1MaxChunkSize() {
         return getInt("defaultHttp1MaxChunkSize");
     }
 
+    @Nullable
     @Override
     public Boolean defaultUseHttp2Preface() {
         return getBoolean("defaultUseHttp2Preface");
     }
 
+    @Nullable
     @Override
     public Boolean defaultPreferHttp1() {
         return getBoolean("preferHttp1");
     }
 
+    @Nullable
     @Override
     public Boolean defaultUseHttp2WithoutAlpn() {
         return getBoolean("defaultUseHttp2WithoutAlpn");
     }
 
+    @Nullable
     @Override
     public Boolean defaultUseHttp1Pipelining() {
         return getBoolean("defaultUseHttp1Pipelining");
     }
 
+    @Nullable
     @Override
     public Long defaultPingIntervalMillis() {
         return getLong("defaultPingIntervalMillis");
     }
 
+    @Nullable
     @Override
     public Integer defaultMaxServerNumRequestsPerConnection() {
         return getInt("defaultMaxServerNumRequestsPerConnection");
     }
 
+    @Nullable
     @Override
     public Integer defaultMaxClientNumRequestsPerConnection() {
         return getInt("defaultMaxClientNumRequestsPerConnection");
     }
 
+    @Nullable
     @Override
     public Long defaultMaxServerConnectionAgeMillis() {
         return getLong("defaultMaxServerConnectionAgeMillis");
     }
 
+    @Nullable
     @Override
     public Long defaultMaxClientConnectionAgeMillis() {
         return getLong("defaultMaxClientConnectionAgeMillis");
     }
 
+    @Nullable
     @Override
     public Long defaultServerConnectionDrainDurationMicros() {
         return getLong("defaultServerConnectionDrainDurationMicros");
     }
 
+    @Nullable
     @Override
     public Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
         return getLong("defaultClientHttp2GracefulShutdownTimeoutMillis");
     }
 
+    @Nullable
     @Override
     public Integer defaultHttp2InitialConnectionWindowSize() {
         return getInt("defaultHttp2InitialConnectionWindowSize");
     }
 
+    @Nullable
     @Override
     public Integer defaultHttp2InitialStreamWindowSize() {
         return getInt("defaultHttp2InitialStreamWindowSize");
     }
 
+    @Nullable
     @Override
     public Integer defaultHttp2MaxFrameSize() {
         return getInt("defaultHttp2MaxFrameSize");
     }
 
+    @Nullable
     @Override
     public Long defaultHttp2MaxStreamsPerConnection() {
         return getLong("defaultHttp2MaxStreamsPerConnection");
     }
 
+    @Nullable
     @Override
     public Long defaultHttp2MaxHeaderListSize() {
         return getLong("defaultHttp2MaxHeaderListSize");
     }
 
+    @Nullable
     @Override
     public Integer defaultServerHttp2MaxResetFramesPerMinute() {
         return getInt("defaultServerHttp2MaxResetFramesPerMinute");
     }
 
+    @Nullable
     @Override
     public String defaultBackoffSpec() {
         return getNormalized("defaultBackoffSpec");
     }
 
+    @Nullable
     @Override
     public Integer defaultMaxTotalAttempts() {
         return getInt("defaultMaxTotalAttempts");
     }
 
+    @Nullable
     @Override
-    public @Nullable Long defaultRequestAutoAbortDelayMillis() {
+    public Long defaultRequestAutoAbortDelayMillis() {
         return getLong("defaultRequestAutoAbortDelayMillis");
     }
 
+    @Nullable
     @Override
     public String routeCacheSpec() {
         return getNormalized("routeCacheSpec");
     }
 
+    @Nullable
     @Override
     public String routeDecoratorCacheSpec() {
         return getNormalized("routeDecoratorCacheSpec");
     }
 
+    @Nullable
     @Override
     public String parsedPathCacheSpec() {
         return getNormalized("parsedPathCacheSpec");
     }
 
+    @Nullable
     @Override
     public String headerValueCacheSpec() {
         return getNormalized("headerValueCacheSpec");
     }
 
+    @Nullable
     @Override
     public List<String> cachedHeaders() {
         final String val = getNormalized("cachedHeaders");
@@ -371,16 +419,19 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         return CSV_SPLITTER.splitToList(val);
     }
 
+    @Nullable
     @Override
     public String fileServiceCacheSpec() {
         return getNormalized("fileServiceCacheSpec");
     }
 
+    @Nullable
     @Override
     public String dnsCacheSpec() {
         return getNormalized("dnsCacheSpec");
     }
 
+    @Nullable
     @Override
     public Predicate<InetAddress> preferredIpV4Addresses() {
         final String val = getNormalized("preferredIpV4Addresses");
@@ -417,31 +468,43 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         }
     }
 
+    @Nullable
     @Override
     public Boolean useJdkDnsResolver() {
         return getBoolean("useJdkDnsResolver");
     }
 
+    @Nullable
     @Override
     public Boolean reportBlockedEventLoop() {
         return getBoolean("reportBlockedEventLoop");
     }
 
+    @Nullable
     @Override
     public Boolean reportMaskedRoutes() {
         return getBoolean("reportMaskedRoutes");
     }
 
+    @Nullable
     @Override
     public Boolean validateHeaders() {
         return getBoolean("validateHeaders");
     }
 
+    @Nullable
     @Override
     public Boolean tlsAllowUnsafeCiphers() {
         return getBoolean("tlsAllowUnsafeCiphers");
     }
 
+    @Nullable
+    @Override
+    public Integer defaultMaxClientHelloLength() {
+        return getInt("defaultMaxClientHelloLength");
+    }
+
+    @Nullable
     @Override
     public Set<TransientServiceOption> transientServiceOptions() {
         final String val = getNormalized("transientServiceOptions");
@@ -454,26 +517,31 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
                        .collect(toImmutableSet()));
     }
 
+    @Nullable
     @Override
     public Boolean useDefaultSocketOptions() {
         return getBoolean("useDefaultSocketOptions");
     }
 
+    @Nullable
     @Override
     public Boolean useLegacyRouteDecoratorOrdering() {
         return getBoolean("useLegacyRouteDecoratorOrdering");
     }
 
+    @Nullable
     @Override
     public Boolean allowDoubleDotsInQueryString() {
         return getBoolean("allowDoubleDotsInQueryString");
     }
 
+    @Nullable
     @Override
     public Boolean allowSemicolonInPathComponent() {
         return getBoolean("allowSemicolonInPathComponent");
     }
 
+    @Nullable
     @Override
     public Path defaultMultipartUploadsLocation() {
         return getAndParse("defaultMultipartUploadsLocation", Paths::get);
@@ -497,6 +565,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         }
     }
 
+    @Nullable
     @Override
     public Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
         final String spec = getNormalized("requestContextLeakDetectionSampler");
@@ -511,18 +580,21 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         }
     }
 
+    @Nullable
     @Override
     public Long defaultUnhandledExceptionsReportIntervalMillis() {
         return getLong("defaultUnhandledExceptionsReportIntervalMillis");
     }
 
+    @Nullable
     @Override
     public Long defaultHttp1ConnectionCloseDelayMillis() {
         return getLong("defaultHttp1ConnectionCloseDelayMillis");
     }
 
+    @Nullable
     @Override
-    public @Nullable Long defaultUnloggedExceptionsReportIntervalMillis() {
+    public Long defaultUnloggedExceptionsReportIntervalMillis() {
         return getLong("defaultUnloggedExceptionsReportIntervalMillis");
     }
 

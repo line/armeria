@@ -350,6 +350,7 @@ final class RefreshingAddressResolver
             }
             refreshing = true;
 
+            assert address != null;
             final String hostname = address.getHostName();
             // 'sendQueries()' always successfully completes.
             sendQueries(questions, hostname, originalCreationTimeNanos).thenAccept(entry -> {
@@ -370,6 +371,7 @@ final class RefreshingAddressResolver
 
             final Throwable cause = entry.cause();
             if (cause != null) {
+                assert autoRefreshBackoff != null;
                 final long nextDelayMillis = autoRefreshBackoff.nextDelayMillis(numAttemptsSoFar++);
 
                 if (nextDelayMillis < 0) {
@@ -400,6 +402,8 @@ final class RefreshingAddressResolver
             if (address == null) {
                 return false;
             }
+
+            assert autoRefreshTimeoutFunction != null;
 
             if (autoRefreshTimeoutFunction == DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION) {
                 return true;

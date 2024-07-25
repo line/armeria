@@ -31,9 +31,12 @@ import com.linecorp.armeria.common.HttpResponse;
  * 4. ServerBuilder
  */
 class ServiceOptionsTest {
-    private final ServiceOptions serviceOptions =
-            ServiceOptions.builder().requestTimeoutMillis(100001).maxRequestLength(10002)
-                          .requestAutoAbortDelayMillis(10003).build();
+
+    private static final ServiceOptions SERVICE_OPTIONS =
+            ServiceOptions.builder().requestTimeoutMillis(5000)
+                          .maxRequestLength(1024)
+                          .requestAutoAbortDelayMillis(1000)
+                          .build();
 
     @Test
     void serviceOptionsShouldNotOverrideServiceBindingBuilder() {
@@ -45,7 +48,7 @@ class ServiceOptionsTest {
 
             @Override
             public ServiceOptions options() {
-                return serviceOptions;
+                return SERVICE_OPTIONS;
             }
         };
 
@@ -73,7 +76,7 @@ class ServiceOptionsTest {
 
             @Override
             public ServiceOptions options() {
-                return serviceOptions;
+                return SERVICE_OPTIONS;
             }
         };
         try (Server server = Server.builder()
@@ -89,10 +92,10 @@ class ServiceOptionsTest {
                                            .filter(s -> s.route().paths().contains("/test"))
                                            .findFirst().get();
 
-            assertThat(sc.requestTimeoutMillis()).isEqualTo(serviceOptions.requestTimeoutMillis());
-            assertThat(sc.maxRequestLength()).isEqualTo(serviceOptions.maxRequestLength());
+            assertThat(sc.requestTimeoutMillis()).isEqualTo(SERVICE_OPTIONS.requestTimeoutMillis());
+            assertThat(sc.maxRequestLength()).isEqualTo(SERVICE_OPTIONS.maxRequestLength());
             assertThat(sc.requestAutoAbortDelayMillis()).isEqualTo(
-                    serviceOptions.requestAutoAbortDelayMillis());
+                    SERVICE_OPTIONS.requestAutoAbortDelayMillis());
         }
     }
 
@@ -106,7 +109,7 @@ class ServiceOptionsTest {
 
             @Override
             public ServiceOptions options() {
-                return serviceOptions;
+                return SERVICE_OPTIONS;
             }
         };
 
@@ -124,10 +127,10 @@ class ServiceOptionsTest {
                                             .stream()
                                             .filter(s -> s.route().paths().contains("/test"))
                                             .findFirst().get();
-            assertThat(sc1.requestTimeoutMillis()).isEqualTo(serviceOptions.requestTimeoutMillis());
-            assertThat(sc1.maxRequestLength()).isEqualTo(serviceOptions.maxRequestLength());
+            assertThat(sc1.requestTimeoutMillis()).isEqualTo(SERVICE_OPTIONS.requestTimeoutMillis());
+            assertThat(sc1.maxRequestLength()).isEqualTo(SERVICE_OPTIONS.maxRequestLength());
             assertThat(sc1.requestAutoAbortDelayMillis()).isEqualTo(
-                    serviceOptions.requestAutoAbortDelayMillis());
+                    SERVICE_OPTIONS.requestAutoAbortDelayMillis());
         }
     }
 }

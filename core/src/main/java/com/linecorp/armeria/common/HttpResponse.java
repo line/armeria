@@ -63,6 +63,7 @@ import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -194,9 +195,10 @@ public interface HttpResponse extends Response, HttpMessage {
     static HttpResponse delayed(Supplier<? extends HttpResponse> responseSupplier, Duration delay) {
         requireNonNull(responseSupplier, "responseSupplier");
         requireNonNull(delay, "delay");
-        return delayed(responseSupplier, delay,
-                       RequestContext.mapCurrent(RequestContext::eventLoop,
-                                                 CommonPools.workerGroup()::next));
+        final EventLoop executor = RequestContext.mapCurrent(RequestContext::eventLoop,
+                                                             CommonPools.workerGroup()::next);
+        assert executor != null;
+        return delayed(responseSupplier, delay, executor);
     }
 
     /**

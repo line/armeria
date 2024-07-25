@@ -55,7 +55,9 @@ public final class UnprocessedRequestException extends RuntimeException {
     @Nonnull
     @Override
     public Throwable getCause() {
-        return super.getCause();
+        final Throwable cause = super.getCause();
+        assert cause != null;
+        return cause;
     }
 
     @Override

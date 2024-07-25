@@ -267,6 +267,7 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
 
     private void onError0(Throwable cause) {
         try {
+            assert subscriber != null;
             subscriber.onError(cause);
             if (!completionFuture.isDone()) {
                 completionFuture.completeExceptionally(cause);

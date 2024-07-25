@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 final class DefaultCircuitBreakerClientHandler implements CircuitBreakerClientHandler {
@@ -35,6 +36,7 @@ final class DefaultCircuitBreakerClientHandler implements CircuitBreakerClientHa
         this.mapping = mapping;
     }
 
+    @Nullable
     @Override
     public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, Request req) {
         final CircuitBreaker circuitBreaker;

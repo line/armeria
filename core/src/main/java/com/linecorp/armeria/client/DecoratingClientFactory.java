@@ -108,11 +108,13 @@ public class DecoratingClientFactory extends AbstractUnwrappable<ClientFactory> 
         return unwrap().newClient(params);
     }
 
+    @Nullable
     @Override
     public <T> ClientBuilderParams clientBuilderParams(T client) {
         return unwrap().clientBuilderParams(client);
     }
 
+    @Nullable
     @Override
     public <T> T unwrap(Object client, Class<T> type) {
         return unwrap().unwrap(client, type);

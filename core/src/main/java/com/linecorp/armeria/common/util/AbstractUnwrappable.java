@@ -17,6 +17,8 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * Skeletal {@link Unwrappable} implementation.
  *
@@ -33,6 +35,7 @@ public abstract class AbstractUnwrappable<T extends Unwrappable> implements Unwr
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
+    @Nullable
     @Override
     public final <U> U as(Class<U> type) {
         final U result = Unwrappable.super.as(type);

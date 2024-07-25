@@ -13,13 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.internal.common.grpc;
 
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -27,22 +25,36 @@ import com.linecorp.armeria.common.util.Exceptions;
 import io.grpc.Metadata;
 import io.grpc.Status;
 
-public final class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptionHandlerFunction {
-    private final GrpcExceptionHandlerFunction delegate;
+public final class GrpcExceptionHandlerFunctionUtil {
 
-    public UnwrappingGrpcExceptionHandleFunction(GrpcExceptionHandlerFunction handlerFunction) {
-        delegate = handlerFunction;
+    public static Metadata generateMetadataFromThrowable(Throwable exception) {
+        final Metadata metadata = Status.trailersFromThrowable(peelAndUnwrap(exception));
+        return metadata != null ? metadata : new Metadata();
     }
 
-    @Override
-    public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
-        final Throwable t = peelAndUnwrap(cause);
-        return delegate.apply(ctx, t, metadata);
+    public static Status fromThrowable(RequestContext ctx, GrpcExceptionHandlerFunction exceptionHandler,
+                                       Throwable t, Metadata metadata) {
+        final Status status = Status.fromThrowable(peelAndUnwrap(t));
+        final Throwable cause = status.getCause();
+        if (cause == null) {
+            return status;
+        }
+        return applyExceptionHandler(ctx, exceptionHandler, status, cause, metadata);
+    }
+
+    public static Status applyExceptionHandler(RequestContext ctx,
+                                               GrpcExceptionHandlerFunction exceptionHandler,
+                                               Status status, Throwable cause, Metadata metadata) {
+        final Throwable peeled = peelAndUnwrap(cause);
+        status = exceptionHandler.apply(ctx, status, peeled, metadata);
+        assert status != null;
+        return status;
     }
 
     private static Throwable peelAndUnwrap(Throwable t) {
         requireNonNull(t, "t");
-        Throwable cause = Exceptions.peel(t);
+        t = Exceptions.peel(t);
+        Throwable cause = t;
         while (cause != null) {
             if (cause instanceof ArmeriaStatusException) {
                 return StatusExceptionConverter.toGrpc((ArmeriaStatusException) cause);
@@ -51,4 +63,6 @@ public final class UnwrappingGrpcExceptionHandleFunction implements GrpcExceptio
         }
         return t;
     }
+
+    private GrpcExceptionHandlerFunctionUtil() {}
 }

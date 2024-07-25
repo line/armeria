@@ -407,7 +407,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         res = res.recover(cause -> {
             reqCtx.logBuilder().responseCause(cause);
             // Recover the failed response with the error handler.
-            return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+            try (SafeCloseable ignored = reqCtx.push()) {
+                return serviceCfg.errorHandler().onServiceException(reqCtx, cause);
+            }
         });
 
         // Keep track of the number of unfinished requests and
@@ -810,9 +812,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     unfinishedRequests.remove(req);
                 }
 
-                final boolean needsDisconnection =
-                        ctx.channel().isActive() &&
-                        (handledLastRequest || responseEncoder.keepAliveHandler().needsDisconnection());
+                final boolean needsDisconnection = ctx.channel().isActive() &&
+                                                   (handledLastRequest || isNeedsDisconnection());
                 if (needsDisconnection) {
                     // Graceful shutdown mode: If a connection needs to be closed by `KeepAliveHandler`
                     // such as a max connection age or `ServiceRequestContext.initiateConnectionShutdown()`,
@@ -841,6 +842,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } catch (Throwable t) {
                 logger.warn("Unexpected exception:", t);
             }
+        }
+
+        private boolean isNeedsDisconnection() {
+            assert responseEncoder != null;
+            return responseEncoder.keepAliveHandler().needsDisconnection();
         }
     }
 }

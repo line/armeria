@@ -79,6 +79,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
         exceptionHandler = null;
     }
 
+    @Nullable
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
         final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
