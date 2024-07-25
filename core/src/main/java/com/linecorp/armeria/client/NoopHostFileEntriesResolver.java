@@ -18,12 +18,15 @@ package com.linecorp.armeria.client;
 
 import java.net.InetAddress;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.resolver.HostsFileEntriesResolver;
 import io.netty.resolver.ResolvedAddressTypes;
 
 enum NoopHostFileEntriesResolver implements HostsFileEntriesResolver {
     INSTANCE;
 
+    @Nullable
     @Override
     public InetAddress address(String inetHost, ResolvedAddressTypes resolvedAddressTypes) {
         return null;

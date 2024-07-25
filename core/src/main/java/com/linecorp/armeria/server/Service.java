@@ -69,6 +69,7 @@ public interface Service<I extends Request, O extends Response> extends Unwrappa
      *
      * @see Unwrappable
      */
+    @Nullable
     @Override
     default <T> T as(Class<T> type) {
         requireNonNull(type, "type");

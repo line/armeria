@@ -145,6 +145,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
         this.jsonPrinter = requireNonNull(jsonPrinter, "jsonPrinter");
     }
 
+    @Nullable
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
         final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));

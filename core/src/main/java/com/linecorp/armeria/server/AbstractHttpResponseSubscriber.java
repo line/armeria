@@ -216,6 +216,7 @@ abstract class AbstractHttpResponseSubscriber extends AbstractHttpResponseHandle
                 break;
             }
             case DONE:
+                assert subscription != null;
                 isSubscriptionCompleted = true;
                 subscription.cancel();
                 PooledObjects.close(o);

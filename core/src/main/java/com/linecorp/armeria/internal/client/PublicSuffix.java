@@ -100,7 +100,7 @@ public final class PublicSuffix {
                     for (int i = labels.length - 1; i >= 0; i--) {
                         // assume wildcard is at the first position, we don't need to create a new node for it
                         // but set the current node's isWildcard = true instead
-                        if (labels[i].equals("*")) {
+                        if ("*".equals(labels[i])) {
                             node.isWildcard = true;
                             break;
                         }
@@ -109,6 +109,7 @@ public final class PublicSuffix {
                         }
                         if (node.children.containsKey(labels[i])) {
                             node = node.children.get(labels[i]);
+                            assert node != null;
                         } else {
                             final TrieNode newNode = new TrieNode();
                             if (labels[i].charAt(0) == '!') {
@@ -157,12 +158,20 @@ public final class PublicSuffix {
         for (int i = end; i >= start; i--) {
             if (node.children != null && node.children.containsKey(labels[i])) {
                 node = node.children.get(labels[i]);
+                assert node != null;
             } else {
                 return false;
             }
             if (i == 1 && node.isWildcard) {
-                return node.children == null || !node.children.containsKey(labels[0]) ||
-                       !node.children.get(labels[0]).isException;
+                if (node.children == null) {
+                    return true;
+                }
+                if (!node.children.containsKey(labels[0])) {
+                    return true;
+                }
+                final TrieNode child = node.children.get(labels[0]);
+                assert child != null;
+                return !child.isException;
             }
         }
         return node.isEnd;

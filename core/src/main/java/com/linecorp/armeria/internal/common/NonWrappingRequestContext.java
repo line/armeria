@@ -109,11 +109,13 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         this.contextHook = (Supplier<AutoCloseable>) contextHook;
     }
 
+    @Nullable
     @Override
     public final HttpRequest request() {
         return req;
     }
 
+    @Nullable
     @Override
     public final RpcRequest rpcRequest() {
         return rpcReq;
@@ -192,6 +194,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return this.decodedPath = ArmeriaHttpUtil.decodePath(path());
     }
 
+    @Nullable
     @Override
     public final String query() {
         return reqTarget.query();
@@ -231,6 +234,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return attrs.ownAttr(key);
     }
 
+    @Nullable
     @Override
     public final <V> V setAttr(AttributeKey<V> key, @Nullable V value) {
         requireNonNull(key, "key");

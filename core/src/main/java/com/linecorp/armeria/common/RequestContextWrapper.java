@@ -98,11 +98,13 @@ public abstract class RequestContextWrapper<T extends RequestContext>
         return unwrap().ownAttrs();
     }
 
+    @Nullable
     @Override
     public <V> V setAttr(AttributeKey<V> key, @Nullable V value) {
         return unwrap().setAttr(key, value);
     }
 
+    @Nullable
     @Override
     public HttpRequest request() {
         return unwrap().request();
@@ -167,6 +169,7 @@ public abstract class RequestContextWrapper<T extends RequestContext>
         return unwrap().decodedPath();
     }
 
+    @Nullable
     @Override
     public String query() {
         return unwrap().query();

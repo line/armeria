@@ -697,6 +697,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return requestStartTimeNanos;
     }
 
+    @Nullable
     @Override
     public Long requestFirstBytesTransferredTimeNanos() {
         ensureAvailable(RequestLogProperty.REQUEST_FIRST_BYTES_TRANSFERRED_TIME);
@@ -715,6 +716,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return requestEndTimeNanos - requestStartTimeNanos;
     }
 
+    @Nullable
     @Override
     public Throwable requestCause() {
         ensureAvailable(RequestLogProperty.REQUEST_CAUSE);
@@ -766,12 +768,14 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         updateFlags(RequestLogProperty.SCHEME);
     }
 
+    @Nullable
     @Override
     public Channel channel() {
         ensureAvailable(RequestLogProperty.SESSION);
         return channel;
     }
 
+    @Nullable
     @Override
     public SSLSession sslSession() {
         ensureAvailable(RequestLogProperty.SESSION);
@@ -876,6 +880,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
+    @Nullable
     @Override
     public String authenticatedUser() {
         ensureAvailable(RequestLogProperty.AUTHENTICATED_USER);
@@ -968,6 +973,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         updateFlags(RequestLogProperty.REQUEST_HEADERS);
     }
 
+    @Nullable
     @Override
     public Object requestContent() {
         ensureAvailable(RequestLogProperty.REQUEST_CONTENT);
@@ -993,12 +999,14 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
     }
 
+    @Nullable
     @Override
     public Object rawRequestContent() {
         ensureAvailable(RequestLogProperty.REQUEST_CONTENT);
         return rawRequestContent;
     }
 
+    @Nullable
     @Override
     public String requestContentPreview() {
         ensureAvailable(RequestLogProperty.REQUEST_CONTENT_PREVIEW);
@@ -1136,6 +1144,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             // Set serviceName from ServiceType or innermost class name
             if (newServiceName == null) {
                 if (config != null) {
+                    assert sctx != null;
                     newServiceName = ServiceNaming.fullTypeName().serviceName(sctx);
                 } else if (rpcReq != null) {
                     newServiceName = rpcReq.serviceName();
@@ -1198,6 +1207,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return responseStartTimeNanos;
     }
 
+    @Nullable
     @Override
     public Long responseFirstBytesTransferredTimeNanos() {
         ensureAvailable(RequestLogProperty.RESPONSE_FIRST_BYTES_TRANSFERRED_TIME);
@@ -1222,6 +1232,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         return responseEndTimeNanos - requestStartTimeNanos;
     }
 
+    @Nullable
     @Override
     public Throwable responseCause() {
         ensureAvailable(RequestLogProperty.RESPONSE_CAUSE);
@@ -1315,6 +1326,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         updateFlags(RequestLogProperty.RESPONSE_HEADERS);
     }
 
+    @Nullable
     @Override
     public Object responseContent() {
         ensureAvailable(RequestLogProperty.RESPONSE_CONTENT);
@@ -1343,6 +1355,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         updateFlags(RequestLogProperty.RESPONSE_CONTENT);
     }
 
+    @Nullable
     @Override
     public String responseContentPreview() {
         ensureAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
@@ -1359,6 +1372,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         updateFlags(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
     }
 
+    @Nullable
     @Override
     public Object rawResponseContent() {
         ensureAvailable(RequestLogProperty.RESPONSE_CONTENT);
@@ -1570,7 +1584,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return true;
         }
 
-        @Nullable
         @Override
         public RequestLog getIfAvailable(RequestLogProperty... properties) {
             requireNonNull(properties, "properties");
@@ -1578,7 +1591,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return this;
         }
 
-        @Nullable
         @Override
         public RequestLog getIfAvailable(Iterable<RequestLogProperty> properties) {
             requireNonNull(properties, "properties");
@@ -1684,6 +1696,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return requestStartTimeNanos;
         }
 
+        @Nullable
         @Override
         public Long requestFirstBytesTransferredTimeNanos() {
             return requestFirstBytesTransferredTimeNanosSet ? requestFirstBytesTransferredTimeNanos : null;
@@ -1748,6 +1761,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public String name() {
+            assert name != null;
             return name;
         }
 
@@ -1756,6 +1770,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return DefaultRequestLog.this.fullName();
         }
 
+        @Nullable
         @Override
         public String authenticatedUser() {
             return authenticatedUser;
@@ -1810,6 +1825,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return responseStartTimeNanos;
         }
 
+        @Nullable
         @Override
         public Long responseFirstBytesTransferredTimeNanos() {
             return responseFirstBytesTransferredTimeNanosSet ? responseFirstBytesTransferredTimeNanos : null;
