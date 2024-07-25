@@ -157,6 +157,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
             completed = true;
             delegate.onError(new StreamTimeoutException(
                     String.format(TIMEOUT_MESSAGE, timeoutDuration.toMillis(), timeoutMode)));
+            assert subscription != null;
             subscription.cancel();
         }
 
@@ -213,6 +214,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
 
         @Override
         public void request(long l) {
+            assert subscription != null;
             subscription.request(l);
         }
 
@@ -220,6 +222,7 @@ final class TimeoutStreamMessage<T> implements StreamMessage<T> {
         public void cancel() {
             canceled = true;
             cancelSchedule();
+            assert subscription != null;
             subscription.cancel();
         }
     }
