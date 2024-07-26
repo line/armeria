@@ -224,6 +224,12 @@ service HttpJsonTranscodingTestService {
       }
     };
   }
+
+  rpc EchoBidirectionalStream(stream Message) returns (stream Message) {
+    option (google.api.http) = {
+      post: "/v1/echo/bidirectional_stream"
+    };
+  }
 }
 
 message GetMessageRequestV1 {
