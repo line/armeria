@@ -181,7 +181,6 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
                                         @Nullable Object result, HttpHeaders trailers) throws Exception {
         final MediaType contentType = headers.contentType();
         final boolean isJson = isJson(contentType);
-        assert contentType != null;
 
         if (isJsonSeq(contentType)) {
             checkArgument(result != null, "a null value is not allowed for %s", contentType);
@@ -217,6 +216,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
 
         if (result instanceof Message) {
             if (isJson) {
+                assert contentType != null;
                 final Charset charset = contentType.charset(StandardCharsets.UTF_8);
                 return HttpResponse.of(headers, toJsonHttpData(result, charset), trailers);
             }
@@ -232,6 +232,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
         }
 
         if (isJson) {
+            assert contentType != null;
             checkArgument(result != null, "a null value is not allowed for %s", contentType);
             final Charset charset = contentType.charset(StandardCharsets.UTF_8);
 
