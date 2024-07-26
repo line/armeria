@@ -3289,7 +3289,6 @@ grane.no
 granvin.no
 graphic.design
 graphics
-graphox.us
 gratangen.no
 gratis
 grayjayleagues.com
@@ -6563,7 +6562,6 @@ paas.massivegrid.com
 padova.it
 padua.it
 page
-pagefrontapp.com
 pages.dev
 pages.gay
 pages.it.hs-heilbronn.de
