@@ -34,6 +34,7 @@ sensible defaults. By applying them, you can:
     - [Shading a multi-module project with `relocate` flag](#shading-a-multi-module-project-with-relocate-flag)
 - [Setting a Java target version with the `java(\\d+)` flag](#setting-a-java-target-version-with-the-javad-flag)
 - [Setting a Kotlin target version with the `kotlin(\\d+\\.\\d+)` flag](#setting-a-koltin-target-version-with-the-kotlindd-flag)
+- [Automatic module names](#automatic-module-names)
 - [Tagging conveniently with `release` task](#tagging-conveniently-with-release-task)
 
 <!-- /MarkdownTOC -->
@@ -98,6 +99,7 @@ sensible defaults. By applying them, you can:
    ```
    group=com.doe.john.myexample
    version=0.0.1-SNAPSHOT
+   versionPattern=^[0-9]+\\.[0-9]+\\.[0-9]+$
    projectName=My Example
    projectUrl=https://www.example.com/
    projectDescription=My example project
@@ -118,6 +120,7 @@ sensible defaults. By applying them, you can:
    googleAnalyticsId=UA-XXXXXXXX
    javaSourceCompatibility=1.8
    javaTargetCompatibility=1.8
+   automaticModuleNames=false
    ```
 
 5. That's all. You now have two Java subprojects with sensible defaults.
@@ -573,6 +576,12 @@ relocations [ { from: "com.google.common", to: "com.doe.john.myproject.shaded.gu
               { from: "com.google.thirdparty.publicsuffix", to: "com.doe.john.myproject.shaded.publicsuffix" } ]
 ```
 
+Unshaded tests are disabled by default when a shading task is configured. If you want to run unshaded tests,
+you can specify `-PpreferShadedTests=false` option.
+
+If you would like to remove specific files when shading the JAR, you may specify the
+`-PshadowExclusions=<comma delimited files>` option.
+
 ### Trimming a shaded JAR with `trim` flag
 
 If you shade many dependencies, your JAR will grow huge, even if you only use
@@ -671,6 +680,31 @@ However, if you want to compile a Kotlin module with a different language versio
 `kotlin(\\d+\\.\\d)` flag.
 
 For example, `kotlin1.6` flag makes your Kotlin module compatible with language version 1.6 and API version 1.6.
+
+## Automatic module names
+
+By specifying the `automaticModuleNames=true` property in `settings.gradle`, every `java` project's JAR
+file will contain the `Automatic-Module-Name` property in its `MANIFEST.MF`, auto-generated from the group ID
+and artifact ID. For example:
+
+- groupId: `com.example`, artifactId: `foo-bar`
+  - module name: `com.example.foo.bar`
+- groupId: `com.example.foo`, artifactId: `foo-bar`
+  - module name: `com.example.foo.bar`
+
+If enabled, each project with `java` flag will have the `automaticModuleName` property.
+
+You can override the automatic module name of a certain project via the `automaticModuleNameOverrides`
+extension property:
+
+    ```groovy
+    ext {
+        // Change the automatic module name of project ':bar' to 'com.example.fubar'.
+        automaticModuleNameOverrides = [
+            ':bar': 'com.example.fubar'
+        ]
+    }
+    ```
 
 ## Tagging conveniently with `release` task
 
