@@ -34,10 +34,13 @@ import org.apache.catalina.startup.Constants;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.startup.Tomcat.DefaultWebXmlListener;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class TomcatUtil {
 
     private static final LifecycleListener defaultWebXmlListener = new DefaultWebXmlListener();
 
+    @Nullable
     static URL getWebAppConfigFile(String contextPath, Path docBase) {
         final AtomicReference<URL> configUrlRef = new AtomicReference<>();
         new Tomcat() {
@@ -46,9 +49,7 @@ final class TomcatUtil {
             }
         };
 
-        final URL url = configUrlRef.get();
-        assert url != null;
-        return url;
+        return configUrlRef.get();
     }
 
     static String noDefaultWebXmlPath() {
