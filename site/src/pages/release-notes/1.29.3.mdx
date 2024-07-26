@@ -9,6 +9,7 @@ date: 2024-07-26
   by <type://ServerErrorHandler#onProtocolViolation(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> #5811
 - Fixed compatibility issue with Java 9 modules by excluding `java.security.Provider` SPI configuration from 
   the shadowed JAR. #5825
+- Reapplied changes that were unexpectedly overwritten for Java module support. #5835
 - <type://GrpcService> now correctly returns `RESOURCE_EXHAUSTED` status when a response message exceeds the 
   maximum allowed length. #5818 #5824
 - Relaxed constraints on gRPC JSON transcoding to log a warning instead of raising an `IllegalArgumentException`
