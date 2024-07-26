@@ -47,6 +47,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.withModifier;
 
@@ -71,6 +72,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
@@ -100,10 +102,9 @@ final class HandlerRegistry {
     private final Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
             ? extends HttpService>>> additionalDecorators;
     private final Set<ServerMethodDefinition<?, ?>> blockingMethods;
-    private final Map<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction> grpcExceptionHandlers;
+    private final Map<ServerMethodDefinition<?, ?>, InternalGrpcExceptionHandler> grpcExceptionHandlers;
 
-    @Nullable
-    private final GrpcExceptionHandlerFunction defaultExceptionHandler;
+    private final InternalGrpcExceptionHandler defaultExceptionHandler;
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods,
@@ -115,7 +116,7 @@ final class HandlerRegistry {
                             Set<ServerMethodDefinition<?, ?>> blockingMethods,
                             Map<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                                     grpcExceptionHandlers,
-                            @Nullable GrpcExceptionHandlerFunction defaultExceptionHandler) {
+                            GrpcExceptionHandlerFunction defaultExceptionHandler) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
@@ -123,8 +124,14 @@ final class HandlerRegistry {
         this.annotationDecorators = requireNonNull(annotationDecorators, "annotationDecorators");
         this.additionalDecorators = requireNonNull(additionalDecorators, "additionalDecorators");
         this.blockingMethods = requireNonNull(blockingMethods, "blockingMethods");
-        this.grpcExceptionHandlers = requireNonNull(grpcExceptionHandlers, "grpcExceptionHandlers");
-        this.defaultExceptionHandler = defaultExceptionHandler;
+        requireNonNull(grpcExceptionHandlers, "grpcExceptionHandlers");
+        this.grpcExceptionHandlers =
+                grpcExceptionHandlers.entrySet()
+                                     .stream()
+                                     .collect(toImmutableMap(Map.Entry::getKey,
+                                                             e -> new InternalGrpcExceptionHandler(
+                                                                     e.getValue())));
+        this.defaultExceptionHandler = new InternalGrpcExceptionHandler(defaultExceptionHandler);
     }
 
     @Nullable
@@ -163,12 +170,8 @@ final class HandlerRegistry {
         return blockingMethods.contains(methodDef);
     }
 
-    @Nullable
-    GrpcExceptionHandlerFunction getExceptionHandler(ServerMethodDefinition<?, ?> methodDef) {
-        if (!grpcExceptionHandlers.containsKey(methodDef)) {
-            return defaultExceptionHandler;
-        }
-        return grpcExceptionHandlers.get(methodDef);
+    InternalGrpcExceptionHandler getExceptionHandler(ServerMethodDefinition<?, ?> methodDef) {
+        return grpcExceptionHandlers.getOrDefault(methodDef, defaultExceptionHandler);
     }
 
     Map<ServerMethodDefinition<?, ?>, HttpService> applyDecorators(
@@ -271,7 +274,7 @@ final class HandlerRegistry {
                 ServerMethodDefinition<?, ?> methodDefinition,
                 final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, GrpcExceptionHandlerFunction>
                         grpcExceptionHandlersBuilder,
-                @Nullable GrpcExceptionHandlerFunction defaultExceptionHandler) {
+                GrpcExceptionHandlerFunction defaultExceptionHandler) {
             final List<GrpcExceptionHandlerFunction> exceptionHandlers =
                     AnnotationUtil.getAnnotatedInstances(method, clazz,
                                                          GrpcExceptionHandler.class,
@@ -281,11 +284,8 @@ final class HandlerRegistry {
                     exceptionHandlers.stream().reduce(GrpcExceptionHandlerFunction::orElse);
 
             grpcExceptionHandler.ifPresent(exceptionHandler -> {
-                GrpcExceptionHandlerFunction grpcExceptionHandler0 = exceptionHandler;
-                if (defaultExceptionHandler != null) {
-                    grpcExceptionHandler0 = exceptionHandler.orElse(defaultExceptionHandler);
-                }
-                grpcExceptionHandlersBuilder.put(methodDefinition, grpcExceptionHandler0);
+                exceptionHandler = exceptionHandler.orElse(defaultExceptionHandler);
+                grpcExceptionHandlersBuilder.put(methodDefinition, exceptionHandler);
             });
         }
 
@@ -294,6 +294,9 @@ final class HandlerRegistry {
         }
 
         HandlerRegistry build() {
+            // setDefaultExceptionHandler() must be called before invoking build()
+            assert defaultExceptionHandler != null;
+
             // Store per-service first, to make sure services are added/replaced atomically.
             final ImmutableMap.Builder<String, ServerServiceDefinition> services = ImmutableMap.builder();
             final ImmutableMap.Builder<String, ServerMethodDefinition<?, ?>> methods = ImmutableMap.builder();
