@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -113,7 +114,8 @@ class DeferredListenerTest {
                                      DecompressorRegistry.getDefaultInstance(),
                                      HttpResponse.streaming(), new CompletableFuture<>(), 0, 0, ctx,
                                      GrpcSerializationFormats.PROTO, null, false,
-                                     ResponseHeaders.of(200), GrpcExceptionHandlerFunction.of(),
+                                     ResponseHeaders.of(200),
+                                     new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of()),
                                      blockingTaskExecutor, false, false);
     }
 

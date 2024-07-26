@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
@@ -88,6 +89,9 @@ class StreamingServerCallTest {
     private static final AsciiString EXTRA_HEADER_NAME1 = HttpHeaderNames.of("extra-header-1");
     private static final Key<String> EXTRA_HEADER_KEY1 = Key.of(EXTRA_HEADER_NAME1.toString(),
                                                                 Metadata.ASCII_STRING_MARSHALLER);
+
+    private static final InternalGrpcExceptionHandler exceptionHandler =
+            new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of());
 
     @Mock
     private HttpResponseWriter res;
@@ -297,7 +301,7 @@ class StreamingServerCallTest {
                         ResponseHeaders.builder(HttpStatus.OK)
                                        .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                        .build(),
-                        GrpcExceptionHandlerFunction.of(),
+                        exceptionHandler,
                         /* blockingExecutor */ null,
                         false,
                         false);
@@ -367,7 +371,7 @@ class StreamingServerCallTest {
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build(),
-                GrpcExceptionHandlerFunction.of(),
+                exceptionHandler,
                 /* blockingExecutor */ null,
                 false,
                 false);
