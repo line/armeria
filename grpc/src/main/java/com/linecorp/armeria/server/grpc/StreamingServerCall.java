@@ -31,7 +31,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
@@ -84,7 +84,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                         ServiceRequestContext ctx, SerializationFormat serializationFormat,
                         @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
                         ResponseHeaders defaultHeaders,
-                        @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                        InternalGrpcExceptionHandler exceptionHandler,
                         @Nullable Executor blockingExecutor, boolean autoCompress,
                         boolean useMethodMarshaller) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
@@ -210,8 +210,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                     trailersOnly = false;
                 } else {
                     // A stream was closed already.
-                    statusAndMetadata.shouldCancel();
-                    statusAndMetadata.setResponseContent(true);
+                    statusAndMetadata.shouldCancel(true);
                     closeListener(statusAndMetadata);
                     return;
                 }
@@ -225,7 +224,6 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                 res.close();
             }
         } finally {
-            statusAndMetadata.setResponseContent(false);
             closeListener(statusAndMetadata);
         }
     }
@@ -274,6 +272,6 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        closeListener(new ServerStatusAndMetadata(status, metadata, true, true));
+        closeListener(new ServerStatusAndMetadata(status, metadata, true));
     }
 }
