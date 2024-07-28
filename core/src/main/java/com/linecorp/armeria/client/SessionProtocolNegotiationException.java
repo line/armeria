@@ -49,7 +49,7 @@ public final class SessionProtocolNegotiationException extends RuntimeException 
                                                @Nullable SessionProtocol actual, @Nullable String reason) {
 
         super(appendReason("expected: " + requireNonNull(expected, "expected") +
-                           ", actual: " + requireNonNull(actual, "actual"), reason));
+                           ", actual: " + actual, reason));
         this.expected = expected;
         this.actual = actual;
     }
