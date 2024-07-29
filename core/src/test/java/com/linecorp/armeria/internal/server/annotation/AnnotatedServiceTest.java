@@ -774,8 +774,8 @@ class AnnotatedServiceTest {
         }
 
         @Post("/headerNameSpecified")
-        public String headerNameSpecified(@Header("X-Line-Id") String id) {
-            // Because the header name is specified, it's not converted to LOWER_HYPHEN such as x--line--id.
+        public String headerNameSpecified(@Header("X-x-FoO-bAr") String id) {
+            // Because the header name is specified, it's not converted.
             return id;
         }
 
@@ -1231,7 +1231,7 @@ class AnnotatedServiceTest {
             testBody(hc, request, "1:2:1/minwoox:giraffe");
 
             request = post("/11/headerNameSpecified");
-            request.addHeader("X-Line-Id", "qwerty");
+            request.addHeader("X-x-FoO-bAr", "qwerty");
             testBody(hc, request, "qwerty");
 
             request = get("/11/headerDefault");
