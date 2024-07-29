@@ -31,9 +31,9 @@ import com.linecorp.armeria.server.annotation.Param;
 final class AnnotatedElementNameUtil {
 
     /**
-     * Returns the value of {@link Header}, {@link Param}, {@link Attribute} if the value is not blank.
+     * Returns the value of {@link Param}, {@link Attribute} if the value is not blank.
      * If the value is blank, it returns the name of the specified {@code nameRetrievalTarget} object
-     * which is an instance of {@link Header}, {@link Param}, {@link Attribute} or {@link Field}.
+     * which is an instance of {@link Param}, {@link Attribute} or {@link Field}.
      */
     static String findName(Object nameRetrievalTarget, String value) {
         requireNonNull(nameRetrievalTarget, "nameRetrievalTarget");
