@@ -54,7 +54,7 @@ public final class GrpcExceptionHandlerFunctionBuilder {
      */
     public GrpcExceptionHandlerFunctionBuilder on(Class<? extends Throwable> exceptionType, Status status) {
         requireNonNull(status, "status");
-        return on(exceptionType, (ctx, cause, metadata) -> status);
+        return on(exceptionType, (ctx, unused, cause, metadata) -> status);
     }
 
     /**
@@ -66,7 +66,7 @@ public final class GrpcExceptionHandlerFunctionBuilder {
         requireNonNull(exceptionType, "exceptionType");
         requireNonNull(exceptionHandler, "exceptionHandler");
         //noinspection unchecked
-        return on(exceptionType, (ctx, cause, metadata) -> exceptionHandler.apply((T) cause, metadata));
+        return on(exceptionType, (ctx, status, cause, metadata) -> exceptionHandler.apply((T) cause, metadata));
     }
 
     /**
@@ -107,11 +107,11 @@ public final class GrpcExceptionHandlerFunctionBuilder {
 
         final List<Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction>> mappings =
                 ImmutableList.copyOf(exceptionMappings);
-        return (ctx, cause, metadata) -> {
+        return (ctx, status, cause, metadata) -> {
             for (Map.Entry<Class<? extends Throwable>, GrpcExceptionHandlerFunction> mapping : mappings) {
                 if (mapping.getKey().isInstance(cause)) {
-                    final Status status = mapping.getValue().apply(ctx, cause, metadata);
-                    return status == null ? null : status.withCause(cause);
+                    final Status newStatus = mapping.getValue().apply(ctx, status, cause, metadata);
+                    return newStatus == null ? null : newStatus.withCause(cause);
                 }
             }
             return null;

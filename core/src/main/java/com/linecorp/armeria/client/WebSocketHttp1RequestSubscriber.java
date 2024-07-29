@@ -29,7 +29,7 @@ final class WebSocketHttp1RequestSubscriber extends AbstractHttpRequestSubscribe
                                     HttpResponseDecoder responseDecoder,
                                     HttpRequest request, DecodedHttpResponse originalRes,
                                     ClientRequestContext ctx, long timeoutMillis) {
-        super(ch, encoder, responseDecoder, request, originalRes, ctx, timeoutMillis, false, false);
+        super(ch, encoder, responseDecoder, request, originalRes, ctx, timeoutMillis, false, false, true);
     }
 
     @Override

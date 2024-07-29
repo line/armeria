@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 
-public class ThriftOverHttp2Test extends AbstractThriftOverHttpTest {
+class ThriftOverHttp2Test extends AbstractThriftOverHttpTest {
     @Override
     protected TTransport newTransport(String uri, HttpHeaders headers) throws TTransportException {
         final io.netty.handler.codec.http.HttpHeaders nettyDefaultHeaders = new DefaultHttpHeaders();

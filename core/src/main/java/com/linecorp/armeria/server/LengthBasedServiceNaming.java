@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TargetLengthBasedClassNameAbbreviator;
 
 final class LengthBasedServiceNaming implements ServiceNaming {
@@ -36,10 +37,11 @@ final class LengthBasedServiceNaming implements ServiceNaming {
         abbreviator = new TargetLengthBasedClassNameAbbreviator(shortenedServiceNameLength);
     }
 
+    @Nullable
     @Override
     public String serviceName(ServiceRequestContext ctx) {
         final String fullTypeName = ServiceNaming.fullTypeName().serviceName(ctx);
-        return abbreviate(fullTypeName);
+        return fullTypeName != null ? abbreviate(fullTypeName) : null;
     }
 
     private String abbreviate(String serviceName) {

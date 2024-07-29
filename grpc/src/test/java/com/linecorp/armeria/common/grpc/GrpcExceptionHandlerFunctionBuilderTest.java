@@ -47,7 +47,7 @@ class GrpcExceptionHandlerFunctionBuilderTest {
         builder.on(A1Exception.class, Status.RESOURCE_EXHAUSTED);
 
         assertThatThrownBy(() -> {
-            builder.on(A1Exception.class, (ctx, throwable, metadata) -> Status.UNIMPLEMENTED);
+            builder.on(A1Exception.class, (ctx, status, throwable, metadata) -> Status.UNIMPLEMENTED);
         }).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("is already added with");
 
@@ -60,26 +60,26 @@ class GrpcExceptionHandlerFunctionBuilderTest {
     @Test
     void sortExceptionHandler() {
         final GrpcExceptionHandlerFunctionBuilder builder = GrpcExceptionHandlerFunction.builder();
-        builder.on(A1Exception.class, (ctx, throwable, metadata) -> Status.RESOURCE_EXHAUSTED);
-        builder.on(A2Exception.class, (ctx, throwable, metadata) -> Status.UNIMPLEMENTED);
+        builder.on(A1Exception.class, (ctx, status, throwable, metadata) -> Status.RESOURCE_EXHAUSTED);
+        builder.on(A2Exception.class, (ctx, status, throwable, metadata) -> Status.UNIMPLEMENTED);
 
         assertThat(builder.exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A2Exception.class, A1Exception.class);
 
-        builder.on(B1Exception.class, (ctx, throwable, metadata) -> Status.UNAUTHENTICATED);
+        builder.on(B1Exception.class, (ctx, status, throwable, metadata) -> Status.UNAUTHENTICATED);
         assertThat(builder.exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A2Exception.class,
                                  A1Exception.class,
                                  B1Exception.class);
 
-        builder.on(A3Exception.class, (ctx, throwable, metadata) -> Status.UNAUTHENTICATED);
+        builder.on(A3Exception.class, (ctx, status, throwable, metadata) -> Status.UNAUTHENTICATED);
         assertThat(builder.exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A3Exception.class,
                                  A2Exception.class,
                                  A1Exception.class,
                                  B1Exception.class);
 
-        builder.on(B2Exception.class, (ctx, throwable, metadata) -> Status.NOT_FOUND);
+        builder.on(B2Exception.class, (ctx, status, throwable, metadata) -> Status.NOT_FOUND);
         assertThat(builder.exceptionMappings.stream().map(it -> (Class) it.getKey()))
                 .containsExactly(A3Exception.class,
                                  A2Exception.class,
@@ -89,19 +89,19 @@ class GrpcExceptionHandlerFunctionBuilderTest {
 
         final GrpcExceptionHandlerFunction exceptionHandler = builder.build().orElse(
                 GrpcExceptionHandlerFunction.of());
-        Status status = exceptionHandler.apply(ctx, new A3Exception(), new Metadata());
+        Status status = exceptionHandler.apply(ctx, Status.UNKNOWN, new A3Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNAUTHENTICATED);
 
-        status = exceptionHandler.apply(ctx, new A2Exception(), new Metadata());
+        status = exceptionHandler.apply(ctx, Status.UNKNOWN, new A2Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNIMPLEMENTED);
 
-        status = exceptionHandler.apply(ctx, new A1Exception(), new Metadata());
+        status = exceptionHandler.apply(ctx, Status.UNKNOWN, new A1Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.RESOURCE_EXHAUSTED);
 
-        status = exceptionHandler.apply(ctx, new B2Exception(), new Metadata());
+        status = exceptionHandler.apply(ctx, Status.UNKNOWN, new B2Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.NOT_FOUND);
 
-        status = exceptionHandler.apply(ctx, new B1Exception(), new Metadata());
+        status = exceptionHandler.apply(ctx, Status.UNKNOWN, new B1Exception(), new Metadata());
         assertThat(status.getCode()).isEqualTo(Code.UNAUTHENTICATED);
     }
 
@@ -110,13 +110,13 @@ class GrpcExceptionHandlerFunctionBuilderTest {
         final GrpcExceptionHandlerFunction exceptionHandler =
                 GrpcExceptionHandlerFunction
                         .builder()
-                        .on(A2Exception.class, (ctx, throwable, metadata) -> Status.PERMISSION_DENIED)
-                        .on(A1Exception.class, (ctx1, cause, metadata) -> Status.DEADLINE_EXCEEDED)
+                        .on(A2Exception.class, (ctx, status, throwable, metadata) -> Status.PERMISSION_DENIED)
+                        .on(A1Exception.class, (ctx1, status, cause, metadata) -> Status.DEADLINE_EXCEEDED)
                         .build();
 
         for (Throwable ex : ImmutableList.of(new A2Exception(), new A3Exception())) {
             final Metadata metadata = new Metadata();
-            final Status newStatus = exceptionHandler.apply(ctx, ex, metadata);
+            final Status newStatus = exceptionHandler.apply(ctx, Status.UNKNOWN, ex, metadata);
             assertThat(newStatus.getCode()).isEqualTo(Code.PERMISSION_DENIED);
             assertThat(newStatus.getCause()).isEqualTo(ex);
             assertThat(metadata.keys()).isEmpty();
@@ -124,7 +124,7 @@ class GrpcExceptionHandlerFunctionBuilderTest {
 
         final A1Exception cause = new A1Exception();
         final Metadata metadata = new Metadata();
-        final Status newStatus = exceptionHandler.apply(ctx, cause, metadata);
+        final Status newStatus = exceptionHandler.apply(ctx, Status.UNKNOWN, cause, metadata);
 
         assertThat(newStatus.getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
         assertThat(newStatus.getCause()).isEqualTo(cause);
@@ -136,7 +136,7 @@ class GrpcExceptionHandlerFunctionBuilderTest {
         final GrpcExceptionHandlerFunction exceptionHandler =
                 GrpcExceptionHandlerFunction
                         .builder()
-                        .on(B1Exception.class, (ctx, throwable, metadata) -> {
+                        .on(B1Exception.class, (ctx, status, throwable, metadata) -> {
                             metadata.put(TEST_KEY, throwable.getClass().getSimpleName());
                             return Status.ABORTED;
                         })
@@ -144,14 +144,14 @@ class GrpcExceptionHandlerFunctionBuilderTest {
 
         final B1Exception cause = new B1Exception();
         final Metadata metadata1 = new Metadata();
-        final Status newStatus1 = exceptionHandler.apply(ctx, cause, metadata1);
+        final Status newStatus1 = exceptionHandler.apply(ctx, Status.UNKNOWN, cause, metadata1);
         assertThat(newStatus1.getCode()).isEqualTo(Code.ABORTED);
         assertThat(metadata1.get(TEST_KEY)).isEqualTo("B1Exception");
         assertThat(metadata1.keys()).containsOnly(TEST_KEY.name());
 
         final Metadata metadata2 = new Metadata();
         metadata2.put(TEST_KEY2, "test");
-        final Status newStatus2 = exceptionHandler.apply(ctx, cause, metadata2);
+        final Status newStatus2 = exceptionHandler.apply(ctx, Status.UNKNOWN, cause, metadata2);
 
         assertThat(newStatus2.getCode()).isEqualTo(Code.ABORTED);
         assertThat(metadata2.get(TEST_KEY)).isEqualTo("B1Exception");

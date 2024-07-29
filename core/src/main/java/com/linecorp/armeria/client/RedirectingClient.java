@@ -561,15 +561,21 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
                 redirectSignatures = new LinkedHashSet<>();
 
                 final String originalProtocol = ctx.sessionProtocol().isTls() ? "https" : "http";
+                final String originalAuthority = ctx.authority();
+                assert originalAuthority != null;
                 final RedirectSignature originalSignature = new RedirectSignature(originalProtocol,
-                                                                                  ctx.authority(),
+                                                                                  originalAuthority,
                                                                                   request.headers().path(),
                                                                                   request.method());
                 redirectSignatures.add(originalSignature);
             }
 
-            final RedirectSignature signature = new RedirectSignature(nextReqTarget.scheme(),
-                                                                      nextReqTarget.authority(),
+            final String nextScheme = nextReqTarget.scheme();
+            final String nextAuthority = nextReqTarget.authority();
+            assert nextScheme != null;
+            assert nextAuthority != null;
+            final RedirectSignature signature = new RedirectSignature(nextScheme,
+                                                                      nextAuthority,
                                                                       nextReqTarget.pathAndQuery(),
                                                                       nextMethod);
             if (!redirectSignatures.add(signature)) {

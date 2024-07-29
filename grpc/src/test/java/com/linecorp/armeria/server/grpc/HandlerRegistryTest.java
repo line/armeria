@@ -21,6 +21,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
+
 import testing.grpc.TestServiceGrpc.TestServiceImplBase;
 
 class HandlerRegistryTest {
@@ -33,7 +35,8 @@ class HandlerRegistryTest {
     })
     @ParameterizedTest
     void normalizePath(String path1, String path2, String expected1, String expected2) {
-        final HandlerRegistry.Builder builder = new HandlerRegistry.Builder();
+        final HandlerRegistry.Builder builder = new HandlerRegistry.Builder()
+                .setDefaultExceptionHandler(GrpcExceptionHandlerFunction.of());
         final TestServiceImplBase testService = new TestServiceImplBase() {};
         final HandlerRegistry handlerRegistry = builder.addService(path1, testService.bindService(),
                                                                    null, null, ImmutableList.of())

@@ -11,7 +11,7 @@ class GrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
     @Nullable
     @Override
-    public Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+    public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
         if (cause instanceof IllegalArgumentException) {
             return Status.INVALID_ARGUMENT.withCause(cause);
         }

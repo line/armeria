@@ -254,6 +254,7 @@ public final class ClientCacheControl extends CacheControl {
             return false;
         }
 
+        assert o != null;
         final ClientCacheControl that = (ClientCacheControl) o;
         return onlyIfCached == that.onlyIfCached &&
                maxStaleSeconds == that.maxStaleSeconds &&

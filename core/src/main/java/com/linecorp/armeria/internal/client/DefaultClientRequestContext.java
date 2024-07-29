@@ -70,6 +70,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.SchemeAndAuthority;
@@ -285,6 +286,11 @@ public final class DefaultClientRequestContext
         if (req instanceof FixedStreamMessage) {
             return ExchangeType.RESPONSE_STREAMING;
         }
+        if (req instanceof HeaderOverridingHttpRequest) {
+            if (((HeaderOverridingHttpRequest) req).delegate() instanceof FixedStreamMessage) {
+                return ExchangeType.RESPONSE_STREAMING;
+            }
+        }
         return ExchangeType.BIDI_STREAMING;
     }
 
@@ -410,7 +416,9 @@ public final class DefaultClientRequestContext
             if (whenInitializedUpdater.compareAndSet(this, null, whenInitialized)) {
                 return whenInitialized;
             } else {
-                return this.whenInitialized;
+                final CompletableFuture<Boolean> oldWhenInitialized = this.whenInitialized;
+                assert oldWhenInitialized != null;
+                return oldWhenInitialized;
             }
         }
     }
@@ -423,7 +431,9 @@ public final class DefaultClientRequestContext
         } else {
             if (!whenInitializedUpdater.compareAndSet(this, null,
                                                       UnmodifiableFuture.completedFuture(success))) {
-                this.whenInitialized.complete(success);
+                final CompletableFuture<Boolean> oldWhenInitialized = this.whenInitialized;
+                assert oldWhenInitialized != null;
+                oldWhenInitialized.complete(success);
             }
         }
     }
@@ -615,6 +625,7 @@ public final class DefaultClientRequestContext
                                                sessionProtocol(), method(), requestTarget());
     }
 
+    @Nullable
     @Override
     protected RequestTarget validateHeaders(RequestHeaders headers) {
         // no need to validate since internal headers will contain
@@ -639,6 +650,7 @@ public final class DefaultClientRequestContext
         return newChannel;
     }
 
+    @Nullable
     @Override
     public InetSocketAddress remoteAddress() {
         final InetSocketAddress remoteAddress = this.remoteAddress;
@@ -651,6 +663,7 @@ public final class DefaultClientRequestContext
         return newRemoteAddress;
     }
 
+    @Nullable
     @Override
     public InetSocketAddress localAddress() {
         final InetSocketAddress localAddress = this.localAddress;
@@ -690,11 +703,13 @@ public final class DefaultClientRequestContext
         return options;
     }
 
+    @Nullable
     @Override
     public EndpointGroup endpointGroup() {
         return endpointGroup;
     }
 
+    @Nullable
     @Override
     public Endpoint endpoint() {
         return endpoint;
@@ -706,6 +721,7 @@ public final class DefaultClientRequestContext
         return requestTarget().fragment();
     }
 
+    @Nullable
     @Override
     public String authority() {
         final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
@@ -749,6 +765,7 @@ public final class DefaultClientRequestContext
         return origin;
     }
 
+    @Nullable
     @Override
     public String host() {
         final String authority = authority();

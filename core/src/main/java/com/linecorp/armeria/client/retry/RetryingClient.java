@@ -426,8 +426,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 }
                 return;
             }
-            final HttpResponse response0 = aggregatedRes != null ? aggregatedRes.toHttpResponse()
-                                                                 : response;
+            final HttpResponse response0;
+            if (aggregatedRes != null) {
+                response0 = aggregatedRes.toHttpResponse();
+            } else {
+                response0 = response;
+                assert response0 != null;
+            }
             handleResponseWithoutContent(retryConfig, ctx, rootReqDuplicator, originalReq, returnedRes,
                                          future, derivedCtx, response0, responseCause);
         });
@@ -517,7 +522,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     private static RetryRule retryRule(RetryConfig<HttpResponse> retryConfig) {
         if (retryConfig.needsContentInRule()) {
             return retryConfig.fromRetryRuleWithContent();
+        } else {
+            final RetryRule rule = retryConfig.retryRule();
+            assert rule != null;
+            return rule;
         }
-        return retryConfig.retryRule();
     }
 }

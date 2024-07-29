@@ -89,6 +89,7 @@ public final class RetryRuleWithContentBuilder<T extends Response>
             if (content == null) {
                 return NEXT_DECISION;
             }
+            assert responseFilter != null;
             return responseFilter.apply(ctx, content)
                                  .handle((matched, cause0) -> {
                                      if (cause0 != null) {
