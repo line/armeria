@@ -114,8 +114,8 @@ const IndexPage = (props: RouteComponentProps): JSX.Element => {
               <OutboundLink href="https://netty.io/">Netty</OutboundLink>
             </Tooltip>{' '}
             and his colleagues at{' '}
-            <Tooltip title="The company behind LINE and Yahoo! Japan, leaders in digital communication and web services">
-              <OutboundLink href="https://techblog.lycorp.co.jp/en">
+            <Tooltip title="The company behind LINE and Yahoo! Japan, the leaders in digital communication and web services">
+              <OutboundLink href="https://en.wikipedia.org/wiki/LY_Corporation">
                 LY Corporation
               </OutboundLink>
             </Tooltip>{' '}
