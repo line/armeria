@@ -1865,7 +1865,6 @@ cu
 cuiaba.br
 cuisinella
 cuneo.it
-cupcake.is
 curitiba.br
 curv.dev
 cust.cloudscale.ch
@@ -2726,7 +2725,6 @@ flt.cloud.muni.cz
 flutterflow.app
 fly
 fly.dev
-flynnhosting.net
 fm
 fm.br
 fm.it
