@@ -22,11 +22,13 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.AbstractServerHttpRequest;
 import org.springframework.util.MultiValueMap;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * A version specific {@link AbstractServerHttpRequest} which implements the APIs that only exists in Spring 6.
  */
 abstract class AbstractServerHttpRequestVersionSpecific extends AbstractServerHttpRequest {
-    protected AbstractServerHttpRequestVersionSpecific(HttpMethod method, URI uri, String contextPath,
+    protected AbstractServerHttpRequestVersionSpecific(HttpMethod method, URI uri, @Nullable String contextPath,
                                                        MultiValueMap<String, String> headers) {
         super(method, uri, contextPath, headers);
     }

@@ -137,7 +137,7 @@ public class Ssl {
      * Sets whether the client authentication is not none ({@link ClientAuth#NONE}), optional
      * ({@link ClientAuth#OPTIONAL}) or required ({@link ClientAuth#REQUIRE}).
      */
-    public Ssl setClientAuth(ClientAuth clientAuth) {
+    public Ssl setClientAuth(@Nullable ClientAuth clientAuth) {
         this.clientAuth = clientAuth;
         return this;
     }
@@ -154,7 +154,7 @@ public class Ssl {
     /**
      * Sets the supported SSL ciphers.
      */
-    public Ssl setCiphers(List<String> ciphers) {
+    public Ssl setCiphers(@Nullable List<String> ciphers) {
         this.ciphers = ciphers;
         return this;
     }
@@ -171,7 +171,7 @@ public class Ssl {
     /**
      * Sets the enabled SSL protocols.
      */
-    public Ssl setEnabledProtocols(List<String> enabledProtocols) {
+    public Ssl setEnabledProtocols(@Nullable List<String> enabledProtocols) {
         this.enabledProtocols = enabledProtocols;
         return this;
     }

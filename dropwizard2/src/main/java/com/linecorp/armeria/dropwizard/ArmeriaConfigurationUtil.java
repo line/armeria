@@ -127,7 +127,10 @@ final class ArmeriaConfigurationUtil {
         }
 
         if (settings.getPorts().isEmpty()) {
-            serverBuilder.port(new ServerPort(DEFAULT_PORT.getPort(), DEFAULT_PORT.getProtocols()));
+            final int port = DEFAULT_PORT.getPort();
+            final List<SessionProtocol> protocols = DEFAULT_PORT.getProtocols();
+            assert protocols != null;
+            serverBuilder.port(new ServerPort(port, protocols));
         } else {
             configurePorts(serverBuilder, settings.getPorts());
         }
@@ -445,8 +448,9 @@ final class ArmeriaConfigurationUtil {
         } else if ("combined".equals(accessLog.getType())) {
             serverBuilder.accessLogWriter(AccessLogWriter.combined(), true);
         } else if ("custom".equals(accessLog.getType())) {
-            serverBuilder
-                    .accessLogWriter(AccessLogWriter.custom(accessLog.getFormat()), true);
+            final String format = accessLog.getFormat();
+            assert format != null;
+            serverBuilder.accessLogWriter(AccessLogWriter.custom(format), true);
         }
     }
 

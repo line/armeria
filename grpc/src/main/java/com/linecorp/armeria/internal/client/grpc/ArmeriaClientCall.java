@@ -474,7 +474,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     @Override
-    public void transportReportStatus(Status status, Metadata metadata) {
+    public void transportReportStatus(Status status, @Nullable Metadata metadata) {
         // This method is invoked in ctx.eventLoop and we need to bounce it through
         // CallOptions executor (in case it's configured) to serialize with closes
         // that were potentially triggered when Listener throws (closeWhenListenerThrows).
@@ -519,7 +519,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         closeWhenEos(statusAndMetadata.status(), statusAndMetadata.metadata());
     }
 
-    private void closeWhenEos(Status status, Metadata metadata) {
+    private void closeWhenEos(Status status, @Nullable Metadata metadata) {
         if (needsDirectInvocation()) {
             close(status, metadata);
         } else {
@@ -535,7 +535,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     // never do this concurrently: the abnormal call into close() from the caller thread happens in case
     // of early return, before event-loop is being assigned to this call. After event-loop is being
     // assigned, the driving call won't be able to trigger close() anymore.
-    private void close(Status status, Metadata metadata) {
+    private void close(Status status, @Nullable Metadata metadata) {
         if (closed) {
             // 'close()' could be called twice if a call is closed with non-OK status.
             // See: https://github.com/line/armeria/issues/3799
@@ -548,7 +548,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             status = Status.DEADLINE_EXCEEDED;
             // Replace trailers to prevent mixing sources of status and trailers.
             metadata = new Metadata();
+        } else if (metadata == null) {
+            metadata = new Metadata();
         }
+
         if (status.getCode() == Code.DEADLINE_EXCEEDED) {
             status = status.augmentDescription("deadline exceeded after " +
                                                MILLISECONDS.toNanos(ctx.responseTimeoutMillis()) + "ns.");

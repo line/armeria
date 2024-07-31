@@ -139,8 +139,10 @@ final class HandlerRegistry {
         return methods.get(methodName);
     }
 
-    String simpleMethodName(MethodDescriptor<?, ?> methodName) {
-        return simpleMethodNames.get(methodName);
+    String simpleMethodName(MethodDescriptor<?, ?> methodDescriptor) {
+        final String simpleMethodName = simpleMethodNames.get(methodDescriptor);
+        assert simpleMethodName != null : "No simple name found for " + methodDescriptor.getFullMethodName();
+        return simpleMethodName;
     }
 
     List<ServerServiceDefinition> services() {
