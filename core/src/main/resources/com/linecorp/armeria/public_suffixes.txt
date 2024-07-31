@@ -762,7 +762,6 @@ awaji.hyogo.jp
 aws
 awsapps.com
 awsglobalaccelerator.com
-awsmppl.com
 ax
 axa
 aya.miyazaki.jp
