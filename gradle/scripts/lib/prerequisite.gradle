@@ -9,12 +9,15 @@ plugins {
 ''')
 }
 
-['projectName', 'projectUrl', 'inceptionYear', 'licenseName', 'licenseUrl', 'scmUrl', 'scmConnection',
+['group', 'version', 'projectName', 'projectUrl', 'inceptionYear', 'licenseName', 'licenseUrl', 'scmUrl', 'scmConnection',
  'scmDeveloperConnection', 'publishUrlForRelease', 'publishUrlForSnapshot', 'publishUsernameProperty',
  'publishPasswordProperty'].each {
     if (rootProject.findProperty(it) == null) {
         throw new IllegalStateException('''Add project info properties to gradle.properties:
 
+group=com.doe.john.myexample
+version=0.0.1-SNAPSHOT
+versionPattern=^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$
 projectName=My Example
 projectUrl=https://www.example.com/
 projectDescription=My example project
@@ -31,7 +34,11 @@ publishUrlForRelease=https://oss.sonatype.org/service/local/staging/deploy/maven
 publishUrlForSnapshot=https://oss.sonatype.org/content/repositories/snapshots/
 publishUsernameProperty=ossrhUsername
 publishPasswordProperty=ossrhPassword
-versionPattern=^[0-9]+\\\\.[0-9]+\\\\.[0-9]+$
+publishSignatureRequired=true
+googleAnalyticsId=UA-XXXXXXXX
+javaSourceCompatibility=1.8
+javaTargetCompatibility=1.8
+automaticModuleNames=false
 ''')
     }
 }

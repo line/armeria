@@ -110,7 +110,9 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
     }
 
     final State state() {
-        return state.get();
+        final State state = this.state.get();
+        assert state != null;
+        return state;
     }
 
     @Override

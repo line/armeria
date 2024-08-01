@@ -209,6 +209,7 @@ public abstract class AbstractHttpFile implements HttpFile {
             return null;
         }
 
+        assert attrs != null;
         final long length = attrs.length();
         if (length == 0) {
             // No need to stream an empty file.

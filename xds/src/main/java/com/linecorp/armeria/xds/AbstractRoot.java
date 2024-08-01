@@ -107,7 +107,7 @@ abstract class AbstractRoot<T extends Snapshot<? extends XdsResource>>
             return;
         }
         snapshot = newSnapshot;
-        notifyWatchers("snapshotUpdated", watcher -> watcher.snapshotUpdated(snapshot));
+        notifyWatchers("snapshotUpdated", watcher -> watcher.snapshotUpdated(newSnapshot));
     }
 
     @Override

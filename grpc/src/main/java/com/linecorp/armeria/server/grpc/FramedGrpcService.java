@@ -52,7 +52,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
@@ -60,7 +59,9 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
@@ -214,10 +215,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
+            final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
+            assert defaultHeaders != null;
             return HttpResponse.of(
                     (ResponseHeaders) AbstractServerCall.statusToTrailers(
                             ctx,
-                            defaultHeaders.get(serializationFormat).toBuilder(),
+                            defaultHeaders.toBuilder(),
                             Status.UNIMPLEMENTED.withDescription(
                                     "Method not found: " + ctx.config().route().patternString()),
                             new Metadata()));
@@ -235,11 +238,16 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     }
                 } catch (IllegalArgumentException e) {
                     final Metadata metadata = new Metadata();
-                    final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(method);
+                    final InternalGrpcExceptionHandler exceptionHandler = registry.getExceptionHandler(method);
+                    assert exceptionHandler != null;
+                    final Status status = Status.INVALID_ARGUMENT.withCause(e);
+                    final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
+                    assert defaultHeaders != null;
                     return HttpResponse.of(
                             (ResponseHeaders) AbstractServerCall.statusToTrailers(
-                                    ctx, defaultHeaders.get(serializationFormat).toBuilder(),
-                                    exceptionHandler.apply(ctx, e, metadata), metadata));
+                                    ctx, defaultHeaders.toBuilder(),
+                                    exceptionHandler.handle(ctx, status, e, metadata),
+                                    metadata));
                 }
             } else {
                 if (Boolean.TRUE.equals(ctx.attr(AbstractUnframedGrpcService.IS_UNFRAMED_GRPC))) {
@@ -297,9 +305,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         }
     }
 
-    private <I, O> void startCall(ServerMethodDefinition<I, O> methodDef, ServiceRequestContext ctx,
-                                  HttpRequest req, MethodDescriptor<I, O> methodDescriptor,
-                                  AbstractServerCall<I, O> call) {
+    private static <I, O> void startCall(ServerMethodDefinition<I, O> methodDef, ServiceRequestContext ctx,
+                                         HttpRequest req, MethodDescriptor<I, O> methodDescriptor,
+                                         AbstractServerCall<I, O> call) {
         final Listener<I> listener;
         final Metadata headers = MetadataUtil.copyFromHeaders(req.headers());
         try {
@@ -320,9 +328,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            final Status status = call.exceptionHandler().apply(ctx, cancellationCause, headers);
-            assert status != null;
-            call.close(new ServerStatusAndMetadata(status, new Metadata(), true, true));
+            final StatusAndMetadata statusAndMetadata = call.exceptionHandler().handle(ctx, cancellationCause);
+            call.close(new ServerStatusAndMetadata(statusAndMetadata.status(), statusAndMetadata.metadata(),
+                                                   true));
             return null;
         });
     }
@@ -332,9 +340,15 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             ServiceRequestContext ctx, HttpRequest req,
             HttpResponse res, @Nullable CompletableFuture<HttpResponse> resFuture,
             SerializationFormat serializationFormat, @Nullable Executor blockingExecutor) {
+
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
-        final GrpcExceptionHandlerFunction exceptionHandler = registry.getExceptionHandler(
-                methodDef);
+        final InternalGrpcExceptionHandler exceptionHandler =
+                registry.getExceptionHandler(methodDef);
+        assert exceptionHandler != null;
+        final GrpcJsonMarshaller jsonMarshaller = jsonMarshallers.get(methodDescriptor.getServiceName());
+        final ResponseHeaders defaultHeaders = this.defaultHeaders.get(serializationFormat);
+        assert defaultHeaders != null;
+
         if (methodDescriptor.getType() == MethodType.UNARY) {
             assert resFuture != null;
             return new UnaryServerCall<>(
@@ -349,9 +363,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     maxResponseMessageLength,
                     ctx,
                     serializationFormat,
-                    jsonMarshallers.get(methodDescriptor.getServiceName()),
+                    jsonMarshaller,
                     unsafeWrapRequestBuffers,
-                    defaultHeaders.get(serializationFormat),
+                    defaultHeaders,
                     exceptionHandler,
                     blockingExecutor,
                     autoCompression,
@@ -368,9 +382,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     maxResponseMessageLength,
                     ctx,
                     serializationFormat,
-                    jsonMarshallers.get(methodDescriptor.getServiceName()),
+                    jsonMarshaller,
                     unsafeWrapRequestBuffers,
-                    defaultHeaders.get(serializationFormat),
+                    defaultHeaders,
                     exceptionHandler,
                     blockingExecutor,
                     autoCompression,
@@ -405,6 +419,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         }
     }
 
+    @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         // method could be set in HttpJsonTranscodingService.

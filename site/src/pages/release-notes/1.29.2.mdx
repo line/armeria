@@ -1,0 +1,22 @@
+---
+date: 2024-07-10
+---
+
+## 🛠️ Bug fixes
+
+- Service binding builder methods now correctly return the self-types. #5797
+- The peeled exception is now correctly passed to
+  <type://GrpcExceptionHandlerFunction#apply(RequestContext,Status,Throwable,Metadata)> method. #5796
+- <type://Endpoint> selection calls to the ramping up <type://EndpointSelectionStrategy> succeeds
+  for <type://XdsEndpointGroup>. #5799
+- The meter names in <type://ServerMetrics> no longer conflict with <type://MetricCollectingService>. #5804
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'jrhee17',
+  'ks-yim',
+  'minwoox',
+  'trustin'
+]} />

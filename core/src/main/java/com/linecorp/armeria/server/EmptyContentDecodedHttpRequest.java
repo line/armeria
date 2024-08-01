@@ -89,6 +89,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         return routingContext;
     }
 
+    @Nullable
     @Override
     public Routed<ServiceConfig> route() {
         if (routingContext.hasResult()) {

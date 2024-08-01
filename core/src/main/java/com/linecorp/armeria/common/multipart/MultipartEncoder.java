@@ -90,7 +90,9 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
         if (completionFutureUpdater.compareAndSet(this, null, completionFuture)) {
             return completionFuture;
         } else {
-            return this.completionFuture;
+            final CompletableFuture<Void> oldFuture = this.completionFuture;
+            assert oldFuture != null;
+            return oldFuture;
         }
     }
 
@@ -243,7 +245,9 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
             } else {
                 if (!completionFutureUpdater
                         .compareAndSet(MultipartEncoder.this, null, newEmitter.whenComplete())) {
-                    completeAsync(newEmitter.whenComplete(), MultipartEncoder.this.completionFuture);
+                    final CompletableFuture<Void> oldFuture = MultipartEncoder.this.completionFuture;
+                    assert oldFuture != null;
+                    completeAsync(newEmitter.whenComplete(), oldFuture);
                 }
             }
 
@@ -268,6 +272,8 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
         @Override
         public void onNext(BodyPart bodyPart) {
             requireNonNull(bodyPart, "bodyPart");
+            final StreamWriter<StreamMessage<HttpData>> emitter = MultipartEncoder.this.emitter;
+            assert emitter != null;
             emitter.write(createBodyPartPublisher(bodyPart));
         }
 
@@ -280,6 +286,8 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
             }
 
             closed = true;
+            final StreamWriter<StreamMessage<HttpData>> emitter = MultipartEncoder.this.emitter;
+            assert emitter != null;
             emitter.abort(cause);
         }
 
@@ -290,6 +298,8 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
             }
 
             closed = true;
+            final StreamWriter<StreamMessage<HttpData>> emitter = MultipartEncoder.this.emitter;
+            assert emitter != null;
             emitter.close();
         }
     }

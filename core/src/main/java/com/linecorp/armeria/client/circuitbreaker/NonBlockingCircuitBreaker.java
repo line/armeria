@@ -73,7 +73,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @Override
     public void onSuccess() {
-        final State currentState = state.get();
+        final State currentState = state();
         if (currentState.isClosed()) {
             // fires success event
             final EventCount updatedCount = currentState.counter().onSuccess();
@@ -97,7 +97,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @Override
     public void onFailure() {
-        final State currentState = state.get();
+        final State currentState = state();
         if (currentState.isClosed()) {
             // fires failure event
             final EventCount updatedCount = currentState.counter().onFailure();
@@ -140,7 +140,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @Override
     public boolean tryRequest() {
-        final State currentState = state.get();
+        final State currentState = state();
         if (currentState.isClosed()) {
             // all requests are allowed during CLOSED
             return true;
@@ -168,7 +168,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @Override
     public CircuitState circuitState() {
-        return state.get().circuitState;
+        return state().circuitState;
     }
 
     @Override
@@ -272,7 +272,9 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
 
     @VisibleForTesting
     State state() {
-        return state.get();
+        final State state = this.state.get();
+        assert state != null;
+        return state;
     }
 
     @VisibleForTesting
@@ -362,11 +364,13 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
             return EventCount.ZERO;
         }
 
+        @Nullable
         @Override
         public EventCount onSuccess() {
             return null;
         }
 
+        @Nullable
         @Override
         public EventCount onFailure() {
             return null;

@@ -60,8 +60,12 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                         SocketAddress localAddress, ChannelPromise promise) throws Exception {
         final InetSocketAddress proxyAddress = haProxyConfig.proxyAddress();
         assert proxyAddress != null;
-        promise.addListener(f -> {
+        final ChannelPromise connectionPromise = ctx.newPromise();
+        ctx.connect(proxyAddress, localAddress, connectionPromise);
+        connectionPromise.addListener(f -> {
             if (!f.isSuccess()) {
+                promise.tryFailure(wrapException(f.cause()));
+                ctx.close();
                 return;
             }
             try {
@@ -71,20 +75,20 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
                            ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
                            final ProxyConnectionEvent event = new ProxyConnectionEvent(
                                    PROTOCOL, AUTH, proxyAddress, remoteAddress);
+                           promise.trySuccess();
                            ctx.pipeline().fireUserEventTriggered(event);
                        } else {
-                           ctx.fireExceptionCaught(wrapException(f0.cause()));
+                           promise.tryFailure(wrapException(f0.cause()));
                            ctx.close();
                        }
                    });
             } catch (Exception e) {
-                ctx.pipeline().fireUserEventTriggered(wrapException(e));
+                promise.tryFailure(wrapException(e));
                 ctx.close();
             } finally {
                 ctx.pipeline().remove(this);
             }
         });
-        super.connect(ctx, proxyAddress, localAddress, promise);
     }
 
     private static ProxyConnectException wrapException(Throwable e) {
@@ -123,4 +127,3 @@ final class HAProxyHandler extends ChannelOutboundHandlerAdapter {
         return NetUtil.getByName(inetAddress.getHostAddress());
     }
 }
-

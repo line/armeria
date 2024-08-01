@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,6 +25,13 @@ import org.reactivestreams.Subscriber;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
@@ -33,14 +40,28 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * An {@link HttpRequest} that overrides the {@link RequestHeaders}.
  */
-final class HeaderOverridingHttpRequest implements HttpRequest {
+public final class HeaderOverridingHttpRequest implements HttpRequest {
 
     private final HttpRequest delegate;
     private final RequestHeaders headers;
 
+    public static HeaderOverridingHttpRequest of(HttpRequest delegate, RequestHeaders headers) {
+        requireNonNull(delegate, "delegate");
+        requireNonNull(headers, "headers");
+        if (delegate instanceof HeaderOverridingHttpRequest) {
+            return new HeaderOverridingHttpRequest(
+                    ((HeaderOverridingHttpRequest) delegate).delegate(), headers);
+        }
+        return new HeaderOverridingHttpRequest(delegate, headers);
+    }
+
     HeaderOverridingHttpRequest(HttpRequest delegate, RequestHeaders headers) {
         this.delegate = delegate;
         this.headers = headers;
+    }
+
+    public HttpRequest delegate() {
+        return delegate;
     }
 
     @Override

@@ -102,7 +102,7 @@ class GrpcStatusMappingTest {
             sb.service(
                     GrpcService.builder()
                                .addService(new TestServiceImpl())
-                               .exceptionHandler((ctx, cause, metadata) -> {
+                               .exceptionHandler((ctx, status, cause, metadata) -> {
                                    final String attr = ctx.attr(METHOD_ATTR);
                                    if (attr != null) {
                                        metadata.put(METHOD_KEY, attr);

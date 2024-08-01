@@ -185,6 +185,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         return serializationFormat;
     }
 
+    @Nullable
     @Override
     public SessionProtocol protocol() {
         return protocol;
@@ -243,8 +244,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         final long writeTimeoutMillis = ctx.writeTimeoutMillis();
 
         assert protocol != null;
-        assert responseDecoder != null;
         assert requestEncoder != null;
+        assert responseDecoder != null;
         if (!protocol.isMultiplex() && !serializationFormat.requiresNewConnection(protocol)) {
             // When HTTP/1.1 is used and the serialization format does not require
             // a new connection (w.g. WebSocket):
@@ -256,6 +257,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                     useHttp1Pipelining ? req.whenComplete()
                                        : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
             completionFuture.handle((ret, cause) -> {
+                assert responseDecoder != null;
                 if (isAcquirable(responseDecoder.keepAliveHandler())) {
                     pooledChannel.release();
                 }
@@ -446,8 +448,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
-        if (evt instanceof SessionProtocolNegotiationException ||
-            evt instanceof ProxyConnectException) {
+        if (evt instanceof SessionProtocolNegotiationException) {
             tryFailSessionPromise((Throwable) evt);
             ctx.close();
             return;

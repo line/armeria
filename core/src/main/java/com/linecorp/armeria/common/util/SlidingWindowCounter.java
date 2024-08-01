@@ -62,14 +62,18 @@ final class SlidingWindowCounter implements EventCounter {
 
     @Override
     public EventCount count() {
-        return snapshot.get();
+        final EventCount snapshot = this.snapshot.get();
+        assert snapshot != null;
+        return snapshot;
     }
 
+    @Nullable
     @Override
     public EventCount onSuccess() {
         return onEvent(Event.SUCCESS);
     }
 
+    @Nullable
     @Override
     public EventCount onFailure() {
         return onEvent(Event.FAILURE);
@@ -80,6 +84,7 @@ final class SlidingWindowCounter implements EventCounter {
         final long tickerNanos = ticker.read();
 
         final Bucket currentBucket = current.get();
+        assert currentBucket != null;
 
         if (tickerNanos < currentBucket.timestamp()) {
             // if current timestamp is older than bucket's timestamp (maybe race or GC pause?),

@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -31,14 +31,12 @@ import org.apache.thrift.async.AsyncMethodCallback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -70,7 +68,7 @@ public final class ThriftCallService implements RpcService {
      */
     public static ThriftCallService of(Object implementation) {
         requireNonNull(implementation, "implementation");
-        return new ThriftCallService(ImmutableMap.of("", ImmutableList.of(implementation)));
+        return builder().addService(implementation).build();
     }
 
     /**
@@ -82,19 +80,27 @@ public final class ThriftCallService implements RpcService {
      */
     public static ThriftCallService of(Map<String, ? extends Iterable<?>> implementations) {
         requireNonNull(implementations, "implementations");
-        return new ThriftCallService(implementations);
+        checkArgument(!implementations.isEmpty(), "implementations is empty");
+
+        return builder().addServices(implementations).build();
+    }
+
+    /**
+     * Creates a new instance of {@link ThriftCallServiceBuilder} which can build
+     * an instance of {@link ThriftCallService} fluently.
+     */
+    @UnstableApi
+    public static ThriftCallServiceBuilder builder() {
+        return new ThriftCallServiceBuilder();
     }
 
     private final Map<String, ThriftServiceEntry> entries;
 
-    private ThriftCallService(Map<String, ? extends Iterable<?>> implementations) {
-        requireNonNull(implementations, "implementations");
-        if (implementations.isEmpty()) {
-            throw new IllegalArgumentException("empty implementations");
-        }
+    private final boolean useBlockingTaskExecutor;
 
-        entries = implementations.entrySet().stream().collect(
-                toImmutableMap(Map.Entry::getKey, ThriftServiceEntry::new));
+    ThriftCallService(Map<String, ThriftServiceEntry> entries, boolean useBlockingTaskExecutor) {
+        this.entries = entries;
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
     }
 
     /**
@@ -140,14 +146,24 @@ public final class ThriftCallService implements RpcService {
                 TApplicationException.UNKNOWN_METHOD, "unknown method: " + call.method()));
     }
 
-    private static void invoke(
+    private void invoke(
             ServiceRequestContext ctx,
             Object impl, ThriftFunction func, List<Object> args, CompletableRpcResponse reply) {
 
         try {
             final TBase<?, ?> tArgs = func.newArgs(args);
             if (func.isAsync()) {
-                invokeAsynchronously(impl, func, tArgs, reply);
+                if (useBlockingTaskExecutor) {
+                    ctx.blockingTaskExecutor().execute(() -> {
+                        try {
+                            invokeAsynchronously(impl, func, tArgs, reply);
+                        } catch (Throwable t) {
+                            reply.completeExceptionally(t);
+                        }
+                    });
+                } else {
+                    invokeAsynchronously(impl, func, tArgs, reply);
+                }
             } else {
                 invokeSynchronously(ctx, impl, func, tArgs, reply);
             }

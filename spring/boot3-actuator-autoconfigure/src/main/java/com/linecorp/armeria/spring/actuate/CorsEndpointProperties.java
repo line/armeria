@@ -39,6 +39,8 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.convert.DurationUnit;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * Fork of <a href="https://github.com/spring-projects/spring-boot/blob/12c5cdceb18fd2f64d55d1855b78b50b50151f4f/spring-boot-project/spring-boot-actuator-autoconfigure/src/main/java/org/springframework/boot/actuate/autoconfigure/endpoint/web/CorsEndpointProperties.java>
  * CorsEndpointProperties</a>. Upstream has a dependency on {@code CorsConfiguration} which we don't need.
@@ -71,6 +73,7 @@ class CorsEndpointProperties {
     /**
      * Whether credentials are supported. When not set, credentials are not supported.
      */
+    @Nullable
     private Boolean allowCredentials;
 
     /**
@@ -81,7 +84,7 @@ class CorsEndpointProperties {
     private Duration maxAge = Duration.ofSeconds(1800);
 
     public List<String> getAllowedOrigins() {
-        return this.allowedOrigins;
+        return allowedOrigins;
     }
 
     public void setAllowedOrigins(List<String> allowedOrigins) {
@@ -89,7 +92,7 @@ class CorsEndpointProperties {
     }
 
     public List<String> getAllowedMethods() {
-        return this.allowedMethods;
+        return allowedMethods;
     }
 
     public void setAllowedMethods(List<String> allowedMethods) {
@@ -97,7 +100,7 @@ class CorsEndpointProperties {
     }
 
     public List<String> getAllowedHeaders() {
-        return this.allowedHeaders;
+        return allowedHeaders;
     }
 
     public void setAllowedHeaders(List<String> allowedHeaders) {
@@ -105,15 +108,16 @@ class CorsEndpointProperties {
     }
 
     public List<String> getExposedHeaders() {
-        return this.exposedHeaders;
+        return exposedHeaders;
     }
 
     public void setExposedHeaders(List<String> exposedHeaders) {
         this.exposedHeaders = exposedHeaders;
     }
 
+    @Nullable
     public Boolean getAllowCredentials() {
-        return this.allowCredentials;
+        return allowCredentials;
     }
 
     public void setAllowCredentials(Boolean allowCredentials) {
@@ -121,7 +125,7 @@ class CorsEndpointProperties {
     }
 
     public Duration getMaxAge() {
-        return this.maxAge;
+        return maxAge;
     }
 
     public void setMaxAge(Duration maxAge) {

@@ -116,6 +116,17 @@ class AbstractEndpointSelectorTest {
                 .hasRootCauseInstanceOf(EndpointSelectionTimeoutException.class);
     }
 
+    @Test
+    void testRampingUpInitialSelection() {
+        final DynamicEndpointGroup endpointGroup =
+                new DynamicEndpointGroup(EndpointSelectionStrategy.rampingUp());
+        final Endpoint endpoint = Endpoint.of("foo.com");
+        endpointGroup.setEndpoints(ImmutableList.of(endpoint));
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final Endpoint selected = endpointGroup.select(ctx, ctx.eventLoop()).join();
+        assertThat(selected).isEqualTo(endpoint);
+    }
+
     private static AbstractEndpointSelector newSelector(EndpointGroup endpointGroup) {
         final AbstractEndpointSelector selector = new AbstractEndpointSelector(endpointGroup) {
 

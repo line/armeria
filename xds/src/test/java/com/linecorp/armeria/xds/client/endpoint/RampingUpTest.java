@@ -41,6 +41,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -176,8 +177,8 @@ class RampingUpTest {
     private static Set<Endpoint> selectEndpoints(int weight, EndpointGroup xdsEndpointGroup) {
         final Set<Endpoint> selectedEndpoints = new HashSet<>();
         for (int i = 0; i < weight * 2; i++) {
-            selectedEndpoints.add(xdsEndpointGroup.selectNow(ctx()));
-            selectedEndpoints.add(xdsEndpointGroup.selectNow(ctx()));
+            selectedEndpoints.add(xdsEndpointGroup.select(ctx(), CommonPools.workerGroup()).join());
+            selectedEndpoints.add(xdsEndpointGroup.select(ctx(), CommonPools.workerGroup()).join());
         }
         return selectedEndpoints;
     }

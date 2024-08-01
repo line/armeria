@@ -31,10 +31,12 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -72,12 +74,17 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  */
 @UnstableApi
 public final class UnaryGrpcClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(UnaryGrpcClient.class);
+
     private static final Set<SerializationFormat> SUPPORTED_SERIALIZATION_FORMATS =
             UnaryGrpcSerializationFormats.values();
 
+    private static final RequestOptions REQUEST_OPTIONS =
+            RequestOptions.builder().exchangeType(ExchangeType.UNARY).build();
+
     private final SerializationFormat serializationFormat;
     private final WebClient webClient;
-    private static final Logger logger = LoggerFactory.getLogger(UnaryGrpcClient.class);
 
     /**
      * Constructs a {@link UnaryGrpcClient} for the given {@link WebClient}.
@@ -131,7 +138,7 @@ public final class UnaryGrpcClient {
                 RequestHeaders.builder(HttpMethod.POST, uri).contentType(serializationFormat.mediaType())
                               .add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString()).build(),
                 HttpData.wrap(payload));
-        return webClient.execute(request).aggregate(
+        return webClient.execute(request, REQUEST_OPTIONS).aggregate(
                                 AggregationOptions.builder()
                                                   .usePooledObjects(PooledByteBufAllocator.DEFAULT)
                                                   .build())
