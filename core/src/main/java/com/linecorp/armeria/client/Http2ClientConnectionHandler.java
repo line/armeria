@@ -73,22 +73,6 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        super.handlerAdded(ctx);
-    }
-
-    @Override
-    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.handlerRemoved0(ctx);
-    }
-
-    @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        super.channelRegistered(ctx);
-    }
-
-    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
         // NB: Http2ConnectionHandler does not flush the preface string automatically.
@@ -99,15 +83,5 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     protected boolean needsImmediateDisconnection() {
         return responseDecoder.goAwayHandler().receivedErrorGoAway() ||
                keepAliveHandler().isClosing();
-    }
-
-    @Override
-    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.channelInactive(ctx);
-    }
-
-    private void destroyKeepAliveHandler() {
-        keepAliveHandler().destroy();
     }
 }

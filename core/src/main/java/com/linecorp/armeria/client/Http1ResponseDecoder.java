@@ -118,9 +118,7 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {}
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        keepAliveHandler.destroy();
-    }
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {}
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {

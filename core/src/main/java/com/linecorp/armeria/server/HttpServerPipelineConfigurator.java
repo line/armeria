@@ -632,12 +632,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
 
         @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            keepAliveHandler.destroy();
-            super.channelInactive(ctx);
-        }
-
-        @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
             keepAliveHandler.onReadOrWrite();
 
