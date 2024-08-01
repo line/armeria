@@ -121,13 +121,14 @@ public interface CancellationScheduler {
 
     enum State {
         INIT,
-        PENDING,
+        SCHEDULED,
         FINISHED,
     }
 
     /**
      * A cancellation task invoked by the scheduler when its timeout exceeds or invoke by the user.
      */
+    @FunctionalInterface
     interface CancellationTask {
         /**
          * Returns {@code true} if the cancellation task can be scheduled.

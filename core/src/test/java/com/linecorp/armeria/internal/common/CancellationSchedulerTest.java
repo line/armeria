@@ -139,7 +139,7 @@ class CancellationSchedulerTest {
     void cancelTimeoutBySettingTimeoutZero() {
         executeInEventLoop(1000, scheduler -> {
             scheduler.setTimeoutNanos(SET_FROM_START, Long.MAX_VALUE);
-            assertThat(scheduler.state()).isEqualTo(State.PENDING);
+            assertThat(scheduler.state()).isEqualTo(State.SCHEDULED);
         });
     }
 
@@ -272,7 +272,7 @@ class CancellationSchedulerTest {
             assertThat(scheduler.isFinished()).isFalse();
 
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
-            assertThat(scheduler.state()).isEqualTo(State.PENDING);
+            assertThat(scheduler.state()).isEqualTo(State.SCHEDULED);
 
             schedulerRef.set(scheduler);
             whenTimedOutRef.set(scheduler.whenCancelled());
@@ -339,7 +339,7 @@ class CancellationSchedulerTest {
             assertThat(scheduler.isFinished()).isFalse();
 
             scheduler.setTimeoutNanos(SET_FROM_NOW, MILLISECONDS.toNanos(1000));
-            assertThat(scheduler.state()).isEqualTo(State.PENDING);
+            assertThat(scheduler.state()).isEqualTo(State.SCHEDULED);
 
             schedulerRef.set(scheduler);
             whenCancellingRef.set(scheduler.whenCancelling());

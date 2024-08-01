@@ -123,11 +123,11 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
             if (state != State.INIT) {
                 return;
             }
-            state = State.PENDING;
+            state = State.SCHEDULED;
             startTimeNanos = ticker.read();
             if (timeoutMode == TimeoutMode.SET_FROM_NOW) {
                 final long elapsedTimeNanos = startTimeNanos - setFromNowStartNanos;
-                timeoutNanos = LongMath.saturatedSubtract(timeoutNanos, elapsedTimeNanos);
+                timeoutNanos = Long.max(LongMath.saturatedSubtract(timeoutNanos, elapsedTimeNanos), 0);
             }
             if (timeoutNanos != Long.MAX_VALUE) {
                 scheduledFuture = eventLoop().schedule(() -> invokeTask(null), timeoutNanos, NANOSECONDS);
