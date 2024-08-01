@@ -48,7 +48,7 @@ final class WebSocketHttp1ClientKeepAliveHandler extends Http1KeepAliveHandler {
 
     @Override
     protected ChannelFuture writePing() {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
