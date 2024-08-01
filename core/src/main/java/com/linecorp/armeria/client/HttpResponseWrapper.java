@@ -278,7 +278,9 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
         }
 
         final StringBuilder logMsg = new StringBuilder("Unexpected exception while closing a request");
-        final String authority = ctx.request().authority();
+        final HttpRequest request = ctx.request();
+        assert request != null;
+        final String authority = request.authority();
         if (authority != null) {
             logMsg.append(" to ").append(authority);
         }

@@ -376,6 +376,7 @@ interface AccessLogComponent {
             return headerName;
         }
 
+        @Nullable
         @Override
         public Object getMessage0(RequestLog log) {
             return httpHeaders.apply(log).get(headerName);

@@ -39,8 +39,11 @@ import com.linecorp.armeria.common.Request;
  */
 final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
 
-    static final CircuitBreakerMapping hostMapping = new KeyedCircuitBreakerMapping(
-            true, false, false, (host, method, path) -> CircuitBreaker.of(host));
+    static final CircuitBreakerMapping hostMapping =
+            new KeyedCircuitBreakerMapping(true, false, false, (host, method, path) -> {
+                assert host != null;
+                return CircuitBreaker.of(host);
+            });
 
     private final ConcurrentMap<String, CircuitBreaker> mapping = new ConcurrentHashMap<>();
 

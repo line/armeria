@@ -98,6 +98,8 @@ netty = "4.1.110.Final"
 netty-incubator-transport-native-io_uring = "0.0.25.Final"
 nexus-publish = "2.0.0"
 node-gradle-plugin = "7.0.2"
+nullaway = "0.11.0"
+nullaway-gradle-plugin = "2.0.0"
 okhttp2 = "2.7.5" # For testing
 okhttp3 = { strictly = "3.14.9" } # Not just for testing. Used in the Retrofit mudule.
 okhttp4 = "4.12.0" # For testing
@@ -159,6 +161,8 @@ thrift015 = { strictly = "0.15.0" }
 thrift016 = { strictly = "0.16.0" }
 thrift017 = { strictly = "0.17.0" }
 thrift018 = { strictly = "0.18.1" }
+thrift019 = { strictly = "0.19.0" }
+thrift020 = { strictly = "0.20.0" }
 tomcat8 = "8.5.100"
 tomcat9 = "9.0.87"
 tomcat10 = "10.1.20"
@@ -943,6 +947,10 @@ module = 'io.netty:netty-tcnative-boringssl-static'
 module = "io.netty.incubator:netty-incubator-transport-native-io_uring"
 version.ref = "netty-incubator-transport-native-io_uring"
 
+[libraries.nullaway]
+module = "com.uber.nullaway:nullaway"
+version.ref = "nullaway"
+
 [libraries.picocli]
 module = "info.picocli:picocli"
 version.ref = "picocli"
@@ -1329,6 +1337,23 @@ exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
     "org.apache.httpcomponents:httpclient"]
+[libraries.thrift019]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift019"
+javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.19.0/"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift020]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift020"
+javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.20.0/"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+
 
 [libraries.tomcat8-core]
 module = "org.apache.tomcat.embed:tomcat-embed-core"
@@ -1396,15 +1421,16 @@ module = "io.github.resilience4j:resilience4j-micrometer"
 version.ref = "resilience4j"
 
 [plugins]
+errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-gradle-plugin" }
 jkube = { id = "org.eclipse.jkube.kubernetes", version.ref = "jkube" }
 jmh = { id = "me.champeau.jmh", version.ref = "jmh-gradle-plugin" }
-osdetector = { id = "com.google.osdetector", version.ref = "osdetector" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
 kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
-scalafmt = { id = "cz.alenkacz.gradle.scalafmt", version.ref = "scalafmt-gradle-plugin" }
-nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
 ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle-plugin" }
-errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-gradle-plugin" }
+nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
 node-gradle = { id = "com.github.node-gradle.node", version.ref = "node-gradle-plugin" }
+nullaway = { id = "net.ltgt.nullaway", version.ref = "nullaway-gradle-plugin" }
+osdetector = { id = "com.google.osdetector", version.ref = "osdetector" }
+scalafmt = { id = "cz.alenkacz.gradle.scalafmt", version.ref = "scalafmt-gradle-plugin" }
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot2" }

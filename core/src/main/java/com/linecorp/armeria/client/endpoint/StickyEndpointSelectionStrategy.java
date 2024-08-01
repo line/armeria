@@ -25,6 +25,7 @@ import com.google.common.hash.Hashing;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An {@link EndpointSelector} strategy which implements sticky load-balancing using
@@ -80,6 +81,7 @@ final class StickyEndpointSelectionStrategy implements EndpointSelectionStrategy
             initialize();
         }
 
+        @Nullable
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
 

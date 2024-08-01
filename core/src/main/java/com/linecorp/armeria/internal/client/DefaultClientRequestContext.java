@@ -419,7 +419,9 @@ public final class DefaultClientRequestContext
             if (whenInitializedUpdater.compareAndSet(this, null, whenInitialized)) {
                 return whenInitialized;
             } else {
-                return this.whenInitialized;
+                final CompletableFuture<Boolean> oldWhenInitialized = this.whenInitialized;
+                assert oldWhenInitialized != null;
+                return oldWhenInitialized;
             }
         }
     }
@@ -432,7 +434,9 @@ public final class DefaultClientRequestContext
         } else {
             if (!whenInitializedUpdater.compareAndSet(this, null,
                                                       UnmodifiableFuture.completedFuture(success))) {
-                this.whenInitialized.complete(success);
+                final CompletableFuture<Boolean> oldWhenInitialized = this.whenInitialized;
+                assert oldWhenInitialized != null;
+                oldWhenInitialized.complete(success);
             }
         }
     }
@@ -639,6 +643,7 @@ public final class DefaultClientRequestContext
                                                sessionProtocol(), method(), requestTarget());
     }
 
+    @Nullable
     @Override
     protected RequestTarget validateHeaders(RequestHeaders headers) {
         // no need to validate since internal headers will contain
@@ -663,6 +668,7 @@ public final class DefaultClientRequestContext
         return newChannel;
     }
 
+    @Nullable
     @Override
     public InetSocketAddress remoteAddress() {
         final InetSocketAddress remoteAddress = this.remoteAddress;
@@ -675,6 +681,7 @@ public final class DefaultClientRequestContext
         return newRemoteAddress;
     }
 
+    @Nullable
     @Override
     public InetSocketAddress localAddress() {
         final InetSocketAddress localAddress = this.localAddress;
@@ -714,11 +721,13 @@ public final class DefaultClientRequestContext
         return options;
     }
 
+    @Nullable
     @Override
     public EndpointGroup endpointGroup() {
         return endpointGroup;
     }
 
+    @Nullable
     @Override
     public Endpoint endpoint() {
         return endpoint;
@@ -730,6 +739,7 @@ public final class DefaultClientRequestContext
         return requestTarget().fragment();
     }
 
+    @Nullable
     @Override
     public String authority() {
         final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
@@ -773,6 +783,7 @@ public final class DefaultClientRequestContext
         return origin;
     }
 
+    @Nullable
     @Override
     public String host() {
         final String authority = authority();

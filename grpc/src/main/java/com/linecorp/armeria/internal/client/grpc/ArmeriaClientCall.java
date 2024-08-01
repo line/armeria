@@ -17,8 +17,6 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil.messageBuf;
-import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.fromThrowable;
-import static com.linecorp.armeria.internal.common.grpc.GrpcExceptionHandlerFunctionUtil.generateMetadataFromThrowable;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -50,7 +48,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -71,6 +68,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
@@ -127,7 +125,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
     private final Compressor compressor;
-    private final GrpcExceptionHandlerFunction exceptionHandler;
+    private final InternalGrpcExceptionHandler exceptionHandler;
 
     private boolean endpointInitialized;
     @Nullable
@@ -162,7 +160,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             SerializationFormat serializationFormat,
             @Nullable GrpcJsonMarshaller jsonMarshaller,
             boolean unsafeWrapResponseBuffers,
-            GrpcExceptionHandlerFunction exceptionHandler,
+            InternalGrpcExceptionHandler exceptionHandler,
             boolean useMethodMarshaller) {
         this.ctx = ctx;
         this.endpointGroup = endpointGroup;
@@ -251,8 +249,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
 
         final BiFunction<ClientRequestContext, Throwable, HttpResponse> errorResponseFactory =
                 (unused, cause) -> {
-                    final Metadata responseMetadata = generateMetadataFromThrowable(cause);
-                    Status status = fromThrowable(ctx, exceptionHandler, cause, responseMetadata);
+                    final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, cause);
+                    Status status = statusAndMetadata.status();
                     if (status.getDescription() == null) {
                         status = status.withDescription(cause.getMessage());
                     }
@@ -460,8 +458,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 }
             });
         } catch (Throwable t) {
-            final Metadata metadata = generateMetadataFromThrowable(t);
-            close(fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
+            final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, t);
+            close(statusAndMetadata.status(), statusAndMetadata.metadata());
         }
     }
 
@@ -476,7 +474,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     @Override
-    public void transportReportStatus(Status status, Metadata metadata) {
+    public void transportReportStatus(Status status, @Nullable Metadata metadata) {
         // This method is invoked in ctx.eventLoop and we need to bounce it through
         // CallOptions executor (in case it's configured) to serialize with closes
         // that were potentially triggered when Listener throws (closeWhenListenerThrows).
@@ -517,11 +515,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void closeWhenListenerThrows(Throwable t) {
-        final Metadata metadata = generateMetadataFromThrowable(t);
-        closeWhenEos(fromThrowable(ctx, exceptionHandler, t, metadata), metadata);
+        final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, t);
+        closeWhenEos(statusAndMetadata.status(), statusAndMetadata.metadata());
     }
 
-    private void closeWhenEos(Status status, Metadata metadata) {
+    private void closeWhenEos(Status status, @Nullable Metadata metadata) {
         if (needsDirectInvocation()) {
             close(status, metadata);
         } else {
@@ -537,7 +535,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     // never do this concurrently: the abnormal call into close() from the caller thread happens in case
     // of early return, before event-loop is being assigned to this call. After event-loop is being
     // assigned, the driving call won't be able to trigger close() anymore.
-    private void close(Status status, Metadata metadata) {
+    private void close(Status status, @Nullable Metadata metadata) {
         if (closed) {
             // 'close()' could be called twice if a call is closed with non-OK status.
             // See: https://github.com/line/armeria/issues/3799
@@ -550,7 +548,10 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             status = Status.DEADLINE_EXCEEDED;
             // Replace trailers to prevent mixing sources of status and trailers.
             metadata = new Metadata();
+        } else if (metadata == null) {
+            metadata = new Metadata();
         }
+
         if (status.getCode() == Code.DEADLINE_EXCEEDED) {
             status = status.augmentDescription("deadline exceeded after " +
                                                MILLISECONDS.toNanos(ctx.responseTimeoutMillis()) + "ns.");

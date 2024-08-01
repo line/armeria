@@ -71,6 +71,7 @@ public final class JacksonResponseConverterFunction implements ResponseConverter
         this.mapper = requireNonNull(mapper, "mapper");
     }
 
+    @Nullable
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
         final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));

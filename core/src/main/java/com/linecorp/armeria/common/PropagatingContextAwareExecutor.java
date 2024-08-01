@@ -22,6 +22,8 @@ import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class PropagatingContextAwareExecutor extends AbstractContextAwareExecutor<Executor> {
 
     static PropagatingContextAwareExecutor of(Executor executor) {
@@ -37,6 +39,7 @@ final class PropagatingContextAwareExecutor extends AbstractContextAwareExecutor
         super(executor);
     }
 
+    @Nullable
     @Override
     RequestContext contextOrNull() {
         return RequestContext.mapCurrent(Function.identity(), LogRequestContextWarningOnce.INSTANCE);

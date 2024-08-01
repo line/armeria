@@ -135,6 +135,7 @@ final class JsonUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
         final String grpcMessage = status.getDescription();
         final Throwable cause = responseCause(ctx);
         final HttpStatus httpStatus = statusMappingFunction.apply(ctx, status, cause);
+        assert httpStatus != null : "Default statusMappingFunction returned null?";
         final HttpHeaders trailers = !response.trailers().isEmpty() ?
                                      response.trailers() : response.headers();
         final String grpcStatusDetailsBin = trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);

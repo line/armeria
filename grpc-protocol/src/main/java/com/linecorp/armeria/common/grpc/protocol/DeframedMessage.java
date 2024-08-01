@@ -124,6 +124,7 @@ public final class DeframedMessage implements SafeCloseable {
         if (buf != null) {
             buf.release();
         } else {
+            assert stream != null;
             try {
                 stream.close();
             } catch (IOException e) {

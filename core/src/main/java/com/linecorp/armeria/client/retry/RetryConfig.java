@@ -137,9 +137,14 @@ public final class RetryConfig<T extends Response> {
      * Converts this {@link RetryConfig} to a mutable {@link RetryConfigBuilder}.
      */
     public RetryConfigBuilder<T> toBuilder() {
-        final RetryConfigBuilder<T> builder =
-                retryRuleWithContent != null ?
-                builder0(retryRuleWithContent).maxContentLength(maxContentLength) : builder0(retryRule);
+        final RetryConfigBuilder<T> builder;
+        if (retryRuleWithContent != null) {
+            builder = builder0(retryRuleWithContent).maxContentLength(
+                    maxContentLength);
+        } else {
+            assert retryRule != null;
+            builder = builder0(retryRule);
+        }
         return builder
                 .maxTotalAttempts(maxTotalAttempts)
                 .responseTimeoutMillisForEachAttempt(responseTimeoutMillisForEachAttempt);
@@ -197,8 +202,15 @@ public final class RetryConfig<T extends Response> {
      * response trailers.
      */
     public boolean requiresResponseTrailers() {
-        return needsContentInRule() ?
-               retryRuleWithContent().requiresResponseTrailers() : retryRule().requiresResponseTrailers();
+        if (needsContentInRule()) {
+            final RetryRuleWithContent<T> rule = retryRuleWithContent();
+            assert rule != null;
+            return rule.requiresResponseTrailers();
+        } else {
+            final RetryRule rule = retryRule();
+            assert rule != null;
+            return rule.requiresResponseTrailers();
+        }
     }
 
     /**

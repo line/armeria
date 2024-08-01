@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
@@ -104,6 +105,7 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
         return selectionStrategy;
     }
 
+    @Nullable
     @Override
     public Endpoint selectNow(ClientRequestContext ctx) {
         return selector.selectNow(ctx);

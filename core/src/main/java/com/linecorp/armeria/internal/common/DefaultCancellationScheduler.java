@@ -391,7 +391,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (whenCancellingUpdater.compareAndSet(this, null, cancellationFuture)) {
             return cancellationFuture;
         } else {
-            return this.whenCancelling;
+            final CancellationFuture oldWhenCancelling = this.whenCancelling;
+            assert oldWhenCancelling != null;
+            return oldWhenCancelling;
         }
     }
 
@@ -405,7 +407,9 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         if (whenCancelledUpdater.compareAndSet(this, null, cancellationFuture)) {
             return cancellationFuture;
         } else {
-            return this.whenCancelled;
+            final CancellationFuture oldWhenCancelled = this.whenCancelled;
+            assert oldWhenCancelled != null;
+            return oldWhenCancelled;
         }
     }
 

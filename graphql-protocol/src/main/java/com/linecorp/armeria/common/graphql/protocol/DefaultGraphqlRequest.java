@@ -44,6 +44,7 @@ final class DefaultGraphqlRequest implements GraphqlRequest {
         return query;
     }
 
+    @Nullable
     @Override
     public String operationName() {
         return operationName;

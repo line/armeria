@@ -104,7 +104,7 @@ struct TTextProtocolTestMsg {
 
   22: required list<TestUnion> x;
 
-  23: Moji y;  // Does not support string values.
+  23: Moji y;  // Does not support string values for thrift version < 0.19.
 
   27: required map<Letter, i32> aa;
 
