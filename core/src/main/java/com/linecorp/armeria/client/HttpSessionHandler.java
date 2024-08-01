@@ -44,10 +44,10 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.outlier.OutlierRule;
 import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.outlier.OutlierDetectionDecision;
 import com.linecorp.armeria.common.outlier.OutlierDetector;
+import com.linecorp.armeria.common.outlier.OutlierRule;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -606,6 +606,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
+        assert outlierRule != null;
         final OutlierDetectionDecision decision;
         try {
             decision = outlierRule.decide(context, log.responseHeaders(), log.responseCause());
@@ -617,6 +618,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (decision == null) {
             return;
         }
+        assert outlierDetector != null;
         switch (decision) {
             // NEXT is assumed as SUCCESS.
             case SUCCESS:
