@@ -90,7 +90,9 @@ final class HttpDataFile extends AbstractHttpFile implements AggregatedHttpFile 
     @Nonnull
     @Override
     public ResponseHeaders headers() {
-        return readHeaders(attrs);
+        final ResponseHeaders headers = readHeaders(attrs);
+        assert headers != null;
+        return headers;
     }
 
     @Override

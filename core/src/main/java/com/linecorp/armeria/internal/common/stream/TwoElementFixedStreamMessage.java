@@ -72,6 +72,7 @@ public class TwoElementFixedStreamMessage<T> extends FixedStreamMessage<T> {
     @Override
     final List<T> drainAll(boolean withPooledObjects) {
         assert obj1 != null;
+        assert obj2 != null;
         final List<T> objs = ImmutableList.of(touchOrCopyAndClose(obj1, withPooledObjects),
                                               touchOrCopyAndClose(obj2, withPooledObjects));
         obj1 = obj2 = null;

@@ -100,6 +100,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
         return delegate.services();
     }
 
+    @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         return delegate.methodDefinition(ctx);

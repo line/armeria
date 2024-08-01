@@ -86,6 +86,7 @@ final class CloseByteBufWebSocketFrame extends ByteBufWebSocketFrame implements 
         }
     }
 
+    @Nullable
     @Override
     public String reasonPhrase() {
         return reasonPhrase;
@@ -135,7 +136,7 @@ final class CloseByteBufWebSocketFrame extends ByteBufWebSocketFrame implements 
 
         final CloseByteBufWebSocketFrame that = (CloseByteBufWebSocketFrame) obj;
         return status.equals(that.status()) &&
-               reasonPhrase.equals(that.reasonPhrase()) &&
+               Objects.equals(reasonPhrase, that.reasonPhrase()) &&
                super.equals(obj);
     }
 

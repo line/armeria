@@ -115,6 +115,7 @@ public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedRespons
         return decoder != null ? decoder.decode((HttpData) obj) : obj;
     }
 
+    @Nullable
     @Override
     StreamDecoder decoder() {
         return decoder;

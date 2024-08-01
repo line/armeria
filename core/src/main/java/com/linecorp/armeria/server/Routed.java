@@ -83,6 +83,7 @@ public final class Routed<T> {
      */
     public Route route() {
         ensurePresence();
+        assert route != null;
         return route;
     }
 
@@ -110,6 +111,7 @@ public final class Routed<T> {
      */
     public T value() {
         ensurePresence();
+        assert value != null;
         return value;
     }
 

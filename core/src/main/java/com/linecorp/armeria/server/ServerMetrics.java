@@ -157,17 +157,22 @@ public final class ServerMetrics implements MeterBinder {
     public void bindTo(MeterRegistry meterRegistry) {
         meterRegistry.gauge("armeria.server.connections", activeConnections);
         // pending requests
-        meterRegistry.gauge("armeria.server.pending.requests",
-                            ImmutableList.of(Tag.of("protocol", "http1")), pendingHttp1Requests);
-        meterRegistry.gauge("armeria.server.pending.requests",
-                            ImmutableList.of(Tag.of("protocol", "http2")), pendingHttp2Requests);
+        final String allRequestsMeterName = "armeria.server.all.requests";
+        meterRegistry.gauge(allRequestsMeterName,
+                            ImmutableList.of(Tag.of("protocol", "http1"), Tag.of("state", "pending")),
+                            pendingHttp1Requests);
+        meterRegistry.gauge(allRequestsMeterName,
+                            ImmutableList.of(Tag.of("protocol", "http2"), Tag.of("state", "pending")),
+                            pendingHttp2Requests);
         // Active requests
-        meterRegistry.gauge("armeria.server.active.requests", ImmutableList.of(Tag.of("protocol", "http1")),
+        meterRegistry.gauge(allRequestsMeterName,
+                            ImmutableList.of(Tag.of("protocol", "http1"), Tag.of("state", "active")),
                             activeHttp1Requests);
-        meterRegistry.gauge("armeria.server.active.requests", ImmutableList.of(Tag.of("protocol", "http2")),
+        meterRegistry.gauge(allRequestsMeterName,
+                            ImmutableList.of(Tag.of("protocol", "http2"), Tag.of("state", "active")),
                             activeHttp2Requests);
-        meterRegistry.gauge("armeria.server.active.requests",
-                            ImmutableList.of(Tag.of("protocol", "http1.websocket")),
+        meterRegistry.gauge(allRequestsMeterName,
+                            ImmutableList.of(Tag.of("protocol", "http1.websocket"), Tag.of("state", "active")),
                             activeHttp1WebSocketRequests);
     }
 

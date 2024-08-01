@@ -82,6 +82,7 @@ final class FileSystemHttpFile extends StreamingHttpFile<ByteChannel> {
         }, fileReadExecutor);
     }
 
+    @Nullable
     @Override
     protected ByteChannel newStream() throws IOException {
         try {

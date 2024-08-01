@@ -124,7 +124,9 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * logical request.
      */
     final RetryConfig<O> mappedRetryConfig(ClientRequestContext ctx) {
-        return (RetryConfig<O>) ctx.attr(STATE).config;
+        @SuppressWarnings("unchecked")
+        final RetryConfig<O> config = (RetryConfig<O>) state(ctx).config;
+        return config;
     }
 
     /**
@@ -176,7 +178,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     @SuppressWarnings("MethodMayBeStatic") // Intentionally left non-static for better user experience.
     protected final boolean setResponseTimeout(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        final long responseTimeoutMillis = ctx.attr(STATE).responseTimeoutMillis();
+        final long responseTimeoutMillis = state(ctx).responseTimeoutMillis();
         if (responseTimeoutMillis < 0) {
             return false;
         } else if (responseTimeoutMillis == 0) {
@@ -215,7 +217,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
     protected final long getNextDelay(ClientRequestContext ctx, Backoff backoff, long millisAfterFromServer) {
         requireNonNull(ctx, "ctx");
         requireNonNull(backoff, "backoff");
-        final State state = ctx.attr(STATE);
+        final State state = state(ctx);
         final int currentAttemptNo = state.currentAttemptNoWith(backoff);
 
         if (currentAttemptNo < 0) {
@@ -259,6 +261,12 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
                                                             @Nullable RpcRequest rpcReq,
                                                             boolean initialAttempt) {
         return ClientUtil.newDerivedContext(ctx, req, rpcReq, initialAttempt);
+    }
+
+    private static State state(ClientRequestContext ctx) {
+        final State state = ctx.attr(STATE);
+        assert state != null;
+        return state;
     }
 
     private static final class State {

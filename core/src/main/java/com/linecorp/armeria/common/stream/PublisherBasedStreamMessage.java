@@ -170,7 +170,9 @@ public class PublisherBasedStreamMessage<T> extends AggregationSupport implement
                                                                       ImmediateEventExecutor.INSTANCE,
                                                                       false, false);
         if (!subscriberUpdater.compareAndSet(this, null, abortable)) {
-            this.subscriber.abort(cause);
+            final AbortableSubscriber oldSubscriber = this.subscriber;
+            assert oldSubscriber != null;
+            oldSubscriber.abort(cause);
             return;
         }
 
@@ -289,6 +291,8 @@ public class PublisherBasedStreamMessage<T> extends AggregationSupport implement
                 logger.warn("Subscriber.onError() should not raise an exception. subscriber: {}",
                             subscriber, composite);
             } finally {
+                final Subscription subscription = this.subscription;
+                assert subscription != null;
                 subscription.cancel();
             }
         }

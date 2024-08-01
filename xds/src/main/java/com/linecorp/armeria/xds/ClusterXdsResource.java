@@ -54,6 +54,7 @@ public final class ClusterXdsResource extends XdsResourceWithPrimer<ClusterXdsRe
         return new ClusterXdsResource(cluster, primer);
     }
 
+    @Nullable
     @Override
     XdsResource primer() {
         return primer;

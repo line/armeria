@@ -11,13 +11,16 @@
 *.advisor.ws
 *.af-south-1.airflow.amazonaws.com
 *.alces.network
-*.amplifyapp.com
 *.ap-east-1.airflow.amazonaws.com
 *.ap-northeast-1.airflow.amazonaws.com
 *.ap-northeast-2.airflow.amazonaws.com
+*.ap-northeast-3.airflow.amazonaws.com
 *.ap-south-1.airflow.amazonaws.com
+*.ap-south-2.airflow.amazonaws.com
 *.ap-southeast-1.airflow.amazonaws.com
 *.ap-southeast-2.airflow.amazonaws.com
+*.ap-southeast-3.airflow.amazonaws.com
+*.ap-southeast-4.airflow.amazonaws.com
 *.awdev.ca
 *.awsapprunner.com
 *.azurecontainer.io
@@ -30,6 +33,7 @@
 *.bzz.dapps.earth
 *.c.ts.net
 *.ca-central-1.airflow.amazonaws.com
+*.ca-west-1.airflow.amazonaws.com
 *.ck
 *.cloud.metacentrum.cz
 *.cloudera.site
@@ -41,7 +45,6 @@
 *.compute.amazonaws.com
 *.compute.amazonaws.com.cn
 *.compute.estate
-*.cprapid.com
 *.cryptonomic.net
 *.customer-oci.com
 *.d.crm.dev
@@ -58,14 +61,17 @@
 *.elb.amazonaws.com.cn
 *.er
 *.eu-central-1.airflow.amazonaws.com
+*.eu-central-2.airflow.amazonaws.com
 *.eu-north-1.airflow.amazonaws.com
 *.eu-south-1.airflow.amazonaws.com
+*.eu-south-2.airflow.amazonaws.com
 *.eu-west-1.airflow.amazonaws.com
 *.eu-west-2.airflow.amazonaws.com
 *.eu-west-3.airflow.amazonaws.com
 *.ewp.live
 *.ex.futurecms.at
 *.ex.ortsinfo.at
+*.experiments.sagemaker.aws
 *.firenet.ch
 *.fk
 *.frusky.de
@@ -75,6 +81,7 @@
 *.hosting.myjino.ru
 *.hosting.ovh.net
 *.id.pub
+*.il-central-1.airflow.amazonaws.com
 *.in.futurecms.at
 *.jm
 *.kawasaki.jp
@@ -89,6 +96,7 @@
 *.lclstage.dev
 *.linodeobjects.com
 *.magentosite.cloud
+*.me-central-1.airflow.amazonaws.com
 *.me-south-1.airflow.amazonaws.com
 *.migration.run
 *.mm
@@ -486,9 +494,9 @@ ami.ibaraki.jp
 amica
 amli.no
 amot.no
+amplifyapp.com
 amscompute.com
 amsterdam
-amusement.aero
 an.it
 analytics
 analytics-gateway.ap-northeast-1.amazonaws.com
@@ -705,6 +713,7 @@ auth-fips.us-gov-west-1.amazoncognito.com
 auth-fips.us-west-1.amazoncognito.com
 auth-fips.us-west-2.amazoncognito.com
 auth.af-south-1.amazoncognito.com
+auth.ap-east-1.amazoncognito.com
 auth.ap-northeast-1.amazoncognito.com
 auth.ap-northeast-2.amazoncognito.com
 auth.ap-northeast-3.amazoncognito.com
@@ -715,6 +724,7 @@ auth.ap-southeast-2.amazoncognito.com
 auth.ap-southeast-3.amazoncognito.com
 auth.ap-southeast-4.amazoncognito.com
 auth.ca-central-1.amazoncognito.com
+auth.ca-west-1.amazoncognito.com
 auth.eu-central-1.amazoncognito.com
 auth.eu-central-2.amazoncognito.com
 auth.eu-north-1.amazoncognito.com
@@ -752,7 +762,6 @@ awaji.hyogo.jp
 aws
 awsapps.com
 awsglobalaccelerator.com
-awsmppl.com
 ax
 axa
 aya.miyazaki.jp
@@ -787,7 +796,6 @@ babymilk.jp
 bacgiang.vn
 backan.vn
 backdrop.jp
-backplaneapp.io
 baclieu.vn
 bacninh.vn
 badaddja.no
@@ -1205,7 +1213,6 @@ bz.it
 bzh
 c.bg
 c.cdn77.org
-c.la
 c.se
 c66.me
 ca
@@ -1376,6 +1383,7 @@ cf
 cf-ipfs.com
 cfa
 cfd
+cfolks.pl
 cg
 ch
 ch.eu.org
@@ -1492,8 +1500,6 @@ cloudaccess.host
 cloudaccess.net
 cloudapp.net
 cloudapps.digital
-cloudcontrolapp.com
-cloudcontrolled.com
 cloudflare-ipfs.com
 cloudflare.net
 cloudfront.net
@@ -1822,11 +1828,13 @@ courses
 coz.br
 cpa
 cpa.pro
+cprapid.com
 cpserver.com
 cq.cn
 cr
 cr.it
 cr.ua
+craft.me
 crafting.xyz
 cranky.jp
 crap.jp
@@ -1856,7 +1864,6 @@ cu
 cuiaba.br
 cuisinella
 cuneo.it
-cupcake.is
 curitiba.br
 curv.dev
 cust.cloudscale.ch
@@ -1876,11 +1883,6 @@ cx
 cx.ua
 cy
 cy.eu.org
-cya.gg
-cyclic-app.com
-cyclic.app
-cyclic.cloud
-cyclic.co.in
 cymru
 cyon.link
 cyon.site
@@ -1995,6 +1997,7 @@ development.run
 devices.resinstaging.io
 df.gov.br
 df.leg.br
+dfirma.pl
 dgca.aero
 dh.bytemark.co.uk
 dhl
@@ -2028,6 +2031,7 @@ diy
 dj
 dk
 dk.eu.org
+dkonto.pl
 dlugoleka.pl
 dm
 dn.ua
@@ -2102,6 +2106,7 @@ duckdns.org
 dunlop
 dupont
 durban
+durumis.com
 dvag
 dvr
 dvrcam.info
@@ -2656,12 +2661,6 @@ fi.it
 fidelity
 fido
 fie.ee
-filegear-au.me
-filegear-de.me
-filegear-gb.me
-filegear-ie.me
-filegear-jp.me
-filegear-sg.me
 filegear.me
 film
 film.hu
@@ -2725,7 +2724,6 @@ flt.cloud.muni.cz
 flutterflow.app
 fly
 fly.dev
-flynnhosting.net
 fm
 fm.br
 fm.it
@@ -2797,6 +2795,7 @@ freemyip.com
 freesite.host
 freetls.fastly.net
 frei.no
+freight.aero
 frenchkiss.jp
 fresenius
 friuli-v-giulia.it
@@ -2944,7 +2943,6 @@ fylkesbibl.no
 fyresdal.no
 g.bg
 g.se
-g.vbrplsbx.io
 g12.br
 ga
 ga.us
@@ -3286,7 +3284,6 @@ grane.no
 granvin.no
 graphic.design
 graphics
-graphox.us
 gratangen.no
 gratis
 grayjayleagues.com
@@ -3437,6 +3434,12 @@ hasuda.saitama.jp
 hasura-app.io
 hasura.app
 hasvik.no
+hateblo.jp
+hatenablog.com
+hatenablog.jp
+hatenadiary.com
+hatenadiary.jp
+hatenadiary.org
 hatinh.vn
 hatogaya.saitama.jp
 hatoyama.saitama.jp
@@ -3771,8 +3774,6 @@ imizu.toyama.jp
 immo
 immobilien
 imperia.it
-impertrix.com
-impertrixcdn.com
 in
 in-addr.arpa
 in-berlin.de
@@ -3874,7 +3875,6 @@ ink
 ino.kochi.jp
 instance.datadetect.com
 instances.spawn.cc
-instantcloud.cn
 institute
 insurance
 insurance.aero
@@ -5011,6 +5011,7 @@ maringa.br
 marker.no
 market
 marketing
+marketplace.aero
 markets
 marnardal.no
 marriott
@@ -5264,7 +5265,6 @@ minoh.osaka.jp
 minokamo.gifu.jp
 minowa.nagano.jp
 mint
-mintere.site
 mints.ne.jp
 mircloud.host
 mircloud.ru
@@ -5405,7 +5405,6 @@ motoyama.kochi.jp
 mov
 movie
 movimiento.bo
-mozilla-iot.org
 mp
 mp.br
 mq
@@ -5887,7 +5886,6 @@ nic.za
 nichinan.miyazaki.jp
 nichinan.tottori.jp
 nico
-nid.io
 nieruchomosci.pl
 niigata.jp
 niigata.niigata.jp
@@ -6249,7 +6247,6 @@ oncilla.mythic-beasts.com
 ondigitalocean.app
 one
 onfabrica.com
-onflashdrive.app
 ong
 ong.br
 onga.fukuoka.jp
@@ -6545,6 +6542,8 @@ ozu.ehime.jp
 ozu.kumamoto.jp
 p.bg
 p.se
+p.tawk.email
+p.tawkto.email
 pa
 pa.gov.br
 pa.gov.pl
@@ -6558,7 +6557,6 @@ paas.massivegrid.com
 padova.it
 padua.it
 page
-pagefrontapp.com
 pages.dev
 pages.gay
 pages.it.hs-heilbronn.de
@@ -6598,7 +6596,6 @@ pb.leg.br
 pc.it
 pc.pl
 pccw
-pcloud.host
 pd.it
 pdns.page
 pe
@@ -7623,6 +7620,7 @@ servebbs.net
 servebbs.org
 servebeer.com
 serveblog.net
+servebolt.cloud
 servecounterstrike.com
 serveexchange.com
 serveftp.com
@@ -7671,7 +7669,6 @@ shakotan.hokkaido.jp
 shangrila
 shari.hokkaido.jp
 sharp
-shaw
 sheezy.games
 shell
 shia
@@ -7683,8 +7680,6 @@ shibukawa.gunma.jp
 shibuya.tokyo.jp
 shichikashuku.miyagi.jp
 shichinohe.aomori.jp
-shiftcrypto.dev
-shiftcrypto.io
 shiftedit.io
 shiga.jp
 shiiba.miyazaki.jp
@@ -8057,7 +8052,6 @@ stuff-4-sale.us
 stufftoread.com
 style
 su
-su.paba.se
 sub.jp
 sucks
 sue.fukuoka.jp
@@ -8243,6 +8237,7 @@ tattoo
 tawaramoto.nara.jp
 tax
 taxi
+taxi.aero
 taxi.br
 tayninh.vn
 tc
@@ -9725,6 +9720,7 @@ yoshinogari.saga.jp
 yoshioka.gunma.jp
 yotsukaido.chiba.jp
 you
+you2.pl
 youtube
 yt
 yuasa.wakayama.jp

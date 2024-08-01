@@ -115,7 +115,10 @@ final class ConcatArrayStreamMessage<T> implements StreamMessage<T> {
             if (executor.inEventLoop()) {
                 parent.nextSource();
             } else {
-                executor.execute(() -> parent.nextSource());
+                executor.execute(() -> {
+                    assert parent != null;
+                    parent.nextSource();
+                });
             }
         } else {
             subscriber.onSubscribe(NoopSubscription.get());

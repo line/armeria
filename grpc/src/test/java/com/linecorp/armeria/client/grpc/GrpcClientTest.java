@@ -85,6 +85,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.common.grpc.StreamRecorder;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
@@ -175,10 +176,10 @@ class GrpcClientTest {
                 }
 
                 @Override
-                public void onError(Throwable t) { }
+                public void onError(Throwable t) {}
 
                 @Override
-                public void onCompleted() { }
+                public void onCompleted() {}
             };
         }
 
@@ -238,6 +239,8 @@ class GrpcClientTest {
         }
     };
 
+    private final InternalGrpcExceptionHandler grpcExceptionHandler =
+            new InternalGrpcExceptionHandler(GrpcExceptionHandlerFunction.of());
     private final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
     private TestServiceBlockingStub blockingStub;
     private TestServiceStub asyncStub;
@@ -318,9 +321,9 @@ class GrpcClientTest {
     void callOptionsExecutorIsRespected() {
         final ExecutorService executor = Executors.newSingleThreadExecutor(
                 ThreadFactories.builder("my-calloptions-executor-3")
-                    .daemon(true)
-                    .eventLoop(false)
-                    .build());
+                               .daemon(true)
+                               .eventLoop(false)
+                               .build());
 
         final TestServiceGrpc.TestServiceStub asyncStubWithExecutor = asyncStub.withExecutor(executor);
         final AtomicReference<String> onMessageThread = new AtomicReference<>();
@@ -746,9 +749,8 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion();
         assertThat(responseObserver.getValues()).isEmpty();
-        assertThat(GrpcExceptionHandlerFunction.of()
-                                               .apply(null, responseObserver.getError(), null)
-                                               .getCode()).isEqualTo(Code.CANCELLED);
+        assertThat(grpcExceptionHandler.handle(null, responseObserver.getError()).status().getCode())
+                .isEqualTo(Code.CANCELLED);
 
         final RequestLog log = requestLogQueue.take();
         assertThat(log.isComplete()).isTrue();
@@ -782,9 +784,8 @@ class GrpcClientTest {
         requestObserver.onError(new RuntimeException());
         responseObserver.awaitCompletion(operationTimeoutMillis(), TimeUnit.MILLISECONDS);
         assertThat(responseObserver.getValues()).hasSize(1);
-        assertThat(GrpcExceptionHandlerFunction.of()
-                                               .apply(null, responseObserver.getError(), null)
-                                               .getCode()).isEqualTo(Code.CANCELLED);
+        assertThat(grpcExceptionHandler.handle(null, responseObserver.getError()).status()
+                                       .getCode()).isEqualTo(Code.CANCELLED);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
             assertThat(rpcReq.params()).containsExactly(request);
@@ -1417,9 +1418,8 @@ class GrpcClientTest {
         recorder.awaitCompletion();
 
         assertThat(recorder.getError()).isNotNull();
-        assertThat(GrpcExceptionHandlerFunction.of()
-                                               .apply(null, recorder.getError(), null)
-                                               .getCode())
+        assertThat(grpcExceptionHandler.handle(null, recorder.getError()).status()
+                                       .getCode())
                 .isEqualTo(Status.DEADLINE_EXCEEDED.getCode());
 
         checkRequestLogError((headers, rpcReq, cause) -> {
@@ -1617,12 +1617,11 @@ class GrpcClientTest {
         final ArgumentCaptor<Throwable> captor = ArgumentCaptor.forClass(Throwable.class);
         verify(responseObserver,
                timeout(operationTimeoutMillis())).onError(captor.capture());
-        assertThat(GrpcExceptionHandlerFunction.of()
-                                               .apply(null, captor.getValue(), null)
-                                               .getCode()).isEqualTo(Status.UNKNOWN.getCode());
-        assertThat(GrpcExceptionHandlerFunction.of()
-                                               .apply(null, captor.getValue(), null)
-                                               .getDescription()).isEqualTo(errorMessage);
+
+        assertThat(grpcExceptionHandler.handle(null, captor.getValue()).status()
+                                       .getCode()).isEqualTo(Status.UNKNOWN.getCode());
+        assertThat(grpcExceptionHandler.handle(null, captor.getValue()).status()
+                                       .getDescription()).isEqualTo(errorMessage);
         verifyNoMoreInteractions(responseObserver);
 
         checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {

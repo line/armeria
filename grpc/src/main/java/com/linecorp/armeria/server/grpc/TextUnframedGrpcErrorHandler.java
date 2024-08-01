@@ -76,6 +76,7 @@ final class TextUnframedGrpcErrorHandler implements UnframedGrpcErrorHandler {
         final String grpcMessage = status.getDescription();
         final Throwable cause = responseCause(ctx);
         final HttpStatus httpStatus = statusMappingFunction.apply(ctx, status, cause);
+        assert httpStatus != null : "Default statusMappingFunction returned null?";
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                .contentType(MediaType.PLAIN_TEXT_UTF_8)
                                                                .addInt(GrpcHeaderNames.GRPC_STATUS,

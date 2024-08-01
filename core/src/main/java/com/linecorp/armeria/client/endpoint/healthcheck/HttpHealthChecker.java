@@ -166,7 +166,7 @@ final class HttpHealthChecker implements AsyncCloseable {
 
         private final ClientRequestContext reqCtx;
         private final HttpResponse res;
-        @SuppressWarnings("NotNullFieldNotInitialized")
+        @Nullable
         private Subscription subscription;
         @Nullable
         private ResponseHeaders responseHeaders;
@@ -192,6 +192,8 @@ final class HttpHealthChecker implements AsyncCloseable {
 
         @Override
         public void onNext(HttpObject obj) {
+            assert subscription != null;
+
             if (closeable.isClosing()) {
                 subscription.cancel();
                 return;
