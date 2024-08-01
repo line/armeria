@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -62,8 +61,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
                              Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
-        assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
-               keepAliveHandler instanceof NoopKeepAliveHandler;
+        assert keepAliveHandler instanceof Http1ServerKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         this.http1HeaderNaming = http1HeaderNaming;
     }

@@ -22,7 +22,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
@@ -34,8 +33,6 @@ import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.EventLoop;
 
 /**
  * An {@link AbstractKeepAliveHandler} that writes a PING when neither read nor write was performed for
@@ -44,10 +41,8 @@ import io.netty.channel.EventLoop;
  */
 public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractKeepAliveHandler.class);
-
     @Nullable
-    private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
+    private final Stopwatch stopwatch = logger().isDebugEnabled() ? Stopwatch.createUnstarted() : null;
     private final ChannelFutureListener pingWriteListener = new PingWriteListener();
     private final Runnable shutdownRunnable = this::closeChannelAndLog;
 
@@ -77,7 +72,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private final long maxConnectionAgeNanos;
     private boolean isMaxConnectionAgeExceeded;
 
-    private boolean closed;
     private boolean disconnectWhenFinished;
     private PingState pingState = PingState.IDLE;
     private KeepAliveState keepAliveState = KeepAliveState.NONE;
@@ -88,6 +82,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private Future<?> shutdownFuture;
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
+                                       @Nullable DelegatingConnectionEventListener connectionEventListener,
                                        long idleTimeoutMillis, long pingIntervalMillis,
                                        long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
                                        boolean keepAliveOnPing) {
@@ -95,12 +90,8 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         this.name = name;
         isServer = "server".equals(name);
         this.keepAliveTimer = keepAliveTimer;
-        if (isServer) {
-            // TODO(ikhoon): Support ConnectionEventListener for server-side
-            connectionEventListener = null;
-        } else {
-            connectionEventListener = DelegatingConnectionEventListener.get(channel);
-        }
+
+        this.connectionEventListener = connectionEventListener;
         this.maxNumRequestsPerConnection = maxNumRequestsPerConnection;
         this.keepAliveOnPing = keepAliveOnPing;
 
@@ -123,8 +114,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         }
     }
 
+    protected abstract Logger logger();
+
     @Override
-    public final void initialize(ChannelHandlerContext ctx) {
+    public final void initialize() {
         // Avoid the case where destroy() is called before scheduling timeouts.
         // See: https://github.com/netty/netty/issues/143
         if (keepAliveState != KeepAliveState.NONE) {
@@ -137,7 +130,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         }
 
         final long connectionStartTimeNanos = System.nanoTime();
-        ctx.channel().closeFuture().addListener(unused -> {
+        channel.closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
 
             if (connectionEventListener != null) {
@@ -148,28 +141,29 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
         lastConnectionIdleTime = lastPingIdleTime = connectionStartTimeNanos;
         if (connectionIdleTimeNanos > 0) {
-            connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(ctx),
+            connectionIdleTimeout = executor().schedule(new ConnectionIdleTimeoutTask(),
                                                         connectionIdleTimeNanos, TimeUnit.NANOSECONDS);
         }
         if (pingIdleTimeNanos > 0) {
-            pingIdleTimeout = executor().schedule(new PingIdleTimeoutTask(ctx),
+            pingIdleTimeout = executor().schedule(new PingIdleTimeoutTask(),
                                                   pingIdleTimeNanos, TimeUnit.NANOSECONDS);
         }
         if (maxConnectionAgeNanos > 0) {
-            maxConnectionAgeFuture = executor().schedule(new MaxConnectionAgeExceededTask(ctx),
+            maxConnectionAgeFuture = executor().schedule(new MaxConnectionAgeExceededTask(),
                                                          maxConnectionAgeNanos, TimeUnit.NANOSECONDS);
         }
     }
 
     @Override
     public final void destroy() {
-        if (closed) {
+        if (keepAliveState == KeepAliveState.CLOSED) {
             return;
         }
 
-        // TODO(ikhoon): Unify `closed` and `keepAliveState` to simplify the logic.
-        closed = true;
-        keepAliveState = KeepAliveState.INITIALIZED;
+        keepAliveState = KeepAliveState.CLOSED;
+        pingState = PingState.SHUTDOWN;
+        isMaxConnectionAgeExceeded = true;
+
         if (connectionIdleTimeout != null) {
             connectionIdleTimeout.cancel(false);
             connectionIdleTimeout = null;
@@ -182,8 +176,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             maxConnectionAgeFuture.cancel(false);
             maxConnectionAgeFuture = null;
         }
-        pingState = PingState.SHUTDOWN;
-        isMaxConnectionAgeExceeded = true;
         cancelFutures();
     }
 
@@ -227,7 +219,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public final boolean isClosing() {
-        return pingState == PingState.SHUTDOWN;
+        return keepAliveState == KeepAliveState.CLOSED;
     }
 
     @Override
@@ -237,7 +229,10 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public final boolean needsDisconnection() {
-        return disconnectWhenFinished || pingState == PingState.SHUTDOWN || isMaxConnectionAgeExceeded ||
+        return disconnectWhenFinished ||
+               pingState == PingState.SHUTDOWN ||
+               keepAliveState == KeepAliveState.CLOSED ||
+               isMaxConnectionAgeExceeded ||
                (currentNumRequests > 0 && currentNumRequests >= maxNumRequestsPerConnection);
     }
 
@@ -251,7 +246,11 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public void notifyActive() {
-        assert keepAliveState != KeepAliveState.NONE && keepAliveState != KeepAliveState.ACTIVE;
+        if (keepAliveState == KeepAliveState.NONE) {
+            initialize();
+        }
+
+        assert keepAliveState != KeepAliveState.ACTIVE : "keepAliveState: " + keepAliveState;
 
         switch (keepAliveState) {
             case INITIALIZED:
@@ -273,17 +272,27 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public void notifyIdle() {
-        assert keepAliveState == KeepAliveState.ACTIVE;
+        if (isClosing()) {
+            // notifyIdle() could be called after Channel.close().
+            return;
+        }
+
+        if (keepAliveState == KeepAliveState.NONE) {
+            // Ignore the notification before KeepAliveHandler is initialized.
+            return;
+        }
+        assert keepAliveState == KeepAliveState.ACTIVE : "keepAliveState: " + keepAliveState;
+        keepAliveState = KeepAliveState.IDLE;
         if (connectionEventListener != null) {
             connectionEventListener.connectionIdle();
         }
     }
 
-    protected abstract ChannelFuture writePing(ChannelHandlerContext ctx);
+    protected abstract ChannelFuture writePing();
 
     protected abstract boolean pingResetsPreviousPing();
 
-    protected abstract boolean hasRequestsInProgress(ChannelHandlerContext ctx);
+    protected abstract boolean hasRequestsInProgress();
 
     @Nullable
     protected final Future<?> shutdownFuture() {
@@ -311,16 +320,17 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     }
 
     private void closeChannelAndLog() {
-        if (pingState == PingState.SHUTDOWN) {
+        if (isClosing()) {
             return;
         }
-        logger.debug("{} Closing an idle channel", channel);
+        logger().debug("{} Closing an idle channel", channel);
+        keepAliveState = KeepAliveState.CLOSED;
         pingState = PingState.SHUTDOWN;
         channel.close().addListener(future -> {
             if (future.isSuccess()) {
-                logger.debug("{} Closed an idle channel", channel);
+                logger().debug("{} Closed an idle channel", channel);
             } else {
-                logger.debug("{} Failed to close an idle channel", channel, future.cause());
+                logger().debug("{} Failed to close an idle channel", channel, future.cause());
             }
         });
     }
@@ -328,6 +338,166 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private ScheduledExecutorService executor() {
         return channel.eventLoop();
     }
+
+    @Override
+    public final Channel channel() {
+        return channel;
+    }
+
+    private class PingWriteListener implements ChannelFutureListener {
+
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
+            if (future.isSuccess()) {
+                logger().debug("{} PING write successful", channel);
+                shutdownFuture = executor().schedule(shutdownRunnable, pingIdleTimeNanos, TimeUnit.NANOSECONDS);
+                pingState = PingState.PENDING_PING_ACK;
+                resetStopwatch();
+            } else {
+                // Mostly because the channel is already closed. So ignore and change state to IDLE.
+                // If the channel is closed, we change state to SHUTDOWN on destroy.
+                if (!future.isCancelled() && Exceptions.isExpected(future.cause())) {
+                    logger().debug("{} PING write failed", channel, future.cause());
+                }
+                if (pingState != PingState.SHUTDOWN) {
+                    pingState = PingState.IDLE;
+                }
+            }
+        }
+
+        private void resetStopwatch() {
+            if (stopwatch != null) {
+                stopwatch.reset().start();
+            }
+        }
+    }
+
+    private abstract class AbstractKeepAliveTask implements Runnable {
+
+        @Override
+        public void run() {
+            if (!channel.isOpen()) {
+                return;
+            }
+
+            doRun();
+        }
+
+        protected abstract void doRun();
+    }
+
+    private final class ConnectionIdleTimeoutTask extends AbstractKeepAliveTask {
+
+        private boolean warn;
+
+        @Override
+        protected void doRun() {
+            if (isClosing()) {
+                return;
+            }
+
+            final long lastConnectionIdleTime = AbstractKeepAliveHandler.this.lastConnectionIdleTime;
+            final long nextDelay;
+            nextDelay = connectionIdleTimeNanos - (System.nanoTime() - lastConnectionIdleTime);
+            if (nextDelay <= 0) {
+                // Both reader and writer are idle - set a new timeout and
+                // notify the callback.
+                connectionIdleTimeout = executor().schedule(this, connectionIdleTimeNanos,
+                                                            TimeUnit.NANOSECONDS);
+                try {
+                    // TODO(ikhoon): Replace hasRequestsInProgress() with 'keepAliveState == IDLE' when
+                    //               ConnectionEventListener is applied to the server-side.
+                    if (!hasRequestsInProgress()) {
+                        keepAliveState = KeepAliveState.CLOSED;
+                        pingState = PingState.SHUTDOWN;
+                        logger().debug("{} Closing an idle {} connection", channel, name);
+                        channel.close();
+                    }
+                } catch (Exception e) {
+                    if (!warn) {
+                        logger().warn("An error occurred while notifying an all idle event", e);
+                        warn = true;
+                    }
+                }
+            } else {
+                // Either read or write occurred before the connection idle timeout - set a new
+                // timeout with shorter delay.
+                connectionIdleTimeout = executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
+            }
+        }
+    }
+
+    private final class PingIdleTimeoutTask extends AbstractKeepAliveTask {
+
+        private boolean warn;
+
+        @Override
+        protected void doRun() {
+
+            final long lastPingIdleTime = AbstractKeepAliveHandler.this.lastPingIdleTime;
+            final long nextDelay;
+            nextDelay = pingIdleTimeNanos - (System.nanoTime() - lastPingIdleTime);
+            if (nextDelay <= 0) {
+                // PING is idle - set a new timeout and notify the callback.
+                pingIdleTimeout = executor().schedule(this, pingIdleTimeNanos, TimeUnit.NANOSECONDS);
+
+                final boolean isFirst = firstPingIdleEvent;
+                firstPingIdleEvent = false;
+                try {
+                    if (pingIdleTimeNanos > 0 && isFirst) {
+                        pingState = PingState.PING_SCHEDULED;
+                        writePing().addListener(pingWriteListener);
+                    }
+                } catch (Exception e) {
+                    if (!warn) {
+                        logger().warn("An error occurred while notifying a ping idle event", e);
+                        warn = true;
+                    }
+                }
+            } else {
+                // A PING was sent or received within the ping timeout
+                // - set a new timeout with shorter delay.
+                pingIdleTimeout = executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
+            }
+        }
+    }
+
+    private final class MaxConnectionAgeExceededTask extends AbstractKeepAliveTask {
+
+        @Override
+        protected void doRun() {
+            try {
+                isMaxConnectionAgeExceeded = true;
+
+                // A connection exceeding the max age will be closed with:
+                // - HTTP/2 server: Sending GOAWAY frame after writing headers
+                // - HTTP/1 server: Sending 'Connection: close' header when writing headers
+                // - HTTP/2 client
+                //   - Sending GOAWAY frame after receiving the end of a stream
+                //   - Or closed by this task if the connection is idle
+                // - HTTP/1 client
+                //   - Close the connection after fully receiving a response
+                //   - Or closed by this task if the connection is idle
+
+                if (!isServer && !hasRequestsInProgress()) {
+                    logger().debug("{} Closing a {} connection exceeding the max age: {}ns",
+                                   channel, name, maxConnectionAgeNanos);
+                    channel.close();
+                }
+            } catch (Exception e) {
+                logger().warn("Unexpected error occurred while closing a connection exceeding the max age", e);
+            }
+        }
+    }
+
+    private enum KeepAliveState {
+        NONE,
+        INITIALIZED,
+        ACTIVE,
+        IDLE,
+        CLOSED
+    }
+
 
     /**
      * State changes from IDLE -> PING_SCHEDULED -> PENDING_PING_ACK -> IDLE and so on. When the
@@ -346,174 +516,5 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
         /* Not active anymore */
         SHUTDOWN
-    }
-
-    private class PingWriteListener implements ChannelFutureListener {
-
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (future.isSuccess()) {
-                logger.debug("{} PING write successful", channel);
-                final EventLoop el = channel.eventLoop();
-                shutdownFuture = el.schedule(shutdownRunnable, pingIdleTimeNanos, TimeUnit.NANOSECONDS);
-                pingState = PingState.PENDING_PING_ACK;
-                resetStopwatch();
-            } else {
-                // Mostly because the channel is already closed. So ignore and change state to IDLE.
-                // If the channel is closed, we change state to SHUTDOWN on destroy.
-                if (!future.isCancelled() && Exceptions.isExpected(future.cause())) {
-                    logger.debug("{} PING write failed", channel, future.cause());
-                }
-                if (pingState != PingState.SHUTDOWN) {
-                    pingState = PingState.IDLE;
-                }
-            }
-        }
-
-        private void resetStopwatch() {
-            if (stopwatch != null) {
-                stopwatch.reset().start();
-            }
-        }
-    }
-
-    private abstract static class AbstractKeepAliveTask implements Runnable {
-
-        private final ChannelHandlerContext ctx;
-
-        AbstractKeepAliveTask(ChannelHandlerContext ctx) {
-            this.ctx = ctx;
-        }
-
-        @Override
-        public void run() {
-            if (!ctx.channel().isOpen()) {
-                return;
-            }
-
-            run(ctx);
-        }
-
-        protected abstract void run(ChannelHandlerContext ctx);
-    }
-
-    private final class ConnectionIdleTimeoutTask extends AbstractKeepAliveTask {
-
-        private boolean warn;
-
-        ConnectionIdleTimeoutTask(ChannelHandlerContext ctx) {
-            super(ctx);
-        }
-
-        @Override
-        protected void run(ChannelHandlerContext ctx) {
-            if (pingState == PingState.SHUTDOWN) {
-                return;
-            }
-
-            final long lastConnectionIdleTime = AbstractKeepAliveHandler.this.lastConnectionIdleTime;
-            final long nextDelay;
-            nextDelay = connectionIdleTimeNanos - (System.nanoTime() - lastConnectionIdleTime);
-            if (nextDelay <= 0) {
-                // Both reader and writer are idle - set a new timeout and
-                // notify the callback.
-                connectionIdleTimeout = executor().schedule(this, connectionIdleTimeNanos,
-                                                            TimeUnit.NANOSECONDS);
-                try {
-                    if (keepAliveState == KeepAliveState.IDLE) {
-                        pingState = PingState.SHUTDOWN;
-                        logger.debug("{} Closing an idle {} connection", ctx.channel(), name);
-                        ctx.channel().close();
-                    }
-                } catch (Exception e) {
-                    if (!warn) {
-                        logger.warn("An error occurred while notifying an all idle event", e);
-                        warn = true;
-                    }
-                }
-            } else {
-                // Either read or write occurred before the connection idle timeout - set a new
-                // timeout with shorter delay.
-                connectionIdleTimeout = executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
-            }
-        }
-    }
-
-    private final class PingIdleTimeoutTask extends AbstractKeepAliveTask {
-
-        private boolean warn;
-
-        PingIdleTimeoutTask(ChannelHandlerContext ctx) {
-            super(ctx);
-        }
-
-        @Override
-        protected void run(ChannelHandlerContext ctx) {
-
-            final long lastPingIdleTime = AbstractKeepAliveHandler.this.lastPingIdleTime;
-            final long nextDelay;
-            nextDelay = pingIdleTimeNanos - (System.nanoTime() - lastPingIdleTime);
-            if (nextDelay <= 0) {
-                // PING is idle - set a new timeout and notify the callback.
-                pingIdleTimeout = executor().schedule(this, pingIdleTimeNanos, TimeUnit.NANOSECONDS);
-
-                final boolean isFirst = firstPingIdleEvent;
-                firstPingIdleEvent = false;
-                try {
-                    if (pingIdleTimeNanos > 0 && isFirst) {
-                        pingState = PingState.PING_SCHEDULED;
-                        writePing(ctx).addListener(pingWriteListener);
-                    }
-                } catch (Exception e) {
-                    if (!warn) {
-                        logger.warn("An error occurred while notifying a ping idle event", e);
-                        warn = true;
-                    }
-                }
-            } else {
-                // A PING was sent or received within the ping timeout
-                // - set a new timeout with shorter delay.
-                pingIdleTimeout = executor().schedule(this, nextDelay, TimeUnit.NANOSECONDS);
-            }
-        }
-    }
-
-    private final class MaxConnectionAgeExceededTask extends AbstractKeepAliveTask {
-
-        MaxConnectionAgeExceededTask(ChannelHandlerContext ctx) {
-            super(ctx);
-        }
-
-        @Override
-        protected void run(ChannelHandlerContext ctx) {
-            try {
-                isMaxConnectionAgeExceeded = true;
-
-                // A connection exceeding the max age will be closed with:
-                // - HTTP/2 server: Sending GOAWAY frame after writing headers
-                // - HTTP/1 server: Sending 'Connection: close' header when writing headers
-                // - HTTP/2 client
-                //   - Sending GOAWAY frame after receiving the end of a stream
-                //   - Or closed by this task if the connection is idle
-                // - HTTP/1 client
-                //   - Close the connection after fully receiving a response
-                //   - Or closed by this task if the connection is idle
-
-                if (!isServer && !hasRequestsInProgress(ctx)) {
-                    logger.debug("{} Closing a {} connection exceeding the max age: {}ns",
-                                 ctx.channel(), name, maxConnectionAgeNanos);
-                    ctx.channel().close();
-                }
-            } catch (Exception e) {
-                logger.warn("Unexpected error occurred while closing a connection exceeding the max age", e);
-            }
-        }
-    }
-
-    private enum KeepAliveState {
-        NONE,
-        INITIALIZED,
-        ACTIVE,
-        IDLE
     }
 }

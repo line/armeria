@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.ConnectionEventListener;
@@ -37,16 +39,16 @@ import io.netty.util.AttributeMap;
  *  |    Initial   |  ----->   |    Pending   | -----> | |    Opened    | |-----> |    Closed    |
  *  |              |           |              |        | |              | |       |              |
  *  +--------------+           +--------------+        | +--------------+ |       +--------------+
- *          |                                          |                  |
- *          |                                          |      Active      |
- *          |                                          |         ^        |
- *          v                                          |         |        |
- *   +--------------+                                  |         |        |
- *   |              |                                  |         |        |
- *   |    Failed    |                                  |         v        |
- *   |              |                                  |       Idle       |
- *   +--------------+                                  |                  |
- *                                                     +------------------+
+ *          |                          |                |                  |
+ *          |                          |                |      Active      |
+ *          |                          |                |         ^        |
+ *          v                          |                |         |        |
+ *   +--------------+                  |                |         |        |
+ *   |              |                  |                |         |        |
+ *   |    Failed    |   <--------------                 |         v        |
+ *   |              |                                   |       Idle       |
+ *   +--------------+                                   |                  |
+ *                                                      +------------------+
  * }</pre>
  */
 public interface ClientConnectionEventListener extends ConnectionEventListener {
@@ -172,4 +174,13 @@ public interface ClientConnectionEventListener extends ConnectionEventListener {
                           @Nullable InetSocketAddress localAddress,
                           AttributeMap attrs,
                           Throwable cause, boolean wasPending) throws Exception;
+
+    /**
+     * Returns a new {@link ClientConnectionEventListener} that forwards the events to this listener and then to
+     * {@code next} listener.
+     */
+    default ClientConnectionEventListener andThen(ClientConnectionEventListener next) {
+        requireNonNull(next, "next");
+        return new ChainedClientConnectionEventListener(this, next);
+    }
 }

@@ -18,9 +18,12 @@ package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.net.InetSocketAddress;
+
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.common.DelegatingConnectionEventListener;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
@@ -29,12 +32,16 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.NetUtil;
 
 class Http1ResponseDecoderTest {
 
     @Test
     void testRequestTimeoutClosesImmediately() throws Exception {
         final EmbeddedChannel channel = new EmbeddedChannel();
+        new DelegatingConnectionEventListener(ClientConnectionEventListener.noop(), channel,
+                                              SessionProtocol.HTTP,
+                                              new InetSocketAddress(NetUtil.LOCALHOST, 8080));
         try (HttpClientFactory httpClientFactory = new HttpClientFactory(ClientFactoryOptions.of())) {
             final Http1ResponseDecoder decoder = new Http1ResponseDecoder(
                     channel, httpClientFactory, SessionProtocol.H1);

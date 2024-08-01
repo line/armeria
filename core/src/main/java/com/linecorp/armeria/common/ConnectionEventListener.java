@@ -19,20 +19,15 @@ package com.linecorp.armeria.common;
 import java.net.InetSocketAddress;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeMap;
 
 /**
  * Listens to the connection events.
  */
+@UnstableApi
 public interface ConnectionEventListener {
-    /**
-     * Returns an instance that does nothing.
-     */
-    static ConnectionEventListener noop() {
-        return ConnectionEventListenerAdapter.NOOP;
-    }
-
     /**
      * Invoked when a connection is opened.
      *

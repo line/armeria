@@ -24,7 +24,6 @@ import static com.linecorp.armeria.common.SessionProtocol.H2C;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
-import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
@@ -52,7 +51,6 @@ import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
@@ -199,19 +197,10 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final long idleTimeoutMillis = config.idleTimeoutMillis();
         final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
-        final boolean needsKeepAliveHandler =
-                needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
-                                      maxConnectionAgeMillis, maxNumRequestsPerConnection);
-
-        final KeepAliveHandler keepAliveHandler;
-        if (needsKeepAliveHandler) {
-            final Timer keepAliveTimer = newKeepAliveTimer(H1C);
-            keepAliveHandler = new Http1ServerKeepAliveHandler(p.channel(), keepAliveTimer, idleTimeoutMillis,
-                                                               maxConnectionAgeMillis,
-                                                               maxNumRequestsPerConnection);
-        } else {
-            keepAliveHandler = new NoopKeepAliveHandler(true, p.channel());
-        }
+        final Timer keepAliveTimer = newKeepAliveTimer(H1C);
+        final KeepAliveHandler keepAliveHandler =
+                new Http1ServerKeepAliveHandler(p.channel(), keepAliveTimer, idleTimeoutMillis,
+                                                maxConnectionAgeMillis, maxNumRequestsPerConnection);
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), H1C, keepAliveHandler, config.http1HeaderNaming()
         );
@@ -508,18 +497,9 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final long idleTimeoutMillis = config.idleTimeoutMillis();
             final long maxConnectionAgeMillis = config.maxConnectionAgeMillis();
             final int maxNumRequestsPerConnection = config.maxNumRequestsPerConnection();
-            final boolean needsKeepAliveHandler =
-                    needsKeepAliveHandler(idleTimeoutMillis, /* pingIntervalMillis */ 0,
-                                          maxConnectionAgeMillis, maxNumRequestsPerConnection);
-
-            final KeepAliveHandler keepAliveHandler;
-            if (needsKeepAliveHandler) {
-                keepAliveHandler = new Http1ServerKeepAliveHandler(ch, newKeepAliveTimer(H1), idleTimeoutMillis,
-                                                                   maxConnectionAgeMillis,
-                                                                   maxNumRequestsPerConnection);
-            } else {
-                keepAliveHandler = new NoopKeepAliveHandler(true, ch);
-            }
+            final KeepAliveHandler keepAliveHandler =
+                    new Http1ServerKeepAliveHandler(ch, newKeepAliveTimer(H1), idleTimeoutMillis,
+                                                    maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
             final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
                     ch, H1, keepAliveHandler, config.http1HeaderNaming());
@@ -646,7 +626,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-            keepAliveHandler.initialize(ctx);
+            keepAliveHandler.initialize();
             super.handlerAdded(ctx);
             name = ctx.name();
         }

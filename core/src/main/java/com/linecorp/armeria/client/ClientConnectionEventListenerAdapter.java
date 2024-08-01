@@ -34,37 +34,6 @@ public class ClientConnectionEventListenerAdapter implements ClientConnectionEve
     static final ClientConnectionEventListenerAdapter NOOP = new ClientConnectionEventListenerAdapter();
 
     /**
-     * Convert the {@link ConnectionPoolListener} into a {@link ClientConnectionEventListener}.
-     */
-    static ClientConnectionEventListener of(ConnectionPoolListener connectionPoolListener) {
-        return new ClientConnectionEventListenerAdapter() {
-            @Override
-            public void connectionOpened(@Nullable SessionProtocol desiredProtocol,
-                                         SessionProtocol protocol,
-                                         InetSocketAddress remoteAddress,
-                                         InetSocketAddress localAddress,
-                                         AttributeMap attrs) throws Exception {
-                connectionPoolListener.connectionOpen(protocol,
-                                                      remoteAddress,
-                                                      localAddress,
-                                                      attrs);
-            }
-
-            @Override
-            public void connectionClosed(SessionProtocol protocol,
-                                         InetSocketAddress remoteAddress,
-                                         InetSocketAddress localAddress,
-                                         AttributeMap attrs,
-                                         boolean wasIdle) throws Exception {
-                connectionPoolListener.connectionClosed(protocol,
-                                                        remoteAddress,
-                                                        localAddress,
-                                                        attrs);
-            }
-        };
-    }
-
-    /**
      * Creates a new instance.
      */
     protected ClientConnectionEventListenerAdapter() {}

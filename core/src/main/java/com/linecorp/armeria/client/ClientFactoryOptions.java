@@ -598,17 +598,17 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the graceful connection shutdown timeout in milliseconds.
-     */
-    public long http2GracefulShutdownTimeoutMillis() {
-        return get(HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
-    }
-
-    /**
      * Returns the listener which is notified on a connection event.
      */
     public ClientConnectionEventListener connectionEventListener() {
         return get(CONNECTION_EVENT_LISTENER);
+    }
+
+    /**
+     * Returns the graceful connection shutdown timeout in milliseconds.
+     */
+    public long http2GracefulShutdownTimeoutMillis() {
+        return get(HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS);
     }
 
     /**

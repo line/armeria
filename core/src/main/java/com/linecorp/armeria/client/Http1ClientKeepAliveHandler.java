@@ -18,20 +18,24 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.UserAgentUtil;
+import com.linecorp.armeria.internal.common.DelegatingConnectionEventListener;
 import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
 
 final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
+    private static final Logger logger = LoggerFactory.getLogger(Http1ClientKeepAliveHandler.class);
 
     private static final RequestHeaders HTTP1_PING_REQUEST =
             RequestHeaders.builder(HttpMethod.OPTIONS, "*")
@@ -44,10 +48,11 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
     private ClientHttp1ObjectEncoder encoder;
 
     Http1ClientKeepAliveHandler(Channel channel, Http1ResponseDecoder decoder,
-                                Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
+                                Timer keepAliveTimer, DelegatingConnectionEventListener connectionEventListener,
+                                long idleTimeoutMillis, long pingIntervalMillis,
                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
                                 boolean keepAliveOnPing) {
-        super(channel, "client", keepAliveTimer, idleTimeoutMillis,
+        super(channel, "client", keepAliveTimer, connectionEventListener, idleTimeoutMillis,
               pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
         httpSession = HttpSession.get(requireNonNull(channel, "channel"));
         this.decoder = requireNonNull(decoder, "decoder");
@@ -58,13 +63,19 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
     }
 
     @Override
-    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+    protected Logger logger() {
+        return logger;
+    }
+
+    @Override
+    protected ChannelFuture writePing() {
         final int id = httpSession.incrementAndGetNumRequestsSent();
 
         assert encoder != null;
         decoder.setPingReqId(id);
-        final ChannelFuture future = encoder.writeHeaders(id, 0, HTTP1_PING_REQUEST, true, ctx.newPromise());
-        ctx.flush();
+        final ChannelFuture future = encoder.writeHeaders(id, 0, HTTP1_PING_REQUEST, true,
+                                                          channel().newPromise());
+        channel().flush();
         return future;
     }
 
@@ -74,7 +85,7 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
     }
 
     @Override
-    protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
+    protected boolean hasRequestsInProgress() {
         return httpSession.hasUnfinishedResponses();
     }
 

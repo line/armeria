@@ -16,14 +16,11 @@
 
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.GracefulConnectionShutdownHandler;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
@@ -70,13 +67,6 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
         final long pingIntervalMillis = cfg.pingIntervalMillis();
         final long maxConnectionAgeMillis = cfg.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = cfg.maxNumRequestsPerConnection();
-        final boolean needsKeepAliveHandler = needsKeepAliveHandler(
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
-
-        if (!needsKeepAliveHandler) {
-            return new NoopKeepAliveHandler(true, channel);
-        }
-
         return new Http2ServerKeepAliveHandler(
                 channel, encoder.frameWriter(), keepAliveTimer, idleTimeoutMillis,
                 pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
@@ -129,11 +119,9 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        if (!(keepAliveHandler instanceof NoopKeepAliveHandler)) {
-            final Channel channel = ctx.channel();
-            if (channel.isActive() && channel.isRegistered()) {
-                keepAliveHandler.initialize(ctx);
-            }
+        final Channel channel = ctx.channel();
+        if (channel.isActive() && channel.isRegistered()) {
+            keepAliveHandler.initialize();
         }
     }
 

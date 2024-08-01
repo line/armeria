@@ -21,7 +21,6 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -31,17 +30,20 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 
 class Http2KeepAliveHandlerTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandlerTest.class);
 
     @RegisterExtension
     static EventLoopExtension eventLoop = new EventLoopExtension();
@@ -51,25 +53,27 @@ class Http2KeepAliveHandlerTest {
 
     @Mock
     private Http2FrameWriter frameWriter;
-    private ChannelHandlerContext ctx;
     private EmbeddedChannel channel;
 
     private Http2KeepAliveHandler keepAliveHandler;
 
     void setup(boolean keepAliveOnPing) throws Exception {
-        ctx = mock(ChannelHandlerContext.class);
         channel = spy(new EmbeddedChannel());
         when(channel.eventLoop()).thenReturn(eventLoop.get());
-        when(ctx.channel()).thenReturn(channel);
 
         keepAliveHandler = new Http2KeepAliveHandler(
-                channel, frameWriter, "test", NoopMeterRegistry.get().timer(""),
+                channel, frameWriter, "test", NoopMeterRegistry.get().timer(""), null,
                 idleTimeoutMillis, pingIntervalMillis,
                 /* maxConnectionAgeMillis */ 0, /* maxNumRequestsPerConnection */ 0,
                 keepAliveOnPing) {
             @Override
-            protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
+            protected boolean hasRequestsInProgress() {
                 return false;
+            }
+
+            @Override
+            protected Logger logger() {
+                return logger;
             }
         };
 
@@ -86,7 +90,7 @@ class Http2KeepAliveHandlerTest {
     void verifyPingAck() throws Exception {
         setup(false);
         final ChannelPromise promise = channel.newPromise();
-        keepAliveHandler.initialize(ctx);
+        keepAliveHandler.initialize();
         when(frameWriter.writePing(any(), eq(false), anyLong(), any())).thenReturn(promise);
 
         Thread.sleep(pingIntervalMillis * 2);
@@ -109,7 +113,7 @@ class Http2KeepAliveHandlerTest {
     })
     void shouldKeepAliveOnPing(boolean keepAliveOnPing, PingState expectedState) throws Exception {
         setup(keepAliveOnPing);
-        keepAliveHandler.initialize(ctx);
+        keepAliveHandler.initialize();
         Thread.sleep(idleTimeoutMillis / 2);
         keepAliveHandler.onPing();
         Thread.sleep(idleTimeoutMillis / 2 + 1000);

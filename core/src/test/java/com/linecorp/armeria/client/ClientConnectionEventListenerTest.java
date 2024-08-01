@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -119,31 +120,26 @@ class ClientConnectionEventListenerTest {
 
             final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/delayed");
             final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request).aggregate();
-
-            await().untilAsserted(
-                    () -> assertThat(connectionEventListener.opened(protocol)).isEqualTo(1));
-            assertThat(connectionEventListener.pending(protocol)).isEqualTo(1);
-            assertThat(connectionEventListener.failed(protocol)).isEqualTo(0);
-            assertThat(connectionEventListener.active(protocol)).isEqualTo(0);
-            assertThat(connectionEventListener.idle(protocol)).isEqualTo(0);
-
             response.join();
 
-            await().untilAsserted(() -> assertThat(connectionEventListener.closed(protocol)).isEqualTo(1));
-            assertThat(connectionEventListener.opened(protocol)).isEqualTo(1);
-            assertThat(connectionEventListener.active(protocol)).isEqualTo(0);
-            assertThat(connectionEventListener.idle(protocol)).isEqualTo(0);
+            await().untilAsserted(() -> {
+                assertThat(connectionEventListener.opened(protocol)).isEqualTo(1);
+            });
+            assertThat(connectionEventListener.pending(protocol)).isEqualTo(1);
+            assertThat(connectionEventListener.failed(protocol)).isEqualTo(0);
+            assertThat(connectionEventListener.active(protocol)).isEqualTo(1);
+            assertThat(connectionEventListener.idle(protocol)).isEqualTo(1);
         }
     }
 
     @CsvSource({
-            "H1C,0,0",
-            "H1C,1000,1",
-            "H2C,0,0",
-            "H2C,1000,1"
+            "H1C,0",
+            "H1C,1000",
+            "H2C,0",
+            "H2C,1000"
     })
     @ParameterizedTest
-    void nioClientConnection(SessionProtocol protocol, Long idleTimeoutMillis, int expectedActiveOrIdleCount)
+    void clientConnectionEventLifecycle(SessionProtocol protocol, Long idleTimeoutMillis)
             throws InterruptedException {
         final CountingClientConnectionEventListener connectionEventListener =
                 new CountingClientConnectionEventListener();
@@ -161,19 +157,31 @@ class ClientConnectionEventListenerTest {
             final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/delayed");
             final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request).aggregate();
 
-            await().untilAsserted(
-                    () -> assertThat(connectionEventListener.opened(protocol)).isEqualTo(1));
+            await().untilAsserted(() -> {
+                assertThat(connectionEventListener.opened(protocol)).isEqualTo(1);
+            });
             assertThat(connectionEventListener.pending(protocol)).isEqualTo(1);
             assertThat(connectionEventListener.failed(protocol)).isEqualTo(0);
-            assertThat(connectionEventListener.active(protocol)).isEqualTo(expectedActiveOrIdleCount);
+            assertThat(connectionEventListener.active(protocol)).isEqualTo(1);
             assertThat(connectionEventListener.idle(protocol)).isEqualTo(0);
 
             response.join();
 
-            await().untilAsserted(() -> assertThat(connectionEventListener.closed(protocol)).isEqualTo(1));
+            Thread.sleep(idleTimeoutMillis + 100);
+
+            if (idleTimeoutMillis > 0) {
+                await().untilAsserted(() -> {
+                    assertThat(connectionEventListener.idle(protocol)).isEqualTo(1);
+                });
+                await().untilAsserted(() -> {
+                    assertThat(connectionEventListener.closed(protocol)).isEqualTo(1);
+                });
+            } else {
+                assertThat(connectionEventListener.closed(protocol)).isEqualTo(0);
+                assertThat(connectionEventListener.idle(protocol)).isEqualTo(1);
+            }
             assertThat(connectionEventListener.opened(protocol)).isEqualTo(1);
-            assertThat(connectionEventListener.active(protocol)).isEqualTo(expectedActiveOrIdleCount);
-            assertThat(connectionEventListener.idle(protocol)).isEqualTo(expectedActiveOrIdleCount);
+            assertThat(connectionEventListener.active(protocol)).isEqualTo(1);
         }
     }
 
@@ -189,13 +197,12 @@ class ClientConnectionEventListenerTest {
                                                         .useHttp2Preface(false)
                                                         .connectionEventListener(connectionEventListener)
                                                         .build()) {
-            final WebClient webClient = WebClient
-                    .builder(desiredProtocol.uriText() + "://127.0.0.1:" + server.httpPort())
-                    .factory(clientFactory)
-                    .build();
-
-            final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/");
-            final CompletableFuture<AggregatedHttpResponse> response = webClient.execute(request).aggregate();
+            final BlockingWebClient client = WebClient.builder(server.httpUri())
+                                                      .factory(clientFactory)
+                                                      .build()
+                                                      .blocking();
+            final AggregatedHttpResponse response = client.get("/delayed");
+            assertThat(response.status()).isEqualTo(HttpStatus.OK);
 
             await().untilAsserted(
                     () -> assertThat(connectionEventListener.active(actualProtocol)).isEqualTo(1));

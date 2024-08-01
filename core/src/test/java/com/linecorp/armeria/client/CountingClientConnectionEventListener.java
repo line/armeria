@@ -17,36 +17,27 @@
 package com.linecorp.armeria.client;
 
 import java.net.InetSocketAddress;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-
-import com.google.errorprone.annotations.concurrent.GuardedBy;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 
 import io.netty.util.AttributeMap;
 
 public class CountingClientConnectionEventListener implements ClientConnectionEventListener {
-    @GuardedBy("lock")
-    private final Map<List<String>, Integer> counter = new HashMap<>();
-    private final ReentrantShortLock lock = new ReentrantShortLock();
+    private final Map<String, Integer> counter = new ConcurrentHashMap<>();
+
+    private void increase(String key) {
+        counter.compute(key, (unused, counter) -> counter == null ? 1 : counter + 1);
+    }
 
     @Override
     public void connectionPending(SessionProtocol desiredProtocol,
                                   InetSocketAddress remoteAddress,
                                   InetSocketAddress localAddress,
                                   AttributeMap attrs) throws Exception {
-        try {
-            lock.lock();
-            final List<String> key = key("pending", desiredProtocol);
-            counter.put(key, counter.getOrDefault(key, 0) + 1);
-        } finally {
-            lock.unlock();
-        }
+        increase(key("pending", desiredProtocol));
     }
 
     @Override
@@ -56,13 +47,7 @@ public class CountingClientConnectionEventListener implements ClientConnectionEv
                                  AttributeMap attrs,
                                  Throwable cause,
                                  boolean wasPending) throws Exception {
-        try {
-            lock.lock();
-            final List<String> key = key("failed", desiredProtocol);
-            counter.put(key, counter.getOrDefault(key, 0) + 1);
-        } finally {
-            lock.unlock();
-        }
+        increase(key("failed", desiredProtocol));
     }
 
     @Override
@@ -71,13 +56,7 @@ public class CountingClientConnectionEventListener implements ClientConnectionEv
                                  InetSocketAddress remoteAddress,
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs) throws Exception {
-        try {
-            lock.lock();
-            final List<String> key = key("opened", protocol);
-            counter.put(key, counter.getOrDefault(key, 0) + 1);
-        } finally {
-            lock.unlock();
-        }
+        increase(key("opened", protocol));
     }
 
     @Override
@@ -86,13 +65,7 @@ public class CountingClientConnectionEventListener implements ClientConnectionEv
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
                                  boolean wasIdle) throws Exception {
-        try {
-            lock.lock();
-            final List<String> key = key("active", protocol);
-            counter.put(key, counter.getOrDefault(key, 0) + 1);
-        } finally {
-            lock.unlock();
-        }
+        increase(key("active", protocol));
     }
 
     @Override
@@ -100,13 +73,7 @@ public class CountingClientConnectionEventListener implements ClientConnectionEv
                                InetSocketAddress remoteAddress,
                                InetSocketAddress localAddress,
                                AttributeMap attrs) throws Exception {
-        try {
-            lock.lock();
-            final List<String> key = key("idle", protocol);
-            counter.put(key, counter.getOrDefault(key, 0) + 1);
-        } finally {
-            lock.unlock();
-        }
+        increase(key("idle", protocol));
     }
 
     @Override
@@ -115,70 +82,34 @@ public class CountingClientConnectionEventListener implements ClientConnectionEv
                                  InetSocketAddress localAddress,
                                  AttributeMap attrs,
                                  boolean wasIdle) throws Exception {
-        try {
-            lock.lock();
-            final List<String> key = key("closed", protocol);
-            counter.put(key, counter.getOrDefault(key, 0) + 1);
-        } finally {
-            lock.unlock();
-        }
+        increase(key("closed", protocol));
     }
 
     public int pending(SessionProtocol desiredProtocol) {
-        try {
-            lock.lock();
-            return counter.getOrDefault(key("pending", desiredProtocol), 0);
-        } finally {
-            lock.unlock();
-        }
+        return counter.getOrDefault(key("pending", desiredProtocol), 0);
     }
 
     public int failed(SessionProtocol desiredProtocol) {
-        try {
-            lock.lock();
-            return counter.getOrDefault(key("failed", desiredProtocol), 0);
-        } finally {
-            lock.unlock();
-        }
+        return counter.getOrDefault(key("failed", desiredProtocol), 0);
     }
 
     public int opened(SessionProtocol protocol) {
-        try {
-            lock.lock();
-            return counter.getOrDefault(key("opened", protocol), 0);
-        } finally {
-            lock.unlock();
-        }
+        return counter.getOrDefault(key("opened", protocol), 0);
     }
 
     public int closed(SessionProtocol protocol) {
-        try {
-            lock.lock();
-            return counter.getOrDefault(key("closed", protocol), 0);
-        } finally {
-            lock.unlock();
-        }
+        return counter.getOrDefault(key("closed", protocol), 0);
     }
 
     public int active(SessionProtocol protocol) {
-        try {
-            lock.lock();
-            return counter.getOrDefault(key("active", protocol), 0);
-        } finally {
-            lock.unlock();
-        }
+        return counter.getOrDefault(key("active", protocol), 0);
     }
 
     public int idle(SessionProtocol protocol) {
-        try {
-            lock.lock();
-            return counter.getOrDefault(key("idle", protocol), 0);
-        } finally {
-            lock.unlock();
-        }
+        return counter.getOrDefault(key("idle", protocol), 0);
     }
 
-    private static List<String> key(String eventType, SessionProtocol protocol) {
-        return Arrays.asList(eventType, protocol.uriText());
+    private static String key(String eventType, SessionProtocol protocol) {
+        return eventType + "-" + protocol.uriText();
     }
 }

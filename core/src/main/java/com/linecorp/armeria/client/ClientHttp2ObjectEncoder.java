@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -46,8 +45,7 @@ final class ClientHttp2ObjectEncoder extends Http2ObjectEncoder implements Clien
                              SessionProtocol protocol) {
         super(connectionHandlerCtx, connectionHandler);
         this.protocol = requireNonNull(protocol, "protocol");
-        assert keepAliveHandler() instanceof Http2ClientKeepAliveHandler ||
-               keepAliveHandler() instanceof NoopKeepAliveHandler;
+        assert keepAliveHandler() instanceof Http2ClientKeepAliveHandler;
     }
 
     @Override

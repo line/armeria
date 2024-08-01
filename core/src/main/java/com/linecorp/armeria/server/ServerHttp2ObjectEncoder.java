@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2ObjectEncoder;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -42,8 +41,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
     ServerHttp2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
                              AbstractHttp2ConnectionHandler connectionHandler) {
         super(connectionHandlerCtx, connectionHandler);
-        assert keepAliveHandler() instanceof Http2ServerKeepAliveHandler ||
-               keepAliveHandler() instanceof NoopKeepAliveHandler;
+        assert keepAliveHandler() instanceof Http2ServerKeepAliveHandler;
     }
 
     @Override

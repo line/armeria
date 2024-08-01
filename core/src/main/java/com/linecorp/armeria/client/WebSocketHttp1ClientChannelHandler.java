@@ -23,6 +23,7 @@ import static io.netty.handler.codec.http.LastHttpContent.EMPTY_LAST_CONTENT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpData;
@@ -30,14 +31,17 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.DelegatingConnectionEventListener;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
@@ -73,16 +77,16 @@ final class WebSocketHttp1ClientChannelHandler extends ChannelDuplexHandler impl
     @Nullable
     private HttpSession httpSession;
 
-    WebSocketHttp1ClientChannelHandler(Channel channel) {
+    WebSocketHttp1ClientChannelHandler(Channel channel, HttpClientFactory clientFactory) {
         this.channel = channel;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
 
-        // Use NoopKeepAliveHandler because
-        // - hasRequestsInProgress is always true for WebSocket
-        // - a Ping frame is not sent by the keepAliveHandler but by the upper layer.
-        // TODO(minwoox): Provide a dedicated KeepAliveHandler to the upper layer (e.g. WebSocketClient)
-        //                that handles Ping frames for WebSocket.
-        keepAliveHandler = new NoopKeepAliveHandler(true, channel);
+        final Timer keepAliveTimer =
+                MoreMeters.newTimer(clientFactory.meterRegistry(),
+                                    "armeria.client.connections.lifespan",
+                                    ImmutableList.of(Tag.of("protocol", "http1.websocket")));
+        final DelegatingConnectionEventListener eventListener = DelegatingConnectionEventListener.get(channel);
+        keepAliveHandler = new WebSocketHttp1ClientKeepAliveHandler(channel, keepAliveTimer, eventListener);
     }
 
     @Override

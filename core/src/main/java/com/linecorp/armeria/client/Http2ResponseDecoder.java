@@ -37,7 +37,6 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
@@ -69,8 +68,7 @@ final class Http2ResponseDecoder extends AbstractHttpResponseDecoder implements 
               InboundTrafficController.ofHttp2(channel, clientFactory.http2InitialConnectionWindowSize()));
         conn = encoder.connection();
         this.encoder = encoder;
-        assert keepAliveHandler instanceof Http2ClientKeepAliveHandler ||
-               keepAliveHandler instanceof NoopKeepAliveHandler;
+        assert keepAliveHandler instanceof Http2ClientKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
         goAwayHandler = new Http2GoAwayHandler();
     }

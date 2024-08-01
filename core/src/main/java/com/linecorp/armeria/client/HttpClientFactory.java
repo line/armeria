@@ -120,7 +120,6 @@ final class HttpClientFactory implements ClientFactory {
     private final boolean useHttp2Preface;
     private final boolean useHttp2WithoutAlpn;
     private final boolean useHttp1Pipelining;
-    private final ConnectionPoolListener connectionPoolListener;
     private final long http2GracefulShutdownTimeoutMillis;
     private final ClientConnectionEventListener connectionEventListener;
     private MeterRegistry meterRegistry;
@@ -203,9 +202,8 @@ final class HttpClientFactory implements ClientFactory {
         useHttp2Preface = options.useHttp2Preface();
         useHttp2WithoutAlpn = options.useHttp2WithoutAlpn();
         useHttp1Pipelining = options.useHttp1Pipelining();
-        connectionPoolListener = options.connectionPoolListener();
-        http2GracefulShutdownTimeoutMillis = options.http2GracefulShutdownTimeoutMillis();
         connectionEventListener = options.connectionEventListener();
+        http2GracefulShutdownTimeoutMillis = options.http2GracefulShutdownTimeoutMillis();
         meterRegistry = options.meterRegistry();
         proxyConfigSelector = options.proxyConfigSelector();
         http1HeaderNaming = options.http1HeaderNaming();
@@ -299,15 +297,6 @@ final class HttpClientFactory implements ClientFactory {
 
     boolean useHttp1Pipelining() {
         return useHttp1Pipelining;
-    }
-
-    /**
-     * Returns the {@link ConnectionPoolListener} which is notified on {@link HttpChannelPool} events.
-     * @deprecated Use {@link #connectionEventListener()} instead.
-     */
-    @Deprecated
-    ConnectionPoolListener connectionPoolListener() {
-        return connectionPoolListener;
     }
 
     ClientConnectionEventListener connectionEventListener() {
