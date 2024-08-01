@@ -498,7 +498,6 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         CLOSED
     }
 
-
     /**
      * State changes from IDLE -> PING_SCHEDULED -> PENDING_PING_ACK -> IDLE and so on. When the
      * channel is inactive then the state changes to SHUTDOWN.

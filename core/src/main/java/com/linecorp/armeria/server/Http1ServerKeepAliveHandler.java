@@ -32,7 +32,8 @@ final class Http1ServerKeepAliveHandler extends Http1KeepAliveHandler {
                                 long idleTimeoutMillis, long maxConnectionAgeMillis,
                                 int maxNumRequestsPerConnection) {
         // TODO(ikhoon): Support ConnectionEventListener for server-side
-        super(channel, "server", keepAliveTimer, null, idleTimeoutMillis, /* pingIntervalMillis(unsupported) */ 0,
+        super(channel, "server", keepAliveTimer, null,
+              idleTimeoutMillis, /* pingIntervalMillis(unsupported) */ 0,
               maxConnectionAgeMillis, maxNumRequestsPerConnection, false);
     }
 
