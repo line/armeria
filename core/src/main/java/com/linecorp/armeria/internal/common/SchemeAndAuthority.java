@@ -27,6 +27,9 @@ import com.google.common.net.HostAndPort;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 public final class SchemeAndAuthority {
+
+    private static final char[] RESERVED_CHARS = { '/', '?', '#', };
+
     /**
      * Attempts to parse this URI's authority component and return {@link SchemeAndAuthority}.
      * The authority part may have one of the following formats (The userinfo part will be ignored.):
@@ -51,6 +54,13 @@ public final class SchemeAndAuthority {
             return new SchemeAndAuthority(scheme, authority, authority, -1);
         }
 
+        for (char reservedChar : RESERVED_CHARS) {
+            if (authority.indexOf(reservedChar) > -1) {
+                throw new IllegalArgumentException("authority contains reserved character: " + authority +
+                                                   " (" + reservedChar + ')');
+            }
+        }
+
         final String authorityWithoutUserInfo = removeUserInfo(authority);
         try {
             final URI uri = new URI(null, authorityWithoutUserInfo, null, null, null);
@@ -63,6 +73,7 @@ public final class SchemeAndAuthority {
             final boolean isIpv6 = rawAuthority.startsWith("[");
             final HostAndPort hostAndPort = HostAndPort.fromString(rawAuthority);
             String host = hostAndPort.getHost();
+
             if (isIpv6) {
                 host = '[' + host + ']';
             }

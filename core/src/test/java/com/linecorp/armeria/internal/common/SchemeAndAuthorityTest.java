@@ -48,6 +48,10 @@ class SchemeAndAuthorityTest {
     @ParameterizedTest
     @CsvSource({
             "foo:bar",        // Invalid port
+            "http://foo:80",  // Scheme included
+            "foo/bar",        // Authority with path
+            "foo?bar=1",      // Authority with query
+            "foo#bar",        // Authority with fragment
             "[192.168.0.1]",  // Bracketed IPv4
             "[::1", "::1]",   // Incomplete IPv6
             "[::1]%eth0",     // IPv6 with scope
