@@ -16,19 +16,20 @@
 
 package com.linecorp.armeria.server.cors;
 
-import static com.linecorp.armeria.server.cors.CorsService.ANY_ORIGIN;
+import static com.linecorp.armeria.internal.server.CorsHeaderUtil.DELIMITER;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -38,10 +39,10 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
+import com.linecorp.armeria.internal.server.CorsHeaderUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.cors.CorsConfig.ConstantValueSupplier;
 
@@ -51,9 +52,6 @@ import io.netty.util.AsciiString;
  * Contains information of the CORS policy with the specified origins.
  */
 public final class CorsPolicy {
-
-    private static final String DELIMITER = ",";
-    private static final Joiner HEADER_JOINER = Joiner.on(DELIMITER);
 
     /**
      * Returns a new {@link CorsPolicyBuilder}.
@@ -76,7 +74,29 @@ public final class CorsPolicy {
         return new CorsPolicyBuilder(origins);
     }
 
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code predicate}.
+     */
+    public static CorsPolicyBuilder builder(Predicate<? super String> predicate) {
+        return new CorsPolicyBuilder(predicate);
+    }
+
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code regex}.
+     */
+    public static CorsPolicyBuilder builderForOriginRegex(String regex) {
+        return builderForOriginRegex(Pattern.compile(requireNonNull(regex, "regex")));
+    }
+
+    /**
+     * Returns a new {@link CorsPolicyBuilder} with origins matching the {@code regex}.
+     */
+    public static CorsPolicyBuilder builderForOriginRegex(Pattern regex) {
+        return builder(requireNonNull(regex, "regex").asPredicate());
+    }
+
     private final Set<String> origins;
+    private final Predicate<String> originPredicate;
     private final List<Route> routes;
     private final boolean credentialsAllowed;
     private final boolean nullOriginAllowed;
@@ -85,17 +105,18 @@ public final class CorsPolicy {
     private final Set<HttpMethod> allowedRequestMethods;
     private final boolean allowAllRequestHeaders;
     private final Set<AsciiString> allowedRequestHeaders;
-    private final String joinedExposedHeaders;
-    private final String joinedAllowedRequestHeaders;
+
     private final String joinedAllowedRequestMethods;
     private final Map<AsciiString, Supplier<?>> preflightResponseHeaders;
 
-    CorsPolicy(Set<String> origins, List<Route> routes, boolean credentialsAllowed, long maxAge,
+    CorsPolicy(Set<String> origins, Predicate<? super String> originPredicate,
+               List<Route> routes, boolean credentialsAllowed, long maxAge,
                boolean nullOriginAllowed, Set<AsciiString> exposedHeaders,
                boolean allowAllRequestHeaders, Set<AsciiString> allowedRequestHeaders,
                EnumSet<HttpMethod> allowedRequestMethods, boolean preflightResponseHeadersDisabled,
                Map<AsciiString, Supplier<?>> preflightResponseHeaders) {
         this.origins = ImmutableSet.copyOf(origins);
+        this.originPredicate = (Predicate<String>) originPredicate;
         this.routes = ImmutableList.copyOf(routes);
         this.credentialsAllowed = credentialsAllowed;
         this.maxAge = maxAge;
@@ -104,10 +125,8 @@ public final class CorsPolicy {
         this.allowedRequestMethods = ImmutableSet.copyOf(allowedRequestMethods);
         this.allowAllRequestHeaders = allowAllRequestHeaders;
         this.allowedRequestHeaders = ImmutableSet.copyOf(allowedRequestHeaders);
-        joinedExposedHeaders = HEADER_JOINER.join(this.exposedHeaders);
         joinedAllowedRequestMethods = this.allowedRequestMethods
                 .stream().map(HttpMethod::name).collect(Collectors.joining(DELIMITER));
-        joinedAllowedRequestHeaders = HEADER_JOINER.join(this.allowedRequestHeaders);
         if (preflightResponseHeadersDisabled) {
             this.preflightResponseHeaders = Collections.emptyMap();
         } else if (preflightResponseHeaders.isEmpty()) {
@@ -124,16 +143,29 @@ public final class CorsPolicy {
      * This method returns the first specified origin if this policy has more than one origin.
      *
      * @return the value that will be used for the CORS response header {@code "Access-Control-Allow-Origin"}
+     *
+     * @deprecated Use {@link #originPredicate()} to check if an origin is allowed.
      */
+    @Deprecated
     public String origin() {
-        return Iterables.getFirst(origins, ANY_ORIGIN);
+        return Iterables.getFirst(origins, CorsHeaderUtil.ANY_ORIGIN);
     }
 
     /**
      * Returns the set of allowed origins.
+     *
+     * @deprecated @deprecated Use {@link #originPredicate()} to check if an origin is allowed.
      */
+    @Deprecated
     public Set<String> origins() {
         return origins;
+    }
+
+    /**
+     * Returns predicate to match origins.
+     */
+    public Predicate<String> originPredicate() {
+        return originPredicate;
     }
 
     /**
@@ -261,51 +293,22 @@ public final class CorsPolicy {
         headers.add(generatePreflightResponseHeaders());
     }
 
-    void setCorsAllowCredentials(ResponseHeadersBuilder headers) {
-        // The string "*" cannot be used for a resource that supports credentials.
-        // https://www.w3.org/TR/cors/#resource-requests
-        if (credentialsAllowed &&
-            !ANY_ORIGIN.equals(headers.get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))) {
-            headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true");
-        }
-    }
-
-    void setCorsExposeHeaders(ResponseHeadersBuilder headers) {
-        if (exposedHeaders.isEmpty()) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_EXPOSE_HEADERS, joinedExposedHeaders);
+    /**
+     * Determines whether all request headers are allowed.
+     *
+     * @return true if all request headers are allowed,
+     *         false if only specific request headers are allowed.
+     */
+    public boolean shouldAllowAllRequestHeaders() {
+        return allowAllRequestHeaders;
     }
 
     void setCorsAllowMethods(ResponseHeadersBuilder headers) {
         headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS, joinedAllowedRequestMethods);
     }
 
-    void setCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
-        if (allowAllRequestHeaders) {
-            copyCorsAllowHeaders(requestHeaders, headers);
-            return;
-        }
-
-        if (allowedRequestHeaders.isEmpty()) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, joinedAllowedRequestHeaders);
-    }
-
     void setCorsMaxAge(ResponseHeadersBuilder headers) {
         headers.setLong(HttpHeaderNames.ACCESS_CONTROL_MAX_AGE, maxAge);
-    }
-
-    private void copyCorsAllowHeaders(RequestHeaders requestHeaders, ResponseHeadersBuilder headers) {
-        final String header = requestHeaders.get(HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS);
-        if (Strings.isNullOrEmpty(header)) {
-            return;
-        }
-
-        headers.set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS, header);
     }
 
     @Override

@@ -27,11 +27,14 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
+import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
 
 /**
  * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
@@ -57,6 +60,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     static final long DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
 
+    // Use the fragmentation size as the default. https://datatracker.ietf.org/doc/html/rfc5246#section-6.2.1
+    static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH = 16384; // 16KiB
+
     // Use slightly greater value than the default request timeout so that clients have a higher chance of
     // getting proper 503 Service Unavailable response when server-side timeout occurs.
     static final long DEFAULT_RESPONSE_TIMEOUT_MILLIS = 15 * 1000; // 15 seconds
@@ -70,6 +76,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_MAX_SERVER_CONNECTION_AGE_MILLIS = 0; // Disabled
     static final long DEFAULT_MAX_CLIENT_CONNECTION_AGE_MILLIS = 0; // Disabled
     static final long DEFAULT_SERVER_CONNECTION_DRAIN_DURATION_MICROS = 1000000;
+    // Same as server connection drain duration
+    static final long DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS = 1000;
     static final int DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_INITIAL_STREAM_WINDOW_SIZE = 1024 * 1024; // 1MiB
     static final int DEFAULT_HTTP2_MAX_FRAME_SIZE = 16384; // From HTTP/2 specification
@@ -90,7 +98,8 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final String CACHED_HEADERS = ":authority,:scheme,:method,accept-encoding,content-type";
     static final String FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
     static final String DNS_CACHE_SPEC = "maximumSize=4096";
-    static final long DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
+    static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
+    static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS = 3000;
 
     private DefaultFlagsProvider() {}
 
@@ -157,6 +166,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean useOpenSsl() {
         return true;
+    }
+
+    @Override
+    public TlsEngineType tlsEngineType() {
+        return TlsEngineType.OPENSSL;
     }
 
     @Override
@@ -300,6 +314,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Long defaultClientHttp2GracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
+    }
+
+    @Override
     public Integer defaultHttp2InitialConnectionWindowSize() {
         return DEFAULT_HTTP2_INITIAL_CONNECTION_WINDOW_SIZE;
     }
@@ -422,6 +441,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Integer defaultMaxClientHelloLength() {
+        return DEFAULT_MAX_CLIENT_HELLO_LENGTH;
+    }
+
+    @Override
     public Set<TransientServiceOption> transientServiceOptions() {
         return ImmutableSet.of();
     }
@@ -454,6 +478,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public MultipartRemovalStrategy defaultMultipartRemovalStrategy() {
+        return MultipartRemovalStrategy.ON_RESPONSE_COMPLETION;
+    }
+
+    @Override
     public Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
         return Sampler.never();
     }
@@ -465,6 +494,21 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public Long defaultUnhandledExceptionsReportIntervalMillis() {
-        return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+        return DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    @Override
+    public Long defaultUnloggedExceptionsReportIntervalMillis() {
+        return DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
+    }
+
+    @Override
+    public DistributionStatisticConfig distributionStatisticConfig() {
+        return DistributionStatisticConfigUtil.DEFAULT_DIST_STAT_CFG;
+    }
+
+    @Override
+    public Long defaultHttp1ConnectionCloseDelayMillis() {
+        return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
     }
 }

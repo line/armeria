@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
@@ -44,8 +43,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
     private final RequestContext ctx;
     private final DecompressorRegistry decompressorRegistry;
     private final TransportStatusListener transportStatusListener;
-    @Nullable
-    private final GrpcExceptionHandlerFunction exceptionHandler;
+    private final InternalGrpcExceptionHandler exceptionHandler;
 
     @Nullable
     private StreamMessage<DeframedMessage> deframedStreamMessage;
@@ -56,7 +54,7 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             DecompressorRegistry decompressorRegistry,
             RequestContext ctx,
             TransportStatusListener transportStatusListener,
-            @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+            InternalGrpcExceptionHandler exceptionHandler,
             int maxMessageLength, boolean grpcWebText, boolean server) {
         super(maxMessageLength, ctx.alloc(), grpcWebText);
         this.ctx = requireNonNull(ctx, "ctx");
@@ -120,10 +118,9 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             try {
                 decompressor(ForwardingDecompressor.forGrpc(decompressor));
             } catch (Throwable t) {
-                final Metadata metadata = new Metadata();
-                transportStatusListener.transportReportStatus(
-                        GrpcStatus.fromThrowable(exceptionHandler, ctx, t, metadata),
-                        metadata);
+                final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, t);
+                transportStatusListener.transportReportStatus(statusAndMetadata.status(),
+                                                              statusAndMetadata.metadata());
                 return;
             }
         }
@@ -149,9 +146,8 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
 
     @Override
     public void processOnError(Throwable cause) {
-        final Metadata metadata = new Metadata();
-        transportStatusListener.transportReportStatus(
-                GrpcStatus.fromThrowable(exceptionHandler, ctx, cause, metadata), metadata);
+        final StatusAndMetadata statusAndMetadata = exceptionHandler.handle(ctx, cause);
+        transportStatusListener.transportReportStatus(statusAndMetadata.status(), statusAndMetadata.metadata());
     }
 
     @Override

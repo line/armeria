@@ -180,9 +180,16 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         return;
                     }
 
-                    // Convert the Netty HttpHeaders into Armeria RequestHeaders.
+                    assert msg instanceof NettyHttp1Request;
+                    // Precompute values that rely on CONNECTION related headers since they will be cleaned
+                    // after ArmeriaHttpUtil#toArmeria is called
+                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
+                    final boolean transferEncodingChunked = HttpUtil.isTransferEncodingChunked(nettyReq);
+
+                    final NettyHttp1Headers nettyHttp1Headers = (NettyHttp1Headers) nettyReq.headers();
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(), reqTarget);
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, nettyHttp1Headers.delegate(),
+                                                      cfg, scheme.toString(), reqTarget);
                     // Do not accept unsupported methods.
                     final HttpMethod method = headers.method();
                     switch (method) {
@@ -254,7 +261,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                             eventLoop, id, 1, headers, false, inboundTrafficController,
                                             serviceConfig.maxRequestLength(), routingCtx,
                                             ExchangeType.BIDI_STREAMING,
-                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true, false);
+                                            System.nanoTime(), SystemInfo.currentTimeMicros(), true, false
+                                    );
                             assert encoder instanceof ServerHttp1ObjectEncoder;
                             ((ServerHttp1ObjectEncoder) encoder).webSocketUpgrading();
                             final ChannelPipeline pipeline = ctx.pipeline();
@@ -263,20 +271,17 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                             if (pipeline.get(HttpServerUpgradeHandler.class) != null) {
                                 pipeline.remove(HttpServerUpgradeHandler.class);
                             }
+                            cfg.serverMetrics().increasePendingHttp1Requests();
                             ctx.fireChannelRead(webSocketRequest);
                             return;
                         }
                     }
 
-                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
-                    final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
+                    final boolean endOfStream = contentEmpty && !transferEncodingChunked;
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
                                                            keepAlive, inboundTrafficController, routingCtx);
-
-                    // An aggregating request will be fired after all objects are collected.
-                    if (!req.needsAggregation()) {
-                        ctx.fireChannelRead(req);
-                    }
+                    cfg.serverMetrics().increasePendingHttp1Requests();
+                    ctx.fireChannelRead(req);
                 } else {
                     fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
                     return;
@@ -318,7 +323,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         req = null;
                         final boolean shouldReset;
                         if (encoder instanceof ServerHttp1ObjectEncoder) {
-                            keepAliveHandler.disconnectWhenFinished();
+                            if (encoder.isResponseHeadersSent(id, 1)) {
+                                ctx.channel().close();
+                            } else {
+                                keepAliveHandler.disconnectWhenFinished();
+                            }
                             shouldReset = false;
                         } else {
                             // Upgraded to HTTP/2. Reset only if the remote peer is still open.
@@ -329,15 +338,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         // status.
                         final HttpStatusException httpStatusException =
                                 HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
-                        if (!decodedReq.isInitialized()) {
-                            assert decodedReq.needsAggregation();
-                            final StreamingDecodedHttpRequest streamingReq = decodedReq.toAbortedStreaming(
-                                    inboundTrafficController, httpStatusException, shouldReset);
-                            ctx.fireChannelRead(streamingReq);
-                        } else {
-                            decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
-                            decodedReq.abortResponse(httpStatusException, true);
-                        }
+                        decodedReq.setShouldResetOnlyIfRemoteIsOpen(shouldReset);
+                        decodedReq.abortResponse(httpStatusException, true);
                         return;
                     }
 
@@ -352,11 +354,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                     }
                     decodedReq.close();
-                    if (decodedReq.needsAggregation()) {
-                        assert !decodedReq.isInitialized();
-                        // An aggregated request is now ready to be fired.
-                        ctx.fireChannelRead(decodedReq);
-                    }
                     this.req = null;
                 }
             }

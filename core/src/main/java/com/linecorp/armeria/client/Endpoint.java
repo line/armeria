@@ -36,15 +36,14 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
+
+import javax.annotation.Nonnull;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
-import com.google.common.net.HostAndPort;
 import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -58,6 +57,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.DomainSocketAddress;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.SchemeAndAuthority;
 import com.linecorp.armeria.internal.common.util.IpAddrUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -80,13 +81,6 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     private static final int DEFAULT_WEIGHT = 1000;
 
-    /**
-     * Validator for the scheme part of the URI, as defined in
-     * <a href="https://datatracker.ietf.org/doc/html/rfc3986#section-3.1">the section 3.1 of RFC3986</a>.
-     */
-    private static final Predicate<String> SCHEME_VALIDATOR =
-            scheme -> Pattern.compile("^([a-z][a-z0-9+\\-.]*)").matcher(scheme).matches();
-
     private static final Cache<String, Endpoint> cache =
             Caffeine.newBuilder()
                     .maximumSize(8192) // TODO(ikhoon): Add a flag if there is a demand for it.
@@ -96,7 +90,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Parse the authority part of a URI. The authority part may have one of the following formats:
      * <ul>
      *   <li>{@code "<host>:<port>"} for a host endpoint (The userinfo part will be ignored.)</li>
-     *   <li>{@code "<host>"} for a host endpoint with no port number specified</li>
+     *   <li>{@code "<host>"}, {@code "<host>:"} for a host endpoint with no port number specified</li>
      * </ul>
      * An IPv4 or IPv6 address can be specified in lieu of a host name, e.g. {@code "127.0.0.1:8080"} and
      * {@code "[::1]:8080"}.
@@ -105,21 +99,11 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         requireNonNull(authority, "authority");
         checkArgument(!authority.isEmpty(), "authority is empty");
         return cache.get(authority, key -> {
-            if (key.charAt(key.length() - 1) == ':') {
-                // HostAndPort.fromString() does not validate an authority that ends with ':' such as "0.0.0.0:"
-                throw new IllegalArgumentException("Missing port number: " + key);
-            }
-            final HostAndPort hostAndPort = HostAndPort.fromString(removeUserInfo(key)).withDefaultPort(0);
-            return create(hostAndPort.getHost(), hostAndPort.getPort(), true);
+            final SchemeAndAuthority schemeAndAuthority = SchemeAndAuthority.of(null, key);
+            // If the port is undefined, set to 0
+            final int port = schemeAndAuthority.port() == -1 ? 0 : schemeAndAuthority.port();
+            return create(schemeAndAuthority.host(), port, true);
         });
-    }
-
-    private static String removeUserInfo(String authority) {
-        final int indexOfDelimiter = authority.lastIndexOf('@');
-        if (indexOfDelimiter == -1) {
-            return authority;
-        }
-        return authority.substring(indexOfDelimiter + 1);
     }
 
     /**
@@ -281,7 +265,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         // Pre-generate the authority.
         authority = generateAuthority(type, host, port);
         // Pre-generate toString() value.
-        strVal = generateToString(type, authority, ipAddr, weight);
+        strVal = generateToString(type, authority, ipAddr, weight, attributes);
         this.attributes = attributes;
     }
 
@@ -308,14 +292,18 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     private static String generateToString(Type type, String authority, @Nullable String ipAddr,
-                                           int weight) {
+                                           int weight, @Nullable Attributes attributes) {
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
             final StringBuilder buf = tempThreadLocals.stringBuilder();
             buf.append("Endpoint{").append(authority);
             if (type == Type.HOSTNAME_AND_IP) {
                 buf.append(", ipAddr=").append(ipAddr);
             }
-            return buf.append(", weight=").append(weight).append('}').toString();
+            buf.append(", weight=").append(weight);
+            if (attributes != null) {
+                buf.append(", attributes=").append(attributes);
+            }
+            return buf.append('}').toString();
         }
     }
 
@@ -337,6 +325,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return EndpointSelectionStrategy.weightedRoundRobin();
     }
 
+    @Nonnull
     @Override
     public Endpoint selectNow(ClientRequestContext ctx) {
         return this;
@@ -707,7 +696,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             if (value == null) {
                 return this;
             }
-            return withAttrs(Attributes.of(key, value));
+            return replaceAttrs(Attributes.of(key, value));
         }
 
         if (attributes.attr(key) == value) {
@@ -715,8 +704,32 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         } else {
             final AttributesBuilder attributesBuilder = attributes.toBuilder();
             attributesBuilder.set(key, value);
-            return withAttrs(attributesBuilder.build());
+            return replaceAttrs(attributesBuilder.build());
         }
+    }
+
+    /**
+     * Returns a new {@link Endpoint} with the specified {@link Attributes}.
+     * Note that the {@link #attrs()} of this {@link Endpoint} is merged with the specified
+     * {@link Attributes}. For attributes with the same {@link AttributeKey}, the attribute
+     * in {@param newAttributes} has higher precedence.
+     */
+    @UnstableApi
+    @SuppressWarnings("unchecked")
+    public Endpoint withAttrs(Attributes newAttributes) {
+        requireNonNull(newAttributes, "newAttributes");
+        if (newAttributes.isEmpty()) {
+            return this;
+        }
+        if (attrs().isEmpty()) {
+            return replaceAttrs(newAttributes);
+        }
+        final AttributesBuilder builder = attrs().toBuilder();
+        newAttributes.attrs().forEachRemaining(entry -> {
+            final AttributeKey<Object> key = (AttributeKey<Object>) entry.getKey();
+            builder.set(key, entry.getValue());
+        });
+        return new Endpoint(type, host, ipAddr, port, weight, builder.build());
     }
 
     /**
@@ -725,7 +738,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * {@link Attributes}.
      */
     @UnstableApi
-    public Endpoint withAttrs(Attributes newAttributes) {
+    public Endpoint replaceAttrs(Attributes newAttributes) {
         requireNonNull(newAttributes, "newAttributes");
         if (attrs().isEmpty() && newAttributes.isEmpty()) {
             return this;
@@ -769,11 +782,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public URI toUri(String scheme, @Nullable String path) {
         requireNonNull(scheme, "scheme");
-
-        if (!SCHEME_VALIDATOR.test(scheme)) {
-            throw new IllegalArgumentException("scheme: " + scheme + " (expected: a valid scheme)");
-        }
-
+        scheme = ArmeriaHttpUtil.schemeValidateAndNormalize(scheme);
         try {
             return new URI(scheme, authority, path, null, null);
         } catch (URISyntaxException e) {

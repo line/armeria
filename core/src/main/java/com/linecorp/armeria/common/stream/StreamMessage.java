@@ -865,6 +865,55 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified {@link Function} and
+     * emitting the values of the resulting {@link StreamMessage}.
+     * The inner {@link StreamMessage}s are subscribed to eagerly and
+     * publish values as soon as they are received.
+     * It allows inner {@link StreamMessage}s to interleave.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value.
+     *
+     * <p>Example:<pre>{@code
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3);
+     * StreamMessage<Integer> transformed =
+     *     streamMessage.flatMap(x -> StreamMessage.of(x, x + 1));
+     * }</pre>
+     * {@code transformed} will produce {@code 1, 2, 2, 3, 3, 4} (order is not guaranteed).
+     */
+    default <U> StreamMessage<U> flatMap(
+            Function<? super T, ? extends StreamMessage<? extends U>> function) {
+        requireNonNull(function, "function");
+        return flatMap(function, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Transforms values emitted by this {@link StreamMessage} by applying the specified {@link Function} and
+     * emitting the values of the resulting {@link StreamMessage}.
+     * The inner {@link StreamMessage}s are subscribed to eagerly, up to a limit of {@code maxConcurrency}, and
+     * publish values as soon as they are received.
+     * It allows inner {@link StreamMessage}s to interleave.
+     * As per
+     * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
+     * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
+     * a {@code null} value.
+     *
+     * <p>Example:<pre>{@code
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3);
+     * StreamMessage<Integer> transformed =
+     *     streamMessage.flatMap(x -> StreamMessage.of(x, x + 1));
+     * }</pre>
+     * {@code transformed} will produce {@code 1, 2, 2, 3, 3, 4} (order is not guaranteed).
+     */
+    default <U> StreamMessage<U> flatMap(
+            Function<? super T, ? extends StreamMessage<? extends U>> function, int maxConcurrency) {
+        checkArgument(maxConcurrency > 0, "maxConcurrency: %s (expected: > 0)", maxConcurrency);
+        requireNonNull(function, "function");
+        return new FlatMapStreamMessage<>(this, function, maxConcurrency);
+    }
+
+    /**
      * Transforms an error emitted by this {@link StreamMessage} by applying the specified {@link Function}.
      * As per
      * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">

@@ -31,6 +31,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class NullToNoContentResponseConverterFunction implements ResponseConverterFunction {
 
+    @Nullable
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
         return null;

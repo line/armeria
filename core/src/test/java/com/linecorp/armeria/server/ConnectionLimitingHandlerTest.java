@@ -26,7 +26,9 @@ class ConnectionLimitingHandlerTest {
 
     @Test
     void testExceedMaxNumConnections() {
-        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(1);
+        final ServerMetrics serverMetrics = new ServerMetrics();
+        final ConnectionLimitingHandler handler =
+                new ConnectionLimitingHandler(1, serverMetrics);
 
         final EmbeddedChannel ch1 = new EmbeddedChannel(handler);
         ch1.writeInbound(ch1);
@@ -44,13 +46,15 @@ class ConnectionLimitingHandlerTest {
 
     @Test
     void testMaxNumConnectionsRange() {
-        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE);
+        final ServerMetrics serverMetrics = new ServerMetrics();
+        final ConnectionLimitingHandler handler = new ConnectionLimitingHandler(Integer.MAX_VALUE,
+                                                                                serverMetrics);
         assertThat(handler.maxNumConnections()).isEqualTo(Integer.MAX_VALUE);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(0))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(0, serverMetrics))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1))
+        assertThatThrownBy(() -> new ConnectionLimitingHandler(-1, serverMetrics))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

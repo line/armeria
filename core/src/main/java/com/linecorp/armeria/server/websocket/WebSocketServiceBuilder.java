@@ -16,14 +16,19 @@
 package com.linecorp.armeria.server.websocket;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -34,6 +39,7 @@ import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
 import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceOptions;
 
 /**
  * Builds a {@link WebSocketService}.
@@ -56,15 +62,26 @@ public final class WebSocketServiceBuilder {
 
     static final int DEFAULT_MAX_FRAME_PAYLOAD_LENGTH = 65535; // 64 * 1024 -1
 
+    static final ServiceOptions DEFAULT_OPTIONS = ServiceOptions
+            .builder()
+            .requestTimeoutMillis(WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS)
+            .maxRequestLength(WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH)
+            .requestAutoAbortDelayMillis(WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS)
+            .build();
+
     private final WebSocketServiceHandler handler;
 
     private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
     private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
-    private Set<String> allowedOrigins = ImmutableSet.of();
+    @Nullable
+    private Set<String> allowedOrigins;
+    @Nullable
+    private Predicate<? super String> originPredicate;
     private boolean aggregateContinuation;
     @Nullable
     private HttpService fallbackService;
+    private ServiceOptions serviceOptions = DEFAULT_OPTIONS;
 
     WebSocketServiceBuilder(WebSocketServiceHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -142,13 +159,46 @@ public final class WebSocketServiceBuilder {
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
      */
     public WebSocketServiceBuilder allowedOrigins(Iterable<String> allowedOrigins) {
+        checkState(originPredicate == null, "allowedOrigins and originPredicate are mutually exclusive.");
         this.allowedOrigins = validateOrigins(allowedOrigins);
         return this;
     }
 
+    /**
+     * Sets the predicate that evaluates whether an origin is allowed. The same-origin is allowed by default.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
+     */
+    public WebSocketServiceBuilder allowedOrigin(Predicate<? super String> predicate) {
+        checkState(allowedOrigins == null, "allowedOrigins and originPredicate are mutually exclusive.");
+        originPredicate = requireNonNull(predicate, "predicate");
+        return this;
+    }
+
+    /**
+     * Sets the regex pattern to evaluate whether an origin is allowed. The same-origin is allowed by default.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
+     */
+    public WebSocketServiceBuilder allowedOrigin(String regex) {
+        return allowedOrigin(Pattern.compile(requireNonNull(regex, "regex")));
+    }
+
+    /**
+     * Sets the regex pattern to evaluate whether an origin is allowed. The same-origin is allowed by default.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-10.2">Origin Considerations</a>
+     */
+    public WebSocketServiceBuilder allowedOrigin(Pattern regex) {
+        return allowedOrigin(requireNonNull(regex, "regex").asPredicate());
+    }
+
     private static Set<String> validateOrigins(Iterable<String> allowedOrigins) {
         //TODO(minwoox): Dedup the same logic in cors service.
-        final Set<String> copied = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"));
+        final Set<String> copied = ImmutableSet.copyOf(requireNonNull(allowedOrigins, "allowedOrigins"))
+                                               .stream()
+                                               .map(Ascii::toLowerCase)
+                                               .collect(toImmutableSet());
         checkArgument(!copied.isEmpty(), "allowedOrigins is empty. (expected: non-empty)");
         if (copied.contains(ANY_ORIGIN)) {
             if (copied.size() > 1) {
@@ -162,11 +212,23 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
+     * Sets the {@link ServiceOptions} for the {@link WebSocketService}.
+     * If not set, {@link WebSocketService#options()} is used.
+     */
+    public WebSocketServiceBuilder serviceOptions(ServiceOptions serviceOptions) {
+        requireNonNull(serviceOptions, "serviceOptions");
+        this.serviceOptions = serviceOptions;
+        return this;
+    }
+
+    /**
      * Sets the fallback {@link HttpService} to use when the request is not a valid WebSocket upgrade request.
      * This is useful when you want to serve both WebSocket and HTTP requests at the same path.
      */
     public WebSocketServiceBuilder fallbackService(HttpService fallbackService) {
         this.fallbackService = requireNonNull(fallbackService, "fallbackService");
+        checkArgument(!(fallbackService instanceof WebSocketService),
+                      "fallbackService must not be a WebSocketService.");
         return this;
     }
 
@@ -174,8 +236,17 @@ public final class WebSocketServiceBuilder {
      * Returns a newly-created {@link WebSocketService} with the properties set so far.
      */
     public WebSocketService build() {
+        final boolean allowAnyOrigin;
+        final Predicate<? super String> originPredicate;
+        if (allowedOrigins != null) {
+            allowAnyOrigin = allowedOrigins.contains(ANY_ORIGIN);
+            originPredicate = allowedOrigins::contains;
+        } else {
+            allowAnyOrigin = false;
+            originPredicate = this.originPredicate;
+        }
         return new DefaultWebSocketService(handler, fallbackService, maxFramePayloadLength, allowMaskMismatch,
-                                           subprotocols, allowedOrigins, allowedOrigins.contains(ANY_ORIGIN),
-                                           aggregateContinuation);
+                                           subprotocols, allowAnyOrigin, originPredicate, aggregateContinuation,
+                                           serviceOptions);
     }
 }

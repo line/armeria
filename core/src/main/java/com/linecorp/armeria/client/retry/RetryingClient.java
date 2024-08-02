@@ -376,6 +376,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 retryConfig.requiresResponseTrailers() ?
                 RequestLogProperty.RESPONSE_END_TIME : RequestLogProperty.RESPONSE_HEADERS;
 
+        // The RequestLog may be not complete when a decorator returns a response directly.
+        // The direct response typically occurs when an exception is raised from the decorator.
+        // The incomplete RequestLog may cause a deadlock when the response don't be completed
+        // until it times out.
+        // TODO(ikhoon): Find a way to apply RetryingRule without relying on the RequestLog.
         derivedCtx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable responseCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
@@ -421,8 +426,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 }
                 return;
             }
-            final HttpResponse response0 = aggregatedRes != null ? aggregatedRes.toHttpResponse()
-                                                                 : response;
+            final HttpResponse response0;
+            if (aggregatedRes != null) {
+                response0 = aggregatedRes.toHttpResponse();
+            } else {
+                response0 = response;
+                assert response0 != null;
+            }
             handleResponseWithoutContent(retryConfig, ctx, rootReqDuplicator, originalReq, returnedRes,
                                          future, derivedCtx, response0, responseCause);
         });
@@ -512,7 +522,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     private static RetryRule retryRule(RetryConfig<HttpResponse> retryConfig) {
         if (retryConfig.needsContentInRule()) {
             return retryConfig.fromRetryRuleWithContent();
+        } else {
+            final RetryRule rule = retryConfig.retryRule();
+            assert rule != null;
+            return rule;
         }
-        return retryConfig.retryRule();
     }
 }

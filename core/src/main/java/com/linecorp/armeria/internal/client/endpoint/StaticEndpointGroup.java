@@ -71,6 +71,7 @@ public final class StaticEndpointGroup implements EndpointGroup {
         return selectionStrategy;
     }
 
+    @Nullable
     @Override
     public Endpoint selectNow(ClientRequestContext ctx) {
         return selector.selectNow(ctx);

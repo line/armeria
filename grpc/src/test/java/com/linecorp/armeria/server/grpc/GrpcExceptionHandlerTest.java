@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -73,10 +74,21 @@ class GrpcExceptionHandlerTest {
                                   .addService("/foo", new FooTestServiceImpl())
                                   .addService("/bar", new BarTestServiceImpl(),
                                               TestServiceGrpc.getUnaryCallMethod())
-                                  .exceptionHandler((ctx, throwable, metadata) -> {
+                                  .exceptionHandler((ctx, status, throwable, metadata) -> {
                                       exceptionHandler.add("global");
                                       return Status.INTERNAL;
                                   })
+                                  .build());
+        }
+    };
+
+    @RegisterExtension
+    static final ServerExtension serverWithDefaultExceptionHandler = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.requestTimeoutMillis(5000)
+              .service(GrpcService.builder()
+                                  .addService(new ErrorTestServiceImpl())
                                   .build());
         }
     };
@@ -430,10 +442,35 @@ class GrpcExceptionHandlerTest {
         assertThat(client.unaryCall(fifthRequest)).isNotNull();
     }
 
+    @Test
+    void defaultGrpcExceptionHandlerConvertIOExceptionToUnavailable() {
+        final TestServiceBlockingStub client =
+                GrpcClients.newClient(serverWithDefaultExceptionHandler.httpUri(),
+                                      TestServiceBlockingStub.class);
+
+        final SimpleRequest globalRequest = SimpleRequest
+                .newBuilder()
+                .setNestedRequest(NestedRequest
+                                          .newBuilder()
+                                          .setNestedPayload("global")
+                                          .build())
+                .build();
+        assertThatThrownBy(() -> client.unaryCall(globalRequest))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
+                    assertThat(e.getStatus().getCode()).isEqualTo(Status.UNAVAILABLE.getCode());
+                });
+        assertThatThrownBy(() -> client.unaryCall2(globalRequest))
+                .isInstanceOfSatisfying(StatusRuntimeException.class, e -> {
+                    assertThat(e.getStatus().getCode()).isEqualTo(Status.INVALID_ARGUMENT.getCode());
+                    assertThat(e.getStatus().getCause().getMessage()).contains("IllegalArgumentException");
+                });
+    }
+
     private static class FirstGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
+        @Nullable
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("first");
             if (Objects.equals(cause.getMessage(), "first")) {
                 return Status.UNAUTHENTICATED;
@@ -444,8 +481,9 @@ class GrpcExceptionHandlerTest {
 
     private static class SecondGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
+        @Nullable
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("second");
             if (Objects.equals(cause.getMessage(), "second")) {
                 return Status.INVALID_ARGUMENT;
@@ -456,8 +494,9 @@ class GrpcExceptionHandlerTest {
 
     private static class ThirdGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
+        @Nullable
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("third");
             if (Objects.equals(cause.getMessage(), "third")) {
                 return Status.NOT_FOUND;
@@ -468,8 +507,9 @@ class GrpcExceptionHandlerTest {
 
     private static class ForthGrpcExceptionHandler implements GrpcExceptionHandlerFunction {
 
+        @Nullable
         @Override
-        public @Nullable Status apply(RequestContext ctx, Throwable cause, Metadata metadata) {
+        public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
             exceptionHandler.add("forth");
             if (Objects.equals(cause.getMessage(), "forth")) {
                 return Status.UNAVAILABLE;
@@ -560,6 +600,19 @@ class GrpcExceptionHandlerTest {
                                                   .setUsername("bar user")
                                                   .build());
             responseObserver.onCompleted();
+        }
+    }
+
+    private static class ErrorTestServiceImpl extends TestServiceImpl {
+        @Override
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onError(new IOException());
+        }
+
+        @Override
+        public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onError(new StatusRuntimeException(Status.INVALID_ARGUMENT.withCause(
+                    new IllegalArgumentException())));
         }
     }
 }

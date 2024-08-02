@@ -47,7 +47,9 @@ import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.server.MultipartRemovalStrategy;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.channel.epoll.Epoll;
@@ -56,12 +58,13 @@ import io.netty.handler.ssl.OpenSsl;
 class FlagsTest {
 
     private static final String osName = Ascii.toLowerCase(System.getProperty("os.name"));
+    private FlagsClassLoader flagsClassLoader;
     private Class<?> flags;
 
     @BeforeEach
     void reloadFlags() throws ClassNotFoundException {
-        final FlagsClassLoader classLoader = new FlagsClassLoader();
-        flags = classLoader.loadClass(Flags.class.getCanonicalName());
+        flagsClassLoader = new FlagsClassLoader();
+        flags = flagsClassLoader.loadClass(Flags.class.getCanonicalName());
     }
 
     /**
@@ -85,9 +88,9 @@ class FlagsTest {
     void openSslAvailable() {
         assumeThat(osName.startsWith("linux") || osName.startsWith("windows") ||
                    osName.startsWith("mac") || osName.startsWith("osx")).isTrue();
-        assumeThat(System.getProperty("com.linecorp.armeria.useOpenSsl")).isNull();
+        assumeThat(System.getProperty("com.linecorp.armeria.tlsEngineType")).isNull();
 
-        assertThat(Flags.useOpenSsl()).isTrue();
+        assertThat(Flags.tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
         assertThat(OpenSsl.isAvailable()).isTrue();
     }
 
@@ -107,8 +110,22 @@ class FlagsTest {
 
         final MethodHandle dumpOpenSslInfoMethodHandle =
                 lookup.findStatic(flags, "dumpOpenSslInfo", MethodType.methodType(boolean.class));
-        // // Call Flags.dumpOpenSslInfo();
+        // Call Flags.dumpOpenSslInfo();
         assertThat(dumpOpenSslInfoMethodHandle.invoke()).isSameAs(Boolean.TRUE);
+    }
+
+    @Test
+    void defaultTlsEngineType() {
+        assumeThat(System.getProperty("com.linecorp.armeria.tlsEngineType")).isNull();
+
+        assertThat(Flags.tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.useOpenSsl", value = "false")
+    @SetSystemProperty(key = "com.linecorp.armeria.tlsEngineType", value = "OPENSSL")
+    void tlsEngineTypeIsUsedWhenIncompatibleWithUseOpenSsl() {
+        assertThat(Flags.tlsEngineType()).isEqualTo(TlsEngineType.OPENSSL);
     }
 
     @Test
@@ -165,7 +182,7 @@ class FlagsTest {
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses",
-            value = "211.111.111.111,10.0.0.0/8,192.168.1.0/24")
+                       value = "211.111.111.111,10.0.0.0/8,192.168.1.0/24")
     void preferredIpV4Addresses() throws Throwable {
         final Lookup lookup = MethodHandles.publicLookup();
         final MethodHandle method =
@@ -182,7 +199,7 @@ class FlagsTest {
 
     @Test
     @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses",
-            value = "211.111.111.111,10.0.0.0/40")
+                       value = "211.111.111.111,10.0.0.0/40")
     void someOfPreferredIpV4AddressesIsInvalid() throws Throwable {
         // 10.0.0.0/40 is invalid cidr
         final Lookup lookup = MethodHandles.publicLookup();
@@ -249,19 +266,36 @@ class FlagsTest {
     }
 
     @Test
+    void defaultMultipartRemovalStrategy() throws Throwable {
+        assertThat(Flags.defaultMultipartRemovalStrategy())
+                .isEqualTo(MultipartRemovalStrategy.ON_RESPONSE_COMPLETION);
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.defaultMultipartRemovalStrategy", value = "NEVER")
+    void overrideMultipartRemovalStrategy() throws Throwable {
+        final Method method = flags.getDeclaredMethod("defaultMultipartRemovalStrategy");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(MultipartRemovalStrategy.NEVER);
+    }
+
+    @Test
     void testApiConsistencyBetweenFlagsAndFlagsProvider() {
         //Check method consistency between Flags and FlagsProvider excluding deprecated methods
         final Set<String> flagsApis = Arrays.stream(Flags.class.getMethods())
-                                             .filter(m -> !m.isAnnotationPresent(Deprecated.class))
-                                             .map(Method::getName)
-                                             .collect(Collectors.toSet());
+                                            .filter(m -> !m.isAnnotationPresent(Deprecated.class))
+                                            .map(Method::getName)
+                                            .collect(Collectors.toSet());
         flagsApis.removeAll(Arrays.stream(Object.class.getMethods())
-                                                  .map(Method::getName)
-                                                  .collect(toImmutableSet()));
+                                  .map(Method::getName)
+                                  .collect(toImmutableSet()));
 
         final Set<String> armeriaOptionsProviderApis = Arrays.stream(FlagsProvider.class.getMethods())
-                                                              .map(Method::getName)
-                                                              .collect(Collectors.toSet());
+                                                             .filter(m -> !m.isAnnotationPresent(
+                                                                     Deprecated.class))
+                                                             .map(Method::getName)
+                                                             .collect(Collectors.toSet());
         final Set<String> knownIgnoreMethods = ImmutableSet.of("priority", "name");
         armeriaOptionsProviderApis.removeAll(knownIgnoreMethods);
 
@@ -270,9 +304,12 @@ class FlagsTest {
 
     private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
         final Lookup lookup = MethodHandles.publicLookup();
+        Class<?> rtype = Flags.class.getMethod(flagsMethod).getReturnType();
+        if (!rtype.isPrimitive()) {
+            rtype = flagsClassLoader.loadClass(rtype.getCanonicalName());
+        }
         final MethodHandle method =
-                lookup.findStatic(flags, flagsMethod, MethodType.methodType(
-                        Flags.class.getMethod(flagsMethod).getReturnType()));
+                lookup.findStatic(flags, flagsMethod, MethodType.methodType(rtype));
         return assertThat(method.invoke());
     }
 

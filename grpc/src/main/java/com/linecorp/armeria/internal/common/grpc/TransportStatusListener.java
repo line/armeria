@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.grpc.Metadata;
 import io.grpc.Status;
 
@@ -29,8 +31,8 @@ public interface TransportStatusListener {
     default void transportReportHeaders(Metadata metadata) {}
 
     default void transportReportStatus(Status status) {
-        transportReportStatus(status, new Metadata());
+        transportReportStatus(status, null);
     }
 
-    void transportReportStatus(Status status, Metadata metadata);
+    void transportReportStatus(Status status, @Nullable Metadata metadata);
 }

@@ -253,6 +253,19 @@ public interface ServiceRequestContext extends RequestContext {
     ServiceConfig config();
 
     /**
+     * Finds the {@link HttpService} of the specified {@link Class} within the decorators or the service
+     * handling the current {@link Request}. This method is particularly useful when attempting to finding a
+     * dynamic decorator set using {@link ServerBuilder#decorator(DecoratingHttpServiceFunction)} or
+     * {@link ServerBuilder#decorator(Route, DecoratingHttpServiceFunction)}.
+     *
+     * <p>Note that {@link HttpService#as(Class)} by itself cannot find a dynamic decorator added directly
+     * to a {@link ServerBuilder}.
+     */
+    @UnstableApi
+    @Nullable
+    <T extends HttpService> T findService(Class<? extends T> serviceClass);
+
+    /**
      * Returns the {@link RoutingContext} used to find the {@link Service}.
      */
     RoutingContext routingContext();
@@ -600,15 +613,33 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Returns whether exceptions should be reported.
-     * When {@link LoggingService} handles exceptions, this is set to false.
+     * When {@link LoggingService} logs exceptions, this is set to false.
+     *
+     * @deprecated Use {@link #shouldReportUnloggedExceptions()} instead.
      */
+    @Deprecated
     boolean shouldReportUnhandledExceptions();
 
     /**
      * Sets whether to report exceptions.
-     * @param value whether to report unhandled exceptions
+     * @param value whether to report unlogged exceptions
+     *
+     * @deprecated Use {@link #setShouldReportUnloggedExceptions(boolean)} instead.
      */
+    @Deprecated
     void setShouldReportUnhandledExceptions(boolean value);
+
+    /**
+     * Returns whether exceptions should be reported.
+     * When {@link LoggingService} logs exceptions, this is set to false.
+     */
+    boolean shouldReportUnloggedExceptions();
+
+    /**
+     * Sets whether to report exceptions.
+     * @param value whether to report unlogged exceptions
+     */
+    void setShouldReportUnloggedExceptions(boolean value);
 
     /**
      * Initiates graceful connection shutdown with a given drain duration in microseconds and returns

@@ -149,7 +149,7 @@ public interface Route {
      * <ul>
      *   <li>EXACT: {@code [ "/foo", "/foo" ]} (The trie path is the same.)</li>
      *   <li>PREFIX: {@code [ "/foo/", "/foo/*" ]}</li>
-     *   <li>PARAMETERIZED: {@code [ "/foo/:", "/foo/:" ]} (The trie path is the same.)</li>
+     *   <li>PARAMETERIZED: {@code [ "/foo/\0", "/foo/\0" ]} (The trie path is the same.)</li>
      * </ul>
      *
      * <p>{@link RoutePathType#REGEX} may have one or two paths. If the {@link Route} was created from a glob
@@ -218,4 +218,37 @@ public interface Route {
      * Returns whether the current {@link Route} is cacheable when queried from a {@link Router}.
      */
     boolean isCacheable();
+
+    /**
+     * Tells whether the current {@link Route} shares duplicate route condition with the specified
+     * {@link Route}. This returns {@code true} when all of the following conditions are met:
+     * <ul>
+     *   <li>Both routes have the same trie path.</li>
+     *   <li>One of the {@link #methods()} overlaps with those in the specified route.</li>
+     *   <li>One of the {@link #consumes()} overlaps with those in the specified route.</li>
+     *   <li>One of the {@link #produces()} overlaps with those in the specified route.</li>
+     *   <li>One of the {@link RouteBuilder#matchesParams(String...)}} overlaps with those in the
+     *       specified route.</li>
+     *   <li>One of the {@link RouteBuilder#matchesHeaders(String...)}} overlaps with those in the
+     *       specified route.</li>
+     * </ul>
+     *
+     * <p>For example:
+     * <pre>{@code
+     * Route route = Route.builder().path("/foo").methods(HttpMethod.POST, HttpMethod.GET)
+     *                    .consumes(MediaType.JSON_UTF_8)
+     *                    .produces(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+     *                    .matchesParams("foo")
+     *                    .matchesHeaders("baz", "qux")
+     *                    .build();
+     * Route other = Route.builder().path("/foo").methods(HttpMethod.POST)
+     *                    .consumes(MediaType.PLAIN_TEXT_UTF_8, MediaType.JSON_UTF_8)
+     *                    .produces(MediaType.PLAIN_TEXT_UTF_8)
+     *                    .matchesParams("foo", "bar")
+     *                    .matchesHeaders("baz")
+     *                    .build();
+     * assert route.hasConflicts(other);
+     * }</pre>
+     */
+    boolean hasConflicts(Route other);
 }

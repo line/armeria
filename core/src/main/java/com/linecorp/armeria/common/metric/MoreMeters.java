@@ -22,13 +22,13 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.Flags;
+
 import io.micrometer.core.instrument.DistributionSummary;
-import io.micrometer.core.instrument.DistributionSummary.Builder;
 import io.micrometer.core.instrument.Measurement;
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -41,16 +41,6 @@ import io.micrometer.core.instrument.distribution.DistributionStatisticConfig;
  */
 public final class MoreMeters {
 
-    private static final double[] PERCENTILES = { 0, 0.5, 0.75, 0.9, 0.95, 0.98, 0.99, 0.999, 1.0 };
-
-    private static final boolean MICROMETER_1_5;
-
-    static {
-        MICROMETER_1_5 = Stream.of(Builder.class.getMethods())
-                               .anyMatch(method -> method != null &&
-                                                   "serviceLevelObjectives".equals(method.getName()));
-    }
-
     /**
      * Export the percentile values only by default. We specify all properties so that we get consistent values
      * even if Micrometer changes its defaults. Most notably, we changed {@code percentilePrecision},
@@ -62,17 +52,8 @@ public final class MoreMeters {
      *       (i.e. rotate every 40 seconds) does not make much sense.</li>
      * </ul>
      */
-    private static volatile DistributionStatisticConfig distStatCfg =
-            DistributionStatisticConfig.builder()
-                                       .percentilesHistogram(false)
-                                       .sla()
-                                       .percentiles(PERCENTILES)
-                                       .percentilePrecision(2)
-                                       .minimumExpectedValue(1L)
-                                       .maximumExpectedValue(Long.MAX_VALUE)
-                                       .expiry(Duration.ofMinutes(3))
-                                       .bufferLength(3)
-                                       .build();
+    private static volatile DistributionStatisticConfig defaultDistStatCfg =
+            Flags.distributionStatisticConfig();
 
     /**
      * Sets the {@link DistributionStatisticConfig} to use when the factory methods in {@link MoreMeters} create
@@ -80,7 +61,7 @@ public final class MoreMeters {
      */
     public static void setDistributionStatisticConfig(DistributionStatisticConfig config) {
         requireNonNull(config, "config");
-        distStatCfg = config;
+        defaultDistStatCfg = config;
     }
 
     /**
@@ -88,7 +69,7 @@ public final class MoreMeters {
      * create a {@link Timer} or a {@link DistributionSummary}.
      */
     public static DistributionStatisticConfig distributionStatisticConfig() {
-        return distStatCfg;
+        return defaultDistStatCfg;
     }
 
     /**
@@ -97,64 +78,79 @@ public final class MoreMeters {
      */
     public static DistributionSummary newDistributionSummary(MeterRegistry registry,
                                                              String name, Iterable<Tag> tags) {
+        return newDistributionSummary(registry, name, tags, defaultDistStatCfg);
+    }
+
+    /**
+     * Returns a newly-registered {@link DistributionSummary} configured by
+     * given {@link DistributionStatisticConfig}.
+     *
+     * @param distStatsConfig the {@link DistributionStatisticConfig} to use
+     */
+    public static DistributionSummary newDistributionSummary(MeterRegistry registry,
+                                                             String name, Iterable<Tag> tags,
+                                                             DistributionStatisticConfig distStatsConfig) {
         requireNonNull(registry, "registry");
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
+        requireNonNull(distStatsConfig, "distStatsConfig");
 
-        final Builder builder =
-                DistributionSummary.builder(name)
-                                   .tags(tags)
-                                   .publishPercentiles(distStatCfg.getPercentiles())
-                                   .publishPercentileHistogram(distStatCfg.isPercentileHistogram())
-                                   .percentilePrecision(distStatCfg.getPercentilePrecision())
-                                   .distributionStatisticBufferLength(distStatCfg.getBufferLength())
-                                   .distributionStatisticExpiry(distStatCfg.getExpiry());
-
-        if (MICROMETER_1_5) {
-            builder.maximumExpectedValue(distStatCfg.getMaximumExpectedValueAsDouble())
-                   .minimumExpectedValue(distStatCfg.getMinimumExpectedValueAsDouble())
-                   .serviceLevelObjectives(distStatCfg.getServiceLevelObjectiveBoundaries());
-        } else {
-            final Double maxExpectedValueNanos = distStatCfg.getMaximumExpectedValueAsDouble();
-            final Double minExpectedValueNanos = distStatCfg.getMinimumExpectedValueAsDouble();
-            final Long maxExpectedValue =
-                    maxExpectedValueNanos != null ? maxExpectedValueNanos.longValue() : null;
-            final Long minExpectedValue =
-                    minExpectedValueNanos != null ? minExpectedValueNanos.longValue() : null;
-            builder.maximumExpectedValue(maxExpectedValue);
-            builder.minimumExpectedValue(minExpectedValue);
-            final double[] slas = distStatCfg.getServiceLevelObjectiveBoundaries();
-            if (slas != null) {
-                builder.sla(Arrays.stream(slas).mapToLong(sla -> (long) sla).toArray());
-            }
-        }
-        return builder.register(registry);
+        return DistributionSummary.builder(name)
+                                  .tags(tags)
+                                  .publishPercentiles(distStatsConfig.getPercentiles())
+                                  .publishPercentileHistogram(distStatsConfig.isPercentileHistogram())
+                                  .percentilePrecision(distStatsConfig.getPercentilePrecision())
+                                  .distributionStatisticBufferLength(distStatsConfig.getBufferLength())
+                                  .distributionStatisticExpiry(distStatsConfig.getExpiry())
+                                  .maximumExpectedValue(distStatsConfig.getMaximumExpectedValueAsDouble())
+                                  .minimumExpectedValue(distStatsConfig.getMinimumExpectedValueAsDouble())
+                                  .serviceLevelObjectives(distStatsConfig.getServiceLevelObjectiveBoundaries())
+                                  .register(registry);
     }
 
     /**
      * Returns a newly-registered {@link Timer} configured by {@link #distributionStatisticConfig()}.
      */
     public static Timer newTimer(MeterRegistry registry, String name, Iterable<Tag> tags) {
+        return newTimer(registry, name, tags, defaultDistStatCfg);
+    }
+
+    /**
+     * Returns a newly-registered {@link Timer} configured by given {@link DistributionStatisticConfig}.
+     *
+     * @param distStatsConfig the {@link DistributionStatisticConfig} to use
+     */
+    public static Timer newTimer(MeterRegistry registry, String name, Iterable<Tag> tags,
+                                 DistributionStatisticConfig distStatsConfig) {
         requireNonNull(registry, "registry");
         requireNonNull(name, "name");
         requireNonNull(tags, "tags");
+        requireNonNull(distStatsConfig, "distStatsConfig");
 
-        final Double maxExpectedValueNanos = distStatCfg.getMaximumExpectedValueAsDouble();
-        final Double minExpectedValueNanos = distStatCfg.getMinimumExpectedValueAsDouble();
+        final Double maxExpectedValueNanos = distStatsConfig.getMaximumExpectedValueAsDouble();
+        final Double minExpectedValueNanos = distStatsConfig.getMinimumExpectedValueAsDouble();
         final Duration maxExpectedValue =
                 maxExpectedValueNanos != null ? Duration.ofNanos(maxExpectedValueNanos.longValue()) : null;
         final Duration minExpectedValue =
                 minExpectedValueNanos != null ? Duration.ofNanos(minExpectedValueNanos.longValue()) : null;
 
+        final double[] sloBoundariesNanos = distStatsConfig.getServiceLevelObjectiveBoundaries();
+        final Duration[] sloBoundaries =
+                sloBoundariesNanos != null ? Arrays.stream(sloBoundariesNanos)
+                                                   .mapToObj(slo -> Duration.ofNanos((long) slo))
+                                                   .toArray(Duration[]::new)
+                                           : null;
+
         return Timer.builder(name)
                     .tags(tags)
                     .maximumExpectedValue(maxExpectedValue)
                     .minimumExpectedValue(minExpectedValue)
-                    .publishPercentiles(distStatCfg.getPercentiles())
-                    .publishPercentileHistogram(distStatCfg.isPercentileHistogram())
-                    .percentilePrecision(distStatCfg.getPercentilePrecision())
-                    .distributionStatisticBufferLength(distStatCfg.getBufferLength())
-                    .distributionStatisticExpiry(distStatCfg.getExpiry())
+                    .publishPercentiles(distStatsConfig.getPercentiles())
+                    .publishPercentileHistogram(distStatsConfig.isPercentileHistogram())
+                    .percentilePrecision(distStatsConfig.getPercentilePrecision())
+                    .distributionStatisticBufferLength(distStatsConfig.getBufferLength())
+                    .distributionStatisticExpiry(distStatsConfig.getExpiry())
+                    .serviceLevelObjectives(sloBoundaries)
                     .register(registry);
     }
 

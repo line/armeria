@@ -67,8 +67,11 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.CompletionActions;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
+import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -228,8 +231,11 @@ public final class JettyService implements HttpService {
 
         req.aggregate().handle((aReq, cause) -> {
             if (cause != null) {
+                cause = Exceptions.peel(cause);
                 logger.warn("{} Failed to aggregate a request:", ctx, cause);
-                if (res.tryWrite(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR))) {
+                if (cause instanceof HttpStatusException || cause instanceof HttpResponseException) {
+                    res.close(cause);
+                } else if (res.tryWrite(ResponseHeaders.of(HttpStatus.INTERNAL_SERVER_ERROR))) {
                     res.close();
                 }
                 return null;
@@ -405,6 +411,7 @@ public final class JettyService implements HttpService {
                 final int length = content != null ? content.remaining() : 0;
                 if (ctx.request().headers().method() != HttpMethod.HEAD && length != 0) {
                     final HttpData data;
+                    assert content != null;
                     if (content.hasArray()) {
                         final int from = content.arrayOffset() + content.position();
                         content.position(content.position() + length);

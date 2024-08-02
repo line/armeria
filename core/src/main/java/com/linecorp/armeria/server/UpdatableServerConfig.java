@@ -316,6 +316,16 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public long unloggedExceptionsReportIntervalMillis() {
+        return delegate.unloggedExceptionsReportIntervalMillis();
+    }
+
+    @Override
+    public ServerMetrics serverMetrics() {
+        return delegate.serverMetrics();
+    }
+
+    @Override
     public String toString() {
         return delegate.toString();
     }

@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
 
 import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;

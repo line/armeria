@@ -53,6 +53,7 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
     }
 
     private final HttpRequest request;
+    private final boolean http1WebSocket;
 
     @Nullable
     private Subscription subscription;
@@ -62,10 +63,11 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
                                   HttpResponseDecoder responseDecoder,
                                   HttpRequest request, DecodedHttpResponse originalRes,
                                   ClientRequestContext ctx, long timeoutMillis, boolean allowTrailers,
-                                  boolean keepAlive) {
+                                  boolean keepAlive, boolean http1WebSocket) {
         super(ch, encoder, responseDecoder, originalRes, ctx, timeoutMillis, request.isEmpty(), allowTrailers,
               keepAlive);
         this.request = request;
+        this.http1WebSocket = http1WebSocket;
     }
 
     @Override
@@ -77,6 +79,14 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
             return;
         }
 
+        final RequestHeaders headers = mergedRequestHeaders(mapHeaders(request.headers()));
+        final boolean needs100Continue = needs100Continue(headers);
+        if (needs100Continue && http1WebSocket) {
+            failRequest(new IllegalArgumentException(
+                    "a WebSocket request is not allowed to have Expect: 100-continue header"));
+            return;
+        }
+
         if (!tryInitialize()) {
             return;
         }
@@ -84,8 +94,7 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         // NB: This must be invoked at the end of this method because otherwise the callback methods in this
         //     class can be called before the member fields (subscription, id, responseWrapper and
         //     timeoutFuture) are initialized.
-        //     It is because the successful write of the first headers will trigger subscription.request(1).
-        writeHeaders(mapHeaders(request.headers()));
+        writeHeaders(headers, needs100Continue(headers));
         channel().flush();
     }
 
@@ -111,6 +120,13 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
 
     @Override
     void onWriteSuccess() {
+        if (state() == State.NEEDS_100_CONTINUE) {
+            return;
+        }
+        request();
+    }
+
+    private void request() {
         // Request more messages regardless whether the state is DONE. It makes the producer have
         // a chance to produce the last call such as 'onComplete' and 'onError' when there are
         // no more messages it can produce.
@@ -125,5 +141,15 @@ abstract class AbstractHttpRequestSubscriber extends AbstractHttpRequestHandler
         isSubscriptionCompleted = true;
         assert subscription != null;
         subscription.cancel();
+    }
+
+    @Override
+    final void resume() {
+        request();
+    }
+
+    @Override
+    void discardRequestBody() {
+        cancel();
     }
 }

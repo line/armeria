@@ -79,6 +79,17 @@ class EndpointTest {
         assertThat(barWithUserInfo.hasIpAddr()).isFalse();
         assertThat(barWithUserInfo.hasPort()).isTrue();
         assertThat(barWithUserInfo.toUri("none+http").toString()).isEqualTo("none+http://bar:80");
+
+        final Endpoint barWithoutPort = Endpoint.parse("foo@bar:");
+        assertThat(barWithoutPort).isEqualTo(Endpoint.of("bar"));
+        assertThat(barWithoutPort.type()).isSameAs(Type.HOSTNAME_ONLY);
+        assertThatThrownBy(barWithoutPort::port).isInstanceOf(IllegalStateException.class);
+        assertThat(barWithoutPort.weight()).isEqualTo(1000);
+        assertThat(barWithoutPort.ipAddr()).isNull();
+        assertThat(barWithoutPort.ipFamily()).isNull();
+        assertThat(barWithoutPort.hasIpAddr()).isFalse();
+        assertThat(barWithoutPort.hasPort()).isFalse();
+        assertThat(barWithoutPort.toUri("none+http").toString()).isEqualTo("none+http://bar");
     }
 
     @Test
@@ -518,6 +529,11 @@ class EndpointTest {
         // ipAddr is omitted if hostname is an IP address.
         assertThat(Endpoint.of("127.0.0.1").toString()).isEqualTo("Endpoint{127.0.0.1, weight=1000}");
         assertThat(Endpoint.of("::1").toString()).isEqualTo("Endpoint{[::1], weight=1000}");
+
+        // attributes
+        final Endpoint endpointWithAttr = Endpoint.of("127.0.0.1").withAttr(AttributeKey.valueOf("test"), 1);
+        assertThat(endpointWithAttr.toString())
+                .isEqualTo("Endpoint{127.0.0.1, weight=1000, attributes=[test=1]}");
     }
 
     @Test
@@ -729,8 +745,8 @@ class EndpointTest {
         attrs2.set(key1, "value1-2");
         attrs2.set(key3, "value3");
 
-        final Endpoint endpointB = endpoint.withAttrs(attrs.build());
-        final Endpoint endpointC = endpointB.withAttrs(attrs2.build());
+        final Endpoint endpointB = endpoint.replaceAttrs(attrs.build());
+        final Endpoint endpointC = endpointB.replaceAttrs(attrs2.build());
 
         assertThat(endpointB.attr(key1))
                 .isEqualTo("value1");
@@ -751,10 +767,40 @@ class EndpointTest {
                                            Maps.immutableEntry(key3, "value3"));
 
         // Reset attrs with an empty attributes.
-        final Endpoint newEndpointB = endpointB.withAttrs(Attributes.of());
+        final Endpoint newEndpointB = endpointB.replaceAttrs(Attributes.of());
         assertThat(newEndpointB.attrs().isEmpty()).isTrue();
 
-        final Endpoint sameEndpoint = endpoint.withAttrs(Attributes.of());
+        final Endpoint sameEndpoint = endpoint.replaceAttrs(Attributes.of());
         assertThat(sameEndpoint).isSameAs(endpoint);
+    }
+
+    @Test
+    void withAttrs() {
+        final AttributeKey<String> key1 = AttributeKey.valueOf("key1");
+        final AttributeKey<String> key2 = AttributeKey.valueOf("key2");
+
+        final Endpoint endpoint = Endpoint.parse("a").withAttrs(Attributes.of(key1, "val1"));
+        assertThat(endpoint.attrs().attrs())
+                .toIterable()
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "val1"));
+
+        assertThat(endpoint.withAttrs(Attributes.of(key2, "val2")).attrs().attrs())
+                .toIterable()
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "val1"),
+                                           Maps.immutableEntry(key2, "val2"));
+
+        assertThat(endpoint.withAttrs(Attributes.of(key1, "val1")).attrs().attrs())
+                .toIterable()
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "val1"));
+
+        assertThat(endpoint.withAttrs(Attributes.of(key1, "val2")).attrs().attrs())
+                .toIterable()
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "val2"));
+
+        assertThat(endpoint.withAttrs(Attributes.of()).attrs().attrs())
+                .toIterable()
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "val1"));
+
+        assertThat(endpoint.withAttrs(Attributes.of())).isSameAs(endpoint);
     }
 }

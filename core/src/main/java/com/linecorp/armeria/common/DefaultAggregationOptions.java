@@ -42,6 +42,7 @@ final class DefaultAggregationOptions implements AggregationOptions {
         this.cacheResult = cacheResult;
     }
 
+    @Nullable
     @Override
     public EventExecutor executor() {
         return executor;
@@ -57,6 +58,7 @@ final class DefaultAggregationOptions implements AggregationOptions {
         return preferCached;
     }
 
+    @Nullable
     @Override
     public ByteBufAllocator alloc() {
         return alloc;

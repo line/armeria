@@ -165,7 +165,7 @@ public final class RouteBuilder {
      * Sets the {@link Route} to match the specified exact path.
      */
     public RouteBuilder exact(String exactPath) {
-        return pathMapping(new ExactPathMapping(exactPath));
+        return pathMapping(new ExactPathMapping(requireNonNull(exactPath, "exactPath")));
     }
 
     /**
@@ -216,7 +216,8 @@ public final class RouteBuilder {
     }
 
     private RouteBuilder glob(String glob, int numGroupsToSkip) {
-        return pathMapping(globPathMapping(requireNonNull(glob, "glob"), numGroupsToSkip));
+        requireNonNull(glob, "glob");
+        return pathMapping(globPathMapping(glob, numGroupsToSkip));
     }
 
     /**
@@ -540,7 +541,7 @@ public final class RouteBuilder {
                     "pathPattern: " + pathPattern +
                     " (not an absolute path starting with '/' or a unknown pattern type)");
         }
-        if (!pathPattern.contains("{") && !pathPattern.contains(":")) {
+        if (!pathPattern.contains("/{") && !pathPattern.contains("/:")) {
             return new ExactPathMapping(pathPattern);
         }
         return new ParameterizedPathMapping(pathPattern);

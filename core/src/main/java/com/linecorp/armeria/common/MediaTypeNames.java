@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * String constants defined in {@link MediaType} class.
  */
@@ -345,6 +347,21 @@ public final class MediaTypeNames {
      * {@value #GEO_JSON}.
      */
     public static final String GEO_JSON = "application/geo+json";
+    /**
+     * {@value #GIT_UPLOAD_PACK_ADVERTISEMENT}.
+     */
+    @UnstableApi
+    public static final String GIT_UPLOAD_PACK_ADVERTISEMENT = "application/x-git-upload-pack-advertisement";
+    /**
+     * {@value #GIT_UPLOAD_PACK_REQUEST}.
+     */
+    @UnstableApi
+    public static final String GIT_UPLOAD_PACK_REQUEST = "application/x-git-upload-pack-request";
+    /**
+     * {@value #GIT_UPLOAD_PACK_RESULT}.
+     */
+    @UnstableApi
+    public static final String GIT_UPLOAD_PACK_RESULT = "application/x-git-upload-pack-result";
     /**
      * {@value #GZIP}.
      */

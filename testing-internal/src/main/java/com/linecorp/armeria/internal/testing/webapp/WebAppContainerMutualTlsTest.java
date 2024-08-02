@@ -86,6 +86,7 @@ public abstract class WebAppContainerMutualTlsTest {
 
             final AggregatedHttpResponse res = client.get("/jsp/mutual_tls.jsp").aggregate().join();
             final SSLSession sslSession = server().requestContextCaptor().take().sslSession();
+            assert sslSession != null;
             final String expectedId;
             if (sslSession.getId() != null) {
                 expectedId = BaseEncoding.base16().encode(sslSession.getId());

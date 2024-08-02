@@ -25,12 +25,10 @@ import static java.util.Objects.requireNonNull;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.security.KeyStore;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +40,6 @@ import org.springframework.boot.web.reactive.server.ReactiveWebServerFactory;
 import org.springframework.boot.web.server.Compression;
 import org.springframework.boot.web.server.Http2;
 import org.springframework.boot.web.server.Ssl;
-import org.springframework.boot.web.server.SslStoreProvider;
 import org.springframework.boot.web.server.WebServer;
 import org.springframework.core.ResolvableType;
 import org.springframework.core.env.Environment;
@@ -59,11 +56,10 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 import com.linecorp.armeria.spring.ArmeriaSettings;
@@ -167,6 +163,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                meterIdPrefixFunctionOrDefault(),
                                                findBeans(MetricCollectingServiceConfigurator.class),
                                                findBeans(DependencyInjector.class),
+                                               findBeans(ServerErrorHandler.class),
                                                beanFactory);
         }
 
@@ -207,7 +204,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                 logger.warn("Both Armeria and Spring TLS configuration exist. " +
                             "Armeria TLS configuration is used.");
             } else {
-                configureTls(sb, toArmeriaSslConfiguration(springSsl));
+                TlsUtil.configureTls(sb, toArmeriaSslConfiguration(springSsl), this);
             }
             springSessionProtocol = SessionProtocol.HTTPS;
         } else {
@@ -293,32 +290,6 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
             }
         }
         return false;
-    }
-
-    private void configureTls(ServerBuilder sb, com.linecorp.armeria.spring.Ssl ssl) {
-        final SslStoreProvider provider = getSslStoreProvider();
-        final Supplier<KeyStore> keyStoreSupplier;
-        final Supplier<KeyStore> trustStoreSupplier;
-        if (provider != null) {
-            keyStoreSupplier = () -> {
-                try {
-                    return provider.getKeyStore();
-                } catch (Exception e) {
-                    return Exceptions.throwUnsafely(e);
-                }
-            };
-            trustStoreSupplier = () -> {
-                try {
-                    return provider.getTrustStore();
-                } catch (Exception e) {
-                    return Exceptions.throwUnsafely(e);
-                }
-            };
-        } else {
-            keyStoreSupplier = null;
-            trustStoreSupplier = null;
-        }
-        ArmeriaConfigurationUtil.configureTls(sb, ssl, keyStoreSupplier, trustStoreSupplier);
     }
 
     private MeterIdPrefixFunction meterIdPrefixFunctionOrDefault() {

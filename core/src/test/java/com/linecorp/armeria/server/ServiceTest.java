@@ -60,12 +60,14 @@ public class ServiceTest {
         // Test if FooService.serviceAdded() is invoked.
         final ServiceConfig cfg =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(),
-                                  outer, /* defaultLogName */ null, /* defaultServiceName */ null,
-                                  ServiceNaming.of("FooService"), 1, 1, true,
+                                  outer, /* defaultServiceName */ null,
+                                  ServiceNaming.of("FooService"), /* defaultLogName */ null,
+                                  1, 1, true,
                                   AccessLogWriter.disabled(),
                                   CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  0, Files.newTemporaryFolder().toPath(), CommonPools.workerGroup(),
+                                  0, Files.newTemporaryFolder().toPath(),
+                                  MultipartRemovalStrategy.ON_RESPONSE_COMPLETION, CommonPools.workerGroup(),
                                   ImmutableList.of(), HttpHeaders.of(),
                                   ctx -> RequestId.of(1L),
                                   ServerErrorHandler.ofDefault().asServiceErrorHandler(), NOOP_CONTEXT_HOOK);

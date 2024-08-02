@@ -92,9 +92,7 @@ final class HttpClientDelegate implements HttpClient {
         try {
             proxyConfig = getProxyConfig(protocol, endpoint);
         } catch (Throwable t) {
-            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
-            handleEarlyRequestException(ctx, req, wrapped);
-            return HttpResponse.ofFailure(wrapped);
+            return earlyFailedResponse(t, ctx, req);
         }
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol());
@@ -117,9 +115,7 @@ final class HttpClientDelegate implements HttpClient {
                     acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder, proxyConfig);
                 } else {
                     ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
-                    final UnprocessedRequestException wrappedCause = UnprocessedRequestException.of(cause);
-                    handleEarlyRequestException(ctx, req, wrappedCause);
-                    res.close(wrappedCause);
+                    earlyFailedResponse(cause, ctx, req, res);
                 }
             });
         }
@@ -169,7 +165,13 @@ final class HttpClientDelegate implements HttpClient {
                                               ClientConnectionTimingsBuilder timingsBuilder,
                                               ProxyConfig proxyConfig) {
         final PoolKey key = new PoolKey(endpoint, proxyConfig);
-        final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
+        final HttpChannelPool pool;
+        try {
+            pool = factory.pool(ctx.eventLoop().withoutContext());
+        } catch (Throwable t) {
+            earlyFailedResponse(t, ctx, req, res);
+            return;
+        }
         final SessionProtocol protocol = ctx.sessionProtocol();
         final SerializationFormat serializationFormat = ctx.log().partial().serializationFormat();
         final PooledChannel pooledChannel = pool.acquireNow(protocol, serializationFormat, key);
@@ -183,9 +185,7 @@ final class HttpClientDelegate implements HttpClient {
                     if (cause == null) {
                         doExecute(newPooledChannel, ctx, req, res);
                     } else {
-                        final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
-                        handleEarlyRequestException(ctx, req, wrapped);
-                        res.close(wrapped);
+                        earlyFailedResponse(cause, ctx, req, res);
                     }
                     return null;
                 });
@@ -230,6 +230,13 @@ final class HttpClientDelegate implements HttpClient {
         return HttpResponse.ofFailure(cause);
     }
 
+    private static void earlyFailedResponse(Throwable t, ClientRequestContext ctx, HttpRequest req,
+                                            DecodedHttpResponse res) {
+        final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
+        handleEarlyRequestException(ctx, req, cause);
+        res.close(cause);
+    }
+
     private static void handleEarlyRequestException(ClientRequestContext ctx,
                                                     HttpRequest req, Throwable cause) {
         try (SafeCloseable ignored = RequestContextUtil.pop()) {
@@ -237,6 +244,7 @@ final class HttpClientDelegate implements HttpClient {
             final RequestLogBuilder logBuilder = ctx.logBuilder();
             logBuilder.endRequest(cause);
             logBuilder.endResponse(cause);
+            ctx.cancel(cause);
         }
     }
 

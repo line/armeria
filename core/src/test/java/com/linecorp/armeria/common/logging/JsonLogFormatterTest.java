@@ -16,23 +16,33 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextBuilder;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class JsonLogFormatterTest {
@@ -45,7 +55,6 @@ class JsonLogFormatterTest {
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
         final String requestLog = logFormatter.formatRequest(log);
-        System.err.println(requestLog);
         assertThat(requestLog)
                 .matches("^\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
                          "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}}$");
@@ -61,6 +70,23 @@ class JsonLogFormatterTest {
         assertThat(responseLog)
                 .matches("^\\{\"type\":\"response\",\"startTime\":\".+\",\"length\":\".+\"," +
                          "\"duration\":\".+\",\"totalDuration\":\".+\",\"headers\":\\{\".+\"}}$");
+    }
+
+    @Test
+    void derivedLog() {
+        final LogFormatter logFormatter = LogFormatter.ofJson();
+        final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/format");
+        final ClientRequestContext ctx = ClientRequestContext.of(request);
+        final ClientRequestContext derivedCtx =
+                ctx.newDerivedContext(RequestId.of(1), request, null, Endpoint.of("127.0.0.1"));
+        final DefaultRequestLog log = (DefaultRequestLog) derivedCtx.log();
+        ctx.logBuilder().addChild(log);
+        log.endRequest();
+        final String requestLog = logFormatter.formatRequest(log);
+        assertThat(requestLog)
+                .matches("^\\{\"type\":\"request\",\"startTime\":\".+\",\"length\":\".+\"," +
+                         "\"duration\":\".+\",\"scheme\":\".+\",\"name\":\".+\",\"headers\":\\{\".+\"}" +
+                         ",\"currentAttempt\":1}$");
     }
 
     @Test
@@ -212,5 +238,84 @@ class JsonLogFormatterTest {
         final Matcher matcher3 = Pattern.compile("\"cache-control\":\"(.*?)\"").matcher(responseLog);
         assertThat(matcher3.find()).isTrue();
         assertThat(matcher3.group(1)).isEqualTo("no-cache");
+    }
+
+    static Stream<Arguments> connectionTimingsAreLoggedIfExistParams() {
+        return Stream.of(
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .build()),
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .dnsResolutionEnd()
+                                                    .build()),
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .tlsHandshakeStart()
+                                                    .tlsHandshakeEnd()
+                                                    .build()),
+                Arguments.of(ClientConnectionTimings.builder()
+                                                    .dnsResolutionEnd()
+                                                    .pendingAcquisitionStart()
+                                                    .pendingAcquisitionEnd()
+                                                    .socketConnectStart()
+                                                    .socketConnectEnd()
+                                                    .tlsHandshakeStart()
+                                                    .tlsHandshakeEnd()
+                                                    .build())
+        );
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @MethodSource("connectionTimingsAreLoggedIfExistParams")
+    void connectionTimingsAreLoggedIfExist(@Nullable ClientConnectionTimings timings) {
+        final LogFormatter logFormatter = JsonLogFormatter.DEFAULT_INSTANCE;
+        final HttpRequest req = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"));
+        final ClientRequestContextBuilder builder = ClientRequestContext.builder(req);
+        if (timings != null) {
+            builder.connectionTimings(timings);
+        }
+        final ClientRequestContext ctx = builder.build();
+        final RequestLogBuilder logBuilder = ctx.logBuilder();
+        logBuilder.endRequest();
+        final String formatted = logFormatter.formatRequest(logBuilder.partial());
+        if (timings == null) {
+            assertThatJson(formatted).node("connection").isAbsent();
+            return;
+        }
+
+        assertThatJson(formatted)
+                .node("connection.total.durationNanos")
+                .isEqualTo(timings.connectionAcquisitionDurationNanos());
+
+        if (timings.dnsResolutionDurationNanos() >= 0) {
+            assertThatJson(formatted)
+                    .node("connection.dns.durationNanos")
+                    .isEqualTo(timings.dnsResolutionDurationNanos());
+        } else {
+            assertThatJson(formatted).node("connection.dns.durationNanos").isAbsent();
+        }
+
+        if (timings.pendingAcquisitionDurationNanos() >= 0) {
+            assertThatJson(formatted)
+                    .node("connection.pending.durationNanos")
+                    .isEqualTo(timings.pendingAcquisitionDurationNanos());
+        } else {
+            assertThatJson(formatted).node("connection.pending.durationNanos").isAbsent();
+        }
+
+        if (timings.socketConnectDurationNanos() >= 0) {
+            assertThatJson(formatted)
+                    .node("connection.socket.durationNanos")
+                    .isEqualTo(timings.socketConnectDurationNanos());
+        } else {
+            assertThatJson(formatted).node("connection.socket.durationNanos").isAbsent();
+        }
+
+        if (timings.tlsHandshakeDurationNanos() >= 0) {
+            assertThatJson(formatted)
+                    .node("connection.tls.durationNanos")
+                    .isEqualTo(timings.tlsHandshakeDurationNanos());
+        } else {
+            assertThatJson(formatted).node("connection.tls.durationNanos").isAbsent();
+        }
     }
 }

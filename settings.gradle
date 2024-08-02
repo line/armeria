@@ -6,20 +6,19 @@ plugins {
     // automatically download one based on the foojay Disco API.
     // https://docs.gradle.org/8.1.1/userguide/toolchains.html#sec:provisioning
     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.6.0'
-    id 'com.gradle.enterprise' version '3.16.2'
+    id 'com.gradle.develocity' version '3.17.6'
     // adds additional metadata to build scans
-    id 'com.gradle.common-custom-user-data-gradle-plugin' version '1.12.1'
+    id 'com.gradle.common-custom-user-data-gradle-plugin' version '2.0.2'
 }
 
-import com.gradle.scan.plugin.PublishedBuildScan
+import com.gradle.develocity.agent.gradle.scan.PublishedBuildScan
 
 def isCi = System.getenv("CI") != null
 
-gradleEnterprise {
+develocity {
     server = "https://ge.armeria.dev"
     buildScan {
-        publishIfAuthenticated()
-        publishAlways()
+        publishing.onlyIf { it.authenticated }
         uploadInBackground = !isCi
         if (isCi) {
             buildScanPublished { PublishedBuildScan scan ->
@@ -53,10 +52,6 @@ gradleEnterprise {
                 tag jobName
             }
         }
-
-        capture {
-            taskInputFiles = true
-        }
     }
 }
 
@@ -64,10 +59,10 @@ buildCache {
     local {
         enabled = true
     }
-    remote(gradleEnterprise.buildCache) {
+    remote(develocity.buildCache) {
         enabled = true
         // also check access key to avoid warning logs
-        def accessKey = System.getenv("GRADLE_ENTERPRISE_ACCESS_KEY")
+        def accessKey = System.getenv("DEVELOCITY_ACCESS_KEY")
         push = isCi && accessKey != null && !accessKey.isEmpty()
     }
 }
@@ -76,10 +71,22 @@ rootProject.name = 'armeria'
 
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 
+def virtualProjectsPath = "${rootDir}/build/virtual-projects"
+
 // Published BOM projects
 includeWithFlags ':bom',                                 'bom'
+project(':bom').with {
+    projectDir = file("${virtualProjectsPath}/bom")
+    projectDir.mkdirs()
+    buildFileName = 'gradle/scripts/lib/bom.gradle'
+}
 // Published version catalog projects
 includeWithFlags ':version-catalog',                     'version-catalog'
+project(':version-catalog').with {
+    projectDir = file("${virtualProjectsPath}/version-catalog")
+    projectDir.mkdirs()
+    buildFileName = 'gradle/scripts/version-catalog.gradle'
+}
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
@@ -117,6 +124,7 @@ includeWithFlags ':logback14',                           'java11', 'publish', 'r
 project(':logback14').projectDir = file('logback/logback14')
 includeWithFlags ':native-image-config'
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate', 'native'
+includeWithFlags ':prometheus1',                         'java', 'publish', 'relocate', 'native'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate', 'native'
 includeWithFlags ':resilience4j2',                       'java17', 'publish', 'relocate', 'native'
@@ -174,6 +182,10 @@ includeWithFlags ':thrift0.17',                          'java', 'publish', 'rel
 project(':thrift0.17').projectDir = file('thrift/thrift0.17')
 includeWithFlags ':thrift0.18',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
 project(':thrift0.18').projectDir = file('thrift/thrift0.18')
+includeWithFlags ':thrift0.19',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
+project(':thrift0.19').projectDir = file('thrift/thrift0.19')
+includeWithFlags ':thrift0.20',                          'java11', 'publish', 'relocate', 'no_aggregation', 'native'
+project(':thrift0.20').projectDir = file('thrift/thrift0.20')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
@@ -205,12 +217,12 @@ includeWithFlags ':it:jackson-provider',                       'java', 'relocate
 includeWithFlags ':it:kotlin',                                 'java', 'relocate', 'kotlin'
 includeWithFlags ':it:kubernetes-chaos-tests',                 'java', 'relocate'
 includeWithFlags ':it:logback1.4',                             'java11', 'relocate'
-includeWithFlags ':it:micrometer1.3',                          'java', 'relocate'
 includeWithFlags ':it:multipart',                              'java17', 'relocate'
 includeWithFlags ':it:nio',                                    'java', 'relocate'
 includeWithFlags ':it:okhttp',                                 'java', 'relocate'
 includeWithFlags ':it:resilience4j',                           'java17', 'relocate'
 includeWithFlags ':it:server',                                 'java', 'relocate'
+includeWithFlags ':it:server-allow-semicolon',                 'java'
 includeWithFlags ':it:spring:boot3-jetty12',                   'java17', 'relocate'
 includeWithFlags ':it:spring:boot3-kotlin',                    'java17', 'relocate', 'kotlin'
 includeWithFlags ':it:spring:boot3-mixed',                     'java17', 'relocate'
@@ -257,6 +269,7 @@ includeWithFlags ':examples:graphql-kotlin-example',               'java17', 'ko
 project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
 includeWithFlags ':examples:graphql-sangria-example',              'java11', 'scala_2.13'
 project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')
+includeWithFlags ':examples:grpc-envoy',                           'java11'
 includeWithFlags ':examples:grpc-example',                         'java11'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
 includeWithFlags ':examples:grpc-kotlin',                          'java11', 'kotlin-grpc', 'kotlin'

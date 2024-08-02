@@ -15,7 +15,8 @@ dependencies {
     }
     implementation project(':logback')
 
-    optionalApi libs.micrometer.prometheus
+    optionalApi project(':prometheus1')
+    optionalApi libs.micrometer.prometheus.legacy
     optionalApi libs.dropwizard.metrics.json
     api libs.javax.inject
     compileOnly libs.javax.validation
@@ -57,6 +58,7 @@ task copyBoot3Sources(type: Copy) {
         include '**/LocalArmeriaPort.java'
         include '**/LocalArmeriaPorts.java'
         include '**/PrometheusSupport.java'
+        include '**/PrometheusLegacySupport.java'
         include '**/SpringDependencyInjector.java'
         include '**/Ssl.java'
     }
@@ -83,6 +85,7 @@ task generateSources(type: Copy) {
         exclude '**/AbstractServerHttpRequestVersionSpecific.java'
         exclude '**/package-info.java'
         exclude '**/org.springframework.boot.autoconfigure.AutoConfiguration.imports'
+        exclude '**/TlsUtil.java'
     }
 
     into "${project.ext.genSrcDir}"
