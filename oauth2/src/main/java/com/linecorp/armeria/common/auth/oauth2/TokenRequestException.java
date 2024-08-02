@@ -100,7 +100,7 @@ public class TokenRequestException extends RuntimeException {
      *                 thus MUST NOT include characters outside
      *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
      */
-    public TokenRequestException(String errorDescription, @Nullable String errorUri) {
+    public TokenRequestException(@Nullable String errorDescription, @Nullable String errorUri) {
         super(errorDescription);
         this.errorUri = errorUri;
     }
@@ -119,7 +119,8 @@ public class TokenRequestException extends RuntimeException {
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
      *              (A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.)
      */
-    public TokenRequestException(String errorDescription, @Nullable String errorUri, Throwable cause) {
+    public TokenRequestException(@Nullable String errorDescription, @Nullable String errorUri,
+                                 @Nullable Throwable cause) {
         super(errorDescription, cause);
         this.errorUri = errorUri;
     }

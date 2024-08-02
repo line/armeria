@@ -49,6 +49,7 @@ final class DefaultHttpResult<T> implements HttpResult<T> {
         return headers;
     }
 
+    @Nullable
     @Override
     public T content() {
         return content;

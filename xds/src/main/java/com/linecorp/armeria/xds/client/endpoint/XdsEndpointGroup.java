@@ -36,6 +36,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractListenable;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
@@ -138,6 +139,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
         }
     }
 
+    @Nullable
     @Override
     protected List<Endpoint> latestValue() {
         final List<Endpoint> endpoints = state.endpoints();
@@ -163,6 +165,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
         return selectionStrategy;
     }
 
+    @Nullable
     @Override
     public Endpoint selectNow(ClientRequestContext ctx) {
         return selector.selectNow(ctx);

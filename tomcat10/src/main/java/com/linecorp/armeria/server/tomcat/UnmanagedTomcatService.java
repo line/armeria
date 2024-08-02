@@ -54,6 +54,7 @@ final class UnmanagedTomcatService extends TomcatService {
         return tomcat.getConnector();
     }
 
+    @Nullable
     @Override
     public String hostName() {
         if (hostName != null) {

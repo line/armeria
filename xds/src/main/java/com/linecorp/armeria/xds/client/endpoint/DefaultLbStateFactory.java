@@ -79,6 +79,7 @@ final class DefaultLbStateFactory {
     private static HealthAndDegraded recalculatePerPriorityState(
             int priority, PrioritySet prioritySet) {
         final HostSet hostSet = prioritySet.hostSets().get(priority);
+        assert hostSet != null;
         final int hostCount = hostSet.hosts().size();
 
         if (hostCount <= 0) {
@@ -188,6 +189,7 @@ final class DefaultLbStateFactory {
         final ImmutableMap.Builder<Integer, Boolean> perPriorityPanicBuilder = ImmutableMap.builder();
         for (Integer priority : prioritySet.priorities()) {
             final HostSet hostSet = prioritySet.hostSets().get(priority);
+            assert hostSet != null;
             final boolean isPanic =
                     normalizedTotalAvailability == 100 ? false : isHostSetInPanic(hostSet, panicThreshold);
             perPriorityPanicBuilder.put(priority, isPanic);
@@ -212,6 +214,7 @@ final class DefaultLbStateFactory {
                 new Int2IntOpenHashMap(prioritySet.priorities().size());
         for (Integer priority: prioritySet.priorities()) {
             final HostSet hostSet = prioritySet.hostSets().get(priority);
+            assert hostSet != null;
             final int hostsSize = hostSet.hosts().size();
             if (firstNoEmpty == -1 && hostsSize > 0) {
                 firstNoEmpty = priority;

@@ -44,13 +44,13 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcCallOptions;
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.common.RequestTargetCache;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
 
 import io.grpc.CallCredentials;
 import io.grpc.CallOptions;
@@ -98,7 +98,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private final Compressor compressor;
     private final DecompressorRegistry decompressorRegistry;
     private final CallCredentials credentials0;
-    private final GrpcExceptionHandlerFunction exceptionHandler;
+    private final InternalGrpcExceptionHandler exceptionHandler;
     private final boolean useMethodMarshaller;
 
     ArmeriaChannel(ClientBuilderParams params,
@@ -124,7 +124,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         compressor = options.get(GrpcClientOptions.COMPRESSOR);
         decompressorRegistry = options.get(GrpcClientOptions.DECOMPRESSOR_REGISTRY);
         credentials0 = options.get(GrpcClientOptions.CALL_CREDENTIALS);
-        exceptionHandler = options.get(GrpcClientOptions.EXCEPTION_HANDLER);
+        exceptionHandler = new InternalGrpcExceptionHandler(options.get(GrpcClientOptions.EXCEPTION_HANDLER));
     }
 
     @Override
@@ -221,6 +221,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         return params.options();
     }
 
+    @Nullable
     @Override
     public <T> T as(Class<T> type) {
         final T unwrapped = Unwrappable.super.as(type);
@@ -238,6 +239,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         assert reqTarget != null : path;
         RequestTargetCache.putForClient(path, reqTarget);
 
+        final RequestOptions requestOptions = REQUEST_OPTIONS_MAP.get(methodDescriptor.getType());
+        assert requestOptions != null;
+
         return new DefaultClientRequestContext(
                 meterRegistry,
                 sessionProtocol,
@@ -247,7 +251,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 options(),
                 req,
                 null,
-                REQUEST_OPTIONS_MAP.get(methodDescriptor.getType()),
+                requestOptions,
                 System.nanoTime(),
                 SystemInfo.currentTimeMicros());
     }

@@ -34,10 +34,11 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.grpc.GrpcExceptionHandlerFunction;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
+import com.linecorp.armeria.internal.common.grpc.InternalGrpcExceptionHandler;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.server.grpc.AbstractServerCall;
 import com.linecorp.armeria.internal.server.grpc.ServerStatusAndMetadata;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -70,7 +71,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                     ServiceRequestContext ctx, SerializationFormat serializationFormat,
                     @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
                     ResponseHeaders defaultHeaders,
-                    @Nullable GrpcExceptionHandlerFunction exceptionHandler,
+                    InternalGrpcExceptionHandler exceptionHandler,
                     @Nullable Executor blockingExecutor,
                     boolean autoCompress,
                     boolean useMethodMarshaller) {
@@ -142,11 +143,11 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     public void doClose(ServerStatusAndMetadata statusAndMetadata) {
-        final ResponseHeaders responseHeaders = responseHeaders();
-        final Status status = statusAndMetadata.status();
-        final Metadata metadata = statusAndMetadata.metadata();
-        final HttpResponse response;
         try {
+            final ResponseHeaders responseHeaders = responseHeaders();
+            final Status status = statusAndMetadata.status();
+            final Metadata metadata = statusAndMetadata.metadata();
+            final HttpResponse response;
             if (status.isOk()) {
                 assert responseHeaders != null;
                 assert responseMessage != null;
@@ -174,11 +175,18 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
             // Set responseContent before closing stream to use responseCause in error handling
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, responseMessage), null);
-            statusAndMetadata.setResponseContent(false);
             resFuture.complete(response);
         } catch (Exception ex) {
-            statusAndMetadata.shouldCancel();
-            resFuture.completeExceptionally(ex);
+            final StatusAndMetadata statusAndMetadata0 = exceptionHandler().handle(ctx, ex);
+            final Status status = statusAndMetadata0.status();
+            final Metadata metadata = statusAndMetadata0.metadata();
+            assert metadata != null;
+            statusAndMetadata = new ServerStatusAndMetadata(status, metadata, true);
+
+            final ResponseHeadersBuilder trailersBuilder = defaultResponseHeaders().toBuilder();
+            final HttpResponse response = HttpResponse.of(
+                    (ResponseHeaders) statusToTrailers(ctx, trailersBuilder, status, metadata));
+            resFuture.complete(response);
         } finally {
             closeListener(statusAndMetadata);
         }

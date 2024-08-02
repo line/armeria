@@ -18,6 +18,8 @@ package com.linecorp.armeria.common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class OrElseDependencyInjector implements DependencyInjector {
 
     private static final Logger logger = LoggerFactory.getLogger(OrElseDependencyInjector.class);
@@ -30,6 +32,7 @@ final class OrElseDependencyInjector implements DependencyInjector {
         this.second = second;
     }
 
+    @Nullable
     @Override
     public <T> T getInstance(Class<T> type) {
         final T instance = first.getInstance(type);
