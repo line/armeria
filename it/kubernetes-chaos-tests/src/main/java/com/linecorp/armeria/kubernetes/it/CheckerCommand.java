@@ -48,6 +48,7 @@ import io.fabric8.kubernetes.client.informers.SharedIndexInformer;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+@SuppressWarnings("NullAway")
 @Command(name = "checker", mixinStandardHelpOptions = true)
 public class CheckerCommand implements Runnable {
 

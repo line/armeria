@@ -53,6 +53,8 @@ final class HttpMessageSubscriberAdapter implements Subscriber<HttpObject> {
 
     @Override
     public void onNext(HttpObject httpObject) {
+        assert subscription != null;
+
         final boolean eos = httpObject.isEndOfStream();
         if (httpObject instanceof HttpHeaders) {
             subscriber.onHeaders((HttpHeaders) httpObject);

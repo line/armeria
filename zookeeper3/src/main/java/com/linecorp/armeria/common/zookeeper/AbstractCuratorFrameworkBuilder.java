@@ -50,7 +50,8 @@ public class AbstractCuratorFrameworkBuilder<SELF extends AbstractCuratorFramewo
     private final CuratorFramework client;
     private final String znodePath;
 
-    private final CuratorFrameworkFactory.@Nullable Builder clientBuilder;
+    @Nullable
+    private final CuratorFrameworkFactory.Builder clientBuilder;
     @Nullable
     private final ImmutableList.Builder<Consumer<? super Builder>> customizers;
 
@@ -174,6 +175,7 @@ public class AbstractCuratorFrameworkBuilder<SELF extends AbstractCuratorFramewo
     public SELF customizer(
             Consumer<? super CuratorFrameworkFactory.Builder> customizer) {
         ensureInternalClient();
+        assert customizers != null;
         customizers.add(requireNonNull(customizer, "customizer"));
         return self();
     }
@@ -202,6 +204,8 @@ public class AbstractCuratorFrameworkBuilder<SELF extends AbstractCuratorFramewo
         if (client != null) {
             return client;
         }
+        assert customizers != null;
+        assert clientBuilder != null;
         customizers.build().forEach(c -> c.accept(clientBuilder));
         return clientBuilder.build();
     }

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.auth.oauth2;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -39,7 +40,7 @@ public final class UnsupportedGrantTypeException extends TokenRequestException {
      *                 thus MUST NOT include characters outside
      *                 the set {@code %x21} / {@code %x23-5B} / {@code %x5D-7E}.
      */
-    public UnsupportedGrantTypeException(String errorDescription, String errorUri) {
+    public UnsupportedGrantTypeException(@Nullable String errorDescription, @Nullable String errorUri) {
         super(errorDescription, errorUri);
     }
 
@@ -58,7 +59,8 @@ public final class UnsupportedGrantTypeException extends TokenRequestException {
      * @param cause the cause (which is saved for later retrieval by the {@link #getCause()} method).
      *              (A {@code null} value is permitted, and indicates that the cause is nonexistent or unknown.)
      */
-    public UnsupportedGrantTypeException(String errorDescription, String errorUri, Throwable cause) {
+    public UnsupportedGrantTypeException(@Nullable String errorDescription, @Nullable String errorUri,
+                                         @Nullable Throwable cause) {
         super(errorDescription, errorUri, cause);
     }
 }
