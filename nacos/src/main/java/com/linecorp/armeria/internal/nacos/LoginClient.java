@@ -118,7 +118,7 @@ final class LoginClient extends SimpleDecoratingHttpClient {
                     @JsonProperty("globalAdmin") @Nullable Boolean globalAdmin) {
             this.accessToken = AuthToken.ofOAuth2(accessToken);
             createdAtNanos = System.nanoTime();
-            this.tokenTtlNanos = TimeUnit.SECONDS.toNanos(tokenTtl);
+            tokenTtlNanos = TimeUnit.SECONDS.toNanos(tokenTtl);
             this.globalAdmin = globalAdmin;
         }
 
