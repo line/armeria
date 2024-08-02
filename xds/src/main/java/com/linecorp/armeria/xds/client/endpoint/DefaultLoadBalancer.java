@@ -95,6 +95,7 @@ final class DefaultLoadBalancer implements LoadBalancer {
         final PrioritySet prioritySet = lbState.prioritySet();
         final int priority = priorityAndAvailability.priority;
         final HostSet hostSet = prioritySet.hostSets().get(priority);
+        assert hostSet != null;
         final HostAvailability hostAvailability = priorityAndAvailability.hostAvailability;
         if (lbState.perPriorityPanic().get(priority)) {
             if (prioritySet.failTrafficOnPanic()) {

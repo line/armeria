@@ -63,6 +63,7 @@ import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.netty.buffer.ByteBuf;
 import io.netty.util.AttributeKey;
 
 /**
@@ -248,7 +249,9 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             @Override
             public void onNext(DeframedMessage message) {
                 // We know that we don't support compression, so this is always a ByteBuf.
-                final HttpData unframedContent = HttpData.wrap(message.buf());
+                final ByteBuf buf = message.buf();
+                assert buf != null;
+                final HttpData unframedContent = HttpData.wrap(buf);
                 unframedHeaders.contentType(MediaType.JSON_UTF_8);
 
                 final AggregatedHttpResponse existingResponse = AggregatedHttpResponse.of(

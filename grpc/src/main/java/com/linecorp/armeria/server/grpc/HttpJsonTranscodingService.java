@@ -159,10 +159,12 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
                 final HttpRule httpRule = methodOptions.getExtension(AnnotationsProto.http);
 
-                checkArgument(methodDefinition.getMethodDescriptor().getType() == MethodType.UNARY,
-                              "Only unary methods can be configured with an HTTP/JSON endpoint: " +
-                              "method=%s, httpRule=%s",
-                              methodDefinition.getMethodDescriptor().getFullMethodName(), httpRule);
+                if (methodDefinition.getMethodDescriptor().getType() != MethodType.UNARY) {
+                    logger.warn("Only unary methods can be configured with an HTTP/JSON endpoint: " +
+                                "method={}, httpRule={}",
+                                methodDefinition.getMethodDescriptor().getFullMethodName(), httpRule);
+                    continue;
+                }
 
                 @Nullable
                 final Entry<Route, List<PathVariable>> routeAndVariables = toRouteAndPathVariables(httpRule);
@@ -564,6 +566,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                           .contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
     }
 
+    @Nullable
     @Override
     public HttpEndpointSpecification httpEndpointSpecification(Route route) {
         requireNonNull(route, "route");
@@ -595,6 +598,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return routes;
     }
 
+    @Nullable
     @Override
     public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         final TranscodingSpec spec = routeAndSpecs.get(ctx.config().mappedRoute());

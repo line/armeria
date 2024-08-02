@@ -12,7 +12,7 @@ function svgEmoji(input: string) {
     return emoji(input, {
       // baseUrl shouldn't end with '/'.
       // https://github.com/appfigures/react-easy-emoji/issues/25
-      baseUrl: 'https://twemoji.maxcdn.com/2/svg',
+      baseUrl: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg',
       ext: '.svg',
       size: '',
     });

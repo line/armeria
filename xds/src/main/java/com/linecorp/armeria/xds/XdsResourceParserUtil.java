@@ -45,7 +45,9 @@ final class XdsResourceParserUtil {
     }
 
     static ResourceParser<?, ?> fromType(XdsType xdsType) {
-        return typeToResourceType.get(xdsType);
+        final ResourceParser<?, ?> parser = typeToResourceType.get(xdsType);
+        assert parser != null;
+        return parser;
     }
 
     private XdsResourceParserUtil() {}

@@ -65,6 +65,9 @@ public interface GrpcExceptionHandlerFunction {
      */
     default GrpcExceptionHandlerFunction orElse(GrpcExceptionHandlerFunction next) {
         requireNonNull(next, "next");
+        if (this == next) {
+            return this;
+        }
         return (ctx, status, cause, metadata) -> {
             final Status newStatus = apply(ctx, status, cause, metadata);
             if (newStatus != null) {

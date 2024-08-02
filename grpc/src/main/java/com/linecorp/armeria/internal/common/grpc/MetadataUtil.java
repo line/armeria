@@ -33,6 +33,7 @@ import com.google.rpc.Status;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 
 import io.grpc.InternalMetadata;
@@ -70,8 +71,8 @@ public final class MetadataUtil {
      * Copies the headers in the gRPC {@link Metadata} to the Armeria {@link HttpHeadersBuilder}. Headers will
      * be added, without replacing any currently present in the {@link HttpHeaders}.
      */
-    public static void fillHeaders(Metadata metadata, HttpHeadersBuilder builder) {
-        if (InternalMetadata.headerCount(metadata) == 0) {
+    public static void fillHeaders(@Nullable Metadata metadata, HttpHeadersBuilder builder) {
+        if (metadata == null || InternalMetadata.headerCount(metadata) == 0) {
             return;
         }
 
