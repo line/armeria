@@ -18,8 +18,11 @@ package com.linecorp.armeria.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.IDN;
 import java.net.URI;
 import java.net.URISyntaxException;
+
+import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -50,8 +53,21 @@ public final class SchemeAndAuthority {
 
         final String authorityWithoutUserInfo = removeUserInfo(authority);
         try {
-            final URI uri = new URI(null, authorityWithoutUserInfo, null, null, null).parseServerAuthority();
-            return new SchemeAndAuthority(scheme, uri.getRawAuthority(), uri.getHost(), uri.getPort());
+            final URI uri = new URI(null, authorityWithoutUserInfo, null, null, null);
+            String rawAuthority = uri.getRawAuthority();
+            if (rawAuthority == null) {
+                throw new IllegalArgumentException("Invalid authority: " + authority);
+            }
+            rawAuthority = IDN.toASCII(rawAuthority, IDN.ALLOW_UNASSIGNED);
+
+            final boolean isIpv6 = rawAuthority.startsWith("[");
+            final HostAndPort hostAndPort = HostAndPort.fromString(rawAuthority);
+            String host = hostAndPort.getHost();
+            if (isIpv6) {
+                host = '[' + host + ']';
+            }
+            final int port = hostAndPort.getPortOrDefault(-1);
+            return new SchemeAndAuthority(scheme, rawAuthority, host, port);
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }

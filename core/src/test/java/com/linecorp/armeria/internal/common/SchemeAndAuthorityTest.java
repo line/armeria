@@ -25,13 +25,15 @@ import org.junit.jupiter.params.provider.CsvSource;
 class SchemeAndAuthorityTest {
     @ParameterizedTest
     @CsvSource({
-            "0.0.0.0:80,        0.0.0.0:80,         0.0.0.0,            80",    // IPv4
-            "[::1]:8080,        [::1]:8080,         [::1],              8080",  // IPv6
-            "unix%3Afoo.sock,   unix%3Afoo.sock,    unix%3Afoo.sock,    -1",    // Domain socket
-            "foo.bar,           foo.bar,            foo.bar,            -1",    // Only host
-            "foo:,              foo:,               foo,                -1",    // Empty port
-            "bar:80,            bar:80,             bar,                80",    // Host and port
-            "foo@bar:80,        bar:80,             bar,                80",    // Userinfo and host and port
+            "0.0.0.0:80,        0.0.0.0:80,          0.0.0.0,            80",    // IPv4
+            "[::1]:8080,        [::1]:8080,          [::1],              8080",  // IPv6
+            "unix%3Afoo.sock,   unix%3Afoo.sock,     unix%3Afoo.sock,    -1",    // Domain socket
+            "foo.bar,           foo.bar,             foo.bar,            -1",    // Only host
+            "foo:,              foo:,                foo,                -1",    // Empty port
+            "bar:80,            bar:80,              bar,                80",    // Host and port
+            "foo@bar:80,        bar:80,              bar,                80",    // Userinfo and host and port
+            "foo_bar:80,        foo_bar:80,          foo_bar,            80",    // Underscore in host
+            "한글.com:80,        xn--bj0bj06e.com:80, xn--bj0bj06e.com,   80",    // IDN
     })
     void fromAuthority(String authority, String expectedAuthority, String expectedHost,
                        int expectedPort) {
