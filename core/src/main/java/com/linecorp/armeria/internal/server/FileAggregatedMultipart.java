@@ -67,7 +67,10 @@ public final class FileAggregatedMultipart {
     private static boolean shouldHandle(BodyPart bodyPart, List<String> parameters) {
         final String name = bodyPart.name();
         assert name != null;
-        return !parameters.isEmpty() && parameters.contains(name);
+        if (parameters.isEmpty()) {
+            return true;
+        }
+        return parameters.contains(name);
     }
 
     public static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
