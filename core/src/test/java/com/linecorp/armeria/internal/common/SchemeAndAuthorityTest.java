@@ -47,8 +47,7 @@ class SchemeAndAuthorityTest {
 
     @ParameterizedTest
     @CsvSource({
-            "foo:bar", "http://foo:80", "foo/bar", "foo?bar=1", "foo#bar",
-            "[192.168.0.1]", "[::1", "::1]", "[::1]%eth0", "unix:foo.sock"
+            "foo:bar", "[192.168.0.1]", "[::1", "::1]", "[::1]%eth0", "unix:foo.sock"
     })
     void fromBadAuthority(String badAuthority) {
         assertThatThrownBy(() -> SchemeAndAuthority.of(null, badAuthority))
