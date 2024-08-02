@@ -47,6 +47,7 @@ final class AggregatedResponseConverterFunction implements ResponseConverterFunc
         this.responseConverter = responseConverter;
     }
 
+    @Nullable
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
         final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));

@@ -365,6 +365,7 @@ public class DefaultStreamMessage<T> extends AbstractStreamWriter<T> {
             return;
         }
 
+        assert subscription != null;
         for (;;) {
             if (state == State.CLEANUP) {
                 cleanupObjects(null);

@@ -68,6 +68,7 @@ final class DefaultRequestOptions implements RequestOptions {
         return maxResponseLength;
     }
 
+    @Nullable
     @Override
     public Long requestAutoAbortDelayMillis() {
         return requestAutoAbortDelayMillis;
@@ -78,6 +79,7 @@ final class DefaultRequestOptions implements RequestOptions {
         return attributeMap;
     }
 
+    @Nullable
     @Override
     public ExchangeType exchangeType() {
         return exchangeType;

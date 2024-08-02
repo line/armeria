@@ -39,6 +39,7 @@ import com.linecorp.armeria.server.file.HttpFile;
  */
 public final class HttpFileResponseConverterFunction implements ResponseConverterFunction {
 
+    @Nullable
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
         final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
