@@ -244,6 +244,7 @@ final class HttpClientDelegate implements HttpClient {
             final RequestLogBuilder logBuilder = ctx.logBuilder();
             logBuilder.endRequest(cause);
             logBuilder.endResponse(cause);
+            ctx.cancel(cause);
         }
     }
 

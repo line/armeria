@@ -19,15 +19,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -276,6 +282,24 @@ class ClientRequestContextTest {
                 .hasMessageContaining("invalid path");
     }
 
+    @ParameterizedTest
+    @ArgumentsSource(TimedOutExceptionProvider.class)
+    void isTimedOut_true(Throwable cause) {
+        final ClientRequestContext cctx = clientRequestContext();
+        cctx.cancel(cause);
+        cctx.whenResponseCancelled().join();
+        assertThat(cctx.isTimedOut()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(NotTimedOutExceptionProvider.class)
+    void isTimedOut_false(Throwable cause) {
+        final ClientRequestContext cctx = clientRequestContext();
+        cctx.cancel(cause);
+        cctx.whenResponseCancelled().join();
+        assertThat(cctx.isTimedOut()).isFalse();
+    }
+
     private static void assertUnwrapAllCurrentCtx(@Nullable RequestContext ctx) {
         final RequestContext current = RequestContext.currentOrNull();
         if (current == null) {
@@ -291,5 +315,26 @@ class ClientRequestContextTest {
 
     private static ClientRequestContext clientRequestContext() {
         return ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+    }
+
+    private static class TimedOutExceptionProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            return Stream.of(new TimeoutException(),
+                             ResponseTimeoutException.get(),
+                             UnprocessedRequestException.of(ResponseTimeoutException.get()))
+                         .map(Arguments::of);
+        }
+    }
+
+    private static class NotTimedOutExceptionProvider implements ArgumentsProvider {
+
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+            return Stream.of(new RuntimeException(),
+                             UnprocessedRequestException.of(new RuntimeException()))
+                         .map(Arguments::of);
+        }
     }
 }
