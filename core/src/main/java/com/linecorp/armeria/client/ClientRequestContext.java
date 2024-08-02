@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -512,6 +513,21 @@ public interface ClientRequestContext extends RequestContext {
     @Override
     default void timeoutNow() {
         cancel(ResponseTimeoutException.get());
+    }
+
+    /**
+     * Returns whether this {@link ClientRequestContext} has been timed-out, that is the cancellation cause
+     * is an instance of {@link TimeoutException} or
+     * {@link UnprocessedRequestException} and wrapped cause is {@link TimeoutException}.
+     */
+    @Override
+    default boolean isTimedOut() {
+        if (RequestContext.super.isTimedOut()) {
+            return true;
+        }
+        final Throwable cause = cancellationCause();
+        return cause instanceof TimeoutException ||
+               cause instanceof UnprocessedRequestException && cause.getCause() instanceof TimeoutException;
     }
 
     /**
