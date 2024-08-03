@@ -62,7 +62,7 @@ public final class SchemeAndAuthority {
         for (int i = 0; i < authorityWithoutUserInfo.length(); i++) {
             final char c = authorityWithoutUserInfo.charAt(i);
             if (c < 0x80 && RESERVED_CHARS.get(c)) {
-                throw new IllegalArgumentException("authority contains reserved character: " +
+                throw new IllegalArgumentException("The authority contains reserved character: " +
                                                    authority + " (" + c + ')');
             }
         }
@@ -101,7 +101,7 @@ public final class SchemeAndAuthority {
 
         final int endBracket = ipV6Authority.indexOf(']');
         // An incomplete IPv6 address is rejected by URI constructor.
-        assert endBracket >= 0 : "endBracket: " + endBracket + " (expected: >= 0)";
+        assert endBracket > 0 : "endBracket: " + endBracket + " (expected: >= 0)";
         return ipV6Authority.substring(0, percentPos) + ipV6Authority.substring(endBracket);
     }
 
