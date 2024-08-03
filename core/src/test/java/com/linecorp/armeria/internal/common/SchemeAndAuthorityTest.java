@@ -25,8 +25,13 @@ import org.junit.jupiter.params.provider.CsvSource;
 class SchemeAndAuthorityTest {
     @ParameterizedTest
     @CsvSource({
-            "0.0.0.0:80,        0.0.0.0:80,          0.0.0.0,            80",    // IPv4
-            "[::1]:8080,        [::1]:8080,          [::1],              8080",  // IPv6
+            "0.0.0.0,           0.0.0.0,             0.0.0.0,            -1",    // IPv4
+            "0.0.0.0:,          0.0.0.0:,            0.0.0.0,            -1",    // IPv4 with empty port
+            "0.0.0.0:80,        0.0.0.0:80,          0.0.0.0,            80",    // IPv4 with port
+            "[::1],             [::1],               [::1],              -1",    // IPv6
+            "[::1]:,            [::1]:,              [::1],              -1",    // IPv6 with empty port
+            "[::1]:8080,        [::1]:8080,          [::1],              8080",  // IPv6 with port
+            "[::1%eth0]:8080,   [::1]:8080,          [::1],              8080",  // IPv6 with port
             "unix%3Afoo.sock,   unix%3Afoo.sock,     unix%3Afoo.sock,    -1",    // Domain socket
             "foo.bar,           foo.bar,             foo.bar,            -1",    // Only host
             "foo:,              foo:,                foo,                -1",    // Empty port
@@ -47,15 +52,16 @@ class SchemeAndAuthorityTest {
 
     @ParameterizedTest
     @CsvSource({
-            "foo:bar",        // Invalid port
-            "http://foo:80",  // Scheme included
-            "foo/bar",        // Authority with path
-            "foo?bar=1",      // Authority with query
-            "foo#bar",        // Authority with fragment
-            "[192.168.0.1]",  // Bracketed IPv4
-            "[::1", "::1]",   // Incomplete IPv6
-            "[::1]%eth0",     // IPv6 with scope
-            "unix:foo.sock"   // Invalid domain socket
+            "foo:bar",                 // Invalid port
+            "http://foo:80",           // Scheme included
+            "foo/bar",                 // Authority with path
+            "foo?bar=1",               // Authority with query
+            "foo#bar",                 // Authority with fragment
+            "[192.168.0.1]",           // Bracketed IPv4
+            "[::1", "::1]",            // Incomplete IPv6 with scope
+            "[::1%eth0", "::1%eth0]",  // Incomplete IPv6 with scope
+            "[::1]%eth0",              // Invalid IPv6 scope
+            "unix:foo.sock"            // Invalid domain socket
     })
     void fromBadAuthority(String badAuthority) {
         assertThatThrownBy(() -> SchemeAndAuthority.of(null, badAuthority))

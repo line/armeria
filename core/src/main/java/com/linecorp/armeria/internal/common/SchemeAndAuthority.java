@@ -16,19 +16,22 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.common.util.BitSetUtil.toBitSet;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.BitSet;
 
+import com.google.common.base.Strings;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 public final class SchemeAndAuthority {
 
-    private static final char[] RESERVED_CHARS = { '/', '?', '#', };
+    private static final BitSet RESERVED_CHARS = toBitSet("/?#");
 
     /**
      * Attempts to parse this URI's authority component and return {@link SchemeAndAuthority}.
@@ -54,34 +57,52 @@ public final class SchemeAndAuthority {
             return new SchemeAndAuthority(scheme, authority, authority, -1);
         }
 
-        for (char reservedChar : RESERVED_CHARS) {
-            if (authority.indexOf(reservedChar) > -1) {
-                throw new IllegalArgumentException("authority contains reserved character: " + authority +
-                                                   " (" + reservedChar + ')');
+        final String authorityWithoutUserInfo = removeUserInfo(authority);
+
+        for (int i = 0; i < authorityWithoutUserInfo.length(); i++) {
+            final char c = authorityWithoutUserInfo.charAt(i);
+            if (c < 0x80 && RESERVED_CHARS.get(c)) {
+                throw new IllegalArgumentException("authority contains reserved character: " +
+                                                   authority + " (" + c + ')');
             }
         }
 
-        final String authorityWithoutUserInfo = removeUserInfo(authority);
         try {
             final URI uri = new URI(null, authorityWithoutUserInfo, null, null, null);
             String rawAuthority = uri.getRawAuthority();
-            if (rawAuthority == null) {
+            if (Strings.isNullOrEmpty(rawAuthority)) {
                 throw new IllegalArgumentException("Invalid authority: " + authority);
             }
             rawAuthority = IDN.toASCII(rawAuthority, IDN.ALLOW_UNASSIGNED);
 
-            final boolean isIpv6 = rawAuthority.startsWith("[");
+            final boolean isIpv6 = rawAuthority.charAt(0) == '[';
+            if (isIpv6) {
+                rawAuthority = removeIpv6ScopeId(rawAuthority);
+            }
+
             final HostAndPort hostAndPort = HostAndPort.fromString(rawAuthority);
             String host = hostAndPort.getHost();
-
             if (isIpv6) {
                 host = '[' + host + ']';
             }
             final int port = hostAndPort.getPortOrDefault(-1);
+
             return new SchemeAndAuthority(scheme, rawAuthority, host, port);
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    private static String removeIpv6ScopeId(String ipV6Authority) {
+        final int percentPos = ipV6Authority.indexOf('%');
+        if (percentPos == -1) {
+            return ipV6Authority;
+        }
+
+        final int endBracket = ipV6Authority.indexOf(']');
+        // An incomplete IPv6 address is rejected by URI constructor.
+        assert endBracket >= 0 : "endBracket: " + endBracket + " (expected: >= 0)";
+        return ipV6Authority.substring(0, percentPos) + ipV6Authority.substring(endBracket);
     }
 
     private static String removeUserInfo(String authority) {
