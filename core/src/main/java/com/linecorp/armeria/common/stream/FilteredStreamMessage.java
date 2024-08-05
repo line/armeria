@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -219,7 +218,6 @@ public abstract class FilteredStreamMessage<T, U> extends AggregationSupport imp
             try {
                 filtered = filter(o);
             } catch (Throwable ex) {
-                StreamMessageUtil.closeOrAbort(o);
                 // onError(ex) should be called before upstream.cancel() to deliver the cause to downstream.
                 // upstream.cancel() and make downstream closed with CancelledSubscriptionException
                 // before sending the actual cause.
