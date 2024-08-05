@@ -16,8 +16,7 @@
 
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.DEGRADED_ATTR;
-import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.HEALTHY_ATTR;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.healthCheckAttributes;
 
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -94,8 +93,7 @@ final class DefaultHealthCheckerContext
         this.clientOptions = clientOptions;
         this.retryBackoff = retryBackoff;
         this.onUpdateHealth = onUpdateHealth;
-        endpointAttributes = Attributes.of(HEALTHY_ATTR, false,
-                                           DEGRADED_ATTR, false);
+        endpointAttributes = healthCheckAttributes(false, false);
     }
 
     void init(AsyncCloseable handle) {
@@ -133,8 +131,7 @@ final class DefaultHealthCheckerContext
                 lock.unlock();
             }
 
-            endpointAttributes = Attributes.of(HEALTHY_ATTR, false,
-                                               DEGRADED_ATTR, false);
+            endpointAttributes = healthCheckAttributes(false, false);
             onUpdateHealth.accept(originalEndpoint.withAttrs(endpointAttributes), false);
 
             return null;
@@ -193,11 +190,9 @@ final class DefaultHealthCheckerContext
                              @Nullable ResponseHeaders headers, @Nullable Throwable cause) {
         final boolean isHealthy = health > 0;
         if (headers != null && headers.contains("x-envoy-degraded")) {
-            endpointAttributes = Attributes.of(HEALTHY_ATTR, isHealthy,
-                                               DEGRADED_ATTR, true);
+            endpointAttributes = healthCheckAttributes(isHealthy, true);
         } else {
-            endpointAttributes = Attributes.of(HEALTHY_ATTR, isHealthy,
-                                               DEGRADED_ATTR, false);
+            endpointAttributes = healthCheckAttributes(isHealthy, false);
         }
         onUpdateHealth.accept(originalEndpoint.withAttrs(endpointAttributes), isHealthy);
 

@@ -18,10 +18,14 @@ package com.linecorp.armeria.internal.client.endpoint;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import java.util.Map;
+
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 public final class EndpointAttributeKeys {
 
@@ -31,6 +35,8 @@ public final class EndpointAttributeKeys {
             AttributeKey.valueOf(EndpointAttributeKeys.class, "HEALTHY");
     public static final AttributeKey<Boolean> DEGRADED_ATTR =
             AttributeKey.valueOf(EndpointAttributeKeys.class, "DEGRADED");
+
+    private static final Map<Integer, Attributes> attributesCache = new Int2ObjectOpenHashMap<>();
 
     public static long createdAtNanos(Endpoint endpoint) {
         final Long createdAtNanos = endpoint.attr(CREATED_AT_NANOS_KEY);
@@ -50,6 +56,18 @@ public final class EndpointAttributeKeys {
     @Nullable
     public static Boolean degraded(Endpoint endpoint) {
         return endpoint.attr(DEGRADED_ATTR);
+    }
+
+    public static Attributes healthCheckAttributes(boolean healthy, boolean degraded) {
+        int key = 0;
+        if (healthy) {
+            key |= 1;
+        }
+        if (degraded) {
+            key |= 1 << 1;
+        }
+        return attributesCache.computeIfAbsent(key, ignored -> Attributes.of(HEALTHY_ATTR, healthy,
+                                                                             DEGRADED_ATTR, degraded));
     }
 
     private EndpointAttributeKeys() {}
