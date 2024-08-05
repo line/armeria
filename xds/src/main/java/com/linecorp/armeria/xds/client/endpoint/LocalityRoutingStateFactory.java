@@ -47,7 +47,8 @@ final class LocalityRoutingStateFactory {
         // Only priority 0 is supported
         final HostSet upstreamHostSet = upstreamPrioritySet.hostSets().get(0);
         final HostSet localHostSet = localPrioritySet.hostSets().get(0);
-        if (earlyExitNonLocalityRouting(upstreamHostSet, localHostSet, localLocality,
+        if (upstreamHostSet == null || localHostSet == null ||
+            earlyExitNonLocalityRouting(upstreamHostSet, localHostSet, localLocality,
                                         upstreamPrioritySet.minClusterSize())) {
             return new LocalityRoutingState(State.NO_LOCALITY_ROUTING, localHostSet, localLocality);
         }
@@ -121,10 +122,11 @@ final class LocalityRoutingStateFactory {
         private final State state;
         private final long localPercentageToRoute;
         private final List<ResidualCapacity> residualCapacities;
+        @Nullable
         private final HostSet localHostSet;
         private final Locality localLocality;
 
-        private LocalityRoutingState(State state, HostSet localHostSet, Locality localLocality) {
+        private LocalityRoutingState(State state, @Nullable HostSet localHostSet, Locality localLocality) {
             assert state == State.NO_LOCALITY_ROUTING || state == State.LOCALITY_DIRECT;
             this.state = state;
             localPercentageToRoute = 0;
@@ -147,6 +149,7 @@ final class LocalityRoutingStateFactory {
             return state;
         }
 
+        @Nullable
         HostSet localHostSet() {
             return localHostSet;
         }
@@ -238,12 +241,8 @@ final class LocalityRoutingStateFactory {
         return localityPercentagesBuilder.build();
     }
 
-    private static boolean earlyExitNonLocalityRouting(@Nullable HostSet upstreamHostSet,
-                                                       @Nullable HostSet localHostSet,
+    private static boolean earlyExitNonLocalityRouting(HostSet upstreamHostSet, HostSet localHostSet,
                                                        Locality localLocality, long minClusterSize) {
-        if (upstreamHostSet == null || localHostSet == null) {
-            return true;
-        }
         final Map<Locality, EndpointGroup> upstreamHealthyHostsPerLocality =
                 upstreamHostSet.healthyEndpointGroupPerLocality();
         final Map<Locality, EndpointGroup> localHealthyHostsPerLocality =
