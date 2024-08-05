@@ -92,6 +92,7 @@ public final class VirtualHost {
     private final Logger accessLogger;
 
     private final ServiceNaming defaultServiceNaming;
+    @Nullable
     private final String defaultLogName;
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
@@ -114,7 +115,7 @@ public final class VirtualHost {
                 RejectedRouteHandler rejectionHandler,
                 Function<? super VirtualHost, ? extends Logger> accessLoggerMapper,
                 ServiceNaming defaultServiceNaming,
-                String defaultLogName,
+                @Nullable String defaultLogName,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
@@ -362,6 +363,7 @@ public final class VirtualHost {
      * Returns the default value of the {@link RequestLog#name()} property which is used when no name was set
      * via {@link RequestLogBuilder#name(String, String)}.
      */
+    @Nullable
     public String defaultLogName() {
         return defaultLogName;
     }

@@ -186,7 +186,7 @@ class ServiceNamingTest {
 
     private static ServiceConfig newServiceConfig(HttpService httpService, ServiceNaming serviceNaming) {
         return new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), httpService,
-                                 null, null, serviceNaming, 0, 0, false,
+                                 null, serviceNaming, null, 0, 0, false,
                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                  SuccessFunction.always(),
                                  0, Files.newTemporaryFolder().toPath(),

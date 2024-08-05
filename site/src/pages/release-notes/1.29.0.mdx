@@ -22,8 +22,8 @@ date: 2024-06-12
       MultipartRemovalStrategy.ON_RESPONSE_COMPLETION)
     ...
   ```
-  - The default value is now <type://ON_RESPONSE_COMPLETION`> which removes the temporary files
-    when the response is completed.
+  - The default value is now <type://MultipartRemovalStrategy#ON_RESPONSE_COMPLETION> which removes
+    the temporary files when the response is completed.
 - A <type://ClientConnectionTimings> now includes the time spent on the TLS handshake. #3647 #5647
   ```java
   ClientConnectionTimings timings = ...
@@ -37,7 +37,7 @@ date: 2024-06-12
     .build();
   ```
 - You can now easily find both dynamic and static decorators that handle a request
-  via <type://ServiceRequestContext.findService(Class)>. #5670
+  via <type://ServiceRequestContext#findService(Class)>. #5670
   ```java
   ServerBuilder sb = ...
   sb.decorator(CorsService.builderForAnyOrigin().newDecorator());

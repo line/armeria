@@ -43,12 +43,13 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
         this.serverErrorHandler = serverErrorHandler;
     }
 
+    @Nullable
     @Override
-    public @Nullable AggregatedHttpResponse renderStatus(@Nullable ServiceRequestContext ctx,
-                                                         ServiceConfig serviceConfig,
-                                                         @Nullable RequestHeaders headers,
-                                                         HttpStatus status, @Nullable String description,
-                                                         @Nullable Throwable cause) {
+    public AggregatedHttpResponse renderStatus(@Nullable ServiceRequestContext ctx,
+                                               ServiceConfig serviceConfig,
+                                               @Nullable RequestHeaders headers,
+                                               HttpStatus status, @Nullable String description,
+                                               @Nullable Throwable cause) {
 
         if (ctx == null) {
             return serverErrorHandler.renderStatus(null, serviceConfig, headers, status, description, cause);
@@ -73,8 +74,9 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
         return AggregatedHttpResponse.of(updatedResponseHeaders, res.content());
     }
 
+    @Nullable
     @Override
-    public @Nullable HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
+    public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
         if (cause instanceof HttpResponseException) {
             final HttpResponse oldRes = serverErrorHandler.onServiceException(ctx, cause);
             if (oldRes == null) {
@@ -84,14 +86,21 @@ final class CorsServerErrorHandler implements ServerErrorHandler {
             if (corsService == null) {
                 return oldRes;
             }
-            return oldRes
-                    .recover(HttpResponseException.class,
-                             ex -> ex.httpResponse()
-                                     .mapHeaders(oldHeaders -> addCorsHeaders(ctx,
-                                                                              corsService.config(),
-                                                                              oldHeaders)));
+            return oldRes.recover(HttpResponseException.class, ex -> {
+                return ex.httpResponse()
+                         .mapHeaders(oldHeaders -> addCorsHeaders(ctx, corsService.config(), oldHeaders));
+            });
         } else {
             return serverErrorHandler.onServiceException(ctx, cause);
         }
+    }
+
+    @Nullable
+    @Override
+    public AggregatedHttpResponse onProtocolViolation(ServiceConfig config,
+                                                      @Nullable RequestHeaders headers,
+                                                      HttpStatus status, @Nullable String description,
+                                                      @Nullable Throwable cause) {
+        return serverErrorHandler.onProtocolViolation(config, headers, status, description, cause);
     }
 }

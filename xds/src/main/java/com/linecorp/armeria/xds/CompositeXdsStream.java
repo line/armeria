@@ -49,6 +49,8 @@ final class CompositeXdsStream implements XdsStream {
 
     @Override
     public void resourcesUpdated(XdsType type) {
-        streamMap.get(type).resourcesUpdated(type);
+        final XdsStream stream = streamMap.get(type);
+        assert stream != null;
+        stream.resourcesUpdated(type);
     }
 }

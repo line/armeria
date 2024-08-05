@@ -337,6 +337,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
     }
 
     ServiceConfig build(ServiceNaming defaultServiceNaming,
+                        @Nullable String defaultLogName,
                         long defaultRequestTimeoutMillis,
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
@@ -374,8 +375,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
         return new ServiceConfig(
                 routeWithBaseContextPath,
                 mappedRoute == null ? routeWithBaseContextPath : mappedRoute,
-                service, defaultLogName, defaultServiceName,
+                service, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
+                this.defaultLogName != null ? this.defaultLogName : defaultLogName,
                 requestTimeoutMillis,
                 maxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
@@ -398,6 +400,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
                           .add("route", route)
                           .add("service", service)
                           .add("defaultServiceNaming", defaultServiceNaming)
+                          .add("defaultLogName", defaultLogName)
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)

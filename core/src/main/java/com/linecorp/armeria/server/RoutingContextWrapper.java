@@ -104,6 +104,7 @@ class RoutingContextWrapper implements RoutingContext {
         delegate.deferStatusException(cause);
     }
 
+    @Nullable
     @Override
     public HttpStatusException deferredStatusException() {
         return delegate.deferredStatusException();
