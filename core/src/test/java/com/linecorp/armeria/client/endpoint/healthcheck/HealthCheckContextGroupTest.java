@@ -25,8 +25,6 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -62,7 +60,7 @@ class HealthCheckContextGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> ImmutableList.of())) {
+                                                    endpoints -> false)) {
             assertThat(contexts).hasSize(2);
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();
@@ -132,7 +130,7 @@ class HealthCheckContextGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> ImmutableList.of())) {
+                                                    endpoints -> false)) {
             assertThat(contexts).hasSize(2);
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();

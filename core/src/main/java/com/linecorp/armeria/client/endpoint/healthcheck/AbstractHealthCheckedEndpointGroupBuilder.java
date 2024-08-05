@@ -22,12 +22,10 @@ import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKey
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.client.Client;
@@ -74,8 +72,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
     static final Predicate<Endpoint> DEFAULT_ENDPOINT_PREDICATE =
             endpoint -> Boolean.TRUE.equals(endpoint.attr(HEALTHY_ATTR));
     private Predicate<Endpoint> healthCheckedEndpointPredicate = DEFAULT_ENDPOINT_PREDICATE;
-    private Function<? super List<Endpoint>, ? extends List<Endpoint>> initialStateResolver =
-            endpoint -> ImmutableList.of();
+    private Predicate<? super Endpoint> initialStateResolver = endpoint -> false;
 
     /**
      * Creates a new {@link AbstractHealthCheckedEndpointGroupBuilder}.
@@ -400,27 +397,26 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
     }
 
     /**
-     * Sets a predicate to determine whether a list of {@link Endpoint} should be considered healthy
+     * Sets a predicate to determine whether an {@link Endpoint} should be considered healthy
      * before the initial health check. This predicate will be called on each update of the delegate
      * {@link EndpointGroup} as long as the first round of health checks haven't completed yet.
-     * This can be used to potentially avoid a long initial endpoint selection time. If an empty list
-     * is returned, the {@link HealthCheckedEndpointGroup} waits until the first round of health checks
+     * This can be used to potentially avoid a long initial endpoint selection time. If no endpoints
+     * are selected, the {@link HealthCheckedEndpointGroup} waits until the first round of health checks
      * complete.
      *
      * <p>For example:<pre>{@code
      * HealthCheckedEndpointGroup endpointGroup =
      *     HealthCheckedEndpointGroup.builder(delegate, "/health")
      *                               // all endpoints are candidates for endpoint selection
-     *                               .initialStateResolver(endpoints -> endpoints)
+     *                               .initialStateResolver(endpoint -> true)
      *                               // we wait until the first round of health checks complete
      *                               // before considering endpoints for selection
-     *                               .initialStateResolver(endpoints -> Collections.emptyList())
+     *                               .initialStateResolver(endpoint -> false)
      *                               .build();
      * }</pre>
      */
     @UnstableApi
-    public SELF initialStateResolver(
-            Function<? super List<Endpoint>, ? extends List<Endpoint>> initialStateResolver) {
+    public SELF initialStateResolver(Predicate<? super Endpoint> initialStateResolver) {
         this.initialStateResolver = requireNonNull(initialStateResolver, "initialStateResolver");
         return self();
     }

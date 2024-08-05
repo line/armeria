@@ -265,7 +265,7 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> ImmutableList.of())) {
+                                                    endpoints -> false)) {
 
             assertThat(group.allHealthyEndpoints()).containsOnly(candidate1, candidate2);
 
@@ -297,7 +297,7 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> ImmutableList.of())) {
+                                                    endpoints -> false)) {
 
             assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
                                          .containsOnly(candidate1, candidate2);
@@ -330,7 +330,7 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> ImmutableList.of())) {
+                                                    endpoints -> false)) {
             assertThat(counter.get()).isEqualTo(2);
         }
     }
@@ -356,7 +356,7 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> ImmutableList.of())) {
+                                                    endpoints -> false)) {
             final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
             endpointGroup.addListener(healthyEndpointsList::add, true);
             delegate.set(candidate1, candidate3);
@@ -565,7 +565,7 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
                                                     DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> ImmutableList.of())) {
+                                                    endpoints -> false)) {
             endpointGroup.addListener(endpointsListener, true);
             await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
             // the counter should stay 1 after 1 second has passed

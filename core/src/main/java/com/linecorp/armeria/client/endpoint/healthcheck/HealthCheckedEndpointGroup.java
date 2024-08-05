@@ -113,7 +113,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
     private final Predicate<Endpoint> healthCheckedEndpointPredicate;
-    private final Function<? super List<Endpoint>, ? extends List<Endpoint>> initialStateResolver;
+    private final Predicate<? super Endpoint> initialStateResolver;
 
     private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
@@ -137,7 +137,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy,
             Predicate<Endpoint> healthCheckedEndpointPredicate,
-            Function<? super List<Endpoint>, ? extends List<Endpoint>> initialStateResolver) {
+            Predicate<? super Endpoint> initialStateResolver) {
 
         super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
 
@@ -210,7 +210,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private void maybeApplyInitialResolver(List<Endpoint> endpoints) {
         try {
-            final List<Endpoint> mappedEndpoints = initialStateResolver.apply(endpoints);
+            final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
+            for (Endpoint endpoint: endpoints) {
+                if (initialStateResolver.test(endpoint)) {
+                    builder.add(endpoint);
+                }
+            }
+            final List<Endpoint> mappedEndpoints = builder.build();
             if (!mappedEndpoints.isEmpty()) {
                 setEndpoints(mappedEndpoints);
             }
