@@ -16,14 +16,11 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.POOLED_OBJECTS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.toSubscriptionOptions;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
@@ -31,12 +28,9 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
-
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -134,79 +128,6 @@ public abstract class FilteredStreamMessage<T, U> extends AggregationSupport imp
     @Override
     public final CompletableFuture<Void> whenComplete() {
         return completionFuture;
-    }
-
-    @Override
-    public CompletableFuture<List<U>> collect(EventExecutor executor, SubscriptionOption... options) {
-        final SubscriptionOption[] filterOptions = filterSupportsPooledObjects ? POOLED_OBJECTS : EMPTY_OPTIONS;
-        return upstream.collect(executor, filterOptions).handle((result, cause) -> {
-            // CollectingSubscriberAndSubscription just captures cancel(), onComplete(), and onError() signals
-            // from the subclass of FilteredStreamMessage. So we need to follow regular Reactive Streams
-            // specifications.
-            final CollectingSubscriberAndSubscription<U> subscriberAndSubscription =
-                    new CollectingSubscriberAndSubscription<>();
-            beforeSubscribe(subscriberAndSubscription, subscriberAndSubscription);
-            if (cause != null) {
-                beforeError(subscriberAndSubscription, cause);
-                completionFuture.completeExceptionally(cause);
-                return Exceptions.throwUnsafely(cause);
-            } else {
-                Throwable abortCause = null;
-                final ImmutableList.Builder<U> builder = ImmutableList.builderWithExpectedSize(result.size());
-                final boolean withPooledObjects = containsWithPooledObjects(options);
-                for (T t : result) {
-                    if (abortCause != null) {
-                        // This StreamMessage was aborted already. However, we need to release the remaining
-                        // objects in result.
-                        StreamMessageUtil.closeOrAbort(t, abortCause);
-                        continue;
-                    }
-
-                    try {
-                        U filtered = filter(t);
-
-                        if (subscriberAndSubscription.completed || subscriberAndSubscription.cause != null ||
-                            subscriberAndSubscription.cancelled) {
-                            if (subscriberAndSubscription.cause != null) {
-                                abortCause = cause;
-                            } else {
-                                abortCause = CancelledSubscriptionException.get();
-                            }
-                            StreamMessageUtil.closeOrAbort(filtered, abortCause);
-                        } else {
-                            requireNonNull(filtered, "filter() returned null");
-                            if (!withPooledObjects) {
-                                filtered = PooledObjects.copyAndClose(filtered);
-                            }
-                            builder.add(filtered);
-                        }
-                    } catch (Throwable ex) {
-                        // Failed to filter the object.
-                        StreamMessageUtil.closeOrAbort(t, abortCause);
-                        abortCause = ex;
-                    }
-                }
-
-                final List<U> elements = builder.build();
-                if (abortCause != null && !(abortCause instanceof CancelledSubscriptionException)) {
-                    // The stream was aborted with an unsafe exception.
-                    for (U element : elements) {
-                        StreamMessageUtil.closeOrAbort(element, abortCause);
-                    }
-                    completionFuture.completeExceptionally(abortCause);
-                    return Exceptions.throwUnsafely(abortCause);
-                }
-
-                try {
-                    beforeComplete(subscriberAndSubscription);
-                    completionFuture.complete(null);
-                } catch (Exception ex) {
-                    completionFuture.completeExceptionally(ex);
-                    throw ex;
-                }
-                return elements;
-            }
-        });
     }
 
     @Override
@@ -349,44 +270,6 @@ public abstract class FilteredStreamMessage<T, U> extends AggregationSupport imp
                 delegate.onError(cause);
                 completionFuture.completeExceptionally(cause);
             }
-        }
-    }
-
-    private static final class CollectingSubscriberAndSubscription<T> implements Subscriber<T>, Subscription {
-
-        private boolean completed;
-        private boolean cancelled;
-        @Nullable
-        private Throwable cause;
-
-        @Override
-        public void onSubscribe(Subscription s) {}
-
-        @Override
-        public void onNext(T o) {}
-
-        @Override
-        public void onError(Throwable t) {
-            if (completed) {
-                return;
-            }
-            cause = t;
-        }
-
-        @Override
-        public void onComplete() {
-            if (cause != null) {
-                return;
-            }
-            completed = true;
-        }
-
-        @Override
-        public void request(long n) {}
-
-        @Override
-        public void cancel() {
-            cancelled = true;
         }
     }
 }
