@@ -154,7 +154,7 @@ final class StreamMessageInputStream<T> extends InputStream {
 
         @Override
         public void onError(Throwable cause) {
-            byteBufsInputStream.setEos();
+            byteBufsInputStream.interrupt(cause);
         }
 
         @Override
