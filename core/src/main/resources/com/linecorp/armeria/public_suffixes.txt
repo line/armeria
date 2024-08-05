@@ -295,6 +295,7 @@ ac.mz
 ac.ni
 ac.nz
 ac.pa
+ac.pk
 ac.pr
 ac.rs
 ac.ru
@@ -3038,6 +3039,7 @@ gjerdrum.no
 gjerstad.no
 gjesdal.no
 gjovik.no
+gkp.pk
 gl
 gl.srv.us
 glass
@@ -3096,6 +3098,7 @@ gob.ve
 gobo.wakayama.jp
 godaddy
 godo.gifu.jp
+gog.pk
 goiania.br
 goip.de
 gojome.akita.jp
@@ -3856,7 +3859,6 @@ info.na
 info.nf
 info.ni
 info.nr
-info.pk
 info.pl
 info.pr
 info.ro
