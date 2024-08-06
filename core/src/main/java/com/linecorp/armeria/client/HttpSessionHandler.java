@@ -623,8 +623,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             // NEXT is assumed as SUCCESS.
             case SUCCESS:
             case NEXT:
+                // Although the last request succeeded luckily, we should see the total result in a window
+                // rather than just looking at one result.
                 outlierDetector.onSuccess();
-                // The connection was marked as an outlier, but it's back to normal.
                 if (outlierDetector.isOutlier()) {
                     markUnacquirable();
                 }
