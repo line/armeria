@@ -14,6 +14,22 @@ Send a pull request by editing [this page](https://github.com/line/armeria/edit/
 ### Slides and videos
 
 <Article
+  title="When Armeria blooms in Spring (Boot)"
+  url="https://www.youtube.com/watch?v=GTITs9lJY4U"
+  author="Trustin Lee"
+  date="20240531"
+  type="video"
+  description="
+    This Spring I/O 2024 presentation focuses on the integration between Armeria and Spring Boot Building,
+    demonstrating how Armeria helps with various migration scenarios involving a wide range of technologies,
+    including Spring MVC, WebFlux, gRPC, GraphQL, and WebSocket. How can we transition from Spring MVC or
+    WebFlux to gRPC, or even allow them to coexist without outages? Should we keep additional servers until
+    the migration is complete? Should we open an extra port? How do we manage the operational complexity
+    involved? If you’ve ever pondered these questions, this talk might be for you.
+  "
+/>
+
+<Article
   title="gRPC supercharged with Armeria"
   url="https://www.youtube.com/watch?v=g_z_Pbjd0v0"
   author="Trustin Lee"
@@ -165,13 +181,27 @@ Send a pull request by editing [this page](https://github.com/line/armeria/edit/
 ### Articles
 
 <Article
+  title="Migration to Armeria server"
+  url="https://evitadb.io/blog/13-migration-to-armeria-server"
+  author="Jan Novotný"
+  date="20240810"
+  description="
+    evitaDB's successful migration story for their multi-protocol (REST, GraphQL, and gRPC) server from
+    Undertow to Armeria. This blog post covers various aspects of the migration, including the performance
+    changes they observed and the new interesting features in Armeria previously impossible,
+    such as serving TLS and cleartext traffic in the same port.
+  "
+/>
+
+<Article
   title="Building an authorization framework with Armeria - a case study"
   url="https://blog.dogac.dev/building-an-authorization-framework-with-armeria/"
   author="Doğaç Eldenk"
   date="20240603"
   description="
-    Learn how to utilize Armeria decorators and Java/Kotlin annotations to build a flexible authentication and
-    authorization framework for your application.
+    A comprehensive guide on how to implement authentication and authorization in your Armeria application.
+    It also covers interesting topics like Kotlin coroutines and OPA (Open Policy Agent) based authorization
+    without using Envoy at all.
   "
 />
 

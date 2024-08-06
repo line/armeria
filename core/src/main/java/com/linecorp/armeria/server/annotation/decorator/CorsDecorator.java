@@ -77,7 +77,7 @@ public @interface CorsDecorator {
      */
     String[] exposedHeaders() default {};
 
-    // FIXME(ghkim3221): Change the default value to true in Armeria 2.0.
+    // FIXME(0x1306e6d): Change the default value to true in Armeria 2.0.
     /**
      * Allows all HTTP headers in the CORS {@code "Access-Control-Request-Headers"} request header.
      *
