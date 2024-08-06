@@ -109,8 +109,6 @@ public final class DefaultServiceRequestContext
 
     private boolean shouldReportUnloggedExceptions = true;
 
-    private boolean shouldUseBlockingTaskExecutor;
-
     private final RequestLogBuilder log;
 
     @Nullable
@@ -295,16 +293,6 @@ public final class DefaultServiceRequestContext
 
         final BlockingTaskExecutor executor = config().blockingTaskExecutor();
         return blockingTaskExecutor = ContextAwareBlockingTaskExecutor.of(this, executor);
-    }
-
-    @Override
-    public boolean shouldUseBlockingTaskExecutor() {
-        return shouldUseBlockingTaskExecutor;
-    }
-
-    @Override
-    public void setShouldUseBlockingTaskExecutor(boolean value) {
-        shouldUseBlockingTaskExecutor = value;
     }
 
     @Override
