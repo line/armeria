@@ -72,7 +72,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
     static final Predicate<Endpoint> DEFAULT_ENDPOINT_PREDICATE =
             endpoint -> Boolean.TRUE.equals(endpoint.attr(HEALTHY_ATTR));
     private Predicate<Endpoint> healthCheckedEndpointPredicate = DEFAULT_ENDPOINT_PREDICATE;
-    private Predicate<? super Endpoint> initialStateResolver = endpoint -> false;
 
     /**
      * Creates a new {@link AbstractHealthCheckedEndpointGroupBuilder}.
@@ -397,31 +396,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
     }
 
     /**
-     * Sets a predicate to determine whether an {@link Endpoint} should be considered healthy
-     * before the initial health check. This predicate will be called on each update of the delegate
-     * {@link EndpointGroup} as long as the first round of health checks haven't completed yet.
-     * This can be used to potentially avoid a long initial endpoint selection time. If no endpoints
-     * are selected, the {@link HealthCheckedEndpointGroup} waits until the first round of health checks
-     * complete.
-     *
-     * <p>For example:<pre>{@code
-     * HealthCheckedEndpointGroup endpointGroup =
-     *     HealthCheckedEndpointGroup.builder(delegate, "/health")
-     *                               // all endpoints are candidates for endpoint selection
-     *                               .initialStateResolver(endpoint -> true)
-     *                               // we wait until the first round of health checks complete
-     *                               // before considering endpoints for selection
-     *                               .initialStateResolver(endpoint -> false)
-     *                               .build();
-     * }</pre>
-     */
-    @UnstableApi
-    public SELF initialStateResolver(Predicate<? super Endpoint> initialStateResolver) {
-        this.initialStateResolver = requireNonNull(initialStateResolver, "initialStateResolver");
-        return self();
-    }
-
-    /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
     public final HealthCheckedEndpointGroup build() {
@@ -446,8 +420,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
                                               protocol, port, retryBackoff,
                                               clientOptionsBuilder.build(),
                                               newCheckerFactory(), healthCheckStrategy,
-                                              healthCheckedEndpointPredicate,
-                                              initialStateResolver);
+                                              healthCheckedEndpointPredicate);
     }
 
     /**

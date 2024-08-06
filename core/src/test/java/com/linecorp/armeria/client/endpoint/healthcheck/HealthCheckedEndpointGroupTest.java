@@ -264,8 +264,7 @@ class HealthCheckedEndpointGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> false)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
 
             assertThat(group.allHealthyEndpoints()).containsOnly(candidate1, candidate2);
 
@@ -296,8 +295,7 @@ class HealthCheckedEndpointGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> false)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
 
             assertThat(group.endpoints()).usingElementComparator(new EndpointComparator())
                                          .containsOnly(candidate1, candidate2);
@@ -329,8 +327,7 @@ class HealthCheckedEndpointGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> false)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
             assertThat(counter.get()).isEqualTo(2);
         }
     }
@@ -355,8 +352,7 @@ class HealthCheckedEndpointGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> false)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
             final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
             endpointGroup.addListener(healthyEndpointsList::add, true);
             delegate.set(candidate1, candidate3);
@@ -564,8 +560,7 @@ class HealthCheckedEndpointGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> false)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
             endpointGroup.addListener(endpointsListener, true);
             await().untilAsserted(() -> assertThat(updateInvokedCounter).hasValue(1));
             // the counter should stay 1 after 1 second has passed

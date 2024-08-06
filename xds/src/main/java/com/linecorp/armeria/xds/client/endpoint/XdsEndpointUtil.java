@@ -36,10 +36,8 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
-import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.Attributes;
-import com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
@@ -117,15 +115,9 @@ final class XdsEndpointUtil {
                                                     HealthCheck healthCheck,
                                                     Map<Endpoint, Attributes> prevAttrs) {
         final HttpHealthCheck httpHealthCheck = healthCheck.getHttpHealthCheck();
-        final HealthCheckedEndpointGroup group =
-                new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck)
-                        .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
-                        .initialStateResolver(prevAttrs::containsKey)
-                        .build();
-        // XdsHealthCheckedEndpointGroupBuilder can return endpoints without attributes if initialStateResolver
-        // is applied. If endpoints don't have HEALTHY or DEGRADED attributes, add them from cached attributes.
-        return new AttributeRetainingEndpointGroup(group, prevAttrs, EndpointAttributeKeys.HEALTHY_ATTR,
-                                                   EndpointAttributeKeys.DEGRADED_ATTR);
+        return new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck)
+                .healthCheckedEndpointPredicate(Predicates.alwaysTrue())
+                .build();
     }
 
     private static EndpointGroup staticEndpointGroup(ClusterSnapshot clusterSnapshot) {

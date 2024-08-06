@@ -59,8 +59,7 @@ class HealthCheckContextGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> false)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
             assertThat(contexts).hasSize(2);
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();
@@ -129,8 +128,7 @@ class HealthCheckContextGroupTest {
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all(),
-                                                    DEFAULT_ENDPOINT_PREDICATE,
-                                                    endpoints -> false)) {
+                                                    DEFAULT_ENDPOINT_PREDICATE)) {
             assertThat(contexts).hasSize(2);
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();

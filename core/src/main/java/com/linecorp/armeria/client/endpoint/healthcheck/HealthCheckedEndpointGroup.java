@@ -113,7 +113,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
     private final Predicate<Endpoint> healthCheckedEndpointPredicate;
-    private final Predicate<? super Endpoint> initialStateResolver;
 
     private final ReentrantLock lock = new ReentrantShortLock();
     @GuardedBy("lock")
@@ -136,8 +135,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             Backoff retryBackoff, ClientOptions clientOptions,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy,
-            Predicate<Endpoint> healthCheckedEndpointPredicate,
-            Predicate<? super Endpoint> initialStateResolver) {
+            Predicate<Endpoint> healthCheckedEndpointPredicate) {
 
         super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
 
@@ -152,17 +150,12 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         this.healthCheckStrategy = requireNonNull(healthCheckStrategy, "healthCheckStrategy");
         this.healthCheckedEndpointPredicate =
                 requireNonNull(healthCheckedEndpointPredicate, "healthCheckedEndpointPredicate");
-        this.initialStateResolver = requireNonNull(initialStateResolver, "initialStateResolver");
 
         clientOptions.factory().whenClosed().thenRun(this::closeAsync);
         delegate.addListener(this::setCandidates, true);
     }
 
     private void setCandidates(List<Endpoint> endpoints) {
-        if (!initialized) {
-            maybeApplyInitialResolver(endpoints);
-        }
-
         final List<Endpoint> candidates = healthCheckStrategy.select(endpoints);
         final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(candidates.size());
 
@@ -205,23 +198,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             });
         } finally {
             lock.unlock();
-        }
-    }
-
-    private void maybeApplyInitialResolver(List<Endpoint> endpoints) {
-        try {
-            final ImmutableList.Builder<Endpoint> builder = ImmutableList.builder();
-            for (Endpoint endpoint: endpoints) {
-                if (initialStateResolver.test(endpoint)) {
-                    builder.add(endpoint);
-                }
-            }
-            final List<Endpoint> mappedEndpoints = builder.build();
-            if (!mappedEndpoints.isEmpty()) {
-                setEndpoints(mappedEndpoints);
-            }
-        } catch (Throwable t) {
-            logger.warn("Unexpected error while applying initialStateResolver: ", t);
         }
     }
 
@@ -319,7 +295,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         if (health && findContext(endpoint) != null) {
             final Endpoint cached = cachedEndpoints.get(endpoint);
             cachedEndpoints.put(endpoint, endpoint);
-            // the previous endpoin didn't exist, or the attributes changed
+            // the previous endpoint didn't exist, or the attributes changed
             updated = (cached == null) || !cached.attrs().equals(endpoint.attrs());
         } else {
             updated = cachedEndpoints.remove(endpoint, endpoint);
