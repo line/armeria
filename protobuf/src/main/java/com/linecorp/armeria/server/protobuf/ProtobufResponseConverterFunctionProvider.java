@@ -27,6 +27,7 @@ import org.reactivestreams.Publisher;
 import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 @UnstableApi
 public final class ProtobufResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
+    @Nullable
     @Override
     public ResponseConverterFunction createResponseConverterFunction(Type returnType) {
         if (isSupportedType(returnType)) {

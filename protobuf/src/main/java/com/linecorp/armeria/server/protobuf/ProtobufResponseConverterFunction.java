@@ -97,6 +97,8 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             // Should never reach here.
             fromPublisher = null;
         }
+
+        assert fromPublisher != null;
         fromPublisherMH = fromPublisher;
 
         MethodHandle fromStream;
@@ -110,6 +112,8 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             // Should never reach here.
             fromStream = null;
         }
+
+        assert fromStream != null;
         fromStreamMH = fromStream;
 
         MethodHandle fromObject;
@@ -122,6 +126,8 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             // Should never reach here.
             fromObject = null;
         }
+
+        assert fromObject != null;
         fromObjectMH = fromObject;
     }
 
@@ -145,6 +151,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
         this.jsonPrinter = requireNonNull(jsonPrinter, "jsonPrinter");
     }
 
+    @Nullable
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
         final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
@@ -209,6 +216,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
 
         if (result instanceof Message) {
             if (isJson) {
+                assert contentType != null;
                 final Charset charset = contentType.charset(StandardCharsets.UTF_8);
                 return HttpResponse.of(headers, toJsonHttpData(result, charset), trailers);
             }
@@ -224,6 +232,7 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
         }
 
         if (isJson) {
+            assert contentType != null;
             checkArgument(result != null, "a null value is not allowed for %s", contentType);
             final Charset charset = contentType.charset(StandardCharsets.UTF_8);
 

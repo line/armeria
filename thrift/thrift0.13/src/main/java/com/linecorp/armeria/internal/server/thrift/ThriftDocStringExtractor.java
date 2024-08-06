@@ -65,6 +65,7 @@ final class ThriftDocStringExtractor extends DocStringExtractor {
                 final Map<String, Object> namespaces =
                         (Map<String, Object>) json.getOrDefault("namespaces", ImmutableMap.of());
                 final String packageName = (String) namespaces.get("java");
+                assert packageName != null : "Missing namespace for Java? " + namespaces;
                 json.forEach((key, children) -> {
                     if (children instanceof Collection) {
                         @SuppressWarnings("unchecked")

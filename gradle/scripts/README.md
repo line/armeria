@@ -576,6 +576,13 @@ relocations [ { from: "com.google.common", to: "com.doe.john.myproject.shaded.gu
               { from: "com.google.thirdparty.publicsuffix", to: "com.doe.john.myproject.shaded.publicsuffix" } ]
 ```
 
+Unshaded tests are disabled by default when a shading task is configured. If you want to run unshaded tests,
+you can specify `-PpreferShadedTests=false` option.
+
+
+If you would like to remove specific files when shading the JAR, you may specify the
+`-PshadowExclusions=<comma delimited files>` option.
+
 ### Trimming a shaded JAR with `trim` flag
 
 If you shade many dependencies, your JAR will grow huge, even if you only use

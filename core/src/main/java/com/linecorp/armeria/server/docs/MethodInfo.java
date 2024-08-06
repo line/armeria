@@ -159,7 +159,9 @@ public final class MethodInfo {
         for (String query : exampleQueries) {
             final RequestTarget reqTarget = RequestTarget.forServer("/?" + query);
             checkArgument(reqTarget != null, "exampleQueries contains an invalid query string: %s", query);
-            exampleQueriesBuilder.add(reqTarget.query());
+            final String safeQuery = reqTarget.query();
+            assert safeQuery != null;
+            exampleQueriesBuilder.add(safeQuery);
         }
         this.exampleQueries = exampleQueriesBuilder.build();
 

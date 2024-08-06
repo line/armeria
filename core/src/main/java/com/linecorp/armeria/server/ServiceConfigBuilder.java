@@ -35,7 +35,6 @@ import java.util.function.Supplier;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.RequestId;
@@ -43,8 +42,6 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
-import com.linecorp.armeria.internal.common.websocket.WebSocketUtil;
-import com.linecorp.armeria.internal.server.websocket.DefaultWebSocketService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.netty.channel.EventLoopGroup;
@@ -93,6 +90,17 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
     ServiceConfigBuilder(Route route, String contextPath, HttpService service) {
         this.route = requireNonNull(route, "route").withPrefix(contextPath);
         this.service = requireNonNull(service, "service");
+
+        final ServiceOptions options = service.options();
+        if (options.requestTimeoutMillis() != -1) {
+            requestTimeoutMillis = options.requestTimeoutMillis();
+        }
+        if (options.maxRequestLength() != -1) {
+            maxRequestLength = options.maxRequestLength();
+        }
+        if (options.requestAutoAbortDelayMillis() != -1) {
+            requestAutoAbortDelayMillis = options.requestAutoAbortDelayMillis();
+        }
     }
 
     void addMappedRoute(Route mappedRoute) {
@@ -329,6 +337,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
     }
 
     ServiceConfig build(ServiceNaming defaultServiceNaming,
+                        @Nullable String defaultLogName,
                         long defaultRequestTimeoutMillis,
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
@@ -352,34 +361,13 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
                                                                      unloggedExceptionsReporter);
         }
 
-        final boolean webSocket = service.as(DefaultWebSocketService.class) != null;
-        final long requestTimeoutMillis;
-        if (this.requestTimeoutMillis != null) {
-            requestTimeoutMillis = this.requestTimeoutMillis;
-        } else if (!webSocket || defaultRequestTimeoutMillis != Flags.defaultRequestTimeoutMillis()) {
-            requestTimeoutMillis = defaultRequestTimeoutMillis;
-        } else {
-            requestTimeoutMillis = WebSocketUtil.DEFAULT_REQUEST_RESPONSE_TIMEOUT_MILLIS;
-        }
-
-        final long maxRequestLength;
-        if (this.maxRequestLength != null) {
-            maxRequestLength = this.maxRequestLength;
-        } else if (!webSocket || defaultMaxRequestLength != Flags.defaultMaxRequestLength()) {
-            maxRequestLength = defaultMaxRequestLength;
-        } else {
-            maxRequestLength = WebSocketUtil.DEFAULT_MAX_REQUEST_RESPONSE_LENGTH;
-        }
-
-        final long requestAutoAbortDelayMillis;
-        if (this.requestAutoAbortDelayMillis != null) {
-            requestAutoAbortDelayMillis = this.requestAutoAbortDelayMillis;
-        } else if (!webSocket ||
-                   defaultRequestAutoAbortDelayMillis != Flags.defaultRequestAutoAbortDelayMillis()) {
-            requestAutoAbortDelayMillis = defaultRequestAutoAbortDelayMillis;
-        } else {
-            requestAutoAbortDelayMillis = WebSocketUtil.DEFAULT_REQUEST_AUTO_ABORT_DELAY_MILLIS;
-        }
+        final long requestTimeoutMillis = this.requestTimeoutMillis != null ? this.requestTimeoutMillis
+                                                                            : defaultRequestTimeoutMillis;
+        final long maxRequestLength = this.maxRequestLength != null ? this.maxRequestLength
+                                                                    : defaultMaxRequestLength;
+        final long requestAutoAbortDelayMillis =
+                this.requestAutoAbortDelayMillis != null ? this.requestAutoAbortDelayMillis
+                                                         : defaultRequestAutoAbortDelayMillis;
 
         final Supplier<AutoCloseable> mergedContextHook = mergeHooks(contextHook, this.contextHook);
 
@@ -387,8 +375,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
         return new ServiceConfig(
                 routeWithBaseContextPath,
                 mappedRoute == null ? routeWithBaseContextPath : mappedRoute,
-                service, defaultLogName, defaultServiceName,
+                service, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
+                this.defaultLogName != null ? this.defaultLogName : defaultLogName,
                 requestTimeoutMillis,
                 maxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
@@ -411,6 +400,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters<ServiceConfigBu
                           .add("route", route)
                           .add("service", service)
                           .add("defaultServiceNaming", defaultServiceNaming)
+                          .add("defaultLogName", defaultLogName)
                           .add("requestTimeoutMillis", requestTimeoutMillis)
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)

@@ -160,7 +160,7 @@ class HttpResponseWrapperTest {
         final TestHttpResponseDecoder decoder = new TestHttpResponseDecoder(channel, controller);
 
         res.init(controller);
-        return decoder.addResponse(1, res, cctx, cctx.eventLoop());
+        return decoder.addResponse(null, 1, res, cctx, cctx.eventLoop());
     }
 
     private static class TestHttpResponseDecoder extends AbstractHttpResponseDecoder {

@@ -51,7 +51,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.common.grpc.UnwrappingGrpcExceptionHandleFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
@@ -878,7 +877,8 @@ public final class GrpcServiceBuilder {
     @Deprecated
     public GrpcServiceBuilder exceptionMapping(GrpcStatusFunction statusFunction) {
         requireNonNull(statusFunction, "statusFunction");
-        return exceptionHandler(statusFunction::apply);
+        return exceptionHandler(
+                (ctx, status, throwable, metadata) -> statusFunction.apply(ctx, throwable, metadata));
     }
 
     /**
@@ -943,7 +943,9 @@ public final class GrpcServiceBuilder {
         checkState(exceptionHandler == null,
                    "addExceptionMapping() and exceptionMapping() are mutually exclusive.");
 
-        exceptionMappingsBuilder().on(exceptionType, statusFunction::apply);
+        exceptionMappingsBuilder().on(exceptionType,
+                                      (ctx, status, throwable, metadata) ->
+                                              statusFunction.apply(ctx, throwable, metadata));
         return this;
     }
 
@@ -997,7 +999,7 @@ public final class GrpcServiceBuilder {
             registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
 
-        GrpcExceptionHandlerFunction grpcExceptionHandler;
+        final GrpcExceptionHandlerFunction grpcExceptionHandler;
         if (exceptionMappingsBuilder != null) {
             grpcExceptionHandler = exceptionMappingsBuilder.build().orElse(GrpcExceptionHandlerFunction.of());
         } else if (exceptionHandler != null) {
@@ -1005,7 +1007,6 @@ public final class GrpcServiceBuilder {
         } else {
             grpcExceptionHandler = GrpcExceptionHandlerFunction.of();
         }
-        grpcExceptionHandler = new UnwrappingGrpcExceptionHandleFunction(grpcExceptionHandler);
         registryBuilder.setDefaultExceptionHandler(grpcExceptionHandler);
 
         if (interceptors != null) {

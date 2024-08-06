@@ -400,6 +400,11 @@ public final class Flags {
     private static final boolean TLS_ALLOW_UNSAFE_CIPHERS =
             getValue(FlagsProvider::tlsAllowUnsafeCiphers, "tlsAllowUnsafeCiphers");
 
+    // Maximum 16MiB https://datatracker.ietf.org/doc/html/rfc5246#section-7.4
+    private static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH =
+            getValue(FlagsProvider::defaultMaxClientHelloLength, "defaultMaxClientHelloLength",
+                     value -> value >= 0 && value <= 16777216); // 16MiB
+
     private static final Set<TransientServiceOption> TRANSIENT_SERVICE_OPTIONS =
             getValue(FlagsProvider::transientServiceOptions, "transientServiceOptions");
 
@@ -583,6 +588,7 @@ public final class Flags {
             return tlsEngineType;
         }
         detectTlsEngineAndDumpOpenSslInfo();
+        assert tlsEngineType != null;
         return tlsEngineType;
     }
 
@@ -629,6 +635,7 @@ public final class Flags {
             final SSLEngine engine = SslContextUtil.createSslContext(
                     SslContextBuilder::forClient,
                     /* forceHttp1 */ false,
+                    tlsEngineType,
                     /* tlsAllowUnsafeCiphers */ false,
                     ImmutableList.of(), null).newEngine(ByteBufAllocator.DEFAULT);
             logger.info("All available SSL protocols: {}",
@@ -655,6 +662,7 @@ public final class Flags {
             return dumpOpenSslInfo;
         }
         detectTlsEngineAndDumpOpenSslInfo();
+        assert dumpOpenSslInfo != null;
         return dumpOpenSslInfo;
     }
 
@@ -1424,6 +1432,19 @@ public final class Flags {
      */
     public static boolean tlsAllowUnsafeCiphers() {
         return TLS_ALLOW_UNSAFE_CIPHERS;
+    }
+
+    /**
+     * Returns the default maximum client hello length that a server allows.
+     * The length shouldn't exceed 16MiB as described in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc5246#section-7.4">Handshake Protocol</a>.
+     *
+     * <p>The default value of this flag is {@value DefaultFlagsProvider#DEFAULT_MAX_CLIENT_HELLO_LENGTH}.
+     * Specify the {@code -Dcom.linecorp.armeria.defaultMaxClientHelloLength=<integer>} JVM option to
+     * override the default value.
+     */
+    public static int defaultMaxClientHelloLength() {
+        return DEFAULT_MAX_CLIENT_HELLO_LENGTH;
     }
 
     /**

@@ -131,7 +131,10 @@ public final class DnsUtil {
         return DEFAULT_DNS_QUERY_TIMEOUT_MILLIS;
     }
 
-    public static boolean isDnsQueryTimedOut(Throwable cause) {
+    public static boolean isDnsQueryTimedOut(@Nullable Throwable cause) {
+        if (cause == null) {
+            return false;
+        }
         final Throwable rootCause = Throwables.getRootCause(cause);
         if (rootCause instanceof DnsErrorCauseException) {
             return false;

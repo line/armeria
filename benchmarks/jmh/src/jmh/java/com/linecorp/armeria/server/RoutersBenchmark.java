@@ -60,7 +60,8 @@ public class RoutersBenchmark {
         SERVICES = ImmutableList.of(newServiceConfig(route1), newServiceConfig(route2));
         FALLBACK_SERVICE = newServiceConfig(Route.ofCatchAll());
         HOST = new VirtualHost(
-                "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
+                "localhost", "localhost", 0, null,
+                null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, FALLBACK_SERVICE.defaultServiceNaming(),
                 FALLBACK_SERVICE.defaultLogName(), 0, 0, false,
                 AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), 0, SuccessFunction.ofDefault(),
@@ -77,7 +78,7 @@ public class RoutersBenchmark {
         final Path multipartUploadsLocation = Flags.defaultMultipartUploadsLocation();
         final ServiceErrorHandler serviceErrorHandler = ServerErrorHandler.ofDefault().asServiceErrorHandler();
         return new ServiceConfig(route, route,
-                                 SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
+                                 SERVICE, defaultServiceName, defaultServiceNaming, defaultLogName, 0, 0,
                                  false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                  SuccessFunction.always(), 0, multipartUploadsLocation,
                                  MultipartRemovalStrategy.ON_RESPONSE_COMPLETION,

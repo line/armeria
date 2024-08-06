@@ -60,6 +60,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final long DEFAULT_CONNECT_TIMEOUT_MILLIS = 3200; // 3.2 seconds
     static final long DEFAULT_WRITE_TIMEOUT_MILLIS = 1000; // 1 second
 
+    // Use the fragmentation size as the default. https://datatracker.ietf.org/doc/html/rfc5246#section-6.2.1
+    static final int DEFAULT_MAX_CLIENT_HELLO_LENGTH = 16384; // 16KiB
+
     // Use slightly greater value than the default request timeout so that clients have a higher chance of
     // getting proper 503 Service Unavailable response when server-side timeout occurs.
     static final long DEFAULT_RESPONSE_TIMEOUT_MILLIS = 15 * 1000; // 15 seconds
@@ -435,6 +438,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public Boolean tlsAllowUnsafeCiphers() {
         return false;
+    }
+
+    @Override
+    public Integer defaultMaxClientHelloLength() {
+        return DEFAULT_MAX_CLIENT_HELLO_LENGTH;
     }
 
     @Override

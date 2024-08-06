@@ -88,6 +88,7 @@ public final class FutureTransformingRequestPreparation<T>
 
         return response.exceptionally(cause -> {
             cause = Exceptions.peel(cause);
+            assert errorHandler != null;
             final Object maybeRecovered = errorHandler.apply(cause);
             if (maybeRecovered instanceof Throwable) {
                 // The cause was translated.

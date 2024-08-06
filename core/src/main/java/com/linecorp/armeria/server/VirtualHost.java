@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -82,6 +83,8 @@ public final class VirtualHost {
     private final int port;
     @Nullable
     private final SslContext sslContext;
+    @Nullable
+    private final TlsEngineType tlsEngineType;
     private final Router<ServiceConfig> router;
     private final List<ServiceConfig> serviceConfigs;
     private final ServiceConfig fallbackServiceConfig;
@@ -89,6 +92,7 @@ public final class VirtualHost {
     private final Logger accessLogger;
 
     private final ServiceNaming defaultServiceNaming;
+    @Nullable
     private final String defaultLogName;
     private final long requestTimeoutMillis;
     private final long maxRequestLength;
@@ -105,12 +109,13 @@ public final class VirtualHost {
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
+                @Nullable TlsEngineType tlsEngineType,
                 Iterable<ServiceConfig> serviceConfigs,
                 ServiceConfig fallbackServiceConfig,
                 RejectedRouteHandler rejectionHandler,
                 Function<? super VirtualHost, ? extends Logger> accessLoggerMapper,
                 ServiceNaming defaultServiceNaming,
-                String defaultLogName,
+                @Nullable String defaultLogName,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
@@ -133,6 +138,7 @@ public final class VirtualHost {
         }
         this.port = port;
         this.sslContext = sslContext;
+        this.tlsEngineType = tlsEngineType;
         this.defaultServiceNaming = defaultServiceNaming;
         this.defaultLogName = defaultLogName;
         this.requestTimeoutMillis = requestTimeoutMillis;
@@ -167,9 +173,9 @@ public final class VirtualHost {
 
     VirtualHost withNewSslContext(SslContext sslContext) {
         return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
-                               serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
-                               maxRequestLength, verboseResponses,
+                               tlsEngineType, serviceConfigs, fallbackServiceConfig,
+                               RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
+                               defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
                                successFunction, multipartUploadsLocation, multipartRemovalStrategy,
                                serviceWorkerGroup,
@@ -322,6 +328,15 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the {@link TlsEngineType} of this virtual host.
+     */
+    @Nullable
+    @UnstableApi
+    public TlsEngineType tlsEngineType() {
+        return tlsEngineType;
+    }
+
+    /**
      * Returns the information about the {@link HttpService}s bound to this virtual host.
      */
     public List<ServiceConfig> serviceConfigs() {
@@ -348,6 +363,7 @@ public final class VirtualHost {
      * Returns the default value of the {@link RequestLog#name()} property which is used when no name was set
      * via {@link RequestLogBuilder#name(String, String)}.
      */
+    @Nullable
     public String defaultLogName() {
         return defaultLogName;
     }
@@ -575,12 +591,12 @@ public final class VirtualHost {
                 this.fallbackServiceConfig.withDecoratedService(decorator);
 
         return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
-                               serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, defaultServiceNaming, defaultLogName, requestTimeoutMillis,
-                               maxRequestLength, verboseResponses, accessLogWriter, blockingTaskExecutor,
-                               requestAutoAbortDelayMillis, successFunction, multipartUploadsLocation,
-                               multipartRemovalStrategy, serviceWorkerGroup, shutdownSupports,
-                               requestIdGenerator);
+                               tlsEngineType, serviceConfigs, fallbackServiceConfig,
+                               RejectedRouteHandler.DISABLED, host -> accessLogger, defaultServiceNaming,
+                               defaultLogName, requestTimeoutMillis, maxRequestLength, verboseResponses,
+                               accessLogWriter, blockingTaskExecutor, requestAutoAbortDelayMillis,
+                               successFunction, multipartUploadsLocation, multipartRemovalStrategy,
+                               serviceWorkerGroup, shutdownSupports, requestIdGenerator);
     }
 
     @Override

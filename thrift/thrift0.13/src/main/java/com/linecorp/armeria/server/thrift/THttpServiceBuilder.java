@@ -23,6 +23,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -84,6 +85,7 @@ public final class THttpServiceBuilder {
     // -1 means to use the default request length of the Server.
     private int maxRequestStringLength = -1;
     private int maxRequestContainerLength = -1;
+    private boolean useBlockingTaskExecutor;
 
     THttpServiceBuilder() {}
 
@@ -191,6 +193,17 @@ public final class THttpServiceBuilder {
     }
 
     /**
+     * Sets whether the service executes service methods using the blocking executor. By default, service
+     * methods are executed directly on the event loop for implementing fully asynchronous services. If your
+     * service uses blocking logic, you should either execute such logic in a separate thread using something
+     * like {@link Executors#newCachedThreadPool()} or enable this setting.
+     */
+    public THttpServiceBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
+        this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        return this;
+    }
+
+    /**
      * Sets the {@link BiFunction} that returns an {@link RpcResponse} using the given {@link Throwable}
      * and {@link ServiceRequestContext}.
      */
@@ -225,10 +238,11 @@ public final class THttpServiceBuilder {
      * Builds a new instance of {@link THttpService}.
      */
     public THttpService build() {
-        @SuppressWarnings("UnstableApiUsage")
         final Map<String, List<Object>> implementations = Multimaps.asMap(implementationsBuilder.build());
-
-        final ThriftCallService tcs = ThriftCallService.of(implementations);
+        final ThriftCallService tcs = new ThriftCallServiceBuilder()
+                .addServices(implementations)
+                .useBlockingTaskExecutor(useBlockingTaskExecutor)
+                .build();
         return build0(tcs);
     }
 
@@ -244,7 +258,9 @@ public final class THttpServiceBuilder {
         builder.add(defaultSerializationFormat);
         builder.addAll(otherSerializationFormats);
 
-        return new THttpService(decorate(tcs), defaultSerializationFormat, builder.build(),
-                                maxRequestStringLength, maxRequestContainerLength, exceptionHandler);
+        return new THttpService(
+                decorate(tcs), defaultSerializationFormat, builder.build(),
+                maxRequestStringLength, maxRequestContainerLength, exceptionHandler
+        );
     }
 }

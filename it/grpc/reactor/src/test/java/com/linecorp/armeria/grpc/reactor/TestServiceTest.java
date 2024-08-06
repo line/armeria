@@ -60,7 +60,7 @@ class TestServiceTest {
         final HttpServiceWithRoutes grpcService =
                 GrpcService.builder()
                            .addService(new TestServiceImpl())
-                           .exceptionHandler((ctx, throwable, metadata) -> {
+                           .exceptionHandler((ctx, status, throwable, metadata) -> {
                                if (throwable instanceof TestServiceImpl.AuthException) {
                                    return Status.UNAUTHENTICATED.withDescription(throwable.getMessage())
                                                                 .withCause(throwable);

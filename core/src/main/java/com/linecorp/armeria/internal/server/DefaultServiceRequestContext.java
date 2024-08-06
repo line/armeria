@@ -212,6 +212,7 @@ public final class DefaultServiceRequestContext
         this.additionalResponseTrailers = additionalResponseTrailers;
     }
 
+    @Nullable
     @Override
     protected RequestTarget validateHeaders(RequestHeaders headers) {
         checkArgument(headers.scheme() != null && headers.authority() != null,

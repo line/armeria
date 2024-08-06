@@ -55,7 +55,7 @@ class AsyncServerInterceptorTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final GrpcExceptionHandlerFunction exceptionHandler = (ctx, throwable, metadata) -> {
+            final GrpcExceptionHandlerFunction exceptionHandler = (ctx, status, throwable, metadata) -> {
                 exceptionCounter.getAndIncrement();
                 if (throwable instanceof AnticipatedException &&
                     "Invalid access".equals(throwable.getMessage())) {

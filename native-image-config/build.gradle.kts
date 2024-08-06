@@ -12,9 +12,9 @@ buildscript {
     dependencies {
         // TODO(trustin): Use platform(libs.boms.jackson) once Gradle supports platform() for build dependencies.
         //                https://github.com/gradle/gradle/issues/21788
-        val jacksonDatabind = libs.jackson.databind.get()
+        val jacksonDatabind: ModuleVersionSelector = libs.jackson.databind.get()
         classpath(
-            group = jacksonDatabind.group!!,
+            group = jacksonDatabind.group,
             name = jacksonDatabind.name,
             version = libs.boms.jackson.get().version
         )
@@ -29,12 +29,10 @@ plugins {
 // If `-Pscratch` is specified, do not source the previously generated config at core/src/main/resources/META-INF/native-image
 // otherwise, the previously generated config will be merged into the newly generated config.
 val shouldGenerateFromScratch = project.findProperty("scratch").let {
-    if (it == null) {
-        false
-    } else if (it == "") {
-        true
-    } else {
-        throw IllegalArgumentException("-Pscratch option must be specified without any value.")
+    when (it) {
+        null -> false
+        "" -> true
+        else -> throw IllegalArgumentException("-Pscratch option must be specified without any value.")
     }
 }
 
@@ -50,6 +48,7 @@ val nativeImageConfigToolPath = "${graalHome.resolve("lib/svm/bin/native-image-c
 
 val thisProject = project
 val callerFilterFile = projectDir.resolve("src/trace-filters/caller-filter.json")
+val buildDir = layout.buildDirectory.asFile.get()
 val processNativeImageTracesOutputDir = buildDir.resolve("step-1-process-native-image-traces")
 val simplifyNativeImageConfigOutputDir = buildDir.resolve("step-2-simplify-native-image-config")
 val nativeImageConfigOutputDir = buildDir.resolve("step-3-final-native-image-config")

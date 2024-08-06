@@ -42,11 +42,17 @@ class ServerErrorHandlerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             sb.route()
               .get("/foo")
-              .errorHandler((ctx, cause) -> null)
+              .errorHandler((ctx, cause) -> {
+                  assertThat(ServiceRequestContext.current()).isSameAs(ctx);
+                  return null;
+              })
               .build((ctx, req) -> {
                   throw new RuntimeException();
               });
-            sb.errorHandler((ctx, cause) -> HttpResponse.of(HttpStatus.BAD_REQUEST));
+            sb.errorHandler((ctx, cause) -> {
+                assertThat(ServiceRequestContext.current()).isSameAs(ctx);
+                return HttpResponse.of(HttpStatus.BAD_REQUEST);
+            });
         }
     };
 

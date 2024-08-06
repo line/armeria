@@ -132,6 +132,14 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                           .responseTimeoutMillis(0)
                           .maxResponseLength(UPGRADE_RESPONSE_MAX_LENGTH).build();
 
+    private static final RequestTarget REQ_TARGET_ASTERISK;
+
+    static {
+        final RequestTarget asterisk = RequestTarget.forClient("*");
+        assert asterisk != null;
+        REQ_TARGET_ASTERISK = asterisk;
+    }
+
     private enum HttpPreference {
         HTTP1_REQUIRED,
         HTTP2_PREFERRED,
@@ -215,7 +223,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
      * See <a href="https://http2.github.io/http2-spec/#discover-https">HTTP/2 specification</a>.
      */
     private void configureAsHttps(Channel ch, SocketAddress remoteAddr) {
-        assert isHttps();
+        assert sslCtx != null;
 
         final ChannelPipeline p = ch.pipeline();
         final SSLEngine sslEngine;
@@ -564,13 +572,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
             final DefaultClientRequestContext reqCtx = new DefaultClientRequestContext(
                     ctx.channel().eventLoop(), Flags.meterRegistry(), H1C, RequestId.random(),
                     com.linecorp.armeria.common.HttpMethod.OPTIONS,
-                    RequestTarget.forClient("*"), ClientOptions.of(),
+                    REQ_TARGET_ASTERISK, ClientOptions.of(),
                     HttpRequest.of(com.linecorp.armeria.common.HttpMethod.OPTIONS, "*"),
                     null, REQUEST_OPTIONS_FOR_UPGRADE_REQUEST, CancellationScheduler.noop(),
                     System.nanoTime(), SystemInfo.currentTimeMicros());
 
             // NB: No need to set the response timeout because we have session creation timeout.
-            responseDecoder.addResponse(0, res, reqCtx, ctx.channel().eventLoop());
+            responseDecoder.addResponse(null, 0, res, reqCtx, ctx.channel().eventLoop());
             ctx.fireChannelActive();
         }
 
@@ -805,7 +813,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            HttpSession.get(ctx.channel()).deactivate();
+            HttpSession.get(ctx.channel()).markUnacquirable();
             super.close(ctx, promise);
         }
     }

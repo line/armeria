@@ -163,7 +163,7 @@ public final class Version {
             for (Object o : props.keySet()) {
                 final String k = (String) o;
 
-                final int dotIndex = k.indexOf('.');
+                final int dotIndex = k.lastIndexOf('.');
                 if (dotIndex <= 0) {
                     continue;
                 }

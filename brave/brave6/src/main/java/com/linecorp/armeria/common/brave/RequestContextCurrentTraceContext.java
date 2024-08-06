@@ -174,7 +174,7 @@ public final class RequestContextCurrentTraceContext extends CurrentTraceContext
 
     @UnstableApi
     @Override
-    public Scope decorateScope(TraceContext context, Scope scope) {
+    public Scope decorateScope(@Nullable TraceContext context, Scope scope) {
         // If a `Scope` is decorated, `ScopeDecorator`s populate some contexts as such as MDC, which are stored
         // to a thread-local. The activated contexts will be removed when `decoratedScope.close()` is called.
         // If `Scope.NOOP` is specified, CurrentTraceContext.decorateScope() performs nothing.

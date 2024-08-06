@@ -53,6 +53,8 @@ class AbstractStreamDecoder implements StreamDecoder {
                                               .maxContentLength(maxLength)
                                               .cause(ex)
                                               .build();
+            } else {
+                throw ex;
             }
         }
         return fetchDecoderOutput();

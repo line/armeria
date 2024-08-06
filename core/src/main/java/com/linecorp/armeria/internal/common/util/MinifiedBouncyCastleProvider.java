@@ -41,6 +41,8 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 /**
  * A downsized version of {@link BouncyCastleProvider} which provides only RSA/DSA/EC {@link KeyFactorySpi}s
  * and X.509 {@link CertificateFactorySpi}.
@@ -159,6 +161,7 @@ public final class MinifiedBouncyCastleProvider extends Provider implements Conf
         keyInfoConverters.put(oid, keyInfoConverter);
     }
 
+    @Nullable
     @Override
     public AsymmetricKeyInfoConverter getKeyInfoConverter(ASN1ObjectIdentifier oid) {
         return keyInfoConverters.get(oid);
