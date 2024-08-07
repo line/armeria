@@ -26,11 +26,12 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.loadbalancer.LoadBalancer;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLbStateFactory.DefaultLbState;
 
 import io.envoyproxy.envoy.config.core.v3.Locality;
 
-final class DefaultLoadBalancer implements LoadBalancer {
+final class DefaultLoadBalancer implements LoadBalancer<Endpoint, ClientRequestContext> {
 
     private final DefaultLbStateFactory.DefaultLbState lbState;
 
@@ -40,7 +41,7 @@ final class DefaultLoadBalancer implements LoadBalancer {
 
     @Override
     @Nullable
-    public Endpoint selectNow(ClientRequestContext ctx) {
+    public Endpoint pick(ClientRequestContext ctx) {
         final PrioritySet prioritySet = lbState.prioritySet();
         if (prioritySet.priorities().isEmpty()) {
             return null;

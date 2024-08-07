@@ -238,12 +238,12 @@ class WeightedRoundRobinStrategyTest {
                 Endpoint.of("127.0.0.1", 2222).withWeight(2))
         );
 
-        assertThat(group.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
-        assertThat(group.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
         assertThat(group.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1111).withWeight(1));
         assertThat(group.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
         assertThat(group.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
         assertThat(group.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 1111).withWeight(1));
+        assertThat(group.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
+        assertThat(group.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 2222).withWeight(2));
     }
 
     private static final class TestDynamicEndpointGroup extends DynamicEndpointGroup {
