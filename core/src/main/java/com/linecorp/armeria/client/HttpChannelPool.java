@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -154,8 +155,9 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
-            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
+            final ReleasableHolder<SslContext> sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
+            ch.pipeline().addFirst(sslCtx.get().newHandler(ch.alloc()));
+            ch.closeFuture().addListener(unused -> sslCtx.release());
         }
     }
 

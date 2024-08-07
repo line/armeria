@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.TlsProviderUtil;
 import com.linecorp.armeria.internal.common.TlsProviderUtil.SslContextType;
@@ -42,8 +43,8 @@ import io.netty.handler.ssl.SslContext;
 final class Bootstraps {
 
     private final EventLoop eventLoop;
-    private final SslContext sslCtxHttp1Only;
-    private final SslContext sslCtxHttp1Or2;
+    private final ReleasableHolder<SslContext> sslCtxHttp1Only;
+    private final ReleasableHolder<SslContext> sslCtxHttp1Or2;
     private final HttpClientFactory clientFactory;
     private final Bootstrap inetBaseBootstrap;
     @Nullable
@@ -56,8 +57,8 @@ final class Bootstraps {
     Bootstraps(HttpClientFactory clientFactory, EventLoop eventLoop,
                SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only) {
         this.eventLoop = eventLoop;
-        this.sslCtxHttp1Or2 = sslCtxHttp1Or2;
-        this.sslCtxHttp1Only = sslCtxHttp1Only;
+        this.sslCtxHttp1Or2 = new ReusableSslContext(sslCtxHttp1Or2);
+        this.sslCtxHttp1Only = new ReusableSslContext(sslCtxHttp1Only);
         this.clientFactory = clientFactory;
         tlsProvider = clientFactory.options().tlsProvider();
         tlsEngineType = clientFactory.options().tlsEngineType();
@@ -82,7 +83,7 @@ final class Bootstraps {
         // Attempting to access the array with an unallowed protocol will trigger NPE,
         // which will help us find a bug.
         for (SessionProtocol p : sessionProtocols) {
-            final SslContext sslCtx = determineSslContext(p);
+            final ReleasableHolder<SslContext> sslCtx = determineSslContext(p);
             createAndSetBootstrap(baseBootstrap, maps, p, sslCtx, true);
             createAndSetBootstrap(baseBootstrap, maps, p, sslCtx, false);
         }
@@ -92,7 +93,7 @@ final class Bootstraps {
     /**
      * Determine {@link SslContext} by the specified {@link SessionProtocol}.
      */
-    SslContext determineSslContext(SessionProtocol desiredProtocol) {
+    ReleasableHolder<SslContext> determineSslContext(SessionProtocol desiredProtocol) {
         return desiredProtocol.isExplicitHttp1() ? sslCtxHttp1Only : sslCtxHttp1Or2;
     }
 
@@ -109,7 +110,7 @@ final class Bootstraps {
     }
 
     private void createAndSetBootstrap(Bootstrap baseBootstrap, Bootstrap[][] maps,
-                                       SessionProtocol desiredProtocol, SslContext sslContext,
+                                       SessionProtocol desiredProtocol, ReleasableHolder<SslContext> sslContext,
                                        boolean webSocket) {
         maps[desiredProtocol.ordinal()][toIndex(webSocket)] = newBootstrap(baseBootstrap, desiredProtocol,
                                                                            sslContext, webSocket);
@@ -151,18 +152,19 @@ final class Bootstraps {
                                    SessionProtocol desiredProtocol,
                                    SerializationFormat serializationFormat) {
         final boolean webSocket = serializationFormat == SerializationFormat.WS;
-        final SslContext sslContext = newSslContext(remoteAddress, desiredProtocol);
+        final ReleasableHolder<SslContext> sslContext = newSslContext(remoteAddress, desiredProtocol);
         return newBootstrap(baseBootstrap, desiredProtocol, sslContext, webSocket);
     }
 
     private Bootstrap newBootstrap(Bootstrap baseBootstrap, SessionProtocol desiredProtocol,
-                                   SslContext sslContext, boolean webSocket) {
+                                   ReleasableHolder<SslContext> sslContext, boolean webSocket) {
         final Bootstrap bootstrap = baseBootstrap.clone();
         bootstrap.handler(clientChannelInitializer(desiredProtocol, sslContext, webSocket));
         return bootstrap;
     }
 
-    SslContext getOrCreateSslContext(SocketAddress remoteAddress, SessionProtocol desiredProtocol) {
+    ReleasableHolder<SslContext> getOrCreateSslContext(SocketAddress remoteAddress,
+                                                       SessionProtocol desiredProtocol) {
         if (tlsProvider == NullTlsProvider.INSTANCE) {
             return determineSslContext(desiredProtocol);
         } else {
@@ -170,7 +172,8 @@ final class Bootstraps {
         }
     }
 
-    private SslContext newSslContext(SocketAddress remoteAddress, SessionProtocol desiredProtocol) {
+    private ReleasableHolder<SslContext> newSslContext(SocketAddress remoteAddress,
+                                                       SessionProtocol desiredProtocol) {
         assert tlsProvider != NullTlsProvider.INSTANCE;
         assert desiredProtocol.isTls();
 
@@ -189,7 +192,8 @@ final class Bootstraps {
         return TlsProviderUtil.getOrCreateSslContext(tlsProvider, tlsKeyPair, sslContextType, tlsEngineType);
     }
 
-    private ChannelInitializer<Channel> clientChannelInitializer(SessionProtocol p, SslContext sslCtx,
+    private ChannelInitializer<Channel> clientChannelInitializer(SessionProtocol p,
+                                                                 ReleasableHolder<SslContext> sslCtx,
                                                                  boolean webSocket) {
         return new ChannelInitializer<Channel>() {
             @Override
@@ -198,5 +202,23 @@ final class Bootstraps {
                         clientFactory, webSocket, p, sslCtx));
             }
         };
+    }
+
+    private static final class ReusableSslContext implements ReleasableHolder<SslContext> {
+        private final SslContext sslContext;
+
+        ReusableSslContext(SslContext sslContext) {
+            this.sslContext = sslContext;
+        }
+
+        @Override
+        public SslContext get() {
+            return sslContext;
+        }
+
+        @Override
+        public void release() {
+            // Do nothing.
+        }
     }
 }
