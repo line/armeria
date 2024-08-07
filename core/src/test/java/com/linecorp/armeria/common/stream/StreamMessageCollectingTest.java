@@ -153,6 +153,8 @@ class StreamMessageCollectingTest {
                 if (count < 2) {
                     return obj;
                 } else {
+                    // The ownership of `obj` belongs to this method.
+                    obj.close();
                     return Exceptions.throwUnsafely(cause);
                 }
             }
