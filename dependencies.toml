@@ -299,7 +299,7 @@ version.ref = "brotli4j"
 [libraries.bucket4j]
 module = "com.github.vladimir-bukhtoyarov:bucket4j-core"
 version.ref = "bucket4j"
-javadocs = "https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/7.6.1/"
+javadocs = "https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/7.6.0/"
 
 [libraries.caffeine]
 module = "com.github.ben-manes.caffeine:caffeine"
