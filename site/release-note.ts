@@ -138,7 +138,7 @@ function parseResult(body: string | null): string[] {
   const value = chain(lines)
     .dropWhile((line) => !line.includes('Result:'))
     .drop()
-    .filter((line) => !line.match(/([Cc]loses?|[Ff]ix(es)?) /))
+    .filter((line) => !line.match(/([Cc]loses?|[Ff]ix(es)?) #[0-9]+/))
     .value();
 
   const result: string[] = [];
@@ -239,6 +239,7 @@ function renderReleaseNotes(pullRequests: PullRequest[]): string {
           builder.push(change.results.shift());
         } else {
           const links = change.references.map((id) => `#${id}`).join(' ');
+          console.log("Change : " + JSON.stringify(change));
           if (change.results.length === 0) {
             builder.push(`- ${change.title} ${links}`);
           } else {
