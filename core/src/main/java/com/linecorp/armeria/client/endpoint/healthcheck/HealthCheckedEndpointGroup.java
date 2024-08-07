@@ -294,8 +294,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         final boolean updated;
         // A healthy endpoint should be a valid checker context.
         if (health && findContext(endpoint) != null) {
-            final Endpoint cached = cachedEndpoints.get(endpoint);
-            cachedEndpoints.put(endpoint, endpoint);
+            final Endpoint cached = cachedEndpoints.put(endpoint, endpoint);
             // the previous endpoint didn't exist, or the attributes changed
             updated = (cached == null) || !equalHealthCheckAttributes(cached, endpoint);
         } else {

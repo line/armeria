@@ -37,7 +37,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroupBuilder;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 import com.linecorp.armeria.xds.EndpointSnapshot;
 
@@ -79,8 +78,7 @@ final class XdsEndpointUtil {
         return true;
     }
 
-    static EndpointGroup convertEndpointGroup(ClusterSnapshot clusterSnapshot,
-                                              Map<Endpoint, Attributes> prevAttrs) {
+    static EndpointGroup convertEndpointGroup(ClusterSnapshot clusterSnapshot) {
         final EndpointSnapshot endpointSnapshot = clusterSnapshot.endpointSnapshot();
         if (endpointSnapshot == null) {
             return EndpointGroup.of();
@@ -105,15 +103,14 @@ final class XdsEndpointUtil {
             // multiple health-checks aren't supported
             final HealthCheck healthCheck = cluster.getHealthChecksList().get(0);
             if (healthCheck.hasHttpHealthCheck()) {
-                return maybeHealthChecked(endpointGroup, cluster, healthCheck, prevAttrs);
+                return maybeHealthChecked(endpointGroup, cluster, healthCheck);
             }
         }
         return endpointGroup;
     }
 
     private static EndpointGroup maybeHealthChecked(EndpointGroup delegate, Cluster cluster,
-                                                    HealthCheck healthCheck,
-                                                    Map<Endpoint, Attributes> prevAttrs) {
+                                                    HealthCheck healthCheck) {
         final HttpHealthCheck httpHealthCheck = healthCheck.getHttpHealthCheck();
         return new XdsHealthCheckedEndpointGroupBuilder(delegate, cluster, httpHealthCheck)
                 .healthCheckedEndpointPredicate(Predicates.alwaysTrue())

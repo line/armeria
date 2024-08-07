@@ -55,7 +55,7 @@ final class EndpointsPool implements AsyncCloseable {
         delegate.closeAsync();
 
         // set the new endpoint and listener
-        delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot, prevAttrs);
+        delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot);
         listener = endpoints -> eventExecutor.execute(
                 () -> endpointsListener.accept(cacheAttributesAndDelegate(endpoints)));
         delegate.addListener(listener, true);
@@ -66,8 +66,7 @@ final class EndpointsPool implements AsyncCloseable {
         final ImmutableList.Builder<Endpoint> endpointsBuilder = ImmutableList.builder();
         final ImmutableMap.Builder<Endpoint, Attributes> prevAttrsBuilder = ImmutableMap.builder();
         for (Endpoint endpoint: endpoints) {
-            final long timestamp = computeTimestamp(endpoint, defaultTimestamp);
-            final Endpoint endpointWithTimestamp = endpoint.withAttr(CREATED_AT_NANOS_KEY, timestamp);
+            final Endpoint endpointWithTimestamp = withTimestamp(endpoint, defaultTimestamp);
             endpointsBuilder.add(endpointWithTimestamp);
             prevAttrsBuilder.put(endpoint, endpointWithTimestamp.attrs());
         }
@@ -88,6 +87,18 @@ final class EndpointsPool implements AsyncCloseable {
             return timestamp;
         }
         return defaultTimestamp;
+    }
+
+    private Endpoint withTimestamp(Endpoint endpoint, long defaultTimestamp) {
+        if (hasCreatedAtNanos(endpoint)) {
+            return endpoint;
+        }
+        Long timestamp = null;
+        final Attributes prevAttr = prevAttrs.get(endpoint);
+        if (prevAttr != null) {
+            timestamp = prevAttr.attr(CREATED_AT_NANOS_KEY);
+        }
+        return endpoint.withAttr(CREATED_AT_NANOS_KEY, timestamp != null ? timestamp : defaultTimestamp);
     }
 
     @Override

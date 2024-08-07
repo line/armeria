@@ -54,6 +54,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
         extends AbstractDynamicEndpointGroupBuilder<SELF> {
 
     static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
+    @VisibleForTesting
+    static final Predicate<Endpoint> DEFAULT_ENDPOINT_PREDICATE =
+            endpoint -> Boolean.TRUE.equals(endpoint.attr(HEALTHY_ATTR));
 
     private final EndpointGroup delegate;
 
@@ -68,9 +71,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder
 
     private long initialSelectionTimeoutMillis = Flags.defaultResponseTimeoutMillis();
     private long selectionTimeoutMillis = Flags.defaultConnectTimeoutMillis();
-    @VisibleForTesting
-    static final Predicate<Endpoint> DEFAULT_ENDPOINT_PREDICATE =
-            endpoint -> Boolean.TRUE.equals(endpoint.attr(HEALTHY_ATTR));
     private Predicate<Endpoint> healthCheckedEndpointPredicate = DEFAULT_ENDPOINT_PREDICATE;
 
     /**

@@ -39,6 +39,13 @@ public final class EndpointAttributeKeys {
 
     private static final Map<Integer, Attributes> attributesCache = new Int2ObjectOpenHashMap<>();
 
+    static {
+        attributesCache.put(0, Attributes.of(HEALTHY_ATTR, false, DEGRADED_ATTR, false));
+        attributesCache.put(1, Attributes.of(HEALTHY_ATTR, true, DEGRADED_ATTR, false));
+        attributesCache.put(2, Attributes.of(HEALTHY_ATTR, false, DEGRADED_ATTR, true));
+        attributesCache.put(3, Attributes.of(HEALTHY_ATTR, true, DEGRADED_ATTR, true));
+    }
+
     public static long createdAtNanos(Endpoint endpoint) {
         final Long createdAtNanos = endpoint.attr(CREATED_AT_NANOS_KEY);
         checkState(createdAtNanos != null, "createdAtNanos doesn't exist for '%s'", endpoint);
@@ -62,13 +69,14 @@ public final class EndpointAttributeKeys {
     public static Attributes healthCheckAttributes(boolean healthy, boolean degraded) {
         int key = 0;
         if (healthy) {
-            key |= 1;
+            key += 1;
         }
         if (degraded) {
-            key |= 1 << 1;
+            key += 2;
         }
-        return attributesCache.computeIfAbsent(key, ignored -> Attributes.of(HEALTHY_ATTR, healthy,
-                                                                             DEGRADED_ATTR, degraded));
+        final Attributes attributes = attributesCache.get(key);
+        assert attributes != null;
+        return attributes;
     }
 
     public static boolean equalHealthCheckAttributes(Endpoint endpoint1, Endpoint endpoint2) {

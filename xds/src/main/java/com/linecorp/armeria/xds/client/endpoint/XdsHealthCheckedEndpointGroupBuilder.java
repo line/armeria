@@ -72,8 +72,8 @@ final class XdsHealthCheckedEndpointGroupBuilder
     private static HttpMethod httpMethod(HttpHealthCheck httpHealthCheck) {
         final HttpMethod method = EndpointUtil.convert(httpHealthCheck.getMethod(), HttpMethod.GET);
         if (method != HttpMethod.GET && method != HttpMethod.HEAD) {
-            logger.warn("Unsupported http method: {}. Only GET and HEAD are supported. " +
-                        "Falling back to GET for health checks.", method);
+            logger.warn("Unsupported http method<{}> for HttpHealthCheck<{}>. Only GET and HEAD " +
+                        "are supported. Falling back to GET for health checks.", method, httpHealthCheck);
             return HttpMethod.GET;
         }
         return method;
@@ -94,10 +94,12 @@ final class XdsHealthCheckedEndpointGroupBuilder
             return endpoint;
         }
         final int port = healthCheckConfig.getPortValue();
-        if (healthCheckConfig.hasAddress()) {
-            return Endpoint.of(healthCheckConfig.getAddress().getSocketAddress().getAddress())
-                           .withPort(port);
+        if (port > 0) {
+            endpoint = endpoint.withPort(port);
         }
-        return endpoint.withPort(port);
+        if (healthCheckConfig.hasAddress()) {
+            return endpoint.withHost(healthCheckConfig.getAddress().getSocketAddress().getAddress());
+        }
+        return endpoint;
     }
 }
