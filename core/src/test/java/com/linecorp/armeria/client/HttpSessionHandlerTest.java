@@ -29,16 +29,16 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.ClosedSessionException;
 
 class HttpSessionHandlerTest {
 
     @Test
     void connectionTimeoutBeforeSettingsFrameIsSent() throws Exception {
+        final int connectTimeoutMillis = 1000;
         try (ServerSocket ss = new ServerSocket(0);
              ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .idleTimeoutMillis(1000)
+                                  .connectTimeoutMillis(connectTimeoutMillis)
                                   .useHttp2Preface(true)
                                   .build()) {
             final int port = ss.getLocalPort();
@@ -55,8 +55,9 @@ class HttpSessionHandlerTest {
                 readBytes(in, 21);
                 // Do not send back the SETTINGS frame.
                 TimeUnit.SECONDS.sleep(3);
-                assertThat(future.isCompletedExceptionally()).isTrue();
-                assertThatThrownBy(future::join).hasRootCauseExactlyInstanceOf(ClosedSessionException.class);
+                assertThat(future).isCompletedExceptionally();
+                assertThatThrownBy(future::join)
+                        .hasRootCauseExactlyInstanceOf(SessionProtocolNegotiationException.class);
             }
         }
     }

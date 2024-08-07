@@ -28,7 +28,9 @@ import io.netty.util.AttributeMap;
 
 /**
  * Listens to the client connection pool events.
+ * @deprecated Use {@link ClientConnectionEventListener} instead.
  */
+@Deprecated
 public interface ConnectionPoolListener extends Unwrappable {
 
     /**

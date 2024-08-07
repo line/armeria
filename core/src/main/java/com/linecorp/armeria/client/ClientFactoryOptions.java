@@ -251,7 +251,10 @@ public final class ClientFactoryOptions
 
     /**
      * The listener which is notified on a connection pool event.
+     *
+     * @deprecated Use {@link #CONNECTION_EVENT_LISTENER} instead.
      */
+    @Deprecated
     public static final ClientFactoryOption<ConnectionPoolListener> CONNECTION_POOL_LISTENER =
             ClientFactoryOption.define("CONNECTION_POOL_LISTENER", ConnectionPoolListener.noop());
 
@@ -261,6 +264,13 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<Long> HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
             ClientFactoryOption.define("HTTP2_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS",
                                        Flags.defaultClientHttp2GracefulShutdownTimeoutMillis());
+
+    /**
+     * The listener which is notified on a connection pool event.
+     */
+    public static final ClientFactoryOption<ClientConnectionEventListener> CONNECTION_EVENT_LISTENER =
+            ClientFactoryOption.define("CONNECTION_EVENT_LISTENER",
+                                       ClientConnectionEventListener.noop());
 
     /**
      * The {@link MeterRegistry} which collects various stats.
@@ -579,9 +589,19 @@ public final class ClientFactoryOptions
 
     /**
      * Returns the listener which is notified on a connection pool event.
+     *
+     * @deprecated Use {@link #connectionEventListener()} instead.
      */
+    @Deprecated
     public ConnectionPoolListener connectionPoolListener() {
         return get(CONNECTION_POOL_LISTENER);
+    }
+
+    /**
+     * Returns the listener which is notified on a connection event.
+     */
+    public ClientConnectionEventListener connectionEventListener() {
+        return get(CONNECTION_EVENT_LISTENER);
     }
 
     /**

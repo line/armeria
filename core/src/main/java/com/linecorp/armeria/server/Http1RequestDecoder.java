@@ -45,7 +45,6 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeEvent;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 
@@ -478,9 +477,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         final KeepAliveHandler keepAliveHandler = encoder.keepAliveHandler();
-        if (!(keepAliveHandler instanceof NoopKeepAliveHandler) &&
-            ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            keepAliveHandler.initialize(ctx);
+        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
+            keepAliveHandler.initialize();
         }
     }
 }

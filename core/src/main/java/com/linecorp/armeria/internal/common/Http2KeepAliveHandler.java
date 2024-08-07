@@ -22,9 +22,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 
@@ -34,7 +31,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 import io.netty.handler.codec.http2.Http2PingFrame;
@@ -57,23 +53,21 @@ import io.netty.handler.codec.http2.Http2PingFrame;
  */
 public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(Http2KeepAliveHandler.class);
-
     @Nullable
-    private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
+    private final Stopwatch stopwatch = logger().isDebugEnabled() ? Stopwatch.createUnstarted() : null;
     private final Http2FrameWriter frameWriter;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
-    private final Channel channel;
 
     private long lastPingPayload;
 
     protected Http2KeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, String name,
-                                    Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
+                                    Timer keepAliveTimer,
+                                    @Nullable DelegatingConnectionEventListener connectionEventListener,
+                                    long idleTimeoutMillis, long pingIntervalMillis,
                                     long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
                                     boolean keepAliveOnPing) {
-        super(channel, name, keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
+        super(channel, name, keepAliveTimer, connectionEventListener, idleTimeoutMillis, pingIntervalMillis,
               maxConnectionAgeMillis, maxNumRequestsPerConnection, keepAliveOnPing);
-        this.channel = requireNonNull(channel, "channel");
         this.frameWriter = requireNonNull(frameWriter, "frameWriter");
     }
 
@@ -83,10 +77,11 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
     }
 
     @Override
-    protected final ChannelFuture writePing(ChannelHandlerContext ctx) {
+    protected final ChannelFuture writePing() {
         lastPingPayload = random.nextLong();
-        final ChannelFuture future = frameWriter.writePing(ctx, false, lastPingPayload, ctx.newPromise());
-        ctx.flush();
+        final ChannelFuture future = frameWriter.writePing(channel().pipeline().lastContext(), false,
+                                                           lastPingPayload, channel().newPromise());
+        channel().flush();
         return future;
     }
 
@@ -102,10 +97,10 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
         if (shutdownFuture != null) {
             final boolean isCancelled = shutdownFuture.cancel(false);
             if (!isCancelled) {
-                logger.debug("{} shutdownFuture cannot be cancelled because of late PING ACK", channel);
+                logger().debug("{} shutdownFuture cannot be cancelled because of late PING ACK", channel());
             }
         }
-        logger.debug("{} PING(ACK=1, DATA={}) received in {} ns", channel, lastPingPayload, elapsed);
+        logger().debug("{} PING(ACK=1, DATA={}) received in {} ns", channel(), lastPingPayload, elapsed);
     }
 
     @Override
@@ -117,12 +112,12 @@ public abstract class Http2KeepAliveHandler extends AbstractKeepAliveHandler {
         // 'isPendingPingAck()' can return false when channel read some data other than PING ACK frame
         // or a PING ACK is received without sending PING in first place.
         if (!isPendingPingAck()) {
-            logger.debug("{} PING(ACK=1, DATA={}) ignored", channel, data);
+            logger().debug("{} PING(ACK=1, DATA={}) ignored", channel(), data);
             return false;
         }
         if (lastPingPayload != data) {
-            logger.debug("{} Unexpected PING(ACK=1, DATA={}) received, " +
-                         "but expecting PING(ACK=1, DATA={})", channel, data, lastPingPayload);
+            logger().debug("{} Unexpected PING(ACK=1, DATA={}) received, " +
+                           "but expecting PING(ACK=1, DATA={})", channel(), data, lastPingPayload);
             return false;
         }
         return true;

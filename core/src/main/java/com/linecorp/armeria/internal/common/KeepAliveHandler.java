@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.common;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 
 /**
  * A keep-alive handler for a connection.
@@ -24,9 +24,9 @@ import io.netty.channel.ChannelHandlerContext;
 public interface KeepAliveHandler {
 
     /**
-     * Initializes this {@link KeepAliveHandler} with the {@link ChannelHandlerContext}.
+     * Initializes this {@link KeepAliveHandler}.
      */
-    void initialize(ChannelHandlerContext ctx);
+    void initialize();
 
     /**
      * Destroys scheduled resources. Unfinished requests may be closed immediately.
@@ -76,4 +76,19 @@ public interface KeepAliveHandler {
      * Increases the number of requests received or sent.
      */
     void increaseNumRequests();
+
+    /**
+     * Notify connection active event.
+     */
+    void notifyActive();
+
+    /**
+     * Notify connection idle event.
+     */
+    void notifyIdle();
+
+    /**
+     * Returns the {@link Channel} managed by this {@link KeepAliveHandler}.
+     */
+    Channel channel();
 }

@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.client.ClosedStreamExceptionUtil.newClosedSessionException;
-import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +32,9 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.DelegatingConnectionEventListener;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.micrometer.core.instrument.Tag;
@@ -80,22 +79,16 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
         final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
         final boolean keepAliveOnPing = clientFactory.keepAliveOnPing();
-        final boolean needsKeepAliveHandler =
-                needsKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
-                                      maxConnectionAgeMillis, maxNumRequestsPerConnection);
-
-        if (needsKeepAliveHandler) {
-            final Timer keepAliveTimer =
-                    MoreMeters.newTimer(clientFactory.meterRegistry(),
-                                        "armeria.client.connections.lifespan",
-                                        ImmutableList.of(Tag.of("protocol", protocol.uriText())));
-            keepAliveHandler = new Http1ClientKeepAliveHandler(
-                    channel, this, keepAliveTimer, idleTimeoutMillis,
-                    pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
-                    keepAliveOnPing);
-        } else {
-            keepAliveHandler = new NoopKeepAliveHandler();
-        }
+        final Timer keepAliveTimer =
+                MoreMeters.newTimer(clientFactory.meterRegistry(),
+                                    "armeria.client.connections.lifespan",
+                                    ImmutableList.of(Tag.of("protocol", protocol.uriText())));
+        final DelegatingConnectionEventListener eventListener =
+                DelegatingConnectionEventListener.get(channel);
+        keepAliveHandler = new Http1ClientKeepAliveHandler(
+                channel, this, keepAliveTimer, eventListener, idleTimeoutMillis,
+                pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                keepAliveOnPing);
     }
 
     @Override
@@ -122,18 +115,13 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        maybeInitializeKeepAliveHandler(ctx);
-    }
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {}
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        keepAliveHandler.destroy();
-    }
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {}
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        maybeInitializeKeepAliveHandler(ctx);
         ctx.fireChannelRegistered();
     }
 
@@ -144,7 +132,6 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        maybeInitializeKeepAliveHandler(ctx);
         ctx.fireChannelActive();
     }
 
@@ -153,7 +140,6 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
         if (res != null) {
             res.close(newClosedSessionException(ctx));
         }
-        keepAliveHandler.destroy();
         ctx.fireChannelInactive();
     }
 
@@ -341,12 +327,6 @@ final class Http1ResponseDecoder extends AbstractHttpResponseDecoder implements 
     @Override
     public KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
-    }
-
-    void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
-        if (ctx.channel().isActive()) {
-            keepAliveHandler.initialize(ctx);
-        }
     }
 
     private void onPingRead(Object msg) {

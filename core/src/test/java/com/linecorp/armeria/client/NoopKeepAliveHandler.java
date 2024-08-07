@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,17 +14,24 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.client;
 
-import io.netty.channel.ChannelHandlerContext;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
 
-public class NoopKeepAliveHandler implements KeepAliveHandler {
+import io.netty.channel.Channel;
+
+final class NoopKeepAliveHandler implements KeepAliveHandler {
 
     private boolean closed;
     private boolean disconnectWhenFinished;
 
     @Override
-    public void initialize(ChannelHandlerContext ctx) {}
+    public Channel channel() {
+        return null;
+    }
+
+    @Override
+    public void initialize() {}
 
     @Override
     public void destroy() {
@@ -43,9 +50,7 @@ public class NoopKeepAliveHandler implements KeepAliveHandler {
     public void onPing() {}
 
     @Override
-    public void onPingAck(long data) {
-        throw new UnsupportedOperationException();
-    }
+    public void onPingAck(long data) {}
 
     @Override
     public boolean isClosing() {
@@ -64,4 +69,10 @@ public class NoopKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public void increaseNumRequests() {}
+
+    @Override
+    public void notifyActive() {}
+
+    @Override
+    public void notifyIdle() {}
 }

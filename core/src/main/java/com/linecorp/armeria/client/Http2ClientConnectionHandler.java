@@ -16,15 +16,13 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.common.KeepAliveHandlerUtil.needsKeepAliveHandler;
-
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
+import com.linecorp.armeria.internal.common.DelegatingConnectionEventListener;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
-import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
@@ -59,18 +57,13 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         final long pingIntervalMillis = clientFactory.pingIntervalMillis();
         final long maxConnectionAgeMillis = clientFactory.maxConnectionAgeMillis();
         final int maxNumRequestsPerConnection = clientFactory.maxNumRequestsPerConnection();
-        final boolean needsKeepAliveHandler = needsKeepAliveHandler(
-                idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
-
-        if (!needsKeepAliveHandler) {
-            return new NoopKeepAliveHandler();
-        }
-
         final Timer keepAliveTimer =
                 MoreMeters.newTimer(clientFactory.meterRegistry(), "armeria.client.connections.lifespan",
                                     ImmutableList.of(Tag.of("protocol", protocol.uriText())));
+        final DelegatingConnectionEventListener eventListener =
+                DelegatingConnectionEventListener.get(channel);
         return new Http2ClientKeepAliveHandler(
-                channel, encoder.frameWriter(), keepAliveTimer,
+                channel, encoder.frameWriter(), keepAliveTimer, eventListener,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 keepAliveOnPing);
     }
@@ -80,27 +73,7 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        maybeInitializeKeepAliveHandler(ctx);
-        super.handlerAdded(ctx);
-    }
-
-    @Override
-    protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.handlerRemoved0(ctx);
-    }
-
-    @Override
-    public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
-        maybeInitializeKeepAliveHandler(ctx);
-        super.channelRegistered(ctx);
-    }
-
-    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        maybeInitializeKeepAliveHandler(ctx);
-
         super.channelActive(ctx);
         // NB: Http2ConnectionHandler does not flush the preface string automatically.
         ctx.flush();
@@ -110,21 +83,5 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
     protected boolean needsImmediateDisconnection() {
         return responseDecoder.goAwayHandler().receivedErrorGoAway() ||
                keepAliveHandler().isClosing();
-    }
-
-    @Override
-    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.channelInactive(ctx);
-    }
-
-    private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
-        if (ctx.channel().isActive() && ctx.channel().isRegistered()) {
-            keepAliveHandler().initialize(ctx);
-        }
-    }
-
-    private void destroyKeepAliveHandler() {
-        keepAliveHandler().destroy();
     }
 }

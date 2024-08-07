@@ -204,6 +204,7 @@ class ServerMetricsTest {
 
             final AggregatedHttpResponse result = response.join();
 
+            await().until(() -> serverMetrics.activeConnections() == 0);
             assertThat(result.status()).isSameAs(HttpStatus.OK);
             assertThat(serverMetrics.pendingRequests()).isZero();
             await().untilAsserted(() -> assertThat(serverMetrics.activeRequests()).isZero());
@@ -237,10 +238,10 @@ class ServerMetricsTest {
 
             final AggregatedHttpResponse result = response.join();
 
+            await().until(() -> serverMetrics.activeConnections() == 0);
             assertThat(result.status()).isSameAs(HttpStatus.INTERNAL_SERVER_ERROR);
             assertThat(serverMetrics.pendingRequests()).isZero();
             assertThat(serverMetrics.activeRequests()).isZero();
-            await().until(() -> serverMetrics.activeConnections() == 0);
         }
     }
 
@@ -271,6 +272,7 @@ class ServerMetricsTest {
 
             final AggregatedHttpResponse result = response.join();
 
+            await().until(() -> serverMetrics.activeConnections() == 0);
             assertThat(result.status()).isSameAs(HttpStatus.SERVICE_UNAVAILABLE);
             assertThat(serverMetrics.pendingRequests()).isZero();
             await().untilAsserted(() -> assertThat(serverMetrics.activeRequests()).isZero());

@@ -81,6 +81,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
+import io.netty.util.AttributeMap;
 
 /**
  * Builds a new {@link ClientFactory}.
@@ -121,6 +122,10 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private Consumer<DnsResolverGroupBuilder> dnsResolverGroupCustomizer;
 
     // Armeria-related properties:
+    @Nullable
+    private ConnectionPoolListener connectionPoolListener;
+    @Nullable
+    private ClientConnectionEventListener connectionEventListener;
     private int maxNumEventLoopsPerEndpoint;
     private int maxNumEventLoopsPerHttp1Endpoint;
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
@@ -796,11 +801,32 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
     /**
      * Sets the listener which is notified on a connection pool event.
+     * This option won't work in case the connectionEventListener is already set.
+     *
+     * @deprecated Use {@link #connectionEventListener} instead.
      */
+    @Deprecated
     public ClientFactoryBuilder connectionPoolListener(
             ConnectionPoolListener connectionPoolListener) {
-        option(ClientFactoryOptions.CONNECTION_POOL_LISTENER,
-               requireNonNull(connectionPoolListener, "connectionPoolListener"));
+        requireNonNull(connectionPoolListener, "connectionPoolListener");
+        checkState(connectionEventListener == null,
+                   "connectionPoolListener() and connectionEventListener() are mutually exclusive");
+        this.connectionPoolListener = connectionPoolListener;
+        return this;
+    }
+
+    /**
+     * Sets the listener which is notified on a connection event.
+     */
+    public ClientFactoryBuilder connectionEventListener(ClientConnectionEventListener connectionEventListener) {
+        requireNonNull(connectionEventListener, "connectionEventListener");
+        checkState(connectionPoolListener == null,
+                   "connectionPoolListener() and connectionEventListener() are mutually exclusive");
+        if (this.connectionEventListener == null) {
+            this.connectionEventListener = connectionEventListener;
+        } else {
+            this.connectionEventListener = this.connectionEventListener.andThen(connectionEventListener);
+        }
         return this;
     }
 
@@ -946,6 +972,17 @@ public final class ClientFactoryBuilder implements TlsSetters {
             return ClientFactoryOptions.ADDRESS_RESOLVER_GROUP_FACTORY.newValue(addressResolverGroupFactory);
         });
 
+        final ClientConnectionEventListener connectionEventListener;
+        if (connectionPoolListener != null) {
+            connectionEventListener = toConnectionEventListener(connectionPoolListener);
+        } else {
+            connectionEventListener = this.connectionEventListener;
+        }
+        if (connectionEventListener != null) {
+            options.put(ClientFactoryOptions.CONNECTION_EVENT_LISTENER,
+                        ClientFactoryOptions.CONNECTION_EVENT_LISTENER.newValue(connectionEventListener));
+        }
+
         if (tlsNoVerifySet) {
             tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
         } else if (!insecureHosts.isEmpty()) {
@@ -989,6 +1026,35 @@ public final class ClientFactoryBuilder implements TlsSetters {
         } else {
             return newOptions;
         }
+    }
+
+    static ClientConnectionEventListener toConnectionEventListener(
+            ConnectionPoolListener connectionPoolListener) {
+        return new ClientConnectionEventListenerAdapter() {
+            @Override
+            public void connectionOpened(@Nullable SessionProtocol desiredProtocol,
+                                         SessionProtocol protocol,
+                                         InetSocketAddress remoteAddress,
+                                         InetSocketAddress localAddress,
+                                         AttributeMap attrs) throws Exception {
+                connectionPoolListener.connectionOpen(protocol,
+                                                      remoteAddress,
+                                                      localAddress,
+                                                      attrs);
+            }
+
+            @Override
+            public void connectionClosed(SessionProtocol protocol,
+                                         InetSocketAddress remoteAddress,
+                                         InetSocketAddress localAddress,
+                                         AttributeMap attrs,
+                                         boolean wasIdle) throws Exception {
+                connectionPoolListener.connectionClosed(protocol,
+                                                        remoteAddress,
+                                                        localAddress,
+                                                        attrs);
+            }
+        };
     }
 
     /**

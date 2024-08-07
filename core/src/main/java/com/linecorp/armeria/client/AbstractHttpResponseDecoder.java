@@ -89,8 +89,13 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
         }
 
         final HttpResponseWrapper removed = responses.remove(id);
+        if (id == 0) {
+            // id == 0 is an upgrade request that didn't increase `unfinishedResponses`.
+            return removed;
+        }
+
         if (removed != null) {
-            unfinishedResponses--;
+            decrementUnfinishedResponses();
             assert unfinishedResponses >= 0 : unfinishedResponses;
         }
         return removed;
@@ -107,6 +112,9 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
             return false;
         }
 
+        if (unfinishedResponses == 0) {
+            keepAliveHandler().notifyActive();
+        }
         unfinishedResponses++;
         return true;
     }
@@ -114,6 +122,10 @@ abstract class AbstractHttpResponseDecoder implements HttpResponseDecoder {
     @Override
     public void decrementUnfinishedResponses() {
         unfinishedResponses--;
+
+        if (unfinishedResponses == 0) {
+            keepAliveHandler().notifyIdle();
+        }
     }
 
     @Override

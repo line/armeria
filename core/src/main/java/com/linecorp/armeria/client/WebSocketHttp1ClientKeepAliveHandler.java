@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,27 +14,31 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.internal.common.DelegatingConnectionEventListener;
 import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 
-final class Http1ServerKeepAliveHandler extends Http1KeepAliveHandler {
-    private static final Logger logger = LoggerFactory.getLogger(Http1ServerKeepAliveHandler.class);
+final class WebSocketHttp1ClientKeepAliveHandler extends Http1KeepAliveHandler {
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketHttp1ClientKeepAliveHandler.class);
 
-    Http1ServerKeepAliveHandler(Channel channel, Timer keepAliveTimer,
-                                long idleTimeoutMillis, long maxConnectionAgeMillis,
-                                int maxNumRequestsPerConnection) {
-        // TODO(ikhoon): Support ConnectionEventListener for server-side
-        super(channel, "server", keepAliveTimer, null,
-              idleTimeoutMillis, /* pingIntervalMillis(unsupported) */ 0,
-              maxConnectionAgeMillis, maxNumRequestsPerConnection, false);
+    WebSocketHttp1ClientKeepAliveHandler(Channel channel, Timer keepAliveTimer,
+                                         DelegatingConnectionEventListener connectionEventListener) {
+
+        // WebSocketHttp1ClientKeepAliveHandler is mostly noop because
+        // - hasRequestsInProgress is always true for WebSocket
+        // - a Ping frame is not sent by the keepAliveHandler but by the upper layer.
+        // TODO(minwoox): Provide a dedicated KeepAliveHandler to the upper layer (e.g. WebSocketClient)
+        //                that handles Ping frames for WebSocket.
+        super(channel, "client", keepAliveTimer, connectionEventListener, 0, 0, 0,
+              0, false);
     }
 
     @Override
@@ -54,7 +58,6 @@ final class Http1ServerKeepAliveHandler extends Http1KeepAliveHandler {
 
     @Override
     protected boolean hasRequestsInProgress() {
-        final HttpServer server = HttpServer.get(channel());
-        return server != null && server.unfinishedRequests() != 0;
+        return false;
     }
 }

@@ -421,9 +421,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         if (protocol == H1 || protocol == H1C) {
             addBeforeSessionHandler(
-                    pipeline, webSocket ? new WebSocketHttp1ClientChannelHandler(pipeline.channel())
-                                        : new Http1ResponseDecoder(pipeline.channel(),
-                                                                   clientFactory, protocol));
+                    pipeline,
+                    webSocket ? new WebSocketHttp1ClientChannelHandler(pipeline.channel(), clientFactory)
+                              : new Http1ResponseDecoder(pipeline.channel(), clientFactory, protocol));
         } else if (protocol == H2 || protocol == H2C) {
             final int initialWindow = clientFactory.http2InitialConnectionWindowSize();
             if (initialWindow > DEFAULT_WINDOW_SIZE) {
@@ -568,7 +568,6 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                 public void onComplete() {}
             }, ctx.channel().eventLoop());
 
-            responseDecoder.reserveUnfinishedResponse(Integer.MAX_VALUE);
             final DefaultClientRequestContext reqCtx = new DefaultClientRequestContext(
                     ctx.channel().eventLoop(), Flags.meterRegistry(), H1C, RequestId.random(),
                     com.linecorp.armeria.common.HttpMethod.OPTIONS,

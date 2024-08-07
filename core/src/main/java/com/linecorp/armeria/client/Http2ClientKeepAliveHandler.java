@@ -16,27 +16,39 @@
 
 package com.linecorp.armeria.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.internal.client.HttpSession;
+import com.linecorp.armeria.internal.common.DelegatingConnectionEventListener;
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.http2.Http2FrameWriter;
 
 final class Http2ClientKeepAliveHandler extends Http2KeepAliveHandler {
+    private static final Logger logger = LoggerFactory.getLogger(Http2ClientKeepAliveHandler.class);
+
     Http2ClientKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Timer keepAliveTimer,
+                                DelegatingConnectionEventListener connectionEventListener,
                                 long idleTimeoutMillis, long pingIntervalMillis,
                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
                                 boolean keepAliveOnPing) {
 
         super(channel, frameWriter, "client", keepAliveTimer,
+              connectionEventListener,
               idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
               keepAliveOnPing);
     }
 
     @Override
-    protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
-        return HttpSession.get(ctx.channel()).hasUnfinishedResponses();
+    protected Logger logger() {
+        return logger;
+    }
+
+    @Override
+    protected boolean hasRequestsInProgress() {
+        return HttpSession.get(channel()).hasUnfinishedResponses();
     }
 }

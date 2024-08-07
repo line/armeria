@@ -400,12 +400,10 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                     responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
                 }
                 final KeepAliveHandler keepAliveHandler = responseDecoder.keepAliveHandler();
-                keepAliveHandler.initialize(ctx);
 
                 final ClientHttp1ObjectEncoder requestEncoder =
                         new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming(),
-                                                     keepAliveHandler,
-                                                     isWebSocket());
+                                                     keepAliveHandler, isWebSocket());
                 if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
                     ((Http1ClientKeepAliveHandler) keepAliveHandler).setEncoder(requestEncoder);
                 }
