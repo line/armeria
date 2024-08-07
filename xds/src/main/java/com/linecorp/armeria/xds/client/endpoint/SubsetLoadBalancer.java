@@ -30,8 +30,6 @@ import com.google.protobuf.Struct;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.client.endpoint.EndpointGroup;
-import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
 
@@ -43,31 +41,32 @@ final class SubsetLoadBalancer implements LoadBalancer {
 
     private static final Logger logger = LoggerFactory.getLogger(SubsetLoadBalancer.class);
 
-    private final EndpointGroup endpointGroup;
+    private final LoadBalancer loadBalancer;
 
-    SubsetLoadBalancer(PrioritySet prioritySet) {
-        endpointGroup = createEndpointGroup(prioritySet);
+    SubsetLoadBalancer(PrioritySet prioritySet, LoadBalancer allEndpointsLoadBalancer) {
+        loadBalancer = createSubsetLoadBalancer(prioritySet, allEndpointsLoadBalancer);
     }
 
     @Override
     @Nullable
     public Endpoint selectNow(ClientRequestContext ctx) {
-        return endpointGroup.selectNow(ctx);
+        return loadBalancer.selectNow(ctx);
     }
 
-    private static EndpointGroup createEndpointGroup(PrioritySet prioritySet) {
+    private static LoadBalancer createSubsetLoadBalancer(PrioritySet prioritySet,
+                                                         LoadBalancer allEndpointsLoadBalancer) {
         final ClusterSnapshot clusterSnapshot = prioritySet.clusterSnapshot();
         final Struct filterMetadata = filterMetadata(clusterSnapshot);
         if (filterMetadata.getFieldsCount() == 0) {
             // No metadata. Use the whole endpoints.
-            return createEndpointGroup(prioritySet.endpoints(), clusterSnapshot);
+            return allEndpointsLoadBalancer;
         }
 
         final Cluster cluster = clusterSnapshot.xdsResource().resource();
         final LbSubsetConfig lbSubsetConfig = cluster.getLbSubsetConfig();
         if (lbSubsetConfig == LbSubsetConfig.getDefaultInstance()) {
             // Route metadata exists but no lbSubsetConfig. Use NO_FALLBACK.
-            return EndpointGroup.of();
+            return NOOP;
         }
         LbSubsetFallbackPolicy fallbackPolicy = lbSubsetConfig.getFallbackPolicy();
         if (!(fallbackPolicy == LbSubsetFallbackPolicy.NO_FALLBACK ||
@@ -79,32 +78,31 @@ final class SubsetLoadBalancer implements LoadBalancer {
 
         if (!findMatchedSubsetSelector(lbSubsetConfig, filterMetadata)) {
             if (fallbackPolicy == LbSubsetFallbackPolicy.NO_FALLBACK) {
-                return EndpointGroup.of();
+                return NOOP;
             }
-            return createEndpointGroup(prioritySet.endpoints(), clusterSnapshot);
+            return allEndpointsLoadBalancer;
         }
         final List<Endpoint> endpoints = convertEndpoints(prioritySet.endpoints(),
                                                           filterMetadata);
         if (endpoints.isEmpty()) {
             if (fallbackPolicy == LbSubsetFallbackPolicy.NO_FALLBACK) {
-                return EndpointGroup.of();
+                return NOOP;
             }
-            return createEndpointGroup(prioritySet.endpoints(), clusterSnapshot);
+            return allEndpointsLoadBalancer;
         }
-        return createEndpointGroup(endpoints, clusterSnapshot);
+        return createSubsetLoadBalancer(endpoints, clusterSnapshot);
     }
 
-    private static EndpointGroup createEndpointGroup(List<Endpoint> endpoints,
-                                                     ClusterSnapshot clusterSnapshot) {
-        final EndpointSelectionStrategy strategy = EndpointUtil.selectionStrategy(
-                clusterSnapshot.xdsResource().resource());
-        return EndpointGroup.of(strategy, endpoints);
+    private static LoadBalancer createSubsetLoadBalancer(List<Endpoint> endpoints,
+                                                         ClusterSnapshot clusterSnapshot) {
+        final PrioritySet subsetPrioritySet = new PriorityStateManager(clusterSnapshot, endpoints).build();
+        return new DefaultLoadBalancer(subsetPrioritySet);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("endpointGroup", endpointGroup)
+                          .add("loadBalancer", loadBalancer)
                           .toString();
     }
 }

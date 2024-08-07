@@ -588,6 +588,7 @@ public final class Flags {
             return tlsEngineType;
         }
         detectTlsEngineAndDumpOpenSslInfo();
+        assert tlsEngineType != null;
         return tlsEngineType;
     }
 
@@ -661,6 +662,7 @@ public final class Flags {
             return dumpOpenSslInfo;
         }
         detectTlsEngineAndDumpOpenSslInfo();
+        assert dumpOpenSslInfo != null;
         return dumpOpenSslInfo;
     }
 

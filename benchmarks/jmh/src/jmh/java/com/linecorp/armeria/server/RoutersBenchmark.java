@@ -78,7 +78,7 @@ public class RoutersBenchmark {
         final Path multipartUploadsLocation = Flags.defaultMultipartUploadsLocation();
         final ServiceErrorHandler serviceErrorHandler = ServerErrorHandler.ofDefault().asServiceErrorHandler();
         return new ServiceConfig(route, route,
-                                 SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
+                                 SERVICE, defaultServiceName, defaultServiceNaming, defaultLogName, 0, 0,
                                  false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                  SuccessFunction.always(), 0, multipartUploadsLocation,
                                  MultipartRemovalStrategy.ON_RESPONSE_COMPLETION,

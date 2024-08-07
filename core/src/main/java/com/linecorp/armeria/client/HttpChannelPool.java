@@ -111,9 +111,12 @@ final class HttpChannelPool implements AsyncCloseable {
                                           SessionProtocol.H2, SessionProtocol.H2C));
         pendingAcquisitions = newEnumMap(httpAndHttpsValues());
         allChannels = new IdentityHashMap<>();
-        connectTimeoutMillis = (Integer) clientFactory.options()
-                                                      .channelOptions()
-                                                      .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+        final Integer connectTimeoutMillisBoxed =
+                (Integer) clientFactory.options()
+                                       .channelOptions()
+                                       .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
+        assert connectTimeoutMillisBoxed != null;
+        connectTimeoutMillis = connectTimeoutMillisBoxed;
         bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
     }
 
@@ -830,6 +833,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
             switch (result) {
                 case SUCCESS:
+                    assert pch != null;
                     timingsBuilder.pendingAcquisitionEnd();
                     childPromise.complete(pch);
                     break;

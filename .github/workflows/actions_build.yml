@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - "**"
     tags-ignore:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
@@ -104,7 +104,7 @@ jobs:
         shell: bash
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       # Build the shaded JARs first so that shading process doesn't incur memory pressure
       # on other Gradle tasks such as tests.
@@ -247,7 +247,7 @@ jobs:
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Run the linters
         run: |
@@ -275,7 +275,7 @@ jobs:
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Build the site
         run: |
@@ -297,7 +297,7 @@ jobs:
           java-version: ${{ env.BUILD_JDK_VERSION }}
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Run flaky tests
         run: |

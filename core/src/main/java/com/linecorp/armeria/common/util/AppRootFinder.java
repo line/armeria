@@ -60,6 +60,7 @@ public final class AppRootFinder {
         // - This class
         // - The anonymous SecurityManager
         final Class<?>[] classes = classContextRef.get();
+        assert classes != null;
         final int toSkip = 2;
 
         if (callDepth < 0 || callDepth + toSkip >= classes.length) {

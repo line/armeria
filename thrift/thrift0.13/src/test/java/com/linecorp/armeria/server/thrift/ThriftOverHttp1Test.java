@@ -18,49 +18,32 @@ package com.linecorp.armeria.server.thrift;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.security.GeneralSecurityException;
-
-import javax.net.ssl.SSLContext;
-
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.conn.ssl.TrustStrategy;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.ssl.SSLContextBuilder;
-import org.apache.http.util.EntityUtils;
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.internal.ApacheClientUtils;
 
 import io.netty.util.AsciiString;
 import testing.thrift.main.SleepService;
 
-public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
+class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
+
     @Override
     protected TTransport newTransport(String uri, HttpHeaders headers) throws TTransportException {
-        final SSLContext sslContext;
-        try {
-            sslContext = SSLContextBuilder.create()
-                                          .loadTrustMaterial((TrustStrategy) (chain, authType) -> true)
-                                          .build();
-        } catch (GeneralSecurityException e) {
-            throw new TTransportException("failed to initialize an SSL context", e);
-        }
-
-        final THttpClient client = new THttpClient(
-                uri, HttpClientBuilder.create()
-                                      .setSSLHostnameVerifier((hostname, session) -> true)
-                                      .setSSLContext(sslContext)
-                                      .build());
+        final THttpClient client = ApacheClientUtils.allTrustClient(uri);
         client.setCustomHeaders(
                 headers.names().stream()
                        .collect(toImmutableMap(AsciiString::toString,
@@ -68,28 +51,20 @@ public class ThriftOverHttp1Test extends AbstractThriftOverHttpTest {
         return client;
     }
 
-    @Test
-    public void testNonPostRequest() throws Exception {
-        final HttpUriRequest[] reqs = {
-                new HttpGet(newUri("http", "/hello")),
-                new HttpDelete(newUri("http", "/hello"))
-        };
-
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            for (HttpUriRequest r: reqs) {
-                try (CloseableHttpResponse res = hc.execute(r)) {
-                    assertThat(res.getStatusLine().toString()).isEqualTo(
-                            "HTTP/1.1 405 Method Not Allowed");
-                    assertThat(EntityUtils.toString(res.getEntity()))
-                              .isNotEqualTo("Hello, world!");
-                }
-            }
-        }
+    @ParameterizedTest
+    @EnumSource(value = HttpMethod.class, names = {"DELETE", "GET"})
+    void testNonPostRequest(HttpMethod method) throws Exception {
+        final AggregatedHttpResponse res =
+                WebClient.of(server.uri(SessionProtocol.H1C, SerializationFormat.NONE))
+                         .blocking()
+                         .execute(HttpRequest.of(method, "/hello"));
+        assertThat(res.status().code()).isEqualTo(405);
+        assertThat(res.contentUtf8()).doesNotContain("Hello, world!");
     }
 
     @Test
-    @Ignore
-    public void testPipelinedHttpInvocation() throws Exception {
+    @Disabled
+    void testPipelinedHttpInvocation() throws Exception {
         // FIXME: Enable this test once we have a working Thrift-over-HTTP/1 client with pipelining.
         try (TTransport transport = newTransport("http", "/sleep")) {
             final SleepService.Client client = new SleepService.Client.Factory().getClient(

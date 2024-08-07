@@ -1,0 +1,28 @@
+---
+date: 2024-07-26
+---
+
+## 🛠️ Bug fixes
+
+- `NullPointerException` is no longer raised when <type://GraphqlService> handles errors. #5815 #5816
+- Fixed a regression where a protocol violation error is not handled 
+  by <type://ServerErrorHandler#onProtocolViolation(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> #5811
+- Fixed compatibility issue with Java 9 modules by excluding `java.security.Provider` SPI configuration from 
+  the shadowed JAR. #5825
+- Reapplied changes that were unexpectedly overwritten for Java module support. #5835
+- <type://GrpcService> now correctly returns `RESOURCE_EXHAUSTED` status when a response message exceeds the 
+  maximum allowed length. #5818 #5824
+- Relaxed constraints on gRPC JSON transcoding to log a warning instead of raising an `IllegalArgumentException`
+  when used with non-unary gRPC methods. #5828 #5829
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Dogacel',
+  'ikhoon',
+  'jrhee17',
+  'linw50',
+  'minwoox',
+  'trustin',
+  'yzfeng2020'
+]} />

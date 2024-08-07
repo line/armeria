@@ -442,6 +442,7 @@ final class TTextProtocol extends TProtocol {
         } catch (IOException e) {
             throw new TException("Could not parse input, is it valid json?", e);
         }
+        assert root != null;
         if (!root.isObject()) {
             throw new TException("The top level of the input must be a json object with method and args!");
         }

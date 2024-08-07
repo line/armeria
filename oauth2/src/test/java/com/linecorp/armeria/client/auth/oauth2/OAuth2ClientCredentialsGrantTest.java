@@ -18,16 +18,15 @@ package com.linecorp.armeria.client.auth.oauth2;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -176,10 +175,12 @@ class OAuth2ClientCredentialsGrantTest {
                 ClientAuthentication.ofAuthorization("Basic", CLIENT_CREDENTIALS);
         final AccessTokenRequest accessTokenRequest =
                 AccessTokenRequest.ofClientCredentials(clientAuthentication);
+        final AtomicInteger newTokenCounter = new AtomicInteger();
         final DefaultOAuth2AuthorizationGrant grant = (DefaultOAuth2AuthorizationGrant) spy(
                 OAuth2AuthorizationGrant
                         .builder(authClient, "/token/client/")
                         .accessTokenRequest(() -> accessTokenRequest)
+                        .newTokenConsumer(newToken -> newTokenCounter.incrementAndGet())
                         .build());
 
         final WebClient client = WebClient.builder(resourceServer.httpUri())
@@ -190,20 +191,17 @@ class OAuth2ClientCredentialsGrantTest {
         final List<AggregatedHttpResponse> responses1 =
                 getConcurrently(client, "/resource-read-write/", count).join();
         validateResponses(responses1, HttpStatus.OK);
-        verify(grant, times(1)).obtainAccessToken(any());
-        verify(grant, times(0)).refreshAccessToken(any(), any());
+        assertThat(newTokenCounter.get()).isOne();
 
         final List<AggregatedHttpResponse> responses2 =
                 getConcurrently(client, "/resource-read/", count).join();
         validateResponses(responses2, HttpStatus.OK);
-        verify(grant, times(1)).obtainAccessToken(any());
-        verify(grant, times(0)).refreshAccessToken(any(), any());
+        assertThat(newTokenCounter.get()).isOne();
 
         final List<AggregatedHttpResponse> responses3 =
                 getConcurrently(client, "/resource-read-write-update/", count).join();
         validateResponses(responses3, HttpStatus.FORBIDDEN);
-        verify(grant, times(1)).obtainAccessToken(any());
-        verify(grant, times(0)).refreshAccessToken(any(), any());
+        assertThat(newTokenCounter.get()).isOne();
     }
 
     @Test
@@ -211,12 +209,14 @@ class OAuth2ClientCredentialsGrantTest {
         final WebClient authClient = WebClient.of(authServer.httpUri());
         final AccessTokenRequest accessTokenRequest =
                 AccessTokenRequest.ofClientCredentials("test_client", "client_secret");
+        final AtomicInteger newTokenCounter = new AtomicInteger();
         final DefaultOAuth2AuthorizationGrant grant = (DefaultOAuth2AuthorizationGrant) spy(
                 OAuth2AuthorizationGrant
                         .builder(authClient, "/token/client/")
                         .accessTokenRequest(accessTokenRequest)
                         // Token is considered expired after 3 seconds
                         .refreshBefore(Duration.ofSeconds(EXPIRES_IN_HOURS * 3600 - 3))
+                        .newTokenConsumer(newToken -> newTokenCounter.incrementAndGet())
                         .build());
 
         final WebClient client = WebClient.builder(resourceServer.httpUri())
@@ -224,15 +224,13 @@ class OAuth2ClientCredentialsGrantTest {
                                           .build();
         final AggregatedHttpResponse response = client.get("/resource-read/").aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        verify(grant, times(1)).obtainAccessToken(any());
-        verify(grant, times(0)).refreshAccessToken(any(), any());
+        assertThat(newTokenCounter.get()).isOne();
 
         Thread.sleep(3000L); // Wait until token expires.
         final List<AggregatedHttpResponse> responses =
                 getConcurrently(client, "/resource-read/", 10).join();
         validateResponses(responses, HttpStatus.OK);
-        verify(grant, times(1)).obtainAccessToken(any());
-        verify(grant, times(1)).refreshAccessToken(any(), any());
+        await().untilAsserted(() -> assertThat(newTokenCounter.get()).isEqualTo(2));
     }
 
     private static CompletableFuture<List<AggregatedHttpResponse>> getConcurrently(

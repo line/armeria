@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.TimeoutException;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -46,15 +45,10 @@ enum DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction
      * well and the protocol package.
      */
     @Override
-    public Status apply(RequestContext ctx, @Nullable Status status, Throwable cause, Metadata metadata) {
-        if (status != null && status.getCode() != Code.UNKNOWN) {
+    public Status apply(RequestContext ctx, Status status, Throwable cause, Metadata metadata) {
+        if (status.getCode() != Code.UNKNOWN) {
             return status;
         }
-        final Status s = Status.fromThrowable(cause);
-        if (s.getCode() != Code.UNKNOWN) {
-            return s;
-        }
-
         if (cause instanceof ClosedSessionException || cause instanceof ClosedChannelException) {
             if (ctx instanceof ServiceRequestContext) {
                 // Upstream uses CANCELLED
@@ -64,7 +58,7 @@ enum DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction
             // ClosedChannelException is used any time the Netty channel is closed. Proper error
             // processing requires remembering the error that occurred before this one and using it
             // instead.
-            return s;
+            return status;
         }
         if (cause instanceof ClosedStreamException || cause instanceof RequestTimeoutException) {
             return Status.CANCELLED.withCause(cause);
@@ -90,6 +84,6 @@ enum DefaultGrpcExceptionHandlerFunction implements GrpcExceptionHandlerFunction
         if (cause instanceof ContentTooLargeException) {
             return Status.RESOURCE_EXHAUSTED.withCause(cause);
         }
-        return s;
+        return status;
     }
 }

@@ -185,32 +185,28 @@ public final class SelfSignedCertificateRuleDelegate {
      *  Returns the generated {@link X509Certificate}.
      */
     public X509Certificate certificate() {
-        ensureCertificate();
-        return certificate.cert();
+        return ensureCertificate().cert();
     }
 
     /**
      * Returns the self-signed certificate file.
      */
     public File certificateFile() {
-        ensureCertificate();
-        return certificate.certificate();
+        return ensureCertificate().certificate();
     }
 
     /**
      * Returns the {@link PrivateKey} of the self-signed certificate.
      */
     public PrivateKey privateKey() {
-        ensureCertificate();
-        return certificate.key();
+        return ensureCertificate().key();
     }
 
     /**
      * Returns the private key file of the self-signed certificate.
      */
     public File privateKeyFile() {
-        ensureCertificate();
-        return certificate.privateKey();
+        return ensureCertificate().privateKey();
     }
 
     /**
@@ -223,7 +219,8 @@ public final class SelfSignedCertificateRuleDelegate {
         return tlsKeyPair;
     }
 
-    private void ensureCertificate() {
+    private SelfSignedCertificate ensureCertificate() {
         checkState(certificate != null, "certificate not created");
+        return certificate;
     }
 }

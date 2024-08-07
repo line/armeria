@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;
@@ -42,6 +43,7 @@ public enum BuiltInDependencyInjector implements DependencyInjector {
 
     private static final Map<Class<?>, Object> instances = new ConcurrentHashMap<>();
 
+    @Nullable
     @Override
     public <T> T getInstance(Class<T> type) {
         if (!builtInClasses.contains(type)) {
