@@ -7,6 +7,7 @@ import com.linecorp.armeria.server.annotation.Blocking
 import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.test.runTest
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import testing.grpc.Messages.SimpleRequest
@@ -38,7 +39,7 @@ internal class BlockingExecutorTest {
         @Blocking
         override suspend fun unaryCall(request: SimpleRequest): SimpleResponse {
             val isInEventLoop = ServiceRequestContext.current().eventLoop().inEventLoop()
-            assert(isInEventLoop.not())
+            assertThat(isInEventLoop).isFalse()
             return SimpleResponse.newBuilder().setUsername(isInEventLoop.toString()).build()
         }
     }
@@ -47,7 +48,7 @@ internal class BlockingExecutorTest {
         TestServiceGrpcKt.TestServiceCoroutineImplBase() {
         override suspend fun unaryCall(request: SimpleRequest): SimpleResponse {
             val isInEventLoop = ServiceRequestContext.current().eventLoop().inEventLoop()
-            assert(isInEventLoop)
+            assertThat(isInEventLoop).isTrue()
             return SimpleResponse.newBuilder().setUsername(isInEventLoop.toString()).build()
         }
     }
