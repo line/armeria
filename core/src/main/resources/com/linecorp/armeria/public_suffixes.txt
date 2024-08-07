@@ -52,7 +52,6 @@
 *.database.run
 *.dev-builder.code.com
 *.dev.adobeaemcloud.com
-*.devcdnaccesso.com
 *.developer.app
 *.digitaloceanspaces.com
 *.diher.solutions
@@ -295,6 +294,7 @@ ac.mz
 ac.ni
 ac.nz
 ac.pa
+ac.pk
 ac.pr
 ac.rs
 ac.ru
@@ -963,7 +963,6 @@ bip.sh
 bir.ru
 biratori.hokkaido.jp
 birkenes.no
-bitbridge.net
 bitbucket.io
 bitter.jp
 biz
@@ -1992,7 +1991,6 @@ deta.dev
 dev
 dev-myqnapcloud.com
 dev.br
-dev.static.land
 development.run
 devices.resinstaging.io
 df.gov.br
@@ -3038,6 +3036,7 @@ gjerdrum.no
 gjerstad.no
 gjesdal.no
 gjovik.no
+gkp.pk
 gl
 gl.srv.us
 glass
@@ -3096,6 +3095,7 @@ gob.ve
 gobo.wakayama.jp
 godaddy
 godo.gifu.jp
+gog.pk
 goiania.br
 goip.de
 gojome.akita.jp
@@ -3856,7 +3856,6 @@ info.na
 info.nf
 info.ni
 info.nr
-info.pk
 info.pl
 info.pr
 info.ro
@@ -7811,7 +7810,6 @@ site.rb-hosting.io
 site.tb-hosting.com
 site.transip.me
 siteleaf.net
-sites.static.land
 sj
 sjc.br
 sk
@@ -7973,7 +7971,6 @@ statebank
 statefarm
 stathelle.no
 static-access.net
-static.land
 static.observableusercontent.com
 stavanger.no
 stavern.no
@@ -8127,7 +8124,6 @@ szex.hu
 szkola.pl
 t.bg
 t.se
-t3l3p0rt.net
 ta.it
 taa.it
 tab
@@ -8260,7 +8256,6 @@ technology
 tecnologia.bo
 tel
 tel.tr
-tele.amune.org
 telebit.app
 telebit.io
 temasek
@@ -9047,9 +9042,6 @@ webview-assets.cloud9.us-west-1.amazonaws.com
 webview-assets.cloud9.us-west-2.amazonaws.com
 wed
 wedding
-wedeploy.io
-wedeploy.me
-wedeploy.sh
 weeklylottery.org.uk
 wegrow.pl
 weibo
