@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.equalHealthCheckAttributes;
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
@@ -296,7 +297,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             final Endpoint cached = cachedEndpoints.get(endpoint);
             cachedEndpoints.put(endpoint, endpoint);
             // the previous endpoint didn't exist, or the attributes changed
-            updated = (cached == null) || !cached.attrs().equals(endpoint.attrs());
+            updated = (cached == null) || !equalHealthCheckAttributes(cached, endpoint);
         } else {
             updated = cachedEndpoints.remove(endpoint, endpoint);
         }

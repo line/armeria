@@ -19,6 +19,7 @@ package com.linecorp.armeria.internal.client.endpoint;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.Map;
+import java.util.Objects;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.Attributes;
@@ -68,6 +69,11 @@ public final class EndpointAttributeKeys {
         }
         return attributesCache.computeIfAbsent(key, ignored -> Attributes.of(HEALTHY_ATTR, healthy,
                                                                              DEGRADED_ATTR, degraded));
+    }
+
+    public static boolean equalHealthCheckAttributes(Endpoint endpoint1, Endpoint endpoint2) {
+        return Objects.equals(endpoint1.attr(HEALTHY_ATTR), endpoint2.attr(HEALTHY_ATTR)) &&
+               Objects.equals(endpoint1.attr(DEGRADED_ATTR), endpoint2.attr(DEGRADED_ATTR));
     }
 
     private EndpointAttributeKeys() {}
