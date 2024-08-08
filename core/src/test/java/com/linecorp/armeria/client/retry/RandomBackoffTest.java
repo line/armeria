@@ -36,7 +36,7 @@ public class RandomBackoffTest {
     @Test
     public void nextDelayMillisWithBuilder() throws Exception {
         final Random r = new Random(1);
-        final Backoff backoff2 = RandomBackoff.builder()
+        final Backoff backoff2 = Backoff.builderForRandom()
                 .minDelayMillis(10)
                 .maxDelayMillis(100)
                 .randomSupplier(() -> r)

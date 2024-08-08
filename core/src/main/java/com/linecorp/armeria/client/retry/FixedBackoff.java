@@ -40,21 +40,4 @@ final class FixedBackoff extends AbstractBackoff {
                           .add("delayMillis", delayMillis)
                           .toString();
     }
-
-    public static Builder builder() {
-        return new Builder();
-    }
-
-    public static class Builder {
-        private long delayMillis;
-
-        FixedBackoff build() {
-            return new FixedBackoff(delayMillis);
-        }
-
-        public Builder delayMillis(long delayMillis) {
-            this.delayMillis = delayMillis;
-            return this;
-        }
-    }
 }

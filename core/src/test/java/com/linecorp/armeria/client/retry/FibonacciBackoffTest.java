@@ -31,7 +31,7 @@ class FibonacciBackoffTest {
         assertThat(backoff.nextDelayMillis(4)).isEqualTo(30);
         assertThat(backoff.nextDelayMillis(7)).isEqualTo(120);
 
-        final Backoff backoff2 = FibonacciBackoff.builder()
+        final Backoff backoff2 = Backoff.builderForFibonacci()
                 .initialDelayMillis(10)
                 .maxDelayMillis(120)
                 .build();
@@ -49,7 +49,7 @@ class FibonacciBackoffTest {
         assertThat(backoff.nextDelayMillis(31)).isEqualTo(1346269);
         assertThat(backoff.nextDelayMillis(32)).isEqualTo(2178309);
 
-        final Backoff backoff2 = FibonacciBackoff.builder()
+        final Backoff backoff2 = Backoff.builderForFibonacci()
                 .initialDelayMillis(1)
                 .maxDelayMillis(Long.MAX_VALUE)
                 .build();
@@ -67,7 +67,7 @@ class FibonacciBackoffTest {
         assertThat(backoff.nextDelayMillis(4)).isEqualTo(Long.MAX_VALUE / 3 * 3);
         assertThat(backoff.nextDelayMillis(5)).isEqualTo(Long.MAX_VALUE);
 
-        final Backoff backoff2 = FibonacciBackoff.builder()
+        final Backoff backoff2 = Backoff.builderForFibonacci()
                 .initialDelayMillis(Long.MAX_VALUE / 3)
                 .maxDelayMillis(Long.MAX_VALUE)
                 .build();
@@ -82,7 +82,7 @@ class FibonacciBackoffTest {
     void testConstraintInitialDelay() {
         assertThatThrownBy(() -> new FibonacciBackoff(-5, 120))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> FibonacciBackoff.builder()
+        assertThatThrownBy(() -> Backoff.builderForFibonacci()
                 .initialDelayMillis(-5)
                 .maxDelayMillis(120)
                 .build())
@@ -93,7 +93,7 @@ class FibonacciBackoffTest {
     void testConstraintMaxDelay() {
         assertThatThrownBy(() -> new FibonacciBackoff(10, 0))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> FibonacciBackoff.builder()
+        assertThatThrownBy(() -> Backoff.builderForFibonacci()
                 .initialDelayMillis(10)
                 .maxDelayMillis(0)
                 .build())

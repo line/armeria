@@ -130,6 +130,39 @@ public interface Backoff extends Unwrappable {
     }
 
     /**
+     * Returns a {@link ExponentialBackoffBuilder} that provides methods to configure
+     * backoff delay which is exponentially-increasing.
+     */
+    static ExponentialBackoffBuilder builderForExponential() {
+        return new ExponentialBackoffBuilder();
+    }
+
+    /**
+     * Returns a {@link FixedBackoffBuilder} that provides methods to configure
+     * backoff delay which follows fibonacci sequence.
+     * f(n) = f(n-1) + f(n-2) where f(0) = f(1) = {@code initialDelayMillis}
+     */
+    static FibonacciBackoffBuilder builderForFibonacci() {
+        return new FibonacciBackoffBuilder();
+    }
+
+    /**
+     * Returns a {@link FixedBackoffBuilder} that provides methods to configure
+     * backoff delay which is a fixed value.
+     */
+    static FixedBackoffBuilder builderForFixed() {
+        return new FixedBackoffBuilder();
+    }
+
+    /**
+     * Returns a {@link RandomBackoffBuilder} that provides methods to configure
+     * backoff delay which is a random value.
+     */
+    static RandomBackoffBuilder builderForRandom() {
+        return new RandomBackoffBuilder();
+    }
+
+    /**
      * Returns the number of milliseconds to wait for before attempting a retry.
      *
      * @param numAttemptsSoFar the number of attempts made by a client so far, including the first attempt and
