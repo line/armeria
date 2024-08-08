@@ -47,11 +47,10 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
     @Nullable
     private final LocalityRoutingState localityRoutingState;
 
-    SubsetLoadBalancer(PrioritySet prioritySet, LoadBalancer allEndpointsLoadBalancer,
-                       @Nullable LocalityRoutingState localityRoutingState) {
+    SubsetLoadBalancer(PrioritySet prioritySet, XdsLoadBalancer allEndpointsLoadBalancer) {
         loadBalancer = createSubsetLoadBalancer(prioritySet, allEndpointsLoadBalancer);
         this.prioritySet = prioritySet;
-        this.localityRoutingState = localityRoutingState;
+        localityRoutingState = allEndpointsLoadBalancer.localityRoutingState();
     }
 
     @Override
@@ -116,5 +115,11 @@ final class SubsetLoadBalancer implements XdsLoadBalancer {
     @Override
     public PrioritySet prioritySet() {
         return prioritySet;
+    }
+
+    @Override
+    @Nullable
+    public LocalityRoutingState localityRoutingState() {
+        return localityRoutingState;
     }
 }

@@ -25,7 +25,6 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
@@ -56,7 +55,6 @@ final class ClusterEntry extends AbstractListenable<XdsLoadBalancer> implements 
     private final LocalCluster localCluster;
     private final EventExecutor eventExecutor;
     private boolean closing;
-    private final CompletableFuture<Void> initialLocalEntryStateFuture = new CompletableFuture<>();
 
     ClusterEntry(EventExecutor eventExecutor, @Nullable LocalCluster localCluster) {
         this.eventExecutor = eventExecutor;
@@ -118,12 +116,9 @@ final class ClusterEntry extends AbstractListenable<XdsLoadBalancer> implements 
         }
         XdsLoadBalancer loadBalancer = new DefaultLoadBalancer(prioritySet, localityRoutingState);
         if (clusterSnapshot.xdsResource().resource().hasLbSubsetConfig()) {
-            loadBalancer = new SubsetLoadBalancer(prioritySet, loadBalancer, localityRoutingState);
+            loadBalancer = new SubsetLoadBalancer(prioritySet, loadBalancer);
         }
         this.loadBalancer = loadBalancer;
-        if (localLoadBalancer != null && !initialLocalEntryStateFuture.isDone()) {
-            initialLocalEntryStateFuture.complete(null);
-        }
         notifyListeners(loadBalancer);
     }
 
@@ -131,11 +126,6 @@ final class ClusterEntry extends AbstractListenable<XdsLoadBalancer> implements 
     @Nullable
     protected XdsLoadBalancer latestValue() {
         return loadBalancer;
-    }
-
-    @VisibleForTesting
-    CompletableFuture<Void> initialLocalEntryStateFuture() {
-        return initialLocalEntryStateFuture;
     }
 
     List<Endpoint> allEndpoints() {

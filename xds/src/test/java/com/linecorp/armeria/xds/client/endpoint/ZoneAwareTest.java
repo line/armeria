@@ -97,9 +97,10 @@ class ZoneAwareTest {
              XdsEndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             await().untilAsserted(() -> {
-                final ClusterEntry clusterEntry = endpointGroup.clusterEntries().get("cluster");
+                final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
-                assertThat(clusterEntry.initialLocalEntryStateFuture()).isDone();
+                assertThat(clusterEntry.latestValue()).isNotNull();
+                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -153,9 +154,10 @@ class ZoneAwareTest {
              XdsEndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             await().untilAsserted(() -> {
-                final ClusterEntry clusterEntry = endpointGroup.clusterEntries().get("cluster");
+                final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
-                assertThat(clusterEntry.initialLocalEntryStateFuture()).isDone();
+                assertThat(clusterEntry.latestValue()).isNotNull();
+                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -209,9 +211,10 @@ class ZoneAwareTest {
              XdsEndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             await().untilAsserted(() -> {
-                final ClusterEntry clusterEntry = endpointGroup.clusterEntries().get("cluster");
+                final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
-                assertThat(clusterEntry.initialLocalEntryStateFuture()).isDone();
+                assertThat(clusterEntry.latestValue()).isNotNull();
+                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -262,9 +265,10 @@ class ZoneAwareTest {
              XdsEndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             await().untilAsserted(() -> {
-                final ClusterEntry clusterEntry = endpointGroup.clusterEntries().get("cluster");
+                final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
-                assertThat(clusterEntry.initialLocalEntryStateFuture()).isDone();
+                assertThat(clusterEntry.latestValue()).isNotNull();
+                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -317,9 +321,10 @@ class ZoneAwareTest {
              XdsEndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             await().untilAsserted(() -> {
-                final ClusterEntry clusterEntry = endpointGroup.clusterEntries().get("cluster");
+                final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
-                assertThat(clusterEntry.initialLocalEntryStateFuture()).isDone();
+                assertThat(clusterEntry.latestValue()).isNotNull();
+                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -376,9 +381,10 @@ class ZoneAwareTest {
              XdsEndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             await().untilAsserted(() -> {
-                final ClusterEntry clusterEntry = endpointGroup.clusterEntries().get("cluster");
+                final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
-                assertThat(clusterEntry.initialLocalEntryStateFuture()).isDone();
+                assertThat(clusterEntry.latestValue()).isNotNull();
+                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -435,9 +441,10 @@ class ZoneAwareTest {
              XdsEndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             await().untilAsserted(() -> {
-                final ClusterEntry clusterEntry = endpointGroup.clusterEntries().get("cluster");
+                final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
-                assertThat(clusterEntry.initialLocalEntryStateFuture()).isDone();
+                assertThat(clusterEntry.latestValue()).isNotNull();
+                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();
@@ -499,9 +506,10 @@ class ZoneAwareTest {
              XdsEndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             await().untilAsserted(() -> {
-                final ClusterEntry clusterEntry = endpointGroup.clusterEntries().get("cluster");
+                final ClusterEntry clusterEntry = endpointGroup.clusterEntriesMap().get("cluster");
                 assertThat(clusterEntry).isNotNull();
-                assertThat(clusterEntry.initialLocalEntryStateFuture()).isDone();
+                assertThat(clusterEntry.latestValue()).isNotNull();
+                assertThat(clusterEntry.latestValue().localityRoutingState()).isNotNull();
             });
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final SettableXdsRandom random = new SettableXdsRandom();

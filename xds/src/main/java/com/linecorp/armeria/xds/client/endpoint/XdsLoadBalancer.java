@@ -16,7 +16,16 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
+import com.google.common.annotations.VisibleForTesting;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
+
 interface XdsLoadBalancer extends LoadBalancer {
 
     PrioritySet prioritySet();
+
+    @Nullable
+    @VisibleForTesting
+    LocalityRoutingState localityRoutingState();
 }

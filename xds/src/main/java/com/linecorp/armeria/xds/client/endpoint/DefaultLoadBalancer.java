@@ -134,8 +134,8 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
         if (priority != 0 ||
             localityRoutingState == null ||
             localityRoutingState.state() == State.NO_LOCALITY_ROUTING ||
-            prioritySet.routingEnabled() <= random.nextInt(100, ROUTING_ENABLED) ||
-            localityRoutingState.localHostSet() == null) {
+            localityRoutingState.localHostSet() == null ||
+            prioritySet.routingEnabled() <= random.nextInt(100, ROUTING_ENABLED)) {
             return new HostsSource(priority, sourceType(hostAvailability));
         }
 
@@ -183,6 +183,12 @@ final class DefaultLoadBalancer implements XdsLoadBalancer {
     @Override
     public PrioritySet prioritySet() {
         return prioritySet;
+    }
+
+    @Override
+    @Nullable
+    public LocalityRoutingState localityRoutingState() {
+        return localityRoutingState;
     }
 
     static class PriorityAndAvailability {

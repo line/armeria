@@ -76,7 +76,7 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
      * Creates a {@link XdsEndpointGroup} which listens to the specified listener.
      */
     public static XdsEndpointGroup of(String listenerName, XdsBootstrap xdsBootstrap,
-                                   boolean allowEmptyEndpoints) {
+                                      boolean allowEmptyEndpoints) {
         return new XdsEndpointGroup(new ClusterManager(listenerName, xdsBootstrap), allowEmptyEndpoints);
     }
 
@@ -151,8 +151,8 @@ public final class XdsEndpointGroup extends AbstractListenable<List<Endpoint>> i
     }
 
     @VisibleForTesting
-    Map<String, ClusterEntry> clusterEntries() {
-        return clusterManager.clusterEntries();
+    Map<String, ClusterEntry> clusterEntriesMap() {
+        return clusterManager.clusterEntriesMap();
     }
 
     @Override
