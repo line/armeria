@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.findAuthority;
+import static com.linecorp.armeria.internal.common.util.BitSetUtil.toBitSet;
 import static io.netty.util.internal.StringUtil.decodeHexNibble;
 import static java.util.Objects.requireNonNull;
 
@@ -118,14 +119,6 @@ public final class DefaultRequestTarget implements RequestTarget {
      * in a fragment. We currently use the same table with {@link #PATH_MUST_PRESERVE_ENCODING}.
      */
     private static final BitSet FRAGMENT_MUST_PRESERVE_ENCODING = PATH_MUST_PRESERVE_ENCODING;
-
-    private static BitSet toBitSet(String chars) {
-        final BitSet bitSet = new BitSet();
-        for (int i = 0; i < chars.length(); i++) {
-            bitSet.set(chars.charAt(i));
-        }
-        return bitSet;
-    }
 
     private enum ComponentType {
         CLIENT_PATH(PATH_ALLOWED, PATH_ALLOWED_IF_ENCODED, PATH_MUST_PRESERVE_ENCODING),

@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.DistributeLoadState;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.HostAvailability;
 import com.linecorp.armeria.xds.client.endpoint.DefaultLoadBalancer.PriorityAndAvailability;
+import com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint;
 
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMaps;
@@ -231,7 +232,7 @@ final class DefaultLbStateFactory {
         return new PerPriorityLoad(healthyPriorityLoad, degradedPriorityLoad, 100);
     }
 
-    private static boolean isHostSetInPanic(HostSet hostSet, int panicThreshold) {
+    static boolean isHostSetInPanic(HostSet hostSet, int panicThreshold) {
         final int hostCount = hostSet.hosts().size();
         final double healthyPercent =
                 hostCount == 0 ? 0 : 100.0 * hostSet.healthyHosts().size() / hostCount;
@@ -357,11 +358,11 @@ final class DefaultLbStateFactory {
         }
 
         @Nullable
-        PriorityAndAvailability choosePriority(int hash) {
+        PriorityAndAvailability choosePriority(XdsRandom random) {
             if (perPriorityLoad.forceEmptyEndpoint() || perPriorityPanic.forceEmptyEndpoint()) {
                 return null;
             }
-            hash = hash % 100 + 1;
+            final int hash = random.nextInt(100, RandomHint.SELECT_PRIORITY) + 1;
             int aggregatePercentageLoad = 0;
             final PerPriorityLoad perPriorityLoad = perPriorityLoad();
             for (Integer priority: prioritySet.priorities()) {
