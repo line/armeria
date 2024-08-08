@@ -227,9 +227,8 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
             listenerRoot.close();
         }
         final ImmutableList.Builder<CompletableFuture<?>> closeFuturesBuilder = ImmutableList.builder();
-        closeFuturesBuilder.addAll(clusterEntries.clusterEntriesMap
-                                           .values().stream().map(ClusterEntry::closeAsync)
-                                           .collect(Collectors.toList()));
+        closeFuturesBuilder.addAll(clusterEntriesMap().values().stream().map(ClusterEntry::closeAsync)
+                                                      .collect(Collectors.toList()));
         closeFuturesBuilder.addAll(pendingRemovals);
         if (localCluster != null) {
             closeFuturesBuilder.add(localCluster.closeAsync());
