@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.createdAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.createdAtNanos;
 import static com.linecorp.armeria.xds.XdsTestResources.BOOTSTRAP_CLUSTER_NAME;
 import static com.linecorp.armeria.xds.XdsTestResources.endpoint;
 import static com.linecorp.armeria.xds.XdsTestResources.localityLbEndpoints;
