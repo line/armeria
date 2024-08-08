@@ -31,7 +31,7 @@ class SchemeAndAuthorityTest {
             "[::1],             [::1],               [::1],              -1",    // IPv6
             "[::1]:,            [::1]:,              [::1],              -1",    // IPv6 with empty port
             "[::1]:8080,        [::1]:8080,          [::1],              8080",  // IPv6 with port
-            "[::1%eth0]:8080,   [::1]:8080,          [::1],              8080",  // IPv6 with port
+            "[::1%eth0]:8080,   [::1]:8080,          [::1],              8080",  // IPv6 with port and scope
             "unix%3Afoo.sock,   unix%3Afoo.sock,     unix%3Afoo.sock,    -1",    // Domain socket
             "foo.bar,           foo.bar,             foo.bar,            -1",    // Only host
             "foo:,              foo:,                foo,                -1",    // Empty port
