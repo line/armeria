@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.xds;
 
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
@@ -79,6 +80,11 @@ public final class XdsTestResources {
                         HealthStatus.HEALTHY);
     }
 
+    public static LbEndpoint endpoint(InetSocketAddress address, int weight) {
+        return endpoint(address.getAddress().getHostAddress(), address.getPort(),
+                        Metadata.getDefaultInstance(), weight, HealthStatus.HEALTHY);
+    }
+
     public static LbEndpoint endpoint(String address, int port, int weight) {
         return endpoint(address, port, Metadata.getDefaultInstance(), weight,
                         HealthStatus.HEALTHY);
@@ -99,20 +105,22 @@ public final class XdsTestResources {
 
     public static LbEndpoint endpoint(String address, int port, Metadata metadata, int weight,
                                       HealthStatus healthStatus) {
-        final SocketAddress socketAddress = SocketAddress.newBuilder()
-                                                         .setAddress(address)
-                                                         .setPortValue(port)
-                                                         .build();
         return LbEndpoint
                 .newBuilder()
                 .setLoadBalancingWeight(UInt32Value.of(weight))
                 .setMetadata(metadata)
                 .setHealthStatus(healthStatus)
                 .setEndpoint(Endpoint.newBuilder()
-                                     .setAddress(Address.newBuilder()
-                                                        .setSocketAddress(socketAddress)
-                                                        .build())
+                                     .setAddress(address(address, port))
                                      .build()).build();
+    }
+
+    public static SocketAddress socketAddress(String address, int port) {
+        return SocketAddress.newBuilder().setAddress(address).setPortValue(port).build();
+    }
+
+    public static Address address(String address, int port) {
+        return Address.newBuilder().setSocketAddress(socketAddress(address, port)).build();
     }
 
     public static Locality locality(String region) {
