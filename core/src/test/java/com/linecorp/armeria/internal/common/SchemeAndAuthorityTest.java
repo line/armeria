@@ -58,7 +58,7 @@ class SchemeAndAuthorityTest {
             "foo?bar=1",               // Authority with query
             "foo#bar",                 // Authority with fragment
             "[192.168.0.1]",           // Bracketed IPv4
-            "[::1", "::1]",            // Incomplete IPv6 with scope
+            "[::1", "::1]",            // Incomplete IPv6
             "[::1%eth0", "::1%eth0]",  // Incomplete IPv6 with scope
             "[::1]%eth0",              // Invalid IPv6 scope
             "unix:foo.sock"            // Invalid domain socket
