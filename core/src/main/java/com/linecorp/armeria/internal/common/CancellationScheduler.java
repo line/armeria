@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.internal.common;
 
+import static com.linecorp.armeria.internal.common.DefaultCancellationScheduler.translateTimeoutNanos;
+
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -26,16 +28,12 @@ import io.netty.util.concurrent.EventExecutor;
 public interface CancellationScheduler {
 
     static CancellationScheduler ofClient(long timeoutNanos) {
-        if (timeoutNanos == 0) {
-            timeoutNanos = Long.MAX_VALUE;
-        }
+        timeoutNanos = translateTimeoutNanos(timeoutNanos);
         return new DefaultCancellationScheduler(timeoutNanos, false);
     }
 
     static CancellationScheduler ofServer(long timeoutNanos) {
-        if (timeoutNanos == 0) {
-            timeoutNanos = Long.MAX_VALUE;
-        }
+        timeoutNanos = translateTimeoutNanos(timeoutNanos);
         return new DefaultCancellationScheduler(timeoutNanos, true);
     }
 

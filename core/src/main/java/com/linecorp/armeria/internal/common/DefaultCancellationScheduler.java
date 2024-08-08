@@ -432,4 +432,16 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
         cancellationScheduler.finishNow();
         return cancellationScheduler;
     }
+
+    static long translateTimeoutNanos(long timeoutNanos) {
+        if (timeoutNanos == Long.MAX_VALUE) {
+            // If the user specified MAX_VALUE, then use MAX_VALUE-1 since MAX_VALUE means no scheduling
+            timeoutNanos = Long.MAX_VALUE - 1;
+        }
+        if (timeoutNanos == 0) {
+            // If the user specified 0, then use MAX_VALUE which means no scheduling
+            timeoutNanos = Long.MAX_VALUE;
+        }
+        return timeoutNanos;
+    }
 }
