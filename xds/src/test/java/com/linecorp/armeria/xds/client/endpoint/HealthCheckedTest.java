@@ -48,8 +48,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.healthcheck.HealthCheckService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
+import com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
@@ -123,10 +123,8 @@ class HealthCheckedTest {
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            // disable allowEmptyEndpoints since the first update iteration in no available healthy endpoints
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot, false);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
 
             final ClientRequestContext ctx =
@@ -192,20 +190,21 @@ class HealthCheckedTest {
 
         final Listener listener = staticResourceListener();
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            // disable allowEmptyEndpoints since the first update iteration in no available healthy endpoints
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot, false);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             // disable allowEmptyEndpoints since the first update iteration in no available healthy endpoints
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap, false)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
 
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+            final SettableXdsRandom random = new SettableXdsRandom();
+            ctx.setAttr(XdsAttributeKeys.XDS_RANDOM, random);
             final Set<Endpoint> selectedEndpoints = new HashSet<>();
             for (int i = 0; i < allEndpoints.size(); i++) {
                 // try to hit all the ranges of the selection hash
                 final int hash = 100 / allEndpoints.size() * i;
                 // WeightedRoundRobinStrategy guarantees that each endpoint will be selected at least once
-                ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, hash);
+                random.fixNextInt(RandomHint.SELECT_PRIORITY, hash);
                 final Endpoint selected = endpointGroup.selectNow(ctx);
                 if (selected != null) {
                     selectedEndpoints.add(selected);

@@ -166,7 +166,7 @@ class DynamicHealthCheckTest {
                                                  ImmutableList.of(listener), ImmutableList.of(),
                                                  ImmutableList.of(), "v1"));
         try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
-             EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"))) {
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             endpointGroup.whenReady().get();
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             final Endpoint endpoint = endpointGroup.select(ctx, CommonPools.workerGroup()).get();
@@ -228,8 +228,8 @@ class DynamicHealthCheckTest {
         cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(),
                                                  ImmutableList.of(listener), ImmutableList.of(),
                                                  ImmutableList.of(), "v3"));
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             endpointGroup.whenReady().get();
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             // WeightRampingUpStrategy guarantees that all endpoints will be considered, so
@@ -309,8 +309,8 @@ class DynamicHealthCheckTest {
         cache.setSnapshot(GROUP, Snapshot.create(ImmutableList.of(cluster), ImmutableList.of(),
                                                  ImmutableList.of(listener), ImmutableList.of(),
                                                  ImmutableList.of(), "v3"));
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             endpointGroup.whenReady().get();
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
             // WeightRampingUpStrategy guarantees that all endpoints will be considered, so

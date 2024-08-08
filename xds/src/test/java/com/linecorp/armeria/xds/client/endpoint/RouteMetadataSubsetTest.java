@@ -47,9 +47,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 import com.linecorp.armeria.xds.XdsTestResources;
+import com.linecorp.armeria.xds.client.endpoint.XdsRandom.RandomHint;
 
 import io.envoyproxy.controlplane.cache.v3.SimpleCache;
 import io.envoyproxy.controlplane.cache.v3.Snapshot;
@@ -154,8 +154,8 @@ class RouteMetadataSubsetTest {
         Bootstrap bootstrap = XdsTestResources.bootstrap(
                 configSource, staticResourceListener(routeMetadataMatch1, clusterName),
                 bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
 
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -169,8 +169,8 @@ class RouteMetadataSubsetTest {
         bootstrap = XdsTestResources.bootstrap(configSource,
                                                staticResourceListener(routeMetadataMatch2, clusterName),
                                                bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
 
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -186,8 +186,8 @@ class RouteMetadataSubsetTest {
         bootstrap = XdsTestResources.bootstrap(configSource,
                                                staticResourceListener(routeMetadataMatch3, clusterName),
                                                bootstrapCluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(xdsBootstrap.listenerRoot("listener"));
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
 
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -235,24 +235,25 @@ class RouteMetadataSubsetTest {
                 .build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             final ClientRequestContext ctx =
                     ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
+            final SettableXdsRandom random = new SettableXdsRandom();
+            ctx.setAttr(XdsAttributeKeys.XDS_RANDOM, random);
             // default overprovisioning factor (140) * 0.5 = 70 will be routed
             // to healthy endpoints for priority 0
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 0);
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 0);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 68);
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 68);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8080));
 
             // 100 - 70 (priority 0) = 30 will be routed to healthy endpoints for priority 1
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 70);
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 70);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
-            ctx.setAttr(XdsAttributeKeys.SELECTION_HASH, 99);
+            random.fixNextInt(RandomHint.SELECT_PRIORITY, 99);
             assertThat(endpointGroup.selectNow(ctx)).isEqualTo(Endpoint.of("127.0.0.1", 8082));
         }
     }

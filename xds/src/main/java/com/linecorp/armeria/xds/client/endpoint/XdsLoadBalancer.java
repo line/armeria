@@ -16,18 +16,16 @@
 
 package com.linecorp.armeria.xds.client.endpoint;
 
-import io.envoyproxy.envoy.config.endpoint.v3.LbEndpoint;
-import io.envoyproxy.envoy.config.endpoint.v3.LocalityLbEndpoints;
-import io.netty.util.AttributeKey;
+import com.google.common.annotations.VisibleForTesting;
 
-final class XdsAttributeKeys {
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
 
-    static final AttributeKey<LbEndpoint> LB_ENDPOINT_KEY =
-            AttributeKey.valueOf(XdsAttributeKeys.class, "LB_ENDPOINT_KEY");
-    static final AttributeKey<LocalityLbEndpoints> LOCALITY_LB_ENDPOINTS_KEY =
-            AttributeKey.valueOf(XdsAttributeKeys.class, "LOCALITY_LB_ENDPOINTS_KEY");
-    static final AttributeKey<XdsRandom> XDS_RANDOM =
-            AttributeKey.valueOf(XdsAttributeKeys.class, "XDS_RANDOM");
+interface XdsLoadBalancer extends LoadBalancer {
 
-    private XdsAttributeKeys() {}
+    PrioritySet prioritySet();
+
+    @Nullable
+    @VisibleForTesting
+    LocalityRoutingState localityRoutingState();
 }

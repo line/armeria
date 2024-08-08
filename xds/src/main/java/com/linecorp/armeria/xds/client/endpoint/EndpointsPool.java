@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.client.endpoint.ClusterEntry.EndpointsState;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -48,7 +49,7 @@ final class EndpointsPool implements AsyncCloseable {
         this.eventExecutor = eventExecutor;
     }
 
-    void updateClusterSnapshot(ClusterSnapshot newSnapshot, Consumer<List<Endpoint>> endpointsListener) {
+    void updateClusterSnapshot(ClusterSnapshot newSnapshot, Consumer<EndpointsState> endpointsListener) {
         // it is very important that the listener is removed first so that endpoints aren't deemed
         // unhealthy due to closing a HealthCheckedEndpointGroup
         delegate.removeListener(listener);
@@ -57,7 +58,8 @@ final class EndpointsPool implements AsyncCloseable {
         // set the new endpoint and listener
         delegate = XdsEndpointUtil.convertEndpointGroup(newSnapshot);
         listener = endpoints -> eventExecutor.execute(
-                () -> endpointsListener.accept(cacheAttributesAndDelegate(endpoints)));
+                () -> endpointsListener.accept(new EndpointsState(newSnapshot,
+                                                                  cacheAttributesAndDelegate(endpoints))));
         delegate.addListener(listener, true);
     }
 
