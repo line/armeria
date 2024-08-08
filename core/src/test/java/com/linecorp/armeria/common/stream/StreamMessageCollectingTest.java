@@ -74,11 +74,13 @@ class StreamMessageCollectingTest {
                 .hasCause(cause);
     }
 
-    @CsvSource({ "1, true", "1, false",
-                 "2, true", "2, false",
-                 "3, true", "3, false",
-                 "4, true", "4, false",
-                 "100, true", "100, false" })
+    @CsvSource({
+            "1, true", "1, false",
+            "2, true", "2, false",
+            "3, true", "3, false",
+            "4, true", "4, false",
+            "100, true", "100, false"
+    })
     @ParameterizedTest
     void closeOrAbortAndCollect(int size, boolean fixedStream) {
         Map<HttpData, ByteBuf> data = newHttpData(size);
@@ -151,6 +153,8 @@ class StreamMessageCollectingTest {
                 if (count < 2) {
                     return obj;
                 } else {
+                    // The ownership of `obj` belongs to this method.
+                    obj.close();
                     return Exceptions.throwUnsafely(cause);
                 }
             }
@@ -193,19 +197,16 @@ class StreamMessageCollectingTest {
             }
         };
 
-        final List<HttpData> collected = filtered.collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
-        assertThat(collected).hasSize(2);
+        assertThatThrownBy(() -> {
+            filtered.collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
+        }).isInstanceOf(CompletionException.class)
+          .hasCauseInstanceOf(CancelledSubscriptionException.class);
 
         final List<ByteBuf> bufs = ImmutableList.copyOf(data.values());
 
-        assertThat(bufs.get(0).refCnt()).isOne();
-        assertThat(bufs.get(1).refCnt()).isOne();
-        assertThat(bufs.get(2).refCnt()).isZero();
-        assertThat(bufs.get(3).refCnt()).isZero();
-        assertThat(bufs.get(4).refCnt()).isZero();
-
-        bufs.get(0).release();
-        bufs.get(1).release();
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
     }
 
     @Test
