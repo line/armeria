@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.common.HttpResponseUtil.logger;
+import static com.linecorp.armeria.common.HttpResponseUtil.httpResponseUtilLogger;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.stream.StreamWriter;
@@ -42,8 +42,9 @@ public interface HttpResponseWriter extends HttpResponse, StreamWriter<HttpObjec
 
             if (headers.status().isContentAlwaysEmpty()) {
                 if (!content.isEmpty()) {
-                    logger.debug("Non-empty content found with an empty status: {}, content length: {}",
-                                 headers.status(), content.length());
+                    httpResponseUtilLogger.debug(
+                            "Non-empty content found with an empty status: {}, content length: {}",
+                            headers.status(), content.length());
                 }
             } else if (!content.isEmpty()) {
                 transferredContent = true;

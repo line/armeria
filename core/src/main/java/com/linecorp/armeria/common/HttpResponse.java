@@ -18,7 +18,7 @@ package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.common.HttpResponseUtil.createHttpResponseFrom;
-import static com.linecorp.armeria.common.HttpResponseUtil.logger;
+import static com.linecorp.armeria.common.HttpResponseUtil.httpResponseUtilLogger;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.maybeUpdateContentLengthAndEndOfStream;
 import static java.util.Objects.requireNonNull;
 
@@ -436,8 +436,9 @@ public interface HttpResponse extends Response, HttpMessage {
 
         if (headers.status().isContentAlwaysEmpty()) {
             if (!content.isEmpty()) {
-                logger.debug("Non-empty content found with an empty status: {}, content length: {}",
-                             headers.status(), content.length());
+                httpResponseUtilLogger.debug(
+                        "Non-empty content found with an empty status: {}, content length: {}",
+                        headers.status(), content.length());
                 content.close();
                 content = HttpData.empty();
             }

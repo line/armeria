@@ -27,7 +27,8 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 final class HttpResponseUtil {
 
-    static final Logger logger = LoggerFactory.getLogger(HttpResponseUtil.class);
+    // This logger is used in the default methods of HttpResponse related interfaces.
+    static final Logger httpResponseUtilLogger = LoggerFactory.getLogger(HttpResponseUtil.class);
 
     /**
      * Creates a new HTTP response that delegates to the {@link HttpResponse} produced by the specified
