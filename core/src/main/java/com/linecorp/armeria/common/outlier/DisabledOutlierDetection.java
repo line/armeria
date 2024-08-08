@@ -14,21 +14,19 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.common.outlier;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
+enum DisabledOutlierDetection implements OutlierDetection {
 
-interface LoadBalancer {
+    INSTANCE;
 
-    LoadBalancer NOOP = new LoadBalancer() {
-        @Override
-        public @Nullable Endpoint selectNow(ClientRequestContext ctx) {
-            return null;
-        }
-    };
+    @Override
+    public OutlierRule rule() {
+        throw new UnsupportedOperationException();
+    }
 
-    @Nullable
-    Endpoint selectNow(ClientRequestContext ctx);
+    @Override
+    public OutlierDetector newDetector() {
+        throw new UnsupportedOperationException();
+    }
 }

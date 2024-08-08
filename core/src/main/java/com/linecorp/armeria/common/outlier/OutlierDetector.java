@@ -14,21 +14,29 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.common.outlier;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
-interface LoadBalancer {
+/**
+ * An outlier detector is responsible for determining whether a target is considered an outlier
+ * based on the success or failure of requests.
+ */
+@UnstableApi
+public interface OutlierDetector {
 
-    LoadBalancer NOOP = new LoadBalancer() {
-        @Override
-        public @Nullable Endpoint selectNow(ClientRequestContext ctx) {
-            return null;
-        }
-    };
+    /**
+     * Report a request success.
+     */
+    void onSuccess();
 
-    @Nullable
-    Endpoint selectNow(ClientRequestContext ctx);
+    /**
+     * Report a request failure.
+     */
+    void onFailure();
+
+    /**
+     * Returns whether the target is considered as an outlier.
+     */
+    boolean isOutlier();
 }

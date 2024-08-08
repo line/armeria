@@ -116,11 +116,9 @@ final class ClusterEntry extends AbstractListenable<XdsLoadBalancer> implements 
                                                                       localLoadBalancer.prioritySet());
             logger.trace("Local routing is enabled with LocalityRoutingState({})", localityRoutingState);
         }
-        final XdsLoadBalancer loadBalancer;
+        XdsLoadBalancer loadBalancer = new DefaultLoadBalancer(prioritySet, localityRoutingState);
         if (clusterSnapshot.xdsResource().resource().hasLbSubsetConfig()) {
-            loadBalancer = new SubsetLoadBalancer(prioritySet);
-        } else {
-            loadBalancer = new DefaultLoadBalancer(prioritySet, localityRoutingState);
+            loadBalancer = new SubsetLoadBalancer(prioritySet, loadBalancer, localityRoutingState);
         }
         this.loadBalancer = loadBalancer;
         if (localLoadBalancer != null && !initialLocalEntryStateFuture.isDone()) {

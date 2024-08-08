@@ -14,21 +14,30 @@
  * under the License.
  */
 
-package com.linecorp.armeria.xds.client.endpoint;
+package com.linecorp.armeria.internal.testing;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.annotation.Nullable;
+import java.time.Duration;
 
-interface LoadBalancer {
+import com.linecorp.armeria.common.util.Ticker;
 
-    LoadBalancer NOOP = new LoadBalancer() {
-        @Override
-        public @Nullable Endpoint selectNow(ClientRequestContext ctx) {
-            return null;
-        }
-    };
+public final class TestTicker implements Ticker {
 
-    @Nullable
-    Endpoint selectNow(ClientRequestContext ctx);
+    long nanoTime;
+
+    public void reset(long nanoTime) {
+        this.nanoTime = nanoTime;
+    }
+
+    public void advance(long durationNanos) {
+        nanoTime += durationNanos;
+    }
+
+    public void advance(Duration duration) {
+        advance(duration.toNanos());
+    }
+
+    @Override
+    public long read() {
+        return nanoTime;
+    }
 }
