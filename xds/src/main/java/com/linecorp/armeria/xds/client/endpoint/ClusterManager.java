@@ -139,9 +139,9 @@ final class ClusterManager implements SnapshotWatcher<ListenerSnapshot>, AsyncCl
             ClusterEntry clusterEntry = oldClusterEntries.get(clusterName);
             if (clusterEntry == null) {
                 clusterEntry = new ClusterEntry(eventLoop, localCluster);
+                clusterEntry.addListener(ignored -> notifyListeners(), false);
             }
             clusterEntry.updateClusterSnapshot(clusterSnapshot);
-            clusterEntry.addListener(ignored -> notifyListeners(), false);
             mappingBuilder.put(clusterName, clusterEntry);
         }
         final ImmutableMap<String, ClusterEntry> newClusterEntriesMap = mappingBuilder.build();
