@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.google.common.collect.ImmutableSet;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
@@ -45,6 +47,23 @@ public final class VirtualHostContextPathServicesBuilder
     VirtualHostContextPathServicesBuilder(VirtualHostBuilder parent, VirtualHostBuilder virtualHostBuilder,
                                           Set<String> contextPaths) {
         super(parent, virtualHostBuilder, contextPaths);
+    }
+
+    VirtualHostContextPathServicesBuilder(VirtualHostBuilder parent, VirtualHostBuilder virtualHostBuilder,
+                                          Set<String> contextPaths,
+                                          Set<String> previousContextPaths,
+                                          VirtualHostContextPathServicesBuilder virtualHostContextPathServicesBuilder) {
+        super(parent, virtualHostBuilder, contextPaths, previousContextPaths, virtualHostContextPathServicesBuilder);
+    }
+
+    @Override
+    public VirtualHostContextPathServicesBuilder contextPath(String... contextPaths) {
+        final ImmutableSet<String> currentContextPaths = ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths"));
+        return new VirtualHostContextPathServicesBuilder(parent(),
+                                                         virtualHostBuilder(),
+                                                         currentContextPaths,
+                                                         contextPaths(),
+                                                         this);
     }
 
     /**

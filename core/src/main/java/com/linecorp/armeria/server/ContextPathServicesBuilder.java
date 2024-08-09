@@ -16,11 +16,16 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import javax.naming.Context;
+
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
@@ -44,6 +49,24 @@ public final class ContextPathServicesBuilder
     ContextPathServicesBuilder(ServerBuilder parent, VirtualHostBuilder virtualHostBuilder,
                                Set<String> contextPaths) {
         super(parent, virtualHostBuilder, contextPaths);
+    }
+
+    ContextPathServicesBuilder(ServerBuilder parent,
+                               VirtualHostBuilder virtualHostBuilder,
+                               Set<String> contextPaths,
+                               Set<String> previousContextPaths,
+                               ContextPathServicesBuilder contextPathServicesBuilder) {
+        super(parent, virtualHostBuilder, contextPaths, previousContextPaths, contextPathServicesBuilder);
+    }
+
+    @Override
+    public ContextPathServicesBuilder contextPath(String... contextPaths) {
+        final ImmutableSet<String> currentContextPaths = ImmutableSet.copyOf(requireNonNull(contextPaths, "contextPaths"));
+        return new ContextPathServicesBuilder(parent(),
+                                              virtualHostBuilder(),
+                                              currentContextPaths,
+                                              contextPaths(),
+                                              this);
     }
 
     /**

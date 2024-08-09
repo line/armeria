@@ -20,12 +20,14 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.ServerBuilder.decorate;
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.RouteDecoratingService;
 import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -40,16 +42,33 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
     private final T parent;
     private final VirtualHostBuilder virtualHostBuilder;
 
+    @Nullable
+    private SELF previousNode;
+
+
     AbstractContextPathServicesBuilder(T parent, VirtualHostBuilder virtualHostBuilder,
                                        Set<String> contextPaths) {
+        this(parent, virtualHostBuilder, contextPaths, ImmutableSet.of(), null);
+    }
+
+    AbstractContextPathServicesBuilder(T parent,
+                                       VirtualHostBuilder virtualHostBuilder,
+                                       Set<String> contextPaths,
+                                       Set<String> previousContextPaths,
+                                       @Nullable SELF previousNode) {
         checkArgument(!contextPaths.isEmpty(), "At least one context path is required");
         for (String contextPath: contextPaths) {
             RouteUtil.ensureAbsolutePath(contextPath, "contextPath");
         }
 
+        final Set<String> mergedContextPaths = previousContextPaths.isEmpty() ?
+                                               contextPaths :
+                                               mergeContextPaths(previousContextPaths, contextPaths);
+
         this.parent = parent;
-        this.contextPaths = ImmutableSet.copyOf(contextPaths);
+        this.contextPaths = ImmutableSet.copyOf(mergedContextPaths);
         this.virtualHostBuilder = virtualHostBuilder;
+        this.previousNode = previousNode;
     }
 
     @SuppressWarnings("unchecked")
@@ -406,7 +425,43 @@ abstract class AbstractContextPathServicesBuilder<SELF extends AbstractContextPa
         return parent;
     }
 
+    public abstract SELF contextPath(String... contextPaths);
+
     final Set<String> contextPaths() {
         return contextPaths;
     }
+
+    T parent() {
+        return parent;
+    }
+
+    VirtualHostBuilder virtualHostBuilder() {
+        return virtualHostBuilder;
+    }
+
+    @Nullable
+    public SELF before() {
+        if (previousNode == null) {
+            throw new IllegalStateException("No previous node is existed. it may first nodes.");
+        }
+
+        return previousNode;
+    }
+
+    private Set<String> mergeContextPaths(Set<String> previousContextPaths, Set<String> contextPaths) {
+        final Set<String> compositedPaths = new HashSet<>();
+        for (String previousPath : previousContextPaths) {
+            for (String contextPath : contextPaths) {
+                final StringBuilder sb = new StringBuilder();
+                sb.append(previousPath);
+                sb.append(contextPath);
+
+                final String mergedContextPath = sb.toString();
+                RouteUtil.ensureAbsolutePath(mergedContextPath, "mergedContextPath");
+                compositedPaths.add(mergedContextPath);
+            }
+        }
+        return compositedPaths;
+    }
+
 }
