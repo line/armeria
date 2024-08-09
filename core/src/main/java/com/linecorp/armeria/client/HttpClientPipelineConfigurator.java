@@ -43,6 +43,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -61,6 +63,7 @@ import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -150,6 +153,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private final boolean webSocket;
     @Nullable
     private final SslContext sslCtx;
+    @Nullable
+    private final SslContextFactory sslContextFactory;
     private final HttpPreference httpPreference;
     @Nullable
     private SocketAddress remoteAddress;
@@ -159,7 +164,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
                                    boolean webSocket, SessionProtocol sessionProtocol,
-                                   @Nullable SslContext sslCtx) {
+                                   SslContext sslCtx, @Nullable SslContextFactory sslContextFactory) {
         this.clientFactory = clientFactory;
         this.webSocket = webSocket;
 
@@ -176,10 +181,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         if (sessionProtocol.isTls()) {
             this.sslCtx = sslCtx;
+            this.sslContextFactory = sslContextFactory;
             http1 = H1;
             http2 = H2;
         } else {
             this.sslCtx = null;
+            assert sslContextFactory == null;
+            this.sslContextFactory = null;
             http1 = H1C;
             http2 = H2C;
         }
@@ -217,6 +225,15 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
 
         ctx.connect(remoteAddress, localAddress, connectionPromise);
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        super.channelInactive(ctx);
+        if (sslContextFactory != null) {
+            assert sslCtx != null;
+            sslContextFactory.release(sslCtx);
+        }
     }
 
     /**
@@ -800,6 +817,12 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private static HttpClientCodec newHttp1Codec(
             int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize) {
         return new HttpClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize);
+    }
+
+    @VisibleForTesting
+    @Nullable
+    SslContextFactory sslContextFactory() {
+        return sslContextFactory;
     }
 
     /**
