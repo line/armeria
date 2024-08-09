@@ -201,10 +201,10 @@ final class ChannelSendOperator<T> extends Mono<Void> implements Scannable {
                     }
                     result.subscribe(writeCompletionBarrier);
                 } else {
+                    writeCompletionBarrier.onError(new IllegalStateException("Unexpected item."));
                     if (subscription != null) {
                         subscription.cancel();
                     }
-                    writeCompletionBarrier.onError(new IllegalStateException("Unexpected item."));
                 }
             }
         }

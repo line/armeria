@@ -20,8 +20,8 @@ import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilde
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_RAMPING_UP_TASK_WINDOW_MILLIS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.DEFAULT_TOTAL_STEPS;
 import static com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyBuilder.defaultTransition;
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.createdAtNanos;
-import static com.linecorp.armeria.internal.client.endpoint.RampingUpKeys.hasCreatedAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.createdAtNanos;
+import static com.linecorp.armeria.internal.client.endpoint.EndpointAttributeKeys.hasCreatedAtNanos;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
