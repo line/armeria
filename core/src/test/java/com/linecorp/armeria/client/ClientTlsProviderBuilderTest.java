@@ -29,7 +29,7 @@ class ClientTlsProviderBuilderTest {
     @Test
     void testBuild() {
         assertThatThrownBy(() -> {
-            TlsProvider.builderForClient()
+            TlsProvider.builder()
                        .build();
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("No TLS key pair is set.");
@@ -44,7 +44,7 @@ class ClientTlsProviderBuilderTest {
         final TlsKeyPair barKeyPair = TlsKeyPair.ofSelfSigned();
         final TlsKeyPair barWildKeyPair = TlsKeyPair.ofSelfSigned();
         final TlsProvider tlsProvider =
-                TlsProvider.builderForClient()
+                TlsProvider.builder()
                            .setDefault(defaultKeyPair)
                            .set("example.com", exactKeyPair)
                            .set("*.foo.com", wildcardKeyPair)

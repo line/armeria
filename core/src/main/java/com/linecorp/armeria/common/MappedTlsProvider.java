@@ -19,44 +19,21 @@ package com.linecorp.armeria.common;
 import static com.linecorp.armeria.internal.common.TlsProviderUtil.normalizeHostname;
 import static java.util.Objects.requireNonNull;
 
+import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
-
-import io.netty.handler.ssl.SslContextBuilder;
+import com.google.common.base.MoreObjects;
 
 final class MappedTlsProvider implements TlsProvider {
 
     private final Map<String, TlsKeyPair> tlsKeyPairs;
-    private final boolean allowsUnsafeCiphers;
-    private final Consumer<SslContextBuilder> tlsCustomizer;
-    @Nullable
-    private final MeterIdPrefix meterIdPrefix;
+    private final List<X509Certificate> trustedCertificates;
 
-    MappedTlsProvider(Map<String, TlsKeyPair> tlsKeyPairs, Consumer<SslContextBuilder> tlsCustomizer,
-                      boolean allowsUnsafeCiphers, @Nullable MeterIdPrefix meterIdPrefix) {
+    MappedTlsProvider(Map<String, TlsKeyPair> tlsKeyPairs, List<X509Certificate> trustedCertificates) {
         this.tlsKeyPairs = tlsKeyPairs;
-        this.allowsUnsafeCiphers = allowsUnsafeCiphers;
-        this.tlsCustomizer = tlsCustomizer;
-        this.meterIdPrefix = meterIdPrefix;
-    }
-
-    @Override
-    public boolean allowsUnsafeCiphers() {
-        return allowsUnsafeCiphers;
-    }
-
-    @Override
-    public Consumer<SslContextBuilder> tlsCustomizer() {
-        return tlsCustomizer;
-    }
-
-    @Override
-    public MeterIdPrefix meterIdPrefix() {
-        return meterIdPrefix;
+        this.trustedCertificates = trustedCertificates;
     }
 
     @Override
@@ -85,6 +62,11 @@ final class MappedTlsProvider implements TlsProvider {
     }
 
     @Override
+    public List<X509Certificate> trustedCertificates() {
+        return trustedCertificates;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -93,14 +75,20 @@ final class MappedTlsProvider implements TlsProvider {
             return false;
         }
         final MappedTlsProvider that = (MappedTlsProvider) o;
-        return allowsUnsafeCiphers == that.allowsUnsafeCiphers &&
-               tlsKeyPairs.equals(that.tlsKeyPairs) &&
-               tlsCustomizer.equals(that.tlsCustomizer) &&
-               Objects.equals(meterIdPrefix, that.meterIdPrefix);
+        return tlsKeyPairs.equals(that.tlsKeyPairs) &&
+               trustedCertificates.equals(that.trustedCertificates);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(tlsKeyPairs, allowsUnsafeCiphers, tlsCustomizer, meterIdPrefix);
+        return Objects.hash(tlsKeyPairs, trustedCertificates);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("tlsKeyPairs", tlsKeyPairs)
+                          .add("trustedCertificates", trustedCertificates)
+                          .toString();
     }
 }

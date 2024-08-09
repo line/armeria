@@ -29,13 +29,16 @@ class TlsProviderMappingTest {
 
     @Test
     void testNoDefault() {
-        final TlsProvider tlsProvider = TlsProvider.builderForServer()
+        final TlsProvider tlsProvider = TlsProvider.builder()
                                                    .set("example.com", TlsKeyPair.ofSelfSigned())
                                                    .set("api.example.com", TlsKeyPair.ofSelfSigned())
                                                    .set("foo.com", TlsKeyPair.ofSelfSigned())
                                                    .set("*.foo.com", TlsKeyPair.ofSelfSigned())
                                                    .build();
-        final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider, TlsEngineType.OPENSSL);
+        final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider,
+                                                                  TlsEngineType.OPENSSL,
+                                                                  ServerTlsConfig.builder().build()
+        );
         assertThat(mapping.map("example.com")).isNotNull();
         assertThat(mapping.map("api.example.com")).isNotNull();
         assertThatThrownBy(() -> mapping.map("web.example.com"))
@@ -50,14 +53,17 @@ class TlsProviderMappingTest {
 
     @Test
     void testWithDefault() {
-        final TlsProvider tlsProvider = TlsProvider.builderForServer()
+        final TlsProvider tlsProvider = TlsProvider.builder()
                                                    .setDefault(TlsKeyPair.ofSelfSigned())
                                                    .set("example.com", TlsKeyPair.ofSelfSigned())
                                                    .set("api.example.com", TlsKeyPair.ofSelfSigned())
                                                    .set("foo.com", TlsKeyPair.ofSelfSigned())
                                                    .set("*.foo.com", TlsKeyPair.ofSelfSigned())
                                                    .build();
-        final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider, TlsEngineType.OPENSSL);
+        final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider,
+                                                                  TlsEngineType.OPENSSL,
+                                                                  ServerTlsConfig.builder().build()
+        );
         assertThat(mapping.map("example.com")).isNotNull();
         assertThat(mapping.map("api.example.com")).isNotNull();
         assertThat(mapping.map("web.example.com")).isNotNull();

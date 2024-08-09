@@ -16,31 +16,27 @@
 
 package com.linecorp.armeria.common;
 
-import static com.linecorp.armeria.internal.common.TlsProviderUtil.normalizeHostname;
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
 import java.util.function.Consumer;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManagerFactory;
 
-import com.google.common.collect.ImmutableMap;
-
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.server.ServerBuilder;
 
 import io.netty.handler.ssl.SslContextBuilder;
 
 /**
  * A skeletal builder implementation for {@link TlsProvider}.
  */
-public abstract class AbstractTlsProviderBuilder<SELF extends AbstractTlsProviderBuilder> {
+@UnstableApi
+public abstract class AbstractTlsConfigBuilder<SELF extends AbstractTlsConfigBuilder<SELF>> {
 
     private static final Consumer<SslContextBuilder> NOOP = b -> {};
 
-    private final ImmutableMap.Builder<String, TlsKeyPair> tlsKeyPairsBuilder = ImmutableMap.builder();
     private boolean allowsUnsafeCiphers;
     private Consumer<SslContextBuilder> tlsCustomizer = NOOP;
     @Nullable
@@ -49,35 +45,7 @@ public abstract class AbstractTlsProviderBuilder<SELF extends AbstractTlsProvide
     /**
      * Creates a new instance.
      */
-    protected AbstractTlsProviderBuilder() {}
-
-    /**
-     * Set the {@link TlsKeyPair} for the specified (optionally wildcard) {@code hostname}.
-     *
-     * <p><a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a> is supported as hostname.
-     * The wildcard will only match one sub-domain deep and only when wildcard is used as the most-left label.
-     * For example, *.armeria.dev will match foo.armeria.dev but NOT bar.foo.armeria.dev
-     *
-     * <p>Note that {@code "*"} is a special hostname which matches any hostname which may be used to find the
-     * {@link TlsKeyPair} for the {@linkplain ServerBuilder#defaultVirtualHost() default virtual host}.
-     */
-    public SELF set(String hostname, TlsKeyPair tlsKeyPair) {
-        requireNonNull(hostname, "hostname");
-        requireNonNull(tlsKeyPair, "tlsKeyPair");
-        if ("*".equals(hostname)) {
-            tlsKeyPairsBuilder.put("*", tlsKeyPair);
-        } else {
-            tlsKeyPairsBuilder.put(normalizeHostname(hostname), tlsKeyPair);
-        }
-        return self();
-    }
-
-    /**
-     * Set the default {@link TlsKeyPair} which is used when no {@link TlsKeyPair} is specified for a hostname.
-     */
-    public SELF setDefault(TlsKeyPair tlsKeyPair) {
-        return set("*", tlsKeyPair);
-    }
+    protected AbstractTlsConfigBuilder() {}
 
     /**
      * Allows the bad cipher suites listed in
@@ -101,6 +69,14 @@ public abstract class AbstractTlsProviderBuilder<SELF extends AbstractTlsProvide
     }
 
     /**
+     * Returns whether to allow the bad cipher suites listed in
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
+     */
+    protected final boolean allowsUnsafeCiphers() {
+        return allowsUnsafeCiphers;
+    }
+
+    /**
      * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
      * applied to the SSL session. For example, use {@link SslContextBuilder#trustManager(TrustManagerFactory)}
      * to configure a custom server CA or {@link SslContextBuilder#keyManager(KeyManagerFactory)} to configure
@@ -118,32 +94,30 @@ public abstract class AbstractTlsProviderBuilder<SELF extends AbstractTlsProvide
     }
 
     /**
-     * Sets the {@link MeterIdPrefix} for the {@link TlsProvider}.
+     * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder}.
+     */
+    protected final Consumer<SslContextBuilder> tlsCustomizer() {
+        return tlsCustomizer;
+    }
+
+    /**
+     * Sets the {@link MeterIdPrefix} for the TLS metrics.
      */
     public SELF meterIdPrefix(MeterIdPrefix meterIdPrefix) {
         this.meterIdPrefix = requireNonNull(meterIdPrefix, "meterIdPrefix");
         return self();
     }
 
+    /**
+     * Returns the {@link MeterIdPrefix} for TLS metrics.
+     */
+    @Nullable
+    protected final MeterIdPrefix meterIdPrefix() {
+        return meterIdPrefix;
+    }
+
     @SuppressWarnings("unchecked")
     private SELF self() {
         return (SELF) this;
-    }
-
-    /**
-     * Returns a newly-created {@link TlsProvider} instance.
-     */
-    protected TlsProvider build() {
-        final Map<String, TlsKeyPair> keyPairMappings = tlsKeyPairsBuilder.build();
-        if (keyPairMappings.isEmpty()) {
-            throw new IllegalStateException("No TLS key pair is set.");
-        }
-        if (keyPairMappings.size() == 1 && keyPairMappings.containsKey("*")) {
-            return new StaticTlsProvider(keyPairMappings.get("*"), tlsCustomizer, allowsUnsafeCiphers,
-                                         meterIdPrefix);
-        }
-
-        return new MappedTlsProvider(keyPairMappings, tlsCustomizer, allowsUnsafeCiphers,
-                                     meterIdPrefix);
     }
 }

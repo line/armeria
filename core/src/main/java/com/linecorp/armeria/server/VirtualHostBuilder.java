@@ -353,7 +353,9 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
+     * @deprecated Use {@link #tls(TlsKeyPair)} with {@link TlsKeyPair#ofSelfSigned()}.
      */
+    @Deprecated
     public VirtualHostBuilder tlsSelfSigned() {
         return tlsSelfSigned(true);
     }
@@ -363,7 +365,9 @@ public final class VirtualHostBuilder implements TlsSetters, ServiceConfigsBuild
      * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
+     * @deprecated Use {@link #tls(TlsKeyPair)} with {@link TlsKeyPair#ofSelfSigned()}.
      */
+    @Deprecated
     public VirtualHostBuilder tlsSelfSigned(boolean tlsSelfSigned) {
         checkState(!portBased, "Cannot configure self-signed to a port-based virtual host." +
                                " Please configure to %s.tlsSelfSigned()", ServerBuilder.class.getSimpleName());

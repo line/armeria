@@ -66,6 +66,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.internal.common.IgnoreHostsTrustManager;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -126,6 +127,8 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private final Set<String> insecureHosts = new HashSet<>();
     @Nullable
     private TlsProvider tlsProvider;
+    @Nullable
+    private ClientTlsConfig tlsConfig;
     private boolean staticTlsSettingsSet;
 
     ClientFactoryBuilder() {
@@ -464,11 +467,22 @@ public final class ClientFactoryBuilder implements TlsSetters {
     /**
      * Sets the {@link TlsProvider} that provides {@link TlsKeyPair}s for client certificate authentication.
      */
+    @UnstableApi
     public ClientFactoryBuilder tlsProvider(TlsProvider tlsProvider) {
         requireNonNull(tlsProvider, "tlsProvider");
         checkState(!staticTlsSettingsSet,
                    "Cannot configure the TlsProvider because static TLS settings have been set already.");
         this.tlsProvider = tlsProvider;
+        return this;
+    }
+
+    /**
+     * Sets the {@link TlsProvider} that provides {@link TlsKeyPair}s for client certificate authentication.
+     */
+    @UnstableApi
+    public ClientFactoryBuilder tlsProvider(TlsProvider tlsProvider, ClientTlsConfig tlsConfig) {
+        tlsProvider(tlsProvider);
+        this.tlsConfig = requireNonNull(tlsConfig, "tlsConfig");
         return this;
     }
 
@@ -986,6 +1000,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
 
         if (tlsProvider != null) {
             option(ClientFactoryOptions.TLS_PROVIDER, tlsProvider);
+            if (tlsConfig != null) {
+                option(ClientFactoryOptions.TLS_CONFIG, tlsConfig);
+            }
         } else {
             if (tlsNoVerifySet) {
                 tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));

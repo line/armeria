@@ -43,6 +43,8 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -52,7 +54,6 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.client.DecodedHttpResponse;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
@@ -62,6 +63,7 @@ import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -150,7 +152,9 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private final HttpClientFactory clientFactory;
     private final boolean webSocket;
     @Nullable
-    private final ReleasableHolder<SslContext> sslCtx;
+    private final SslContext sslCtx;
+    @Nullable
+    private final SslContextFactory sslContextFactory;
     private final HttpPreference httpPreference;
     @Nullable
     private SocketAddress remoteAddress;
@@ -160,7 +164,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     HttpClientPipelineConfigurator(HttpClientFactory clientFactory,
                                    boolean webSocket, SessionProtocol sessionProtocol,
-                                   ReleasableHolder<SslContext> sslCtx) {
+                                   SslContext sslCtx, @Nullable SslContextFactory sslContextFactory) {
         this.clientFactory = clientFactory;
         this.webSocket = webSocket;
 
@@ -177,11 +181,13 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
         if (sessionProtocol.isTls()) {
             this.sslCtx = sslCtx;
+            this.sslContextFactory = sslContextFactory;
             http1 = H1;
             http2 = H2;
         } else {
-            // Don't need to release the SslContext because it's reusable.
             this.sslCtx = null;
+            assert sslContextFactory == null;
+            this.sslContextFactory = null;
             http1 = H1C;
             http2 = H2C;
         }
@@ -223,10 +229,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        if (sslCtx != null) {
-            sslCtx.release();
-        }
         super.channelInactive(ctx);
+        if (sslContextFactory != null) {
+            assert sslCtx != null;
+            sslContextFactory.release(sslCtx);
+        }
     }
 
     /**
@@ -239,12 +246,12 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final SSLEngine sslEngine;
         if (remoteAddr instanceof InetSocketAddress) {
             final InetSocketAddress raddr = (InetSocketAddress) remoteAddr;
-            sslEngine = sslCtx.get().newEngine(ch.alloc(),
-                                               raddr.getHostString(),
-                                               raddr.getPort());
+            sslEngine = sslCtx.newEngine(ch.alloc(),
+                                         raddr.getHostString(),
+                                         raddr.getPort());
         } else {
             assert remoteAddr instanceof DomainSocketAddress : remoteAddr;
-            sslEngine = sslCtx.get().newEngine(ch.alloc());
+            sslEngine = sslCtx.newEngine(ch.alloc());
         }
         final ClientConnectionTimingsBuilder timingsBuilder = ch.attr(TIMINGS_BUILDER_KEY).get();
         final SslHandler sslHandler = new ClientSslHandler(sslEngine, timingsBuilder);
@@ -320,8 +327,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                             "An unexpected exception before a TLS handshake starts. The possible reason could" +
                             " be one of: [connection forcefully closed by peer, unsupported TLS version, " +
                             "no cipher suites in common, etc.] " +
-                            "(TLS version: " + tlsVersion + ", cipher suites: " + sslCtx.get().cipherSuites() +
-                            ')',
+                            "(TLS version: " + tlsVersion + ", cipher suites: " + sslCtx.cipherSuites() + ')',
                             cause);
                     setPendingException(ctx, preTlsHandshakeException);
                     return;
@@ -811,6 +817,12 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
     private static HttpClientCodec newHttp1Codec(
             int defaultMaxInitialLineLength, int defaultMaxHeaderSize, int defaultMaxChunkSize) {
         return new HttpClientCodec(defaultMaxInitialLineLength, defaultMaxHeaderSize, defaultMaxChunkSize);
+    }
+
+    @VisibleForTesting
+    @Nullable
+    SslContextFactory sslContextFactory() {
+        return sslContextFactory;
     }
 
     /**

@@ -18,18 +18,14 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.Consumer;
+import java.security.cert.X509Certificate;
+import java.util.List;
 
-import com.linecorp.armeria.client.Client;
-import com.linecorp.armeria.client.ClientTlsProviderBuilder;
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerTlsProviderBuilder;
-
-import io.netty.handler.ssl.SslContextBuilder;
 
 /**
  * Provides {@link TlsKeyPair}s for TLS handshakes.
@@ -41,42 +37,20 @@ public interface TlsProvider {
     /**
      * Returns a {@link TlsProvider} for a {@link Server} which always returns the specified {@link TlsKeyPair}.
      */
-    static TlsProvider ofServer(TlsKeyPair tlsKeyPair) {
+    static TlsProvider of(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        return builderForServer().setDefault(tlsKeyPair).build();
+        return builder().setDefault(tlsKeyPair).build();
     }
 
     /**
-     * Returns a {@link TlsProvider} for a {@link Client} which always returns the specified {@link TlsKeyPair}.
-     */
-    static TlsProvider ofClient(TlsKeyPair tlsKeyPair) {
-        requireNonNull(tlsKeyPair, "tlsKeyPair");
-        return builderForClient().setDefault(tlsKeyPair).build();
-    }
-
-    /**
-     * Returns a newly created {@link ServerTlsProviderBuilder}.
+     * Returns a newly created {@link TlsProviderBuilder}.
      *
      * <p>Example usage:
      * <pre>{@code
      * TlsProvider
-     *   .builderForServer()
+     *   .builder()
      *   // Set the default key pair.
      *   .setDefault(TlsKeyPair.of(...))
-     *   // Set the key pair for "example.com".
-     *   .set("example.com", TlsKeyPair.of(...))
-     *   .build();
-     * }</pre>
-     */
-    static ServerTlsProviderBuilder builderForServer() {
-        return new ServerTlsProviderBuilder();
-    }
-
-    /**
-     * Returns a newly created {@link ClientTlsProviderBuilder}.
-     * <pre>{@code
-     * TlsProvider
-     *   .builderForClient()
      *   // Set the key pair for "api.example.com".
      *   .set("api.example.com", TlsKeyPair.of(...))
      *   // Set the key pair for "web.example.com".
@@ -84,8 +58,8 @@ public interface TlsProvider {
      *   .build();
      * }</pre>
      */
-    static ClientTlsProviderBuilder builderForClient() {
-        return new ClientTlsProviderBuilder();
+    static TlsProviderBuilder builder() {
+        return new TlsProviderBuilder();
     }
 
     /**
@@ -99,39 +73,10 @@ public interface TlsProvider {
     TlsKeyPair find(String hostname);
 
     /**
-     * Allows the bad cipher suites listed in
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#appendix-A">RFC7540</a> for TLS handshake.
-     *
-     * <p>Note that enabling this option increases the security risk of your connection.
-     * Use it only when you must communicate with a legacy system that does not support
-     * secure cipher suites.
-     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
-     * more information. This option is disabled by default.
-     *
-     * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
-     *             communicate with an insecure peer than this.
+     * Returns trusted certificates for verifying the remote endpoint's certificate. The system default will be
+     * used if this method returns an empty list.
      */
-    @Deprecated
-    default boolean allowsUnsafeCiphers() {
-        return false;
-    }
-
-    /**
-     * Returns the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
-     * applied to the SSL session.
-     */
-    default Consumer<SslContextBuilder> tlsCustomizer() {
-        return builder -> {};
-    }
-
-    /**
-     * Returns the {@link MeterIdPrefix} for TLS metrics.
-     * If not specified, "armeria.server" or "armeria.client" will be used by default based on the usage.
-     *
-     * @see MoreMeterBinders#certificateMetrics(Iterable, MeterIdPrefix)
-     */
-    @Nullable
-    default MeterIdPrefix meterIdPrefix() {
-        return null;
+    default List<X509Certificate> trustedCertificates() {
+        return ImmutableList.of();
     }
 }

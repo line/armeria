@@ -53,9 +53,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
-import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.internal.client.HttpSession;
 import com.linecorp.armeria.internal.client.PooledChannel;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -102,6 +102,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
     HttpChannelPool(HttpClientFactory clientFactory, EventLoop eventLoop,
                     SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
+                    @Nullable SslContextFactory sslContextFactory,
                     ConnectionPoolListener listener) {
         this.clientFactory = clientFactory;
         this.eventLoop = eventLoop;
@@ -117,7 +118,8 @@ final class HttpChannelPool implements AsyncCloseable {
                                        .get(ChannelOption.CONNECT_TIMEOUT_MILLIS);
         assert connectTimeoutMillisBoxed != null;
         connectTimeoutMillis = connectTimeoutMillisBoxed;
-        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only);
+        bootstraps = new Bootstraps(clientFactory, eventLoop, sslCtxHttp1Or2, sslCtxHttp1Only,
+                                    sslContextFactory);
     }
 
     private void configureProxy(Channel ch, ProxyConfig proxyConfig, SessionProtocol desiredProtocol) {
@@ -158,9 +160,11 @@ final class HttpChannelPool implements AsyncCloseable {
         ch.pipeline().addFirst(proxyHandler);
 
         if (proxyConfig instanceof ConnectProxyConfig && ((ConnectProxyConfig) proxyConfig).useTls()) {
-            final ReleasableHolder<SslContext> sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
-            ch.pipeline().addFirst(sslCtx.get().newHandler(ch.alloc()));
-            ch.closeFuture().addListener(unused -> sslCtx.release());
+            final SslContext sslCtx = bootstraps.getOrCreateSslContext(proxyAddress, desiredProtocol);
+            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
+            if (bootstraps.shouldReleaseSslContext(sslCtx)) {
+                ch.closeFuture().addListener(unused -> bootstraps.releaseSslContext(sslCtx));
+            }
         }
     }
 
@@ -520,7 +524,7 @@ final class HttpChannelPool implements AsyncCloseable {
                     // Clean up old unhealthy channels by iterating from the beginning of the queue.
                     final Deque<PooledChannel> queue = getPool(protocol, key);
                     if (queue != null) {
-                        for (;;) {
+                        for (; ; ) {
                             final PooledChannel pooledChannel = queue.peekFirst();
                             if (pooledChannel == null || isHealthy(pooledChannel)) {
                                 break;

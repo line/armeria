@@ -46,7 +46,7 @@ class ServerTlsProviderTest {
         @Override
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
-                    TlsProvider.builderForServer()
+                    TlsProvider.builder()
                                .set("*", TlsKeyPair.ofSelfSigned("default"))
                                .set("example.com", TlsKeyPair.ofSelfSigned("example.com"))
                                .set("api.example.com", TlsKeyPair.ofSelfSigned("api.example.com"))
@@ -150,7 +150,7 @@ class ServerTlsProviderTest {
         assertThatThrownBy(() -> {
             Server.builder()
                   .tls(TlsKeyPair.ofSelfSigned())
-                  .tlsProvider(TlsProvider.ofServer(TlsKeyPair.ofSelfSigned()))
+                  .tlsProvider(TlsProvider.of(TlsKeyPair.ofSelfSigned()))
                   .build();
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Cannot configure TLS settings with a TlsProvider");
@@ -158,14 +158,14 @@ class ServerTlsProviderTest {
         assertThatThrownBy(() -> {
             Server.builder()
                   .tlsSelfSigned()
-                  .tlsProvider(TlsProvider.ofServer(TlsKeyPair.ofSelfSigned()))
+                  .tlsProvider(TlsProvider.of(TlsKeyPair.ofSelfSigned()))
                   .build();
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Cannot configure TLS settings with a TlsProvider");
 
         assertThatThrownBy(() -> {
             Server.builder()
-                  .tlsProvider(TlsProvider.ofServer(TlsKeyPair.ofSelfSigned()))
+                  .tlsProvider(TlsProvider.of(TlsKeyPair.ofSelfSigned()))
                   .virtualHost("example.com")
                   .tls(TlsKeyPair.ofSelfSigned())
                   .and()

@@ -241,6 +241,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     private int http2MaxResetFramesWindowSeconds = 60;
     @Nullable
     private TlsProvider tlsProvider;
+    @Nullable
+    private ServerTlsConfig tlsConfig;
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -1170,6 +1172,12 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
     public ServerBuilder tlsProvider(TlsProvider tlsProvider) {
         requireNonNull(tlsProvider, "tlsProvider");
         this.tlsProvider = tlsProvider;
+        return this;
+    }
+
+    public ServerBuilder tlsProvider(TlsProvider tlsProvider, ServerTlsConfig tlsConfig) {
+        tlsProvider(tlsProvider);
+        this.tlsConfig = requireNonNull(tlsConfig, "tlsConfig");
         return this;
     }
 
@@ -2349,7 +2357,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
             } else {
                 final TlsEngineType tlsEngineType = defaultVirtualHost.tlsEngineType();
                 assert tlsEngineType != null;
-                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType);
+                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig);
             }
         }
         if (pingIntervalMillis > 0) {

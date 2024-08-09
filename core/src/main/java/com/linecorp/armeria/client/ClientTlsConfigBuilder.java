@@ -24,48 +24,21 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.AbstractTlsProviderBuilder;
-import com.linecorp.armeria.common.TlsKeyPair;
-import com.linecorp.armeria.common.TlsProvider;
+import com.linecorp.armeria.common.AbstractTlsConfigBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
 /**
- * A builder class for creating a {@link TlsProvider} that provides client-side TLS.
+ * A builder class for creating a {@link ClientTlsConfig}.
  */
 @UnstableApi
-public final class ClientTlsProviderBuilder extends AbstractTlsProviderBuilder<ClientTlsProviderBuilder> {
+public final class ClientTlsConfigBuilder extends AbstractTlsConfigBuilder<ClientTlsConfigBuilder> {
 
     private boolean tlsNoVerifySet;
     private final Set<String> insecureHosts = new HashSet<>();
-
-    /**
-     * Set the default {@link TlsKeyPair} for
-     * <a href="https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/">client certificate authentication</a>
-     * which is used when no {@link TlsKeyPair} is specified for a hostname.
-     */
-    @Override
-    public ClientTlsProviderBuilder setDefault(TlsKeyPair tlsKeyPair) {
-        return super.setDefault(tlsKeyPair);
-    }
-
-    /**
-     * Set the {@link TlsKeyPair} for
-     * <a href="https://www.cloudflare.com/learning/access-management/what-is-mutual-tls/">client certificate authentication</a>
-     * when performing TLS handshake with the specified (optionally wildcard) {@code hostname}.
-     *
-     * <p><a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">DNS wildcard</a> is supported as hostname.
-     * The wildcard will only match one sub-domain deep and only when wildcard is used as the most-left label.
-     * For example, *.armeria.dev will match foo.armeria.dev but NOT bar.foo.armeria.dev
-     *
-     * <p>Note that {@code "*"} is a special hostname which matches any hostname.
-     */
-    @Override
-    public ClientTlsProviderBuilder set(String hostname, TlsKeyPair tlsKeyPair) {
-        return super.set(hostname, tlsKeyPair);
-    }
 
     /**
      * Disables the verification of server's TLS certificate chain. If you want to disable verification for
@@ -75,7 +48,7 @@ public final class ClientTlsProviderBuilder extends AbstractTlsProviderBuilder<C
      * @see InsecureTrustManagerFactory
      * @see #tlsCustomizer(Consumer)
      */
-    public ClientTlsProviderBuilder tlsNoVerify() {
+    public ClientTlsConfigBuilder tlsNoVerify() {
         tlsNoVerifySet = true;
         checkState(insecureHosts.isEmpty(), "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
         return this;
@@ -88,7 +61,7 @@ public final class ClientTlsProviderBuilder extends AbstractTlsProviderBuilder<C
      *
      * @see #tlsCustomizer(Consumer)
      */
-    public ClientTlsProviderBuilder tlsNoVerifyHosts(String... insecureHosts) {
+    public ClientTlsConfigBuilder tlsNoVerifyHosts(String... insecureHosts) {
         requireNonNull(insecureHosts, "insecureHosts");
         return tlsNoVerifyHosts(ImmutableList.copyOf(insecureHosts));
     }
@@ -100,20 +73,15 @@ public final class ClientTlsProviderBuilder extends AbstractTlsProviderBuilder<C
      *
      * @see #tlsCustomizer(Consumer)
      */
-    public ClientTlsProviderBuilder tlsNoVerifyHosts(Iterable<String> insecureHosts) {
+    public ClientTlsConfigBuilder tlsNoVerifyHosts(Iterable<String> insecureHosts) {
         requireNonNull(insecureHosts, "insecureHosts");
         checkState(!tlsNoVerifySet, "tlsNoVerify() and tlsNoVerifyHosts() are mutually exclusive.");
         insecureHosts.forEach(this.insecureHosts::add);
         return this;
     }
 
-    @Override
-    public TlsProvider build() {
-        if (tlsNoVerifySet) {
-            tlsCustomizer(b -> b.trustManager(InsecureTrustManagerFactory.INSTANCE));
-        } else if (!insecureHosts.isEmpty()) {
-            tlsCustomizer(b -> b.trustManager(IgnoreHostsTrustManager.of(insecureHosts)));
-        }
-        return super.build();
+    public ClientTlsConfig build() {
+        return new ClientTlsConfig(allowsUnsafeCiphers(), meterIdPrefix(), tlsCustomizer(),
+                                   tlsNoVerifySet, ImmutableSet.copyOf(insecureHosts));
     }
 }

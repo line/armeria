@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.internal.common.util.CertificateUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerTlsConfig;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -57,18 +58,18 @@ class ClientTlsProviderTest {
         @Override
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
-                    TlsProvider.builderForClient()
+                    TlsProvider.builder()
                                .setDefault(server0DefaultCert.tlsKeyPair())
                                .set("foo.com", server0FooCert.tlsKeyPair())
                                .set("*.foo.com", server0SubFooCert.tlsKeyPair())
-                               .tlsCustomizer(b -> {
-                                   b.clientAuth(ClientAuth.REQUIRE)
-                                    .trustManager(clientFooCert.certificate());
-                               })
+                               .trustedCertificates(clientFooCert.certificate())
                                .build();
 
+            final ServerTlsConfig tlsConfig = ServerTlsConfig.builder()
+                                                             .clientAuth(ClientAuth.REQUIRE)
+                                                             .build();
             sb.https(0)
-              .tlsProvider(tlsProvider)
+              .tlsProvider(tlsProvider, tlsConfig)
               .service("/", (ctx, req) -> {
                   final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
@@ -92,17 +93,17 @@ class ClientTlsProviderTest {
         @Override
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
-                    TlsProvider.builderForClient()
+                    TlsProvider.builder()
                                .setDefault(server1DefaultCert.tlsKeyPair())
                                .set("bar.com", server1BarCert.tlsKeyPair())
-                               .tlsCustomizer(b -> {
-                                   b.clientAuth(ClientAuth.REQUIRE)
-                                    .trustManager(clientFooCert.certificate());
-                               })
+                               .trustedCertificates(clientFooCert.certificate())
                                .build();
+            ServerTlsConfig tlsConfig = ServerTlsConfig.builder()
+                                                       .clientAuth(ClientAuth.REQUIRE)
+                                                       .build();
 
             sb.https(0)
-              .tlsProvider(tlsProvider)
+              .tlsProvider(tlsProvider, tlsConfig)
               .service("/", (ctx, req) -> {
                   final String commonName = CertificateUtil.getCommonName(ctx.sslSession());
                   return HttpResponse.of("default:" + commonName);
@@ -120,7 +121,7 @@ class ClientTlsProviderTest {
         @Override
         protected void configure(ServerBuilder sb) {
             final TlsProvider tlsProvider =
-                    TlsProvider.builderForClient()
+                    TlsProvider.builder()
                                .setDefault(server0DefaultCert.tlsKeyPair())
                                .set("bar.com", server1BarCert.tlsKeyPair())
                                .build();
@@ -142,18 +143,16 @@ class ClientTlsProviderTest {
     @Test
     void testExactMatch() {
         final TlsProvider tlsProvider =
-                TlsProvider.builderForClient()
+                TlsProvider.builder()
                            .set("*.foo.com", clientFooCert.tlsKeyPair())
                            .set("bar.com", clientBarCert.tlsKeyPair())
                            .setDefault(TlsKeyPair.of(clientFooCert.privateKey(),
                                                      clientFooCert.certificate()))
-                           .tlsCustomizer(customizer -> {
-                               customizer.trustManager(
-                                       server0DefaultCert.certificate(),
-                                       server0FooCert.certificate(),
-                                       server0SubFooCert.certificate(),
-                                       server1BarCert.certificate());
-                           })
+                           .trustedCertificates(
+                                   server0DefaultCert.certificate(),
+                                   server0FooCert.certificate(),
+                                   server0SubFooCert.certificate(),
+                                   server1BarCert.certificate())
                            .build();
 
         try (ClientFactory factory = ClientFactory.builder()
@@ -183,19 +182,18 @@ class ClientTlsProviderTest {
     @Test
     void testWildcardMatch() {
         final TlsProvider tlsProvider =
-                TlsProvider.builderForClient()
+                TlsProvider.builder()
                            .set("*.foo.com", clientFooCert.tlsKeyPair())
-                           .tlsCustomizer(customizer -> {
-                               customizer.trustManager(server0FooCert.certificate(),
-                                                       server0SubFooCert.certificate());
-                           })
+                           .trustedCertificates(server0FooCert.certificate(),
+                                                server0SubFooCert.certificate())
                            .build();
 
-        try (ClientFactory factory = ClientFactory.builder()
-                                                  .tlsProvider(tlsProvider)
-                                                  .addressResolverGroupFactory(
-                                                          unused -> MockAddressResolverGroup.localhost())
-                                                  .build()) {
+        try (
+                ClientFactory factory = ClientFactory.builder()
+                                                     .tlsProvider(tlsProvider)
+                                                     .addressResolverGroupFactory(
+                                                             unused -> MockAddressResolverGroup.localhost())
+                                                     .build()) {
             // clientFooCert should be chosen by TlsProvider.
             BlockingWebClient client = WebClient.builder("https://foo.com:" + server0.httpsPort())
                                                 .factory(factory)
@@ -213,12 +211,10 @@ class ClientTlsProviderTest {
     @Test
     void testNoMtls() {
         final TlsProvider tlsProvider =
-                TlsProvider.builderForClient()
+                TlsProvider.builder()
                            .set("foo.com", clientFooCert.tlsKeyPair())
-                           .tlsCustomizer(customizer -> {
-                               customizer.trustManager(server0DefaultCert.certificate(),
-                                                       server1BarCert.certificate());
-                           })
+                           .trustedCertificates(server0DefaultCert.certificate(),
+                                                server1BarCert.certificate())
                            .build();
 
         try (ClientFactory factory = ClientFactory.builder()
@@ -244,7 +240,7 @@ class ClientTlsProviderTest {
     @Test
     void disallowTlsProviderWhenTlsSettingsIsSet() {
         final TlsProvider tlsProvider =
-                TlsProvider.ofClient(TlsKeyPair.ofSelfSigned());
+                TlsProvider.of(TlsKeyPair.ofSelfSigned());
 
         assertThatThrownBy(() -> {
             ClientFactory.builder()

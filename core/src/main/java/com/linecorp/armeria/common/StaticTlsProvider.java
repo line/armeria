@@ -18,57 +18,27 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 
 import com.google.common.base.MoreObjects;
-
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.metric.MeterIdPrefix;
-
-import io.netty.handler.ssl.SslContextBuilder;
 
 final class StaticTlsProvider implements TlsProvider {
 
     private final TlsKeyPair tlsKeyPair;
-    private final boolean allowsUnsafeCiphers;
-    private final Consumer<SslContextBuilder> tlsCustomizer;
-    @Nullable
-    private final MeterIdPrefix meterIdPrefix;
+    private final List<X509Certificate> trustedCertificates;
 
-    StaticTlsProvider(TlsKeyPair tlsKeyPair) {
-        this(tlsKeyPair, b -> {}, false, null);
-    }
-
-    StaticTlsProvider(TlsKeyPair tlsKeyPair, Consumer<SslContextBuilder> tlsCustomizer,
-                      boolean allowsUnsafeCiphers,
-                      @Nullable MeterIdPrefix meterIdPrefix) {
+    StaticTlsProvider(TlsKeyPair tlsKeyPair, List<X509Certificate> trustedCertificates) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        requireNonNull(tlsCustomizer, "tlsCustomizer");
+        requireNonNull(trustedCertificates, "trustedCertificates");
         this.tlsKeyPair = tlsKeyPair;
-        this.allowsUnsafeCiphers = allowsUnsafeCiphers;
-        this.tlsCustomizer = tlsCustomizer;
-        this.meterIdPrefix = meterIdPrefix;
+        this.trustedCertificates = trustedCertificates;
     }
 
     @Override
     public TlsKeyPair find(String hostname) {
         return tlsKeyPair;
-    }
-
-    @Override
-    public boolean allowsUnsafeCiphers() {
-        return allowsUnsafeCiphers;
-    }
-
-    @Override
-    public Consumer<SslContextBuilder> tlsCustomizer() {
-        return tlsCustomizer;
-    }
-
-    @Override
-    public MeterIdPrefix meterIdPrefix() {
-        return meterIdPrefix;
     }
 
     @Override
@@ -80,15 +50,13 @@ final class StaticTlsProvider implements TlsProvider {
             return false;
         }
         final StaticTlsProvider that = (StaticTlsProvider) o;
-        return allowsUnsafeCiphers == that.allowsUnsafeCiphers &&
-               tlsKeyPair.equals(that.tlsKeyPair) &&
-               tlsCustomizer.equals(that.tlsCustomizer) &&
-               Objects.equals(meterIdPrefix, that.meterIdPrefix);
+        return tlsKeyPair.equals(that.tlsKeyPair) &&
+               trustedCertificates.equals(that.trustedCertificates);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(tlsKeyPair, allowsUnsafeCiphers, tlsCustomizer, meterIdPrefix);
+        return Objects.hash(tlsKeyPair, trustedCertificates);
     }
 
     @Override
@@ -96,9 +64,7 @@ final class StaticTlsProvider implements TlsProvider {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
                           .add("tlsKeyPair", tlsKeyPair)
-                          .add("allowsUnsafeCiphers", allowsUnsafeCiphers)
-                          .add("tlsCustomizer", tlsCustomizer)
-                          .add("meterIdPrefix", meterIdPrefix)
+                          .add("trustedCertificates", trustedCertificates)
                           .toString();
     }
 }

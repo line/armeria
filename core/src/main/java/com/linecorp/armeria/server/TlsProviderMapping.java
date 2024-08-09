@@ -16,24 +16,23 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TlsEngineType;
+import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.TlsProviderUtil;
-import com.linecorp.armeria.internal.common.TlsProviderUtil.SslContextType;
+import com.linecorp.armeria.internal.common.TlsProviderUtil.SslContextMode;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 
 final class TlsProviderMapping implements Mapping<String, SslContext> {
 
-    private final TlsProvider tlsProvider;
-    private final TlsEngineType tlsEngineType;
+    private final SslContextFactory sslContextFactory;
 
-    TlsProviderMapping(TlsProvider tlsProvider, TlsEngineType tlsEngineType) {
-        this.tlsProvider = tlsProvider;
-        this.tlsEngineType = tlsEngineType;
+    TlsProviderMapping(TlsProvider tlsProvider, TlsEngineType tlsEngineType,
+                       @Nullable ServerTlsConfig tlsConfig) {
+        sslContextFactory = new SslContextFactory(tlsProvider, tlsEngineType, tlsConfig);
     }
 
     @Override
@@ -43,15 +42,10 @@ final class TlsProviderMapping implements Mapping<String, SslContext> {
         } else {
             hostname = TlsProviderUtil.normalizeHostname(hostname);
         }
-        TlsKeyPair tlsKeyPair = tlsProvider.find(hostname);
-        if (tlsKeyPair == null) {
-            // Try to find the default TLS key pair.
-            tlsKeyPair = tlsProvider.find("*");
-        }
-        if (tlsKeyPair == null) {
-            throw new IllegalStateException("No TLS key pair found for " + hostname);
-        }
-        return TlsProviderUtil.getOrCreateSslContext(tlsProvider, tlsKeyPair, SslContextType.SERVER,
-                                                     tlsEngineType);
+        return sslContextFactory.getOrCreate(SslContextMode.SERVER, hostname);
+    }
+
+    void release(SslContext sslContext) {
+        sslContextFactory.release(sslContext);
     }
 }

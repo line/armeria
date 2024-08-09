@@ -16,18 +16,31 @@
 
 package com.linecorp.armeria.server;
 
-import com.linecorp.armeria.common.AbstractTlsProviderBuilder;
+import static java.util.Objects.requireNonNull;
+
+import com.linecorp.armeria.common.AbstractTlsConfigBuilder;
 import com.linecorp.armeria.common.TlsProvider;
+
+import io.netty.handler.ssl.ClientAuth;
 
 /**
  * A builder class for creating a {@link TlsProvider} that provides server-side TLS.
  */
-public final class ServerTlsProviderBuilder extends AbstractTlsProviderBuilder<ServerTlsProviderBuilder> {
+public final class ServerTlsConfigBuilder extends AbstractTlsConfigBuilder<ServerTlsConfigBuilder> {
 
-    // We may add more methods to this class to provide server-specific features in the future.
+    private ClientAuth clientAuth = ClientAuth.NONE;
 
-    @Override
-    public TlsProvider build() {
-        return super.build();
+    ServerTlsConfigBuilder() {}
+
+    /**
+     * Sets the client authentication mode.
+     */
+    public ServerTlsConfigBuilder clientAuth(ClientAuth clientAuth) {
+        this.clientAuth = requireNonNull(clientAuth, "clientAuth");
+        return this;
+    }
+
+    public ServerTlsConfig build() {
+        return new ServerTlsConfig(allowsUnsafeCiphers(), meterIdPrefix(), clientAuth, tlsCustomizer());
     }
 }
