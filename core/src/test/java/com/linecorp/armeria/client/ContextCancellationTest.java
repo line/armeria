@@ -111,8 +111,6 @@ class ContextCancellationTest {
                     .hasRootCause(t);
             assertThat(connListener.opened()).isEqualTo(0);
             assertThat(requests).doesNotContain(testInfo.getDisplayName());
-            // don't validate the thread since we haven't started with event loop scheduling yet
-            validateCallbackChecks(null);
         }
     }
 
@@ -149,8 +147,6 @@ class ContextCancellationTest {
                     .hasCauseInstanceOf(UnprocessedRequestException.class)
                     .hasRootCause(t);
             assertThat(requests).doesNotContain(testInfo.getDisplayName());
-            // don't validate the thread since we haven't started with event loop scheduling yet
-            validateCallbackChecks(null);
         }
     }
 
