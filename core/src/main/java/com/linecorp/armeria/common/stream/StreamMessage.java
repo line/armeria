@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -49,6 +50,7 @@ import com.google.common.collect.ObjectArrays;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.StreamTimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -1209,5 +1211,49 @@ public interface StreamMessage<T> extends Publisher<T> {
     default StreamMessage<T> subscribeOn(EventExecutor eventExecutor) {
         requireNonNull(eventExecutor, "eventExecutor");
         return new SubscribeOnStreamMessage<>(this, eventExecutor);
+    }
+
+    /**
+     * Configures a timeout for the stream based on the specified duration with
+     * {@link StreamTimeoutMode#UNTIL_NEXT}. If no events are received within the specified duration,
+     * the stream will be terminated with a {@link StreamTimeoutException}.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * StreamMessage<String> stream = ...;
+     * // An item must be received within 10 seconds of the previous item to avoid a timeout.
+     * StreamMessage<String> timeoutStream = stream.timeout(Duration.ofSeconds(10));
+     * }</pre>
+     *
+     * @param timeoutDuration the duration before a timeout occurs
+     * @return a new {@link StreamMessage} with the specified timeout duration and default mode
+     */
+    @UnstableApi
+    default StreamMessage<T> timeout(Duration timeoutDuration) {
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    /**
+     * Configures a timeout for the stream based on the specified duration and mode. >If no events are received
+     * within the specified duration, the stream will be terminated with a {@link StreamTimeoutException}.
+     *
+     * <p>Example usage:
+     * <pre>{@code
+     * StreamMessage<String> stream = ...;
+     * StreamMessage<String> timeoutStream = stream.timeout(
+     *     Duration.ofSeconds(10),
+     *     StreamTimeoutMode.UNTIL_FIRST
+     * );
+     * }</pre>
+     *
+     * @param timeoutDuration the duration before a timeout occurs
+     * @param timeoutMode the mode in which the timeout is applied (see {@link StreamTimeoutMode} for details)
+     * @return a new {@link StreamMessage} with the specified timeout duration and mode applied
+     */
+    @UnstableApi
+    default StreamMessage<T> timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        requireNonNull(timeoutDuration, "timeoutDuration");
+        requireNonNull(timeoutMode, "timeoutMode");
+        return new TimeoutStreamMessage<>(this, timeoutDuration, timeoutMode);
     }
 }

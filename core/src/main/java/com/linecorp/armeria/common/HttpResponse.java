@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.StreamTimeoutMode;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.AbortedHttpResponse;
@@ -1195,5 +1196,17 @@ public interface HttpResponse extends Response, HttpMessage {
     @Override
     default HttpResponse subscribeOn(EventExecutor eventExecutor) {
         return of(HttpMessage.super.subscribeOn(eventExecutor));
+    }
+
+    @UnstableApi
+    @Override
+    default HttpResponse timeout(Duration timeoutDuration) {
+        return timeout(timeoutDuration, StreamTimeoutMode.UNTIL_NEXT);
+    }
+
+    @UnstableApi
+    @Override
+    default HttpResponse timeout(Duration timeoutDuration, StreamTimeoutMode timeoutMode) {
+        return of(HttpMessage.super.timeout(timeoutDuration, timeoutMode));
     }
 }
