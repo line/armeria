@@ -97,6 +97,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     static final AttributeKey<ServerMethodDefinition<?, ?>> RESOLVED_GRPC_METHOD =
             AttributeKey.valueOf(FramedGrpcService.class, "RESOLVED_GRPC_METHOD");
 
+    static final AttributeKey<Boolean> GRPC_USE_BLOCKING_EXECUTOR =
+            AttributeKey.valueOf(FramedGrpcService.class, "GRPC_USE_BLOCKING_EXECUTOR");
+
     private static Map<String, GrpcJsonMarshaller> getJsonMarshallers(
             HandlerRegistry registry,
             Set<SerializationFormat> supportedSerializationFormats,
@@ -289,8 +292,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
         final Executor blockingExecutor;
         if (useBlockingTaskExecutor || registry.needToUseBlockingTaskExecutor(methodDef)) {
+            ctx.setAttr(GRPC_USE_BLOCKING_EXECUTOR, true);
             blockingExecutor = MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor());
         } else {
+            ctx.setAttr(GRPC_USE_BLOCKING_EXECUTOR, false);
             blockingExecutor = null;
         }
         final AbstractServerCall<I, O> call = newServerCall(simpleMethodName, methodDef, ctx, req,

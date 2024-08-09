@@ -468,27 +468,6 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Returns {@code true} if the content of the response with the given {@link HttpStatus} is one of
-     * {@link HttpStatus#NO_CONTENT}, {@link HttpStatus#RESET_CONTENT} and {@link HttpStatus#NOT_MODIFIED}.
-     *
-     * @throws IllegalArgumentException if the specified {@code content} is not empty when the specified
-     *                                  {@link HttpStatus} is one of {@link HttpStatus#NO_CONTENT},
-     *                                  {@link HttpStatus#RESET_CONTENT} and {@link HttpStatus#NOT_MODIFIED}.
-     */
-    public static boolean isContentAlwaysEmptyWithValidation(HttpStatus status, HttpData content) {
-        if (!status.isContentAlwaysEmpty()) {
-            return false;
-        }
-
-        if (!content.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "A " + status + " response must have empty content: " + content.length() + " byte(s)");
-        }
-
-        return true;
-    }
-
-    /**
      * Returns {@code true} if the specified {@code headers} is a CORS preflight request.
      */
     public static boolean isCorsPreflightRequest(RequestHeaders headers) {
@@ -1208,7 +1187,7 @@ public final class ArmeriaHttpUtil {
 
         final HttpStatus status = headers.status();
 
-        if (isContentAlwaysEmptyWithValidation(status, content)) {
+        if (status.isContentAlwaysEmpty()) {
             if (status != HttpStatus.NOT_MODIFIED) {
                 if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                     return headers.toBuilder()

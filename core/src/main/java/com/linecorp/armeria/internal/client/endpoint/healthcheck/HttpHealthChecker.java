@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2024 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.endpoint.healthcheck;
+package com.linecorp.armeria.internal.client.endpoint.healthcheck;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.RejectedExecutionException;
@@ -34,6 +34,8 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroup;
+import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
@@ -44,6 +46,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.AsyncCloseable;
@@ -55,7 +58,7 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 import io.netty.util.AsciiString;
 import io.netty.util.concurrent.ScheduledFuture;
 
-final class HttpHealthChecker implements AsyncCloseable {
+public final class HttpHealthChecker implements AsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpHealthChecker.class);
 
@@ -74,19 +77,19 @@ final class HttpHealthChecker implements AsyncCloseable {
     private HttpResponse lastResponse;
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
-    HttpHealthChecker(HealthCheckerContext ctx, String path, boolean useGet) {
-        final Endpoint endpoint = ctx.endpoint();
+    public HttpHealthChecker(HealthCheckerContext ctx, Endpoint endpoint, String path, boolean useGet,
+                             SessionProtocol protocol, @Nullable String host) {
         this.ctx = ctx;
-        webClient = WebClient.builder(ctx.protocol(), endpoint)
+        webClient = WebClient.builder(protocol, endpoint)
                              .options(ctx.clientOptions())
                              .decorator(ResponseTimeoutUpdater::new)
                              .build();
-        authority = endpoint.authority();
+        authority = host != null ? host : endpoint.authority();
         this.path = path;
         this.useGet = useGet;
     }
 
-    void start() {
+    public void start() {
         check();
     }
 

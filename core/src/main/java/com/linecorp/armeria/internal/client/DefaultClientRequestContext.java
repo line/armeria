@@ -66,13 +66,16 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.HeaderOverridingHttpRequest;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.SchemeAndAuthority;
 import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -449,7 +452,7 @@ public final class DefaultClientRequestContext
                     options().factory().acquireEventLoop(sessionProtocol(), endpointGroup, endpoint);
             eventLoop = releasableEventLoop.get();
             log.whenComplete().thenAccept(unused -> releasableEventLoop.release());
-            responseCancellationScheduler.init(eventLoop());
+            initializeResponseCancellationScheduler();
         }
     }
 
@@ -549,10 +552,25 @@ public final class DefaultClientRequestContext
         // the root context.
         if (endpoint == null || ctx.endpoint() == endpoint && ctx.log.children().isEmpty()) {
             eventLoop = ctx.eventLoop().withoutContext();
-            responseCancellationScheduler.init(eventLoop());
+            initializeResponseCancellationScheduler();
         } else {
             acquireEventLoop(endpoint);
         }
+    }
+
+    private void initializeResponseCancellationScheduler() {
+        final CancellationTask cancellationTask = cause -> {
+            try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                final HttpRequest request = request();
+                if (request != null) {
+                    request.abort(cause);
+                }
+                log.endRequest(cause);
+                log.endResponse(cause);
+            }
+        };
+        responseCancellationScheduler.init(eventLoop().withoutContext());
+        responseCancellationScheduler.updateTask(cancellationTask);
     }
 
     @Nullable
@@ -937,13 +955,13 @@ public final class DefaultClientRequestContext
     @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
-        return responseCancellationScheduler.whenTimingOut();
+        return whenResponseCancelling().handle((v, e) -> null);
     }
 
     @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
-        return responseCancellationScheduler.whenTimedOut();
+        return whenResponseCancelled().handle((v, e) -> null);
     }
 
     @Override
