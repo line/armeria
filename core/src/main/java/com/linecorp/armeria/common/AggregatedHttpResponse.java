@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.common.HttpResponseUtil.httpResponseUtilLogger;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.maybeUpdateContentLengthAndEndOfStream;
 import static java.util.Objects.requireNonNull;
 
@@ -251,6 +252,16 @@ public interface AggregatedHttpResponse extends AggregatedHttpMessage {
 
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
+
+        if (headers.status().isContentAlwaysEmpty()) {
+            if (!content.isEmpty()) {
+                httpResponseUtilLogger.debug(
+                        "Non-empty content found with an empty status: {}, content length: {}",
+                        headers.status(), content.length());
+                content.close();
+                content = HttpData.empty();
+            }
+        }
 
         // Set the 'content-length' header if possible.
         final ResponseHeaders newHeaders =
