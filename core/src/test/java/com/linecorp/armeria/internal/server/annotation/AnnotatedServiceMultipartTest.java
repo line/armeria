@@ -19,11 +19,16 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -48,6 +53,7 @@ import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Param;
@@ -87,6 +93,41 @@ class AnnotatedServiceMultipartTest {
                            "\"multipartFile1\":\"qux.txt_qux (application/octet-stream)\"," +
                            "\"multipartFile2\":\"quz.txt_quz (text/plain)\"," +
                            "\"param1\":\"armeria\"}");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = "/uploadWithUnintendedFileParam")
+    void testUploadFileWithUnexpectedParameters(String path) throws Exception {
+        final Multipart multipart = Multipart.of(
+                BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo"),
+                BodyPart.of(ContentDisposition.of("form-data", "path1", "bar.txt"), "bar"),
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile1", "qux.txt"), "qux"),
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile2", "quz.txt"),
+                            MediaType.PLAIN_TEXT, "quz"),
+                // Unexpected parameter: multipartFile3
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile3", "qux3.txt"), "qux3"),
+                BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
+
+        );
+        final AggregatedHttpResponse response =
+                server.blockingWebClient().execute(multipart.toHttpRequest(path));
+        assertEquals(HttpStatus.OK, response.status());
+        final List<ServiceConfig> serviceConfigs = server.server().config().serviceConfigs();
+        final Optional<java.nio.file.Path> optionalDestination = serviceConfigs.stream()
+                                                   .map(ServiceConfig::multipartUploadsLocation)
+                                                   .reduce((first, second) -> second);
+        optionalDestination.ifPresent(destination -> {
+            final java.nio.file.Path completeDir = destination.resolve("complete");
+            try (Stream<java.nio.file.Path> paths = java.nio.file.Files.walk(completeDir)) {
+              paths.filter(java.nio.file.Files::isRegularFile).forEach(file -> {
+                  try (Stream<String> lines = java.nio.file.Files.lines(file)) {
+                      lines.forEach(name -> assertNotEquals("multipartFile3", name));
+                  } catch (Exception ignored) {
+                  }
+              });
+          } catch (Exception ignored) {
+          }
+        });
     }
 
     @Test
@@ -140,6 +181,37 @@ class AnnotatedServiceMultipartTest {
         @Post
         @Path("/uploadWithFileParam")
         public HttpResponse uploadWithFileParam(@Param File file1, @Param java.nio.file.Path path1,
+                                                MultipartFile multipartFile1,
+                                                @Param MultipartFile multipartFile2,
+                                                @Param String param1) throws IOException {
+            final String file1Content = Files.asCharSource(file1, StandardCharsets.UTF_8).read();
+            final String path1Content = Files.asCharSource(path1.toFile(), StandardCharsets.UTF_8)
+                                             .read();
+            final MediaType multipartFile1ContentType = multipartFile1.headers().contentType();
+            final String multipartFile1Content =
+                    Files.asCharSource(multipartFile1.file(), StandardCharsets.UTF_8)
+                         .read();
+            final MediaType multipartFile2ContentType = multipartFile2.headers().contentType();
+            final String multipartFile2Content =
+                    Files.asCharSource(multipartFile2.file(), StandardCharsets.UTF_8)
+                         .read();
+            final ImmutableMap<String, String> content =
+                    ImmutableMap.of("file1", file1Content,
+                                    "path1", path1Content,
+                                    "multipartFile1",
+                                    multipartFile1.filename() + '_' + multipartFile1Content +
+                                    " (" + multipartFile1ContentType + ')',
+                                    "multipartFile2",
+                                    multipartFile2.filename() + '_' + multipartFile2Content +
+                                    " (" + multipartFile2ContentType + ')',
+                                    "param1", param1);
+            return HttpResponse.ofJson(content);
+        }
+
+        @Blocking
+        @Post
+        @Path("/uploadWithUnintendedFileParam")
+        public HttpResponse uploadWithUnintendedFileParam(@Param File file1, @Param java.nio.file.Path path1,
                                                 MultipartFile multipartFile1,
                                                 @Param MultipartFile multipartFile2,
                                                 @Param String param1) throws IOException {
