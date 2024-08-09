@@ -48,6 +48,8 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.common.EventLoopGroupExtension;
@@ -245,7 +247,9 @@ class ContextCancellationTest {
                 public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                                       SubscriptionOption... options) {
                     super.subscribe(subscriber, executor, options);
-                    ctxRef.get().cancel(t);
+                    try (SafeCloseable ignored = RequestContextUtil.pop()) {
+                        ctxRef.get().cancel(t);
+                    }
                 }
             });
             assertThatThrownBy(() -> res.aggregate().join())
