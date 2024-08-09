@@ -12,7 +12,7 @@ date: 2024-08-08
       .builder()
       .onServerError()
       .onException(IOException.class)
-      .onException(WriteTimeoutException, OutlierDetectionDecision.FATAL)
+      .onException(WriteTimeoutException.class, OutlierDetectionDecision.FATAL)
       .build();
   
   OutlierDetection outlierDetection = 
@@ -43,6 +43,18 @@ date: 2024-08-08
       .expireAfterLoad(Duration.ofSeconds(60))
       .build();
   asyncLoader.get().join();
+  ```
+- **Configurable Response Timeout**: You can now use <type://ResponseTimeoutMode> to configure when a response
+  timeout start for a client. The timeout can be set when a request is started, a connection is acquired or a 
+  request is fully sent. #4591 #5793
+  ```java
+  ClientFactory
+    .builder()
+    .responseTimeoutMode(ResponseTimeoutMode.FROM_START)
+    // A request will be timed out if the response is not fully received
+    // within 5 seconds.
+    .responseTimeout(Duration.ofSeconds(5))
+    .build();
   ```
 - **Fallback File Extensions**: You can now set fallback file extensions in <type://FileService>.
   This feature is useful when you want to map a RESTful URI to a static resource file. #4542 #5806
@@ -76,6 +88,8 @@ date: 2024-08-08
   supports features available in the default load balancer of <type://XdsEndpointGroup> #5801
 - New headers from Guava have been added to <type://HttpHeaderNames>. #5789
 - Armeria is now compatible with Thrift 0.19 and 0.20.0 #5243 #5822
+- Armeria client now silently ignores content instead of raising an exception when content exists for
+  a status that indicates empty content. #5823
 
 ## 🛠️ Bug fixes
 
@@ -91,10 +105,14 @@ date: 2024-08-08
 - Content decompression exceptions are now properly propagated. #5177 #5620
 - <type://@Blocking> now correctly works with gRPC-Kotlin stubs #5295 #5399
 - Fixed <type://DocService> sidebar to occupy at most 40% of the window width. #5091 #5839
+- `InputStream` created from <type://StreamMessage#toInputStream(Function)> now correctly raises 
+  an exception if the original <type://StreamMessage> is closed with an exception. #5859
+- <type://ClientRequestContext#isTimedOut()> now correctly returns `true` if a DNS query, a session creation or
+  a write operation times out. #4935 #5156
 
 ## 📃 Documentation
 
-- Added gRPC reverse proxy server example #2353 #5722
+- Added a gRPC reverse proxy server example. #2353 #5722
 
 ## ☢️ Breaking changes
 
