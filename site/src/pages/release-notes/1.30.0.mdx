@@ -45,15 +45,15 @@ date: 2024-08-08
   asyncLoader.get().join();
   ```
 - **Configurable Response Timeout**: You can now use <type://ResponseTimeoutMode> to configure when a response
-  timeout start for a client. The timeout can be set when a request is started, a connection is acquired or a 
+  timeout starts for a client. The timeout can be set when a request is started, a connection is acquired or a 
   request is fully sent. #4591 #5793
   ```java
   ClientFactory
     .builder()
-    .responseTimeoutMode(ResponseTimeoutMode.FROM_START)
+    .responseTimeout(Duration.ofSeconds(5))
     // A request will be timed out if the response is not fully received
     // within 5 seconds.
-    .responseTimeout(Duration.ofSeconds(5))
+    .responseTimeoutMode(ResponseTimeoutMode.FROM_START)
     .build();
   ```
 - **Fallback File Extensions**: You can now set fallback file extensions in <type://FileService>.
@@ -62,7 +62,7 @@ date: 2024-08-08
   FileService
     .builder(rootDir)
     // '/app/projects' path could be mapped to '<rootDir>/app/projects.html'
-    .fallbackFileExtensions("html", "txt")
+    .fallbackFileExtensions("html")
     ...
   ```
 - **Sending Arbitrary Content in gRPC-JSON Transcoding**: You can now use [google.api.HttpBody](https://github.com/googleapis/googleapis/blob/master/google/api/httpbody.proto)
