@@ -43,6 +43,7 @@ import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilder;
+import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientFactoryBuilder;
 import com.linecorp.armeria.client.DnsResolverGroupBuilder;
 import com.linecorp.armeria.client.Endpoint;
@@ -438,6 +439,10 @@ public final class Flags {
     private static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS =
             getValue(FlagsProvider::defaultHttp1ConnectionCloseDelayMillis,
                     "defaultHttp1ConnectionCloseDelayMillis", value -> value >= 0);
+
+    private static final long DEFAULT_CLIENT_FACTORY_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS =
+            getValue(FlagsProvider::defaultClientFactoryGracefulShutdownTimeoutMillis,
+                    "defaultClientFactoryGracefulShutdownTimeoutMillis", value -> value >= 0);
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1640,6 +1645,25 @@ public final class Flags {
     @UnstableApi
     public static long defaultHttp1ConnectionCloseDelayMillis() {
         return DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS;
+    }
+
+    /**
+     * Returns the default time in milliseconds to wait before closing the
+     * {@linkplain ClientFactory#ofDefault() default ClientFactory} that is closed by JVM
+     * {@linkplain Runtime#addShutdownHook(Thread) shutdown hook}.
+     *
+     * <p>This option is ignored if you manually close the default {@linkplain ClientFactory} with
+     * {@link ClientFactory#closeDefault()} or you disable the shutdown hook with
+     * {@link ClientFactory#disableShutdownHook()}.
+     *
+     * <p>The default value of this flag is
+     * {@value DefaultFlagsProvider#DEFAULT_CLIENT_FACTORY_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultClientFactoryGracefulShutdownTimeoutMillis=<long>} JVM option to
+     * override the default value. {@code 0} closes the default {@link ClientFactory} immediately.
+     */
+    @UnstableApi
+    public static long defaultClientFactoryGracefulShutdownTimeoutMillis() {
+        return DEFAULT_CLIENT_FACTORY_GRACEFUL_SHUTDOWN_TIMEOUT_MILLIS;
     }
 
     @Nullable
