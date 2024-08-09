@@ -22,7 +22,6 @@ import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.math.LongMath;
@@ -41,14 +40,6 @@ import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
 final class DefaultCancellationScheduler implements CancellationScheduler {
-
-    private static final AtomicReferenceFieldUpdater<DefaultCancellationScheduler, CancellationFuture>
-            whenCancellingUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultCancellationScheduler.class, CancellationFuture.class, "whenCancelling");
-
-    private static final AtomicReferenceFieldUpdater<DefaultCancellationScheduler, CancellationFuture>
-            whenCancelledUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultCancellationScheduler.class, CancellationFuture.class, "whenCancelled");
 
     static final CancellationScheduler serverFinishedCancellationScheduler = finished0(true);
     static final CancellationScheduler clientFinishedCancellationScheduler = finished0(false);
@@ -69,10 +60,8 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
     private final ReentrantShortLock lock = new ReentrantShortLock();
 
     private final boolean server;
-    @Nullable
-    private volatile CancellationFuture whenCancelling;
-    @Nullable
-    private volatile CancellationFuture whenCancelled;
+    private final CancellationFuture whenCancelling = new CancellationFuture();
+    private final CancellationFuture whenCancelled = new CancellationFuture();
 
     @VisibleForTesting
     DefaultCancellationScheduler(long timeoutNanos) {
@@ -383,34 +372,12 @@ final class DefaultCancellationScheduler implements CancellationScheduler {
 
     @Override
     public CompletableFuture<Throwable> whenCancelling() {
-        final CancellationFuture whenCancelling = this.whenCancelling;
-        if (whenCancelling != null) {
-            return whenCancelling;
-        }
-        final CancellationFuture cancellationFuture = new CancellationFuture();
-        if (whenCancellingUpdater.compareAndSet(this, null, cancellationFuture)) {
-            return cancellationFuture;
-        } else {
-            final CancellationFuture oldWhenCancelling = this.whenCancelling;
-            assert oldWhenCancelling != null;
-            return oldWhenCancelling;
-        }
+        return whenCancelling;
     }
 
     @Override
     public CompletableFuture<Throwable> whenCancelled() {
-        final CancellationFuture whenCancelled = this.whenCancelled;
-        if (whenCancelled != null) {
-            return whenCancelled;
-        }
-        final CancellationFuture cancellationFuture = new CancellationFuture();
-        if (whenCancelledUpdater.compareAndSet(this, null, cancellationFuture)) {
-            return cancellationFuture;
-        } else {
-            final CancellationFuture oldWhenCancelled = this.whenCancelled;
-            assert oldWhenCancelled != null;
-            return oldWhenCancelled;
-        }
+        return whenCancelled;
     }
 
     private enum ScheduleResult {
