@@ -28,14 +28,14 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * }</pre>
  * <ul>
  *     <li>
- *         If {@link ResponseTimeoutMode#RESPONSE_READ} is used, the request will go through the decorators,
- *         acquire a connection, and write the request. Once the response header is read, the timeout task
- *         will trigger immediately since 5 seconds has passed which exceeds the responseTimeout of 2 seconds.
- *     </li>
- *     <li>
  *         If {@link ResponseTimeoutMode#REQUEST_START} is used, the timeout task will be scheduled
  *         immediately on request start. The timeout task will trigger while the request goes through
  *         the decorator, and the request will fail before acquiring a new connection.
+ *     </li>
+ *     <li>
+ *         If {@link ResponseTimeoutMode#REQUEST_SENT} is used, the request will go through the decorators,
+ *         acquire a connection, and write the request. Once the request is fully sent, the timeout task
+ *         will trigger immediately since 5 seconds has passed which exceeds the responseTimeout of 2 seconds.
  *     </li>
  * </ul>
  */
@@ -49,13 +49,13 @@ public enum ResponseTimeoutMode {
     REQUEST_START,
 
     /**
-     * The response timeout is scheduled when the request is first written on the wire.
+     * The response timeout is scheduled after the connection is acquired.
      */
-    REQUEST_WRITE,
+    CONNECTION_ACQUIRED,
 
     /**
-     * The response timeout is scheduled either when the response bytes are first read, or when the client
-     * finishes writing the request.
+     * The response timeout is scheduled either after the client fully writes the request
+     * or when the response bytes are first read.
      */
-    RESPONSE_READ,
+    REQUEST_SENT,
 }

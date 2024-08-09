@@ -69,7 +69,7 @@ class TimeoutModeTest {
         final HttpRequestWriter streaming = HttpRequest.streaming(HttpMethod.POST, "/");
         final HttpResponse res = server
                 .webClient(cb -> {
-                    cb.responseTimeoutMode(ResponseTimeoutMode.REQUEST_WRITE);
+                    cb.responseTimeoutMode(ResponseTimeoutMode.CONNECTION_ACQUIRED);
                     cb.responseTimeout(Duration.ofMillis(50));
                 })
                 .execute(streaming);
@@ -82,7 +82,7 @@ class TimeoutModeTest {
     void timeoutMode_responseWrite() {
         final HttpResponse res = server
                 .webClient(cb -> {
-                    cb.responseTimeoutMode(ResponseTimeoutMode.RESPONSE_READ);
+                    cb.responseTimeoutMode(ResponseTimeoutMode.REQUEST_SENT);
                     cb.responseTimeout(Duration.ofMillis(50));
                 })
                 .get("/");

@@ -101,7 +101,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final String DNS_CACHE_SPEC = "maximumSize=4096";
     static final long DEFAULT_UNLOGGED_EXCEPTIONS_REPORT_INTERVAL_MILLIS = 10000;
     static final long DEFAULT_HTTP1_CONNECTION_CLOSE_DELAY_MILLIS = 3000;
-    static final ResponseTimeoutMode DEFAULT_RESPONSE_TIMEOUT_MODE = ResponseTimeoutMode.RESPONSE_READ;
+    static final ResponseTimeoutMode DEFAULT_RESPONSE_TIMEOUT_MODE = ResponseTimeoutMode.REQUEST_SENT;
 
     private DefaultFlagsProvider() {}
 

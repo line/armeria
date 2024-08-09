@@ -1650,7 +1650,7 @@ public final class Flags {
      * Returns the {@link ResponseTimeoutMode} which determines when a response timeout
      * will start to be scheduled.
      *
-     * <p>The default value of this flag is RESPONSE_READ. Specify the
+     * <p>The default value of this flag is REQUEST_SENT. Specify the
      * {@code -Dcom.linecorp.armeria.responseTimeoutMode=ResponseTimeoutMode} JVM option to
      * override the default value.
      * @see ResponseTimeoutMode
