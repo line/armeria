@@ -138,7 +138,7 @@ function parseResult(body: string | null): string[] {
   const value = chain(lines)
     .dropWhile((line) => !line.includes('Result:'))
     .drop()
-    .filter((line) => !line.match(/([Cc]loses?|[Ff]ix(es)?) /))
+    .filter((line) => !line.match(/([Cc]loses?|[Ff]ix(es)?) #[0-9]+/))
     .value();
 
   const result: string[] = [];
