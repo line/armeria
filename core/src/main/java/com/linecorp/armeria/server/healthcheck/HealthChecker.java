@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.healthcheck;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.io.File;
 import java.time.Duration;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Supplier;
@@ -103,6 +104,19 @@ public interface HealthChecker {
      */
     static HealthChecker ofCpu(double targetSystemCpuUsage, double targetProcessCpuUsage) {
         return new CpuHealthChecker(targetSystemCpuUsage, targetProcessCpuUsage);
+    }
+
+    /**
+     * Creates a new instance of {@link HealthChecker} which reports health based on free disk space
+     * of the file system the specified path belongs to.
+     * There must be more free space (inclusive) than the specified threshold in order
+     * for the {@link HealthChecker} to report as healthy.
+     *
+     * @param freeDiskSpacePercentage the target free disk space as a percentage (0 - 1).
+     * @return an instance of {@link HealthChecker} configured with the provided disk memory space targets.
+     */
+    static HealthChecker ofDisk(double freeDiskSpacePercentage, File path) {
+        return new DiskMemoryHealthChecker(freeDiskSpacePercentage, path);
     }
 
     /**
