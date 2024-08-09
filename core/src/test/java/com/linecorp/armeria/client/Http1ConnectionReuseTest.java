@@ -24,27 +24,20 @@ import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.reactivestreams.Subscriber;
 
-import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-
-import io.netty.util.concurrent.EventExecutor;
 
 class Http1ConnectionReuseTest {
 
     private static final List<InetSocketAddress> remoteAddresses = new ArrayList<>(3);
+    private static final HttpRequest REQUEST = HttpRequest.of(HttpMethod.GET, "/");
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -73,53 +66,10 @@ class Http1ConnectionReuseTest {
     }
 
     private static HttpRequest httpRequest(CompletableFuture<Void> future) {
-        return new HttpRequest() {
-            private final HttpRequest delegate = HttpRequest.of(HttpMethod.GET, "/");
-
-            @Override
-            public RequestHeaders headers() {
-                return delegate.headers();
-            }
-
-            @Override
-            public boolean isOpen() {
-                return delegate.isOpen();
-            }
-
-            @Override
-            public boolean isEmpty() {
-                return delegate.isEmpty();
-            }
-
-            @Override
-            public long demand() {
-                return delegate.demand();
-            }
-
+        return new DelegatingHttpRequest(REQUEST) {
             @Override
             public CompletableFuture<Void> whenComplete() {
                 return future;
-            }
-
-            @Override
-            public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
-                                  SubscriptionOption... options) {
-                delegate.subscribe(subscriber, executor, options);
-            }
-
-            @Override
-            public void abort() {
-                delegate.abort();
-            }
-
-            @Override
-            public void abort(Throwable cause) {
-                delegate.abort(cause);
-            }
-
-            @Override
-            public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
-                return delegate.aggregate(options);
             }
         };
     }
