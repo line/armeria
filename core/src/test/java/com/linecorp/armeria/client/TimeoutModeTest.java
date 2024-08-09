@@ -48,7 +48,7 @@ class TimeoutModeTest {
     void timeoutMode_requestStart() {
         final HttpResponse res = server
                 .webClient(cb -> {
-                    cb.responseTimeoutMode(ResponseTimeoutMode.REQUEST_START);
+                    cb.responseTimeoutMode(ResponseTimeoutMode.FROM_START);
                     cb.responseTimeoutMillis(50);
                     cb.decorator((delegate, ctx, req) -> {
                         final CompletableFuture<HttpResponse> f = new CompletableFuture<>();

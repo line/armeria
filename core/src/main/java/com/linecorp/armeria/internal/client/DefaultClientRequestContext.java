@@ -570,7 +570,7 @@ public final class DefaultClientRequestContext
                 log.endResponse(cause);
             }
         };
-        if (options.responseTimeoutMode() == ResponseTimeoutMode.REQUEST_START) {
+        if (options.responseTimeoutMode() == ResponseTimeoutMode.FROM_START) {
             responseCancellationScheduler.initAndStart(eventLoop().withoutContext(), cancellationTask);
         } else {
             responseCancellationScheduler.init(eventLoop().withoutContext());
