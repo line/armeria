@@ -254,4 +254,9 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
     public RestClientBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         return (RestClientBuilder) super.contextHook(contextHook);
     }
+
+    @Override
+    public RestClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (RestClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
 }

@@ -250,4 +250,9 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (WebClientBuilder) super.contextCustomizer(contextCustomizer);
     }
+
+    @Override
+    public WebClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (WebClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
 }

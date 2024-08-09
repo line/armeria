@@ -612,6 +612,14 @@ public interface ClientRequestContext extends RequestContext {
     @UnstableApi
     ExchangeType exchangeType();
 
+    /**
+     * Returns the {@link ResponseTimeoutMode} which determines when a {@link #responseTimeoutMillis()}
+     * will start to be scheduled.
+     * @see ResponseTimeoutMode
+     */
+    @UnstableApi
+    ResponseTimeoutMode responseTimeoutMode();
+
     @Override
     default ClientRequestContext unwrap() {
         return (ClientRequestContext) RequestContext.super.unwrap();

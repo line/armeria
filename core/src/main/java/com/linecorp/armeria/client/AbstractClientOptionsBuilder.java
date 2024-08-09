@@ -507,6 +507,17 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * Sets the {@link ResponseTimeoutMode} which determines when a {@link #responseTimeout(Duration)}}
+     * will start to be scheduled.
+     * @see ResponseTimeoutMode
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return option(ClientOptions.RESPONSE_TIMEOUT_MODE,
+                      requireNonNull(responseTimeoutMode, "responseTimeoutMode"));
+    }
+
+    /**
      * Builds {@link ClientOptions} with the given options and the
      * {@linkplain ClientOptions#of() default options}.
      */

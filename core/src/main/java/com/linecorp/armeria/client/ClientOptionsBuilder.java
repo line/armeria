@@ -222,4 +222,9 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     public ClientOptionsBuilder contextHook(Supplier<? extends AutoCloseable> contextHook) {
         return (ClientOptionsBuilder) super.contextHook(contextHook);
     }
+
+    @Override
+    public ClientOptionsBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (ClientOptionsBuilder) super.responseTimeoutMode(responseTimeoutMode);
+    }
 }
