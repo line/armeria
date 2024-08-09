@@ -239,7 +239,6 @@ function renderReleaseNotes(pullRequests: PullRequest[]): string {
           builder.push(change.results.shift());
         } else {
           const links = change.references.map((id) => `#${id}`).join(' ');
-          console.log("Change : " + JSON.stringify(change));
           if (change.results.length === 0) {
             builder.push(`- ${change.title} ${links}`);
           } else {
