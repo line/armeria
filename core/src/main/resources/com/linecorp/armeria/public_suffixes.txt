@@ -562,6 +562,7 @@ api.gov.uk
 api.stdlib.com
 apigee.io
 app
+app-ionos.space
 app.banzaicloud.io
 app.br
 app.os.fedoraproject.org
@@ -571,6 +572,8 @@ appchizi.com
 appengine.flow.ch
 apple
 applinzi.com
+apps-1and1.com
+apps-1and1.net
 apps.fbsbx.com
 apps.lair.io
 appspacehosted.com
@@ -2659,6 +2662,7 @@ fi.it
 fidelity
 fido
 fie.ee
+filegear-sg.me
 filegear.me
 film
 film.hu
@@ -3004,6 +3008,7 @@ gf
 gg
 ggee
 ggf.br
+ggff.net
 gh
 gh.srv.us
 gi
@@ -4817,6 +4822,7 @@ lib.vt.us
 lib.wa.us
 lib.wi.us
 lib.wy.us
+libp2p.direct
 lidl
 lier.no
 lierne.no
@@ -4850,6 +4856,7 @@ lipsy
 littlestar.jp
 live
 live-on.net
+live-website.com
 living
 livorno.it
 lk
@@ -6765,6 +6772,7 @@ presse.ci
 presse.km
 presse.ml
 preview.csb.app
+preview.wdh.app
 pri.ee
 prime
 primetel.cloud
@@ -7857,6 +7865,7 @@ smola.no
 smushcdn.com
 sn
 sn.cn
+sn.mynetname.net
 snaase.no
 snasa.no
 sncf
@@ -8961,6 +8970,7 @@ watches
 watson.jp
 waw.pl
 wazuka.kyoto.jp
+wdh.app
 we.bs
 weather
 weatherchannel
@@ -8995,6 +9005,7 @@ weblike.jp
 webredirect.org
 website
 website.yandexcloud.net
+websitebuilder.online
 websozai.jp
 webspace.rocks
 webthings.io
