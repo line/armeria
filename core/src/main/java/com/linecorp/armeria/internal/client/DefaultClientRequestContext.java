@@ -169,6 +169,8 @@ public final class DefaultClientRequestContext
     @Nullable
     private volatile CompletableFuture<Boolean> whenInitialized;
 
+    private final ResponseTimeoutMode responseTimeoutMode;
+
     /**
      * Creates a new instance. Note that {@link #init(EndpointGroup)} method must be invoked to finish
      * the construction of this context.
@@ -280,6 +282,16 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+        responseTimeoutMode = responseTimeoutMode(options, requestOptions);
+    }
+
+    private static ResponseTimeoutMode responseTimeoutMode(ClientOptions options,
+                                                           RequestOptions requestOptions) {
+        final ResponseTimeoutMode requestOptionTimeoutMode = requestOptions.responseTimeoutMode();
+        if (requestOptionTimeoutMode != null) {
+            return requestOptionTimeoutMode;
+        }
+        return options.responseTimeoutMode();
     }
 
     private static ExchangeType guessExchangeType(RequestOptions requestOptions, @Nullable HttpRequest req) {
@@ -542,6 +554,7 @@ public final class DefaultClientRequestContext
 
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
+        responseTimeoutMode = ctx.responseTimeoutMode();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
@@ -570,7 +583,7 @@ public final class DefaultClientRequestContext
                 log.endResponse(cause);
             }
         };
-        if (options.responseTimeoutMode() == ResponseTimeoutMode.FROM_START) {
+        if (responseTimeoutMode() == ResponseTimeoutMode.FROM_START) {
             responseCancellationScheduler.initAndStart(eventLoop().withoutContext(), cancellationTask);
         } else {
             responseCancellationScheduler.init(eventLoop().withoutContext());
@@ -1061,6 +1074,6 @@ public final class DefaultClientRequestContext
 
     @Override
     public ResponseTimeoutMode responseTimeoutMode() {
-        return options.responseTimeoutMode();
+        return responseTimeoutMode;
     }
 }

@@ -402,6 +402,7 @@ public final class ClientOptions
     /**
      * Returns the {@link ResponseTimeoutMode} which determines when a {@link #responseTimeoutMillis()}
      * will start to be scheduled.
+     *
      * @see ResponseTimeoutMode
      */
     @UnstableApi

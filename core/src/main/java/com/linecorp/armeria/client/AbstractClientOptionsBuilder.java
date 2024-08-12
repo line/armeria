@@ -509,6 +509,7 @@ public class AbstractClientOptionsBuilder {
     /**
      * Sets the {@link ResponseTimeoutMode} which determines when a {@link #responseTimeout(Duration)}}
      * will start to be scheduled.
+     *
      * @see ResponseTimeoutMode
      */
     @UnstableApi

@@ -90,4 +90,47 @@ class TimeoutModeTest {
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(ResponseTimeoutException.class);
     }
+
+    @Test
+    void timeoutMode_requestOptions() {
+        final HttpResponse res = server
+                .webClient(cb -> {
+                    cb.responseTimeoutMode(ResponseTimeoutMode.REQUEST_SENT);
+                    cb.responseTimeoutMillis(50);
+                    cb.decorator((delegate, ctx, req) -> {
+                        final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
+                        CommonPools.workerGroup().schedule(() -> f.complete(delegate.execute(ctx, req)),
+                                                           100, TimeUnit.MILLISECONDS);
+                        return HttpResponse.of(f);
+                    });
+                })
+                .execute(HttpRequest.of(HttpMethod.GET, "/"),
+                         RequestOptions.builder().responseTimeoutMode(ResponseTimeoutMode.FROM_START).build());
+        assertThatThrownBy(() -> res.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                .hasRootCauseInstanceOf(ResponseTimeoutException.class);
+    }
+
+    @Test
+    void timeoutMode_transforming() {
+        final HttpResponse res = server
+                .webClient(cb -> {
+                    cb.responseTimeoutMode(ResponseTimeoutMode.REQUEST_SENT);
+                    cb.responseTimeoutMillis(50);
+                    cb.decorator((delegate, ctx, req) -> {
+                        final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
+                        CommonPools.workerGroup().schedule(() -> f.complete(delegate.execute(ctx, req)),
+                                                           100, TimeUnit.MILLISECONDS);
+                        return HttpResponse.of(f);
+                    });
+                })
+                .prepare()
+                .responseTimeoutMode(ResponseTimeoutMode.FROM_START)
+                .get("/").execute();
+        assertThatThrownBy(() -> res.aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                .hasRootCauseInstanceOf(ResponseTimeoutException.class);
+    }
 }
