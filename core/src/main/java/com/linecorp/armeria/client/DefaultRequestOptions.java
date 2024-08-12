@@ -30,7 +30,7 @@ import io.netty.util.AttributeKey;
 final class DefaultRequestOptions implements RequestOptions {
 
     static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1, -1, -1, null,
-                                                                         ImmutableMap.of(), null);
+                                                                         ImmutableMap.of(), null, null);
 
     private final long responseTimeoutMillis;
     private final long writeTimeoutMillis;
@@ -40,17 +40,21 @@ final class DefaultRequestOptions implements RequestOptions {
     private final Map<AttributeKey<?>, Object> attributeMap;
     @Nullable
     private final ExchangeType exchangeType;
+    @Nullable
+    private final ResponseTimeoutMode responseTimeoutMode;
 
     DefaultRequestOptions(long responseTimeoutMillis, long writeTimeoutMillis,
                           long maxResponseLength, @Nullable Long requestAutoAbortDelayMillis,
                           Map<AttributeKey<?>, Object> attributeMap,
-                          @Nullable ExchangeType exchangeType) {
+                          @Nullable ExchangeType exchangeType,
+                          @Nullable ResponseTimeoutMode responseTimeoutMode) {
         this.responseTimeoutMillis = responseTimeoutMillis;
         this.writeTimeoutMillis = writeTimeoutMillis;
         this.maxResponseLength = maxResponseLength;
         this.requestAutoAbortDelayMillis = requestAutoAbortDelayMillis;
         this.attributeMap = attributeMap;
         this.exchangeType = exchangeType;
+        this.responseTimeoutMode = responseTimeoutMode;
     }
 
     @Override
@@ -85,6 +89,12 @@ final class DefaultRequestOptions implements RequestOptions {
         return exchangeType;
     }
 
+    @Nullable
+    @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return responseTimeoutMode;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -101,13 +111,14 @@ final class DefaultRequestOptions implements RequestOptions {
                writeTimeoutMillis == that.writeTimeoutMillis &&
                maxResponseLength == that.maxResponseLength &&
                attributeMap.equals(that.attributeMap) &&
-               exchangeType == that.exchangeType;
+               exchangeType == that.exchangeType &&
+               responseTimeoutMode == that.responseTimeoutMode;
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(responseTimeoutMillis, writeTimeoutMillis, maxResponseLength,
-                            attributeMap, exchangeType);
+                            attributeMap, exchangeType, responseTimeoutMode);
     }
 
     @Override
@@ -119,6 +130,7 @@ final class DefaultRequestOptions implements RequestOptions {
                           .add("requestAutoAbortDelayMillis", requestAutoAbortDelayMillis)
                           .add("attributeMap", attributeMap)
                           .add("exchangeType", exchangeType)
+                          .add("responseTimeoutMode", responseTimeoutMode)
                           .toString();
     }
 }
