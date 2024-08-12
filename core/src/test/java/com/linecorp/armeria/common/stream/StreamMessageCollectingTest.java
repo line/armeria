@@ -165,7 +165,11 @@ class StreamMessageCollectingTest {
         }).isInstanceOf(CompletionException.class)
           .hasCause(cause);
 
-        assertRefCount(data, 0);
+        await().untilAsserted(() -> {
+            // subscription.cancel() is called after onError() which completes the collecting future
+            // exceptionally.
+            assertRefCount(data, 0);
+        });
     }
 
     @Test
