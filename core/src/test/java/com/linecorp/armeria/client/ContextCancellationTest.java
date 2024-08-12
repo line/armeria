@@ -246,15 +246,16 @@ class ContextCancellationTest {
                 @Override
                 public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                                       SubscriptionOption... options) {
-                    super.subscribe(subscriber, executor, options);
                     try (SafeCloseable ignored = RequestContextUtil.pop()) {
                         ctxRef.get().cancel(t);
                     }
+                    super.subscribe(subscriber, executor, options);
                 }
             });
             assertThatThrownBy(() -> res.aggregate().join())
                     .isInstanceOf(CompletionException.class)
-                    .hasCause(t);
+                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                    .hasRootCause(t);
             assertThat(connListener.opened()).isEqualTo(1);
             validateCallbackChecks(eventLoopThreadPrefix);
         }
