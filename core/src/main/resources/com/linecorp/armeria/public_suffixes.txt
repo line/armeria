@@ -165,6 +165,7 @@
 *.wb.crm.dev
 *.wc.crm.dev
 *.wd.crm.dev
+*.wdh.app
 *.we.crm.dev
 *.webhare.dev
 *.webpaas.ovh.net
@@ -3947,6 +3948,7 @@ is-a-democrat.com
 is-a-designer.com
 is-a-doctor.com
 is-a-financialadvisor.com
+is-a-fullstack.dev
 is-a-geek.com
 is-a-geek.net
 is-a-geek.org
@@ -6772,7 +6774,6 @@ presse.ci
 presse.km
 presse.ml
 preview.csb.app
-preview.wdh.app
 pri.ee
 prime
 primetel.cloud
@@ -8970,7 +8971,6 @@ watches
 watson.jp
 waw.pl
 wazuka.kyoto.jp
-wdh.app
 we.bs
 weather
 weatherchannel
