@@ -285,15 +285,6 @@ public final class DefaultClientRequestContext
         responseTimeoutMode = responseTimeoutMode(options, requestOptions);
     }
 
-    private static ResponseTimeoutMode responseTimeoutMode(ClientOptions options,
-                                                           RequestOptions requestOptions) {
-        final ResponseTimeoutMode requestOptionTimeoutMode = requestOptions.responseTimeoutMode();
-        if (requestOptionTimeoutMode != null) {
-            return requestOptionTimeoutMode;
-        }
-        return options.responseTimeoutMode();
-    }
-
     private static ExchangeType guessExchangeType(RequestOptions requestOptions, @Nullable HttpRequest req) {
         final ExchangeType exchangeType = requestOptions.exchangeType();
         if (exchangeType != null) {
@@ -1075,5 +1066,14 @@ public final class DefaultClientRequestContext
     @Override
     public ResponseTimeoutMode responseTimeoutMode() {
         return responseTimeoutMode;
+    }
+
+    private static ResponseTimeoutMode responseTimeoutMode(ClientOptions options,
+                                                           RequestOptions requestOptions) {
+        final ResponseTimeoutMode requestOptionTimeoutMode = requestOptions.responseTimeoutMode();
+        if (requestOptionTimeoutMode != null) {
+            return requestOptionTimeoutMode;
+        }
+        return options.responseTimeoutMode();
     }
 }
