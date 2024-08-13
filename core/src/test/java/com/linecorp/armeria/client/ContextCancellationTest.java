@@ -42,14 +42,11 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.common.EventLoopGroupExtension;
@@ -62,7 +59,6 @@ class ContextCancellationTest {
 
     private static final Set<String> requests = Sets.newConcurrentHashSet();
     private static final BlockingQueue<Thread> callbackThreads = new LinkedBlockingQueue<>();
-    private static final Set<RequestContext> callbackContexts = Sets.newConcurrentHashSet();
     private static final String eventLoopThreadPrefix = "context-cancellation-test";
     private static final String HEADER = "x-request-id";
 
@@ -84,7 +80,6 @@ class ContextCancellationTest {
     void beforeEach() {
         requests.clear();
         callbackThreads.clear();
-        callbackContexts.clear();
     }
 
     @Test
@@ -246,15 +241,14 @@ class ContextCancellationTest {
                 @Override
                 public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                                       SubscriptionOption... options) {
+                    ctxRef.get().cancel(t);
                     super.subscribe(subscriber, executor, options);
-                    try (SafeCloseable ignored = RequestContextUtil.pop()) {
-                        ctxRef.get().cancel(t);
-                    }
                 }
             });
             assertThatThrownBy(() -> res.aggregate().join())
                     .isInstanceOf(CompletionException.class)
-                    .hasCause(t);
+                    .hasCauseInstanceOf(UnprocessedRequestException.class)
+                    .hasRootCause(t);
             assertThat(connListener.opened()).isEqualTo(1);
             validateCallbackChecks(eventLoopThreadPrefix);
         }
@@ -286,7 +280,6 @@ class ContextCancellationTest {
     }
 
     static void validateCallbackChecks(@Nullable String expectedPrefix) {
-        assertThat(callbackContexts).isEmpty();
         if (expectedPrefix != null) {
             assertThat(callbackThreads).allSatisfy(t -> assertThat(t.getName()).startsWith(expectedPrefix));
         }
@@ -338,10 +331,6 @@ class ContextCancellationTest {
         private static void attachCallbackChecks(RequestLogAccess log) {
             final Runnable runnable = () -> {
                 callbackThreads.add(Thread.currentThread());
-                final RequestContext ctx = RequestContext.currentOrNull();
-                if (ctx != null) {
-                    callbackContexts.add(ctx);
-                }
             };
             log.whenRequestComplete().thenRun(runnable);
             log.whenComplete().thenRun(runnable);

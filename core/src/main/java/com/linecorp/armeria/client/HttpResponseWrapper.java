@@ -294,7 +294,9 @@ class HttpResponseWrapper implements StreamWriter<HttpObject> {
             final CancellationScheduler responseCancellationScheduler =
                     ctxExtension.responseCancellationScheduler();
             responseCancellationScheduler.updateTask(newCancellationTask());
-            responseCancellationScheduler.start();
+            if (ctx.responseTimeoutMode() == ResponseTimeoutMode.REQUEST_SENT) {
+                responseCancellationScheduler.start();
+            }
         }
     }
 

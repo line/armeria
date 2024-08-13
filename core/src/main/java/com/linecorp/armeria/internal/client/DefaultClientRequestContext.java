@@ -40,6 +40,7 @@ import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
@@ -168,6 +169,8 @@ public final class DefaultClientRequestContext
     @Nullable
     private volatile CompletableFuture<Boolean> whenInitialized;
 
+    private final ResponseTimeoutMode responseTimeoutMode;
+
     /**
      * Creates a new instance. Note that {@link #init(EndpointGroup)} method must be invoked to finish
      * the construction of this context.
@@ -279,6 +282,7 @@ public final class DefaultClientRequestContext
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
         }
+        responseTimeoutMode = responseTimeoutMode(options, requestOptions);
     }
 
     private static ExchangeType guessExchangeType(RequestOptions requestOptions, @Nullable HttpRequest req) {
@@ -541,6 +545,7 @@ public final class DefaultClientRequestContext
 
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
+        responseTimeoutMode = ctx.responseTimeoutMode();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
@@ -569,8 +574,12 @@ public final class DefaultClientRequestContext
                 log.endResponse(cause);
             }
         };
-        responseCancellationScheduler.init(eventLoop().withoutContext());
-        responseCancellationScheduler.updateTask(cancellationTask);
+        if (responseTimeoutMode() == ResponseTimeoutMode.FROM_START) {
+            responseCancellationScheduler.initAndStart(eventLoop().withoutContext(), cancellationTask);
+        } else {
+            responseCancellationScheduler.init(eventLoop().withoutContext());
+            responseCancellationScheduler.updateTask(cancellationTask);
+        }
     }
 
     @Nullable
@@ -1052,5 +1061,19 @@ public final class DefaultClientRequestContext
             }
         });
         return completableFuture;
+    }
+
+    @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return responseTimeoutMode;
+    }
+
+    private static ResponseTimeoutMode responseTimeoutMode(ClientOptions options,
+                                                           RequestOptions requestOptions) {
+        final ResponseTimeoutMode requestOptionTimeoutMode = requestOptions.responseTimeoutMode();
+        if (requestOptionTimeoutMode != null) {
+            return requestOptionTimeoutMode;
+        }
+        return options.responseTimeoutMode();
     }
 }
