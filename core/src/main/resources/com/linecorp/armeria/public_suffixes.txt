@@ -3952,6 +3952,7 @@ is-a-fullstack.dev
 is-a-geek.com
 is-a-geek.net
 is-a-geek.org
+is-a-good.dev
 is-a-green.com
 is-a-guru.com
 is-a-hard-worker.com
