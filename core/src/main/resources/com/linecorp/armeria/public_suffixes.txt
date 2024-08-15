@@ -4875,7 +4875,6 @@ localcert.net
 localhost.daplie.me
 localhostcert.net
 localplayer.dev
-localzone.xyz
 locker
 locus
 lodi.it
