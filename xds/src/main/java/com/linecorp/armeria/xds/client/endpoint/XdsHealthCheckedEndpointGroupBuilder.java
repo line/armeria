@@ -30,7 +30,8 @@ import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckerContext;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
-import com.linecorp.armeria.internal.client.endpoint.healthcheck.HttpHealthChecker;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.DefaultHttpHealthChecker;
+import com.linecorp.armeria.internal.client.endpoint.healthcheck.StaticHttpHealthChecker;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.core.v3.HealthCheck.HttpHealthCheck;
@@ -57,13 +58,17 @@ final class XdsHealthCheckedEndpointGroupBuilder
         return ctx -> {
             final LbEndpoint lbEndpoint = EndpointUtil.lbEndpoint(ctx.originalEndpoint());
             final HealthCheckConfig healthCheckConfig = lbEndpoint.getEndpoint().getHealthCheckConfig();
+            if (healthCheckConfig.getDisableActiveHealthCheck()) {
+                // health check is disabled, so assume the endpoint is healthy
+                return StaticHttpHealthChecker.of(ctx, 1.0);
+            }
             final String path = httpHealthCheck.getPath();
             final String host = Strings.emptyToNull(httpHealthCheck.getHost());
 
-            final HttpHealthChecker checker =
-                    new HttpHealthChecker(ctx, endpoint(healthCheckConfig, ctx.originalEndpoint()),
-                                          path, httpMethod(httpHealthCheck) == HttpMethod.GET,
-                                          protocol(cluster), host);
+            final DefaultHttpHealthChecker checker =
+                    new DefaultHttpHealthChecker(ctx, endpoint(healthCheckConfig, ctx.originalEndpoint()),
+                                                 path, httpMethod(httpHealthCheck) == HttpMethod.GET,
+                                                 protocol(cluster), host);
             checker.start();
             return checker;
         };
