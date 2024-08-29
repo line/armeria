@@ -34,7 +34,7 @@ jobs:
       - id: runner
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "runner=self-hosted-unsafe" >> "$GITHUB_OUTPUT"
+            echo "runner=ubicloud-standard-8" >> "$GITHUB_OUTPUT"
           else
             echo "runner=self-hosted-safe" >> "$GITHUB_OUTPUT"
           fi
