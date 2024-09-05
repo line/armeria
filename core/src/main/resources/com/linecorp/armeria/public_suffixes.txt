@@ -54,7 +54,6 @@
 *.dev.adobeaemcloud.com
 *.developer.app
 *.digitaloceanspaces.com
-*.diher.solutions
 *.dweb.link
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
@@ -123,7 +122,6 @@
 *.privatelink.snowflake.app
 *.quipelements.com
 *.r.appspot.com
-*.rss.my.id
 *.run.app
 *.s.brave.io
 *.s5y.io
@@ -2007,6 +2005,7 @@ dienbien.vn
 diet
 digick.jp
 digital
+diher.solutions
 direct
 direct.quickconnect.cn
 direct.quickconnect.to
@@ -2679,7 +2678,6 @@ firewall-gateway.com
 firewall-gateway.de
 firewall-gateway.net
 firewalledreplit.co
-fireweb.app
 firm.co
 firm.dk
 firm.ht
@@ -7082,6 +7080,7 @@ rs.leg.br
 rs.webaccel.jp
 rsc.cdn77.org
 rsc.contentproxy9.cz
+rss.my.id
 rsvp
 rt.ht
 ru
