@@ -113,6 +113,9 @@
 *.on-k3s.io
 *.on-rancher.cloud
 *.on-rio.io
+*.oraclecloudapps.com
+*.oraclegovcloudapps.com
+*.oraclegovcloudapps.uk
 *.otap.co
 *.owo.codes
 *.paywhirl.com
@@ -583,7 +586,6 @@ aq.it
 aquarelle
 aquila.it
 ar
-ar.com
 ar.it
 ar.us
 arab
@@ -981,6 +983,7 @@ biz.ls
 biz.mv
 biz.mw
 biz.my
+biz.ng
 biz.ni
 biz.nr
 biz.pk
@@ -1546,6 +1549,7 @@ co.ao
 co.at
 co.bb
 co.bi
+co.biz.ng
 co.bj
 co.bn
 co.business
@@ -2030,6 +2034,7 @@ dj
 dk
 dk.eu.org
 dkonto.pl
+dl.biz.ng
 dlugoleka.pl
 dm
 dn.ua
@@ -2301,7 +2306,6 @@ edu.ru
 edu.sa
 edu.sb
 edu.sc
-edu.scot
 edu.sd
 edu.sg
 edu.sl
@@ -2699,7 +2703,6 @@ fjell.no
 fl.us
 fla.no
 flakstad.no
-flap.id
 flatanger.no
 fldrv.com
 flekkefjord.no
@@ -3063,6 +3066,7 @@ gmo
 gmx
 gn
 gniezno.pl
+go.biz.ng
 go.ci
 go.cr
 go.dyndns.org
@@ -3663,7 +3667,6 @@ hsbc
 ht
 httpbin.org
 hu
-hu.com
 hu.eu.org
 hu.net
 hughes
@@ -4570,7 +4573,6 @@ kpmg
 kpn
 kppsp.gov.pl
 kr
-kr.com
 kr.eu.org
 kr.it
 kr.ua
@@ -4760,6 +4762,7 @@ lesja.no
 levanger.no
 lexus
 lezajsk.pl
+lg.biz.ng
 lg.jp
 lg.ua
 lgbt
@@ -5959,7 +5962,6 @@ no-ip.co.uk
 no-ip.info
 no-ip.net
 no-ip.org
-no.com
 no.eu.org
 no.it
 nobeoka.miyazaki.jp
@@ -6110,6 +6112,7 @@ ny-1.paas.massivegrid.net
 ny-2.paas.massivegrid.net
 ny.us
 nyanta.jp
+nyat.app
 nyc
 nyc.mn
 nysa.pl
@@ -6246,6 +6249,7 @@ omuta.fukuoka.jp
 on-aptible.com
 on-the-web.tv
 on-web.fr
+on.biz.ng
 on.ca
 on.crisp.email
 onagawa.miyagi.jp
@@ -6693,6 +6697,7 @@ playstation
 playstation-cloud.com
 plc.co.im
 plc.ly
+plc.ng
 plc.uk
 plesk.page
 pleskns.com
@@ -6833,7 +6838,6 @@ pub.instances.scw.cloud
 pub.sa
 publ.pt
 public-inquiry.uk
-publishproxy.com
 pubtls.org
 pueblo.bo
 pug.it
@@ -6861,7 +6865,6 @@ qa
 qa2.com
 qbuser.com
 qc.ca
-qc.com
 qcx.io
 qh.cn
 qld.au
@@ -7547,7 +7550,6 @@ sch.ly
 sch.ng
 sch.qa
 sch.sa
-sch.so
 sch.ss
 sch.tf
 sch.wf
@@ -8756,7 +8758,6 @@ uw.gov.pl
 uwajima.ehime.jp
 uwu.ai
 uy
-uy.com
 uz
 uz.ua
 uzhgorod.ua
