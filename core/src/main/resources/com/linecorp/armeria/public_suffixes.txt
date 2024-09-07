@@ -30,7 +30,6 @@
 *.beget.app
 *.build.run
 *.builder.code.com
-*.bzz.dapps.earth
 *.c.ts.net
 *.ca-central-1.airflow.amazonaws.com
 *.ca-west-1.airflow.amazonaws.com
@@ -48,7 +47,6 @@
 *.cryptonomic.net
 *.customer-oci.com
 *.d.crm.dev
-*.dapps.earth
 *.database.run
 *.dev-builder.code.com
 *.dev.adobeaemcloud.com
@@ -750,7 +748,6 @@ author
 author.aero
 auto
 auto.pl
-autocode.dev
 autos
 av.it
 av.tr
@@ -3085,6 +3082,7 @@ go.ug
 gob.ar
 gob.bo
 gob.cl
+gob.cu
 gob.do
 gob.ec
 gob.es
@@ -4980,7 +4978,6 @@ madrid
 maebashi.gunma.jp
 mafelo.net
 magazine.aero
-magnet.page
 maibara.shiga.jp
 maif
 mail-box.ne.jp
@@ -5065,7 +5062,6 @@ mb.ca
 mb.it
 mba
 mc
-mc.eu.org
 mc.it
 mcdir.me
 mcdir.ru
@@ -5673,6 +5669,7 @@ narviika.no
 narvik.no
 nasu.tochigi.jp
 nasushiobara.tochigi.jp
+nat.cu
 nat.tn
 natal.br
 natori.miyagi.jp
