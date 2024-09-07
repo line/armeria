@@ -39,6 +39,7 @@ public final class ServerMetrics implements MeterBinder {
     private final LongAdder activeHttp1WebSocketRequests = new LongAdder();
     private final LongAdder activeHttp1Requests = new LongAdder();
     private final LongAdder activeHttp2Requests = new LongAdder();
+    private final LongAdder pendingResponse = new LongAdder();
 
     /**
      * AtomicInteger is used to read the number of active connections frequently.
@@ -99,6 +100,13 @@ public final class ServerMetrics implements MeterBinder {
     }
 
     /**
+     * Returns the number of pending responses.
+     */
+    public long pendingResponses() {
+        return pendingResponse.longValue();
+    }
+
+    /**
      * Returns the number of open connections.
      */
     public int activeConnections() {
@@ -153,6 +161,14 @@ public final class ServerMetrics implements MeterBinder {
         activeConnections.decrementAndGet();
     }
 
+    void increasePendingResponse() {
+        pendingResponse.increment();
+    }
+
+    void decreasePendingResponse() {
+        pendingResponse.decrement();
+    }
+
     @Override
     public void bindTo(MeterRegistry meterRegistry) {
         meterRegistry.gauge("armeria.server.connections", activeConnections);
@@ -174,6 +190,10 @@ public final class ServerMetrics implements MeterBinder {
         meterRegistry.gauge(allRequestsMeterName,
                             ImmutableList.of(Tag.of("protocol", "http1.websocket"), Tag.of("state", "active")),
                             activeHttp1WebSocketRequests);
+        // pending responses
+        meterRegistry.gauge(allRequestsMeterName,
+                            ImmutableList.of(Tag.of("protocol", "all"), Tag.of("state", "active")),
+                            pendingResponse);
     }
 
     @Override
@@ -185,6 +205,7 @@ public final class ServerMetrics implements MeterBinder {
                           .add("pendingHttp2Requests", pendingHttp2Requests)
                           .add("activeHttp2Requests", activeHttp2Requests)
                           .add("activeConnections", activeConnections)
+                          .add("pendingResponse", pendingResponse)
                           .toString();
     }
 }
