@@ -13,7 +13,7 @@ jobs:
   publish:
     name: Publish final artifacts
     if: github.repository == 'line/armeria'
-    runs-on: self-hosted-safe
+    runs-on: ubicloud-standard-8
     steps:
       - uses: actions/checkout@v4
 
