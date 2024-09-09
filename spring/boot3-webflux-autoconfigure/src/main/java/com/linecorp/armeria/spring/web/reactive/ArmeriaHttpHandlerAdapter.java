@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.spring.internal.common.DataBufferFactoryWrapper;
 
@@ -75,10 +76,9 @@ final class ArmeriaHttpHandlerAdapter {
                           .doOnCancel(() -> {
                               // If Armeria has already returned a response (e.g. RequestTimeout)
                               // make a best effort to reflect this in the returned response
-                              if (ctx.log().isAvailable(RESPONSE_HEADERS)) {
-                                  convertedResponse.setRawStatusCode(ctx.log()
-                                                                        .ensureAvailable(RESPONSE_HEADERS)
-                                                                        .responseStatus().code());
+                              final RequestLog requestLog = ctx.log().getIfAvailable(RESPONSE_HEADERS);
+                              if (requestLog != null) {
+                                  convertedResponse.setRawStatusCode(requestLog.responseStatus().code());
                                   convertedResponse.setComplete().subscribe();
                               }
                           });
