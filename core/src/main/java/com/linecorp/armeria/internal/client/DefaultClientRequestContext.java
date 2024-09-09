@@ -538,6 +538,8 @@ public final class DefaultClientRequestContext
 
         log = RequestLog.builder(this);
         log.startRequest();
+        // Cancel the original timeout and create a new scheduler for the derived context.
+        ctx.responseCancellationScheduler.cancelScheduled();
         responseCancellationScheduler =
                 CancellationScheduler.ofClient(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();

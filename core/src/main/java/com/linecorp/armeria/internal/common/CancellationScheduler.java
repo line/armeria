@@ -83,6 +83,11 @@ public interface CancellationScheduler {
      */
     boolean cancelScheduled();
 
+    /**
+     * Returns true if a timeout task is scheduled.
+     */
+    boolean isScheduled();
+
     void setTimeoutNanos(TimeoutMode mode, long timeoutNanos);
 
     default void finishNow() {

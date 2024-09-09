@@ -58,6 +58,11 @@ final class NoopCancellationScheduler implements CancellationScheduler {
     }
 
     @Override
+    public boolean isScheduled() {
+        return false;
+    }
+
+    @Override
     public void setTimeoutNanos(TimeoutMode mode, long timeoutNanos) {
     }
 
