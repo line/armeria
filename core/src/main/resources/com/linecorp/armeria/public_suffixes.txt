@@ -494,7 +494,6 @@ amica
 amli.no
 amot.no
 amplifyapp.com
-amscompute.com
 amsterdam
 an.it
 analytics
@@ -1486,11 +1485,9 @@ clinic
 clinique
 clothing
 cloud
-cloud-fr1.unispace.io
 cloud.fedoraproject.org
 cloud.goog
 cloud.interhostsolutions.be
-cloud.jelastic.open.tim.it
 cloud.nospamproxy.com
 cloud66.ws
 cloud66.zone
@@ -1859,6 +1856,7 @@ csb.app
 csx.cc
 ct.it
 ct.us
+ctfcloud.net
 cu
 cuiaba.br
 cuisinella
@@ -2619,7 +2617,6 @@ fast
 fastly-edge.com
 fastly-terrarium.com
 fastlylb.net
-faststacks.net
 fastvps-server.com
 fastvps.host
 fastvps.site
@@ -4116,10 +4113,8 @@ jeep
 jeez.jp
 jeju.kr
 jelastic.dogado.eu
-jelastic.regruhosting.ru
 jelastic.saveincloud.net
 jelastic.team
-jelastic.tsukaeru.net
 jele.cloud
 jele.club
 jele.host
@@ -4437,7 +4432,6 @@ kikirara.jp
 kikonai.hokkaido.jp
 kikuchi.kumamoto.jp
 kikugawa.shizuoka.jp
-kilatiron.com
 kill.jp
 kilo.jp
 kim
@@ -4899,7 +4893,6 @@ lomo.jp
 lomza.pl
 lon-1.paas.massivegrid.net
 lon-2.paas.massivegrid.net
-lon.wafaicloud.com
 london
 london.cloudapps.digital
 londrina.br
@@ -5484,7 +5477,6 @@ myactivedirectory.com
 myamaze.net
 myasustor.com
 mycd.eu
-mycloud.by
 mycloudnas.com
 mydatto.com
 mydatto.net
@@ -8689,7 +8681,6 @@ uol
 uonuma.niigata.jp
 uozu.toyama.jp
 up.in
-upaas.kazteleport.kz
 upli.io
 upow.gov.pl
 upper.jp
