@@ -1831,7 +1831,6 @@ cr
 cr.it
 cr.ua
 craft.me
-crafting.xyz
 cranky.jp
 crap.jp
 crd.co
@@ -1936,7 +1935,6 @@ ddns5.com
 ddnsfree.com
 ddnsgeek.com
 ddnsking.com
-ddnslive.com
 ddnss.de
 ddnss.org
 dds
@@ -9753,7 +9751,6 @@ zaporizhzhe.ua
 zaporizhzhia.ua
 zappos
 zapto.org
-zapto.xyz
 zara
 zarow.pl
 zeabur.app
