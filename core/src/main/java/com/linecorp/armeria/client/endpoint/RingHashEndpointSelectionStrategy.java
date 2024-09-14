@@ -83,6 +83,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                                               new WeightedRingEndpoint(endpoints, size), true);
         }
 
+        @Nullable
         @Override
         public Endpoint selectNow(ClientRequestContext ctx) {
             final WeightedRingEndpoint weightedringendpoint = weightedRingEndpoint;
@@ -116,6 +117,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 return getEndpoint(key);
             }
 
+            @Nullable
             private Endpoint getEndpoint(int key) {
                 final SortedMap<Integer, Endpoint> tailMap = ring.tailMap(key);
                 return tailMap.isEmpty() ? ring.get(ring.firstIntKey())
