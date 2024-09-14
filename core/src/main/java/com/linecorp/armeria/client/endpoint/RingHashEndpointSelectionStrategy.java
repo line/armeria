@@ -169,9 +169,9 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                         final String host = endpoint.host();
                         final int port = endpoint.port();
                         final int weight = endpoint.weight();
-                        // If weight is 3 and x is 1, place 3 times in the ring
-                        // if weight is 1 and x is 1, place once in the ring
-                        // If weight is 3 and x is 3, place 1 times in the ring
+                        // If weight is 3 and divider is 1, place 3 times in the ring
+                        // if weight is 1 and divider is 1, place once in the ring
+                        // If weight is 3 and divider is 3, place 1 times in the ring
                         final int count = (weight + divider - 1) / divider;
                         for (int i = 0; i < count; i++) {
                             final String weightedHost = host + ":" + port + ":" + i;
