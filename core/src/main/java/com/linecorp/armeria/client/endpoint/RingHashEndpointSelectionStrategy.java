@@ -174,7 +174,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                         // If weight is 3 and x is 3, place 1 times in the ring
                         final int count = (weight + divider - 1) / divider;
                         for (int i = 0; i < count; i++) {
-                            final String weightedHost = host + port + i;
+                            final String weightedHost = host + ":" + port + ":" + i;
                             final int hash = getXXHash(weightedHost);
                             ring.put(hash, endpoint);
                         }
