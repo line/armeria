@@ -172,6 +172,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                         // If weight is 3 and divider is 1, place 3 times in the ring
                         // if weight is 1 and divider is 1, place once in the ring
                         // If weight is 3 and divider is 3, place 1 times in the ring
+                        // If weight is 3 and divider is 2, place 2 times in the ring
                         final int count = (weight + divider - 1) / divider;
                         for (int i = 0; i < count; i++) {
                             final String weightedHost = host + ":" + port + ":" + i;
@@ -188,13 +189,13 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                 return Hashing.murmur3_32_fixed().hashBytes(inputBytes).asInt();
             }
 
-            private int binarySearch(List<Integer> weights, int sz) {
+            private int binarySearch(List<Integer> weights, int sizeOfRing) {
                 Collections.sort(weights);
                 int lt = 1;
                 int rt = weights.get(weights.size() - 1);
                 while (rt > lt + 1) {
                     final int mid = (lt + rt) / 2;
-                    if (isPossible(mid, weights, sz)) {
+                    if (isPossible(mid, weights, sizeOfRing)) {
                         rt = mid;
                     } else {
                         lt = mid + 1;
