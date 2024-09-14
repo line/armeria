@@ -113,8 +113,13 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
 
                 final String sequenceString = String.valueOf(sequence);
                 final int key = getXXHash(sequenceString);
+                return getEndpoint(key);
+            }
+
+            private Endpoint getEndpoint(int key) {
                 final SortedMap<Integer, Endpoint> tailMap = ring.tailMap(key);
-                return tailMap.isEmpty() ? ring.get(ring.firstIntKey()) : tailMap.get(tailMap.firstKey());
+                return tailMap.isEmpty() ? ring.get(ring.firstIntKey())
+                    : tailMap.get(tailMap.firstKey());
             }
 
             WeightedRingEndpoint(List<Endpoint> endpoints) {
@@ -126,7 +131,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                                          .collect(toImmutableList()).size());
             }
 
-            WeightedRingEndpoint(List<Endpoint> endpoints, int size) {
+            WeightedRingEndpoint(List<Endpoint> endpoints, int sizeOfRing) {
                 this.endpoints = endpoints.stream()
                                           .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
                                           .sorted(Comparator.comparing(Endpoint::weight)
@@ -134,15 +139,15 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                                                             .thenComparingInt(Endpoint::port))
                                           .collect(toImmutableList());
                 final int sizeOfEndpoints = this.endpoints.size();
-                assert sizeOfEndpoints <= size;
+                assert sizeOfEndpoints <= sizeOfRing;
 
                 int totalWeight = 0;
                 for (final Endpoint endpoint : this.endpoints) {
                     totalWeight += endpoint.weight();
                 }
 
-                // If all endpoints can be placed on a ring of a given size, we should respect that.
-                if (totalWeight <= size) {
+                // If all endpoints can be placed on a ring of a given sizeOfRing, we should respect that.
+                if (totalWeight <= sizeOfRing) {
                     for (final Endpoint endpoint : this.endpoints) {
                         final String host = endpoint.host();
                         final int port = endpoint.port();
@@ -159,7 +164,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
                         final int weight = endpoint.weight();
                         weights.add(weight);
                     }
-                    final int divider = binarySearch(weights, size);
+                    final int divider = binarySearch(weights, sizeOfRing);
                     for (final Endpoint endpoint : this.endpoints) {
                         final String host = endpoint.host();
                         final int port = endpoint.port();
