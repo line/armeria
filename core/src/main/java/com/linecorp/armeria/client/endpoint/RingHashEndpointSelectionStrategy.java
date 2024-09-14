@@ -134,7 +134,7 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             WeightedRingEndpoint(List<Endpoint> endpoints, int sizeOfRing) {
                 this.endpoints = endpoints.stream()
                                           .filter(e -> e.weight() > 0) // only process endpoint with weight > 0
-                                          .sorted(Comparator.comparing(Endpoint::weight)
+                                          .sorted(Comparator.comparing(Endpoint::weight).reversed()
                                                             .thenComparing(Endpoint::host)
                                                             .thenComparingInt(Endpoint::port))
                                           .collect(toImmutableList());
