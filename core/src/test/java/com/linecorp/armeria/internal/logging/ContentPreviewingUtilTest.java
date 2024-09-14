@@ -63,7 +63,6 @@ class ContentPreviewingUtilTest {
 
         ctx.logBuilder().endRequest();
         ctx.logBuilder().endResponse();
-        ctx.logBuilder().ensureComplete();
 
         final RequestLog log = ctx.log().whenComplete().join();
         assertThat(log.requestContentPreview()).isEmpty();

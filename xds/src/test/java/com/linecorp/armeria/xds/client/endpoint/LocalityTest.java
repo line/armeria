@@ -39,7 +39,6 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.xds.ListenerRoot;
 import com.linecorp.armeria.xds.XdsBootstrap;
 
 import io.envoyproxy.envoy.config.bootstrap.v3.Bootstrap;
@@ -77,9 +76,8 @@ class LocalityTest {
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
         final Map<Endpoint, Integer> countsMap = new HashMap<>();
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             // Regardless of the endpoint weight, the locality weight will be used
             // to determine which endpoint group to use
@@ -114,9 +112,8 @@ class LocalityTest {
                 .toBuilder().setCommonLbConfig(LOCALITY_LB_CONFIG).build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
             // regionA won't be selected at all since it is empty
             final ClientRequestContext ctx =
@@ -148,9 +145,8 @@ class LocalityTest {
                 .toBuilder().setCommonLbConfig(LOCALITY_LB_CONFIG).build();
 
         final Bootstrap bootstrap = staticBootstrap(listener, cluster);
-        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap)) {
-            final ListenerRoot listenerRoot = xdsBootstrap.listenerRoot("listener");
-            final EndpointGroup endpointGroup = XdsEndpointGroup.of(listenerRoot);
+        try (XdsBootstrap xdsBootstrap = XdsBootstrap.of(bootstrap);
+             EndpointGroup endpointGroup = XdsEndpointGroup.of("listener", xdsBootstrap)) {
             await().untilAsserted(() -> assertThat(endpointGroup.whenReady()).isDone());
 
             final ClientRequestContext ctx =

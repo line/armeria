@@ -41,6 +41,7 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -550,5 +551,10 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     public EurekaUpdatingListenerBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (EurekaUpdatingListenerBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public EurekaUpdatingListenerBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (EurekaUpdatingListenerBuilder) super.responseTimeoutMode(responseTimeoutMode);
     }
 }
