@@ -5117,6 +5117,7 @@ memset.net
 men
 menu
 meraker.no
+merck
 merckmsd
 merseine.nu
 messerli.app
