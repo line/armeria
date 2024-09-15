@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
+import net.openhft.hashing.LongHashFunction;
 
 final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrategy {
 
@@ -188,7 +189,9 @@ final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrate
             // Returned int values range from -2,147,483,648 to 2,147,483,647, same as java int type
             private int getXXHash(String input) {
                 final byte[] inputBytes = input.getBytes(StandardCharsets.UTF_8);
-                return Hashing.murmur3_32_fixed().hashBytes(inputBytes).asInt();
+                final LongHashFunction xxHash = LongHashFunction.xx();
+                final long hashBytes = xxHash.hashBytes(inputBytes);
+                return (int) (hashBytes >>> 32);
             }
 
             private int binarySearch(List<Integer> weights, int sizeOfRing) {
