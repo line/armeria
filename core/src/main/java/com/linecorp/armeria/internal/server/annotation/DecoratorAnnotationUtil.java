@@ -28,6 +28,8 @@ import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.DependencyInjector;
@@ -52,8 +54,8 @@ public final class DecoratorAnnotationUtil {
         final List<DecoratorAndOrder> decorators = new ArrayList<>();
 
         // Class-level decorators are applied before method-level decorators.
-        collectDecorators(decorators, AnnotationUtil.getAllAnnotations(clazz));
-        collectDecorators(decorators, AnnotationUtil.getAllAnnotations(method));
+        decorators.addAll(collectDecorators(AnnotationUtil.getAllAnnotations(clazz)));
+        decorators.addAll(collectDecorators(AnnotationUtil.getAllAnnotations(method)));
 
         // Sort decorators by "order" attribute values.
         decorators.sort(Comparator.comparing(DecoratorAndOrder::order));
@@ -64,11 +66,12 @@ public final class DecoratorAnnotationUtil {
      * Adds decorators to the specified {@code list}. Decorators which are annotated with {@link Decorator}
      * and user-defined decorators will be collected.
      */
-    private static void collectDecorators(List<DecoratorAndOrder> list, List<Annotation> annotations) {
+    private static List<DecoratorAndOrder> collectDecorators(List<Annotation> annotations) {
         if (annotations.isEmpty()) {
-            return;
+            return ImmutableList.of();
         }
 
+        final Builder<DecoratorAndOrder> builder = ImmutableList.builder();
         // Respect the order of decorators which is specified by a user. The first one is first applied
         // for most of the cases. But if @Decorator and user-defined decorators are specified in a mixed order,
         // the specified order and the applied order can be different. To overcome this problem, we introduce
@@ -77,25 +80,25 @@ public final class DecoratorAnnotationUtil {
         for (final Annotation annotation : annotations) {
             if (annotation instanceof Decorator) {
                 final Decorator d = (Decorator) annotation;
-                list.add(new DecoratorAndOrder(d, d, null, d.order()));
+                builder.add(new DecoratorAndOrder(d, d, null, d.order()));
                 continue;
             }
 
             if (annotation instanceof Decorators) {
                 final Decorator[] decorators = ((Decorators) annotation).value();
                 for (final Decorator d : decorators) {
-                    list.add(new DecoratorAndOrder(d, d, null, d.order()));
+                    builder.add(new DecoratorAndOrder(d, d, null, d.order()));
                 }
                 continue;
             }
 
             DecoratorAndOrder udd = userDefinedDecorator(annotation);
             if (udd != null) {
-                list.add(udd);
+                builder.add(udd);
                 continue;
             }
 
-            // If user-defined decorators are repeatable and they are specified more than once.
+            // If user-defined decorators are repeatable, and they are specified more than once.
             try {
                 final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
                                                                     withName("value")), null);
@@ -106,7 +109,7 @@ public final class DecoratorAnnotationUtil {
                         if (udd == null) {
                             break;
                         }
-                        list.add(udd);
+                        builder.add(udd);
                     }
                 }
             } catch (Throwable ignore) {
@@ -114,6 +117,8 @@ public final class DecoratorAnnotationUtil {
                 // any exception from this clause.
             }
         }
+
+        return builder.build();
     }
 
     /**
