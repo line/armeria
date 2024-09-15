@@ -26,8 +26,9 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import net.openhft.hashing.LongHashFunction;
+
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.hash.Hashing;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -35,7 +36,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
-import net.openhft.hashing.LongHashFunction;
 
 final class RingHashEndpointSelectionStrategy implements EndpointSelectionStrategy {
 
