@@ -467,6 +467,9 @@ public interface RequestContext extends Unwrappable {
 
     /**
      * Returns the cause of cancellation, {@code null} if the request has not been cancelled.
+     * Note that there is no guarantee that the cancellation cause is equivalent to the cause of failure
+     * for {@link HttpRequest} or {@link HttpResponse}. Refer to {@link RequestLog#requestCause()}
+     * or {@link RequestLog#responseCause()} for the exact reason why a request or response failed.
      */
     @Nullable
     Throwable cancellationCause();
