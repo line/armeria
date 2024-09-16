@@ -171,16 +171,6 @@ final class ArmeriaCallFactory implements Factory {
             return request;
         }
 
-        private synchronized HttpResponse createRequest() {
-            if (httpResponse != null) {
-                throw new IllegalStateException("executed already");
-            }
-            executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
-            final HttpResponse newResponse = doCall(callFactory, request);
-            httpResponse = newResponse;
-            return newResponse;
-        }
-
         @Override
         public Response execute() throws IOException {
             final CompletableCallback completableCallback = new CompletableCallback();
@@ -196,7 +186,18 @@ final class ArmeriaCallFactory implements Factory {
 
         @Override
         public void enqueue(Callback callback) {
-            createRequest().subscribe(callFactory.subscriberFactory.create(this, callback, request));
+            if (httpResponse != null) {
+                throw new IllegalStateException("executed already");
+            }
+
+            // Run atomically
+            if (executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING)) {
+                httpResponse = doCall(callFactory, request);
+            } else {
+                callback.onFailure(this, new IOException("Call state is not IDLE"));
+                return;
+            }
+            httpResponse.subscribe(callFactory.subscriberFactory.create(this, callback, request));
         }
 
         @Override
