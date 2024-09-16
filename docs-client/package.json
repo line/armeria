@@ -20,7 +20,7 @@
     "graphql": "^16.8.1",
     "json-bigint": "^1.0.0",
     "jsonminify": "^0.4.2",
-    "mermaid": "^9.3.0",
+    "mermaid": "^11.2.1",
     "monaco-editor": "^0.34.1",
     "monaco-editor-webpack-plugin": "^7.0.1",
     "monaco-graphql": "^1.1.8",
