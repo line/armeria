@@ -24,6 +24,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -92,9 +93,9 @@ public final class DecoratorAnnotationUtil {
                 continue;
             }
 
-            DecoratorAndOrder udd = userDefinedDecorator(annotation);
-            if (udd != null) {
-                builder.add(udd);
+            Optional<DecoratorAndOrder> udd = userDefinedDecorator(annotation);
+            if (udd.isPresent()) {
+                builder.add(udd.get());
                 continue;
             }
 
@@ -106,10 +107,10 @@ public final class DecoratorAnnotationUtil {
                     final Annotation[] decorators = (Annotation[]) method.invoke(annotation);
                     for (final Annotation decorator : decorators) {
                         udd = userDefinedDecorator(decorator);
-                        if (udd == null) {
+                        if (!udd.isPresent()) {
                             break;
                         }
-                        builder.add(udd);
+                        builder.add(udd.get());
                     }
                 }
             } catch (Throwable ignore) {
@@ -125,13 +126,12 @@ public final class DecoratorAnnotationUtil {
      * Returns a decorator with its order if the specified {@code annotation} is one of the user-defined
      * decorator annotation.
      */
-    @Nullable
-    private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
+    private static Optional<DecoratorAndOrder> userDefinedDecorator(Annotation annotation) {
         // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
         final DecoratorFactory df = AnnotationUtil.findFirstDeclared(annotation.annotationType(),
                                                                      DecoratorFactory.class);
         if (df == null) {
-            return null;
+            return Optional.empty();
         }
 
         // If the annotation has "order" attribute, we can use it when sorting decorators.
@@ -149,7 +149,7 @@ public final class DecoratorAnnotationUtil {
             // A user-defined decorator may not have an 'order' attribute.
             // If it does not exist, '0' is used by default.
         }
-        return new DecoratorAndOrder(annotation, null, df, order);
+        return Optional.of(new DecoratorAndOrder(annotation, null, df, order));
     }
 
     private DecoratorAnnotationUtil() {}
