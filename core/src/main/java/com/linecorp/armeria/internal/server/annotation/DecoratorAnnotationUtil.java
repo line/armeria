@@ -22,6 +22,7 @@ import static org.reflections.ReflectionUtils.withName;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -55,12 +56,14 @@ public final class DecoratorAnnotationUtil {
     public static List<DecoratorAndOrder> collectDecorators(Class<?> clazz, Method method) {
         final List<DecoratorAndOrder> decorators = new ArrayList<>();
 
-        final List<DecoratorAndOrder> clazzDecorators = AnnotationUtil.getAllAnnotations(clazz).stream()
-                                                                      .flatMap(a -> collectDecorators(a).stream())
-                                                                      .collect(Collectors.toList());
-        final List<DecoratorAndOrder> methodDecorators = AnnotationUtil.getAllAnnotations(method).stream()
-                                                                      .flatMap(a -> collectDecorators(a).stream())
-                                                                      .collect(Collectors.toList());
+        final List<DecoratorAndOrder> clazzDecorators =
+                AnnotationUtil.getAllAnnotations(clazz).stream()
+                              .flatMap(a -> collectDecorators(a).stream())
+                              .collect(Collectors.toList());
+        final List<DecoratorAndOrder> methodDecorators =
+                AnnotationUtil.getAllAnnotations(method).stream()
+                              .flatMap(a -> collectDecorators(a).stream())
+                              .collect(Collectors.toList());
         // Class-level decorators are applied before method-level decorators.
         decorators.addAll(clazzDecorators);
         decorators.addAll(methodDecorators);
@@ -119,21 +122,7 @@ public final class DecoratorAnnotationUtil {
             return Optional.empty();
         }
 
-        // If the annotation has "order" attribute, we can use it when sorting decorators.
-        int order = 0;
-        try {
-            final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
-                                                                withName("order")), null);
-            if (method != null) {
-                final Object value = method.invoke(annotation);
-                if (value instanceof Integer) {
-                    order = (Integer) value;
-                }
-            }
-        } catch (Throwable ignore) {
-            // A user-defined decorator may not have an 'order' attribute.
-            // If it does not exist, '0' is used by default.
-        }
+        final int order = getOrder(annotation);
         return Optional.of(new DecoratorAndOrder(annotation, null, df, order));
     }
 
@@ -142,27 +131,45 @@ public final class DecoratorAnnotationUtil {
      * annotations which are one of the user-defined decorator annotation.
      */
     private static List<DecoratorAndOrder> userDefinedDecorators(Annotation annotation) {
-        // If user-defined decorators are repeatable, and they are specified more than once.
+
+        final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
+                                                            withName("value")), null);
+        if (method == null) {
+            return ImmutableList.of();
+        }
+
         try {
-            final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
-                                                                withName("value")), null);
-            if (method != null) {
-                final Builder<DecoratorAndOrder> builder = ImmutableList.builder();
-                final Annotation[] decorators = (Annotation[]) method.invoke(annotation);
-                for (final Annotation decorator : decorators) {
-                    final Optional<DecoratorAndOrder> udd = userDefinedDecorator(decorator);
-                    if (!udd.isPresent()) {
-                        break;
-                    }
-                    builder.add(udd.get());
-                }
-                return builder.build();
-            }
+            final Annotation[] decorators = (Annotation[]) method.invoke(annotation);
+            return Arrays.stream(decorators)
+                    .map(DecoratorAnnotationUtil::userDefinedDecorator)
+                    .filter(Optional::isPresent).map(Optional::get)
+                    .collect(Collectors.toList());
         } catch (Throwable ignore) {
             // The annotation may be a container of a decorator or may be not, so we just ignore
             // any exception from this clause.
         }
         return ImmutableList.of();
+    }
+
+
+    private static int getOrder(Annotation annotation) {
+        // If the annotation has "order" attribute, we can use it when sorting decorators.
+        final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
+                                                            withName("order")), null);
+        if (method == null) {
+            return 0;
+        }
+
+        try {
+            final Object value = method.invoke(annotation);
+            if (value instanceof Integer) {
+                return (Integer) value;
+            }
+        } catch (Throwable ignore) {
+            // A user-defined decorator may not have an 'order' attribute.
+            // If it does not exist, '0' is used by default.
+        }
+        return 0;
     }
 
     private DecoratorAnnotationUtil() {}
