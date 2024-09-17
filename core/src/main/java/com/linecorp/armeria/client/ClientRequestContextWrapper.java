@@ -168,6 +168,11 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return unwrap().responseTimeoutMode();
+    }
+
+    @Override
     public void hook(Supplier<? extends AutoCloseable> contextHook) {
         unwrap().hook(contextHook);
     }

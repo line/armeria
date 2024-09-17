@@ -241,14 +241,15 @@ abstract class AbstractHttpResponseHandler {
      */
     final void scheduleTimeout() {
         // Schedule the initial request timeout with the timeoutNanos in the CancellationScheduler
-        reqCtx.requestCancellationScheduler().start(newCancellationTask());
+        reqCtx.requestCancellationScheduler().updateTask(newCancellationTask());
+        reqCtx.requestCancellationScheduler().start();
     }
 
     /**
      * Clears the scheduled request timeout.
      */
     final void clearTimeout() {
-        reqCtx.requestCancellationScheduler().clearTimeout(false);
+        reqCtx.requestCancellationScheduler().cancelScheduled();
     }
 
     final CancellationTask newCancellationTask() {
@@ -260,8 +261,17 @@ abstract class AbstractHttpResponseHandler {
 
             @Override
             public void run(Throwable cause) {
-                // This method will be invoked only when `canSchedule()` returns true.
-                assert !isDone();
+                if (ctx.executor().inEventLoop()) {
+                    doCancel(cause);
+                } else {
+                    ctx.executor().execute(() -> doCancel(cause));
+                }
+            }
+
+            private void doCancel(Throwable cause) {
+                if (isDone()) {
+                    return;
+                }
 
                 if (cause instanceof ClosedStreamException) {
                     // A stream or connection was already closed by a client

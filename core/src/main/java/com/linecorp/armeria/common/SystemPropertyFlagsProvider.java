@@ -36,6 +36,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
@@ -596,6 +597,12 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Long defaultUnloggedExceptionsReportIntervalMillis() {
         return getLong("defaultUnloggedExceptionsReportIntervalMillis");
+    }
+
+    @Override
+    @Nullable
+    public ResponseTimeoutMode responseTimeoutMode() {
+        return getAndParse("responseTimeoutMode", ResponseTimeoutMode::valueOf);
     }
 
     @Nullable
