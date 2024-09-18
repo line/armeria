@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -54,8 +56,6 @@ public final class DecoratorAnnotationUtil {
      * decorator annotations.
      */
     public static List<DecoratorAndOrder> collectDecorators(Class<?> clazz, Method method) {
-        final List<DecoratorAndOrder> decorators = new ArrayList<>();
-
         final List<DecoratorAndOrder> clazzDecorators =
                 AnnotationUtil.getAllAnnotations(clazz).stream()
                               .flatMap(a -> collectDecorators(a).stream())
@@ -64,9 +64,14 @@ public final class DecoratorAnnotationUtil {
                 AnnotationUtil.getAllAnnotations(method).stream()
                               .flatMap(a -> collectDecorators(a).stream())
                               .collect(Collectors.toList());
+
+        final List<DecoratorAndOrder> decorators = new ArrayList<>();
         // Class-level decorators are applied before method-level decorators.
         decorators.addAll(clazzDecorators);
         decorators.addAll(methodDecorators);
+
+        // Remove decorators with lower priority, keeping the original order intact.
+        decorators.removeAll(getDecoratorsWithLowerPriority(decorators));
 
         // Sort decorators by "order" attribute values.
         decorators.sort(Comparator.comparing(DecoratorAndOrder::order));
@@ -151,7 +156,9 @@ public final class DecoratorAnnotationUtil {
         return ImmutableList.of();
     }
 
-
+    /**
+     * Returns an order number which the specified {@code annotation} has.
+    */
     private static int getOrder(Annotation annotation) {
         // If the annotation has "order" attribute, we can use it when sorting decorators.
         final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
@@ -170,6 +177,39 @@ public final class DecoratorAnnotationUtil {
             // If it does not exist, '0' is used by default.
         }
         return 0;
+    }
+
+    /**
+     * Returns decorators with lower priority. The priority is determined by comparing their order numbers
+     * within annotations that have the same {@link DecoratorFactory}. All decorators, except the one with the
+     * highest priority in each group, are returned.
+     */
+    private static List<DecoratorAndOrder> getDecoratorsWithLowerPriority(List<DecoratorAndOrder> decorators) {
+        final Map<DecoratorFactory, List<DecoratorAndOrder>> decoratorsGroupedByDecoratorFactory =
+                decorators.stream().filter(d -> d.decoratorFactory() != null)
+                          .collect(Collectors.groupingBy(DecoratorAndOrder::decoratorFactory));
+
+        final ImmutableList.Builder<DecoratorAndOrder> builder = ImmutableList.builder();
+        for (Entry<DecoratorFactory, List<DecoratorAndOrder>> entry
+                : decoratorsGroupedByDecoratorFactory.entrySet()) {
+
+            final DecoratorFactory df = entry.getKey();
+            final List<DecoratorAndOrder> groupedDecorators = entry.getValue();
+
+            // If additivity is true, we don't need to compare priorities of decorators.
+            if (df.additivity()) {
+                continue;
+            }
+
+            // Collect decorators except the one with the highest priority.
+            final Optional<Integer> minOrder = groupedDecorators.stream()
+                                                    .min(Comparator.comparingInt(DecoratorAndOrder::order))
+                                                    .map(DecoratorAndOrder::order);
+            minOrder.ifPresent(order -> groupedDecorators.stream()
+                                             .filter(decorator -> decorator.order() > order)
+                                             .forEach(builder::add));
+        }
+        return builder.build();
     }
 
     private DecoratorAnnotationUtil() {}
@@ -205,7 +245,6 @@ public final class DecoratorAnnotationUtil {
         }
 
         @Nullable
-        @VisibleForTesting
         public DecoratorFactory decoratorFactory() {
             return decoratorFactory;
         }
