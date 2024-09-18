@@ -203,7 +203,7 @@ class DecoratorAnnotationUtilTest {
 
     @Decorator(Decorator1.class)
     @LoggingDecorator(requestLogLevel = LogLevel.INFO)
-    @UserDefinedDecoratorWithoutAdditivity(value = 1, order = 0)
+    @UserDefinedDecoratorWithoutAdditivity(1)
     static class TestClass {
 
         @LoggingDecorator
@@ -233,7 +233,7 @@ class DecoratorAnnotationUtilTest {
             return "";
         }
 
-        @UserDefinedDecoratorWithoutAdditivity(value = 2, order = 0)
+        @UserDefinedDecoratorWithoutAdditivity(2)
         public String userDefinedDecoratorWithAdditivity() {
             return "";
         }
