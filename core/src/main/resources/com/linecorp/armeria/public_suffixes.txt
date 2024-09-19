@@ -125,12 +125,10 @@
 *.r.appspot.com
 *.run.app
 *.s.brave.io
-*.s5y.io
 *.sa-east-1.airflow.amazonaws.com
 *.sapporo.jp
 *.sch.uk
 *.sendai.jp
-*.sensiosite.cloud
 *.services.clever-cloud.com
 *.snowflake.app
 *.spectrum.myjino.ru
@@ -3653,6 +3651,7 @@ hoylandet.no
 hr
 hr.eu.org
 hra.health
+hrsn.dev
 hs.kr
 hs.run
 hs.zone
@@ -5475,7 +5474,6 @@ my.id
 myactivedirectory.com
 myamaze.net
 myasustor.com
-mycd.eu
 mycloudnas.com
 mydatto.com
 mydatto.net
