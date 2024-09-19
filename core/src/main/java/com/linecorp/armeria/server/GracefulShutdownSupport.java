@@ -55,14 +55,14 @@ abstract class GracefulShutdownSupport {
      * Increases the number of pending responses.
      */
     final void inc() {
-        serverMetrics.increasePendingResponse();
+        serverMetrics.increasePendingResponses();
     }
 
     /**
      * Decreases the number of pending responses.
      */
     void dec() {
-        serverMetrics.decreasePendingResponse();
+        serverMetrics.decreasePendingResponses();
     }
 
     /**
@@ -119,7 +119,7 @@ abstract class GracefulShutdownSupport {
         private volatile long shutdownStartTimeNanos;
 
         private DefaultGracefulShutdownSupport(Duration quietPeriod, Executor blockingTaskExecutor, Ticker ticker,
-                                       ServerMetrics serverMetrics) {
+                                               ServerMetrics serverMetrics) {
             super(serverMetrics);
             quietPeriodNanos = quietPeriod.toNanos();
             this.blockingTaskExecutor = blockingTaskExecutor;
