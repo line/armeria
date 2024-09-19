@@ -118,8 +118,8 @@ abstract class GracefulShutdownSupport {
         private long lastResTimeNanos;
         private volatile long shutdownStartTimeNanos;
 
-        private DefaultGracefulShutdownSupport(Duration quietPeriod, Executor blockingTaskExecutor, Ticker ticker,
-                                               ServerMetrics serverMetrics) {
+        private DefaultGracefulShutdownSupport(Duration quietPeriod, Executor blockingTaskExecutor,
+                                               Ticker ticker, ServerMetrics serverMetrics) {
             super(serverMetrics);
             quietPeriodNanos = quietPeriod.toNanos();
             this.blockingTaskExecutor = blockingTaskExecutor;
