@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.SslContextFactory;
-import com.linecorp.armeria.internal.common.TlsProviderUtil.SslContextMode;
+import com.linecorp.armeria.internal.common.SslContextFactory.SslContextMode;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -98,11 +98,6 @@ final class Bootstraps {
                              SerializationFormat serializationFormat) {
         final Bootstrap[][] bootstraps = isDomainSocket ? unixBootstraps : inetBootstraps;
         assert bootstraps != null;
-        return select(bootstraps, desiredProtocol, serializationFormat);
-    }
-
-    private static Bootstrap select(Bootstrap[][] bootstraps, SessionProtocol desiredProtocol,
-                                    SerializationFormat serializationFormat) {
         return bootstraps[desiredProtocol.ordinal()][toIndex(serializationFormat)];
     }
 
@@ -179,8 +174,8 @@ final class Bootstraps {
         }
 
         final SslContextMode sslContextMode =
-                desiredProtocol.isExplicitHttp1() ? SslContextMode.CLIENT_HTTP1_ONLY
-                                                  : SslContextMode.CLIENT;
+                desiredProtocol.isExplicitHttp1() ? SslContextFactory.SslContextMode.CLIENT_HTTP1_ONLY
+                                                  : SslContextFactory.SslContextMode.CLIENT;
         assert sslContextFactory != null;
         return sslContextFactory.getOrCreate(sslContextMode, hostname);
     }
@@ -195,8 +190,7 @@ final class Bootstraps {
         }
     }
 
-    private ChannelInitializer<Channel> clientChannelInitializer(SessionProtocol p,
-                                                                 SslContext sslCtx,
+    private ChannelInitializer<Channel> clientChannelInitializer(SessionProtocol p, SslContext sslCtx,
                                                                  boolean webSocket, boolean closeSslContext) {
         return new ChannelInitializer<Channel>() {
             @Override

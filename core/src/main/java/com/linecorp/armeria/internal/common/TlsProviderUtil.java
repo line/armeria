@@ -55,11 +55,5 @@ public final class TlsProviderUtil {
         return false;
     }
 
-    public enum SslContextMode {
-        SERVER,
-        CLIENT_HTTP1_ONLY,
-        CLIENT
-    }
-
     private TlsProviderUtil() {}
 }

@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.metric.CloseableMeterBinder;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.metric.MoreMeterBinders;
 import com.linecorp.armeria.common.util.TlsEngineType;
-import com.linecorp.armeria.internal.common.TlsProviderUtil.SslContextMode;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.server.ServerTlsConfig;
 
@@ -219,6 +218,12 @@ public final class SslContextFactory {
     @VisibleForTesting
     public int numCachedContexts() {
         return cache.size();
+    }
+
+    public enum SslContextMode {
+        SERVER,
+        CLIENT_HTTP1_ONLY,
+        CLIENT
     }
 
     private static final class CacheKey {

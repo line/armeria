@@ -21,7 +21,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.common.TlsProviderUtil;
-import com.linecorp.armeria.internal.common.TlsProviderUtil.SslContextMode;
 
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
@@ -42,7 +41,7 @@ final class TlsProviderMapping implements Mapping<String, SslContext> {
         } else {
             hostname = TlsProviderUtil.normalizeHostname(hostname);
         }
-        return sslContextFactory.getOrCreate(SslContextMode.SERVER, hostname);
+        return sslContextFactory.getOrCreate(SslContextFactory.SslContextMode.SERVER, hostname);
     }
 
     void release(SslContext sslContext) {

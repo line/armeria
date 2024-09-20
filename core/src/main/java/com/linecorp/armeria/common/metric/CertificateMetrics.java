@@ -84,7 +84,7 @@ public final class CertificateMetrics extends AbstractCloseableMeterBinder {
                                       final Instant notAfter = x509Cert.getNotAfter().toInstant();
                                       final Duration diff =
                                               Duration.between(Instant.now(), notAfter);
-                                      return diff.isNegative() ? -1 : diff.toDays();
+                                      return diff.toDays();
                                   })
                          .description("Duration in days before TLS certificate expires, which becomes -1 " +
                                       "if certificate is expired")

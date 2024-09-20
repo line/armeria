@@ -417,8 +417,6 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");
-        ensureNoTlsProvider();
-        staticTlsSettingsSet = true;
         return tlsCustomizer(customizer -> customizer.keyManager(tlsKeyPair.privateKey(),
                                                                  tlsKeyPair.certificateChain()));
     }
@@ -429,8 +427,6 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(KeyManagerFactory keyManagerFactory) {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
-        ensureNoTlsProvider();
-        staticTlsSettingsSet = true;
         return tlsCustomizer(customizer -> customizer.keyManager(keyManagerFactory));
     }
 

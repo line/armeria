@@ -40,6 +40,8 @@ public final class ClientTlsConfigBuilder extends AbstractTlsConfigBuilder<Clien
     private boolean tlsNoVerifySet;
     private final Set<String> insecureHosts = new HashSet<>();
 
+    ClientTlsConfigBuilder() {}
+
     /**
      * Disables the verification of server's TLS certificate chain. If you want to disable verification for
      * only specific hosts, use {@link #tlsNoVerifyHosts(String...)}.

@@ -20,12 +20,14 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.AbstractTlsConfigBuilder;
 import com.linecorp.armeria.common.TlsProvider;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.handler.ssl.ClientAuth;
 
 /**
  * A builder class for creating a {@link TlsProvider} that provides server-side TLS.
  */
+@UnstableApi
 public final class ServerTlsConfigBuilder extends AbstractTlsConfigBuilder<ServerTlsConfigBuilder> {
 
     private ClientAuth clientAuth = ClientAuth.NONE;
