@@ -170,8 +170,6 @@ final class Bootstraps {
     }
 
     private SslContext newSslContext(SocketAddress remoteAddress, SessionProtocol desiredProtocol) {
-        assert desiredProtocol.isTls();
-
         final String hostname;
         if (remoteAddress instanceof InetSocketAddress) {
             hostname = ((InetSocketAddress) remoteAddress).getHostString();
@@ -203,8 +201,11 @@ final class Bootstraps {
         return new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
+                if (closeSslContext) {
+                    ch.closeFuture().addListener(unused -> releaseSslContext(sslCtx));
+                }
                 ch.pipeline().addLast(new HttpClientPipelineConfigurator(
-                        clientFactory, webSocket, p, sslCtx, closeSslContext ? sslContextFactory : null));
+                        clientFactory, webSocket, p, sslCtx));
             }
         };
     }

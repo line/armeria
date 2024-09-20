@@ -42,6 +42,11 @@ final class StaticTlsProvider implements TlsProvider {
     }
 
     @Override
+    public List<X509Certificate> trustedCertificates() {
+        return trustedCertificates;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;

@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.common.SslContextFactory;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServerTlsConfig;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -71,17 +72,23 @@ class TlsProviderCacheTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.tls(serverFooCert.tlsKeyPair());
-            sb.tlsCustomizer(b -> {
-                b.clientAuth(ClientAuth.REQUIRE)
-                 .trustManager(clientFooCert.certificate());
-            });
+            final TlsProvider tlsProvider =
+                    TlsProvider.builder()
+                               .setDefault(serverFooCert.tlsKeyPair())
+                               .set("bar.com", serverBarCert.tlsKeyPair())
+                               .trustedCertificates(clientFooCert.certificate(),
+                                                    clientBarCert.certificate())
+                               .build();
+            final ServerTlsConfig tlsConfig = ServerTlsConfig.builder()
+                                                             .clientAuth(ClientAuth.REQUIRE)
+                                                             .build();
+            sb.tlsProvider(tlsProvider, tlsConfig);
 
             sb.virtualHost("bar.com")
-              .tls(serverBarCert.tlsKeyPair())
-              .tlsCustomizer(b -> {
-                  b.clientAuth(ClientAuth.REQUIRE)
-                   .trustManager(clientBarCert.certificate());
+              .service("/", (ctx, req) -> {
+                  final CompletableFuture<HttpResponse> future =
+                          startFuture.thenApply(unused -> HttpResponse.of("Hello, Bar!"));
+                  return HttpResponse.of(future);
               });
 
             sb.service("/", (ctx, req) -> {
@@ -95,24 +102,6 @@ class TlsProviderCacheTest {
     @BeforeEach
     void setUp() {
         startFuture = new CompletableFuture<>();
-    }
-
-    @Test
-    void test() {
-        final ClientFactory factory =
-                ClientFactory.builder()
-                             .tlsCustomizer(b -> {
-                                 b.trustManager(serverFooCert.certificate(),
-                                                serverBarCert.certificate());
-                             })
-                             .build();
-        final BlockingWebClient client =
-                WebClient.builder("https://google.com")
-                         .factory(factory)
-                         .build()
-                         .blocking();
-        final AggregatedHttpResponse res = client.get("/");
-        System.out.println(res);
     }
 
     @Test
@@ -159,22 +148,33 @@ class TlsProviderCacheTest {
                 }
             }
 
-            startFuture.complete(null);
-            for (AggregatedHttpResponse response : CompletableFutures.allAsList(responses).join()) {
-                assertThat(response.status()).isEqualTo(HttpStatus.OK);
-                assertThat(response.contentUtf8()).isEqualTo("Hello!");
-            }
-
             await().untilAsserted(() -> {
                 assertThat(poolListener.opened()).isEqualTo(6);
             });
-            assertThat(channels).hasSize(6);
 
             final HttpClientFactory clientFactory = (HttpClientFactory) factory.unwrap();
             final SslContextFactory sslContextFactory = clientFactory.sslContextFactory();
             assertThat(sslContextFactory).isNotNull();
-            // Make sure the SslContext is reused after the connection is closed.
+            // Make sure the SslContext is reused
             assertThat(sslContextFactory.numCachedContexts()).isEqualTo(2);
+
+            startFuture.complete(null);
+            final List<AggregatedHttpResponse> responses0 = CompletableFutures.allAsList(responses).join();
+            for (int i = 0; i < responses0.size(); i++) {
+                final AggregatedHttpResponse response = responses0.get(i);
+                assertThat(response.status()).isEqualTo(HttpStatus.OK);
+                if (i < 3) {
+                    assertThat(response.contentUtf8()).isEqualTo("Hello!");
+                } else {
+                    assertThat(response.contentUtf8()).isEqualTo("Hello, Bar!");
+                }
+            }
+
+            await().untilAsserted(() -> {
+                assertThat(poolListener.closed()).isEqualTo(6);
+            });
+            // Make sure a cached SslContext is released when all referenced channels are closed.
+            assertThat(sslContextFactory.numCachedContexts()).isEqualTo(0);
         }
     }
 }
