@@ -51,7 +51,6 @@ final class Bootstraps {
     private final Bootstrap[][] inetBootstraps;
     private final Bootstrap @Nullable [][] unixBootstraps;
 
-
     Bootstraps(HttpClientFactory clientFactory, EventLoop eventLoop,
                SslContext sslCtxHttp1Or2, SslContext sslCtxHttp1Only,
                @Nullable SslContextFactory sslContextFactory) {
@@ -143,6 +142,7 @@ final class Bootstraps {
         }
 
         final Bootstrap baseBootstrap = isDomainSocket ? unixBaseBootstrap : inetBaseBootstrap;
+        assert baseBootstrap != null;
         return newBootstrap(baseBootstrap, remoteAddress, desiredProtocol, serializationFormat);
     }
 

@@ -26,6 +26,8 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 final class MappedTlsProvider implements TlsProvider {
 
     private final Map<String, TlsKeyPair> tlsKeyPairs;
@@ -36,6 +38,7 @@ final class MappedTlsProvider implements TlsProvider {
         this.trustedCertificates = trustedCertificates;
     }
 
+    @Nullable
     @Override
     public TlsKeyPair find(String hostname) {
         requireNonNull(hostname, "hostname");

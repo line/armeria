@@ -80,6 +80,9 @@ public final class ClientTlsConfigBuilder extends AbstractTlsConfigBuilder<Clien
         return this;
     }
 
+    /**
+     * Returns a newly-created {@link ClientTlsConfig} based on the properties of this builder.
+     */
     public ClientTlsConfig build() {
         return new ClientTlsConfig(allowsUnsafeCiphers(), meterIdPrefix(), tlsCustomizer(),
                                    tlsNoVerifySet, ImmutableSet.copyOf(insecureHosts));

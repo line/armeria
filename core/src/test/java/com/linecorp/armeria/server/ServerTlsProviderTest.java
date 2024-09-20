@@ -94,10 +94,10 @@ class ServerTlsProviderTest {
 
     @Test
     void testDefault() {
-        BlockingWebClient client = WebClient.builder(server.uri(SessionProtocol.HTTPS))
-                                            .factory(ClientFactory.insecure())
-                                            .build()
-                                            .blocking();
+        final BlockingWebClient client = WebClient.builder(server.uri(SessionProtocol.HTTPS))
+                                                  .factory(ClientFactory.insecure())
+                                                  .build()
+                                                  .blocking();
         assertThat(client.get("/").contentUtf8()).isEqualTo("default:default");
     }
 

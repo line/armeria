@@ -40,6 +40,9 @@ public final class ServerTlsConfigBuilder extends AbstractTlsConfigBuilder<Serve
         return this;
     }
 
+    /**
+     * Returns a newly-created {@link ServerTlsConfig} based on the properties of this builder.
+     */
     public ServerTlsConfig build() {
         return new ServerTlsConfig(allowsUnsafeCiphers(), meterIdPrefix(), clientAuth, tlsCustomizer());
     }

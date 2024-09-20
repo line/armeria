@@ -33,7 +33,6 @@ class ClientTlsProviderBuilderTest {
                        .build();
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("No TLS key pair is set.");
-
     }
 
     @Test

@@ -38,6 +38,9 @@ public abstract class AbstractTlsConfig {
 
     private final Consumer<SslContextBuilder> tlsCustomizer;
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractTlsConfig(boolean allowsUnsafeCiphers, @Nullable MeterIdPrefix meterIdPrefix,
                                 Consumer<SslContextBuilder> tlsCustomizer) {
         this.allowsUnsafeCiphers = allowsUnsafeCiphers;

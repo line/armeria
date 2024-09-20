@@ -1153,17 +1153,15 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * a hostname.
      *
      * <pre>{@code
-     *   Server
-     *     .builder()
-     *     .tlsProvider(
-     *       TlsProvider.builderForServer()
-     *                  // Set the default key pair.
-     *                  .setDefault(TlsKeyPair.of(...))
-     *                  // Set the key pair for "example.com".
-     *                  .set("example.com", TlsKeyPair.of(...))
-     *                  .build())
-     *     .build();
-     *
+     * Server
+     *   .builder()
+     *   .tlsProvider(
+     *     TlsProvider.builderForServer()
+     *                // Set the default key pair.
+     *                .setDefault(TlsKeyPair.of(...))
+     *                // Set the key pair for "example.com".
+     *                .set("example.com", TlsKeyPair.of(...))
+     *                .build())
      * }</pre>
      *
      * <p>Note that this method mutually exclusive with {@link #tls(TlsKeyPair)} and other static TLS settings.
@@ -1175,6 +1173,34 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
         return this;
     }
 
+    /**
+     * Sets the specified {@link TlsProvider} and {@link ServerTlsConfig} which will be used for building an
+     * {@link SslContext} of a hostname.
+     *
+     * <pre>{@code
+     * TlsProvider tlsProvider =
+     *   TlsProvider
+     *     .builderForServer()
+     *     // Set the default key pair.
+     *     .setDefault(TlsKeyPair.of(...))
+     *     // Set the key pair for "example.com".
+     *     .set("example.com", TlsKeyPair.of(...))
+     *     .build();
+     *
+     * ServerTlsConfig tlsConfig =
+     *   ServerTlsConfig
+     *     .builder()
+     *     .clientAuth(ClientAuth.REQUIRED)
+     *     .meterIdPrefix(...)
+     *     .tlsCustomizer(c -> ...)
+     *     .build();
+     *
+     * Server
+     *   .builder()
+     *   .tlsProvider(tlsProvider, tlsConfig)
+     * }</pre>
+     */
+    @UnstableApi
     public ServerBuilder tlsProvider(TlsProvider tlsProvider, ServerTlsConfig tlsConfig) {
         tlsProvider(tlsProvider);
         this.tlsConfig = requireNonNull(tlsConfig, "tlsConfig");
@@ -2357,6 +2383,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
             } else {
                 final TlsEngineType tlsEngineType = defaultVirtualHost.tlsEngineType();
                 assert tlsEngineType != null;
+                assert tlsProvider != null;
                 sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig);
             }
         }

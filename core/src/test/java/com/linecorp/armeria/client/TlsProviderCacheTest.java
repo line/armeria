@@ -152,7 +152,9 @@ class TlsProviderCacheTest {
                                       .execute()
                                       .aggregate();
                         responses.add(future);
-                        channels.add(captor.get().log().whenAvailable(RequestLogProperty.REQUEST_HEADERS).join().channel());
+                        channels.add(captor.get().log()
+                                           .whenAvailable(RequestLogProperty.REQUEST_HEADERS).join()
+                                           .channel());
                     }
                 }
             }

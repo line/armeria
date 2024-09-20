@@ -98,9 +98,9 @@ class ClientTlsProviderTest {
                                .set("bar.com", server1BarCert.tlsKeyPair())
                                .trustedCertificates(clientFooCert.certificate())
                                .build();
-            ServerTlsConfig tlsConfig = ServerTlsConfig.builder()
-                                                       .clientAuth(ClientAuth.REQUIRE)
-                                                       .build();
+            final ServerTlsConfig tlsConfig = ServerTlsConfig.builder()
+                                                             .clientAuth(ClientAuth.REQUIRE)
+                                                             .build();
 
             sb.https(0)
               .tlsProvider(tlsProvider, tlsConfig)
