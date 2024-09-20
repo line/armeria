@@ -183,6 +183,7 @@ class ClientTlsProviderTest {
     void testWildcardMatch() {
         final TlsProvider tlsProvider =
                 TlsProvider.builder()
+                           .set("foo.com", clientFooCert.tlsKeyPair())
                            .set("*.foo.com", clientFooCert.tlsKeyPair())
                            .trustedCertificates(server0FooCert.certificate(),
                                                 server0SubFooCert.certificate())
