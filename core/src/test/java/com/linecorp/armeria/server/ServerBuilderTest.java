@@ -37,6 +37,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -141,6 +142,13 @@ class ServerBuilderTest {
                      .idleTimeoutMillis(idleTimeoutMillis)
                      .pingIntervalMillis(pingIntervalMillis)
                      .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        poppedRouterCnt.set(0);
+        poppedRouterCnt2.set(0);
+        poppedCnt.set(0);
     }
 
     @Test
