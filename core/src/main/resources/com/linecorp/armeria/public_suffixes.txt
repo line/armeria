@@ -125,12 +125,10 @@
 *.r.appspot.com
 *.run.app
 *.s.brave.io
-*.s5y.io
 *.sa-east-1.airflow.amazonaws.com
 *.sapporo.jp
 *.sch.uk
 *.sendai.jp
-*.sensiosite.cloud
 *.services.clever-cloud.com
 *.snowflake.app
 *.spectrum.myjino.ru
@@ -3653,6 +3651,7 @@ hoylandet.no
 hr
 hr.eu.org
 hra.health
+hrsn.dev
 hs.kr
 hs.run
 hs.zone
@@ -4582,7 +4581,6 @@ kropyvnytskyi.ua
 krym.ua
 ks.ua
 ks.us
-ktistory.com
 kuchinotsu.nagasaki.jp
 kudamatsu.yamaguchi.jp
 kudoyama.wakayama.jp
@@ -5117,6 +5115,7 @@ memset.net
 men
 menu
 meraker.no
+merck
 merckmsd
 merseine.nu
 messerli.app
@@ -5474,7 +5473,6 @@ my.id
 myactivedirectory.com
 myamaze.net
 myasustor.com
-mycd.eu
 mycloudnas.com
 mydatto.com
 mydatto.net
@@ -8128,6 +8126,7 @@ szczytno.pl
 szex.hu
 szkola.pl
 t.bg
+t.hrsn.dev
 t.hrsn.net
 t.se
 ta.it
