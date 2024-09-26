@@ -3480,6 +3480,7 @@ herokussl.com
 heroy.more-og-romsdal.no
 heroy.nordland.no
 heteml.net
+hf.space
 hi.cn
 hi.us
 hicam.net
@@ -7775,6 +7776,7 @@ shoparena.pl
 shopitsite.com
 shopping
 shopselect.net
+shopware.shop
 shopware.store
 shouji
 show
@@ -7974,6 +7976,7 @@ statebank
 statefarm
 stathelle.no
 static-access.net
+static.hf.space
 static.observableusercontent.com
 stavanger.no
 stavern.no
