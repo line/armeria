@@ -1371,7 +1371,6 @@ centralus.azurestaticapps.net
 ceo
 cern
 certification.aero
-certmgr.org
 cesena-forli.it
 cesenaforli.it
 cf
@@ -1890,7 +1889,6 @@ d.bg
 d.gv.vc
 d.se
 daa.jp
-dabur
 dad
 daegu.kr
 daejeon.kr
@@ -1907,7 +1905,6 @@ daknong.vn
 damnserver.com
 danang.vn
 dance
-daplie.me
 darklang.io
 data
 date
@@ -2113,7 +2110,6 @@ dyn-vpn.de
 dyn.cosidns.de
 dyn.ddnss.de
 dyn.home-webserver.de
-dyn53.io
 dynalias.com
 dynalias.net
 dynalias.org
@@ -2748,7 +2744,6 @@ forms.ac
 forsale
 forsand.no
 fortal.br
-forte.id
 forum
 forum.hu
 forumz.info
@@ -4859,7 +4854,6 @@ loabat.no
 loan
 loans
 localcert.net
-localhost.daplie.me
 localhostcert.net
 localplayer.dev
 locker
