@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria;
+package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,11 +28,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Server;
-import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.server.logging.LoggingService;

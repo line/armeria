@@ -32,19 +32,25 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.xds.ClusterSnapshot;
+import com.linecorp.armeria.xds.client.endpoint.LocalityRoutingStateFactory.LocalityRoutingState;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.LbSubsetConfig.LbSubsetFallbackPolicy;
 
-final class SubsetLoadBalancer implements LoadBalancer {
+final class SubsetLoadBalancer implements XdsLoadBalancer {
 
     private static final Logger logger = LoggerFactory.getLogger(SubsetLoadBalancer.class);
 
     private final LoadBalancer loadBalancer;
+    private final PrioritySet prioritySet;
+    @Nullable
+    private final LocalityRoutingState localityRoutingState;
 
-    SubsetLoadBalancer(PrioritySet prioritySet, LoadBalancer allEndpointsLoadBalancer) {
+    SubsetLoadBalancer(PrioritySet prioritySet, XdsLoadBalancer allEndpointsLoadBalancer) {
         loadBalancer = createSubsetLoadBalancer(prioritySet, allEndpointsLoadBalancer);
+        this.prioritySet = prioritySet;
+        localityRoutingState = allEndpointsLoadBalancer.localityRoutingState();
     }
 
     @Override
@@ -53,8 +59,8 @@ final class SubsetLoadBalancer implements LoadBalancer {
         return loadBalancer.selectNow(ctx);
     }
 
-    private static LoadBalancer createSubsetLoadBalancer(PrioritySet prioritySet,
-                                                         LoadBalancer allEndpointsLoadBalancer) {
+    private LoadBalancer createSubsetLoadBalancer(PrioritySet prioritySet,
+                                                  LoadBalancer allEndpointsLoadBalancer) {
         final ClusterSnapshot clusterSnapshot = prioritySet.clusterSnapshot();
         final Struct filterMetadata = filterMetadata(clusterSnapshot);
         if (filterMetadata.getFieldsCount() == 0) {
@@ -93,10 +99,10 @@ final class SubsetLoadBalancer implements LoadBalancer {
         return createSubsetLoadBalancer(endpoints, clusterSnapshot);
     }
 
-    private static LoadBalancer createSubsetLoadBalancer(List<Endpoint> endpoints,
-                                                         ClusterSnapshot clusterSnapshot) {
+    private LoadBalancer createSubsetLoadBalancer(List<Endpoint> endpoints,
+                                                  ClusterSnapshot clusterSnapshot) {
         final PrioritySet subsetPrioritySet = new PriorityStateManager(clusterSnapshot, endpoints).build();
-        return new DefaultLoadBalancer(subsetPrioritySet);
+        return new DefaultLoadBalancer(subsetPrioritySet, localityRoutingState);
     }
 
     @Override
@@ -104,5 +110,16 @@ final class SubsetLoadBalancer implements LoadBalancer {
         return MoreObjects.toStringHelper(this)
                           .add("loadBalancer", loadBalancer)
                           .toString();
+    }
+
+    @Override
+    public PrioritySet prioritySet() {
+        return prioritySet;
+    }
+
+    @Override
+    @Nullable
+    public LocalityRoutingState localityRoutingState() {
+        return localityRoutingState;
     }
 }

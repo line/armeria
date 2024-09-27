@@ -30,7 +30,6 @@
 *.beget.app
 *.build.run
 *.builder.code.com
-*.bzz.dapps.earth
 *.c.ts.net
 *.ca-central-1.airflow.amazonaws.com
 *.ca-west-1.airflow.amazonaws.com
@@ -48,13 +47,11 @@
 *.cryptonomic.net
 *.customer-oci.com
 *.d.crm.dev
-*.dapps.earth
 *.database.run
 *.dev-builder.code.com
 *.dev.adobeaemcloud.com
 *.developer.app
 *.digitaloceanspaces.com
-*.diher.solutions
 *.dweb.link
 *.elb.amazonaws.com
 *.elb.amazonaws.com.cn
@@ -114,6 +111,9 @@
 *.on-k3s.io
 *.on-rancher.cloud
 *.on-rio.io
+*.oraclecloudapps.com
+*.oraclegovcloudapps.com
+*.oraclegovcloudapps.uk
 *.otap.co
 *.owo.codes
 *.paywhirl.com
@@ -123,7 +123,6 @@
 *.privatelink.snowflake.app
 *.quipelements.com
 *.r.appspot.com
-*.rss.my.id
 *.run.app
 *.s.brave.io
 *.s5y.io
@@ -562,6 +561,7 @@ api.gov.uk
 api.stdlib.com
 apigee.io
 app
+app-ionos.space
 app.banzaicloud.io
 app.br
 app.os.fedoraproject.org
@@ -571,6 +571,8 @@ appchizi.com
 appengine.flow.ch
 apple
 applinzi.com
+apps-1and1.com
+apps-1and1.net
 apps.fbsbx.com
 apps.lair.io
 appspacehosted.com
@@ -582,7 +584,6 @@ aq.it
 aquarelle
 aquila.it
 ar
-ar.com
 ar.it
 ar.us
 arab
@@ -747,7 +748,6 @@ author
 author.aero
 auto
 auto.pl
-autocode.dev
 autos
 av.it
 av.tr
@@ -959,7 +959,6 @@ binhphuoc.vn
 binhthuan.vn
 bio
 bio.br
-bip.sh
 bir.ru
 biratori.hokkaido.jp
 birkenes.no
@@ -981,6 +980,7 @@ biz.ls
 biz.mv
 biz.mw
 biz.my
+biz.ng
 biz.ni
 biz.nr
 biz.pk
@@ -1013,7 +1013,6 @@ blogdns.com
 blogdns.net
 blogdns.org
 blogsite.org
-blogsite.xyz
 blogspot.ae
 blogspot.al
 blogspot.am
@@ -1547,6 +1546,7 @@ co.ao
 co.at
 co.bb
 co.bi
+co.biz.ng
 co.bj
 co.bn
 co.business
@@ -2006,6 +2006,7 @@ dienbien.vn
 diet
 digick.jp
 digital
+diher.solutions
 direct
 direct.quickconnect.cn
 direct.quickconnect.to
@@ -2030,6 +2031,7 @@ dj
 dk
 dk.eu.org
 dkonto.pl
+dl.biz.ng
 dlugoleka.pl
 dm
 dn.ua
@@ -2301,7 +2303,6 @@ edu.ru
 edu.sa
 edu.sb
 edu.sc
-edu.scot
 edu.sd
 edu.sg
 edu.sl
@@ -2659,6 +2660,7 @@ fi.it
 fidelity
 fido
 fie.ee
+filegear-sg.me
 filegear.me
 film
 film.hu
@@ -2677,7 +2679,6 @@ firewall-gateway.com
 firewall-gateway.de
 firewall-gateway.net
 firewalledreplit.co
-fireweb.app
 firm.co
 firm.dk
 firm.ht
@@ -2699,7 +2700,6 @@ fjell.no
 fl.us
 fla.no
 flakstad.no
-flap.id
 flatanger.no
 fldrv.com
 flekkefjord.no
@@ -3004,6 +3004,7 @@ gf
 gg
 ggee
 ggf.br
+ggff.net
 gh
 gh.srv.us
 gi
@@ -3062,6 +3063,7 @@ gmo
 gmx
 gn
 gniezno.pl
+go.biz.ng
 go.ci
 go.cr
 go.dyndns.org
@@ -3080,6 +3082,7 @@ go.ug
 gob.ar
 gob.bo
 gob.cl
+gob.cu
 gob.do
 gob.ec
 gob.es
@@ -3662,7 +3665,6 @@ hsbc
 ht
 httpbin.org
 hu
-hu.com
 hu.eu.org
 hu.net
 hughes
@@ -3942,9 +3944,11 @@ is-a-democrat.com
 is-a-designer.com
 is-a-doctor.com
 is-a-financialadvisor.com
+is-a-fullstack.dev
 is-a-geek.com
 is-a-geek.net
 is-a-geek.org
+is-a-good.dev
 is-a-green.com
 is-a-guru.com
 is-a-hard-worker.com
@@ -4567,7 +4571,6 @@ kpmg
 kpn
 kppsp.gov.pl
 kr
-kr.com
 kr.eu.org
 kr.it
 kr.ua
@@ -4757,6 +4760,7 @@ lesja.no
 levanger.no
 lexus
 lezajsk.pl
+lg.biz.ng
 lg.jp
 lg.ua
 lgbt
@@ -4817,6 +4821,7 @@ lib.vt.us
 lib.wa.us
 lib.wi.us
 lib.wy.us
+libp2p.direct
 lidl
 lier.no
 lierne.no
@@ -4850,6 +4855,7 @@ lipsy
 littlestar.jp
 live
 live-on.net
+live-website.com
 living
 livorno.it
 lk
@@ -4865,7 +4871,6 @@ localcert.net
 localhost.daplie.me
 localhostcert.net
 localplayer.dev
-localzone.xyz
 locker
 locus
 lodi.it
@@ -4971,8 +4976,8 @@ machida.tokyo.jp
 madethis.site
 madrid
 maebashi.gunma.jp
+mafelo.net
 magazine.aero
-magnet.page
 maibara.shiga.jp
 maif
 mail-box.ne.jp
@@ -5028,6 +5033,7 @@ massacarrara.it
 masuda.shimane.jp
 mat.br
 matera.it
+matlab.cloud
 matrix.jp
 matsubara.osaka.jp
 matsubushi.saitama.jp
@@ -5056,7 +5062,6 @@ mb.ca
 mb.it
 mba
 mc
-mc.eu.org
 mc.it
 mcdir.me
 mcdir.ru
@@ -5349,6 +5354,7 @@ mod.gi
 moda
 modalen.no
 modelling.aero
+modelscape.com
 modena.it
 mods.jp
 modum.no
@@ -5463,6 +5469,7 @@ mutual.ar
 mv
 mw
 mw.gov.pl
+mwcloudnonprod.com
 mx
 mx.na
 my
@@ -5662,6 +5669,7 @@ narviika.no
 narvik.no
 nasu.tochigi.jp
 nasushiobara.tochigi.jp
+nat.cu
 nat.tn
 natal.br
 natori.miyagi.jp
@@ -5951,7 +5959,6 @@ no-ip.co.uk
 no-ip.info
 no-ip.net
 no-ip.org
-no.com
 no.eu.org
 no.it
 nobeoka.miyazaki.jp
@@ -6102,6 +6109,7 @@ ny-1.paas.massivegrid.net
 ny-2.paas.massivegrid.net
 ny.us
 nyanta.jp
+nyat.app
 nyc
 nyc.mn
 nysa.pl
@@ -6238,6 +6246,7 @@ omuta.fukuoka.jp
 on-aptible.com
 on-the-web.tv
 on-web.fr
+on.biz.ng
 on.ca
 on.crisp.email
 onagawa.miyagi.jp
@@ -6685,6 +6694,7 @@ playstation
 playstation-cloud.com
 plc.co.im
 plc.ly
+plc.ng
 plc.uk
 plesk.page
 pleskns.com
@@ -6719,6 +6729,7 @@ politica.bo
 politie
 polkowice.pl
 poltava.ua
+polyspace.com
 pomorskie.pl
 pomorze.pl
 poniatowa.pl
@@ -6764,6 +6775,7 @@ presse.ci
 presse.km
 presse.ml
 preview.csb.app
+preview.wdh.app
 pri.ee
 prime
 primetel.cloud
@@ -6823,7 +6835,6 @@ pub.instances.scw.cloud
 pub.sa
 publ.pt
 public-inquiry.uk
-publishproxy.com
 pubtls.org
 pueblo.bo
 pug.it
@@ -6851,7 +6862,6 @@ qa
 qa2.com
 qbuser.com
 qc.ca
-qc.com
 qcx.io
 qh.cn
 qld.au
@@ -6916,6 +6926,7 @@ re.kr
 read
 read-books.org
 readmyblog.org
+readthedocs-hosted.com
 readthedocs.io
 readymade.jp
 realestate
@@ -7052,6 +7063,9 @@ roros.no
 rost.no
 rotorcraft.aero
 router.management
+routingthecloud.com
+routingthecloud.net
+routingthecloud.org
 rovigo.it
 rovno.ua
 royal-commission.uk
@@ -7066,6 +7080,7 @@ rs.leg.br
 rs.webaccel.jp
 rsc.cdn77.org
 rsc.contentproxy9.cz
+rss.my.id
 rsvp
 rt.ht
 ru
@@ -7532,7 +7547,6 @@ sch.ly
 sch.ng
 sch.qa
 sch.sa
-sch.so
 sch.ss
 sch.tf
 sch.wf
@@ -7856,6 +7870,7 @@ smola.no
 smushcdn.com
 sn
 sn.cn
+sn.mynetname.net
 snaase.no
 snasa.no
 sncf
@@ -8123,6 +8138,7 @@ szczytno.pl
 szex.hu
 szkola.pl
 t.bg
+t.hrsn.net
 t.se
 ta.it
 taa.it
@@ -8739,7 +8755,6 @@ uw.gov.pl
 uwajima.ehime.jp
 uwu.ai
 uy
-uy.com
 uz
 uz.ua
 uzhgorod.ua
@@ -8960,6 +8975,7 @@ watches
 watson.jp
 waw.pl
 wazuka.kyoto.jp
+wdh.app
 we.bs
 weather
 weatherchannel
@@ -8994,6 +9010,7 @@ weblike.jp
 webredirect.org
 website
 website.yandexcloud.net
+websitebuilder.online
 websozai.jp
 webspace.rocks
 webthings.io
@@ -9046,8 +9063,6 @@ weeklylottery.org.uk
 wegrow.pl
 weibo
 weir
-wellbeingzone.co.uk
-wellbeingzone.eu
 wesley.replit.dev
 west1-us.cloudjiffy.net
 westeurope.azurestaticapps.net

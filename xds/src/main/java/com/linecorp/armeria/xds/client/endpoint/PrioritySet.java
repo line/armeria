@@ -31,6 +31,7 @@ import com.linecorp.armeria.xds.EndpointSnapshot;
 
 import io.envoyproxy.envoy.config.cluster.v3.Cluster;
 import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig;
+import io.envoyproxy.envoy.config.cluster.v3.Cluster.CommonLbConfig.ZoneAwareLbConfig;
 import io.envoyproxy.envoy.config.endpoint.v3.ClusterLoadAssignment;
 
 final class PrioritySet {
@@ -59,6 +60,29 @@ final class PrioritySet {
             return false;
         }
         return commonLbConfig.getZoneAwareLbConfig().getFailTrafficOnPanic();
+    }
+
+    long minClusterSize() {
+        final CommonLbConfig commonLbConfig = commonLbConfig();
+        if (commonLbConfig == null ||
+            !commonLbConfig.hasZoneAwareLbConfig() ||
+            !commonLbConfig.getZoneAwareLbConfig().hasMinClusterSize()) {
+            return 6;
+        }
+        final ZoneAwareLbConfig zoneAwareLbConfig = cluster.getCommonLbConfig().getZoneAwareLbConfig();
+        return zoneAwareLbConfig.getMinClusterSize().getValue();
+    }
+
+    long routingEnabled() {
+        final CommonLbConfig commonLbConfig = commonLbConfig();
+        if (commonLbConfig == null || !commonLbConfig.hasZoneAwareLbConfig()) {
+            return 100;
+        }
+        final ZoneAwareLbConfig zoneAwareLbConfig = commonLbConfig.getZoneAwareLbConfig();
+        if (!zoneAwareLbConfig.hasRoutingEnabled()) {
+            return 100;
+        }
+        return Math.round(zoneAwareLbConfig.getRoutingEnabled().getValue());
     }
 
     @Nullable

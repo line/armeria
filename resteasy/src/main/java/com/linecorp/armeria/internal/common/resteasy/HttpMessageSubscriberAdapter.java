@@ -64,10 +64,9 @@ final class HttpMessageSubscriberAdapter implements Subscriber<HttpObject> {
             if (dataLength > 0) {
                 final long allowedDataLength = MAX_ALLOWED_DATA_LENGTH - contentLength;
                 if (dataLength > allowedDataLength) {
-                    //noinspection ConstantConditions
-                    subscription.cancel();
                     onError(new IllegalStateException(
                             "content length greater than " + MAX_ALLOWED_DATA_LENGTH));
+                    subscription.cancel();
                     return;
                 }
                 contentLength += dataLength;

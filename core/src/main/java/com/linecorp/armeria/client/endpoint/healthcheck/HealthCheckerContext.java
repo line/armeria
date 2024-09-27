@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides the properties and operations required for sending health check requests.
@@ -35,6 +36,12 @@ public interface HealthCheckerContext {
      * Returns the {@link Endpoint} to send health check requests to.
      */
     Endpoint endpoint();
+
+    /**
+     * The original {@link Endpoint} which is considered for health checking.
+     */
+    @UnstableApi
+    Endpoint originalEndpoint();
 
     /**
      * Returns the {@link SessionProtocol} to be used when sending health check requests.

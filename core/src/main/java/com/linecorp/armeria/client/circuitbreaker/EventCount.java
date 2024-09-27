@@ -22,7 +22,10 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * An immutable object that stores the count of events.
+ *
+ * @deprecated Use {@link com.linecorp.armeria.common.util.EventCount} instead.
  */
+@Deprecated
 public final class EventCount {
 
     /**

@@ -55,6 +55,7 @@ import com.linecorp.armeria.client.DecoratingHttpClientFunction;
 import com.linecorp.armeria.client.DecoratingRpcClientFunction;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.ResponseTimeoutMode;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
@@ -593,6 +594,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     public GrpcClientBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (GrpcClientBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public GrpcClientBuilder responseTimeoutMode(ResponseTimeoutMode responseTimeoutMode) {
+        return (GrpcClientBuilder) super.responseTimeoutMode(responseTimeoutMode);
     }
 
     /**

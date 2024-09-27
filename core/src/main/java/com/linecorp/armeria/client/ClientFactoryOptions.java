@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.outlier.OutlierDetection;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
@@ -214,6 +215,15 @@ public final class ClientFactoryOptions
      */
     public static final ClientFactoryOption<Long> MAX_CONNECTION_AGE_MILLIS =
             ClientFactoryOption.define("MAX_CONNECTION_AGE_MILLIS", clampedDefaultMaxClientConnectionAge());
+
+    /**
+     * The {@link OutlierDetection} which is used to detect unhealthy connections.
+     * If an unhealthy connection is detected, it is disabled and a new connection will be created.
+     * This option is disabled by default.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<OutlierDetection> CONNECTION_OUTLIER_DETECTION =
+            ClientFactoryOption.define("CONNECTION_OUTLIER_DETECTION", OutlierDetection.disabled());
 
     private static long clampedDefaultMaxClientConnectionAge() {
         final long connectionAgeMillis = Flags.defaultMaxClientConnectionAgeMillis();
@@ -600,6 +610,14 @@ public final class ClientFactoryOptions
      */
     public ConnectionPoolListener connectionPoolListener() {
         return get(CONNECTION_POOL_LISTENER);
+    }
+
+    /**
+     * Returns the {@link OutlierDetection} which is used to detect unhealthy connections.
+     */
+    @UnstableApi
+    public OutlierDetection connectionOutlierDetection() {
+        return get(CONNECTION_OUTLIER_DETECTION);
     }
 
     /**

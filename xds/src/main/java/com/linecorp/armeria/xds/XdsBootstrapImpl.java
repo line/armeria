@@ -35,6 +35,7 @@ import io.envoyproxy.envoy.config.core.v3.Node;
 import io.netty.util.concurrent.EventExecutor;
 
 final class XdsBootstrapImpl implements XdsBootstrap {
+    private final Bootstrap bootstrap;
     private final EventExecutor eventLoop;
 
     private final Map<ConfigSource, ConfigSourceClient> clientMap = new HashMap<>();
@@ -57,6 +58,7 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     @VisibleForTesting
     XdsBootstrapImpl(Bootstrap bootstrap, EventExecutor eventLoop,
                      Consumer<GrpcClientBuilder> configClientCustomizer) {
+        this.bootstrap = bootstrap;
         this.eventLoop = requireNonNull(eventLoop, "eventLoop");
         this.configClientCustomizer = configClientCustomizer;
         configSourceMapper = new ConfigSourceMapper(bootstrap);
@@ -137,6 +139,11 @@ final class XdsBootstrapImpl implements XdsBootstrap {
     @Override
     public EventExecutor eventLoop() {
         return eventLoop;
+    }
+
+    @Override
+    public Bootstrap bootstrap() {
+        return bootstrap;
     }
 
     ConfigSourceMapper configSourceMapper() {
