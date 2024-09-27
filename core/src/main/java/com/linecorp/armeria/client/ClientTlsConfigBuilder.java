@@ -45,7 +45,8 @@ public final class ClientTlsConfigBuilder extends AbstractTlsConfigBuilder<Clien
     /**
      * Disables the verification of server's TLS certificate chain. If you want to disable verification for
      * only specific hosts, use {@link #tlsNoVerifyHosts(String...)}.
-     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * <p><strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see InsecureTrustManagerFactory
      * @see #tlsCustomizer(Consumer)
@@ -59,7 +60,8 @@ public final class ClientTlsConfigBuilder extends AbstractTlsConfigBuilder<Clien
     /**
      * Disables the verification of server's TLS certificate chain for specific hosts. If you want to disable
      * all verification, use {@link #tlsNoVerify()} .
-     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * <p><strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
      */
@@ -71,7 +73,8 @@ public final class ClientTlsConfigBuilder extends AbstractTlsConfigBuilder<Clien
     /**
      * Disables the verification of server's TLS certificate chain for specific hosts. If you want to disable
      * all verification, use {@link #tlsNoVerify()} .
-     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * <p><strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
      */

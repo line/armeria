@@ -198,7 +198,8 @@ final class HttpClientFactory implements ClientFactory {
             if (clientTlsConfig == ClientTlsConfig.NOOP) {
                 clientTlsConfig = null;
             }
-            sslContextFactory = new SslContextFactory(tlsProvider, options.tlsEngineType(), clientTlsConfig);
+            sslContextFactory = new SslContextFactory(tlsProvider, options.tlsEngineType(), clientTlsConfig,
+                                                      options.meterRegistry());
         } else {
             sslContextFactory = null;
         }

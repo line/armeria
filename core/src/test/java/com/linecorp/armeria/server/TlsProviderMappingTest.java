@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.TlsKeyPair;
 import com.linecorp.armeria.common.TlsProvider;
 import com.linecorp.armeria.common.util.TlsEngineType;
@@ -37,8 +38,8 @@ class TlsProviderMappingTest {
                                                    .build();
         final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider,
                                                                   TlsEngineType.OPENSSL,
-                                                                  ServerTlsConfig.builder().build()
-        );
+                                                                  ServerTlsConfig.builder().build(),
+                                                                  Flags.meterRegistry());
         assertThat(mapping.map("example.com")).isNotNull();
         assertThat(mapping.map("api.example.com")).isNotNull();
         assertThatThrownBy(() -> mapping.map("web.example.com"))
@@ -62,8 +63,8 @@ class TlsProviderMappingTest {
                                                    .build();
         final TlsProviderMapping mapping = new TlsProviderMapping(tlsProvider,
                                                                   TlsEngineType.OPENSSL,
-                                                                  ServerTlsConfig.builder().build()
-        );
+                                                                  ServerTlsConfig.builder().build(),
+                                                                  Flags.meterRegistry());
         assertThat(mapping.map("example.com")).isNotNull();
         assertThat(mapping.map("api.example.com")).isNotNull();
         assertThat(mapping.map("web.example.com")).isNotNull();

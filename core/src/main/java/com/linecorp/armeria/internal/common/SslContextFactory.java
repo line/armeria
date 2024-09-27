@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.util.TlsEngineType;
 import com.linecorp.armeria.internal.common.util.ReentrantShortLock;
 import com.linecorp.armeria.server.ServerTlsConfig;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
@@ -57,6 +58,7 @@ public final class SslContextFactory {
 
     private final TlsProvider tlsProvider;
     private final TlsEngineType engineType;
+    private final MeterRegistry meterRegistry;
     @Nullable
     private final AbstractTlsConfig tlsConfig;
     @Nullable
@@ -66,12 +68,13 @@ public final class SslContextFactory {
     private final ReentrantShortLock lock = new ReentrantShortLock();
 
     public SslContextFactory(TlsProvider tlsProvider, TlsEngineType engineType,
-                             @Nullable AbstractTlsConfig tlsConfig) {
+                             @Nullable AbstractTlsConfig tlsConfig, MeterRegistry meterRegistry) {
         // TODO(ikhoon): Support OPENSSL_REFCNT engine type.
         assert engineType.sslProvider() != SslProvider.OPENSSL_REFCNT;
 
         this.tlsProvider = tlsProvider;
         this.engineType = engineType;
+        this.meterRegistry = meterRegistry;
         if (tlsConfig != null) {
             this.tlsConfig = tlsConfig;
             meterIdPrefix = tlsConfig.meterIdPrefix();
@@ -140,6 +143,7 @@ public final class SslContextFactory {
         final CloseableMeterBinder meterBinder;
         if (key.tlsKeyPair != null) {
             meterBinder = MoreMeterBinders.certificateMetrics(key.tlsKeyPair.certificateChain(), meterIdPrefix);
+            meterBinder.bindTo(meterRegistry);
         } else {
             meterBinder = null;
         }

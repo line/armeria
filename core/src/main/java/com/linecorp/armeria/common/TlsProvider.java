@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.Server;
 
 /**
  * Provides {@link TlsKeyPair}s for TLS handshakes.
@@ -35,7 +34,7 @@ import com.linecorp.armeria.server.Server;
 public interface TlsProvider {
 
     /**
-     * Returns a {@link TlsProvider} for a {@link Server} which always returns the specified {@link TlsKeyPair}.
+     * Returns a {@link TlsProvider} which always returns the specified {@link TlsKeyPair}.
      */
     static TlsProvider of(TlsKeyPair tlsKeyPair) {
         requireNonNull(tlsKeyPair, "tlsKeyPair");

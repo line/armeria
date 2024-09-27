@@ -1156,7 +1156,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * Server
      *   .builder()
      *   .tlsProvider(
-     *     TlsProvider.builderForServer()
+     *     TlsProvider.builder()
      *                // Set the default key pair.
      *                .setDefault(TlsKeyPair.of(...))
      *                // Set the key pair for "example.com".
@@ -1180,7 +1180,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
      * <pre>{@code
      * TlsProvider tlsProvider =
      *   TlsProvider
-     *     .builderForServer()
+     *     .builder()
      *     // Set the default key pair.
      *     .setDefault(TlsKeyPair.of(...))
      *     // Set the key pair for "example.com".
@@ -1209,7 +1209,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
 
     /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
-     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * <p><strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
      */
@@ -1220,7 +1221,8 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
 
     /**
      * Configures SSL or TLS of the {@link Server} with an auto-generated self-signed certificate.
-     * <strong>Note:</strong> You should never use this in production but only for a testing purpose.
+     *
+     * <p><strong>Note:</strong> You should never use this in production but only for a testing purpose.
      *
      * @see #tlsCustomizer(Consumer)
      */
@@ -2384,7 +2386,7 @@ public final class ServerBuilder implements TlsSetters, ServiceConfigsBuilder<Se
                 final TlsEngineType tlsEngineType = defaultVirtualHost.tlsEngineType();
                 assert tlsEngineType != null;
                 assert tlsProvider != null;
-                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig);
+                sslContexts = new TlsProviderMapping(tlsProvider, tlsEngineType, tlsConfig, meterRegistry);
             }
         }
         if (pingIntervalMillis > 0) {
