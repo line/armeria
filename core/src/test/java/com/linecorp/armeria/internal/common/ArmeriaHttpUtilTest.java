@@ -116,6 +116,12 @@ class ArmeriaHttpUtilTest {
         } else {
             assertThat(decodeFunc.apply("/%2F")).isEqualTo("/%2F");
         }
+
+        // Tests for '+' decoding into ' '
+        assertThat(decodeFunc.apply("/foo+bar")).isEqualTo("/foo bar"); // '+' should be decoded into space
+        assertThat(decodeFunc.apply("/foo+%20bar")).isEqualTo("/foo  bar"); // '+' and '%20' both decoded to space
+        assertThat(decodeFunc.apply("/foo+bar+baz")).isEqualTo("/foo bar baz"); // multiple '+' should be decoded to space
+        assertThat(decodeFunc.apply("/foo%20bar+baz")).isEqualTo("/foo bar baz"); // combination of '%20' and '+'
     }
 
     @Test

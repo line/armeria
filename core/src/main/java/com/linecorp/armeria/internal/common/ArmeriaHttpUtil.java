@@ -368,7 +368,7 @@ public final class ArmeriaHttpUtil {
      * Decodes a percent-encoded path string.
      */
     public static String decodePath(String path) {
-        if (path.indexOf('%') < 0) {
+        if (path.indexOf('%') < 0 && path.indexOf('+') < 0) {
             // No need to decode because it's not percent-encoded
             return path;
         }
@@ -407,6 +407,11 @@ public final class ArmeriaHttpUtil {
             int dstLen = 0;
             for (int i = 0; i < len; i++) {
                 final char ch = path.charAt(i);
+                if (ch == '+') {
+                    buf[dstLen++] = (byte) ' ';
+                    continue;
+                }
+
                 if (ch != '%') {
                     buf[dstLen++] = (byte) ((ch & 0xFF80) == 0 ? ch : 0xFF);
                     continue;
