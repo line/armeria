@@ -917,6 +917,7 @@ best
 bestbuy
 bet
 bet.ar
+bet.br
 beta.bounty-full.com
 beta.tailscale.net
 betainabox.com
@@ -4732,6 +4733,7 @@ legal
 legnica.pl
 lego
 leikanger.no
+leilao.br
 leirfjord.no
 leirvik.no
 leitungsen.de
@@ -5281,6 +5283,8 @@ mitoyo.kagawa.jp
 mitsubishi
 mitsue.nara.jp
 mitsuke.niigata.jp
+mittwald.info
+mittwaldserver.info
 miura.kanagawa.jp
 miyada.nagano.jp
 miyagi.jp
@@ -5471,6 +5475,7 @@ myasustor.com
 mycloudnas.com
 mydatto.com
 mydatto.net
+mydbserver.com
 myddns.rocks
 mydissent.net
 mydns.bz
@@ -6793,6 +6798,7 @@ prof
 prof.pr
 profesional.bo
 progressive
+project.space
 promo
 properties
 property
@@ -8598,6 +8604,7 @@ tychy.pl
 tydal.no
 tynset.no
 typedream.app
+typo3server.info
 tysfjord.no
 tysnes.no
 tysvar.no
@@ -9000,6 +9007,7 @@ website.yandexcloud.net
 websitebuilder.online
 websozai.jp
 webspace.rocks
+webspaceconfig.de
 webthings.io
 webview-assets.aws-cloud9.af-south-1.amazonaws.com
 webview-assets.aws-cloud9.ap-east-1.amazonaws.com
