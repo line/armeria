@@ -460,7 +460,6 @@ allstate
 ally
 alp1.ae.flow.ch
 alpha-myqnapcloud.com
-alpha.bounty-full.com
 alsace
 alstahaug.no
 alstom
@@ -918,7 +917,6 @@ bestbuy
 bet
 bet.ar
 bet.br
-beta.bounty-full.com
 beta.tailscale.net
 betainabox.com
 better-than.tv
@@ -1133,7 +1131,6 @@ bostik
 boston
 bot
 bounceme.net
-bounty-full.com
 boutique
 boutir.com
 box
