@@ -106,7 +106,7 @@ class AnnotatedServiceMultipartTest {
         );
         final AggregatedHttpResponse response =
                 server.blockingWebClient().execute(multipart.toHttpRequest(path));
-        assertEquals(HttpStatus.OK, response.status());
+        assertThat(HttpStatus.OK).isEqualTo(response.status());
         assertThatJson(response.contentUtf8())
             .isEqualTo("{\"file1\":\"foo\"," +
                 "\"path1\":\"bar\"," +
