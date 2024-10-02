@@ -17,7 +17,9 @@
 package com.linecorp.armeria.common.util;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -25,10 +27,15 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import com.google.common.collect.ImmutableList;
 
 final class DefaultBlockingTaskExecutor implements BlockingTaskExecutor {
 
     private final ScheduledExecutorService delegate;
+
+    private final AtomicInteger taskCounter = new AtomicInteger(0);
 
     DefaultBlockingTaskExecutor(ScheduledExecutorService delegate) {
         this.delegate = delegate;
@@ -36,24 +43,88 @@ final class DefaultBlockingTaskExecutor implements BlockingTaskExecutor {
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return delegate.schedule(command, delay, unit);
+        boolean submitted = false;
+        taskCounter.incrementAndGet();
+        try {
+            final ScheduledFuture<?> future = delegate.schedule(() -> {
+                try {
+                    command.run();
+                } finally {
+                    taskCounter.decrementAndGet();
+                }
+            }, delay, unit);
+            submitted = true;
+            return future;
+        } finally {
+            if (!submitted) {
+                taskCounter.decrementAndGet();
+            }
+        }
     }
 
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return delegate.schedule(callable, delay, unit);
+        boolean submitted = false;
+        taskCounter.incrementAndGet();
+        try {
+            final ScheduledFuture<V> future = delegate.schedule(() -> {
+                try {
+                    return callable.call();
+                } finally {
+                    taskCounter.decrementAndGet();
+                }
+            }, delay, unit);
+            submitted = true;
+            return future;
+        } finally {
+            if (!submitted) {
+                taskCounter.decrementAndGet();
+            }
+        }
     }
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
                                                   TimeUnit unit) {
-        return delegate.scheduleAtFixedRate(command, initialDelay, period, unit);
+        boolean submitted = false;
+        taskCounter.incrementAndGet();
+        try {
+            final ScheduledFuture<?> future = delegate.scheduleAtFixedRate(() -> {
+                try {
+                    command.run();
+                } finally {
+                    taskCounter.decrementAndGet();
+                }
+            }, initialDelay, period, unit);
+            submitted = true;
+            return future;
+        } finally {
+            if (!submitted) {
+                taskCounter.decrementAndGet();
+            }
+        }
     }
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
                                                      TimeUnit unit) {
-        return delegate.scheduleWithFixedDelay(command, initialDelay, delay, unit);
+        boolean submitted = false;
+        taskCounter.incrementAndGet();
+        try {
+            final ScheduledFuture<?> future = delegate.scheduleWithFixedDelay(() -> {
+                try {
+                    command.run();
+                } finally {
+                    taskCounter.decrementAndGet();
+                }
+            }, initialDelay, delay, unit);
+            submitted = true;
+            return future;
+        } finally {
+            if (!submitted) {
+                taskCounter.decrementAndGet();
+            }
+        }
     }
 
     @Override
@@ -83,50 +154,163 @@ final class DefaultBlockingTaskExecutor implements BlockingTaskExecutor {
 
     @Override
     public <T> Future<T> submit(Callable<T> task) {
-        return delegate.submit(task);
+        boolean submitted = false;
+        taskCounter.incrementAndGet();
+        try {
+            final Future<T> future = delegate.submit(() -> {
+                try {
+                    return task.call();
+                } finally {
+                    taskCounter.decrementAndGet();
+                }
+            });
+            submitted = true;
+            return future;
+        } finally {
+            if (!submitted) {
+                taskCounter.decrementAndGet();
+            }
+        }
     }
 
     @Override
     public <T> Future<T> submit(Runnable task, T result) {
-        return delegate.submit(task, result);
+        boolean submitted = false;
+        taskCounter.incrementAndGet();
+        try {
+            final Future<T> future = delegate.submit(() -> {
+                try {
+                    task.run();
+                } finally {
+                    taskCounter.decrementAndGet();
+                }
+            }, result);
+            submitted = true;
+            return future;
+        } finally {
+            if (!submitted) {
+                taskCounter.decrementAndGet();
+            }
+        }
     }
 
     @Override
     public Future<?> submit(Runnable task) {
-        return delegate.submit(task);
+        boolean submitted = false;
+        taskCounter.incrementAndGet();
+        try {
+            final Future<?> future = delegate.submit(() -> {
+                try {
+                    task.run();
+                } finally {
+                    taskCounter.decrementAndGet();
+                }
+            });
+            submitted = true;
+            return future;
+        } finally {
+            if (!submitted) {
+                taskCounter.decrementAndGet();
+            }
+        }
     }
 
     @Override
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
             throws InterruptedException {
-        return delegate.invokeAll(tasks);
+        final Set<Callable<T>> remains = new HashSet<>(tasks);
+        taskCounter.addAndGet(remains.size());
+        final List<Future<T>> result = delegate.invokeAll(tasks.stream().map(task -> (Callable<T>) () -> {
+            try {
+                return task.call();
+            } finally {
+                remains.remove(task);
+                taskCounter.decrementAndGet();
+            }
+        }).collect(ImmutableList.toImmutableList()));
+        taskCounter.addAndGet(-remains.size());
+        return result;
     }
 
     @Override
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout,
                                          TimeUnit unit) throws InterruptedException {
-        return delegate.invokeAll(tasks, timeout, unit);
+        final Set<Callable<T>> remains = new HashSet<>(tasks);
+        taskCounter.addAndGet(remains.size());
+        final List<Future<T>> result = delegate.invokeAll(tasks.stream().map(task -> (Callable<T>) () -> {
+            try {
+                return task.call();
+            } finally {
+                remains.remove(task);
+                taskCounter.decrementAndGet();
+            }
+        }).collect(ImmutableList.toImmutableList()), timeout, unit);
+        taskCounter.addAndGet(-remains.size());
+        return result;
     }
 
     @Override
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
             throws InterruptedException, ExecutionException {
-        return delegate.invokeAny(tasks);
+        final Set<Callable<T>> remains = new HashSet<>(tasks);
+        taskCounter.addAndGet(remains.size());
+        final T result = delegate.invokeAny(tasks.stream().map(task -> (Callable<T>) () -> {
+            try {
+                return task.call();
+            } finally {
+                remains.remove(task);
+                taskCounter.decrementAndGet();
+            }
+        }).collect(ImmutableList.toImmutableList()));
+        taskCounter.addAndGet(-remains.size());
+        return result;
     }
 
     @Override
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
             throws InterruptedException, ExecutionException, TimeoutException {
-        return delegate.invokeAny(tasks, timeout, unit);
+        final Set<Callable<T>> remains = new HashSet<>(tasks);
+        taskCounter.addAndGet(remains.size());
+        final T result = delegate.invokeAny(tasks.stream().map(task -> (Callable<T>) () -> {
+            try {
+                return task.call();
+            } finally {
+                remains.remove(task);
+                taskCounter.decrementAndGet();
+            }
+        }).collect(ImmutableList.toImmutableList()), timeout, unit);
+        taskCounter.addAndGet(-remains.size());
+        return result;
     }
 
     @Override
     public void execute(Runnable command) {
+        boolean submitted = false;
+        taskCounter.incrementAndGet();
+        try {
+            delegate.execute(() -> {
+                try {
+                    command.run();
+                } finally {
+                    taskCounter.decrementAndGet();
+                }
+            });
+            submitted = true;
+        } finally {
+            if (!submitted) {
+                taskCounter.decrementAndGet();
+            }
+        }
         delegate.execute(command);
     }
 
     @Override
     public ScheduledExecutorService unwrap() {
         return delegate;
+    }
+
+    @Override
+    public int numPendingTasks() {
+        return taskCounter.get();
     }
 }
