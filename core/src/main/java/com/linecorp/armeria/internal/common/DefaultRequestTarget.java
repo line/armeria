@@ -171,6 +171,7 @@ public final class DefaultRequestTarget implements RequestTarget {
             -1,
             "*",
             "*",
+            "*",
             null,
             null);
 
@@ -232,10 +233,10 @@ public final class DefaultRequestTarget implements RequestTarget {
      */
     public static RequestTarget createWithoutValidation(
             RequestTargetForm form, @Nullable String scheme, @Nullable String authority,
-            @Nullable String host, int port, String path, String pathWithMatrixVariables,
+            @Nullable String host, int port, String path, String pathWithMatrixVariables, String rawPath,
             @Nullable String query, @Nullable String fragment) {
         return new DefaultRequestTarget(
-                form, scheme, authority, host, port, path, pathWithMatrixVariables, query, fragment);
+                form, scheme, authority, host, port, path, pathWithMatrixVariables, rawPath, query, fragment);
     }
 
     private final RequestTargetForm form;
@@ -248,6 +249,7 @@ public final class DefaultRequestTarget implements RequestTarget {
     private final int port;
     private final String path;
     private final String maybePathWithMatrixVariables;
+    private final String rawPath;
     @Nullable
     private final String query;
     @Nullable
@@ -256,7 +258,7 @@ public final class DefaultRequestTarget implements RequestTarget {
 
     private DefaultRequestTarget(RequestTargetForm form, @Nullable String scheme,
                                  @Nullable String authority, @Nullable String host, int port,
-                                 String path, String maybePathWithMatrixVariables,
+                                 String path,String maybePathWithMatrixVariables, String rawPath,
                                  @Nullable String query, @Nullable String fragment) {
 
         assert (scheme != null && authority != null && host != null) ||
@@ -270,6 +272,7 @@ public final class DefaultRequestTarget implements RequestTarget {
         this.port = port;
         this.path = path;
         this.maybePathWithMatrixVariables = maybePathWithMatrixVariables;
+        this.rawPath = rawPath;
         this.query = query;
         this.fragment = fragment;
     }
@@ -310,6 +313,11 @@ public final class DefaultRequestTarget implements RequestTarget {
     @Override
     public String maybePathWithMatrixVariables() {
         return maybePathWithMatrixVariables;
+    }
+
+    @Override
+    public String rawPath() {
+        return rawPath;
     }
 
     @Nullable
@@ -443,6 +451,7 @@ public final class DefaultRequestTarget implements RequestTarget {
                                         -1,
                                         matrixVariablesRemovedPath,
                                         encodedPath,
+                                        reqTarget,
                                         encodeQueryToPercents(query),
                                         null);
     }
@@ -645,7 +654,9 @@ public final class DefaultRequestTarget implements RequestTarget {
                                             null,
                                             -1,
                                             encodedPath,
-                                            encodedPath, encodedQuery,
+                                            encodedPath,
+                                            encodedPath,
+                                            encodedQuery,
                                             encodedFragment);
         }
     }
@@ -690,6 +701,7 @@ public final class DefaultRequestTarget implements RequestTarget {
                                         authority,
                                         host,
                                         port,
+                                        encodedPath,
                                         encodedPath,
                                         encodedPath,
                                         encodedQuery,
