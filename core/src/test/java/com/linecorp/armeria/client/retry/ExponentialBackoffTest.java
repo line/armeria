@@ -56,7 +56,7 @@ class ExponentialBackoffTest {
         // Not precomputed, should fallback to computation and return a correct value.
         assertThat(backoff.nextDelayMillis(31)).isEqualTo(10737418240L);
 
-        ExponentialBackoff backoff2 = Backoff.builderForExponential()
+        final Backoff backoff2 = Backoff.builderForExponential()
                 .initialDelayMillis(10)
                 .maxDelayMillis(Long.MAX_VALUE)
                 .multiplier(2.0)
@@ -76,7 +76,7 @@ class ExponentialBackoffTest {
         assertThat(backoff.nextDelayMillis(3)).isEqualTo(Long.MAX_VALUE);
         assertThat(backoff.nextDelayMillis(4)).isEqualTo(Long.MAX_VALUE);
 
-        ExponentialBackoff backoff2 = Backoff.builderForExponential()
+        final Backoff backoff2 = Backoff.builderForExponential()
                 .initialDelayMillis(Long.MAX_VALUE / 3)
                 .maxDelayMillis(Long.MAX_VALUE)
                 .multiplier(2.0)
