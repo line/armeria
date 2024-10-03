@@ -3,12 +3,15 @@ package com.linecorp.armeria.client.retry;
 import java.util.Random;
 import java.util.function.Supplier;
 
+import static java.util.Objects.requireNonNull;
+
 public class RandomBackoffBuilder {
     private long minDelayMillis;
     private long maxDelayMillis;
-    private Supplier<Random> randomSupplier;
+    private Supplier<Random> randomSupplier = Random::new;
 
     RandomBackoff build() {
+        requireNonNull(randomSupplier);
         return new RandomBackoff(minDelayMillis, maxDelayMillis, randomSupplier);
     }
 
